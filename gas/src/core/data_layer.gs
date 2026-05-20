@@ -128,6 +128,15 @@ function readJSONAsMap(nome) {
 }
 
 /**
+ * Alias de writeJSON — mantém compatibilidade com módulos que usam saveJSON().
+ * Todos os módulos podem usar writeJSON ou saveJSON indistintamente.
+ * @see writeJSON
+ */
+function saveJSON(nome, data) {
+  return writeJSON(nome, data);
+}
+
+/**
  * Invalida cache da pasta de dados (útil em testes ou após mudança de PropertiesService).
  */
 function invalidarCacheDataFolder() {

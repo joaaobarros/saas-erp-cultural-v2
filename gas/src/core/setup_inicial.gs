@@ -17,8 +17,23 @@
  */
 
 /**
+ * Executa PRIMEIRO se setupInicialCCBJ falhar com erro de DriveApp.
+ * Força a re-autorização dos escopos Drive — necessário quando os scopes foram
+ * adicionados ao appsscript.json APÓS a primeira autorização do script.
+ *
+ * Como usar: selecionar esta função → ▶ Executar → aceitar as permissões.
+ * Depois rodar setupInicialCCBJ() novamente.
+ */
+function autorizarDrive() {
+  var pasta = DriveApp.getRootFolder();
+  console.log('[autorizarDrive] OK — pasta raiz: ' + pasta.getName());
+  console.log('[autorizarDrive] Autorização Drive concluída. Execute setupInicialCCBJ() agora.');
+}
+
+/**
  * Setup inicial completo para o CCBJ.
  * Executa UMA vez no editor GAS antes do primeiro deploy.
+ * Se falhar com erro de DriveApp: executar autorizarDrive() primeiro.
  */
 function setupInicialCCBJ() {
   var props = PropertiesService.getScriptProperties();
