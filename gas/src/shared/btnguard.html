@@ -1,0 +1,176 @@
+<!--
+  shared/btnguard.html — BtnGuard v2
+  Incluir em todos os templates GAS que contenham botões:
+    <?!= include('shared/btnguard'); ?>
+
+  REGRA ABSOLUTA: todo botão que dispara uma operação assíncrona (google.script.run,
+  fetch, setTimeout simulando async) DEVE usar BtnGuard.wrap() ou travar/liberar.
+  Execute BtnGuard.auditar() no console para verificar conformidade.
+-->
+<style>
+  /* ── BtnGuard v2 — estado de carregamento ── */
+  .bg-carregando {
+    cursor: wait !important;
+    opacity: .82;
+    pointer-events: none;
+    position: relative;
+  }
+  .bg-spinner {
+    display: inline-block;
+    width: 1em; height: 1em;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: bg-giro .65s linear infinite;
+    vertical-align: middle;
+    margin-right: .4em;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  /* Spinner em botões claros */
+  .btn-secundario .bg-spinner,
+  .bg-claro .bg-spinner {
+    border-color: rgba(0,0,0,.12);
+    border-top-color: currentColor;
+  }
+  @keyframes bg-giro { to { transform: rotate(360deg); } }
+
+  /* Feedback visual de clique (ripple) antes do spinner aparecer */
+  @keyframes bg-ripple {
+    from { box-shadow: 0 0 0 0 rgba(255,255,255,.4); }
+    to   { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+  }
+  .bg-carregando { animation: bg-ripple .3s ease-out; }
+</style>
+
+<script>
+/**
+ * BtnGuard v2 — proteção universal de botões para operações assíncronas.
+ *
+ * PADRÃO OBRIGATÓRIO para qualquer operação assíncrona:
+ *
+ *   BtnGuard.wrap('id-do-btn', 'Label de carregamento…', function(done) {
+ *     google.script.run
+ *       .withSuccessHandler(function(r) { done(); /* handle success *\/ })
+ *       .withFailureHandler(function(e) { done(); /* handle error  *\/ })
+ *       .minhaFuncaoGAS(dados);
+ *   });
+ *
+ * AUDITORIA (rodar no console do browser):
+ *   BtnGuard.auditar();   // → lista botões sem proteção
+ */
+var BtnGuard = (function () {
+
+  function _el(idOuEl) {
+    if (!idOuEl) return null;
+    return typeof idOuEl === 'string' ? document.getElementById(idOuEl) : idOuEl;
+  }
+
+  /**
+   * Trava o botão: desabilita, exibe spinner + label.
+   * @param {string|HTMLElement} idOuEl
+   * @param {string} [label]  Texto exibido durante processamento. Padrão: 'Aguarde…'
+   * @returns {boolean}  false = já travado (duplo-click rejeitado)
+   */
+  function travar(idOuEl, label) {
+    var btn = _el(idOuEl);
+    if (!btn || btn.dataset.bgTravado) return false;
+
+    btn.dataset.bgTravado     = '1';
+    btn.dataset.bgHtmlOrig    = btn.innerHTML;
+    btn.dataset.bgDisabledOrig = btn.disabled ? '1' : '';
+
+    btn.disabled = true;
+    btn.classList.add('bg-carregando');
+    btn.innerHTML =
+      '<span class="bg-spinner" aria-hidden="true"></span>' +
+      '<span class="bg-label">' + (label || 'Aguarde…') + '</span>';
+    return true;
+  }
+
+  /**
+   * Libera o botão e restaura o HTML original.
+   * @param {string|HTMLElement} idOuEl
+   */
+  function liberar(idOuEl) {
+    var btn = _el(idOuEl);
+    if (!btn || !btn.dataset.bgTravado) return;
+
+    btn.innerHTML = btn.dataset.bgHtmlOrig || '';
+    btn.disabled  = !!btn.dataset.bgDisabledOrig;
+    btn.classList.remove('bg-carregando');
+    delete btn.dataset.bgTravado;
+    delete btn.dataset.bgHtmlOrig;
+    delete btn.dataset.bgDisabledOrig;
+  }
+
+  /**
+   * Trava o botão, executa fn(done) e libera quando done() for chamado.
+   * Libera automaticamente em caso de exceção síncrona.
+   *
+   * @param {string|HTMLElement} idOuEl
+   * @param {string} label
+   * @param {function(done: function): void} fn
+   */
+  function wrap(idOuEl, label, fn) {
+    if (!travar(idOuEl, label)) return; // duplo-click bloqueado
+
+    var liberado = false;
+    var done = function () {
+      if (!liberado) { liberado = true; liberar(idOuEl); }
+    };
+
+    try {
+      fn(done);
+    } catch (e) {
+      done();
+      throw e;
+    }
+  }
+
+  /**
+   * Audita os botões da página e reporta aqueles sem proteção BtnGuard.
+   * Rodar no console: BtnGuard.auditar()
+   * Botões de navegação pura podem receber data-bg-skip="1" para ser isentos.
+   * @returns {Array<{id, texto, aviso}>}
+   */
+  function auditar() {
+    var ISENTOS = ['btn-toggle-sidebar', 'btn-sair'];
+    var botoes  = Array.prototype.slice.call(
+      document.querySelectorAll('button, [role="button"], input[type="submit"], input[type="button"]')
+    );
+
+    var problemas = botoes.filter(function (btn) {
+      if (btn.dataset.bgSkip) return false;
+      if (ISENTOS.indexOf(btn.id) !== -1) return false;
+
+      var oc = btn.getAttribute('onclick') || '';
+      // Protegido se o onclick menciona BtnGuard ou wrap(
+      if (/BtnGuard|\.wrap\(/.test(oc)) return false;
+
+      // Verificar se o onclick chama uma função que internamente usa BtnGuard
+      // (não detectável estaticamente — o desenvolvedor deve marcar com data-bg-skip="1"
+      //  ou garantir que a função interna usa BtnGuard.wrap)
+
+      return true;
+    });
+
+    if (problemas.length === 0) {
+      console.log('%c✅ BtnGuard.auditar(): todos os botões estão protegidos.', 'color:#22c55e;font-weight:bold');
+    } else {
+      console.warn('⚠️ BtnGuard.auditar(): ' + problemas.length + ' botão(ões) sem proteção explícita:');
+      problemas.forEach(function (btn) {
+        var info = 'id="' + (btn.id || '—') + '" | texto="' + btn.textContent.trim().slice(0, 30) + '"';
+        console.warn('   → ' + info);
+      });
+      console.info('💡 Adicione data-bg-skip="1" a botões de navegação pura (sem operação async).');
+    }
+
+    return problemas.map(function (btn) {
+      return { id: btn.id || '', texto: btn.textContent.trim().slice(0, 30) };
+    });
+  }
+
+  return { travar: travar, liberar: liberar, wrap: wrap, auditar: auditar };
+})();
+</script>

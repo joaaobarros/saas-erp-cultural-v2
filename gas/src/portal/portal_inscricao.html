@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= orgConfig.nome ?> — Inscrição</title>
+  <?!= include('shared/btnguard'); ?>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
@@ -155,17 +156,16 @@
       return;
     }
 
-    var btn = document.getElementById('btn-inscrever');
-    btn.disabled = true;
-    btn.textContent = 'Registrando...';
-
-    // TODO Fase 7: google.script.run.ctrl_portal_inscrever(...)
-    setTimeout(function() {
-      var id = 'INS-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*90000)+10000);
-      document.getElementById('form-inscricao').style.display = 'none';
-      document.getElementById('inscricao-id').textContent = id;
-      document.getElementById('resultado').style.display = 'block';
-    }, 700);
+    BtnGuard.wrap('btn-inscrever', 'Registrando inscrição…', function(done) {
+      // TODO Fase 7: google.script.run.ctrl_portal_inscrever(...)
+      setTimeout(function() {
+        done();
+        var id = 'INS-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*90000)+10000);
+        document.getElementById('form-inscricao').style.display = 'none';
+        document.getElementById('inscricao-id').textContent = id;
+        document.getElementById('resultado').style.display = 'block';
+      }, 700);
+    });
   }
 </script>
 </body>

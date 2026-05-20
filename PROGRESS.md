@@ -7,19 +7,22 @@
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
 **Fase atual**: Fase 0 — Fundação Técnica — **FALTA APENAS O DEPLOY**
-**O que foi feito (2026-05-20, sessão 4)**:
-- ✅ Saneamento 0.9: zero hardcodes de org em `.gs` (notification_engine, ia_service, config_service)
-- ✅ Migração 0.4: `SistemaConfigService` já é a fonte única; não há `SETORES_SISTEMA` nem `rh.gs` em v2
-- ✅ Controle de acesso em 2 camadas: `AcessoService` (acesso_service.gs) + `primeiro_acesso.html`
-- ✅ `appsscript.json`: mantido `USER_DEPLOYING` (correto para Workspace + access:DOMAIN)
+**O que foi feito (2026-05-20, sessões 4 e 5)**:
+- ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
+- ✅ AcessoService + `primeiro_acesso.html` + router atualizado
+- ✅ `USER_DEPLOYING` mantido (correto para Workspace + access:DOMAIN)
 - ✅ `inicializarSistema()`: registra superadmin automaticamente
-- ✅ `router.gs`: rota para primeiro_acesso.html se usuário do domínio sem cadastro aprovado
+- ✅ Logomarca + paleta de cores: `LogoPaletaService`, `SistemaConfigService.getLogoUrl/getPaleta`, `Identidade` JS, admin UI
+- ✅ **Paleta padrão → ROXO CCBJ** (`#7c3aed`/`#4c1d95`/`#f59e0b`) em `config_org.json`, `config_service.gs`, `index.html` `:root`
+- ✅ **BtnGuard v2** (`shared/btnguard.html`): `wrap`, `travar`, `liberar`, `auditar`; `include()` em `router.gs`
+- ✅ Todos os botões assíncronos protegidos: `index.html`, `primeiro_acesso.html`, todos os portais
 
 **Próximo passo imediato** — APENAS DEPLOY (fazer no editor GAS):
-> 1. **[CLASP]** Terminal: `cd /home/jpbarros/ccbj-clean/saas-erp-cultural-v2/gas && clasp login && clasp push`
+> 1. **[CLASP]** Terminal: `cd /home/jpbarros/ccbj-clean/saas-erp-cultural-v2/gas && clasp login --no-localhost && clasp push`
 > 2. **[GAS EDITOR]** Abrir o script → executar `inicializarSistema()` (cria planilhas + registra superadmin)
 > 3. **[GAS EDITOR]** Executar `verificarTodasAbas()` → confirmar 100%
 > 4. **[GAS EDITOR]** Definir Properties: `ORG_NOME`, `ORG_NOME_COMPLETO`, `ORG_DOMINIO`, `ADMIN_EMAIL`
+> 5. **[BROWSER]** Abrir webapp → `BtnGuard.auditar()` no console → confirmar "✅ todos protegidos"
 
 **Com Fase 0 concluída → iniciar imediatamente**: **Fase 1** — TarefaRepository com tarefas.json canônico.
 
@@ -194,13 +197,14 @@ Um módulo está **completo** quando oferece:
 
 ### 0.7 — Router e Frontend Shell
 
-- [x] Criar `gas/src/controllers/router.gs` — doGet() com roteamento interno/portal
-- [x] Criar `gas/src/frontend/index.html` — SPA com App/Router/Toast/BtnGuard
-- [x] Criar `gas/src/portal/portal_cessao_pauta.html` — formulário com consentimento LGPD
-- [x] Criar `gas/src/portal/portal_pauta_status.html` — consulta por protocolo
-- [x] Criar `gas/src/portal/portal_inscricao.html` — inscrição com LGPD + foto
-- [x] Criar `gas/src/portal/portal_aprovacao.html` — aprovação via token de email
-- [x] Criar `gas/src/portal/portal_agenda.html` — agenda pública com filtros
+- [x] Criar `gas/src/controllers/router.gs` — doGet() com roteamento interno/portal + `include()`
+- [x] Criar `gas/src/frontend/index.html` — SPA com App/Router/Toast/BtnGuard v2 (roxo)
+- [x] Criar `gas/src/portal/portal_cessao_pauta.html` — formulário com consentimento LGPD + BtnGuard
+- [x] Criar `gas/src/portal/portal_pauta_status.html` — consulta por protocolo + BtnGuard
+- [x] Criar `gas/src/portal/portal_inscricao.html` — inscrição com LGPD + foto + BtnGuard
+- [x] Criar `gas/src/portal/portal_aprovacao.html` — aprovação via token de email + BtnGuard
+- [x] Criar `gas/src/portal/portal_agenda.html` — agenda pública com filtros (links de navegação, sem async)
+- [x] Criar `gas/src/shared/btnguard.html` — BtnGuard v2: `wrap`, `travar`, `liberar`, `auditar`
 
 ### 0.8 — Módulo Admin (ConfigAdmin)
 
@@ -215,6 +219,28 @@ Um módulo está **completo** quando oferece:
 - [x] Zero nomes de organização em `.gs` — `notification_engine.gs` usa `{org}` dinâmico; `ia_service.gs` usa `_getSystemMsg()` + `getOrgConfig()`
 - [x] `config.gs`: defaults `|| 'CCBJ'` aceitos (PropertiesService lido primeiro; fallback apenas para estado não-inicializado; Fase 11.4 eliminará)
 - [x] Controle de acesso para domínios compartilhados: `AcessoService` + `primeiro_acesso.html` + router atualizado
+- [x] **Logomarca**: `LogoPaletaService`, `SistemaConfigService.getLogoUrl/getPaleta`, `Identidade` JS, extração de cor via canvas, admin UI
+- [x] **Paleta padrão → ROXO CCBJ**: `config_org.json`, `config_service.gs._defaultPaleta()`, `index.html :root` atualizados para `#7c3aed`
+- [x] **BtnGuard v2**: criado `shared/btnguard.html`; `include()` em `router.gs`; todos os botões async protegidos em todos os templates
+
+---
+
+### 📋 Checklist BtnGuard — OBRIGATÓRIO a cada nova fase
+
+> **Regra**: todo template HTML criado em qualquer fase DEVE:
+> 1. Incluir `<?!= include('shared/btnguard'); ?>` no `<head>`
+> 2. Usar `BtnGuard.wrap()` em todo botão que dispara async (google.script.run, fetch, setTimeout)
+> 3. Marcar botões de navegação pura com `data-bg-skip="1"`
+> 4. Ao final da fase: rodar `BtnGuard.auditar()` no console e confirmar "✅ todos protegidos"
+
+| Fase | Auditoria BtnGuard | Status |
+|------|-------------------|--------|
+| 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ⏳ Aguardando deploy |
+| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ⬜ |
+| 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ⬜ |
+| 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
+| 4 — Financeiro | Após criar views financeiras | ⬜ |
+| 5+ — Demais fases | Após cada view criada | ⬜ |
 
 ---
 
@@ -576,6 +602,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-20 | Fase 0 | Módulo admin (boot, user_profile, config_admin), alertas_engine.gs (25 tipos), frontend/index.html (SPA+Router+Toast+BtnGuard), 5 portais públicos, diretriz de pesquisa profunda no PROGRESS.md | Deploy clasp; executar `inicializarSistema()`; confirmar 0.9 saneamentos; iniciar Fase 1 |
 | 2026-05-20 | Fase 0 | Links configurados: GAS criado (scriptId `14edpTDbIglnYT_...`), `.clasp.json` atualizado, GitHub repo privado `joaaobarros/saas-erp-cultural-v2` criado e push inicial feito | `clasp push` → `inicializarSistema()` → saneamentos 0.9 → Fase 1 |
 | 2026-05-20 | Fase 0 | Saneamento 0.9 completo (notification_engine, ia_service, config_org.json+contextoIA); migração 0.4 confirmada; AcessoService (acesso_service.gs) + primeiro_acesso.html; USER_DEPLOYING mantido; setup.gs registra superadmin; PROGRESS.md atualizado | `clasp login && clasp push` → definir PropertiesService → `inicializarSistema()` → `verificarTodasAbas()` → Fase 1 |
+| 2026-05-20 | Fase 0 | Logomarca+paleta (LogoPaletaService, SistemaConfigService, Identidade JS, admin UI, extração via canvas); **paleta → ROXO** (`#7c3aed`); BtnGuard v2 (shared/btnguard.html com wrap+auditar); include() em router.gs; todos os botões async protegidos em index.html + primeiro_acesso.html + 5 portais; PROGRESS.md atualizado com checklist BtnGuard por fase | `clasp login --no-localhost && clasp push` → `inicializarSistema()` → `verificarTodasAbas()` → `BtnGuard.auditar()` no browser → Fase 1 |
 
 ---
 

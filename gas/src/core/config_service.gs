@@ -278,12 +278,12 @@ var SistemaConfigService = (function () {
 
   function _defaultPaleta() {
     return {
-      primaria:       '#1a237e',
-      primariaClara:  '#3949ab',
-      primariaEscura: '#0d1757',
-      secundaria:     '#e8eaf6',
-      destaque:       '#ff6f00',
-      sidebar:        '#1a237e',
+      primaria:       '#7c3aed',
+      primariaClara:  '#a78bfa',
+      primariaEscura: '#4c1d95',
+      secundaria:     '#ede9fe',
+      destaque:       '#f59e0b',
+      sidebar:        '#4c1d95',
       sidebarTexto:   '#ffffff'
     };
   }

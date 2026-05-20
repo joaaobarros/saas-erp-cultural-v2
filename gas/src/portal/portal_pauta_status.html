@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= orgConfig.nome ?> — Acompanhar Protocolo</title>
+  <?!= include('shared/btnguard'); ?>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
@@ -74,39 +75,36 @@
       return;
     }
 
-    var btn = document.getElementById('btn-buscar');
-    btn.disabled = true;
-    btn.textContent = 'Consultando...';
+    BtnGuard.wrap('btn-buscar', 'Consultando…', function(done) {
+      // TODO Fase 7: google.script.run.ctrl_portal_consultarProtocolo(protocolo, ...)
+      // Simulação Fase 0:
+      setTimeout(function() {
+        done();
 
-    // TODO Fase 7: google.script.run.ctrl_portal_consultarProtocolo(protocolo, ...)
-    // Simulação Fase 0:
-    setTimeout(function() {
-      btn.disabled = false;
-      btn.textContent = 'Consultar';
+        var statusMap = {
+          'pendente':   { label: 'Aguardando análise', cls: 'status-pendente' },
+          'em_analise': { label: 'Em análise',         cls: 'status-analise' },
+          'aprovado':   { label: 'Aprovado',           cls: 'status-aprovado' },
+          'recusado':   { label: 'Recusado',           cls: 'status-recusado' }
+        };
+        var status = 'pendente';
+        var sm     = statusMap[status];
 
-      var statusMap = {
-        'pendente':  { label: 'Aguardando análise', cls: 'status-pendente' },
-        'em_analise':{ label: 'Em análise',         cls: 'status-analise' },
-        'aprovado':  { label: 'Aprovado',            cls: 'status-aprovado' },
-        'recusado':  { label: 'Recusado',            cls: 'status-recusado' }
-      };
-      var status = 'pendente';
-      var sm     = statusMap[status];
+        var container = document.getElementById('detalhe-container');
+        container.innerHTML = [
+          { chave: 'Protocolo',     valor: protocolo },
+          { chave: 'Status',        valor: '<span class="status-badge ' + sm.cls + '">' + sm.label + '</span>' },
+          { chave: 'Data de envio', valor: new Date().toLocaleDateString('pt-BR') },
+          { chave: 'Previsão',      valor: 'Até 5 dias úteis' },
+          { chave: 'Observação',    valor: 'Aguardando análise da equipe.' }
+        ].map(function(l) {
+          return '<div class="detalhe-linha"><span class="detalhe-chave">' + l.chave
+            + '</span><span>' + l.valor + '</span></div>';
+        }).join('');
 
-      var container = document.getElementById('detalhe-container');
-      container.innerHTML = [
-        { chave: 'Protocolo',      valor: protocolo },
-        { chave: 'Status',         valor: '<span class="status-badge ' + sm.cls + '">' + sm.label + '</span>' },
-        { chave: 'Data de envio',  valor: new Date().toLocaleDateString('pt-BR') },
-        { chave: 'Previsão',       valor: 'Até 5 dias úteis' },
-        { chave: 'Observação',     valor: 'Aguardando análise da equipe.' }
-      ].map(function(l) {
-        return '<div class="detalhe-linha"><span class="detalhe-chave">' + l.chave
-          + '</span><span>' + l.valor + '</span></div>';
-      }).join('');
-
-      document.getElementById('resultado').style.display = 'block';
-    }, 600);
+        document.getElementById('resultado').style.display = 'block';
+      }, 600);
+    });
   }
 </script>
 </body>

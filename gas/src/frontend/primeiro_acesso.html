@@ -10,6 +10,7 @@
       --cor-destaque: <?= (orgConfig.paleta && orgConfig.paleta.destaque)  ? orgConfig.paleta.destaque  : '#ff6f00' ?>;
     }
   </style>
+  <?!= include('shared/btnguard'); ?>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -195,27 +196,23 @@
     }
     if (!ok) return;
 
-    var btn = document.getElementById('btnSolicitar');
-    btn.disabled    = true;
-    btn.textContent = 'Enviando…';
-
-    google.script.run
-      .withSuccessHandler(function(res) {
-        btn.disabled    = false;
-        btn.textContent = 'Solicitar acesso';
-        if (res && res.ok) {
-          document.getElementById('formArea').style.display  = 'none';
-          document.getElementById('successBox').style.display = 'block';
-        } else {
-          alert((res && res.mensagem) || 'Erro ao enviar. Tente novamente.');
-        }
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled    = false;
-        btn.textContent = 'Solicitar acesso';
-        alert('Erro ao comunicar com o servidor: ' + err.message);
-      })
-      .ctrl_acesso_solicitar({ nome: nome, setorDesejado: setor });
+    BtnGuard.wrap('btnSolicitar', 'Enviando solicitação…', function(done) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          done();
+          if (res && res.ok) {
+            document.getElementById('formArea').style.display   = 'none';
+            document.getElementById('successBox').style.display = 'block';
+          } else {
+            alert((res && res.mensagem) || 'Erro ao enviar. Tente novamente.');
+          }
+        })
+        .withFailureHandler(function(err) {
+          done();
+          alert('Erro ao comunicar com o servidor: ' + err.message);
+        })
+        .ctrl_acesso_solicitar({ nome: nome, setorDesejado: setor });
+    });
   }
 </script>
 </body>

@@ -8,9 +8,9 @@
     /* ── Reset e base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --cor-primaria: #1a237e;
-      --cor-secundaria: #e8eaf6;
-      --cor-destaque: #ff6f00;
+      --cor-primaria: #7c3aed;
+      --cor-secundaria: #ede9fe;
+      --cor-destaque: #f59e0b;
       --cor-texto: #212121;
       --cor-texto-claro: #757575;
       --cor-borda: #e0e0e0;
@@ -121,6 +121,7 @@
     .btn-extrair:hover { background: #e2e8f0; }
     .admin-section-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cor-texto-claro); margin: 16px 0 8px; }
   </style>
+  <?!= include('shared/btnguard'); ?>
 </head>
 <body>
 
@@ -133,7 +134,7 @@
 <div id="boot-erro" class="oculto">
   <h2>Não foi possível carregar o sistema</h2>
   <p id="boot-erro-msg"></p>
-  <button class="btn btn-primario" onclick="location.reload()">Tentar novamente</button>
+  <button class="btn btn-primario" onclick="location.reload()" data-bg-skip="1">Tentar novamente</button>
 </div>
 
 <!-- App principal -->
@@ -192,7 +193,7 @@
               <input type="text" id="iv-logo-url" placeholder="https://... (Google Drive, CDN, etc.)"
                      style="flex:1;padding:8px;border:1px solid var(--cor-borda);border-radius:6px;font-size:14px;"
                      oninput="IdentidadeAdmin.previewLogo()">
-              <button class="btn btn-secundario" onclick="IdentidadeAdmin.removerLogo()" style="font-size:13px;">Remover</button>
+              <button class="btn btn-secundario" onclick="IdentidadeAdmin.removerLogo()" style="font-size:13px;" data-bg-skip="1">Remover</button>
             </div>
 
             <button class="btn-extrair" onclick="IdentidadeAdmin.extrairCores()" id="btn-extrair-cores">
@@ -242,7 +243,7 @@
               <button class="btn btn-primario" id="btn-salvar-identidade" onclick="IdentidadeAdmin.salvar()">
                 💾 Salvar identidade visual
               </button>
-              <button class="btn btn-secundario" onclick="IdentidadeAdmin.restaurarPadrao()">
+              <button class="btn btn-secundario" id="btn-restaurar-padrao" onclick="IdentidadeAdmin.restaurarPadrao()">
                 ↺ Restaurar padrão
               </button>
             </div>
@@ -432,9 +433,9 @@ var Identidade = (function () {
     if (temPaleta) {
       // Paleta já configurada — derivar e aplicar
       var completa = derivarPaleta(
-        orgConfig.paleta.primaria  || '#1a237e',
-        orgConfig.paleta.destaque  || '#ff6f00',
-        orgConfig.paleta.sidebar   || orgConfig.paleta.primaria || '#1a237e'
+        orgConfig.paleta.primaria  || '#7c3aed',
+        orgConfig.paleta.destaque  || '#f59e0b',
+        orgConfig.paleta.sidebar   || orgConfig.paleta.primaria || '#4c1d95'
       );
       aplicarPaleta(completa);
     }
@@ -489,8 +490,8 @@ var IdentidadeAdmin = (function () {
 
   /** Calcula e exibe as cores derivadas + prévia do sidebar. */
   function _atualizarDerivadas() {
-    var p  = _hex('primaria') || '#1a237e';
-    var d  = _hex('destaque') || '#ff6f00';
+    var p  = _hex('primaria') || '#7c3aed';
+    var d  = _hex('destaque') || '#f59e0b';
     var s  = _hex('sidebar')  || p;
     if (!/^#[0-9a-fA-F]{6}$/.test(p)) return;
 
@@ -542,30 +543,31 @@ var IdentidadeAdmin = (function () {
     var url = (_el('iv-logo-url') || {}).value || '';
     if (!url) { Toast.aviso('Informe a URL do logo antes de extrair as cores.'); return; }
 
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function () {
-      var cor = Identidade.extrairCorDominante(img);
-      if (!cor) {
-        Toast.aviso('Não foi possível extrair cores automaticamente (CORS). Ajuste as cores manualmente.');
-        return;
-      }
-      var hex    = Identidade.rgbToHex(cor.r, cor.g, cor.b);
-      var escura = Identidade.ajustarBrilho(hex, -0.15);
-
-      // Preencher os campos
-      _el('ct-primaria').value = hex;
-      _el('cp-primaria').value = hex;
-      _el('ct-sidebar').value  = escura;
-      _el('cp-sidebar').value  = escura;
-
-      _atualizarDerivadas();
-      Toast.sucesso('Cores extraídas com sucesso! Ajuste se necessário e salve.');
-    };
-    img.onerror = function () {
-      Toast.aviso('Não foi possível carregar a imagem. Verifique a URL e permissões CORS.');
-    };
-    img.src = url;
+    BtnGuard.wrap('btn-extrair-cores', 'Extraindo cores…', function(done) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () {
+        done();
+        var cor = Identidade.extrairCorDominante(img);
+        if (!cor) {
+          Toast.aviso('Não foi possível extrair cores automaticamente (CORS). Ajuste as cores manualmente.');
+          return;
+        }
+        var hex    = Identidade.rgbToHex(cor.r, cor.g, cor.b);
+        var escura = Identidade.ajustarBrilho(hex, -0.15);
+        _el('ct-primaria').value = hex;
+        _el('cp-primaria').value = hex;
+        _el('ct-sidebar').value  = escura;
+        _el('cp-sidebar').value  = escura;
+        _atualizarDerivadas();
+        Toast.sucesso('Cores extraídas com sucesso! Ajuste se necessário e salve.');
+      };
+      img.onerror = function () {
+        done();
+        Toast.aviso('Não foi possível carregar a imagem. Verifique a URL e permissões CORS.');
+      };
+      img.src = url;
+    });
   }
 
   /** Popula o painel com os dados atuais do servidor. */
@@ -577,8 +579,8 @@ var IdentidadeAdmin = (function () {
       previewLogo();
 
       var paleta = iv.paleta || {};
-      var p      = paleta.primaria || '#1a237e';
-      var d      = paleta.destaque || '#ff6f00';
+      var p      = paleta.primaria || '#7c3aed';
+      var d      = paleta.destaque || '#f59e0b';
       var s      = paleta.sidebar  || p;
 
       _el('ct-primaria').value = p; _el('cp-primaria').value = p;
@@ -601,34 +603,47 @@ var IdentidadeAdmin = (function () {
         return;
       }
       lista.innerHTML = resp.data.map(function (u) {
+        // ID seguro para BtnGuard: substituir @ e . por traços
+        var btnId = 'btn-aprovar-' + u.email.replace(/[@.]/g, '-');
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cor-borda);">' +
           '<div><div style="font-size:14px;font-weight:600;">' + u.nome + '</div>' +
           '<div style="font-size:12px;color:var(--cor-texto-claro);">' + u.email + ' · ' + (u.setorDesejado || 'sem setor') + '</div></div>' +
-          '<button class="btn btn-primario" style="font-size:12px;padding:4px 10px;" onclick="IdentidadeAdmin.aprovar(\'' + u.email + '\')">Aprovar</button>' +
+          '<button id="' + btnId + '" class="btn btn-primario" style="font-size:12px;padding:4px 10px;" ' +
+            'onclick="IdentidadeAdmin.aprovar(\'' + u.email + '\')">Aprovar</button>' +
           '</div>';
       }).join('');
     });
   }
 
   function aprovar(email) {
-    GAS.admin.aprovarAcesso({ emailAlvo: email, papel: 'colaborador', setor: '' }, function (resp) {
-      if (resp && resp.ok) { Toast.sucesso('Acesso aprovado: ' + email); _carregarPendentes(); }
-      else Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao aprovar.');
+    var btnId = 'btn-aprovar-' + email.replace(/[@.]/g, '-');
+    BtnGuard.wrap(btnId, 'Aprovando…', function(done) {
+      GAS.admin.aprovarAcesso({ emailAlvo: email, papel: 'colaborador', setor: '' }, function (resp) {
+        done();
+        if (resp && resp.ok) { Toast.sucesso('Acesso aprovado: ' + email); _carregarPendentes(); }
+        else Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao aprovar.');
+      }, function(err) {
+        done();
+        Toast.erro('Erro ao aprovar: ' + (err.message || err));
+      });
     });
   }
 
   function salvar() {
-    var url  = (_el('iv-logo-url') || {}).value || '';
-    if (!BtnGuard.travar('btn-salvar-identidade', 'Salvando...')) return;
-
-    GAS.admin.salvarIdentidade({ logoUrl: url, paleta: _paletaAtual }, function (resp) {
-      BtnGuard.liberar('btn-salvar-identidade');
-      if (resp && resp.ok) {
-        Toast.sucesso('Identidade visual salva!');
-        Identidade.aplicarLogo(url, false);
-      } else {
-        Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao salvar.');
-      }
+    var url = (_el('iv-logo-url') || {}).value || '';
+    BtnGuard.wrap('btn-salvar-identidade', 'Salvando identidade…', function(done) {
+      GAS.admin.salvarIdentidade({ logoUrl: url, paleta: _paletaAtual }, function (resp) {
+        done();
+        if (resp && resp.ok) {
+          Toast.sucesso('Identidade visual salva!');
+          Identidade.aplicarLogo(url, false);
+        } else {
+          Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao salvar.');
+        }
+      }, function(err) {
+        done();
+        Toast.erro('Erro ao salvar: ' + (err.message || err));
+      });
     });
   }
 
@@ -640,13 +655,19 @@ var IdentidadeAdmin = (function () {
 
   function restaurarPadrao() {
     if (!confirm('Restaurar a paleta de cores padrão do sistema?')) return;
-    GAS.admin.restaurarPadrao(function (resp) {
-      if (resp && resp.ok) {
-        Toast.sucesso('Paleta restaurada.');
-        carregar();
-      } else {
-        Toast.erro('Erro ao restaurar paleta.');
-      }
+    BtnGuard.wrap('btn-restaurar-padrao', 'Restaurando…', function(done) {
+      GAS.admin.restaurarPadrao(function (resp) {
+        done();
+        if (resp && resp.ok) {
+          Toast.sucesso('Paleta restaurada.');
+          carregar();
+        } else {
+          Toast.erro('Erro ao restaurar paleta.');
+        }
+      }, function(err) {
+        done();
+        Toast.erro('Erro: ' + (err.message || err));
+      });
     });
   }
 
@@ -683,29 +704,8 @@ var Toast = (function() {
   };
 })();
 
-// ────────────────────────────────────────────────────────────────
-// BTNGUARD — proteção de botões durante chamadas GAS
-// ────────────────────────────────────────────────────────────────
-var BtnGuard = (function() {
-  var _ativos = {};
-  function travar(btnId, labelLoading) {
-    var btn = document.getElementById(btnId);
-    if (!btn || _ativos[btnId]) return false;
-    _ativos[btnId] = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = labelLoading || 'Aguarde...';
-    return true;
-  }
-  function liberar(btnId) {
-    var btn = document.getElementById(btnId);
-    if (btn && _ativos[btnId]) {
-      btn.disabled = false;
-      btn.textContent = _ativos[btnId];
-    }
-    delete _ativos[btnId];
-  }
-  return { travar: travar, liberar: liberar };
-})();
+// BtnGuard v2 já carregado via <?!= include('shared/btnguard') ?> no <head>
+// Disponível globalmente como BtnGuard.wrap / .travar / .liberar / .auditar
 
 // ────────────────────────────────────────────────────────────────
 // ROUTER — troca de views sem reload

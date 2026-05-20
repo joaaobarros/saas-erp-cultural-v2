@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= orgConfig.nome ?> — Cessão de Pauta</title>
+  <?!= include('shared/btnguard'); ?>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
@@ -180,17 +181,17 @@
       return;
     }
 
-    btn.disabled = true;
-    btn.textContent = 'Enviando...';
-
-    // TODO Fase 7: google.script.run.ctrl_portal_solicitarPauta(dados, ...)
-    // Simulação para Fase 0:
-    setTimeout(function() {
-      var protocolo = 'PAU-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
-      document.getElementById('card-formulario').style.display = 'none';
-      document.getElementById('numero-protocolo').textContent = protocolo;
-      document.getElementById('resultado').style.display = 'block';
-    }, 800);
+    BtnGuard.wrap('btn-enviar', 'Enviando solicitação…', function(done) {
+      // TODO Fase 7: google.script.run.ctrl_portal_solicitarPauta(dados, ...)
+      // Simulação para Fase 0:
+      setTimeout(function() {
+        done();
+        var protocolo = 'PAU-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+        document.getElementById('card-formulario').style.display = 'none';
+        document.getElementById('numero-protocolo').textContent = protocolo;
+        document.getElementById('resultado').style.display = 'block';
+      }, 800);
+    });
   }
 </script>
 </body>

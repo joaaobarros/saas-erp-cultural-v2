@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= orgConfig.nome ?> — Aprovação</title>
+  <?!= include('shared/btnguard'); ?>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -83,6 +84,7 @@
       'Teatro Principal — ' + new Date().toLocaleDateString('pt-BR') + ' às 19h';
   }
 
+  // Botão Recusar: 1º clique mostra campo de motivo; 2º clique (com motivo) confirma
   document.getElementById('btn-recusar').addEventListener('click', function() {
     document.getElementById('grupo-motivo').style.display = 'block';
   });
@@ -91,25 +93,34 @@
     if (decisao === 'recusar') {
       var motivo = document.getElementById('campo-motivo').value.trim();
       if (!motivo) {
-        alert('Informe o motivo da recusa.');
+        document.getElementById('grupo-motivo').style.display = 'block';
+        document.getElementById('campo-motivo').focus();
+        alert('Informe o motivo da recusa antes de confirmar.');
         return;
       }
     }
 
-    document.getElementById('btn-aprovar').disabled = true;
-    document.getElementById('btn-recusar').disabled = true;
+    var btnId      = decisao === 'aprovar' ? 'btn-aprovar' : 'btn-recusar';
+    var outroBtnId = decisao === 'aprovar' ? 'btn-recusar' : 'btn-aprovar';
+    var outroBtn   = document.getElementById(outroBtnId);
 
-    // TODO Fase 7: google.script.run.ctrl_portal_registrarAprovacao(token, decisao, motivo, ...)
-    setTimeout(function() {
-      var isAprovar = decisao === 'aprovar';
-      document.getElementById('card-aprovacao').style.display = 'none';
-      document.getElementById('resultado-icone').textContent = isAprovar ? '✅' : '❌';
-      document.getElementById('resultado-titulo').textContent = isAprovar ? 'Aprovado!' : 'Recusado';
-      document.getElementById('resultado-msg').textContent = isAprovar
-        ? 'A solicitação foi aprovada. O solicitante será notificado.'
-        : 'A solicitação foi recusada. O solicitante será notificado com o motivo informado.';
-      document.getElementById('resultado').style.display = 'block';
-    }, 600);
+    BtnGuard.wrap(btnId, decisao === 'aprovar' ? 'Aprovando…' : 'Confirmando recusa…', function(done) {
+      if (outroBtn) outroBtn.disabled = true;
+
+      // TODO Fase 7: google.script.run.ctrl_portal_registrarAprovacao(token, decisao, motivo, ...)
+      setTimeout(function() {
+        done();
+        if (outroBtn) outroBtn.disabled = false;
+        var isAprovar = decisao === 'aprovar';
+        document.getElementById('card-aprovacao').style.display = 'none';
+        document.getElementById('resultado-icone').textContent  = isAprovar ? '✅' : '❌';
+        document.getElementById('resultado-titulo').textContent = isAprovar ? 'Aprovado!' : 'Recusado';
+        document.getElementById('resultado-msg').textContent    = isAprovar
+          ? 'A solicitação foi aprovada. O solicitante será notificado.'
+          : 'A solicitação foi recusada. O solicitante será notificado com o motivo informado.';
+        document.getElementById('resultado').style.display = 'block';
+      }, 600);
+    });
   }
 </script>
 </body>

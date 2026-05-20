@@ -171,3 +171,15 @@ function ctrl_sistema_verificarSaude() {
     return verificarTodasAbas();
   }, 'ctrl_sistema_verificarSaude');
 }
+
+// ─── Utilitário de include (usado pelos templates HtmlService) ────────────────
+/**
+ * Inclui o conteúdo de um arquivo HTML parcial dentro de um template GAS.
+ * Uso nos templates: <?!= include('shared/btnguard'); ?>
+ *
+ * @param {string} arquivo — caminho relativo à raiz dos arquivos GAS (sem .html)
+ * @returns {string} Conteúdo HTML do arquivo
+ */
+function include(arquivo) {
+  return HtmlService.createHtmlOutputFromFile(arquivo).getContent();
+}
