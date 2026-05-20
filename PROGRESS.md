@@ -7,10 +7,10 @@
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
 **Fase atual**: Fase 0 — Fundação Técnica — **quase concluída**
-**O que foi feito (2026-05-20, sessão 2)**: Módulo admin (boot_service, user_profile_service, config_admin_service), alertas_engine.gs (25 tipos), frontend/index.html (SPA completa), todos os 5 portais públicos (cessao_pauta, pauta_status, inscricao, aprovacao, agenda), diretriz de pesquisa profunda adicionada ao PROGRESS.md.
+**O que foi feito (2026-05-20, sessão 3)**: Links do projeto configurados — GAS novo criado (scriptId: `14edpTDbIglnYT_klFFqBMCpUviyM1gotrgePrgXNgp3GxfYEeJAdrc1e`), `.clasp.json` atualizado, repositório GitHub privado criado (`joaaobarros/saas-erp-cultural-v2`) e primeiro push realizado.
 
 **Próximo passo imediato** (Fase 0 — faltam apenas 3 itens):
-> 1. **[DEPLOY]** Configurar `.clasp.json` com `scriptId` real → executar `clasp push` → executar `inicializarSistema()` → confirmar `verificarTodasAbas() = 100%`
+> 1. **[DEPLOY]** Executar `clasp push` (scriptId já configurado) → executar `inicializarSistema()` no editor GAS → confirmar `verificarTodasAbas() = 100%`
 > 2. **[SANEAMENTO]** Confirmar zero hardcodes: emails, URLs, nomes de organização (subseção 0.9)
 > 3. **[MIGRAÇÃO]** Seção 0.4: `SistemaConfigService` substituindo `SETORES_SISTEMA` constante, INSS hardcoded em rh.gs
 
@@ -548,6 +548,7 @@ Um módulo está **completo** quando oferece:
 |------|------|-----------------|---------------|
 | 2026-05-20 | Fase 0 | Criação do ambiente saas-v2/, estrutura de diretórios, arquivos core Fase 0 completos, config_service.gs, config_org.json, i_repository.gs, stubs de integração, router.gs, appsscript.json, setup.gs, PROGRESS.md | Executar `verificarTodasAbas()`; criar frontend shell; criar módulo admin |
 | 2026-05-20 | Fase 0 | Módulo admin (boot, user_profile, config_admin), alertas_engine.gs (25 tipos), frontend/index.html (SPA+Router+Toast+BtnGuard), 5 portais públicos, diretriz de pesquisa profunda no PROGRESS.md | Deploy clasp; executar `inicializarSistema()`; confirmar 0.9 saneamentos; iniciar Fase 1 |
+| 2026-05-20 | Fase 0 | Links configurados: GAS criado (scriptId `14edpTDbIglnYT_...`), `.clasp.json` atualizado, GitHub repo privado `joaaobarros/saas-erp-cultural-v2` criado e push inicial feito | `clasp push` → `inicializarSistema()` → saneamentos 0.9 → Fase 1 |
 
 ---
 
