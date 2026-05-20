@@ -22,21 +22,38 @@ var IAService = (function () {
 
   var _GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
   var _GROQ_MODEL = 'llama-3.1-8b-instant';
-  var _SYSTEM_MSG =
-    'Você é o Bêjotinha, um especialista em gestão de espaços do Centro Cultural Bom Jardim (CCBJ), ' +
-    'equipamento público de cultura localizado no bairro Bom Jardim, em Fortaleza/CE. ' +
-    'O CCBJ é vinculado à Secretaria de Cultura do Ceará e gerido em parceria pelo Instituto Dragão do Mar ' +
-    'e atende comunidades em situação de vulnerabilidade social com programação gratuita de arte, cultura e educação. ' +
-    'Seus espaços incluem teatro, sala de dança, biblioteca, multigaleria, estúdio, sala multiuso, praça central ' +
-    'e áreas abertas/de convivência/espaços alternativos. Todos os espaços são também sala de aula. ' +
-    'A programação envolve oficinas, espetáculos, mostras, formações e eventos comunitários. ' +
-    'Há 3 setores finalísticos: Escola de Cultura e Artes (Formação), Ação Cultural (Difusão e Fruição) ' +
-    'e NArTE - Núcleo de Articulação Técnica Especializada (Cidadania Cultural e Direitos Humanos); ' +
-    'além de 3 setores meio: Comunicação, Administrativo/Financeiro e Gestão. ' +
-    'O sistema registra reservas internas de espaços pelos setores institucionais, ' +
-    'com controle de itens do almoxarifado. ' +
-    'Responda sempre em português, de forma clara, objetiva e estruturada. ' +
-    'Use markdown simples (negrito, listas) quando ajudar na leitura.';
+
+  /**
+   * Constrói a mensagem de sistema da IA a partir da configuração organizacional.
+   * NUNCA hardcode o nome ou descrição da org aqui — lê de getOrgConfig() + config_org.json.
+   */
+  function _getSystemMsg() {
+    var org    = getOrgConfig();
+    var ctx    = {};
+    try { ctx = (SistemaConfigService.getOrg() || {}); } catch(_) {}
+    // Tenta ler contextoIA de config_org.json via SistemaConfigService
+    var ctxIA  = {};
+    try {
+      var cfgOrg = readJSON('config_org.json');
+      if (cfgOrg && cfgOrg.contextoIA) ctxIA = cfgOrg.contextoIA;
+    } catch(_) {}
+
+    var descOrg = ctxIA.descricao
+      ? org.nomeCompleto + ', ' + ctxIA.descricao
+      : org.nomeCompleto;
+    var espacos  = ctxIA.espacosDisponiveis || 'espaços internos da organização';
+    var programacao = ctxIA.programacao || 'atividades culturais e formativas';
+    var setores  = ctxIA.setores || 'setores institucionais da organização';
+
+    return 'Você é ' + org.nomeAssistente + ', um especialista em gestão de espaços de ' + descOrg + '. ' +
+      'Seus espaços incluem ' + espacos + '. ' +
+      'A programação envolve ' + programacao + '. ' +
+      'Há ' + setores + '. ' +
+      'O sistema registra reservas internas de espaços pelos setores institucionais, ' +
+      'com controle de itens do almoxarifado. ' +
+      'Responda sempre em português, de forma clara, objetiva e estruturada. ' +
+      'Use markdown simples (negrito, listas) quando ajudar na leitura.';
+  }
 
   // ── Helpers privados ─────────────────────────────────────────────
 
@@ -87,7 +104,7 @@ var IAService = (function () {
 
     var payload = {
       model:       _GROQ_MODEL,
-      messages:    [{ role: 'system', content: _SYSTEM_MSG }, { role: 'user', content: prompt }],
+      messages:    [{ role: 'system', content: _getSystemMsg() }, { role: 'user', content: prompt }],
       max_tokens:  2048,
       temperature: 0.4
     };
@@ -165,7 +182,7 @@ var IAService = (function () {
         uso:        'Analise o padrão de uso dos espaços: quais salas são mais usadas, em quais turnos, por quais setores. Identifique subutilização e picos.',
         conflitos:  'Identifique APENAS reservas com sobreposição real de horário na MESMA sala na MESMA data.',
         itens:      'Analise o uso dos itens e equipamentos: quais são mais solicitados, por quais setores.',
-        otimizacao: 'Sugira melhorias operacionais concretas para o CCBJ com base nos dados.'
+        otimizacao: 'Sugira melhorias operacionais concretas para ' + getOrgConfig().nome + ' com base nos dados.'
       };
 
       var prompt = (instrucoes[filtros.tipo] || instrucoes.uso) +
@@ -228,10 +245,11 @@ var IAService = (function () {
 
       var emailAtivo = obterEmailUsuario('');
 
+      var _org = getOrgConfig();
       var prompt =
-        'Você é o Bêjotinha, assistente de gestão de espaços do Centro Cultural Bom Jardim (CCBJ), Fortaleza/CE.\n\n' +
+        'Você é ' + _org.nomeAssistente + ', assistente de gestão de espaços de ' + _org.nomeCompleto + '.\n\n' +
         'REGRA ABSOLUTA — APRESENTAÇÃO:\n' +
-        '- NUNCA se apresente. NUNCA diga "Olá", "Oi", "Sou a Bêjotinha". Já fomos apresentados.\n' +
+        '- NUNCA se apresente. NUNCA diga "Olá", "Oi", "Sou ' + _org.nomeAssistente + '". Já fomos apresentados.\n' +
         '- Responda DIRETAMENTE ao que foi pedido, sem saudações de qualquer tipo.\n\n' +
         'REGRA ABSOLUTA — PROATIVIDADE:\n' +
         '- Só sugira reserva quando o usuário EXPLICITAMENTE pedir para criar, agendar, reservar ou marcar algo.\n' +
@@ -286,7 +304,7 @@ var IAService = (function () {
     try {
       if (!metricas) return { ok: false, texto: 'Nenhuma métrica fornecida.' };
       var prompt =
-        'Analise as métricas de uso do Centro Cultural Bom Jardim e gere um resumo executivo com insights e recomendações.\n\n' +
+        'Analise as métricas de uso de ' + getOrgConfig().nomeCompleto + ' e gere um resumo executivo com insights e recomendações.\n\n' +
         'MÉTRICAS:\n' +
         '- Total de reservas: ' + metricas.total + '\n' +
         '- Confirmadas: ' + metricas.confirmadas + ' | Canceladas: ' + metricas.canceladas + ' (' + metricas.taxaCancelamento + '%)\n' +
@@ -349,8 +367,9 @@ var IAService = (function () {
 
       var hoje_str = Utilities.formatDate(hoje, 'America/Fortaleza', 'dd/MM/yyyy');
 
+      var _org2 = getOrgConfig();
       var prompt =
-        'Você é um assistente de agendamento do CCBJ (Centro Cultural Bom Jardim, Fortaleza/CE).\n\n' +
+        'Você é um assistente de agendamento de ' + _org2.nomeCompleto + ' (' + _org2.nome + ').\n\n' +
         'PEDIDO: ' + descricao + '\n\n' +
         'Retorne SOMENTE JSON válido:\n' +
         '{\n  "viavel": true,\n  "motivo": "",\n  "modoLote": false,\n  "modoRece": false,\n  "datasLote": [],\n' +

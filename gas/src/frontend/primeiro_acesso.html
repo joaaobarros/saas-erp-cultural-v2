@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= orgConfig.titulo ?> — Solicitar Acesso</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      max-width: 460px;
+      width: 100%;
+    }
+    .logo {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e3a5f;
+      text-align: center;
+      margin-bottom: .25rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: .875rem;
+      margin-bottom: 1.75rem;
+    }
+    .email-badge {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: .5rem;
+      padding: .5rem .875rem;
+      font-size: .875rem;
+      color: #1d4ed8;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      word-break: break-all;
+    }
+    .info-box {
+      background: #fefce8;
+      border: 1px solid #fde047;
+      border-radius: .5rem;
+      padding: .75rem 1rem;
+      font-size: .875rem;
+      color: #713f12;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: .5rem;
+      padding: 1rem;
+      font-size: .875rem;
+      color: #14532d;
+      text-align: center;
+      line-height: 1.6;
+      display: none;
+    }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: .875rem; font-weight: 600; color: #374151; margin-bottom: .35rem; }
+    input, select {
+      width: 100%;
+      padding: .6rem .875rem;
+      border: 1px solid #d1d5db;
+      border-radius: .5rem;
+      font-size: .9375rem;
+      color: #111827;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #bfdbfe; }
+    .btn {
+      width: 100%;
+      padding: .75rem;
+      background: #1d4ed8;
+      color: #fff;
+      border: none;
+      border-radius: .5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+      margin-top: .5rem;
+    }
+    .btn:hover  { background: #1e40af; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .error-msg { font-size: .8125rem; color: #dc2626; margin-top: .35rem; display: none; }
+    .footer { text-align: center; color: #94a3b8; font-size: .75rem; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🏛️</div>
+  <h1><?= orgConfig.nome ?></h1>
+  <p class="subtitle">Sistema de Gestão Cultural</p>
+
+  <div class="email-badge">
+    🔐 &nbsp;<strong><?= email ?></strong>
+  </div>
+
+  <? if (jaSolicitou) { ?>
+  <!-- Usuário já solicitou — só mostrar status -->
+  <div class="info-box">
+    ⏳ &nbsp;Sua solicitação de acesso já foi enviada e está sendo analisada pela equipe.<br><br>
+    Você receberá um email quando seu acesso for liberado.
+  </div>
+  <p class="footer"><?= orgConfig.nome ?> &mdash; Sistema interno</p>
+
+  <? } else { ?>
+  <!-- Formulário de primeira solicitação -->
+  <div class="info-box">
+    ℹ️ &nbsp;Seu email está no domínio autorizado, mas você ainda não tem cadastro no sistema.<br><br>
+    Preencha os dados abaixo para solicitar acesso. Um administrador irá analisar e liberar.
+  </div>
+
+  <div id="formArea">
+    <div class="form-group">
+      <label for="nome">Seu nome completo *</label>
+      <input type="text" id="nome" placeholder="Ex: Maria Silva" autocomplete="name">
+      <div class="error-msg" id="erroNome">Informe seu nome completo.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="setor">Setor / área de trabalho *</label>
+      <select id="setor">
+        <option value="">Selecione o setor...</option>
+        <? for (var i = 0; i < setores.length; i++) { ?>
+        <option value="<?= setores[i].id ?>"><?= setores[i].label ?></option>
+        <? } ?>
+      </select>
+      <div class="error-msg" id="erroSetor">Selecione o setor.</div>
+    </div>
+
+    <button class="btn" id="btnSolicitar" onclick="solicitar()">
+      Solicitar acesso
+    </button>
+  </div>
+
+  <div class="success-box" id="successBox">
+    ✅ &nbsp;Solicitação enviada!<br><br>
+    Um administrador irá analisar seu pedido.<br>
+    Você receberá um email quando seu acesso for liberado.
+  </div>
+
+  <p class="footer"><?= orgConfig.nome ?> &mdash; Sistema interno</p>
+  <? } ?>
+</div>
+
+<script>
+  function solicitar() {
+    var nome  = document.getElementById('nome').value.trim();
+    var setor = document.getElementById('setor').value;
+    var ok    = true;
+
+    document.getElementById('erroNome').style.display  = 'none';
+    document.getElementById('erroSetor').style.display = 'none';
+
+    if (!nome || nome.length < 3) {
+      document.getElementById('erroNome').style.display = 'block';
+      ok = false;
+    }
+    if (!setor) {
+      document.getElementById('erroSetor').style.display = 'block';
+      ok = false;
+    }
+    if (!ok) return;
+
+    var btn = document.getElementById('btnSolicitar');
+    btn.disabled    = true;
+    btn.textContent = 'Enviando…';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled    = false;
+        btn.textContent = 'Solicitar acesso';
+        if (res && res.ok) {
+          document.getElementById('formArea').style.display  = 'none';
+          document.getElementById('successBox').style.display = 'block';
+        } else {
+          alert((res && res.mensagem) || 'Erro ao enviar. Tente novamente.');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled    = false;
+        btn.textContent = 'Solicitar acesso';
+        alert('Erro ao comunicar com o servidor: ' + err.message);
+      })
+      .ctrl_acesso_solicitar({ nome: nome, setorDesejado: setor });
+  }
+</script>
+</body>
+</html>

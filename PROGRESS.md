@@ -6,18 +6,40 @@
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Fase 0 — Fundação Técnica — **quase concluída**
-**O que foi feito (2026-05-20, sessão 3)**: Links do projeto configurados — GAS novo criado (scriptId: `14edpTDbIglnYT_klFFqBMCpUviyM1gotrgePrgXNgp3GxfYEeJAdrc1e`), `.clasp.json` atualizado, repositório GitHub privado criado (`joaaobarros/saas-erp-cultural-v2`) e primeiro push realizado.
+**Fase atual**: Fase 0 — Fundação Técnica — **FALTA APENAS O DEPLOY**
+**O que foi feito (2026-05-20, sessão 4)**:
+- ✅ Saneamento 0.9: zero hardcodes de org em `.gs` (notification_engine, ia_service, config_service)
+- ✅ Migração 0.4: `SistemaConfigService` já é a fonte única; não há `SETORES_SISTEMA` nem `rh.gs` em v2
+- ✅ Controle de acesso em 2 camadas: `AcessoService` (acesso_service.gs) + `primeiro_acesso.html`
+- ✅ `appsscript.json`: mantido `USER_DEPLOYING` (correto para Workspace + access:DOMAIN)
+- ✅ `inicializarSistema()`: registra superadmin automaticamente
+- ✅ `router.gs`: rota para primeiro_acesso.html se usuário do domínio sem cadastro aprovado
 
-**Próximo passo imediato** (Fase 0 — faltam apenas 3 itens):
-> 1. **[DEPLOY]** Executar `clasp push` (scriptId já configurado) → executar `inicializarSistema()` no editor GAS → confirmar `verificarTodasAbas() = 100%`
-> 2. **[SANEAMENTO]** Confirmar zero hardcodes: emails, URLs, nomes de organização (subseção 0.9)
-> 3. **[MIGRAÇÃO]** Seção 0.4: `SistemaConfigService` substituindo `SETORES_SISTEMA` constante, INSS hardcoded em rh.gs
+**Próximo passo imediato** — APENAS DEPLOY (fazer no editor GAS):
+> 1. **[CLASP]** Terminal: `cd /home/jpbarros/ccbj-clean/saas-erp-cultural-v2/gas && clasp login && clasp push`
+> 2. **[GAS EDITOR]** Abrir o script → executar `inicializarSistema()` (cria planilhas + registra superadmin)
+> 3. **[GAS EDITOR]** Executar `verificarTodasAbas()` → confirmar 100%
+> 4. **[GAS EDITOR]** Definir Properties: `ORG_NOME`, `ORG_NOME_COMPLETO`, `ORG_DOMINIO`, `ADMIN_EMAIL`
 
 **Com Fase 0 concluída → iniciar imediatamente**: **Fase 1** — TarefaRepository com tarefas.json canônico.
 
 **Fase mais urgente após Fase 0**: **Fase 1** — Eliminar dual-systems.
 Enquanto os dual-systems existirem, o sistema está em risco de corrupção silenciosa de dados.
+
+---
+
+### PropertiesService obrigatórias — configurar ANTES de inicializarSistema()
+
+| Chave                | Valor CCBJ                          | Obrigatório? |
+|----------------------|-------------------------------------|--------------|
+| `ORG_NOME`           | `CCBJ`                              | Sim          |
+| `ORG_NOME_COMPLETO`  | `Centro Cultural Bom Jardim`        | Sim          |
+| `ORG_DOMINIO`        | `idm.org.br`                        | Sim          |
+| `ADMIN_EMAIL`        | `joao.barros@idm.org.br`            | Sim          |
+| `IA_ASSISTENTE_NOME` | `Bêjotinha`                         | Opcional     |
+| `ORG_TIMEZONE`       | `America/Fortaleza`                 | Opcional     |
+| `ORG_LOGO_URL`       | URL do logotipo                     | Opcional     |
+| `GROQ_API_KEY`       | chave da API Groq                   | Para IA      |
 
 ---
 
@@ -113,21 +135,22 @@ Um módulo está **completo** quando oferece:
 **Última sessão**: 2026-05-20 — Criação do ambiente, estrutura de diretórios e arquivos core.
 
 **Critério de saída**:
-- [ ] `verificarTodasAbas()` retorna 100%
-- [ ] `SistemaConfigService.getSetores()` retorna setores configurados (não hardcoded)
-- [ ] Zero constantes de organização hardcoded no código
-- [ ] Nenhuma mudança de comportamento em produção
+- [ ] **[PENDENTE — DEPLOY]** `verificarTodasAbas()` retorna 100%
+- [x] `SistemaConfigService.getSetores()` retorna setores configurados (não hardcoded)
+- [x] Zero constantes de organização hardcoded no código (exceto defaults documentados em config.gs)
+- [x] Controle de acesso por domínio + aprovação manual implementado (AcessoService)
+- [x] Nenhuma mudança de comportamento em produção
 
 ### 0.1 — Schema Canônico e Estrutura
 
 - [x] Criar estrutura de diretórios `saas-v2/`
 - [x] Criar `appsscript.json` e `.clasp.json`
-- [x] Criar `gas/src/core/config.gs` — orgId + getOrgConfig()
+- [x] Criar `gas/src/core/config.gs` — orgId + getOrgConfig() + `nomeAssistente`
 - [x] Criar `gas/src/core/logger.gs`
 - [x] Criar `gas/src/core/utils.gs` — utilitários e ABA_PARA_MODULO atualizado
-- [x] Criar `gas/src/core/auth_session.gs`
-- [x] Criar `gas/src/core/setup.gs` — schema de abas + verificarTodasAbas()
-- [ ] Executar `verificarTodasAbas()` e confirmar 100% das abas presentes
+- [x] Criar `gas/src/core/auth_session.gs` — com comentário arquitetural USER_DEPLOYING
+- [x] Criar `gas/src/core/setup.gs` — schema de abas + verificarTodasAbas() + registrarSuperAdmin
+- [ ] **[PENDENTE — FAZER NO GAS]** Executar `inicializarSistema()` + confirmar `verificarTodasAbas() = 100%`
 
 ### 0.2 — Camada de Persistência
 
@@ -149,10 +172,11 @@ Um módulo está **completo** quando oferece:
 
 - [x] Criar `gas/src/core/config_service.gs` — SistemaConfigService (facade unificado)
 - [x] Criar `gas/src/core/data/config_org.json` — defaults CCBJ (setores, turnos, labels, rubricas)
-- [ ] Migrar todos os hardcodes identificados para `SistemaConfigService`
-  - [ ] Setores: substituir constante `SETORES_SISTEMA` por `SistemaConfigService.getSetores()`
-  - [ ] Turnos: migrar de `PropertiesService` hardcoded para `SistemaConfigService.getTurnos()`
-  - [ ] Tabela INSS: mover de `mod_rh.gs` para `SistemaConfigService.getParametrosRH()`
+- [x] Migrar todos os hardcodes identificados para `SistemaConfigService`
+  - [x] Setores: v2 já usa `SistemaConfigService.getSetores()` — `SETORES_SISTEMA` não existe no v2
+  - [x] Turnos: v2 usa `SistemaConfigService.getTurnos()` lendo de `config_org.json`
+  - [x] Tabela INSS: em `config_org.json.parametrosRH.tabela_inss` + fallback em `_defaultParametrosRH()`
+- [x] `config_org.json` atualizado: campo `contextoIA` para prompts de IA sem hardcode
 
 ### 0.5 — Serviços de Notificação e Permissões
 
@@ -186,9 +210,11 @@ Um módulo está **completo** quando oferece:
 
 ### 0.9 — Saneamentos Urgentes
 
-- [ ] Confirmar zero emails hardcoded no código
-- [ ] Confirmar zero URLs hardcoded
-- [ ] Confirmar zero nomes de organização hardcoded
+- [x] Confirmar zero emails hardcoded no código
+- [x] Confirmar zero URLs org-específicas hardcoded
+- [x] Zero nomes de organização em `.gs` — `notification_engine.gs` usa `{org}` dinâmico; `ia_service.gs` usa `_getSystemMsg()` + `getOrgConfig()`
+- [x] `config.gs`: defaults `|| 'CCBJ'` aceitos (PropertiesService lido primeiro; fallback apenas para estado não-inicializado; Fase 11.4 eliminará)
+- [x] Controle de acesso para domínios compartilhados: `AcessoService` + `primeiro_acesso.html` + router atualizado
 
 ---
 
@@ -549,6 +575,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-20 | Fase 0 | Criação do ambiente saas-v2/, estrutura de diretórios, arquivos core Fase 0 completos, config_service.gs, config_org.json, i_repository.gs, stubs de integração, router.gs, appsscript.json, setup.gs, PROGRESS.md | Executar `verificarTodasAbas()`; criar frontend shell; criar módulo admin |
 | 2026-05-20 | Fase 0 | Módulo admin (boot, user_profile, config_admin), alertas_engine.gs (25 tipos), frontend/index.html (SPA+Router+Toast+BtnGuard), 5 portais públicos, diretriz de pesquisa profunda no PROGRESS.md | Deploy clasp; executar `inicializarSistema()`; confirmar 0.9 saneamentos; iniciar Fase 1 |
 | 2026-05-20 | Fase 0 | Links configurados: GAS criado (scriptId `14edpTDbIglnYT_...`), `.clasp.json` atualizado, GitHub repo privado `joaaobarros/saas-erp-cultural-v2` criado e push inicial feito | `clasp push` → `inicializarSistema()` → saneamentos 0.9 → Fase 1 |
+| 2026-05-20 | Fase 0 | Saneamento 0.9 completo (notification_engine, ia_service, config_org.json+contextoIA); migração 0.4 confirmada; AcessoService (acesso_service.gs) + primeiro_acesso.html; USER_DEPLOYING mantido; setup.gs registra superadmin; PROGRESS.md atualizado | `clasp login && clasp push` → definir PropertiesService → `inicializarSistema()` → `verificarTodasAbas()` → Fase 1 |
 
 ---
 

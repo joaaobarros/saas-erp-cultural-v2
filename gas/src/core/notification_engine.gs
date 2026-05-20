@@ -2,98 +2,115 @@
  * @file core/notification_engine.gs
  * @layer core
  * @description Motor de Notificações Transversais — centraliza alertas por email e internos
- *              para todos os módulos do sistema CCBJ.
+ *              para todos os módulos do sistema.
  *
  *              RESPONSABILIDADE:
  *              Único ponto de envio de emails de alerta operacional.
  *              Todos os módulos que precisam notificar usuários devem chamar este motor.
  *              NÃO duplicar lógica de email em módulos individuais.
  *
+ *              REGRA DE NÃO-HARDCODE: o nome da organização é injetado automaticamente
+ *              via {org} em todos os templates — nunca escrever o nome da org no código.
+ *
  *              VERIFICAÇÕES DIÁRIAS (via Time-based Triggers):
  *              - notificacoes_verificarDiario() → função global para trigger
  *
+ * @depends core/config.gs (getOrgConfig)
  * @depends core/event_bus_backend.gs (SystemEvents)
  * @depends core/logger.gs (Logger)
  */
 
 var NotificationEngine = (function() {
 
-  // Configuração de templates de email por tipo de alerta
+  // Configuração de templates de email por tipo de alerta.
+  // {org} é injetado automaticamente em _interpolar() — nunca hardcode o nome da org aqui.
   var _TEMPLATES_EMAIL = {
 
     processo_prazo_vencido: {
-      assunto:  '[CCBJ] ⚠️ Processo com prazo vencido: {titulo}',
+      assunto:  '[{org}] ⚠️ Processo com prazo vencido: {titulo}',
       corpo:    'O processo institucional "{titulo}" está com prazo vencido.\n\n' +
                 'Responsável atual: {responsavel}\n' +
                 'Status: {status}\n\n' +
                 'Acesse o sistema para verificar o andamento: {url}\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     processo_inativo: {
-      assunto:  '[CCBJ] 🔔 Processo sem atividade: {titulo}',
+      assunto:  '[{org}] 🔔 Processo sem atividade: {titulo}',
       corpo:    'O processo "{titulo}" está sem atividade há {dias} dias.\n\n' +
                 'Responsável: {responsavel}\n' +
                 'Último status: {status}\n\n' +
                 'Acesse o sistema para atualizar o processo.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     processo_tarefas_atrasadas: {
-      assunto:  '[CCBJ] ⚠️ Tarefas atrasadas no processo: {titulo}',
+      assunto:  '[{org}] ⚠️ Tarefas atrasadas no processo: {titulo}',
       corpo:    'O processo "{titulo}" possui {quantidade} tarefa(s) atrasada(s).\n\n' +
                 'Acesse o painel de processos para verificar os gargalos.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     processo_financeiro_negativo: {
-      assunto:  '[CCBJ] 🚨 Saldo negativo no processo: {titulo}',
+      assunto:  '[{org}] 🚨 Saldo negativo no processo: {titulo}',
       corpo:    'Atenção: o processo "{titulo}" está com saldo financeiro negativo.\n\n' +
                 'Previsto: R$ {previsto}\nExecutado: R$ {executado}\n\n' +
                 'Acesse o sistema para revisar o orçamento.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     tarefa_prazo_proximo: {
-      assunto:  '[CCBJ] 📅 Tarefa próxima do prazo: {titulo}',
+      assunto:  '[{org}] 📅 Tarefa próxima do prazo: {titulo}',
       corpo:    'A tarefa "{titulo}" vence em menos de 24 horas.\n\n' +
                 'Prazo: {prazo}\nStatus atual: {status}\n\n' +
                 'Acesse o sistema para atualizar o andamento.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     tarefa_atrasada: {
-      assunto:  '[CCBJ] ⚠️ Tarefa atrasada: {titulo}',
+      assunto:  '[{org}] ⚠️ Tarefa atrasada: {titulo}',
       corpo:    'A tarefa "{titulo}" está atrasada.\n\n' +
                 'Prazo era: {prazo}\nStatus atual: {status}\nResponsável: {responsavel}\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     chave_atrasada: {
-      assunto:  '[CCBJ] 🔑 Chave não devolvida: {ref}',
+      assunto:  '[{org}] 🔑 Chave não devolvida: {ref}',
       corpo:    'A chave "{ref}" ainda não foi devolvida.\n\n' +
                 'Responsável: {responsavel}\nData prevista: {prazo}\n\n' +
                 'Por favor, providencie a devolução urgentemente.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     contrato_vencendo: {
-      assunto:  '[CCBJ] 📋 Contrato vence em breve: {ref}',
+      assunto:  '[{org}] 📋 Contrato vence em breve: {ref}',
       corpo:    'O contrato "{ref}" vence em {dias} dias.\n\n' +
                 'Verifique se é necessário renovar ou encerrar.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     },
     reuniao_ata_pendente: {
-      assunto:  '[CCBJ] 📝 Ata pendente de aprovação: {titulo}',
+      assunto:  '[{org}] 📝 Ata pendente de aprovação: {titulo}',
       corpo:    'A reunião "{titulo}" tem ata aguardando aprovação há {dias} dias.\n\n' +
                 'Acesse o módulo de Reuniões para aprovar.\n\n' +
-                '— Sistema CCBJ'
+                '— {org}'
     }
   };
 
   function _agora() { return new Date().toISOString(); }
 
+  /**
+   * Nome curto da organização — NUNCA hardcode; sempre lê de getOrgConfig().
+   */
+  function _getNomeOrg() {
+    try { return getOrgConfig().nome || 'Sistema'; } catch(_) { return 'Sistema'; }
+  }
+
+  /**
+   * Interpola {variavel} no template. Injeta automaticamente {org} com o nome
+   * da organização configurada — zero hardcode necessário nos templates.
+   */
   function _interpolar(template, dados) {
+    var contexto = Object.assign({ org: _getNomeOrg() }, dados);
     return template.replace(/\{(\w+)\}/g, function(match, chave) {
-      return dados[chave] !== undefined ? String(dados[chave]) : match;
+      return contexto[chave] !== undefined ? String(contexto[chave]) : match;
     });
   }
 
   function _getAppUrl() {
-    try { return ScriptApp.getService().getUrl() || 'https://ccbj.sistema'; } catch(_) { return 'https://ccbj.sistema'; }
+    try { return ScriptApp.getService().getUrl() || ''; } catch(_) { return ''; }
   }
 
   function _enviarEmail(destinatario, assunto, corpo) {
@@ -233,17 +250,18 @@ var NotificationEngine = (function() {
     enviarAlertaSolicitacao: function(alerta) {
       if (!alerta.destinatario || !alerta.destinatario.includes('@')) return false;
 
+      // {org} é injetado automaticamente por _interpolar() — não hardcode o nome da org aqui
       var assuntos = {
-        nova_solicitacao:  '[CCBJ] Nova Solicitação Aguarda Análise — {protocolo}',
-        inativa:           '[CCBJ] Solicitação sem movimentação: {protocolo}',
-        prazo_vencido:     '[CCBJ] Prazo vencido — Solicitação {protocolo}',
-        saldo_insuficiente:'[CCBJ] Saldo insuficiente — Solicitação {protocolo}'
+        nova_solicitacao:  '[{org}] Nova Solicitação Aguarda Análise — {protocolo}',
+        inativa:           '[{org}] Solicitação sem movimentação: {protocolo}',
+        prazo_vencido:     '[{org}] Prazo vencido — Solicitação {protocolo}',
+        saldo_insuficiente:'[{org}] Saldo insuficiente — Solicitação {protocolo}'
       };
       var corpos = {
-        nova_solicitacao:  'A solicitação {protocolo} — "{titulo}" está aguardando análise.\n\nResponsável: {destinatario}\n\nAcesse o sistema para analisar.\n\n— Sistema CCBJ',
-        inativa:           'A solicitação {protocolo} — "{titulo}" está sem movimentação há mais de 3 dias.\n\nAcesse o sistema para verificar.\n\n— Sistema CCBJ',
-        prazo_vencido:     'A data de necessidade da solicitação {protocolo} — "{titulo}" já venceu.\n\nAcesse o sistema para providenciar.\n\n— Sistema CCBJ',
-        saldo_insuficiente:'A solicitação {protocolo} possui saldo orçamentário insuficiente.\n\nAcesse o sistema para verificar a rubrica vinculada.\n\n— Sistema CCBJ'
+        nova_solicitacao:  'A solicitação {protocolo} — "{titulo}" está aguardando análise.\n\nResponsável: {destinatario}\n\nAcesse o sistema para analisar.\n\n— {org}',
+        inativa:           'A solicitação {protocolo} — "{titulo}" está sem movimentação há mais de 3 dias.\n\nAcesse o sistema para verificar.\n\n— {org}',
+        prazo_vencido:     'A data de necessidade da solicitação {protocolo} — "{titulo}" já venceu.\n\nAcesse o sistema para providenciar.\n\n— {org}',
+        saldo_insuficiente:'A solicitação {protocolo} possui saldo orçamentário insuficiente.\n\nAcesse o sistema para verificar a rubrica vinculada.\n\n— {org}'
       };
 
       var tipo   = alerta.tipo || 'inativa';

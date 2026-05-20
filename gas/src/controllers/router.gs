@@ -54,14 +54,57 @@ function doGet(e) {
 // ─── App Interno ──────────────────────────────────────────────────────────────
 
 function _renderAppInterno(e) {
-  // Fase 0: retorna shell HTML da SPA
-  // Fase 0: verificar módulos ativos via ModulosRegistryService
-  var template = HtmlService.createTemplateFromFile('frontend/index');
-  template.orgConfig = getPublicOrgConfig();
-  return template.evaluate()
-    .setTitle(getOrgConfig().titulo)
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // CAMADA 1 — Verificação de acesso em dois níveis:
+  //   (a) domínio autorizado   → configurado via PropertiesService:ORG_DOMINIO
+  //   (b) cadastro interno aprovado → AcessoService (usuarios_acesso.json)
+  var email   = getEmailOuNull();
+  var acesso  = AcessoService.verificar(email || '');
+
+  switch (acesso.status) {
+
+    case 'ativo':
+      // Usuário aprovado — renderiza SPA normalmente
+      var template = HtmlService.createTemplateFromFile('frontend/index');
+      template.orgConfig = getPublicOrgConfig();
+      template.usuarioEmail = email;
+      return template.evaluate()
+        .setTitle(getOrgConfig().titulo)
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+
+    case 'pendente_aprovacao':
+      // Usuário do domínio sem cadastro aprovado — tela de primeiro acesso
+      var tplPendente = HtmlService.createTemplateFromFile('frontend/primeiro_acesso');
+      tplPendente.orgConfig  = getPublicOrgConfig();
+      tplPendente.email      = email || '';
+      tplPendente.mensagem   = acesso.mensagem;
+      tplPendente.jaSolicitou = !!(acesso.registro && acesso.registro.status === 'pendente');
+      tplPendente.setores    = SistemaConfigService.getSetores()
+        .map(function(s) { return { id: s.id, label: s.label }; });
+      return tplPendente.evaluate()
+        .setTitle(getOrgConfig().titulo + ' — Acesso')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+
+    case 'dominio_negado':
+    case 'inativo':
+    default:
+      // Acesso negado — página de erro simples
+      return HtmlService.createHtmlOutput(
+        '<!DOCTYPE html><html lang="pt-BR"><head>' +
+        '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>Acesso Negado — ' + getOrgConfig().titulo + '</title>' +
+        '<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;' +
+        'min-height:100vh;margin:0;background:#f8fafc;}' +
+        '.box{text-align:center;padding:2rem;max-width:420px;}' +
+        'h1{color:#dc2626;font-size:1.25rem;margin-bottom:.75rem;}' +
+        'p{color:#374151;line-height:1.6;}</style>' +
+        '</head><body><div class="box">' +
+        '<h1>⚠️ Acesso Negado</h1>' +
+        '<p>' + acesso.mensagem + '</p>' +
+        '</div></body></html>'
+      ).setTitle('Acesso Negado — ' + getOrgConfig().titulo);
+  }
 }
 
 // ─── Portal Público ───────────────────────────────────────────────────────────
@@ -105,14 +148,19 @@ function _renderErro(mensagem) {
 
 function ctrl_sistema_getBootstrap() {
   return GasResponse.wrap(function() {
+    var email  = getEmailOuNull();
+    var acesso = AcessoService.verificar(email || '');
     return {
       orgConfig:   getPublicOrgConfig(),
       modulosAtivos: typeof ModulosRegistryService !== 'undefined'
         ? ModulosRegistryService.listarAtivos()
         : [],
       usuario: {
-        email:   getEmailOuNull(),
-        setores: []
+        email:        email,
+        statusAcesso: acesso.status,       // 'ativo' | 'pendente_aprovacao' | 'dominio_negado' | 'inativo'
+        papel:        acesso.registro ? acesso.registro.papel  : '',
+        setor:        acesso.registro ? acesso.registro.setor  : '',
+        nome:         acesso.registro ? acesso.registro.nome   : ''
       }
     };
   }, 'ctrl_sistema_getBootstrap');

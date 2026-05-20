@@ -31,14 +31,16 @@ function getOrgConfig() {
   var nome  = props.getProperty('ORG_NOME') || 'CCBJ';
 
   _orgConfigCache = {
-    orgId:        orgId,
-    nome:         nome,
-    nomeCompleto: props.getProperty('ORG_NOME_COMPLETO')  || 'Centro Cultural Bom Jardim',
-    titulo:       props.getProperty('ORG_SISTEMA_TITULO') || 'Sistema ' + nome,
-    dataFolder:   props.getProperty('ORG_DATA_FOLDER')    || (orgId + '_DATA'),
-    logoUrl:      props.getProperty('ORG_LOGO_URL')       || '',
-    dominio:      props.getProperty('ORG_DOMINIO')        || '',
-    timezone:     props.getProperty('ORG_TIMEZONE')       || 'America/Fortaleza'
+    orgId:          orgId,
+    nome:           nome,
+    nomeCompleto:   props.getProperty('ORG_NOME_COMPLETO')    || 'Centro Cultural Bom Jardim',
+    titulo:         props.getProperty('ORG_SISTEMA_TITULO')   || 'Sistema ' + nome,
+    dataFolder:     props.getProperty('ORG_DATA_FOLDER')      || (orgId + '_DATA'),
+    logoUrl:        props.getProperty('ORG_LOGO_URL')         || '',
+    dominio:        props.getProperty('ORG_DOMINIO')          || '',
+    timezone:       props.getProperty('ORG_TIMEZONE')         || 'America/Fortaleza',
+    // Nome do assistente de IA — configurar via PropertiesService:IA_ASSISTENTE_NOME
+    nomeAssistente: props.getProperty('IA_ASSISTENTE_NOME')   || nome + ' Assistente'
   };
 
   return _orgConfigCache;

@@ -3,6 +3,23 @@
  * @layer core
  * @description Sessão e autenticação do usuário interno.
  *
+ * MODELO DE AUTENTICAÇÃO:
+ *   webapp: executeAs=USER_DEPLOYING + access=DOMAIN
+ *
+ *   Por que USER_DEPLOYING (não USER_ACCESSING)?
+ *   - USER_ACCESSING exige que cada usuário autorize os OAuth scopes — cria fricção.
+ *   - Com USER_DEPLOYING em um Google Workspace (G Suite) de domínio + access:DOMAIN,
+ *     Session.getActiveUser().getEmail() retorna o email do VISITANTE (não do deployer),
+ *     pois o Workspace autentica o usuário antes de servir o webapp.
+ *   - O script roda com as permissões do deployer (acesso total aos dados), mas a
+ *     identidade do visitante é rastreada corretamente pelo Google.
+ *
+ *   Controle de acesso em 2 camadas (AcessoService):
+ *   1. Domínio: email deve ser do domínio configurado (ORG_DOMINIO, ex: @idm.org.br)
+ *   2. Cadastro: usuário deve ter registro aprovado em usuarios_acesso.json
+ *      - Primeiro acesso → tela "solicitar acesso"
+ *      - Admin aprova → acesso completo com perfil/setor atribuído
+ *
  * REGRA: todo controller deve obter o email via getEmailSessao() antes de qualquer operação.
  * Contexto do portal externo (sem autenticação) NÃO usa esta função — usa token anônimo.
  */

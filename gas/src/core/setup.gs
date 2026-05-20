@@ -70,6 +70,15 @@ function inicializarSistema() {
   recriarEstrutura();
   SystemEvents.garantirAbaEventLog();
 
+  // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
+  // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
+  var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';
+  var adminEmail = adminProp || Session.getActiveUser().getEmail() || '';
+  if (adminEmail && typeof AcessoService !== 'undefined') {
+    AcessoService.registrarSuperAdmin(adminEmail);
+    Logger.info('setup', 'inicializarSistema', 'SuperAdmin registrado: ' + adminEmail);
+  }
+
   Logger.info('setup', 'inicializarSistema', 'Sistema inicializado com sucesso.');
   return verificarTodasAbas();
 }
