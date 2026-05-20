@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.titulo ?></title>
+  <style>
+    /* ── Reset e base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cor-primaria: #1a237e;
+      --cor-secundaria: #e8eaf6;
+      --cor-destaque: #ff6f00;
+      --cor-texto: #212121;
+      --cor-texto-claro: #757575;
+      --cor-borda: #e0e0e0;
+      --cor-erro: #c62828;
+      --cor-sucesso: #2e7d32;
+      --cor-aviso: #ef6c00;
+      --radius: 8px;
+      --sombra: 0 2px 8px rgba(0,0,0,.12);
+    }
+    html, body { height: 100%; font-family: 'Segoe UI', Arial, sans-serif; color: var(--cor-texto); background: #f5f5f5; }
+
+    /* ── Layout principal ── */
+    #app { display: flex; height: 100vh; overflow: hidden; }
+    #sidebar { width: 220px; background: var(--cor-primaria); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; transition: width .2s; }
+    #sidebar.recolhido { width: 56px; }
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #topbar { height: 56px; background: #fff; border-bottom: 1px solid var(--cor-borda); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+    #conteudo { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* ── Sidebar ── */
+    #sidebar-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,.15); }
+    #sidebar-header .org-nome { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #nav-lista { list-style: none; padding: 8px 0; flex: 1; }
+    #nav-lista li a {
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: rgba(255,255,255,.85);
+      text-decoration: none; font-size: 14px; border-left: 3px solid transparent; transition: background .15s;
+    }
+    #nav-lista li a:hover, #nav-lista li a.ativo { background: rgba(255,255,255,.12); border-left-color: var(--cor-destaque); color: #fff; }
+    #nav-lista li a .icone { font-size: 18px; flex-shrink: 0; }
+    #nav-lista li a .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #sidebar.recolhido #nav-lista li a .label { display: none; }
+    #sidebar.recolhido #sidebar-header .org-nome { display: none; }
+
+    /* ── Topbar ── */
+    #btn-toggle-sidebar { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--cor-texto-claro); padding: 4px; }
+    #breadcrumb { flex: 1; font-size: 14px; color: var(--cor-texto-claro); }
+    #usuario-info { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    #usuario-email { color: var(--cor-texto-claro); }
+    #btn-sair { background: none; border: 1px solid var(--cor-borda); border-radius: var(--radius); padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--cor-texto-claro); }
+
+    /* ── Toast ── */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+    .toast { padding: 12px 16px; border-radius: var(--radius); box-shadow: var(--sombra); font-size: 14px; color: #fff; min-width: 280px; max-width: 400px; animation: slideIn .2s ease; }
+    .toast.sucesso { background: var(--cor-sucesso); }
+    .toast.erro    { background: var(--cor-erro); }
+    .toast.aviso   { background: var(--cor-aviso); }
+    .toast.info    { background: var(--cor-primaria); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ── Loading overlay ── */
+    #loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.8); display: flex; align-items: center; justify-content: center; z-index: 8888; }
+    #loading-overlay.oculto { display: none; }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--cor-borda); border-top-color: var(--cor-primaria); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── View container ── */
+    .view { display: none; }
+    .view.ativa { display: block; }
+    .view-titulo { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+
+    /* ── Cards e painéis ── */
+    .card { background: #fff; border-radius: var(--radius); box-shadow: var(--sombra); padding: 20px; margin-bottom: 16px; }
+    .card-titulo { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--cor-primaria); }
+
+    /* ── Botões ── */
+    .btn { padding: 8px 16px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: opacity .15s; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primario { background: var(--cor-primaria); color: #fff; }
+    .btn-secundario { background: var(--cor-secundaria); color: var(--cor-primaria); }
+    .btn-perigo { background: var(--cor-erro); color: #fff; }
+
+    /* ── Home / Dashboard ── */
+    #view-home .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    #view-home .stat-card { background: #fff; border-radius: var(--radius); box-shadow: var(--sombra); padding: 20px; text-align: center; }
+    #view-home .stat-valor { font-size: 32px; font-weight: 700; color: var(--cor-primaria); }
+    #view-home .stat-label { font-size: 13px; color: var(--cor-texto-claro); margin-top: 4px; }
+
+    /* ── Bootstrap error ── */
+    #boot-erro { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 24px; text-align: center; }
+    #boot-erro h2 { color: var(--cor-erro); }
+    #boot-erro.oculto { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Erro de boot -->
+<div id="boot-erro" class="oculto">
+  <h2>Não foi possível carregar o sistema</h2>
+  <p id="boot-erro-msg"></p>
+  <button class="btn btn-primario" onclick="location.reload()">Tentar novamente</button>
+</div>
+
+<!-- App principal -->
+<div id="app" style="display:none">
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div id="sidebar-header">
+      <div class="org-nome" id="org-nome-sidebar">Carregando...</div>
+    </div>
+    <ul id="nav-lista">
+      <!-- populado via JS após boot -->
+    </ul>
+  </nav>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar">
+      <button id="btn-toggle-sidebar" title="Menu">☰</button>
+      <div id="breadcrumb">Início</div>
+      <div id="usuario-info">
+        <span id="usuario-email"></span>
+        <button id="btn-sair" onclick="GAS.sistema.sair()">Sair</button>
+      </div>
+    </div>
+
+    <div id="conteudo">
+
+      <!-- Home -->
+      <div id="view-home" class="view ativa">
+        <div class="view-titulo" id="home-titulo">Painel</div>
+        <div class="cards-grid" id="home-stats">
+          <!-- Injetado após bootstrap -->
+        </div>
+        <div id="home-alertas"></div>
+      </div>
+
+      <!-- Views de módulos — injetadas dinamicamente -->
+      <!-- Cada módulo registra sua view via App.registrarView() -->
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────────
+// NAMESPACE GAS — todas as chamadas ao backend passam por aqui
+// NUNCA usar google.script.run diretamente fora deste objeto
+// ────────────────────────────────────────────────────────────────
+var GAS = {
+  sistema: {
+    getBootstrap:    function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_sistema_getBootstrap(); },
+    verificarSaude:  function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_sistema_verificarSaude(); },
+    sair: function() { google.script.history.replace(null, null, '?secao=app'); location.reload(); }
+  },
+  _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
+};
+
+// ────────────────────────────────────────────────────────────────
+// TOAST — notificações in-app
+// ────────────────────────────────────────────────────────────────
+var Toast = (function() {
+  function mostrar(msg, tipo, duracao) {
+    var container = document.getElementById('toast-container');
+    var el = document.createElement('div');
+    el.className = 'toast ' + (tipo || 'info');
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(function() { el.remove(); }, duracao || 4000);
+  }
+  return {
+    sucesso: function(msg) { mostrar(msg, 'sucesso'); },
+    erro:    function(msg) { mostrar(msg, 'erro', 6000); },
+    aviso:   function(msg) { mostrar(msg, 'aviso'); },
+    info:    function(msg) { mostrar(msg, 'info'); }
+  };
+})();
+
+// ────────────────────────────────────────────────────────────────
+// BTNGUARD — proteção de botões durante chamadas GAS
+// ────────────────────────────────────────────────────────────────
+var BtnGuard = (function() {
+  var _ativos = {};
+  function travar(btnId, labelLoading) {
+    var btn = document.getElementById(btnId);
+    if (!btn || _ativos[btnId]) return false;
+    _ativos[btnId] = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = labelLoading || 'Aguarde...';
+    return true;
+  }
+  function liberar(btnId) {
+    var btn = document.getElementById(btnId);
+    if (btn && _ativos[btnId]) {
+      btn.disabled = false;
+      btn.textContent = _ativos[btnId];
+    }
+    delete _ativos[btnId];
+  }
+  return { travar: travar, liberar: liberar };
+})();
+
+// ────────────────────────────────────────────────────────────────
+// ROUTER — troca de views sem reload
+// ────────────────────────────────────────────────────────────────
+var Router = (function() {
+  var _views = {};
+  var _atual = 'home';
+
+  function registrar(id, titulo, fn) {
+    _views[id] = { titulo: titulo, fn: fn };
+  }
+
+  function navegar(id) {
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('ativa'); });
+    document.querySelectorAll('#nav-lista a').forEach(function(a) { a.classList.remove('ativo'); });
+
+    var viewEl = document.getElementById('view-' + id);
+    if (!viewEl) {
+      Toast.aviso('Módulo ainda não implementado nesta versão.');
+      return;
+    }
+    viewEl.classList.add('ativa');
+    document.getElementById('breadcrumb').textContent = (_views[id] && _views[id].titulo) || id;
+
+    var link = document.querySelector('#nav-lista a[data-view="' + id + '"]');
+    if (link) link.classList.add('ativo');
+
+    if (_views[id] && _views[id].fn) _views[id].fn();
+    _atual = id;
+  }
+
+  return { registrar: registrar, navegar: navegar, getAtual: function() { return _atual; } };
+})();
+
+// ────────────────────────────────────────────────────────────────
+// APP — bootstrap e inicialização
+// ────────────────────────────────────────────────────────────────
+var App = (function() {
+
+  var _boot = null;
+
+  var _MODULOS_MENU = [
+    { id: 'home',        label: 'Início',        icone: '🏠', modulo: null },
+    { id: 'acoes',       label: 'Ações',          icone: '🎭', modulo: 'ACOES' },
+    { id: 'espacos',     label: 'Espaços',        icone: '🏛️', modulo: 'ESPACOS' },
+    { id: 'pessoas',     label: 'Pessoas',        icone: '👥', modulo: 'PESSOAS' },
+    { id: 'financeiro',  label: 'Financeiro',     icone: '💰', modulo: 'FINANCEIRO' },
+    { id: 'tarefas',     label: 'Tarefas',        icone: '✅', modulo: 'TAREFAS' },
+    { id: 'reunioes',    label: 'Reuniões',       icone: '📋', modulo: 'REUNIOES' },
+    { id: 'comunicacao', label: 'Comunicação',    icone: '📢', modulo: 'COMUNICACAO' },
+    { id: 'relatorios',  label: 'Relatórios',     icone: '📊', modulo: 'RELATORIOS' },
+    { id: 'admin',       label: 'Administração',  icone: '⚙️', modulo: 'ADMIN' }
+  ];
+
+  function iniciar() {
+    GAS.sistema.getBootstrap(
+      function(resp) {
+        if (!resp || !resp.ok) {
+          _mostrarErroBoot((resp && resp.error && resp.error.message) || 'Resposta inválida do servidor.');
+          return;
+        }
+        _boot = resp.data;
+        _aplicarBoot();
+      },
+      function(err) {
+        _mostrarErroBoot(err.message || String(err));
+      }
+    );
+  }
+
+  function _aplicarBoot() {
+    document.getElementById('org-nome-sidebar').textContent = _boot.orgConfig.nome;
+    document.getElementById('usuario-email').textContent = _boot.usuarioEmail;
+    document.title = _boot.orgConfig.titulo;
+
+    _construirMenu();
+    _renderizarHome();
+
+    document.getElementById('loading-overlay').classList.add('oculto');
+    document.getElementById('app').style.display = 'flex';
+  }
+
+  function _construirMenu() {
+    var ul         = document.getElementById('nav-lista');
+    var modulosAti = (_boot.modulosAtivos || []).map(function(m) { return String(m).toUpperCase(); });
+    ul.innerHTML   = '';
+
+    _MODULOS_MENU.forEach(function(item) {
+      if (item.modulo && modulosAti.indexOf(item.modulo) === -1) return;
+
+      var li = document.createElement('li');
+      li.innerHTML = '<a href="#" data-view="' + item.id + '">'
+        + '<span class="icone">' + item.icone + '</span>'
+        + '<span class="label">' + item.label + '</span>'
+        + '</a>';
+      li.querySelector('a').addEventListener('click', function(e) {
+        e.preventDefault();
+        Router.navegar(item.id);
+      });
+      ul.appendChild(li);
+    });
+
+    Router.navegar('home');
+  }
+
+  function _renderizarHome() {
+    var grid = document.getElementById('home-stats');
+    grid.innerHTML = [
+      { valor: (_boot.espacos || []).length, label: 'Espaços configurados' },
+      { valor: (_boot.setores || []).length, label: 'Setores' },
+      { valor: (_boot.modulosAtivos || []).length, label: 'Módulos ativos' },
+      { valor: _boot.orgId ? '✓' : '✗', label: 'OrgId' }
+    ].map(function(s) {
+      return '<div class="stat-card"><div class="stat-valor">' + s.valor
+        + '</div><div class="stat-label">' + s.label + '</div></div>';
+    }).join('');
+
+    document.getElementById('home-titulo').textContent = 'Olá, ' + _boot.usuarioEmail.split('@')[0];
+  }
+
+  function _mostrarErroBoot(msg) {
+    document.getElementById('loading-overlay').classList.add('oculto');
+    document.getElementById('boot-erro-msg').textContent = msg;
+    document.getElementById('boot-erro').classList.remove('oculto');
+  }
+
+  // Toggle sidebar
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btn-toggle-sidebar').addEventListener('click', function() {
+      document.getElementById('sidebar').classList.toggle('recolhido');
+    });
+  });
+
+  return {
+    iniciar:    iniciar,
+    getBoot:    function() { return _boot; },
+    Toast:      Toast,
+    BtnGuard:   BtnGuard,
+    Router:     Router
+  };
+
+})();
+
+// Boot
+document.addEventListener('DOMContentLoaded', function() {
+  App.iniciar();
+});
+</script>
+
+</body>
+</html>

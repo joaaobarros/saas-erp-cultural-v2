@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.nome ?> — Inscrição</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
+    .container { max-width: 600px; margin: 0 auto; padding: 32px 16px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-size: 22px; color: #1a237e; margin-bottom: 4px; }
+    .header .subtitulo { font-size: 18px; font-weight: 700; color: #212121; margin-bottom: 8px; }
+    .header p { color: #757575; font-size: 14px; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); padding: 28px; }
+    .acao-info { background: #e8eaf6; border-radius: 6px; padding: 14px; margin-bottom: 24px; font-size: 14px; }
+    .acao-info strong { display: block; margin-bottom: 4px; color: #1a237e; }
+    .vagas-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+    .grupo { margin-bottom: 18px; }
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+    label span.req { color: #c62828; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
+    input:focus, select:focus { outline: none; border-color: #1a237e; }
+    .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .consentimento { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px; margin-top: 8px; font-size: 13px; }
+    .consentimento label { font-weight: 400; display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+    .consentimento input[type=checkbox] { width: auto; flex-shrink: 0; margin-top: 2px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primario { background: #1a237e; color: #fff; }
+    #resultado { display: none; text-align: center; padding: 24px 0; }
+    #resultado h2 { color: #2e7d32; margin-bottom: 8px; }
+    #resultado .inscricao-id { font-size: 24px; font-weight: 700; color: #1a237e; margin: 12px 0; }
+    #erro { display: none; background: #ffebee; border: 1px solid #ef9a9a; border-radius: 6px; padding: 12px; margin-top: 12px; color: #c62828; font-size: 14px; }
+    #lista-espera-aviso { display: none; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 12px; font-size: 14px; color: #f57f17; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1><?= orgConfig.nome ?></h1>
+    <div class="subtitulo" id="acao-titulo">Inscrição em Ação</div>
+  </div>
+
+  <div class="card">
+    <div class="acao-info" id="acao-info">
+      <strong id="acao-nome">Carregando...</strong>
+      <span id="acao-data"></span>
+      <span id="acao-local"></span>
+      <br>
+      <span class="vagas-badge" id="vagas-info">Vagas disponíveis</span>
+    </div>
+
+    <div id="lista-espera-aviso">
+      ⚠️ As vagas estão esgotadas. Sua inscrição entrará na <strong>lista de espera</strong>.
+    </div>
+
+    <form id="form-inscricao" onsubmit="return false;">
+
+      <div class="grupo">
+        <label>Nome completo <span class="req">*</span></label>
+        <input type="text" id="campo-nome" autocomplete="name" maxlength="150" required>
+      </div>
+
+      <div class="linha-dupla">
+        <div class="grupo">
+          <label>E-mail <span class="req">*</span></label>
+          <input type="email" id="campo-email" autocomplete="email" required>
+        </div>
+        <div class="grupo">
+          <label>Telefone</label>
+          <input type="tel" id="campo-telefone" autocomplete="tel" maxlength="20">
+        </div>
+      </div>
+
+      <div class="linha-dupla">
+        <div class="grupo">
+          <label>CPF</label>
+          <input type="text" id="campo-cpf" placeholder="000.000.000-00" maxlength="14">
+        </div>
+        <div class="grupo">
+          <label>Data de nascimento</label>
+          <input type="date" id="campo-nascimento">
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label>Bairro / Cidade <span class="req">*</span></label>
+        <input type="text" id="campo-cidade" maxlength="100" required>
+      </div>
+
+      <div class="consentimento">
+        <label>
+          <input type="checkbox" id="consentimento-lgpd" required>
+          Autorizo o uso dos meus dados para fins de inscrição e comunicação sobre esta ação,
+          conforme a LGPD (Lei nº 13.709/2018). Os dados não serão compartilhados com terceiros.
+        </label>
+      </div>
+
+      <div class="consentimento" style="margin-top:8px">
+        <label>
+          <input type="checkbox" id="consentimento-foto">
+          Autorizo o uso de imagens (fotos/vídeos) captadas durante a ação para fins institucionais.
+        </label>
+      </div>
+
+      <div id="erro"></div>
+      <button type="submit" id="btn-inscrever" class="btn btn-primario" onclick="inscrever()">
+        Confirmar Inscrição
+      </button>
+    </form>
+
+    <div id="resultado">
+      <h2>Inscrição realizada!</h2>
+      <p>Código de inscrição:</p>
+      <div class="inscricao-id" id="inscricao-id">—</div>
+      <p>Guarde este código. Você receberá confirmação no e-mail informado.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  var params    = <?= JSON.stringify(params) ?>;
+  var orgConfig = <?= JSON.stringify(orgConfig) ?>;
+  var acaoId    = params.acao || null;
+
+  // TODO Fase 7: google.script.run.ctrl_portal_getInfoAcao(acaoId, ...)
+  (function carregarInfoAcao() {
+    if (!acaoId) {
+      document.getElementById('acao-nome').textContent = 'Ação não especificada.';
+      return;
+    }
+    document.getElementById('acao-titulo').textContent = 'Inscrição';
+    document.getElementById('acao-nome').textContent = 'Ação ID: ' + acaoId + ' (aguardando Fase 7)';
+  })();
+
+  function inscrever() {
+    var erroEl = document.getElementById('erro');
+    erroEl.style.display = 'none';
+
+    var nome    = document.getElementById('campo-nome').value.trim();
+    var email   = document.getElementById('campo-email').value.trim();
+    var cidade  = document.getElementById('campo-cidade').value.trim();
+    var lgpd    = document.getElementById('consentimento-lgpd').checked;
+    var foto    = document.getElementById('consentimento-foto').checked;
+
+    if (!nome || !email || !cidade) {
+      erroEl.textContent = 'Preencha todos os campos obrigatórios.';
+      erroEl.style.display = 'block';
+      return;
+    }
+    if (!lgpd) {
+      erroEl.textContent = 'É necessário aceitar o uso dos dados (LGPD).';
+      erroEl.style.display = 'block';
+      return;
+    }
+
+    var btn = document.getElementById('btn-inscrever');
+    btn.disabled = true;
+    btn.textContent = 'Registrando...';
+
+    // TODO Fase 7: google.script.run.ctrl_portal_inscrever(...)
+    setTimeout(function() {
+      var id = 'INS-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*90000)+10000);
+      document.getElementById('form-inscricao').style.display = 'none';
+      document.getElementById('inscricao-id').textContent = id;
+      document.getElementById('resultado').style.display = 'block';
+    }, 700);
+  }
+</script>
+</body>
+</html>

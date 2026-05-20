@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.nome ?> — Cessão de Pauta</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
+    .container { max-width: 680px; margin: 0 auto; padding: 32px 16px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-size: 24px; color: #1a237e; margin-bottom: 8px; }
+    .header p { color: #757575; font-size: 14px; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); padding: 28px; }
+    .grupo { margin-bottom: 20px; }
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #424242; }
+    label span.req { color: #c62828; margin-left: 2px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px;
+      font-size: 14px; transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #1a237e; }
+    textarea { min-height: 100px; resize: vertical; }
+    .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primario { background: #1a237e; color: #fff; margin-top: 8px; }
+    .consentimento { background: #e8eaf6; border-radius: 6px; padding: 14px; margin-top: 20px; font-size: 13px; color: #424242; }
+    .consentimento label { font-weight: 400; display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+    .consentimento input[type=checkbox] { width: auto; margin-top: 2px; flex-shrink: 0; }
+    #resultado { display: none; text-align: center; padding: 32px; }
+    #resultado h2 { color: #2e7d32; font-size: 20px; margin-bottom: 8px; }
+    #resultado .protocolo { font-size: 28px; font-weight: 700; color: #1a237e; margin: 16px 0; letter-spacing: 2px; }
+    #resultado p { color: #757575; font-size: 14px; }
+    #erro-geral { display: none; background: #ffebee; border: 1px solid #ef9a9a; border-radius: 6px; padding: 12px; margin-top: 12px; color: #c62828; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1><?= orgConfig.nome ?></h1>
+    <p>Formulário de Cessão de Pauta — Solicitação de uso de espaço</p>
+  </div>
+
+  <div class="card" id="card-formulario">
+    <form id="form-pauta" onsubmit="return false;">
+
+      <div class="grupo">
+        <label>Nome do proponente <span class="req">*</span></label>
+        <input type="text" id="campo-nome" autocomplete="name" maxlength="120" required>
+      </div>
+
+      <div class="linha-dupla">
+        <div class="grupo">
+          <label>E-mail de contato <span class="req">*</span></label>
+          <input type="email" id="campo-email" autocomplete="email" required>
+        </div>
+        <div class="grupo">
+          <label>Telefone</label>
+          <input type="tel" id="campo-telefone" autocomplete="tel" maxlength="20">
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label>Nome da ação / evento <span class="req">*</span></label>
+        <input type="text" id="campo-acao" maxlength="200" required>
+      </div>
+
+      <div class="grupo">
+        <label>Tipo de ação <span class="req">*</span></label>
+        <select id="campo-tipo-acao" required>
+          <option value="">Selecione...</option>
+          <option value="show">Show / Concerto</option>
+          <option value="exposicao">Exposição</option>
+          <option value="teatro">Teatro / Dança / Circo</option>
+          <option value="oficina">Oficina / Curso</option>
+          <option value="palestra">Palestra / Debate</option>
+          <option value="lancamento">Lançamento</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+
+      <div class="linha-dupla">
+        <div class="grupo">
+          <label>Data pretendida <span class="req">*</span></label>
+          <input type="date" id="campo-data" required>
+        </div>
+        <div class="grupo">
+          <label>Horário (início) <span class="req">*</span></label>
+          <input type="time" id="campo-horario" required>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label>Espaço desejado <span class="req">*</span></label>
+        <select id="campo-espaco" required>
+          <option value="">Carregando espaços...</option>
+        </select>
+      </div>
+
+      <div class="grupo">
+        <label>Público estimado</label>
+        <input type="number" id="campo-publico" min="1" max="10000" placeholder="Ex: 200">
+      </div>
+
+      <div class="grupo">
+        <label>Descrição da ação <span class="req">*</span></label>
+        <textarea id="campo-descricao" placeholder="Descreva brevemente a ação, seus objetivos e público-alvo." required></textarea>
+      </div>
+
+      <div class="grupo">
+        <label>Necessidades técnicas / rider</label>
+        <textarea id="campo-rider" placeholder="Equipamentos, palco, camarim, som, luz etc."></textarea>
+      </div>
+
+      <div class="consentimento">
+        <label>
+          <input type="checkbox" id="consentimento-lgpd" required>
+          Concordo com o tratamento dos dados informados neste formulário para fins de análise da solicitação,
+          conforme a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
+        </label>
+      </div>
+
+      <div id="erro-geral"></div>
+
+      <button type="submit" id="btn-enviar" class="btn btn-primario" onclick="enviarFormulario()">
+        Enviar Solicitação
+      </button>
+    </form>
+  </div>
+
+  <div id="resultado" class="card">
+    <h2>Solicitação enviada!</h2>
+    <p>Anote seu número de protocolo:</p>
+    <div class="protocolo" id="numero-protocolo">—</div>
+    <p>Você receberá uma resposta no e-mail informado em até <strong>5 dias úteis</strong>.</p>
+    <p style="margin-top:12px">Para acompanhar: <a href="?secao=pauta_status">Acompanhar protocolo</a></p>
+  </div>
+</div>
+
+<script>
+  var orgConfig = <?= JSON.stringify(orgConfig) ?>;
+  var params    = <?= JSON.stringify(params) ?>;
+
+  // Espaços de exemplo — Fase 7: carregar via ctrl_portal_getEspacosPublicos()
+  (function carregarEspacos() {
+    var select = document.getElementById('campo-espaco');
+    select.innerHTML = '<option value="">Selecione o espaço...</option>';
+    // TODO Fase 7: google.script.run para buscar espaços com aceitaReserva=true
+    ['Teatro Principal', 'Galeria de Arte', 'Sala Multiuso', 'Pátio Externo'].forEach(function(e) {
+      var o = document.createElement('option');
+      o.value = e; o.textContent = e;
+      select.appendChild(o);
+    });
+  })();
+
+  function enviarFormulario() {
+    var btn = document.getElementById('btn-enviar');
+    var erroEl = document.getElementById('erro-geral');
+    erroEl.style.display = 'none';
+
+    var nome      = document.getElementById('campo-nome').value.trim();
+    var email     = document.getElementById('campo-email').value.trim();
+    var acao      = document.getElementById('campo-acao').value.trim();
+    var tipoAcao  = document.getElementById('campo-tipo-acao').value;
+    var data      = document.getElementById('campo-data').value;
+    var horario   = document.getElementById('campo-horario').value;
+    var espaco    = document.getElementById('campo-espaco').value;
+    var descricao = document.getElementById('campo-descricao').value.trim();
+    var lgpd      = document.getElementById('consentimento-lgpd').checked;
+
+    if (!nome || !email || !acao || !tipoAcao || !data || !horario || !espaco || !descricao) {
+      erroEl.textContent = 'Preencha todos os campos obrigatórios.';
+      erroEl.style.display = 'block';
+      return;
+    }
+    if (!lgpd) {
+      erroEl.textContent = 'É necessário concordar com o tratamento de dados (LGPD).';
+      erroEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    // TODO Fase 7: google.script.run.ctrl_portal_solicitarPauta(dados, ...)
+    // Simulação para Fase 0:
+    setTimeout(function() {
+      var protocolo = 'PAU-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
+      document.getElementById('card-formulario').style.display = 'none';
+      document.getElementById('numero-protocolo').textContent = protocolo;
+      document.getElementById('resultado').style.display = 'block';
+    }, 800);
+  }
+</script>
+</body>
+</html>

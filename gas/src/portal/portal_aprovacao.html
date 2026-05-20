@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.nome ?> — Aprovação</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); padding: 36px; max-width: 520px; width: 100%; text-align: center; }
+    .org-nome { font-size: 13px; color: #757575; margin-bottom: 24px; }
+    .icone-grande { font-size: 56px; margin-bottom: 16px; }
+    h2 { font-size: 20px; margin-bottom: 8px; }
+    .descricao { color: #616161; font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+    .entidade-info { background: #e8eaf6; border-radius: 6px; padding: 14px; margin-bottom: 24px; font-size: 14px; text-align: left; }
+    .entidade-info strong { display: block; color: #1a237e; margin-bottom: 4px; }
+    .botoes { display: flex; gap: 12px; justify-content: center; }
+    .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; max-width: 200px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-aprovar  { background: #2e7d32; color: #fff; }
+    .btn-recusar  { background: #c62828; color: #fff; }
+    .grupo-motivo { text-align: left; margin-bottom: 20px; display: none; }
+    .grupo-motivo label { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: block; }
+    .grupo-motivo textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; min-height: 80px; resize: vertical; }
+    #resultado { display: none; }
+    #resultado h2 { color: #1a237e; }
+    #token-invalido { display: none; color: #c62828; }
+    #token-invalido h2 { color: #c62828; }
+  </style>
+</head>
+<body>
+<div class="card" id="card-aprovacao">
+  <div class="org-nome"><?= orgConfig.nome ?></div>
+  <div class="icone-grande">🔔</div>
+  <h2>Solicitação de Aprovação</h2>
+  <p class="descricao">Você recebeu um link de aprovação. Revise as informações e confirme sua decisão.</p>
+
+  <div class="entidade-info" id="entidade-info">
+    <strong id="entidade-tipo">Carregando...</strong>
+    <span id="entidade-descricao"></span>
+  </div>
+
+  <div class="grupo-motivo" id="grupo-motivo">
+    <label>Motivo da recusa (obrigatório)</label>
+    <textarea id="campo-motivo" placeholder="Descreva o motivo da recusa..."></textarea>
+  </div>
+
+  <div class="botoes">
+    <button id="btn-recusar" class="btn btn-recusar" onclick="processar('recusar')">Recusar</button>
+    <button id="btn-aprovar" class="btn btn-aprovar" onclick="processar('aprovar')">Aprovar</button>
+  </div>
+</div>
+
+<div class="card" id="resultado" style="display:none">
+  <div class="icone-grande" id="resultado-icone">✓</div>
+  <h2 id="resultado-titulo">Decisão registrada</h2>
+  <p class="descricao" id="resultado-msg">Obrigado. Sua decisão foi registrada.</p>
+</div>
+
+<div class="card" id="token-invalido" style="display:none">
+  <div class="icone-grande">❌</div>
+  <h2>Link inválido ou expirado</h2>
+  <p class="descricao">Este link de aprovação não é válido ou já foi utilizado. Caso precise agir, acesse o sistema diretamente.</p>
+</div>
+
+<script>
+  var params    = <?= JSON.stringify(params) ?>;
+  var orgConfig = <?= JSON.stringify(orgConfig) ?>;
+  var token     = params.token || null;
+  var acao_ap   = params.acao  || null; // aprovar|recusar pré-definido pelo link
+
+  if (!token) {
+    document.getElementById('card-aprovacao').style.display = 'none';
+    document.getElementById('token-invalido').style.display = 'block';
+  } else {
+    carregarInfoToken();
+  }
+
+  function carregarInfoToken() {
+    // TODO Fase 7: google.script.run.ctrl_portal_getInfoAprovacao(token, ...)
+    document.getElementById('entidade-tipo').textContent = 'Reserva de Espaço';
+    document.getElementById('entidade-descricao').textContent =
+      'Teatro Principal — ' + new Date().toLocaleDateString('pt-BR') + ' às 19h';
+  }
+
+  document.getElementById('btn-recusar').addEventListener('click', function() {
+    document.getElementById('grupo-motivo').style.display = 'block';
+  });
+
+  function processar(decisao) {
+    if (decisao === 'recusar') {
+      var motivo = document.getElementById('campo-motivo').value.trim();
+      if (!motivo) {
+        alert('Informe o motivo da recusa.');
+        return;
+      }
+    }
+
+    document.getElementById('btn-aprovar').disabled = true;
+    document.getElementById('btn-recusar').disabled = true;
+
+    // TODO Fase 7: google.script.run.ctrl_portal_registrarAprovacao(token, decisao, motivo, ...)
+    setTimeout(function() {
+      var isAprovar = decisao === 'aprovar';
+      document.getElementById('card-aprovacao').style.display = 'none';
+      document.getElementById('resultado-icone').textContent = isAprovar ? '✅' : '❌';
+      document.getElementById('resultado-titulo').textContent = isAprovar ? 'Aprovado!' : 'Recusado';
+      document.getElementById('resultado-msg').textContent = isAprovar
+        ? 'A solicitação foi aprovada. O solicitante será notificado.'
+        : 'A solicitação foi recusada. O solicitante será notificado com o motivo informado.';
+      document.getElementById('resultado').style.display = 'block';
+    }, 600);
+  }
+</script>
+</body>
+</html>

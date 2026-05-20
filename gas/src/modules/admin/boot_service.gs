@@ -1,0 +1,145 @@
+/**
+ * @file modules/admin/boot_service.gs
+ * @layer modules/admin
+ * @description Entrypoint do boot do frontend — carrega dados iniciais para a SPA.
+ *
+ * DIFERENÇA do legado:
+ *   - usa _getSheet(spreadsheetKey, nomeAba) com chave de PropertiesService
+ *   - usa SistemaConfigService em vez de objetos hardcoded
+ *   - usa getEmailSessao() do auth_session.gs
+ *   - usa orgId em todas as operações
+ *
+ * @depends core/auth_session.gs, core/config.gs, core/config_service.gs,
+ *          core/services/cache_service.gs, core/services/permissoes_service.gs
+ */
+
+var BootService = (function () {
+
+  var _CACHE_PREFIX = 'boot_dados_';
+  var _CACHE_TTL    = 60; // segundos
+
+  function _chaveCache(email, orgId) {
+    return _CACHE_PREFIX + orgId + '_' + email.replace(/[^a-z0-9]/g, '_');
+  }
+
+  /**
+   * Entrypoint principal do boot do frontend.
+   * Retorna todos os dados necessários para a SPA inicializar sem chamadas adicionais.
+   *
+   * @returns {object} dados de boot: orgConfig, modulos, usuario, espacos, setores, itens
+   */
+  function obter() {
+    var email  = getEmailSessao();
+    var orgId  = getOrgConfig().orgId;
+    var cache  = CacheService.getScriptCache();
+    var chave  = _chaveCache(email, orgId);
+    var cached = cache.get(chave);
+
+    if (cached) {
+      try {
+        var obj = JSON.parse(cached);
+        obj.usuarioEmail = email; // sempre atualizar — email pode mudar entre caches
+        return obj;
+      } catch(e) {}
+    }
+
+    var orgConfig    = getPublicOrgConfig();
+    var setores      = SistemaConfigService.getSetores();
+    var espacos      = _carregarEspacos(orgId);
+    var itens        = _carregarItens(orgId);
+    var permissoes   = typeof PermissoesService !== 'undefined'
+      ? PermissoesService.obterPermissoesUsuario(email, orgId)
+      : { nivel: 'usuario', setores: [] };
+    var modulosAtivos = typeof ModulosRegistryService !== 'undefined'
+      ? ModulosRegistryService.listarAtivos()
+      : [];
+
+    var resultado = {
+      orgId:        orgId,
+      orgConfig:    orgConfig,
+      usuarioEmail: email,
+      permissoes:   permissoes,
+      modulosAtivos: modulosAtivos,
+      setores:      setores.map(function(s) { return { id: s.id, nome: s.nome, cor: s.cor || null }; }),
+      espacos:      espacos,
+      itens:        itens,
+      timestamp:    agora()
+    };
+
+    cache.put(chave, JSON.stringify(resultado), _CACHE_TTL);
+    Logger.info('boot_service', 'obter', 'Boot OK: ' + email + ' | org: ' + orgId);
+    return resultado;
+  }
+
+  /**
+   * Invalida o cache de boot do usuário.
+   * Chamar após operações que alteram espaços, itens ou configurações.
+   */
+  function limparCache(email) {
+    try {
+      var orgId = getOrgConfig().orgId;
+      CacheService.getScriptCache().remove(_chaveCache(
+        String(email || '').trim().toLowerCase(), orgId
+      ));
+    } catch(e) {}
+  }
+
+  // ─── Privados ─────────────────────────────────────────────────────────────
+
+  function _carregarEspacos(orgId) {
+    try {
+      var espacosConf = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+      if (espacosConf.length) return espacosConf;
+
+      var sheet = _getSheet('MASTER', 'Configuracoes');
+      if (!sheet || sheet.getLastRow() < 2) return [];
+
+      var nCols  = Math.min(sheet.getLastColumn(), 13);
+      var dados  = sheet.getRange(2, 1, sheet.getLastRow() - 1, nCols).getValues();
+      return dados.reduce(function(acc, r) {
+        var id   = String(r[0] || '').trim();
+        var nome = String(r[1] || '').trim();
+        if (!id || !nome) return acc;
+        acc.push({
+          id:            id,
+          nome:          nome,
+          orgId:         orgId,
+          possuiChaves:  r.length > 5 ? String(r[5]).toLowerCase() === 'true' : false,
+          aceitaReserva: r.length > 8 ? String(r[8]).toLowerCase() !== 'false' : true
+        });
+        return acc;
+      }, []);
+    } catch(e) {
+      Logger.warn('boot_service', '_carregarEspacos', e.message);
+      return [];
+    }
+  }
+
+  function _carregarItens(orgId) {
+    try {
+      var sheet = _getSheet('MASTER', 'Itens');
+      if (!sheet || sheet.getLastRow() < 2) return [];
+      return sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues()
+        .filter(function(r) { return String(r[0] || '').trim(); })
+        .map(function(r) {
+          return {
+            id:         String(r[0]).trim(),
+            nome:       String(r[1] || '').trim(),
+            categoria:  String(r[2] || '').trim(),
+            quantidade: Number(r[3]) || 0,
+            disponivel: r[4] !== false && String(r[4]).toLowerCase() !== 'false',
+            orgId:      orgId
+          };
+        });
+    } catch(e) {
+      Logger.warn('boot_service', '_carregarItens', e.message);
+      return [];
+    }
+  }
+
+  return {
+    obter:       obter,
+    limparCache: limparCache
+  };
+
+})();

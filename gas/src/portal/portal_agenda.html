@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.nome ?> — Agenda Cultural</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; }
+    header { background: #1a237e; color: #fff; padding: 20px 24px; }
+    header h1 { font-size: 22px; }
+    header p { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 4px; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+    .filtros { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .filtro-item { display: flex; align-items: center; gap: 6px; }
+    .filtro-item label { font-size: 13px; font-weight: 600; color: #616161; }
+    .filtro-item select, .filtro-item input { padding: 6px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 13px; }
+    .grid-eventos { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card-evento { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); overflow: hidden; display: flex; flex-direction: column; }
+    .card-evento .capa { height: 140px; background: linear-gradient(135deg, #1a237e, #3949ab); display: flex; align-items: center; justify-content: center; font-size: 48px; }
+    .card-evento .corpo { padding: 16px; flex: 1; }
+    .card-evento .tipo-badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px; border-radius: 4px; background: #e8eaf6; color: #1a237e; margin-bottom: 8px; }
+    .card-evento h3 { font-size: 16px; margin-bottom: 6px; line-height: 1.3; }
+    .card-evento .meta { font-size: 13px; color: #757575; margin-bottom: 4px; }
+    .card-evento .meta span { display: inline-block; margin-right: 10px; }
+    .card-evento .descricao-resumo { font-size: 13px; color: #616161; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-evento .footer { padding: 12px 16px; border-top: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; }
+    .vagas-badge { font-size: 12px; font-weight: 600; }
+    .vagas-ok { color: #2e7d32; }
+    .vagas-esgotado { color: #c62828; }
+    .vagas-espera { color: #f57f17; }
+    .btn-inscricao { padding: 6px 14px; background: #1a237e; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .btn-inscricao.esgotado { background: #757575; }
+    #sem-eventos { display: none; text-align: center; padding: 48px; color: #9e9e9e; }
+    #sem-eventos p { font-size: 16px; }
+    .loading { text-align: center; padding: 48px; color: #9e9e9e; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><?= orgConfig.nome ?></h1>
+  <p>Agenda Cultural — Ações e eventos com inscrição aberta</p>
+</header>
+
+<div class="container">
+  <div class="filtros">
+    <div class="filtro-item">
+      <label>Tipo:</label>
+      <select id="filtro-tipo" onchange="filtrar()">
+        <option value="">Todos</option>
+        <option value="show">Show / Concerto</option>
+        <option value="exposicao">Exposição</option>
+        <option value="teatro">Teatro / Dança</option>
+        <option value="oficina">Oficina / Curso</option>
+        <option value="palestra">Palestra / Debate</option>
+      </select>
+    </div>
+    <div class="filtro-item">
+      <label>A partir de:</label>
+      <input type="date" id="filtro-data" onchange="filtrar()">
+    </div>
+  </div>
+
+  <div id="loading" class="loading">Carregando programação...</div>
+  <div class="grid-eventos" id="grid-eventos"></div>
+  <div id="sem-eventos">
+    <p>Nenhum evento encontrado com os filtros selecionados.</p>
+  </div>
+</div>
+
+<script>
+  var orgConfig   = <?= JSON.stringify(orgConfig) ?>;
+  var params      = <?= JSON.stringify(params) ?>;
+  var _eventos    = [];
+
+  var ICONES_TIPO = {
+    show:      '🎵',
+    exposicao: '🖼️',
+    teatro:    '🎭',
+    oficina:   '🎨',
+    palestra:  '💬',
+    outro:     '🌟'
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('filtro-data').value = new Date().toISOString().split('T')[0];
+    carregarEventos();
+  });
+
+  function carregarEventos() {
+    // TODO Fase 7: google.script.run.ctrl_portal_getAgenda({ dataInicio, tipo }, ...)
+    // Simulação Fase 0:
+    setTimeout(function() {
+      _eventos = [
+        {
+          id: 'acao1', titulo: 'Mostra de Teatro Independente', tipo: 'teatro',
+          data: '2026-06-15', horario: '19:30', local: 'Teatro Principal',
+          descricao: 'Uma semana de teatro independente com 12 companhias do estado.',
+          vagas: 80, inscricoes: 45, aceitaInscricao: true
+        },
+        {
+          id: 'acao2', titulo: 'Oficina de Percussão', tipo: 'oficina',
+          data: '2026-06-20', horario: '14:00', local: 'Sala Multiuso',
+          descricao: 'Aprenda os fundamentos da percussão popular brasileira com mestre Raimundo.',
+          vagas: 20, inscricoes: 18, aceitaInscricao: true
+        },
+        {
+          id: 'acao3', titulo: 'Exposição Fotográfica "Território"', tipo: 'exposicao',
+          data: '2026-06-01', horario: '10:00', local: 'Galeria de Arte',
+          descricao: 'Fotografias que documentam a ocupação cultural dos espaços públicos.',
+          vagas: null, inscricoes: 0, aceitaInscricao: false
+        }
+      ];
+      document.getElementById('loading').style.display = 'none';
+      filtrar();
+    }, 400);
+  }
+
+  function filtrar() {
+    var tipo     = document.getElementById('filtro-tipo').value;
+    var dataMin  = document.getElementById('filtro-data').value;
+
+    var filtrados = _eventos.filter(function(e) {
+      if (tipo && e.tipo !== tipo) return false;
+      if (dataMin && e.data < dataMin) return false;
+      return true;
+    });
+
+    renderizar(filtrados);
+  }
+
+  function renderizar(eventos) {
+    var grid = document.getElementById('grid-eventos');
+    var semEv = document.getElementById('sem-eventos');
+
+    if (!eventos.length) {
+      grid.innerHTML = '';
+      semEv.style.display = 'block';
+      return;
+    }
+    semEv.style.display = 'none';
+
+    grid.innerHTML = eventos.map(function(e) {
+      var disponivel = e.vagas ? e.vagas - e.inscricoes : null;
+      var vagasHtml  = '';
+      var btnHtml    = '';
+
+      if (e.aceitaInscricao) {
+        if (disponivel === null || disponivel > 0) {
+          vagasHtml = '<span class="vagas-badge vagas-ok">' + (disponivel !== null ? disponivel + ' vagas' : 'Aberto') + '</span>';
+          btnHtml   = '<a class="btn-inscricao" href="?secao=inscricao&acao=' + e.id + '">Inscrever-se</a>';
+        } else {
+          vagasHtml = '<span class="vagas-badge vagas-espera">Lista de espera</span>';
+          btnHtml   = '<a class="btn-inscricao" href="?secao=inscricao&acao=' + e.id + '">Entrar na fila</a>';
+        }
+      } else {
+        vagasHtml = '<span class="vagas-badge" style="color:#9e9e9e">Entrada franca</span>';
+        btnHtml   = '';
+      }
+
+      var dataFmt = new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+
+      return '<div class="card-evento">'
+        + '<div class="capa">' + (ICONES_TIPO[e.tipo] || '🌟') + '</div>'
+        + '<div class="corpo">'
+        + '<span class="tipo-badge">' + e.tipo + '</span>'
+        + '<h3>' + e.titulo + '</h3>'
+        + '<div class="meta">'
+        + '<span>📅 ' + dataFmt + '</span>'
+        + '<span>🕐 ' + e.horario + '</span>'
+        + '</div>'
+        + '<div class="meta"><span>📍 ' + e.local + '</span></div>'
+        + '<div class="descricao-resumo">' + e.descricao + '</div>'
+        + '</div>'
+        + '<div class="footer">' + vagasHtml + btnHtml + '</div>'
+        + '</div>';
+    }).join('');
+  }
+</script>
+</body>
+</html>
