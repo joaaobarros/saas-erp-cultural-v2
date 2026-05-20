@@ -92,6 +92,34 @@
     #boot-erro { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 24px; text-align: center; }
     #boot-erro h2 { color: var(--cor-erro); }
     #boot-erro.oculto { display: none; }
+
+    /* ── Identidade Visual — logo na sidebar ── */
+    #sidebar { background: var(--cor-sidebar, var(--cor-primaria)); }
+    #nav-lista li a:hover, #nav-lista li a.ativo { border-left-color: var(--cor-destaque); }
+    #sidebar-logo-wrap { display: flex; flex-direction: column; align-items: center; padding: 12px 16px 8px; border-bottom: 1px solid rgba(255,255,255,.15); gap: 6px; }
+    #sidebar-logo { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: rgba(255,255,255,.12); padding: 4px; display: none; }
+    #sidebar-logo.visivel { display: block; }
+    #sidebar-logo-wrap .org-nome { font-size: 13px; font-weight: 700; color: var(--cor-sidebar-texto, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; text-align: center; }
+    #sidebar.recolhido #sidebar-logo { width: 36px; height: 36px; }
+    #sidebar.recolhido #sidebar-logo-wrap .org-nome { display: none; }
+
+    /* ── Painel Admin — Identidade Visual ── */
+    #view-admin .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .identidade-preview { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 12px; min-height: 72px; }
+    .identidade-preview img { width: 64px; height: 64px; object-fit: contain; border-radius: 6px; border: 1px solid var(--cor-borda); background: #fff; padding: 4px; }
+    .identidade-preview .sem-logo { width: 64px; height: 64px; border-radius: 6px; border: 2px dashed var(--cor-borda); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .identidade-preview .preview-info { font-size: 13px; color: var(--cor-texto-claro); line-height: 1.5; }
+    .paleta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .cor-item { display: flex; flex-direction: column; gap: 4px; }
+    .cor-item label { font-size: 12px; font-weight: 600; color: var(--cor-texto-claro); text-transform: uppercase; letter-spacing: .04em; }
+    .cor-input-wrap { display: flex; align-items: center; gap: 6px; }
+    .cor-input-wrap input[type="color"] { width: 36px; height: 36px; border: 1px solid var(--cor-borda); border-radius: 4px; cursor: pointer; padding: 2px; background: none; }
+    .cor-input-wrap input[type="text"] { flex: 1; padding: 6px 8px; border: 1px solid var(--cor-borda); border-radius: 4px; font-size: 13px; font-family: monospace; }
+    .cor-derivadas { font-size: 11px; color: var(--cor-texto-claro); margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 4px; line-height: 1.8; }
+    .mini-preview-sidebar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin-top: 8px; }
+    .btn-extrair { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 6px 12px; background: #f1f5f9; border: 1px solid var(--cor-borda); border-radius: 4px; cursor: pointer; margin-bottom: 12px; }
+    .btn-extrair:hover { background: #e2e8f0; }
+    .admin-section-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--cor-texto-claro); margin: 16px 0 8px; }
   </style>
 </head>
 <body>
@@ -113,8 +141,9 @@
 
   <!-- Sidebar -->
   <nav id="sidebar">
-    <div id="sidebar-header">
-      <div class="org-nome" id="org-nome-sidebar">Carregando...</div>
+    <div id="sidebar-logo-wrap">
+      <img id="sidebar-logo" src="" alt="Logo" crossorigin="anonymous">
+      <span class="org-nome" id="org-nome-sidebar">Carregando...</span>
     </div>
     <ul id="nav-lista">
       <!-- populado via JS após boot -->
@@ -143,6 +172,93 @@
         <div id="home-alertas"></div>
       </div>
 
+      <!-- View: Administração -->
+      <div id="view-admin" class="view">
+        <div class="view-titulo">⚙️ Administração</div>
+        <div class="admin-grid">
+
+          <!-- Card: Identidade Visual -->
+          <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-titulo">🎨 Identidade Visual</div>
+
+            <div class="identidade-preview" id="iv-preview-wrap">
+              <div class="sem-logo" id="iv-sem-logo">🏛️</div>
+              <img id="iv-preview-img" src="" alt="Logo" crossorigin="anonymous" style="display:none">
+              <div class="preview-info" id="iv-preview-info">Nenhum logo configurado.</div>
+            </div>
+
+            <div class="admin-section-titulo">URL da Logomarca</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+              <input type="text" id="iv-logo-url" placeholder="https://... (Google Drive, CDN, etc.)"
+                     style="flex:1;padding:8px;border:1px solid var(--cor-borda);border-radius:6px;font-size:14px;"
+                     oninput="IdentidadeAdmin.previewLogo()">
+              <button class="btn btn-secundario" onclick="IdentidadeAdmin.removerLogo()" style="font-size:13px;">Remover</button>
+            </div>
+
+            <button class="btn-extrair" onclick="IdentidadeAdmin.extrairCores()" id="btn-extrair-cores">
+              🎨 Extrair cores do logo automaticamente
+            </button>
+
+            <div class="admin-section-titulo">Cores da Identidade</div>
+            <div class="paleta-grid">
+              <div class="cor-item">
+                <label>Cor Primária</label>
+                <div class="cor-input-wrap">
+                  <input type="color" id="cp-primaria" oninput="IdentidadeAdmin.sincronizarCor('primaria')">
+                  <input type="text"  id="ct-primaria" placeholder="#1a237e" maxlength="7"
+                         oninput="IdentidadeAdmin.sincronizarHex('primaria')">
+                </div>
+              </div>
+              <div class="cor-item">
+                <label>Cor de Destaque</label>
+                <div class="cor-input-wrap">
+                  <input type="color" id="cp-destaque" oninput="IdentidadeAdmin.sincronizarCor('destaque')">
+                  <input type="text"  id="ct-destaque" placeholder="#ff6f00" maxlength="7"
+                         oninput="IdentidadeAdmin.sincronizarHex('destaque')">
+                </div>
+              </div>
+              <div class="cor-item">
+                <label>Cor do Menu Lateral</label>
+                <div class="cor-input-wrap">
+                  <input type="color" id="cp-sidebar" oninput="IdentidadeAdmin.sincronizarCor('sidebar')">
+                  <input type="text"  id="ct-sidebar" placeholder="#1a237e" maxlength="7"
+                         oninput="IdentidadeAdmin.sincronizarHex('sidebar')">
+                </div>
+              </div>
+            </div>
+
+            <div class="cor-derivadas" id="iv-derivadas">
+              Cores derivadas automáticas: Clara, Escura e Secundária calculadas a partir da Primária.
+              Texto do menu: calculado por contraste com a cor do menu lateral.
+            </div>
+
+            <div class="mini-preview-sidebar" id="iv-mini-sidebar">
+              <span id="iv-mini-sidebar-inner" style="width:100%;padding:4px 8px;border-radius:4px;">
+                Prévia do menu lateral
+              </span>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+              <button class="btn btn-primario" id="btn-salvar-identidade" onclick="IdentidadeAdmin.salvar()">
+                💾 Salvar identidade visual
+              </button>
+              <button class="btn btn-secundario" onclick="IdentidadeAdmin.restaurarPadrao()">
+                ↺ Restaurar padrão
+              </button>
+            </div>
+          </div><!-- /card identidade -->
+
+          <!-- Card: Usuários Pendentes -->
+          <div class="card">
+            <div class="card-titulo">👤 Acessos Pendentes</div>
+            <div id="admin-pendentes-lista">
+              <span style="color:var(--cor-texto-claro);font-size:14px;">Carregando...</span>
+            </div>
+          </div>
+
+        </div><!-- /admin-grid -->
+      </div><!-- /view-admin -->
+
       <!-- Views de módulos — injetadas dinamicamente -->
       <!-- Cada módulo registra sua view via App.registrarView() -->
 
@@ -164,8 +280,388 @@ var GAS = {
     verificarSaude:  function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_sistema_verificarSaude(); },
     sair: function() { google.script.history.replace(null, null, '?secao=app'); location.reload(); }
   },
+  admin: {
+    getIdentidade:       function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_admin_getIdentidade(); },
+    salvarIdentidade:    function(d, cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_admin_salvarIdentidade(d); },
+    removerLogo:         function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_admin_removerLogo(); },
+    restaurarPadrao:     function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_admin_restaurarPaletaPadrao(); },
+    listarPendentes:     function(cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_acesso_listarPendentes(); },
+    aprovarAcesso:       function(d, cb, err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err || GAS._err).ctrl_acesso_aprovar(d); }
+  },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
+
+// ────────────────────────────────────────────────────────────────
+// IDENTIDADE VISUAL — aplica paleta de cores e logo em tempo real
+// ────────────────────────────────────────────────────────────────
+var Identidade = (function () {
+
+  // ── Utilitários de cor ───────────────────────────────────────────────────
+
+  function hexToRgb(hex) {
+    var r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return r ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) } : null;
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(function (v) {
+      return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  function luminancia(r, g, b) {
+    var a = [r, g, b].map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+
+  /** Clareia (+) ou escurece (-) uma cor hex. fator: -1..+1 */
+  function ajustarBrilho(hex, fator) {
+    var rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    return rgbToHex(rgb.r + 255 * fator, rgb.g + 255 * fator, rgb.b + 255 * fator);
+  }
+
+  /** Cor de texto (preto ou branco) com melhor contraste para o fundo dado. */
+  function textoContraste(hex) {
+    var rgb = hexToRgb(hex);
+    if (!rgb) return '#ffffff';
+    return luminancia(rgb.r, rgb.g, rgb.b) > 0.35 ? '#212121' : '#ffffff';
+  }
+
+  /** Deriva a paleta completa a partir das 3 cores editáveis. */
+  function derivarPaleta(primaria, destaque, sidebar) {
+    return {
+      primaria:       primaria,
+      primariaClara:  ajustarBrilho(primaria,  0.22),
+      primariaEscura: ajustarBrilho(primaria, -0.22),
+      secundaria:     ajustarBrilho(primaria,  0.82),
+      destaque:       destaque,
+      sidebar:        sidebar,
+      sidebarTexto:   textoContraste(sidebar)
+    };
+  }
+
+  // ── Extração de cor via canvas ──────────────────────────────────────────
+
+  /**
+   * Extrai a cor dominante de uma imagem via Canvas API.
+   * Requer que a imagem esteja carregada e com CORS permitido.
+   * @param {HTMLImageElement} imgEl
+   * @returns {{ r, g, b }|null}
+   */
+  function extrairCorDominante(imgEl) {
+    try {
+      var canvas = document.createElement('canvas');
+      var W = Math.min(imgEl.naturalWidth  || imgEl.width  || 64, 128);
+      var H = Math.min(imgEl.naturalHeight || imgEl.height || 64, 128);
+      canvas.width = W; canvas.height = H;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(imgEl, 0, 0, W, H);
+      var data = ctx.getImageData(0, 0, W, H).data;
+
+      // Acumula cor média ignorando pixels transparentes e quase-brancos
+      var rSum = 0, gSum = 0, bSum = 0, count = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        var r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+        if (a < 128) continue;               // transparente
+        if (r > 235 && g > 235 && b > 235) continue; // quase branco
+        if (r < 20  && g < 20  && b < 20)  continue; // quase preto
+        rSum += r; gSum += g; bSum += b; count++;
+      }
+      if (!count) return null;
+      return { r: Math.round(rSum/count), g: Math.round(gSum/count), b: Math.round(bSum/count) };
+    } catch (e) {
+      return null; // CORS ou canvas não disponível
+    }
+  }
+
+  // ── Aplicação ao DOM ────────────────────────────────────────────────────
+
+  function _setCssVar(nome, valor) {
+    if (valor) document.documentElement.style.setProperty(nome, valor);
+  }
+
+  /** Aplica a paleta derivada nas CSS custom properties do documento. */
+  function aplicarPaleta(paleta) {
+    _setCssVar('--cor-primaria',    paleta.primaria);
+    _setCssVar('--cor-secundaria',  paleta.secundaria);
+    _setCssVar('--cor-destaque',    paleta.destaque);
+    _setCssVar('--cor-sidebar',     paleta.sidebar);
+    _setCssVar('--cor-sidebar-texto', paleta.sidebarTexto);
+    // Sidebar usa --cor-primaria no CSS base; alias para manter compatibilidade
+    _setCssVar('--cor-primaria',    paleta.sidebar || paleta.primaria);
+  }
+
+  /** Exibe o logo na sidebar e opcionalmente dispara extração de cores. */
+  function aplicarLogo(url, extrairCores) {
+    var logoEl = document.getElementById('sidebar-logo');
+    if (!logoEl) return;
+
+    if (!url) {
+      logoEl.classList.remove('visivel');
+      logoEl.src = '';
+      return;
+    }
+
+    logoEl.src = url;
+    logoEl.classList.add('visivel');
+
+    if (extrairCores) {
+      logoEl.onload = function () {
+        var cor = extrairCorDominante(logoEl);
+        if (cor) {
+          var hex      = rgbToHex(cor.r, cor.g, cor.b);
+          var paleta   = derivarPaleta(hex, ajustarBrilho(hex, -0.1), ajustarBrilho(hex, -0.15));
+          aplicarPaleta(paleta);
+        }
+        logoEl.onload = null;
+      };
+    }
+  }
+
+  /**
+   * Ponto de entrada chamado pelo App no boot.
+   * @param {{ logoUrl, paleta }} orgConfig
+   */
+  function aplicar(orgConfig) {
+    if (!orgConfig) return;
+    var temPaleta = orgConfig.paleta && orgConfig.paleta.primaria;
+    if (temPaleta) {
+      // Paleta já configurada — derivar e aplicar
+      var completa = derivarPaleta(
+        orgConfig.paleta.primaria  || '#1a237e',
+        orgConfig.paleta.destaque  || '#ff6f00',
+        orgConfig.paleta.sidebar   || orgConfig.paleta.primaria || '#1a237e'
+      );
+      aplicarPaleta(completa);
+    }
+    // Logo: aplicar sem extração se já tem paleta definida, com extração se não tem
+    if (orgConfig.logoUrl) {
+      aplicarLogo(orgConfig.logoUrl, !temPaleta);
+    }
+  }
+
+  return {
+    aplicar:            aplicar,
+    aplicarPaleta:      aplicarPaleta,
+    aplicarLogo:        aplicarLogo,
+    derivarPaleta:      derivarPaleta,
+    extrairCorDominante:extrairCorDominante,
+    hexToRgb:           hexToRgb,
+    rgbToHex:           rgbToHex,
+    ajustarBrilho:      ajustarBrilho,
+    textoContraste:     textoContraste
+  };
+})();
+
+// ────────────────────────────────────────────────────────────────
+// IDENTIDADE ADMIN — lógica do painel de edição de cores
+// ────────────────────────────────────────────────────────────────
+var IdentidadeAdmin = (function () {
+
+  var _paletaAtual = {};
+
+  function _el(id) { return document.getElementById(id); }
+
+  function _hex(id) { return _el('ct-' + id) ? _el('ct-' + id).value.trim() : ''; }
+
+  function _setores() {
+    return (App.getBoot() ? App.getBoot().setores || [] : []);
+  }
+
+  /** Atualiza o picker de cor quando o campo texto muda. */
+  function sincronizarHex(campo) {
+    var val = _el('ct-' + campo).value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      _el('cp-' + campo).value = val;
+      _atualizarDerivadas();
+    }
+  }
+
+  /** Atualiza o campo texto quando o picker muda. */
+  function sincronizarCor(campo) {
+    _el('ct-' + campo).value = _el('cp-' + campo).value;
+    _atualizarDerivadas();
+  }
+
+  /** Calcula e exibe as cores derivadas + prévia do sidebar. */
+  function _atualizarDerivadas() {
+    var p  = _hex('primaria') || '#1a237e';
+    var d  = _hex('destaque') || '#ff6f00';
+    var s  = _hex('sidebar')  || p;
+    if (!/^#[0-9a-fA-F]{6}$/.test(p)) return;
+
+    var paleta = Identidade.derivarPaleta(p, d, s);
+
+    // Aplicar ao DOM em tempo real (preview ao vivo)
+    Identidade.aplicarPaleta(paleta);
+
+    // Mostrar derivadas
+    var divDer = _el('iv-derivadas');
+    if (divDer) {
+      divDer.innerHTML =
+        '<strong>Derivadas automáticas:</strong><br>' +
+        'Clara: <code>' + paleta.primariaClara + '</code> &nbsp; ' +
+        'Escura: <code>' + paleta.primariaEscura + '</code> &nbsp; ' +
+        'Secundária: <code>' + paleta.secundaria + '</code> &nbsp; ' +
+        'Texto menu: <code>' + paleta.sidebarTexto + '</code>';
+    }
+
+    // Mini-prévia do sidebar
+    var mini = _el('iv-mini-sidebar-inner');
+    if (mini) {
+      mini.style.background = paleta.sidebar;
+      mini.style.color      = paleta.sidebarTexto;
+    }
+
+    _paletaAtual = paleta;
+  }
+
+  /** Pré-visualiza o logo no painel antes de salvar. */
+  function previewLogo() {
+    var url = (_el('iv-logo-url') || {}).value || '';
+    var imgEl = _el('iv-preview-img');
+    var semLogo = _el('iv-sem-logo');
+    var info = _el('iv-preview-info');
+    if (!url) {
+      imgEl.style.display = 'none'; semLogo.style.display = 'flex';
+      info.textContent = 'Nenhum logo configurado.';
+      return;
+    }
+    imgEl.src = url;
+    imgEl.style.display = '';
+    semLogo.style.display = 'none';
+    info.textContent = 'Logo carregado (salve para confirmar).';
+  }
+
+  /** Dispara extração automática de cores do logo informado. */
+  function extrairCores() {
+    var url = (_el('iv-logo-url') || {}).value || '';
+    if (!url) { Toast.aviso('Informe a URL do logo antes de extrair as cores.'); return; }
+
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      var cor = Identidade.extrairCorDominante(img);
+      if (!cor) {
+        Toast.aviso('Não foi possível extrair cores automaticamente (CORS). Ajuste as cores manualmente.');
+        return;
+      }
+      var hex    = Identidade.rgbToHex(cor.r, cor.g, cor.b);
+      var escura = Identidade.ajustarBrilho(hex, -0.15);
+
+      // Preencher os campos
+      _el('ct-primaria').value = hex;
+      _el('cp-primaria').value = hex;
+      _el('ct-sidebar').value  = escura;
+      _el('cp-sidebar').value  = escura;
+
+      _atualizarDerivadas();
+      Toast.sucesso('Cores extraídas com sucesso! Ajuste se necessário e salve.');
+    };
+    img.onerror = function () {
+      Toast.aviso('Não foi possível carregar a imagem. Verifique a URL e permissões CORS.');
+    };
+    img.src = url;
+  }
+
+  /** Popula o painel com os dados atuais do servidor. */
+  function carregar() {
+    GAS.admin.getIdentidade(function (resp) {
+      if (!resp || !resp.ok) { Toast.erro('Erro ao carregar identidade visual.'); return; }
+      var iv = resp.data;
+      _el('iv-logo-url').value = iv.logoUrl || '';
+      previewLogo();
+
+      var paleta = iv.paleta || {};
+      var p      = paleta.primaria || '#1a237e';
+      var d      = paleta.destaque || '#ff6f00';
+      var s      = paleta.sidebar  || p;
+
+      _el('ct-primaria').value = p; _el('cp-primaria').value = p;
+      _el('ct-destaque').value = d; _el('cp-destaque').value = d;
+      _el('ct-sidebar').value  = s; _el('cp-sidebar').value  = s;
+
+      _atualizarDerivadas();
+
+      // Usuários pendentes
+      _carregarPendentes();
+    });
+  }
+
+  function _carregarPendentes() {
+    var lista = _el('admin-pendentes-lista');
+    if (!lista) return;
+    GAS.admin.listarPendentes(function (resp) {
+      if (!resp || !resp.ok || !resp.data || !resp.data.length) {
+        lista.innerHTML = '<p style="color:var(--cor-texto-claro);font-size:14px;">Nenhum acesso pendente.</p>';
+        return;
+      }
+      lista.innerHTML = resp.data.map(function (u) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cor-borda);">' +
+          '<div><div style="font-size:14px;font-weight:600;">' + u.nome + '</div>' +
+          '<div style="font-size:12px;color:var(--cor-texto-claro);">' + u.email + ' · ' + (u.setorDesejado || 'sem setor') + '</div></div>' +
+          '<button class="btn btn-primario" style="font-size:12px;padding:4px 10px;" onclick="IdentidadeAdmin.aprovar(\'' + u.email + '\')">Aprovar</button>' +
+          '</div>';
+      }).join('');
+    });
+  }
+
+  function aprovar(email) {
+    GAS.admin.aprovarAcesso({ emailAlvo: email, papel: 'colaborador', setor: '' }, function (resp) {
+      if (resp && resp.ok) { Toast.sucesso('Acesso aprovado: ' + email); _carregarPendentes(); }
+      else Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao aprovar.');
+    });
+  }
+
+  function salvar() {
+    var url  = (_el('iv-logo-url') || {}).value || '';
+    if (!BtnGuard.travar('btn-salvar-identidade', 'Salvando...')) return;
+
+    GAS.admin.salvarIdentidade({ logoUrl: url, paleta: _paletaAtual }, function (resp) {
+      BtnGuard.liberar('btn-salvar-identidade');
+      if (resp && resp.ok) {
+        Toast.sucesso('Identidade visual salva!');
+        Identidade.aplicarLogo(url, false);
+      } else {
+        Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao salvar.');
+      }
+    });
+  }
+
+  function removerLogo() {
+    _el('iv-logo-url').value = '';
+    previewLogo();
+    Identidade.aplicarLogo('', false);
+  }
+
+  function restaurarPadrao() {
+    if (!confirm('Restaurar a paleta de cores padrão do sistema?')) return;
+    GAS.admin.restaurarPadrao(function (resp) {
+      if (resp && resp.ok) {
+        Toast.sucesso('Paleta restaurada.');
+        carregar();
+      } else {
+        Toast.erro('Erro ao restaurar paleta.');
+      }
+    });
+  }
+
+  return {
+    carregar:         carregar,
+    salvar:           salvar,
+    removerLogo:      removerLogo,
+    restaurarPadrao:  restaurarPadrao,
+    extrairCores:     extrairCores,
+    previewLogo:      previewLogo,
+    sincronizarCor:   sincronizarCor,
+    sincronizarHex:   sincronizarHex,
+    aprovar:          aprovar
+  };
+})();
 
 // ────────────────────────────────────────────────────────────────
 // TOAST — notificações in-app
@@ -282,8 +778,11 @@ var App = (function() {
 
   function _aplicarBoot() {
     document.getElementById('org-nome-sidebar').textContent = _boot.orgConfig.nome;
-    document.getElementById('usuario-email').textContent = _boot.usuarioEmail;
+    document.getElementById('usuario-email').textContent    = _boot.usuarioEmail;
     document.title = _boot.orgConfig.titulo;
+
+    // Aplicar identidade visual imediatamente — paleta + logo
+    Identidade.aplicar(_boot.orgConfig);
 
     _construirMenu();
     _renderizarHome();
@@ -311,6 +810,9 @@ var App = (function() {
       });
       ul.appendChild(li);
     });
+
+    // Registrar views com callbacks de carga
+    Router.registrar('admin', 'Administração', function () { IdentidadeAdmin.carregar(); });
 
     Router.navegar('home');
   }

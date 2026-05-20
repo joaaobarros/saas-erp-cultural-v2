@@ -54,16 +54,24 @@ function invalidarCacheOrgConfig() {
 }
 
 /**
- * Expõe apenas dados seguros para o contexto público (Portal Externo).
- * NUNCA expor dados internos por esta função.
+ * Expõe apenas dados seguros para o contexto público (Portal Externo e boot do frontend).
+ * Inclui paleta de cores e logoUrl para que a UI aplique a identidade visual no carregamento.
+ * NUNCA expor dados internos (orgId, domínio, emails, etc.) por esta função.
  */
 function getPublicOrgConfig() {
-  var cfg = getOrgConfig();
+  var cfg    = getOrgConfig();
+  var paleta = {};
+  var logoUrl = cfg.logoUrl || '';
+  try {
+    paleta  = SistemaConfigService.getPaleta();
+    logoUrl = SistemaConfigService.getLogoUrl() || logoUrl;
+  } catch(_) {}
   return {
     nome:     cfg.nome,
     titulo:   cfg.titulo,
-    logoUrl:  cfg.logoUrl,
-    timezone: cfg.timezone
+    logoUrl:  logoUrl,
+    timezone: cfg.timezone,
+    paleta:   paleta
   };
 }
 

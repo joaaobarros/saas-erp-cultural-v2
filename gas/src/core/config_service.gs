@@ -201,6 +201,29 @@ var SistemaConfigService = (function () {
     return templates.find(function(t) { return t.eventoId === eventoId; }) || null;
   }
 
+  // ── Identidade Visual ─────────────────────────────────────────────────────
+
+  /**
+   * Retorna a URL do logotipo da organização.
+   * Fonte primária: config_org.json.logoUrl
+   * Fallback: PropertiesService.ORG_LOGO_URL (compatibilidade legada)
+   */
+  function getLogoUrl() {
+    var cfg = _getConfigOrg();
+    if (cfg.logoUrl) return cfg.logoUrl;
+    try { return PropertiesService.getScriptProperties().getProperty('ORG_LOGO_URL') || ''; } catch(_) { return ''; }
+  }
+
+  /**
+   * Retorna a paleta de cores da organização.
+   * Usada pelo frontend para aplicar a identidade visual via CSS custom properties.
+   * @returns {{ primaria, primariaClara, primariaEscura, secundaria, destaque, sidebar, sidebarTexto }}
+   */
+  function getPaleta() {
+    var cfg = _getConfigOrg();
+    return cfg.paleta || _defaultPaleta();
+  }
+
   // ── Invalidação de cache ──────────────────────────────────────────────────
 
   function invalidarCache() {
@@ -253,6 +276,18 @@ var SistemaConfigService = (function () {
     ];
   }
 
+  function _defaultPaleta() {
+    return {
+      primaria:       '#1a237e',
+      primariaClara:  '#3949ab',
+      primariaEscura: '#0d1757',
+      secundaria:     '#e8eaf6',
+      destaque:       '#ff6f00',
+      sidebar:        '#1a237e',
+      sidebarTexto:   '#ffffff'
+    };
+  }
+
   function _defaultParametrosRH() {
     return {
       meses_contrato:              12,
@@ -294,6 +329,8 @@ var SistemaConfigService = (function () {
     getCamposCustom:          getCamposCustom,
     getParametrosRH:          getParametrosRH,
     getTemplateNotificacao:   getTemplateNotificacao,
+    getLogoUrl:               getLogoUrl,
+    getPaleta:                getPaleta,
     invalidarCache:           invalidarCache
   };
 
