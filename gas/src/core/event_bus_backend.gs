@@ -153,7 +153,7 @@ var SystemEvents = (function () {
     var evt = _normalizar(tipo, payload);
 
     try {
-      var sheet = _getSheet(ABA_EVENTO_LOG);
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (!sheet) return;
       sheet.appendRow([
         evt.id, evt.tipo, evt.origem, evt.entidade,
@@ -176,7 +176,7 @@ var SystemEvents = (function () {
   function getRecentes(n) {
     n = n || 50;
     try {
-      var sheet = _getSheet(ABA_EVENTO_LOG);
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (!sheet || sheet.getLastRow() < 2) return [];
       var ultima = sheet.getLastRow();
       var inicio = Math.max(2, ultima - n + 1);
@@ -196,7 +196,7 @@ var SystemEvents = (function () {
    */
   function getEventosPorEntidade(entidade, entidadeId) {
     try {
-      var sheet = _getSheet(ABA_EVENTO_LOG);
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (!sheet || sheet.getLastRow() < 2) return [];
       var dados = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
       return dados
@@ -233,7 +233,7 @@ var SystemEvents = (function () {
     };
 
     try {
-      var sheet = _getSheet(ABA_EVENTO_LOG);
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (!sheet || sheet.getLastRow() < 2) {
         relatorio.anomalias.push({ linha: 0, problema: 'EventLog vazio ou inexistente' });
         return relatorio;
@@ -311,7 +311,7 @@ var SystemEvents = (function () {
    */
   function garantirAbaEventLog() {
     try {
-      var sheet = _getSheet(ABA_EVENTO_LOG);
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (sheet && sheet.getLastRow() >= 1) return;
       if (!sheet) return;
       sheet.appendRow(['id', 'tipo', 'origem', 'entidade', 'entidade_id', 'usuario', 'timestamp', 'contexto']);

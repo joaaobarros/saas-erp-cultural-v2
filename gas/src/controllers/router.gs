@@ -69,7 +69,7 @@ function _renderAppInterno(e) {
       template.usuarioEmail = email;
       return template.evaluate()
         .setTitle(getOrgConfig().titulo)
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
         .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 
     case 'pendente_aprovacao':
@@ -83,7 +83,7 @@ function _renderAppInterno(e) {
         .map(function(s) { return { id: s.id, label: s.label }; });
       return tplPendente.evaluate()
         .setTitle(getOrgConfig().titulo + ' — Acesso')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
         .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 
     case 'dominio_negado':
