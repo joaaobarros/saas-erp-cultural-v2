@@ -47,9 +47,18 @@ var BootService = (function () {
     var setores      = SistemaConfigService.getSetores();
     var espacos      = _carregarEspacos(orgId);
     var itens        = _carregarItens(orgId);
-    var permissoes   = typeof PermissoesService !== 'undefined'
-      ? PermissoesService.obterPermissoesUsuario(email, orgId)
-      : { nivel: 'usuario', setores: [] };
+
+    // PermissoesService.obter() retorna null quando PermissoesV2Engine não está disponível;
+    // nesse caso, usa perfil mínimo seguro para não bloquear o boot.
+    var permissoes;
+    try {
+      permissoes = typeof PermissoesService !== 'undefined'
+        ? (PermissoesService.obter(email) || { perfil: 'usuario', setores: [] })
+        : { perfil: 'usuario', setores: [] };
+    } catch(e) {
+      permissoes = { perfil: 'usuario', setores: [] };
+    }
+
     var modulosAtivos = typeof ModulosRegistryService !== 'undefined'
       ? ModulosRegistryService.listarAtivos()
       : [];
@@ -60,7 +69,8 @@ var BootService = (function () {
       usuarioEmail: email,
       permissoes:   permissoes,
       modulosAtivos: modulosAtivos,
-      setores:      setores.map(function(s) { return { id: s.id, nome: s.nome, cor: s.cor || null }; }),
+      // SistemaConfigService usa 'label' como nome exibível — mapear para 'nome' p/ o frontend
+      setores:      setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
       espacos:      espacos,
       itens:        itens,
       timestamp:    agora()
@@ -91,7 +101,7 @@ var BootService = (function () {
       var espacosConf = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
       if (espacosConf.length) return espacosConf;
 
-      var sheet = _getSheet('MASTER', 'Configuracoes');
+      var sheet = _getSheet('SHEET_ID_MASTER', 'Configuracoes');
       if (!sheet || sheet.getLastRow() < 2) return [];
 
       var nCols  = Math.min(sheet.getLastColumn(), 13);
@@ -117,7 +127,7 @@ var BootService = (function () {
 
   function _carregarItens(orgId) {
     try {
-      var sheet = _getSheet('MASTER', 'Itens');
+      var sheet = _getSheet('SHEET_ID_MASTER', 'Itens');
       if (!sheet || sheet.getLastRow() < 2) return [];
       return sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues()
         .filter(function(r) { return String(r[0] || '').trim(); })

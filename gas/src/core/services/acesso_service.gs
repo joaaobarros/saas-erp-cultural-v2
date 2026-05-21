@@ -381,11 +381,32 @@ function ctrl_acesso_solicitar(dados) {
 
 function ctrl_acesso_listarPendentes() {
   return GasResponse.wrap(function () {
-    var email = getEmailSessao();
-    var status = AcessoService.verificar(email);
-    if (status.status !== 'ativo' || !PermissoesService.isAdmin(email)) {
-      throw new Error('Sem permissão para listar pendentes.');
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+
+    if (acesso.status !== 'ativo') {
+      throw new Error('Acesso negado: usuário não está ativo no sistema.');
     }
+
+    // Verificar papel admin diretamente no registro do AcessoService (funciona mesmo sem PermissoesV2Engine)
+    var papel   = acesso.registro && acesso.registro.papel ? acesso.registro.papel : '';
+    var ehAdmin = (papel === 'admin' || papel === 'superadmin');
+
+    // Fallback: PermissoesService (depende de PermissoesV2Engine — pode não estar disponível)
+    if (!ehAdmin && typeof PermissoesService !== 'undefined') {
+      try { ehAdmin = PermissoesService.isAdmin(email); } catch(e) {}
+    }
+
+    // Último fallback: superadmin configurado em PropertiesService
+    if (!ehAdmin) {
+      var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
+      ehAdmin = superAdmin && email.toLowerCase() === superAdmin;
+    }
+
+    if (!ehAdmin) {
+      throw new Error('Acesso negado: apenas administradores podem listar pendentes.');
+    }
+
     return AcessoService.listarPendentes();
   }, 'ctrl_acesso_listarPendentes');
 }

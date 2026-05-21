@@ -75,7 +75,7 @@ var UserProfileService = (function () {
       : getEmailSessao().toLowerCase();
     if (!email || !chave) return;
 
-    var aba   = _getSheet('MASTER', 'PreferenciasUsuarios');
+    var aba   = _getSheet('SHEET_ID_MASTER', 'PreferenciasUsuarios');
     if (!aba) throw new Error('Aba PreferenciasUsuarios não encontrada.');
 
     var valorStr = typeof valor === 'object' ? JSON.stringify(valor) : String(valor);
@@ -103,7 +103,7 @@ var UserProfileService = (function () {
       : getEmailOuNull();
     if (!email || !chave) return null;
 
-    var aba   = _getSheet('MASTER', 'PreferenciasUsuarios');
+    var aba   = _getSheet('SHEET_ID_MASTER', 'PreferenciasUsuarios');
     if (!aba || aba.getLastRow() < 2) return null;
 
     var dados = aba.getDataRange().getValues();

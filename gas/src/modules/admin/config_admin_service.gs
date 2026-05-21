@@ -73,8 +73,8 @@ var ConfigAdminService = (function () {
     if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
     if (typeof BootService !== 'undefined') BootService.limparCache(email);
 
-    AuditoriaService.registrar('ESPACO_SALVO', 'espaco', id, orgId, email,
-      { nome: registro.nome, ativo: registro.ativo });
+    AuditoriaService.registrar('ESPACO_SALVO', 'espaco',
+      { entidadeId: id, orgId: orgId, usuario: email, nome: registro.nome, ativo: registro.ativo });
 
     Logger.info('config_admin_service', 'salvarEspaco', id + ': ' + registro.nome);
     return registro;
@@ -97,7 +97,8 @@ var ConfigAdminService = (function () {
     });
 
     if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
-    AuditoriaService.registrar('ESPACO_DESATIVADO', 'espaco', espacoId, orgId, email, {});
+    AuditoriaService.registrar('ESPACO_DESATIVADO', 'espaco',
+      { entidadeId: espacoId, orgId: orgId, usuario: email });
     return true;
   }
 
@@ -142,7 +143,8 @@ var ConfigAdminService = (function () {
     });
 
     if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
-    AuditoriaService.registrar('TURNO_SALVO', 'turno', id, orgId, email, { nome: registro.nome });
+    AuditoriaService.registrar('TURNO_SALVO', 'turno',
+      { entidadeId: id, orgId: orgId, usuario: email, nome: registro.nome });
     return registro;
   }
 
@@ -176,7 +178,8 @@ var ConfigAdminService = (function () {
     });
 
     if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
-    AuditoriaService.registrar('SETOR_SALVO', 'setor', id, orgId, email, { nome: setor.nome });
+    AuditoriaService.registrar('SETOR_SALVO', 'setor',
+      { entidadeId: id, orgId: orgId, usuario: email, nome: setor.nome });
     return id;
   }
 
@@ -204,7 +207,7 @@ var ConfigAdminService = (function () {
     ModulosRegistryService.setAtivo(moduloId, ativo, orgId);
     AuditoriaService.registrar(
       ativo ? 'MODULO_ATIVADO' : 'MODULO_DESATIVADO',
-      'modulo', moduloId, orgId, email, {}
+      'modulo', { entidadeId: moduloId, orgId: orgId, usuario: email }
     );
     return true;
   }
@@ -223,15 +226,28 @@ var ConfigAdminService = (function () {
 
   function _assertAdmin() {
     var email = getEmailSessao();
-    var orgId = getOrgConfig().orgId;
     if (typeof PermissoesService === 'undefined') return; // dev/bootstrap mode
-    if (!PermissoesService.ehAdmin(email, orgId))
-      throw new Error('Acesso negado: operação requer papel admin.');
+
+    // Verificar via AcessoService primeiro (não depende de PermissoesV2Engine)
+    var acesso = AcessoService.verificar(email);
+    if (acesso.status !== 'ativo') throw new Error('Acesso negado: usuário não está ativo.');
+
+    var papel = acesso.registro && acesso.registro.papel ? acesso.registro.papel : '';
+    if (papel === 'admin' || papel === 'superadmin') return;
+
+    // Fallback: superadmin via PropertiesService
+    var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
+    if (superAdmin && email.toLowerCase() === superAdmin) return;
+
+    // Fallback: PermissoesService.isAdmin (depende de PermissoesV2Engine)
+    if (PermissoesService.isAdmin(email)) return;
+
+    throw new Error('Acesso negado: operação requer papel admin.');
   }
 
   function _lerEspacosSheet() {
     try {
-      var sheet = _getSheet('MASTER', 'Configuracoes');
+      var sheet = _getSheet('SHEET_ID_MASTER', 'Configuracoes');
       if (!sheet || sheet.getLastRow() < 2) return [];
       var nCols = Math.min(sheet.getLastColumn(), 13);
       return sheet.getRange(2, 1, sheet.getLastRow() - 1, nCols).getValues()

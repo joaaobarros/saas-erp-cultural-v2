@@ -76,9 +76,9 @@ var LogoPaletaService = (function () {
    */
   function obter() {
     return {
-      logoUrl:          SistemaConfigService.getLogoUrl(),
-      paleta:           SistemaConfigService.getPaleta(),
-      coresSemânticas:  _CORES_SEMANTICAS
+      logoUrl:        SistemaConfigService.getLogoUrl(),
+      paleta:         SistemaConfigService.getPaleta(),
+      coresSemanticas: _CORES_SEMANTICAS   // ASCII-only key: seguro para serialização GAS
     };
   }
 
@@ -144,9 +144,7 @@ var LogoPaletaService = (function () {
         ' | paleta: ' + (dados.paleta ? JSON.stringify(dados.paleta) : 'sem alteração'));
 
       if (typeof AuditoriaService !== 'undefined') {
-        AuditoriaService.registrar({
-          acao:       'identidade_visual_atualizada',
-          entidade:   'config_org',
+        AuditoriaService.registrar('IDENTIDADE_VISUAL_ATUALIZADA', 'config_org', {
           entidadeId: 'logo_paleta',
           usuario:    email,
           detalhe:    JSON.stringify({ logoAlterado: dados.logoUrl !== undefined, paletaAlterada: !!dados.paleta })

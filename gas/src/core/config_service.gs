@@ -63,13 +63,28 @@ var SistemaConfigService = (function () {
   // ── Espaços ───────────────────────────────────────────────────────────────
 
   /**
-   * Retorna configuração de espaço da Sheet MASTER.Configuracoes.
+   * Retorna todos os espaços ativos configurados via ConfigAdminService.
+   * Fonte: espacos_config.json (Drive). Nunca lança exceção.
+   * @returns {Array<object>}
+   */
+  function getEspacos() {
+    try {
+      var dados = readJSON('espacos_config.json');
+      return Array.isArray(dados)
+        ? dados.filter(function(e) { return e.ativo !== false; })
+        : [];
+    } catch(e) {
+      Logger.warn('config_service', 'getEspacos', e.message);
+      return [];
+    }
+  }
+
+  /**
+   * Retorna configuração de espaço pelo ID.
    * Inclui horários de funcionamento, responsáveis por turno, bloqueios de datas.
    */
   function getEspaco(id) {
-    var cfg = _getConfigOrg();
-    var espacos = cfg.espacos || [];
-    return espacos.find(function(e) { return e.id === id; }) || null;
+    return getEspacos().find(function(e) { return e.id === id; }) || null;
   }
 
   function getHorarioEspaco(espacoId, diaSemana) {
@@ -314,6 +329,7 @@ var SistemaConfigService = (function () {
     getOrg:                   getOrg,
     getSetores:               getSetores,
     getSetor:                 getSetor,
+    getEspacos:               getEspacos,
     getEspaco:                getEspaco,
     getHorarioEspaco:         getHorarioEspaco,
     getResponsavelTurno:      getResponsavelTurno,

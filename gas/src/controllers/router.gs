@@ -147,22 +147,10 @@ function _renderErro(mensagem) {
 // Os controllers reais ficam em controllers/<modulo>_controller.gs
 
 function ctrl_sistema_getBootstrap() {
+  // BootService.obter() retorna a estrutura completa que o frontend espera:
+  // { orgId, orgConfig, usuarioEmail, modulosAtivos, setores, espacos, itens, permissoes, timestamp }
   return GasResponse.wrap(function() {
-    var email  = getEmailOuNull();
-    var acesso = AcessoService.verificar(email || '');
-    return {
-      orgConfig:   getPublicOrgConfig(),
-      modulosAtivos: typeof ModulosRegistryService !== 'undefined'
-        ? ModulosRegistryService.listarAtivos()
-        : [],
-      usuario: {
-        email:        email,
-        statusAcesso: acesso.status,       // 'ativo' | 'pendente_aprovacao' | 'dominio_negado' | 'inativo'
-        papel:        acesso.registro ? acesso.registro.papel  : '',
-        setor:        acesso.registro ? acesso.registro.setor  : '',
-        nome:         acesso.registro ? acesso.registro.nome   : ''
-      }
-    };
+    return BootService.obter();
   }, 'ctrl_sistema_getBootstrap');
 }
 
