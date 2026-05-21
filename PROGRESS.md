@@ -6,7 +6,7 @@
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Fase 1 — Persistência Canônica — **1.2 Colaboradores entregue; seguir para 1.3 Contratações**
+**Fase atual**: Fase 1 — Persistência Canônica — **1.3 Contratações entregue; seguir para 1.4 Ativos e Almoxarifado**
 **O que foi feito (2026-05-20 a 2026-05-21)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -22,14 +22,13 @@
 - ✅ **Fase 1.2 entregue**: `ColaboradorRepository` (colaboradores.json + índice EQUIPES.Funcionarios), `PessoasEngine` (fusão EquipesEngine+RHEngine, FSMs status/férias), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*), view SPA + GAS.pessoas + PessoasUI
 
 **Próximo passo imediato**:
-> 1. **[clasp push]** Fazer push do código atual e deploy
-> 2. **[GAS EDITOR]** Executar `fase1_colaboradores_prepararIndice()` para garantir cabeçalho/proteção de `EQUIPES.Funcionarios`
-> 3. **[GAS EDITOR]** Se houver funcionarios.json legado: executar `fase1_colaboradores_migrarFuncionarios()`
-> 4. **[BROWSER]** Abrir módulo Pessoas → criar colaborador smoke-test → confirmar que persiste em `colaboradores.json`
-> 5. Iniciar **Fase 1.3 — Contratações**: criar `contratacoes_repository.gs`
+> 1. **[GAS EDITOR]** Executar `fase1_contratos_prepararIndice()` — garante cabeçalho/proteção de `FINANCEIRO.Contratos`
+> 2. **[GAS EDITOR]** Se houver dados no Sheet legado: executar `fase1_contratos_migrarSheetParaJson()`
+> 3. **[BROWSER]** Abrir módulo Financeiro → verificar métricas → criar contrato smoke-test → confirmar em `contratos.json`
+> 4. Iniciar **Fase 1.4 — Ativos e Almoxarifado**
 
-**Fase mais urgente agora**: **Fase 1.3** — Contratações.
-Com colaboradores canônicos, o próximo passo é vincular contratos a eles de forma consistente.
+**Fase mais urgente agora**: **Fase 1.4** — Ativos e Almoxarifado.
+Com contratos canônicos, o próximo passo é estruturar o domínio de espaços físicos e itens.
 
 ---
 
@@ -279,10 +278,21 @@ Um módulo está **completo** quando oferece:
 3. Browser: Módulo Pessoas → clicar "Novo" → preencher nome + setor + vínculo → Salvar → confirmar aparece na lista
 4. Drive: abrir `colaboradores.json` → confirmar que o registro existe com `orgId` correto
 
-### 1.3 — Contratações
+### 1.3 — Contratações (Contratos)
 
-- [ ] Criar `gas/src/modules/financeiro/contratacoes_repository.gs`
-- [ ] Script de migração: Sheet → JSON canônico
+- [x] Criar `gas/src/modules/financeiro/contrato_repository.gs` — fonte: contratos.json (nested: metas→rubricas→indicadores); índice: FINANCEIRO.Contratos; migração idempotente
+- [x] Criar `gas/src/modules/financeiro/contratos_engine.gs` — FSM Ativo↔Suspenso→Encerrado; salvar/excluir/analisar/métricas; orquestração metas/rubricas/indicadores
+- [x] Criar `gas/src/modules/financeiro/contratos_controller.gs` — ctrl_contratos_* com RBAC (leitura: financeiro+gestor+admin; escrita: financeiro+admin; exclusão: admin)
+- [x] View SPA Financeiro — métricas, formulário CRUD, lista com filtro de status, badges de status, ContratosUI, GAS.contratos namespace, rota registrada no Router
+- [x] Script de migração: `fase1_contratos_migrarSheetParaJson()` — idempotente, Sheet → contratos.json
+- [x] Índice: `fase1_contratos_prepararIndice()` — garante cabeçalho + proteção read-only em FINANCEIRO.Contratos
+
+**Smoke-test 1.3:**
+1. GAS Editor: executar `fase1_contratos_prepararIndice()` → deve retornar `{ok:true}`
+2. GAS Editor: executar `fase1_contratos_migrarSheetParaJson()` → deve retornar `{importados:N}`
+3. Browser: Módulo Financeiro → verificar métricas (total/ativos/suspensos/valorAtivos)
+4. Browser: clicar "Novo" → preencher nome + fonte de recurso + valor → Salvar → confirmar na lista
+5. Drive: abrir `contratos.json` → confirmar que o registro existe com `orgId` correto
 
 ### 1.4 — Ativos e Almoxarifado
 
@@ -618,6 +628,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-20 | Fase 0 | Logomarca+paleta (LogoPaletaService, SistemaConfigService, Identidade JS, admin UI, extração via canvas); **paleta → ROXO** (`#7c3aed`); BtnGuard v2 (shared/btnguard.html com wrap+auditar); include() em router.gs; todos os botões async protegidos em index.html + primeiro_acesso.html + 5 portais; PROGRESS.md atualizado com checklist BtnGuard por fase | `clasp login --no-localhost && clasp push` → `inicializarSistema()` → `verificarTodasAbas()` → `BtnGuard.auditar()` no browser → Fase 1 |
 | 2026-05-21 | Fase 0/1 | Deploys realizados no Apps Script; UI principal reconstruída; corrigido include em comentário; criada Fase 1.1 com `TarefaRepository`, `TarefaEngine`, controllers, migração Sheet→JSON, proteção de índice e view mínima de Tarefas; `domain_model.md` atualizado | Executar `fase1_tarefas_prepararIndice()`/migração no GAS se houver dados; iniciar Fase 1.2 Colaboradores |
 | 2026-05-21 | Fase 1.2 | Colaboradores: `ColaboradorRepository` (colaboradores.json + sub-coleções + índice EQUIPES.Funcionarios), `PessoasEngine` (FSM status colaborador + FSM férias com 6 estados + fusão EquipesEngine+RHEngine), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*, RBAC completo, férias com FSM), view SPA Pessoas (métricas, CRUD, filtro status, PessoasUI), GAS.pessoas namespace, rota registrada no Router | `clasp push` → `fase1_colaboradores_prepararIndice()` → `fase1_colaboradores_migrarFuncionarios()` → smoke-test no browser → iniciar Fase 1.3 Contratações |
+| 2026-05-21 | Fase 1.3 | Contratos: `ContratoRepository` (contratos.json com nested metas/rubricas/indicadores, índice FINANCEIRO.Contratos, migração idempotente), `ContratosEngine` (FSM Ativo↔Suspenso→Encerrado, cálculos financeiros, análise de divergência), `contratos_controller.gs` (ctrl_contratos_*, RBAC por papel financeiro/gestor/admin), view SPA Financeiro (ContratosUI, GAS.contratos, métricas, CRUD, filtro status) | `fase1_contratos_prepararIndice()` → `fase1_contratos_migrarSheetParaJson()` → smoke-test browser → iniciar Fase 1.4 Ativos e Almoxarifado |
 
 ---
 

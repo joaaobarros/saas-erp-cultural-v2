@@ -1130,6 +1130,98 @@ body {
         </div>
       </div><!-- /view-pessoas -->
 
+      <!-- VIEW: Financeiro / Contratos — Fase 1.3 -->
+      <div id="view-financeiro" class="view">
+        <div class="page-header">
+          <div class="page-title">Financeiro</div>
+          <div class="page-subtitle">Gestão de contratos com persistência canônica em contratos.json</div>
+        </div>
+
+        <!-- Métricas -->
+        <div class="stats-grid" id="contratos-metricas"></div>
+
+        <!-- Formulário novo contrato -->
+        <div class="card" id="contratos-form-card" style="display:none">
+          <div class="card-header">
+            <div class="card-titulo">
+              <span class="ms">description</span> <span id="contratos-form-titulo">Novo Contrato</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="ContratosUI.fecharForm()" data-bg-skip="1">
+              <span class="ms ms-sm">close</span> Cancelar
+            </button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-group">
+              <label class="form-label">Nome do contrato *</label>
+              <input id="cf-nome" class="form-input" type="text" placeholder="Ex: Lei de Fomento 2024">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fonte de recurso *</label>
+              <input id="cf-fonte" class="form-input" type="text" placeholder="Ex: Secretaria de Cultura">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor total (R$)</label>
+              <input id="cf-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select id="cf-status" class="form-input">
+                <option value="Ativo">Ativo</option>
+                <option value="Suspenso">Suspenso</option>
+                <option value="Encerrado">Encerrado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vigência início</label>
+              <input id="cf-inicio" class="form-input" type="date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Vigência fim</label>
+              <input id="cf-fim" class="form-input" type="date">
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label class="form-label">Objeto / Descrição</label>
+              <input id="cf-objeto" class="form-input" type="text" placeholder="Breve descrição do objeto contratual">
+            </div>
+          </div>
+          <input type="hidden" id="cf-id">
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn btn-primario" id="btn-contratos-salvar" onclick="ContratosUI.salvar()">
+              <span class="ms ms-sm">save</span> Salvar
+            </button>
+          </div>
+        </div>
+
+        <!-- Listagem -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo">
+              <span class="ms">folder_open</span> Contratos
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="cf-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="ContratosUI.carregar()">
+                <option value="">Todos os status</option>
+                <option value="Ativo" selected>Ativos</option>
+                <option value="Suspenso">Suspensos</option>
+                <option value="Encerrado">Encerrados</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" id="btn-contratos-recarregar" onclick="ContratosUI.carregar()">
+                <span class="ms ms-sm">refresh</span> Atualizar
+              </button>
+              <button class="btn btn-primario btn-sm" id="btn-contratos-novo" onclick="ContratosUI.abrirForm()" style="display:none">
+                <span class="ms ms-sm">add</span> Novo
+              </button>
+            </div>
+          </div>
+          <div id="contratos-lista">
+            <div class="empty-state" style="min-height:120px;padding:20px;">
+              <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
+              <p style="font-size:13px;color:var(--muted)">Carregando contratos…</p>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view-financeiro -->
+
       <!-- Views de módulos — injetadas dinamicamente por cada módulo -->
 
     </div><!-- /conteudo -->
@@ -1170,6 +1262,15 @@ var GAS = {
     metricas:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_metricas(); },
     meuNivel:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_meu_nivel(); },
     mudarStatus:  function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_mudar_status(id,s); }
+  },
+  contratos: {
+    listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_listar(f||{}); },
+    obter:       function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_obter(id); },
+    salvar:      function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar(d); },
+    metricas:    function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_metricas(); },
+    analisar:    function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_analisar(id); },
+    mudarStatus: function(id,s,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_status(id,s); },
+    excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir(id); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -1751,6 +1852,169 @@ var PessoasUI = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// CONTRATOS — Fase 1.3
+// ═══════════════════════════════════════════════════════════
+var ContratosUI = (function() {
+  var _carregado  = false;
+  var _meuNivel   = 'colaborador';
+  var _podeEditar = false;
+
+  var _STATUS_LABEL = { Ativo:'Ativo', Suspenso:'Suspenso', Encerrado:'Encerrado' };
+
+  function _badgeStatus(s) {
+    var cls = s === 'Ativo'     ? 'badge-success'
+            : s === 'Suspenso'  ? 'badge-warning'
+            : s === 'Encerrado' ? 'badge-muted'
+            : 'badge-primary';
+    return '<span class="badge '+cls+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
+  }
+
+  function _fmtMoeda(v) {
+    v = parseFloat(v) || 0;
+    return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function _renderMetricas(m) {
+    m = m || {};
+    document.getElementById('contratos-metricas').innerHTML = [
+      {valor:m.total||0,          label:'Total de contratos',  icone:'folder_open',            classe:'primary'},
+      {valor:m.ativos||0,         label:'Ativos',              icone:'check_circle',            classe:'success'},
+      {valor:m.suspensos||0,      label:'Suspensos',           icone:'pause_circle',            classe:'accent'},
+      {valor:_fmtMoeda(m.valorAtivos), label:'Valor em aberto', icone:'account_balance_wallet', classe:'info'}
+    ].map(function(s){
+      return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+        +'<div class="stat-info"><div class="stat-valor" style="font-size:'+(typeof s.valor==='string'?'16px':'28px')+'">'+escaparHtml(s.valor)+'</div>'
+        +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+    }).join('');
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('contratos-lista');
+    if (!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:120px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">folder_off</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhum contrato encontrado.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(c) {
+      var btnEditar = _podeEditar
+        ? '<button class="btn btn-ghost btn-sm btn-editar-contrato" data-id="'+escaparHtml(c.id)+'" title="Editar">'
+          +'<span class="ms ms-sm">edit</span></button>'
+        : '';
+      var vigencia = c.vigenciaInicio && c.vigenciaFim
+        ? escaparHtml(c.vigenciaInicio)+' → '+escaparHtml(c.vigenciaFim)
+        : c.vigenciaFim ? 'até '+escaparHtml(c.vigenciaFim) : '—';
+      return '<div class="pendente-item">'
+        +'<div class="pendente-info">'
+        +'<div class="pendente-nome">'+escaparHtml(c.nome||'(sem nome)')+'</div>'
+        +'<div class="pendente-meta">'
+        + escaparHtml(c.fonteRecurso||'—')
+        + ' · ' + _fmtMoeda(c.valorTotal)
+        + ' · ' + vigencia
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;">'
+        + _badgeStatus(c.status||'Ativo')
+        + btnEditar
+        +'</div></div>';
+    }).join('');
+    Array.prototype.slice.call(el.querySelectorAll('.btn-editar-contrato')).forEach(function(btn) {
+      btn.addEventListener('click', function() { _editarPorId(this.getAttribute('data-id')); });
+    });
+  }
+
+  function _editarPorId(id) {
+    GAS.contratos.listar({}, function(resp){
+      if(!resp||!resp.ok) return;
+      var lista = resp.data || [];
+      for(var i=0;i<lista.length;i++){
+        if(lista[i].id === id){ abrirForm(lista[i]); return; }
+      }
+      Toast.aviso('Contrato não encontrado.');
+    });
+  }
+
+  function carregar() {
+    var status = (document.getElementById('cf-filtro-status')||{}).value || '';
+    var filtros = status ? {status:status} : {};
+    BtnGuard.wrap('btn-contratos-recarregar','Atualizando…',function(done){
+      GAS.contratos.metricas(function(respM){
+        if(respM&&respM.ok) _renderMetricas(respM.data);
+        GAS.contratos.listar(filtros, function(resp){
+          done();
+          if(!resp||!resp.ok){Toast.erro('Erro ao carregar contratos.');return;}
+          _renderLista(resp.data||[]);
+          _carregado = true;
+        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+      },function(err){done();Toast.erro('Erro métricas: '+(err.message||err));});
+    });
+  }
+
+  function abrirForm(dados) {
+    var card  = document.getElementById('contratos-form-card');
+    var titulo= document.getElementById('contratos-form-titulo');
+    card.style.display = '';
+    document.getElementById('cf-id').value     = dados && dados.id || '';
+    document.getElementById('cf-nome').value   = dados && dados.nome || '';
+    document.getElementById('cf-fonte').value  = dados && dados.fonteRecurso || '';
+    document.getElementById('cf-valor').value  = dados && dados.valorTotal || '';
+    document.getElementById('cf-status').value = dados && dados.status || 'Ativo';
+    document.getElementById('cf-inicio').value = dados && dados.vigenciaInicio || '';
+    document.getElementById('cf-fim').value    = dados && dados.vigenciaFim || '';
+    document.getElementById('cf-objeto').value = dados && dados.objeto || '';
+    titulo.textContent = dados && dados.id ? 'Editar Contrato' : 'Novo Contrato';
+    document.getElementById('cf-nome').focus();
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function fecharForm() {
+    document.getElementById('contratos-form-card').style.display = 'none';
+  }
+
+  function salvar() {
+    var nome   = (document.getElementById('cf-nome').value||'').trim();
+    var fonte  = (document.getElementById('cf-fonte').value||'').trim();
+    if(!nome){ Toast.aviso('Nome do contrato é obrigatório.'); return; }
+    if(!fonte){ Toast.aviso('Fonte de recurso é obrigatória.'); return; }
+    var dados = {
+      id:             document.getElementById('cf-id').value || undefined,
+      nome:           nome,
+      fonteRecurso:   fonte,
+      valorTotal:     parseFloat(document.getElementById('cf-valor').value)||0,
+      status:         document.getElementById('cf-status').value || 'Ativo',
+      vigenciaInicio: document.getElementById('cf-inicio').value || '',
+      vigenciaFim:    document.getElementById('cf-fim').value || '',
+      objeto:         document.getElementById('cf-objeto').value.trim() || ''
+    };
+    if(!dados.id) delete dados.id;
+    BtnGuard.wrap('btn-contratos-salvar','Salvando…',function(done){
+      GAS.contratos.salvar(dados, function(resp){
+        done();
+        if(!resp||!resp.ok){Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar.');return;}
+        Toast.sucesso('Contrato salvo.');
+        fecharForm();
+        carregar();
+      },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+    });
+  }
+
+  function aoAbrir() {
+    // Detectar nível financeiro (uma vez por sessão)
+    if(!_carregado) {
+      // Reutiliza GAS.pessoas.meuNivel — mesmo AcessoService
+      GAS.pessoas.meuNivel(function(resp){
+        if(resp&&resp.ok&&resp.data) _meuNivel = resp.data.nivel || 'colaborador';
+        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+        var btnNovo = document.getElementById('btn-contratos-novo');
+        if(btnNovo) btnNovo.style.display = _podeEditar ? '' : 'none';
+      });
+      carregar();
+    }
+  }
+
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════
 var Router = (function() {
@@ -1895,9 +2159,10 @@ var App = (function() {
       if(item.id !== 'home') {
         (function(id, label) {
           Router.registrar(id, label,
-            id === 'admin'   ? function(){ IdentidadeAdmin.carregar(); }
-            : id === 'tarefas' ? function(){ TarefasUI.aoAbrir(); }
-            : id === 'pessoas' ? function(){ PessoasUI.aoAbrir(); }
+            id === 'admin'      ? function(){ IdentidadeAdmin.carregar(); }
+            : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
+            : id === 'pessoas'    ? function(){ PessoasUI.aoAbrir(); }
+            : id === 'financeiro' ? function(){ ContratosUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);
