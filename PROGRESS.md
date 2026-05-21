@@ -632,10 +632,33 @@ Um módulo está **completo** quando oferece:
 
 ---
 
+## 🚀 Deploy — OBRIGATÓRIO ao final de cada fase
+
+> **Regra absoluta**: ao encerrar qualquer fase ou processo de desenvolvimento, executar:
+
+```bash
+cd gas
+clasp push
+clasp deploy --deploymentId "AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j" \
+             --description "Fase X.Y — descrição"
+```
+
+**URL de produção** (testar após cada deploy):
+```
+https://script.google.com/a/macros/idm.org.br/s/AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j/exec
+```
+
+> ⚠️ Usar **sempre o mesmo `deploymentId`** para manter o link de produção estável.
+> Nunca criar um novo deployment sem motivo — isso mudaria a URL que os usuários conhecem.
+
+---
+
 ## Referências Rápidas
 
 | O que procurar | Onde fica |
 |----------------|-----------|
+| **URL de produção** | `https://script.google.com/a/macros/idm.org.br/s/AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j/exec` |
+| **DeploymentId fixo** | `AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j` |
 | Configuração organizacional | `gas/src/core/config.gs` + `gas/src/core/data/config_org.json` |
 | Config facade unificado | `gas/src/core/config_service.gs` |
 | FSM de qualquer domínio | `gas/src/core/services/fsm_guardian.gs` |
