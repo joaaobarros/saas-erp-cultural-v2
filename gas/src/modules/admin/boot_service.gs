@@ -59,9 +59,7 @@ var BootService = (function () {
       permissoes = { perfil: 'usuario', setores: [] };
     }
 
-    var modulosAtivos = typeof ModulosRegistryService !== 'undefined'
-      ? ModulosRegistryService.listarAtivos()
-      : [];
+    var modulosAtivos = SistemaConfigService.getModulosAtivos();
 
     var resultado = {
       orgId:        orgId,

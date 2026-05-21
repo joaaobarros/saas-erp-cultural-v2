@@ -130,13 +130,30 @@ var SistemaConfigService = (function () {
   // ── Módulos ───────────────────────────────────────────────────────────────
 
   /**
+   * Retorna lista de módulos ativos.
+   * Prioridade: ModulosRegistryService (dinâmico) → config_org.json → todos ativos.
+   */
+  function getModulosAtivos() {
+    if (typeof ModulosRegistryService !== 'undefined') {
+      try { return ModulosRegistryService.listarAtivos(); } catch(_) {}
+    }
+    var cfg = _getConfigOrg();
+    if (Array.isArray(cfg.modulosAtivos) && cfg.modulosAtivos.length) {
+      return cfg.modulosAtivos;
+    }
+    // fallback: retorna todos (não bloqueia nada em ambiente de dev)
+    return ['ADMIN','TAREFAS','PESSOAS','FINANCEIRO','ACOES','ESPACOS','REUNIOES','COMUNICACAO','RELATORIOS'];
+  }
+
+  /**
    * Delega ao ModulosRegistryService (não duplicar lógica).
    */
   function moduloAtivo(id) {
     if (typeof ModulosRegistryService !== 'undefined') {
       return ModulosRegistryService.estaAtivo(id);
     }
-    return true; // fallback: módulo ativo por padrão
+    var ativos = getModulosAtivos();
+    return ativos.indexOf(String(id).toUpperCase()) !== -1;
   }
 
   // ── Permissões ────────────────────────────────────────────────────────────
@@ -336,6 +353,7 @@ var SistemaConfigService = (function () {
     verificarBloqueioData:    verificarBloqueioData,
     getTurnos:                getTurnos,
     getReservaHorario:        getReservaHorario,
+    getModulosAtivos:         getModulosAtivos,
     moduloAtivo:              moduloAtivo,
     getPermissao:             getPermissao,
     getTiposProcesso:         getTiposProcesso,

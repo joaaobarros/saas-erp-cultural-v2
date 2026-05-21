@@ -1998,17 +1998,14 @@ var ContratosUI = (function() {
   }
 
   function aoAbrir() {
-    // Detectar nível financeiro (uma vez por sessão)
-    if(!_carregado) {
-      // Reutiliza GAS.pessoas.meuNivel — mesmo AcessoService
-      GAS.pessoas.meuNivel(function(resp){
-        if(resp&&resp.ok&&resp.data) _meuNivel = resp.data.nivel || 'colaborador';
-        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
-        var btnNovo = document.getElementById('btn-contratos-novo');
-        if(btnNovo) btnNovo.style.display = _podeEditar ? '' : 'none';
-      });
-      carregar();
-    }
+    // Detectar nível — sempre (garante botão "Novo" correto ao re-entrar na view)
+    GAS.pessoas.meuNivel(function(resp){
+      if(resp&&resp.ok&&resp.data) _meuNivel = resp.data.nivel || 'colaborador';
+      _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+      var btnNovo = document.getElementById('btn-contratos-novo');
+      if(btnNovo) btnNovo.style.display = _podeEditar ? '' : 'none';
+    });
+    if(!_carregado) carregar();
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
