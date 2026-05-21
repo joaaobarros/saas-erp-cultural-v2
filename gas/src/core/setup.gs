@@ -69,6 +69,11 @@ function inicializarSistema() {
   _criarOuRegistrarPlanilhas();
   recriarEstrutura();
   SystemEvents.garantirAbaEventLog();
+  if (typeof TarefaRepository !== 'undefined' &&
+      typeof TarefaRepository.garantirCabecalhoIndice === 'function') {
+    TarefaRepository.garantirCabecalhoIndice();
+    TarefaRepository.protegerIndice();
+  }
 
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.

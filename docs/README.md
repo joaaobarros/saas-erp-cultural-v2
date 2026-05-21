@@ -1,6 +1,6 @@
 # ERP Cultural SaaS v2 — Documentação
 
-> **Status do projeto**: Fase 0 em andamento  
+> **Status do projeto**: Fase 1 em andamento — Persistência Canônica  
 > **Referência de progresso**: [`../PROGRESS.md`](../PROGRESS.md)  
 > **Plano de reconstrução completo**: [`../../Saas-ERP-cultural-main/docs/01_architecture/plano_reconstrucao.md`](../../Saas-ERP-cultural-main/docs/01_architecture/plano_reconstrucao.md)
 

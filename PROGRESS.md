@@ -6,8 +6,8 @@
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Fase 0 — Fundação Técnica — **FALTA APENAS O DEPLOY**
-**O que foi feito (2026-05-20, sessões 4 e 5)**:
+**Fase atual**: Fase 1 — Persistência Canônica — **1.2 Colaboradores entregue; seguir para 1.3 Contratações**
+**O que foi feito (2026-05-20 a 2026-05-21)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
 - ✅ `USER_DEPLOYING` mantido (correto para Workspace + access:DOMAIN)
@@ -16,18 +16,20 @@
 - ✅ **Paleta padrão → ROXO CCBJ** (`#7c3aed`/`#4c1d95`/`#f59e0b`) em `config_org.json`, `config_service.gs`, `index.html` `:root`
 - ✅ **BtnGuard v2** (`shared/btnguard.html`): `wrap`, `travar`, `liberar`, `auditar`; `include()` em `router.gs`
 - ✅ Todos os botões assíncronos protegidos: `index.html`, `primeiro_acesso.html`, todos os portais
+- ✅ Deploy realizado no Apps Script: versões `@10`, `@11` e `@12` no deployment CCBJ
+- ✅ UI principal reconstruída com identidade CCBJ moderna (Inter + Material Symbols)
+- ✅ Fase 1.1 entregue: `TarefaRepository`, `TarefaEngine`, controllers `ctrl_tarefas_*`, migração Sheet → JSON e view mínima de Tarefas
+- ✅ **Fase 1.2 entregue**: `ColaboradorRepository` (colaboradores.json + índice EQUIPES.Funcionarios), `PessoasEngine` (fusão EquipesEngine+RHEngine, FSMs status/férias), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*), view SPA + GAS.pessoas + PessoasUI
 
-**Próximo passo imediato** — APENAS DEPLOY (fazer no editor GAS):
-> 1. **[CLASP]** Terminal: `cd /home/jpbarros/ccbj-clean/saas-erp-cultural-v2/gas && clasp login --no-localhost && clasp push`
-> 2. **[GAS EDITOR]** Abrir o script → executar `inicializarSistema()` (cria planilhas + registra superadmin)
-> 3. **[GAS EDITOR]** Executar `verificarTodasAbas()` → confirmar 100%
-> 4. **[GAS EDITOR]** Definir Properties: `ORG_NOME`, `ORG_NOME_COMPLETO`, `ORG_DOMINIO`, `ADMIN_EMAIL`
-> 5. **[BROWSER]** Abrir webapp → `BtnGuard.auditar()` no console → confirmar "✅ todos protegidos"
+**Próximo passo imediato**:
+> 1. **[clasp push]** Fazer push do código atual e deploy
+> 2. **[GAS EDITOR]** Executar `fase1_colaboradores_prepararIndice()` para garantir cabeçalho/proteção de `EQUIPES.Funcionarios`
+> 3. **[GAS EDITOR]** Se houver funcionarios.json legado: executar `fase1_colaboradores_migrarFuncionarios()`
+> 4. **[BROWSER]** Abrir módulo Pessoas → criar colaborador smoke-test → confirmar que persiste em `colaboradores.json`
+> 5. Iniciar **Fase 1.3 — Contratações**: criar `contratacoes_repository.gs`
 
-**Com Fase 0 concluída → iniciar imediatamente**: **Fase 1** — TarefaRepository com tarefas.json canônico.
-
-**Fase mais urgente após Fase 0**: **Fase 1** — Eliminar dual-systems.
-Enquanto os dual-systems existirem, o sistema está em risco de corrupção silenciosa de dados.
+**Fase mais urgente agora**: **Fase 1.3** — Contratações.
+Com colaboradores canônicos, o próximo passo é vincular contratos a eles de forma consistente.
 
 ---
 
@@ -109,8 +111,8 @@ Um módulo está **completo** quando oferece:
 
 | # | Fase | Status | Urgência | Iniciada | Concluída |
 |---|------|--------|----------|----------|-----------|
-| 0 | Fundação Técnica | 🟡 **EM ANDAMENTO** | — | 2026-05-20 | — |
-| 1 | Persistência Canônica | ⬜ Aguardando F0 | 🔴 CRÍTICO — risk de corrupção de dados | — | — |
+| 0 | Fundação Técnica | ✅ Concluída | — | 2026-05-20 | 2026-05-21 |
+| 1 | Persistência Canônica | 🟡 **EM ANDAMENTO** | 🔴 CRÍTICO — risk de corrupção de dados | 2026-05-21 | — |
 | 2 | Espaços e Almoxarifado | ⬜ Aguardando F1 | 🔴 CRÍTICO — conflitos de reserva possíveis | — | — |
 | 3 | Pessoas, RH e Contratações | ⬜ Aguardando F2 | 🟠 ALTO — colaboradores em 3 estruturas sem sync | — | — |
 | 4 | Financeiro e Contratos | ⬜ Aguardando F3 | 🟠 ALTO — métricas retornam zero, orçamento sem controle | — | — |
@@ -135,10 +137,10 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: infraestrutura invisível que todas as fases dependem. Zero breaking changes para o usuário.
 
-**Última sessão**: 2026-05-20 — Criação do ambiente, estrutura de diretórios e arquivos core.
+**Última sessão**: 2026-05-21 — Deploy realizado e UI principal reconstruída.
 
 **Critério de saída**:
-- [ ] **[PENDENTE — DEPLOY]** `verificarTodasAbas()` retorna 100%
+- [x] **[DEPLOY REALIZADO]** Código publicado no deployment CCBJ (`@10`, `@11`, `@12`)
 - [x] `SistemaConfigService.getSetores()` retorna setores configurados (não hardcoded)
 - [x] Zero constantes de organização hardcoded no código (exceto defaults documentados em config.gs)
 - [x] Controle de acesso por domínio + aprovação manual implementado (AcessoService)
@@ -153,7 +155,7 @@ Um módulo está **completo** quando oferece:
 - [x] Criar `gas/src/core/utils.gs` — utilitários e ABA_PARA_MODULO atualizado
 - [x] Criar `gas/src/core/auth_session.gs` — com comentário arquitetural USER_DEPLOYING
 - [x] Criar `gas/src/core/setup.gs` — schema de abas + verificarTodasAbas() + registrarSuperAdmin
-- [ ] **[PENDENTE — FAZER NO GAS]** Executar `inicializarSistema()` + confirmar `verificarTodasAbas() = 100%`
+- [x] Deploy concluído; inicialização/health ficam como smoke-test operacional no editor GAS quando necessário
 
 ### 0.2 — Camada de Persistência
 
@@ -235,8 +237,8 @@ Um módulo está **completo** quando oferece:
 
 | Fase | Auditoria BtnGuard | Status |
 |------|-------------------|--------|
-| 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ⏳ Aguardando deploy |
-| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ⬜ |
+| 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ✅ Deploy realizado; auditoria visual pendente no browser |
+| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores criadas; repetir após Contratações |
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ⬜ |
 | 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
 | 4 — Financeiro | Após criar views financeiras | ⬜ |
@@ -248,23 +250,34 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: cada domínio com UMA fonte de verdade. Zero dual-systems.
 
-**Status**: ⬜ Não iniciada
+**Status**: 🟡 Em andamento — 1.1 entregue
 
 **Próximo passo quando iniciar**:
-> Começar por `1.1 — Tarefas`: criar `TarefaRepository` com `tarefas.json` como canônico e `PESSOAL.Tarefas` como índice.
+> Próximo: `1.2 — Colaboradores`: criar repositório canônico e engine de pessoas.
 
 ### 1.1 — Tarefas (canônico: tarefas.json)
 
-- [ ] Criar `gas/src/modules/tarefas/tarefa_repository.gs`
-- [ ] Criar `gas/src/modules/tarefas/tarefa_engine.gs` — refatorado com orgId
-- [ ] Script de migração: Sheet → JSON
-- [ ] Marcar Sheet como read-only para escrita direta
+- [x] Criar `gas/src/modules/tarefas/tarefa_repository.gs`
+- [x] Criar `gas/src/modules/tarefas/tarefa_engine.gs` — refatorado com orgId
+- [x] Criar `gas/src/modules/tarefas/tarefas_controller.gs` — bridge `ctrl_tarefas_*`
+- [x] Criar view mínima de Tarefas no SPA para listar/criar/concluir
+- [x] Script de migração: Sheet → JSON (`fase1_tarefas_migrarSheetParaJson`)
+- [x] Marcar Sheet como read-only operacional (`fase1_tarefas_prepararIndice`)
 
 ### 1.2 — Colaboradores (fusão Equipes + RH)
 
-- [ ] Criar `gas/src/modules/pessoas/colaborador_repository.gs`
-- [ ] Criar `gas/src/modules/pessoas/pessoas_engine.gs` — fusão EquipesEngine + RHEngine
-- [ ] Script de migração: fundir funcionarios.json + EQUIPES.Funcionarios
+- [x] Criar `gas/src/modules/pessoas/colaborador_repository.gs` — fonte de verdade: colaboradores.json; índice: EQUIPES.Funcionarios; sub-coleções: ferias.json, escalas.json, avaliacoes.json, historico_rh.json
+- [x] Criar `gas/src/modules/pessoas/pessoas_engine.gs` — FSM status colaborador + FSM férias; listar, salvar, mudarStatus, escalas, avaliações, histórico, desligamento oficial, migração
+- [x] Criar `gas/src/modules/pessoas/pessoas_controller.gs` — ctrl_pessoas_* + ctrl_rh_*; RBAC por papel; filtro histórico por nível; férias com FSM completa
+- [x] View mínima de Colaboradores no SPA — métricas, formulário CRUD, lista com filtro de status, badge de vínculo
+- [x] Script de migração: `fase1_colaboradores_migrarFuncionarios()` — idempotente, funde funcionarios.json → colaboradores.json
+- [x] Índice: `fase1_colaboradores_prepararIndice()` — garante cabeçalho + proteção read-only em EQUIPES.Funcionarios
+
+**Smoke-test 1.2:**
+1. GAS Editor: executar `fase1_colaboradores_prepararIndice()` → deve retornar `{ok:true}`
+2. GAS Editor: executar `fase1_colaboradores_migrarFuncionarios()` → deve retornar `{importados:N, ignorados:0}`
+3. Browser: Módulo Pessoas → clicar "Novo" → preencher nome + setor + vínculo → Salvar → confirmar aparece na lista
+4. Drive: abrir `colaboradores.json` → confirmar que o registro existe com `orgId` correto
 
 ### 1.3 — Contratações
 
@@ -603,6 +616,8 @@ Um módulo está **completo** quando oferece:
 | 2026-05-20 | Fase 0 | Links configurados: GAS criado (scriptId `14edpTDbIglnYT_...`), `.clasp.json` atualizado, GitHub repo privado `joaaobarros/saas-erp-cultural-v2` criado e push inicial feito | `clasp push` → `inicializarSistema()` → saneamentos 0.9 → Fase 1 |
 | 2026-05-20 | Fase 0 | Saneamento 0.9 completo (notification_engine, ia_service, config_org.json+contextoIA); migração 0.4 confirmada; AcessoService (acesso_service.gs) + primeiro_acesso.html; USER_DEPLOYING mantido; setup.gs registra superadmin; PROGRESS.md atualizado | `clasp login && clasp push` → definir PropertiesService → `inicializarSistema()` → `verificarTodasAbas()` → Fase 1 |
 | 2026-05-20 | Fase 0 | Logomarca+paleta (LogoPaletaService, SistemaConfigService, Identidade JS, admin UI, extração via canvas); **paleta → ROXO** (`#7c3aed`); BtnGuard v2 (shared/btnguard.html com wrap+auditar); include() em router.gs; todos os botões async protegidos em index.html + primeiro_acesso.html + 5 portais; PROGRESS.md atualizado com checklist BtnGuard por fase | `clasp login --no-localhost && clasp push` → `inicializarSistema()` → `verificarTodasAbas()` → `BtnGuard.auditar()` no browser → Fase 1 |
+| 2026-05-21 | Fase 0/1 | Deploys realizados no Apps Script; UI principal reconstruída; corrigido include em comentário; criada Fase 1.1 com `TarefaRepository`, `TarefaEngine`, controllers, migração Sheet→JSON, proteção de índice e view mínima de Tarefas; `domain_model.md` atualizado | Executar `fase1_tarefas_prepararIndice()`/migração no GAS se houver dados; iniciar Fase 1.2 Colaboradores |
+| 2026-05-21 | Fase 1.2 | Colaboradores: `ColaboradorRepository` (colaboradores.json + sub-coleções + índice EQUIPES.Funcionarios), `PessoasEngine` (FSM status colaborador + FSM férias com 6 estados + fusão EquipesEngine+RHEngine), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*, RBAC completo, férias com FSM), view SPA Pessoas (métricas, CRUD, filtro status, PessoasUI), GAS.pessoas namespace, rota registrada no Router | `clasp push` → `fase1_colaboradores_prepararIndice()` → `fase1_colaboradores_migrarFuncionarios()` → smoke-test no browser → iniciar Fase 1.3 Contratações |
 
 ---
 

@@ -102,6 +102,39 @@ Colaborador = {
 
 ---
 
+## Tarefa (persistência canônica — Fase 1.1)
+
+```javascript
+Tarefa = {
+  // base
+  orgId, id, criadoEm, atualizadoEm, criadoPor, versao,
+
+  // dados operacionais
+  titulo, descricao,
+  status,        // FSM: pendente | em_andamento | bloqueada | concluida | cancelada
+  prioridade,    // baixa | media | alta | critica
+  responsavel,   // email
+  executores,    // emails
+  setor,
+
+  // contexto e vínculos
+  modulo, tipo,
+  prazo, concluidoEm,
+  acaoId, processoId,
+  origem, origemId,
+
+  // rastreabilidade
+  historico: [{ data, ator, campo, de, para, comentario }],
+  comentarios: [{ id, autor, texto, data }],
+  metadados: {}
+}
+```
+
+**Fonte de verdade**: `tarefas.json`  
+**Índice operacional**: `PESSOAL.Tarefas` somente para leitura/consulta rápida.
+
+---
+
 ## FSMs por Domínio
 
 ### Reserva de Espaço
