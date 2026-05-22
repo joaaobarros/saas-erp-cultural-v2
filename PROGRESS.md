@@ -58,16 +58,33 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ `boot_service.gs`: inclui `tiposAfastamento` e `tiposOcorrencia` no bootstrap — populado nos selects automaticamente
 - ✅ `index.html` UI: GAS.admin/acesso/rh/solicitacoes/contratos expandidos; cargo `<select>` + `_popularSelectCargo()`; tipos afastamento/ocorrência populados do bootstrap; sala `<select>` + `popularSelectEspacos()`; `ContratosDetailUI` (Metas & Rubricas com Memória de Cálculo grid + grid 12 meses de Indicadores + Histórico de Versões); painel Aprovações + badge solicitações; Admin Cadastros (5 tabs: Espaços|Setores|CategItens|Módulos|Usuários); deploy @32
 
+**O que foi feito (Auditoria Visual — 2026-05-22)**:
+- ✅ **Auditoria visual completa de todas as abas** (`index.html`): identificados e corrigidos 8 problemas CSS/estruturais:
+  1. `--surface3` e `--divider` indefinidos → adicionados ao `:root` (usados em tabelas do ContratosDetailUI)
+  2. `.muted-text` sem regra CSS → adicionado (cor muted, 13px), usado em ~20 pontos de loading/vazio
+  3. `.oculto` sem regra global → adicionado `.oculto { display: none !important; }` (essencial para AdminCadastrosUI.abrirTab)
+  4. `.admin-tab-content` sem CSS → adicionado com `display: block; padding-top: 12px`
+  5. `.tab-btn.ativa` sem CSS → adicionado (cor primária, border-bottom, font-weight 600); usado por AdminCadastrosUI
+  6. `.stat-icon.warning` e `.stat-icon.error` ausentes → adicionados (usados em métricas de Pessoas e Espaços)
+  7. `.error-text`, `.success-text`, `.warning-text` ausentes → adicionados (usados em erros de carga de listas)
+  8. **Tab bar de Espaços** com inline styles desuniformes → refatorado para usar `.tab-bar`/`.tab-btn` (consistente com Pessoas/Contratações/Financeiro)
+  9. ContratosDetailUI: tab bar com `border-bottom:1px solid var(--divider)` e estilo inline hardcoded no 1º botão → migrado para `.tab-bar` + `.tab-btn.cd-tab`
+- ✅ Deploy @38 realizado
+
 **Próximo passo imediato**:
 > 1. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` → `{criados: 8}` ou `{jaExistiam: 8}`
 > 2. **[GAS EDITOR]** Executar `setup_pccs_inicial()` → `{ok: true}`
 > 3. **[GAS EDITOR]** Executar `setup_categorias_itens_iniciais()` → `{criados: 6}`
-> 4. **[GAS EDITOR]** Executar `ctrl_solicitacoes_listar()` → array vazio (ok)
-> 5. **[BROWSER]** Admin → Cadastros → Espaços → deve listar 8 espaços
-> 6. **[BROWSER]** Reservas → campo Sala deve ser `<select>` com espaços SAL-001..006
-> 7. **[BROWSER]** Financeiro → Contrato → clicar ⚙ Gerenciar → painel ContratosDetailUI abre com tabs Metas/Indicadores/Histórico
-> 8. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 9. Iniciar **Fase 5 — Ação como Núcleo Real**
+> 4. **[BROWSER]** Admin → Cadastros → Espaços → deve listar 8 espaços com tabs funcionais
+> 5. **[BROWSER]** Espaços → tabs Reservas/Chaves/Empréstimos/Patrimônio/Mapa devem destacar corretamente
+> 6. **[BROWSER]** Financeiro → Contrato → Gerenciar → tabs Metas/Indicadores/Histórico corretos
+> 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
+> 8. Iniciar **Fase 5 — Ação como Núcleo Real**
+
+**O que ainda falta (prioridade antes da Fase 5)**:
+- ⬜ **[GAS EDITOR]** Seeds: `setup_espacos_iniciais()`, `setup_pccs_inicial()`, `setup_categorias_itens_iniciais()`
+- ⬜ **[BROWSER]** Verificação smoke-test manual das 8 abas do sistema
+- ⬜ **Fase 5 — Ação como Núcleo Real**: `AcaoRepository`, `AcaoEngine`, `acoes_controller.gs`, view Ações com 9 tabs, campo `acaoId` em Reservas/Tarefas/Contratos
 
 **Fase mais urgente agora**: **Fase 5** — Ação conectada a Reservas, Tarefas, Contratos (acaoId).
 

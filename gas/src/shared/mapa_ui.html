@@ -1,0 +1,238 @@
+<script>
+// ═══════════════════════════════════════════════════════════
+// MAPA INTERATIVO — Planta CCBJ (Fase 5A)
+// ═══════════════════════════════════════════════════════════
+var MapaUI=(function(){
+  var _carregado=false,_statusMap={},_selecionado=null;
+  var _zoom=1,_panX=0,_panY=0,_drag={ativo:false,sx:0,sy:0};
+  var _filtros={tipo:'todos',status:'todos'};
+  var _SL={disponivel:'Disponível',ocupado:'Ocupado',em_uso:'Em uso',
+    aguardando:'Aguardando',manutencao:'Manutenção',bloqueado:'Bloqueado',default:'—'};
+  var _SC={disponivel:'badge-success',ocupado:'badge-error',em_uso:'badge-accent',
+    aguardando:'badge-warning',manutencao:'',bloqueado:'badge-error',default:''};
+
+  function carregar(){
+    _carregado=true;
+    var inp=document.getElementById('mapa-data');
+    if(inp&&!inp.value)inp.value=new Date().toISOString().slice(0,10);
+    var data=(inp&&inp.value)||new Date().toISOString().slice(0,10);
+    _skeleton();
+    GAS.mapa.statusEspacos({data:data},function(r){
+      if(!r||!r.ok){Toast.erro('Erro ao carregar mapa');return;}
+      _statusMap={};
+      (r.data.espacos||[]).forEach(function(e){_statusMap[e.id]=e;});
+      _cores();
+      _dash(r.data.espacos||[]);
+    },function(err){Toast.erro('Mapa: '+(err&&err.message||err));});
+    _initIO();
+  }
+
+  function _skeleton(){
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco').forEach(function(g){
+      ['s-disponivel','s-ocupado','s-em_uso','s-aguardando','s-manutencao','s-bloqueado']
+        .forEach(function(c){g.classList.remove(c);});
+      g.classList.add('s-default');
+    });
+  }
+
+  function _cores(){
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco').forEach(function(g){
+      var id=g.dataset.id,info=_statusMap[id],st=info?info.status:'default';
+      ['s-disponivel','s-ocupado','s-em_uso','s-aguardando','s-manutencao','s-bloqueado','s-default']
+        .forEach(function(c){g.classList.remove(c);});
+      g.classList.add('s-'+(st||'default'));
+      var tipo=g.dataset.tipo||'';
+      var vis=(_filtros.tipo==='todos'||_filtros.tipo===tipo)&&
+              (_filtros.status==='todos'||_filtros.status===st);
+      g.style.opacity=vis?'':'0.15';
+      g.style.pointerEvents=vis?'':'none';
+    });
+  }
+
+  function _initIO(){
+    var area=document.getElementById('mapa-svg-area');
+    var inner=document.getElementById('mapa-svg-inner');
+    if(!inner||inner._mi)return; inner._mi=true;
+    inner.addEventListener('click',function(e){
+      var g=e.target.closest('.mapa-espaco');
+      if(!g){fecharPainel();return;}
+      _sel(g.dataset.id);
+    });
+    area.addEventListener('wheel',function(e){
+      e.preventDefault();
+      _zoom=Math.max(0.5,Math.min(4,_zoom*(e.deltaY<0?1.12:0.9)));
+      _tr();
+    },{passive:false});
+    inner.addEventListener('mousedown',function(e){
+      if(e.target.closest('.mapa-espaco'))return;
+      _drag.ativo=true;_drag.sx=e.clientX-_panX;_drag.sy=e.clientY-_panY;
+    });
+    document.addEventListener('mousemove',function(e){
+      if(!_drag.ativo)return;
+      _panX=e.clientX-_drag.sx;_panY=e.clientY-_drag.sy;_tr();
+    });
+    document.addEventListener('mouseup',function(){_drag.ativo=false;});
+    var _t0=null;
+    inner.addEventListener('touchstart',function(e){
+      if(e.touches.length===1)_t0={x:e.touches[0].clientX-_panX,y:e.touches[0].clientY-_panY};
+    },{passive:true});
+    inner.addEventListener('touchmove',function(e){
+      if(e.touches.length===1&&_t0){
+        _panX=e.touches[0].clientX-_t0.x;_panY=e.touches[0].clientY-_t0.y;_tr();
+      }
+    },{passive:true});
+  }
+
+  function _tr(){
+    var inner=document.getElementById('mapa-svg-inner');
+    if(inner)inner.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';
+  }
+
+  function zoom(d){_zoom=Math.max(0.5,Math.min(4,_zoom+d*0.2));_tr();}
+  function resetZoom(){_zoom=1;_panX=0;_panY=0;_tr();}
+
+  function _sel(id){
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco.selecionado')
+      .forEach(function(g){g.classList.remove('selecionado');});
+    var g=document.querySelector('#mapa-svg-inner .mapa-espaco[data-id="'+id+'"]');
+    if(g)g.classList.add('selecionado');
+    _selecionado=id;
+    var info=_statusMap[id]||{id:id,nome:g?(g.dataset.nome||'Espaço'):'Espaço'};
+    _painel(info);
+  }
+
+  function _painel(info){
+    var painel=document.getElementById('mapa-painel-lateral');
+    if(!painel)return;
+    painel.classList.remove('fechado');
+    var st=info.status||'default';
+    painel.innerHTML=
+      '<div class="mapa-pl-header">'+
+        '<div>'+
+          '<div class="mapa-pl-nome">'+escaparHtml(info.nome||'Espaço')+'</div>'+
+          '<span class="badge '+(_SC[st]||'')+'" style="margin-top:5px;display:inline-block">'+
+            escaparHtml(_SL[st]||st)+'</span>'+
+        '</div>'+
+        '<button onclick="MapaUI.fecharPainel()" data-bg-skip="1" '+
+          'style="background:none;border:none;cursor:pointer;color:var(--muted);'+
+                 'font-size:20px;padding:0;line-height:1;flex-shrink:0">&#x2715;</button>'+
+      '</div>'+
+      '<div class="mapa-pl-body">'+
+        '<div class="mapa-pl-info">'+
+          _row('Capacidade',(info.capacidade||0)>0?info.capacidade+' pessoas':'—')+
+          _row('Tipo',_tl(info.tipoEspaco))+
+          _row('Categoria',_cl(info.categoria))+
+          _row('Chave',info.possuiChaves?'Necessária':'Não')+
+          _row('N&#xBA; planta',info.numeroPlanta?'#'+info.numeroPlanta:'—')+
+          _row('Reservas hoje',String(info.totalReservasHoje||0))+
+        '</div>'+
+        '<div class="mapa-pl-agenda"><h4>Agenda</h4>'+
+          _ag(info.reservaAtiva,info.proximaReserva,info.totalReservasHoje)+
+        '</div>'+
+      '</div>'+
+      '<div class="mapa-pl-acoes">'+
+        (info.aceitaReserva!==false?
+          '<button id="mapa-btn-reserva" class="btn btn-primary btn-sm" style="width:100%">'+
+          '<span class="ms ms-sm">event_available</span> Solicitar Reserva</button>':'')+
+        (info.possuiChaves?
+          '<button id="mapa-btn-chave" class="btn btn-secondary btn-sm" style="width:100%;margin-top:5px">'+
+          '<span class="ms ms-sm">key</span> Solicitar Chave</button>':'')+
+      '</div>';
+    if(typeof BtnGuard!=='undefined'){
+      var bR=document.getElementById('mapa-btn-reserva');
+      var bC=document.getElementById('mapa-btn-chave');
+      if(bR)BtnGuard.wrap(bR,'Abrindo…',function(done){done();MapaUI.solicitarReserva(_selecionado);});
+      if(bC)BtnGuard.wrap(bC,'Abrindo…',function(done){done();MapaUI.solicitarChave(_selecionado);});
+    }
+  }
+
+  function _row(l,v){
+    return '<div class="mapa-pl-row"><span>'+escaparHtml(l)+'</span>'+
+           '<strong>'+escaparHtml(String(v))+'</strong></div>';
+  }
+
+  function _tl(t){
+    var m={auditorio:'Auditório',sala_danca:'Sala de Dança',biblioteca:'Biblioteca',
+           galeria:'Galeria',multiuso:'Multiuso',estudio:'Estúdio',praca:'Praça',
+           espaco_ext:'Espaço Externo',escritorio:'Escritório',almoxarifado:'Almoxarifado',
+           tecnico:'Técnico',servicos:'Serviços',sanitario:'Sanitário',
+           circulacao:'Circulação',suporte:'Suporte',externo:'Externo'};
+    return m[t]||(t||'—');
+  }
+
+  function _cl(c){
+    var m={uso_publico:'Uso Público',equipes:'Equipes',tecnico:'Técnico',
+           servicos:'Serviços',externo:'Externo'};
+    return m[c]||(c||'—');
+  }
+
+  function _ag(ativa,proxima,total){
+    if(!total)return '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sem reservas hoje</div>';
+    var html='';
+    if(ativa)html+=
+      '<div class="mapa-reserva-item"><strong>'+
+      escaparHtml(ativa.horaInicio)+' – '+escaparHtml(ativa.horaTermino)+
+      '</strong> · '+escaparHtml(ativa.nomeAcao||'Reserva ativa')+'</div>';
+    if(proxima)html+=
+      '<div class="mapa-reserva-item" style="border-left-color:var(--color-warning)"><strong>'+
+      escaparHtml(proxima.horaInicio)+' – '+escaparHtml(proxima.horaTermino)+
+      '</strong> · '+escaparHtml(proxima.nomeAcao||'Próxima')+'</div>';
+    var extras=total-(ativa?1:0)-(proxima?1:0);
+    if(extras>0)html+=
+      '<div style="color:var(--text2);font-size:11px;margin-top:4px;padding:4px 0">+'+
+      extras+' reserva(s) no dia</div>';
+    return html;
+  }
+
+  function _dash(espacos){
+    var t={disponivel:0,ocupado:0,em_uso:0,aguardando:0,manutencao:0,bloqueado:0};
+    espacos.forEach(function(e){if(t[e.status]!==undefined)t[e.status]++;});
+    var el=document.getElementById('mapa-dashboard');if(!el)return;
+    el.innerHTML=[
+      {k:'disponivel',label:'Disponíveis',cls:'success',i:'check_circle'},
+      {k:'ocupado',   label:'Ocupados',         cls:'error',  i:'block'},
+      {k:'em_uso',    label:'Em uso',            cls:'accent', i:'play_circle'},
+      {k:'aguardando',label:'Aguardando',        cls:'warning',i:'pending'},
+      {k:'manutencao',label:'Manutenção',cls:'',   i:'build'},
+      {k:'bloqueado', label:'Bloqueados',        cls:'',       i:'lock'},
+    ].map(function(s){
+      return '<div class="stat-card">'+
+        '<div class="stat-icon '+s.cls+'"><span class="ms ms-lg">'+s.i+'</span></div>'+
+        '<div class="stat-info"><div class="stat-valor">'+t[s.k]+'</div>'+
+        '<div class="stat-label">'+s.label+'</div></div></div>';
+    }).join('');
+  }
+
+  function fecharPainel(){
+    var p=document.getElementById('mapa-painel-lateral');
+    if(p)p.classList.add('fechado');
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco.selecionado')
+      .forEach(function(g){g.classList.remove('selecionado');});
+    _selecionado=null;
+  }
+
+  function solicitarReserva(id){
+    EspacosUI.abrirTab('reservas');
+    if(typeof ReservasUI!=='undefined'&&ReservasUI.abrirFormComEspaco){
+      var info=_statusMap[id]||{};
+      ReservasUI.abrirFormComEspaco(id,info.nome||'');
+    }
+  }
+
+  function solicitarChave(id){
+    EspacosUI.abrirTab('chaves');
+    if(typeof ChavesUI!=='undefined'&&ChavesUI.abrirFormComEspaco){
+      var info=_statusMap[id]||{};
+      ChavesUI.abrirFormComEspaco(id,info.nome||'');
+    }
+  }
+
+  function setFiltro(campo,valor){_filtros[campo]=valor;_cores();}
+
+  return{
+    carregar:carregar,zoom:zoom,resetZoom:resetZoom,
+    fecharPainel:fecharPainel,setFiltro:setFiltro,
+    solicitarReserva:solicitarReserva,solicitarChave:solicitarChave
+  };
+})();
+</script>

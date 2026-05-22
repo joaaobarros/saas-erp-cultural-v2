@@ -228,14 +228,42 @@ function setup_espacos_iniciais() {
   var agora_ = agora();
 
   var espacos = [
-    { id:'SAL-001', nome:'Teatro',          tipoEspaco:'auditorio',  capacidade:200, possuiChaves:true,  aceitaReserva:true  },
-    { id:'SAL-002', nome:'Sala de Dança',   tipoEspaco:'sala_danca', capacidade:50,  possuiChaves:true,  aceitaReserva:true  },
-    { id:'SAL-003', nome:'Biblioteca',      tipoEspaco:'biblioteca', capacidade:30,  possuiChaves:true,  aceitaReserva:true  },
-    { id:'SAL-004', nome:'Multigaleria',    tipoEspaco:'multiuso',   capacidade:100, possuiChaves:true,  aceitaReserva:true  },
-    { id:'SAL-005', nome:'Estúdio',         tipoEspaco:'estudio',    capacidade:20,  possuiChaves:true,  aceitaReserva:true  },
-    { id:'SAL-006', nome:'Sala Multiuso',   tipoEspaco:'multiuso',   capacidade:40,  possuiChaves:false, aceitaReserva:true  },
-    { id:'SAL-007', nome:'Praça Central',   tipoEspaco:'praca',      capacidade:300, possuiChaves:false, aceitaReserva:false },
-    { id:'SAL-008', nome:'Áreas Abertas',   tipoEspaco:'externo',    capacidade:500, possuiChaves:false, aceitaReserva:false }
+    // ── Uso público ──────────────────────────────────────────────────────
+    { id:'esp-01', nome:'Sala de Cultura Digital',          tipoEspaco:'multiuso',    capacidade:40,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:1,  categoria:'uso_publico' },
+    { id:'esp-03', nome:'Cineclube',                         tipoEspaco:'auditorio',   capacidade:30,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:3,  categoria:'uso_publico' },
+    { id:'esp-04', nome:'Multigaleria',                      tipoEspaco:'galeria',     capacidade:100, possuiChaves:true,  aceitaReserva:true,  numeroPlanta:4,  categoria:'uso_publico' },
+    { id:'esp-11', nome:'Sala Multiuso / Ação Cultural',     tipoEspaco:'multiuso',    capacidade:50,  possuiChaves:false, aceitaReserva:true,  numeroPlanta:11, categoria:'uso_publico' },
+    { id:'esp-12', nome:'Biblioteca',                        tipoEspaco:'biblioteca',  capacidade:30,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:12, categoria:'uso_publico' },
+    { id:'esp-13', nome:'Sala de Dança',                     tipoEspaco:'sala_danca',  capacidade:40,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:13, categoria:'uso_publico' },
+    { id:'esp-15', nome:'Estúdio',                           tipoEspaco:'estudio',     capacidade:20,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:15, categoria:'uso_publico' },
+    { id:'esp-17', nome:'Bicicletário',                      tipoEspaco:'externo',     capacidade:50,  possuiChaves:false, aceitaReserva:false, numeroPlanta:17, categoria:'servicos'    },
+    { id:'esp-18', nome:'Estacionamento',                    tipoEspaco:'externo',     capacidade:100, possuiChaves:false, aceitaReserva:false, numeroPlanta:18, categoria:'externo'     },
+    { id:'esp-20', nome:'Banheiros (20 e 34)',                tipoEspaco:'sanitario',   capacidade:0,   possuiChaves:false, aceitaReserva:false, numeroPlanta:20, categoria:'servicos'    },
+    { id:'esp-21', nome:'Escola de Cultura e Artes',         tipoEspaco:'multiuso',    capacidade:30,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:21, categoria:'uso_publico' },
+    { id:'esp-23', nome:'Pátio Central',                     tipoEspaco:'circulacao',  capacidade:300, possuiChaves:false, aceitaReserva:true,  numeroPlanta:23, categoria:'uso_publico' },
+    { id:'esp-25', nome:'Teatro',                            tipoEspaco:'auditorio',   capacidade:200, possuiChaves:true,  aceitaReserva:true,  numeroPlanta:25, categoria:'uso_publico' },
+    { id:'esp-27', nome:'Praça de Convivência e Alimentação',tipoEspaco:'praca',       capacidade:150, possuiChaves:false, aceitaReserva:true,  numeroPlanta:27, categoria:'uso_publico' },
+    { id:'esp-28', nome:'Espaço Paulo Freire',               tipoEspaco:'espaco_ext',  capacidade:200, possuiChaves:false, aceitaReserva:true,  numeroPlanta:28, categoria:'uso_publico' },
+    { id:'esp-29', nome:'Espaço Marielle',                   tipoEspaco:'espaco_ext',  capacidade:80,  possuiChaves:false, aceitaReserva:true,  numeroPlanta:29, categoria:'uso_publico' },
+    { id:'esp-30', nome:'Campinho Rafael Agostinho',         tipoEspaco:'espaco_ext',  capacidade:100, possuiChaves:false, aceitaReserva:true,  numeroPlanta:30, categoria:'uso_publico' },
+    { id:'esp-31', nome:'Espaço Alternativo de Dança',       tipoEspaco:'sala_danca',  capacidade:30,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:31, categoria:'uso_publico' },
+    { id:'esp-35', nome:'Camarins',                          tipoEspaco:'suporte',     capacidade:15,  possuiChaves:true,  aceitaReserva:true,  numeroPlanta:35, categoria:'uso_publico' },
+    // ── Equipes internas ─────────────────────────────────────────────────
+    { id:'esp-02', nome:'NArTE',                             tipoEspaco:'escritorio',  capacidade:15,  possuiChaves:true,  aceitaReserva:false, numeroPlanta:2,  categoria:'equipes'     },
+    { id:'esp-05', nome:'Administrativo',                    tipoEspaco:'escritorio',  capacidade:10,  possuiChaves:true,  aceitaReserva:false, numeroPlanta:5,  categoria:'equipes'     },
+    { id:'esp-06', nome:'Infraestrutura',                    tipoEspaco:'escritorio',  capacidade:5,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:6,  categoria:'equipes'     },
+    { id:'esp-07', nome:'Vestiário e Almoxarifado',          tipoEspaco:'almoxarifado',capacidade:10,  possuiChaves:true,  aceitaReserva:false, numeroPlanta:7,  categoria:'equipes'     },
+    { id:'esp-08', nome:'Acesso / Circulação Interna',       tipoEspaco:'circulacao',  capacidade:0,   possuiChaves:false, aceitaReserva:false, numeroPlanta:8,  categoria:'servicos'    },
+    { id:'esp-09', nome:'Sala de Elétrica',                  tipoEspaco:'tecnico',     capacidade:3,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:9,  categoria:'tecnico'     },
+    { id:'esp-10', nome:'Copa',                              tipoEspaco:'servicos',    capacidade:10,  possuiChaves:false, aceitaReserva:false, numeroPlanta:10, categoria:'servicos'    },
+    { id:'esp-14', nome:'Sala de Máquinas (14 e 33)',        tipoEspaco:'tecnico',     capacidade:3,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:14, categoria:'tecnico'     },
+    { id:'esp-19', nome:'Gestão',                            tipoEspaco:'escritorio',  capacidade:8,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:19, categoria:'equipes'     },
+    { id:'esp-22', nome:'Comunicação',                       tipoEspaco:'escritorio',  capacidade:8,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:22, categoria:'equipes'     },
+    { id:'esp-24', nome:'Sala de TI',                        tipoEspaco:'tecnico',     capacidade:5,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:24, categoria:'tecnico'     },
+    { id:'esp-26', nome:'Sala de Vigilância',                tipoEspaco:'tecnico',     capacidade:3,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:26, categoria:'tecnico'     },
+    { id:'esp-32', nome:'Sala de Técnica',                   tipoEspaco:'tecnico',     capacidade:5,   possuiChaves:true,  aceitaReserva:false, numeroPlanta:32, categoria:'tecnico'     },
+    { id:'esp-36', nome:'Vestiário e Almoxarifado (36)',      tipoEspaco:'almoxarifado',capacidade:10,  possuiChaves:true,  aceitaReserva:false, numeroPlanta:36, categoria:'equipes'     },
+    { id:'esp-37', nome:'Espaço de Descanso',                tipoEspaco:'servicos',    capacidade:15,  possuiChaves:false, aceitaReserva:false, numeroPlanta:37, categoria:'servicos'    }
   ];
 
   var criados = 0;
