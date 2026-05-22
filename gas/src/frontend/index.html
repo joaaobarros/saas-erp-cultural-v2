@@ -517,6 +517,12 @@ body {
 .badge-error   { background: #fee2e2; color: #991b1b; }
 .badge-muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 .badge-accent  { background: #fef3c7; color: #b45309; }
+.nav-badge { display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:#ef4444;color:#fff;border-radius:9px;font-size:11px;font-weight:700;margin-left:auto; }
+.nav-badge.oculto { display:none; }
+
+/* form-grid (usado em modais de cadastro) */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-grid .full-width { grid-column:1/-1; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TAB BAR (compartilhado: EspacosUI, PessoasTabs, ContratacoesTabs)
@@ -1023,8 +1029,91 @@ body {
             </div>
           </div>
 
+          <!-- Card: Cadastros Base (Espaços, Módulos, Usuários) -->
+          <div class="card" style="grid-column:1/-1;">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">settings</span> Cadastros Base</div>
+            </div>
+            <!-- Sub-tabs -->
+            <div class="tab-bar" id="admin-cadastros-tabs">
+              <button class="tab-btn ativa" data-tab="espacos" onclick="AdminCadastrosUI.abrirTab('espacos')">Espaços</button>
+              <button class="tab-btn" data-tab="setores"  onclick="AdminCadastrosUI.abrirTab('setores')">Setores</button>
+              <button class="tab-btn" data-tab="catitens" onclick="AdminCadastrosUI.abrirTab('catitens')">Categ. Itens</button>
+              <button class="tab-btn" data-tab="modulos"  onclick="AdminCadastrosUI.abrirTab('modulos')">Módulos</button>
+              <button class="tab-btn" data-tab="usuarios" onclick="AdminCadastrosUI.abrirTab('usuarios')">Usuários</button>
+            </div>
+            <!-- Tab: Espaços -->
+            <div id="admin-tab-espacos" class="admin-tab-content">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                <button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(null)">
+                  <span class="ms ms-sm">add</span> Novo Espaço
+                </button>
+              </div>
+              <div id="lista-admin-espacos"><p class="muted-text">Carregando…</p></div>
+            </div>
+            <!-- Tab: Setores -->
+            <div id="admin-tab-setores" class="admin-tab-content oculto">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                <button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(null)">
+                  <span class="ms ms-sm">add</span> Novo Setor
+                </button>
+              </div>
+              <div id="lista-admin-setores"><p class="muted-text">Carregando…</p></div>
+            </div>
+            <!-- Tab: Categorias de Itens -->
+            <div id="admin-tab-catitens" class="admin-tab-content oculto">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                <button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(null)">
+                  <span class="ms ms-sm">add</span> Nova Categoria
+                </button>
+              </div>
+              <div id="lista-admin-catitens"><p class="muted-text">Carregando…</p></div>
+            </div>
+            <!-- Tab: Módulos -->
+            <div id="admin-tab-modulos" class="admin-tab-content oculto">
+              <div id="lista-admin-modulos"><p class="muted-text">Carregando…</p></div>
+            </div>
+            <!-- Tab: Usuários -->
+            <div id="admin-tab-usuarios" class="admin-tab-content oculto">
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <select id="filtro-usuarios-status" class="form-input" style="max-width:180px;" onchange="AdminCadastrosUI.carregarUsuarios()">
+                  <option value="">Todos</option>
+                  <option value="pendente">Pendentes</option>
+                  <option value="ativo">Ativos</option>
+                  <option value="inativo">Inativos</option>
+                </select>
+              </div>
+              <div id="lista-admin-usuarios"><p class="muted-text">Carregando…</p></div>
+            </div>
+          </div><!-- /card cadastros -->
+
         </div><!-- /admin-grid -->
       </div><!-- /view-admin -->
+
+      <!-- VIEW: Aprovações (Solicitações de Reserva) -->
+      <div id="view-aprovacoes" class="view">
+        <div class="page-header">
+          <div class="page-title">Aprovações de Reserva</div>
+          <div class="page-subtitle">Solicitações de reserva aguardando avaliação</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo"><span class="ms">approval</span> Solicitações</div>
+            <div style="display:flex;gap:8px;">
+              <select id="filtro-sol-status" class="form-input" style="max-width:160px;" onchange="AprovacaoReservaUI.carregar()">
+                <option value="PENDENTE">Pendentes</option>
+                <option value="APROVADO">Aprovadas</option>
+                <option value="RECUSADO">Recusadas</option>
+                <option value="TODOS">Todas</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" onclick="AprovacaoReservaUI.carregar()" data-bg-skip="1">
+                <span class="ms ms-sm">refresh</span>
+              </button>
+            </div>
+          </div>
+          <div id="lista-solicitacoes"><p class="muted-text">Carregando…</p></div>
+        </div>
+      </div><!-- /view-aprovacoes -->
 
       <!-- VIEW: Tarefas -->
       <div id="view-tarefas" class="view">
@@ -1116,7 +1205,11 @@ body {
               <div class="form-group"><label class="form-label">Nome completo *</label><input id="pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
               <div class="form-group"><label class="form-label">E-mail institucional</label><input id="pf-email-inst" class="form-input" type="email" placeholder="nome@org.br"></div>
               <div class="form-group"><label class="form-label">Setor</label><input id="pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
-              <div class="form-group"><label class="form-label">Cargo</label><input id="pf-cargo" class="form-input" type="text" placeholder="Ex: Técnico Cultural"></div>
+              <div class="form-group"><label class="form-label">Cargo</label>
+                <select id="pf-cargo" class="form-input">
+                  <option value="">Selecione o cargo…</option>
+                </select>
+              </div>
               <div class="form-group"><label class="form-label">Tipo de Vínculo</label>
                 <select id="pf-vinculo" class="form-input">
                   <option value="clt">CLT</option><option value="pj">PJ</option>
@@ -1494,6 +1587,157 @@ body {
               </div>
             </div>
           </div>
+          <!-- Painel de Detalhe do Contrato (Metas / Rubricas / Indicadores) -->
+          <div id="contrato-detalhe-card" class="card oculto" style="margin-top:12px;">
+            <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+              <div class="card-titulo"><span class="ms">manage_accounts</span> <span id="cd-titulo">Gerenciar Contrato</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fechar()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+            </div>
+            <!-- Tabs do detalhe -->
+            <div style="display:flex;gap:0;border-bottom:1px solid var(--divider);margin-bottom:12px;">
+              <button class="tab-btn cd-tab" data-tab="metas" onclick="ContratosDetailUI.abrirTab('metas')" style="border-bottom:2px solid var(--color-primary);color:var(--color-primary);">Metas &amp; Rubricas</button>
+              <button class="tab-btn cd-tab" data-tab="indicadores" onclick="ContratosDetailUI.abrirTab('indicadores')">Indicadores</button>
+              <button class="tab-btn cd-tab" data-tab="historico" onclick="ContratosDetailUI.abrirTab('historico')">Histórico</button>
+            </div>
+
+            <!-- Tab: Metas & Rubricas -->
+            <div id="cd-tab-metas">
+              <!-- Form nova meta -->
+              <div id="cd-meta-form" class="oculto" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:12px;">
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Nome da Meta *</label><input id="cd-meta-nome" class="form-input" type="text" placeholder="Nome da meta"></div>
+                  <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cd-meta-valor" class="form-input" type="number" min="0" step="0.01" value="0"></div>
+                  <div class="form-group full-width"><label class="form-label">Descrição</label><input id="cd-meta-descricao" class="form-input" type="text" placeholder="Descrição da meta"></div>
+                </div>
+                <input type="hidden" id="cd-meta-id">
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                  <button class="btn btn-primario btn-sm" id="btn-cd-meta-salvar" onclick="ContratosDetailUI.salvarMeta()"><span class="ms ms-sm">save</span> Salvar Meta</button>
+                  <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fecharMetaForm()" data-bg-skip="1">Cancelar</button>
+                </div>
+              </div>
+              <!-- Lista de metas + rubricas inline -->
+              <div id="cd-metas-lista"><p class="muted-text" style="padding:8px;">Carregando…</p></div>
+              <!-- Form nova rubrica (aparece dentro da meta) -->
+              <div id="cd-rubrica-form" class="oculto" style="background:var(--surface2);border-radius:8px;padding:12px;margin:8px 0;">
+                <input type="hidden" id="cd-rubrica-meta-id">
+                <input type="hidden" id="cd-rubrica-id">
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Nome da Rubrica *</label><input id="cd-rubrica-nome" class="form-input" type="text" placeholder="Ex: Cachê Artistas"></div>
+                  <div class="form-group"><label class="form-label">Tipo de Rubrica</label>
+                    <select id="cd-rubrica-tipo" class="form-input">
+                      <option value="pessoal">Pessoal</option><option value="servicos">Serviços</option>
+                      <option value="material">Material</option><option value="equipamento">Equipamento</option>
+                      <option value="viagem">Viagem</option><option value="producao">Produção</option>
+                      <option value="overhead">Overhead</option><option value="outros">Outros</option>
+                    </select>
+                  </div>
+                  <div class="form-group"><label class="form-label">Valor Total (R$)</label>
+                    <input id="cd-rubrica-valor" class="form-input" type="number" min="0" step="0.01" value="0" readonly style="background:var(--surface3);" title="Calculado automaticamente pela memória de cálculo">
+                  </div>
+                </div>
+                <!-- Grid de Memória de Cálculo -->
+                <div style="margin-top:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <label class="form-label" style="margin:0;">Memória de Cálculo</label>
+                    <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.adicionarLinhaMemoria()" data-bg-skip="1"><span class="ms ms-sm">add</span> + Linha</button>
+                  </div>
+                  <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;" id="cd-memoria-tabela">
+                      <thead>
+                        <tr style="background:var(--surface3);">
+                          <th style="padding:6px 8px;text-align:left;min-width:140px;">Descrição</th>
+                          <th style="padding:6px 8px;text-align:left;width:100px;">Tipo</th>
+                          <th style="padding:6px 8px;text-align:right;width:70px;">Qtd</th>
+                          <th style="padding:6px 8px;text-align:right;width:110px;">Valor Unit. (R$)</th>
+                          <th style="padding:6px 8px;text-align:right;width:110px;">Subtotal</th>
+                          <th style="padding:6px 8px;width:36px;"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="cd-memoria-tbody"></tbody>
+                      <tfoot>
+                        <tr style="background:var(--surface3);font-weight:600;">
+                          <td colspan="4" style="padding:6px 8px;text-align:right;">Total da Rubrica:</td>
+                          <td id="cd-memoria-total" style="padding:6px 8px;text-align:right;color:var(--color-primary);">R$ 0,00</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                  <button class="btn btn-primario btn-sm" id="btn-cd-rubrica-salvar" onclick="ContratosDetailUI.salvarRubrica()"><span class="ms ms-sm">save</span> Salvar Rubrica</button>
+                  <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fecharRubricaForm()" data-bg-skip="1">Cancelar</button>
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <button class="btn btn-ghost btn-sm" id="btn-cd-nova-meta" onclick="ContratosDetailUI.abrirMetaForm()" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Meta</button>
+              </div>
+            </div>
+
+            <!-- Tab: Indicadores (12 meses) -->
+            <div id="cd-tab-indicadores" style="display:none;">
+              <div id="cd-indicadores-lista"><p class="muted-text" style="padding:8px;">Carregando…</p></div>
+              <div style="margin-top:8px;padding:12px;background:var(--surface2);border-radius:8px;" id="cd-indicador-form" class="oculto">
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Nome do Indicador *</label><input id="cd-ind-nome" class="form-input" type="text" placeholder="Ex: Público Atingido"></div>
+                  <div class="form-group"><label class="form-label">Unidade</label><input id="cd-ind-unidade" class="form-input" type="text" placeholder="Ex: pessoas, apresentações"></div>
+                  <div class="form-group full-width"><label class="form-label">Meta Anual</label><input id="cd-ind-meta" class="form-input" type="number" min="0" value="0"></div>
+                </div>
+                <input type="hidden" id="cd-ind-id">
+                <input type="hidden" id="cd-ind-meta-id">
+                <!-- Grid 12 meses -->
+                <div style="margin-top:10px;overflow-x:auto;">
+                  <table style="width:100%;border-collapse:collapse;font-size:12px;" id="cd-meses-tabela">
+                    <thead>
+                      <tr style="background:var(--surface3);">
+                        <th style="padding:5px 6px;">Jan</th><th style="padding:5px 6px;">Fev</th><th style="padding:5px 6px;">Mar</th>
+                        <th style="padding:5px 6px;background:var(--color-primary);color:#fff;">Q1</th>
+                        <th style="padding:5px 6px;">Abr</th><th style="padding:5px 6px;">Mai</th><th style="padding:5px 6px;">Jun</th>
+                        <th style="padding:5px 6px;background:var(--color-primary);color:#fff;">Q2</th>
+                        <th style="padding:5px 6px;">Jul</th><th style="padding:5px 6px;">Ago</th><th style="padding:5px 6px;">Set</th>
+                        <th style="padding:5px 6px;background:var(--color-primary);color:#fff;">Q3</th>
+                        <th style="padding:5px 6px;">Out</th><th style="padding:5px 6px;">Nov</th><th style="padding:5px 6px;">Dez</th>
+                        <th style="padding:5px 6px;background:var(--surface3);font-weight:700;">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><input type="number" class="cd-mes-input" data-mes="jan" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="fev" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="mar" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td id="cd-q1" style="padding:5px 6px;text-align:center;background:var(--color-primary);color:#fff;font-weight:600;">0</td>
+                        <td><input type="number" class="cd-mes-input" data-mes="abr" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="mai" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="jun" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td id="cd-q2" style="padding:5px 6px;text-align:center;background:var(--color-primary);color:#fff;font-weight:600;">0</td>
+                        <td><input type="number" class="cd-mes-input" data-mes="jul" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="ago" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="set" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td id="cd-q3" style="padding:5px 6px;text-align:center;background:var(--color-primary);color:#fff;font-weight:600;">0</td>
+                        <td><input type="number" class="cd-mes-input" data-mes="out" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="nov" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td><input type="number" class="cd-mes-input" data-mes="dez" min="0" value="0" style="width:44px;padding:3px;text-align:center;" oninput="ContratosDetailUI.recalcularMeses()"></td>
+                        <td id="cd-total-ano" style="padding:5px 6px;text-align:center;font-weight:700;background:var(--surface3);">0</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                  <button class="btn btn-primario btn-sm" id="btn-cd-ind-salvar" onclick="ContratosDetailUI.salvarIndicador()"><span class="ms ms-sm">save</span> Salvar Indicador</button>
+                  <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fecharIndicadorForm()" data-bg-skip="1">Cancelar</button>
+                </div>
+              </div>
+              <div style="margin-top:8px;">
+                <button class="btn btn-ghost btn-sm" id="btn-cd-novo-ind" onclick="ContratosDetailUI.abrirIndicadorForm()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo Indicador</button>
+              </div>
+            </div>
+
+            <!-- Tab: Histórico de Versões -->
+            <div id="cd-tab-historico" style="display:none;">
+              <div id="cd-historico-lista"><p class="muted-text" style="padding:8px;">Carregando…</p></div>
+            </div>
+          </div><!-- /contrato-detalhe-card -->
+
         </div><!-- /tab contratos -->
 
         <!-- ── TAB: Fontes de Recurso ── -->
@@ -1759,7 +2003,10 @@ body {
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Sala / Espaço *</label>
-                <input type="text" id="res-sala" class="form-input" placeholder="Ex: Auditório Principal">
+                <select id="res-sala" class="form-input" onchange="ReservasUI.aoSelecionarEspaco(this)">
+                  <option value="">Selecione o espaço…</option>
+                </select>
+                <small id="res-sala-hint" class="muted-text"></small>
               </div>
               <div class="form-group">
                 <label class="form-label">Data *</label>
@@ -2102,12 +2349,58 @@ var GAS = {
     sair: function() { google.script.history.replace(null,null,'?secao=app'); location.reload(); }
   },
   admin: {
-    getIdentidade:   function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_getIdentidade(); },
-    salvarIdentidade:function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarIdentidade(d); },
-    removerLogo:     function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_removerLogo(); },
-    restaurarPadrao: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_restaurarPaletaPadrao(); },
-    listarPendentes: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_listarPendentes(); },
-    aprovarAcesso:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_aprovar(d); }
+    // Identidade visual
+    getIdentidade:        function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_getIdentidade(); },
+    salvarIdentidade:     function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarIdentidade(d); },
+    removerLogo:          function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_removerLogo(); },
+    restaurarPadrao:      function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_restaurarPaletaPadrao(); },
+    // Acesso (legado)
+    listarPendentes:      function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_listarPendentes(); },
+    aprovarAcesso:        function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_aprovar(d); },
+    // Espaços
+    listarEspacos:        function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarEspacos(); },
+    listarEspacosPublicos:function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarEspacosPublicos(); },
+    salvarEspaco:         function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarEspaco(d); },
+    desativarEspaco:      function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_desativarEspaco(id); },
+    alternarItemFixo:     function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarItemFixo(d); },
+    obterDadosParaConfig: function(aba,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterDadosParaConfig(aba); },
+    // Turnos e Setores
+    listarTurnos:         function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarTurnos(); },
+    salvarTurno:          function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTurno(d); },
+    listarSetores:        function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarSetores(); },
+    salvarSetor:          function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarSetor(d); },
+    // Categorias de Itens
+    listarCategoriasItens:function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarCategoriasItens(); },
+    salvarCategoriaItem:  function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarCategoriaItem(d); },
+    // Módulos
+    listarModulos:        function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarModulos(); },
+    toggleModulo:         function(id,ativo,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_toggleModulo(id,ativo); }
+  },
+  // Gestão de usuários e permissões
+  acesso: {
+    listarPendentes: function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_listarPendentes(); },
+    listarTodos:     function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_listarTodos(); },
+    aprovar:         function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_aprovar(d); },
+    revogar:         function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_revogar(d); },
+    editarPapel:     function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acesso_editarPapel(d); }
+  },
+  // PCCS e cargos (módulo RH)
+  rh: {
+    listarCargos:    function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_listarCargos(); },
+    listarPccs:      function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_listar(); },
+    salvarPccs:      function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvar(d); },
+    salvarCargo:     function(pid,c,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvarCargo(pid,c); },
+    excluirCargo:    function(pid,cid,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_excluirCargo(pid,cid); },
+    obterSalario:    function(cid,n,cl,r,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_obterSalario(cid,n,cl,r); }
+  },
+  // Solicitações de Reserva (workflow de aprovação)
+  solicitacoes: {
+    criar:      function(tipo,d,just,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_criar(tipo,d,just); },
+    listar:     function(cb,err)             { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_listar(); },
+    listarTodas:function(cb,err)             { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_listar_todas(); },
+    aprovar:    function(id,cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_aprovar(id); },
+    recusar:    function(id,mot,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_recusar(id,mot||''); },
+    contar:     function(cb,err)             { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_contarPendentes(); }
   },
   tarefas: {
     listar:      function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_listar(f||{}); },
@@ -2169,7 +2462,15 @@ var GAS = {
     metricas:    function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_metricas(); },
     analisar:    function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_analisar(id); },
     mudarStatus: function(id,s,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_status(id,s); },
-    excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir(id); }
+    excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir(id); },
+    // Indicadores com meses
+    salvarIndicador: function(cid,mid,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_salvar_indicador(cid,mid,d); },
+    // Memória de Cálculo de Rubricas
+    adicionarMemoria: function(cid,mid,rid,item,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_adicionar_memoria_rubrica(cid,mid,rid,item); },
+    removerMemoria:   function(cid,mid,rid,iid,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_remover_memoria_rubrica(cid,mid,rid,iid); },
+    // Histórico de versões
+    historico: function(cid,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_historico(cid); },
+    versao:    function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_versao(cid,v); }
   },
   fontesRecurso: {
     listar:      function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_listar(f||{}); },
@@ -2669,8 +2970,26 @@ var TarefasUI = (function() {
 // PESSOAS — Fase 1.2
 // ═══════════════════════════════════════════════════════════
 var PessoasUI = (function() {
-  var _carregado = false;
-  var _meuNivel  = 'colaborador';
+  var _carregado   = false;
+  var _meuNivel    = 'colaborador';
+  var _cargosCache = null;
+
+  function _popularSelectCargo(valorAtual) {
+    var sel = document.getElementById('pf-cargo');
+    if (!sel || sel.tagName !== 'SELECT') return;
+    function _preencher(lista) {
+      _cargosCache = lista;
+      sel.innerHTML = '<option value="">Selecione o cargo…</option>'
+        + lista.map(function(c) {
+            return '<option value="'+escaparHtml(c.nome)+'">'+escaparHtml(c.nome)+'</option>';
+          }).join('');
+      if (valorAtual) sel.value = valorAtual;
+    }
+    if (_cargosCache) { _preencher(_cargosCache); return; }
+    GAS.rh.listarCargos(function(resp) {
+      _preencher((resp && resp.ok) ? (resp.data || []) : []);
+    }, function() { _preencher([]); });
+  }
 
   var _STATUS_LABEL = {
     ativo:'Ativo', afastado:'Afastado', ferias:'Em férias',
@@ -2758,7 +3077,7 @@ var PessoasUI = (function() {
     document.getElementById('pf-nome').value = dados && dados.nome || '';
     document.getElementById('pf-email-inst').value = dados && dados.emailInstitucional || '';
     document.getElementById('pf-setor').value = dados && dados.setor || '';
-    document.getElementById('pf-cargo').value = dados && dados.cargo || '';
+    _popularSelectCargo(dados && dados.cargo || '');
     document.getElementById('pf-vinculo').value = dados && dados.tipoVinculo || 'clt';
     document.getElementById('pf-admissao').value = dados && dados.dataAdmissao || '';
     titulo.textContent = dados && dados.id ? 'Editar Colaborador' : 'Novo Colaborador';
@@ -2871,6 +3190,7 @@ var ContratosUI = (function() {
         ? '<button class="btn btn-ghost btn-sm btn-editar-contrato" data-id="'+escaparHtml(c.id)+'" title="Editar">'
           +'<span class="ms ms-sm">edit</span></button>'
         : '';
+      var btnGerenciar = '<button class="btn btn-ghost btn-sm btn-gerenciar-contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" title="Metas, Rubricas, Indicadores"><span class="ms ms-sm">manage_accounts</span></button>';
       var vigencia = c.vigenciaInicio && c.vigenciaFim
         ? escaparHtml(c.vigenciaInicio)+' → '+escaparHtml(c.vigenciaFim)
         : c.vigenciaFim ? 'até '+escaparHtml(c.vigenciaFim) : '—';
@@ -2885,10 +3205,16 @@ var ContratosUI = (function() {
         +'<div style="display:flex;align-items:center;gap:8px;">'
         + _badgeStatus(c.status||'Ativo')
         + btnEditar
+        + btnGerenciar
         +'</div></div>';
     }).join('');
     Array.prototype.slice.call(el.querySelectorAll('.btn-editar-contrato')).forEach(function(btn) {
       btn.addEventListener('click', function() { _editarPorId(this.getAttribute('data-id')); });
+    });
+    Array.prototype.slice.call(el.querySelectorAll('.btn-gerenciar-contrato')).forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        ContratosDetailUI.abrir(this.getAttribute('data-id'), this.getAttribute('data-nome'));
+      });
     });
   }
 
@@ -2979,6 +3305,370 @@ var ContratosUI = (function() {
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CONTRATOS DETAIL — Metas, Rubricas (Memória de Cálculo), Indicadores (Fase 4.5)
+// ═══════════════════════════════════════════════════════════
+var ContratosDetailUI = (function() {
+  var _contratoId   = null;
+  var _contrtoObj   = null;
+  var _tabAtual     = 'metas';
+  var _memoriaLinhas = []; // linha: { id, descricao, metrica, qtd, valorUnit, subtotal, obs }
+
+  function _fmtMoeda(v) {
+    v = parseFloat(v) || 0;
+    return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  // ─── Abrir / fechar painel ───────────────────────────────
+  function abrir(contratoId, nomeContrato) {
+    _contratoId = contratoId;
+    document.getElementById('cd-titulo').textContent = nomeContrato || 'Gerenciar Contrato';
+    var card = document.getElementById('contrato-detalhe-card');
+    card.classList.remove('oculto');
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+    abrirTab('metas');
+  }
+
+  function fechar() {
+    document.getElementById('contrato-detalhe-card').classList.add('oculto');
+    _contratoId = null;
+  }
+
+  function abrirTab(tab) {
+    _tabAtual = tab;
+    ['metas','indicadores','historico'].forEach(function(t) {
+      var el = document.getElementById('cd-tab-'+t);
+      if (el) el.style.display = (t === tab) ? '' : 'none';
+    });
+    document.querySelectorAll('.cd-tab').forEach(function(btn) {
+      var ativo = btn.getAttribute('data-tab') === tab;
+      btn.style.color = ativo ? 'var(--color-primary)' : '';
+      btn.style.borderBottomColor = ativo ? 'var(--color-primary)' : 'transparent';
+      btn.style.fontWeight = ativo ? '600' : '500';
+    });
+    if (tab === 'metas')      _carregarMetas();
+    if (tab === 'indicadores') _carregarIndicadores();
+    if (tab === 'historico')  _carregarHistorico();
+  }
+
+  // ─── Metas ───────────────────────────────────────────────
+  function _carregarMetas() {
+    if (!_contratoId) return;
+    GAS.contratos.obter(_contratoId, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro('Erro ao carregar contrato.'); return; }
+      _contrtoObj = resp.data;
+      _renderMetas((_contrtoObj.metas || []));
+    });
+  }
+
+  function _renderMetas(metas) {
+    var el = document.getElementById('cd-metas-lista');
+    if (!metas || !metas.length) {
+      el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhuma meta cadastrada. Clique em "+ Nova Meta".</p>';
+      return;
+    }
+    el.innerHTML = metas.map(function(m) {
+      var rubricas = m.rubricas || [];
+      var rubHtml = rubricas.length
+        ? '<div style="margin-left:16px;font-size:12px;color:var(--muted);">'
+          + rubricas.map(function(r) {
+              return '<span style="margin-right:10px;">⬩ '+escaparHtml(r.nome||r.id)+' — '+_fmtMoeda(r.valorTotal)+'</span>'
+                +'<button class="btn btn-ghost" style="padding:0 4px;font-size:11px;" onclick="ContratosDetailUI.editarRubrica(\''+escaparHtml(m.id)+'\','+JSON.stringify(r)+')">editar</button>';
+            }).join(' ')
+          +'</div>'
+        : '';
+      return '<div class="pendente-item" style="flex-direction:column;align-items:flex-start;">'
+        +'<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">'
+        +'<strong>'+escaparHtml(m.nome||m.id)+'</strong>'
+        +'<div style="display:flex;gap:6px;">'
+        +'<span class="badge badge-primary">'+_fmtMoeda(m.valorTotal)+'</span>'
+        +'<button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.abrirRubricaForm(\''+escaparHtml(m.id)+'\')"><span class="ms ms-sm">add</span>Rubrica</button>'
+        +'</div></div>'
+        + rubHtml
+        +'</div>';
+    }).join('');
+  }
+
+  function abrirMetaForm() {
+    document.getElementById('cd-meta-id').value    = '';
+    document.getElementById('cd-meta-nome').value  = '';
+    document.getElementById('cd-meta-valor').value = 0;
+    document.getElementById('cd-meta-descricao').value = '';
+    document.getElementById('cd-meta-form').classList.remove('oculto');
+    document.getElementById('cd-meta-nome').focus();
+  }
+
+  function fecharMetaForm() { document.getElementById('cd-meta-form').classList.add('oculto'); }
+
+  function salvarMeta() {
+    var nome = (document.getElementById('cd-meta-nome').value || '').trim();
+    if (!nome) { Toast.aviso('Nome da meta é obrigatório.'); return; }
+    var dados = {
+      id:          document.getElementById('cd-meta-id').value || undefined,
+      nome:        nome,
+      valorTotal:  parseFloat(document.getElementById('cd-meta-valor').value) || 0,
+      descricao:   document.getElementById('cd-meta-descricao').value.trim()
+    };
+    if (!dados.id) delete dados.id;
+    BtnGuard.wrap('btn-cd-meta-salvar', 'Salvando…', function(done) {
+      GAS.contratos.salvar({ id: _contratoId, _adicionarMeta: dados }, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Meta salva.'); fecharMetaForm(); _carregarMetas();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── Rubricas + Memória de Cálculo ───────────────────────
+  function abrirRubricaForm(metaId) {
+    document.getElementById('cd-rubrica-meta-id').value = metaId || '';
+    document.getElementById('cd-rubrica-id').value      = '';
+    document.getElementById('cd-rubrica-nome').value    = '';
+    document.getElementById('cd-rubrica-tipo').value    = 'pessoal';
+    document.getElementById('cd-rubrica-valor').value   = 0;
+    _memoriaLinhas = [];
+    _renderMemoriaTabela();
+    document.getElementById('cd-rubrica-form').classList.remove('oculto');
+    document.getElementById('cd-rubrica-nome').focus();
+  }
+
+  function editarRubrica(metaId, rubrica) {
+    document.getElementById('cd-rubrica-meta-id').value = metaId || '';
+    document.getElementById('cd-rubrica-id').value      = rubrica.id || '';
+    document.getElementById('cd-rubrica-nome').value    = rubrica.nome || '';
+    document.getElementById('cd-rubrica-tipo').value    = rubrica.tipo || 'pessoal';
+    document.getElementById('cd-rubrica-valor').value   = rubrica.valorTotal || 0;
+    _memoriaLinhas = (rubrica.memoriaCalculo || []).map(function(l) { return Object.assign({}, l); });
+    _renderMemoriaTabela();
+    document.getElementById('cd-rubrica-form').classList.remove('oculto');
+    document.getElementById('cd-rubrica-nome').focus();
+  }
+
+  function fecharRubricaForm() { document.getElementById('cd-rubrica-form').classList.add('oculto'); }
+
+  // Memória de cálculo
+  function adicionarLinhaMemoria() {
+    _memoriaLinhas.push({ id: 'tmp-'+Date.now(), descricao: '', metrica: 'UN', qtd: 1, valorUnit: 0, subtotal: 0, obs: '' });
+    _renderMemoriaTabela();
+  }
+
+  function _renderMemoriaTabela() {
+    var tbody = document.getElementById('cd-memoria-tbody');
+    if (!tbody) return;
+    if (!_memoriaLinhas.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:8px;color:var(--muted);text-align:center;font-size:12px;">Nenhuma linha. Clique em "+ Linha" para adicionar.</td></tr>';
+    } else {
+      tbody.innerHTML = _memoriaLinhas.map(function(l, i) {
+        return '<tr>'
+          +'<td><input type="text" class="form-input" style="padding:3px 6px;font-size:12px;" value="'+escaparHtml(l.descricao||'')+'" oninput="ContratosDetailUI._atualizarLinha('+i+',\'descricao\',this.value)"></td>'
+          +'<td><select class="form-input" style="padding:3px 6px;font-size:12px;" onchange="ContratosDetailUI._atualizarLinha('+i+',\'metrica\',this.value)">'
+            +'<option value="UN"'+(l.metrica==='UN'?' selected':'')+'>UN</option>'
+            +'<option value="mensal"'+(l.metrica==='mensal'?' selected':'')+'>mensal</option>'
+            +'<option value="diaria"'+(l.metrica==='diaria'?' selected':'')+'>diária</option>'
+            +'<option value="hora"'+(l.metrica==='hora'?' selected':'')+'>hora</option>'
+          +'</select></td>'
+          +'<td><input type="number" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:60px;" value="'+Number(l.qtd||1)+'" min="0" oninput="ContratosDetailUI._atualizarLinha('+i+',\'qtd\',this.value)"></td>'
+          +'<td><input type="number" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:90px;" value="'+Number(l.valorUnit||0)+'" min="0" step="0.01" oninput="ContratosDetailUI._atualizarLinha('+i+',\'valorUnit\',this.value)"></td>'
+          +'<td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:600;">'+_fmtMoeda(l.subtotal)+'</td>'
+          +'<td style="text-align:center;"><button class="btn btn-ghost" style="padding:0 4px;color:var(--error);" onclick="ContratosDetailUI._removerLinha('+i+')" data-bg-skip="1">✕</button></td>'
+          +'</tr>';
+      }).join('');
+    }
+    _recalcularTotalRubrica();
+  }
+
+  function _atualizarLinha(i, campo, val) {
+    if (!_memoriaLinhas[i]) return;
+    _memoriaLinhas[i][campo] = (campo === 'qtd' || campo === 'valorUnit') ? (parseFloat(val)||0) : val;
+    _memoriaLinhas[i].subtotal = (_memoriaLinhas[i].qtd||0) * (_memoriaLinhas[i].valorUnit||0);
+    _recalcularTotalRubrica();
+    // Atualizar célula de subtotal sem re-renderizar toda a tabela
+    var tbody = document.getElementById('cd-memoria-tbody');
+    if (tbody) {
+      var rows = tbody.querySelectorAll('tr');
+      if (rows[i]) {
+        var cells = rows[i].querySelectorAll('td');
+        if (cells[4]) cells[4].textContent = _fmtMoeda(_memoriaLinhas[i].subtotal);
+      }
+    }
+  }
+
+  function _removerLinha(i) {
+    _memoriaLinhas.splice(i, 1);
+    _renderMemoriaTabela();
+  }
+
+  function _recalcularTotalRubrica() {
+    var total = _memoriaLinhas.reduce(function(s, l) { return s + (parseFloat(l.subtotal)||0); }, 0);
+    var elTotal = document.getElementById('cd-memoria-total');
+    var elValor = document.getElementById('cd-rubrica-valor');
+    if (elTotal) elTotal.textContent = _fmtMoeda(total);
+    if (elValor) elValor.value = total.toFixed(2);
+  }
+
+  function salvarRubrica() {
+    var nome    = (document.getElementById('cd-rubrica-nome').value || '').trim();
+    var metaId  = document.getElementById('cd-rubrica-meta-id').value;
+    if (!nome)   { Toast.aviso('Nome da rubrica é obrigatório.'); return; }
+    if (!metaId) { Toast.aviso('Meta não identificada.'); return; }
+    var rubricaId = document.getElementById('cd-rubrica-id').value || undefined;
+    var memoriaCalculo = _memoriaLinhas.map(function(l) {
+      return { descricao:l.descricao||'', metrica:l.metrica||'UN', qtd:l.qtd||0, valorUnit:l.valorUnit||0, subtotal:l.subtotal||0, obs:l.obs||'' };
+    });
+    var total = memoriaCalculo.reduce(function(s,l){return s+(parseFloat(l.subtotal)||0);},0);
+    var rubricaDados = {
+      id:             rubricaId,
+      nome:           nome,
+      tipo:           document.getElementById('cd-rubrica-tipo').value || 'pessoal',
+      valorTotal:     total,
+      memoriaCalculo: memoriaCalculo
+    };
+    if (!rubricaDados.id) delete rubricaDados.id;
+    BtnGuard.wrap('btn-cd-rubrica-salvar', 'Salvando…', function(done) {
+      GAS.contratos.adicionarMemoria(_contratoId, metaId, rubricaDados.id||'nova', memoriaCalculo[0]||{}, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Rubrica salva com sucesso!');
+        fecharRubricaForm(); _carregarMetas();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── Indicadores (12 meses) ─────────────────────────────
+  function _carregarIndicadores() {
+    if (!_contratoId) return;
+    if (!_contrtoObj) {
+      GAS.contratos.obter(_contratoId, function(resp) {
+        if (!resp || !resp.ok) return;
+        _contrtoObj = resp.data;
+        _renderIndicadoresList();
+      });
+    } else { _renderIndicadoresList(); }
+  }
+
+  function _renderIndicadoresList() {
+    var el = document.getElementById('cd-indicadores-lista');
+    var metas = (_contrtoObj && _contrtoObj.metas) || [];
+    var indicadores = [];
+    metas.forEach(function(m) { (m.indicadores||[]).forEach(function(ind) { indicadores.push({ meta: m, ind: ind }); }); });
+    if (!indicadores.length) {
+      el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhum indicador cadastrado. Clique em "+ Novo Indicador".</p>';
+      return;
+    }
+    el.innerHTML = indicadores.map(function(obj) {
+      var ind = obj.ind;
+      var meses = ind.meses || {};
+      var jan=Number(meses.jan||0), fev=Number(meses.fev||0), mar=Number(meses.mar||0),
+          abr=Number(meses.abr||0), mai=Number(meses.mai||0), jun=Number(meses.jun||0),
+          jul=Number(meses.jul||0), ago=Number(meses.ago||0), set=Number(meses.set||0),
+          out=Number(meses.out||0), nov=Number(meses.nov||0), dez=Number(meses.dez||0);
+      var q1=jan+fev+mar, q2=abr+mai+jun, q3=jul+ago+set, q4=out+nov+dez, tot=q1+q2+q3+q4;
+      return '<div class="pendente-item" style="flex-direction:column;align-items:flex-start;">'
+        +'<div style="display:flex;justify-content:space-between;width:100%;"><strong>'+escaparHtml(ind.nome||ind.id)+'</strong>'
+        +'<span class="badge badge-primary">'+tot+' '+escaparHtml(ind.unidade||'')+'</span></div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:4px;">Q1:'+q1+' Q2:'+q2+' Q3:'+q3+' Q4:'+q4+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  function recalcularMeses() {
+    var vals = {};
+    var meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    meses.forEach(function(m) {
+      var inp = document.querySelector('.cd-mes-input[data-mes="'+m+'"]');
+      vals[m] = inp ? (parseFloat(inp.value)||0) : 0;
+    });
+    var q1 = vals.jan + vals.fev + vals.mar;
+    var q2 = vals.abr + vals.mai + vals.jun;
+    var q3 = vals.jul + vals.ago + vals.set;
+    var q4 = vals.out + vals.nov + vals.dez;
+    var tot = q1 + q2 + q3 + q4;
+    var elQ1 = document.getElementById('cd-q1'); if (elQ1) elQ1.textContent = q1;
+    var elQ2 = document.getElementById('cd-q2'); if (elQ2) elQ2.textContent = q2;
+    var elQ3 = document.getElementById('cd-q3'); if (elQ3) elQ3.textContent = q3;
+    var elTot = document.getElementById('cd-total-ano'); if (elTot) elTot.textContent = tot;
+  }
+
+  function abrirIndicadorForm(metaId) {
+    document.getElementById('cd-ind-id').value    = '';
+    document.getElementById('cd-ind-meta-id').value = metaId || (((_contrtoObj&&_contrtoObj.metas||[])[0]||{}).id || '');
+    document.getElementById('cd-ind-nome').value   = '';
+    document.getElementById('cd-ind-unidade').value = '';
+    document.getElementById('cd-ind-meta').value   = 0;
+    document.querySelectorAll('.cd-mes-input').forEach(function(inp) { inp.value = 0; });
+    recalcularMeses();
+    document.getElementById('cd-indicador-form').classList.remove('oculto');
+  }
+
+  function fecharIndicadorForm() { document.getElementById('cd-indicador-form').classList.add('oculto'); }
+
+  function salvarIndicador() {
+    var nome    = (document.getElementById('cd-ind-nome').value || '').trim();
+    var metaId  = document.getElementById('cd-ind-meta-id').value;
+    if (!nome)   { Toast.aviso('Nome do indicador é obrigatório.'); return; }
+    if (!metaId) { Toast.aviso('Selecione a meta do indicador.'); return; }
+    var meses = {};
+    document.querySelectorAll('.cd-mes-input').forEach(function(inp) {
+      meses[inp.getAttribute('data-mes')] = parseFloat(inp.value) || 0;
+    });
+    var dados = {
+      id:        document.getElementById('cd-ind-id').value || undefined,
+      nome:      nome,
+      unidade:   document.getElementById('cd-ind-unidade').value.trim(),
+      metaAnual: parseFloat(document.getElementById('cd-ind-meta').value) || 0,
+      meses:     meses
+    };
+    if (!dados.id) delete dados.id;
+    BtnGuard.wrap('btn-cd-ind-salvar', 'Salvando…', function(done) {
+      GAS.contratos.salvarIndicador(_contratoId, metaId, dados, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Indicador salvo.'); fecharIndicadorForm(); _carregarIndicadores();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── Histórico de Versões ───────────────────────────────
+  function _carregarHistorico() {
+    if (!_contratoId) return;
+    var el = document.getElementById('cd-historico-lista');
+    el.innerHTML = '<p class="muted-text" style="padding:8px;">Carregando…</p>';
+    GAS.contratos.historico(_contratoId, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Erro ao carregar histórico.</p>'; return; }
+      var versoes = resp.data || [];
+      if (!versoes.length) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhuma versão salva.</p>'; return; }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Versão</th><th>Salvo por</th><th>Data</th></tr></thead><tbody>'
+        + versoes.map(function(v) {
+            return '<tr><td>v'+escaparHtml(v.versao)+'</td><td>'+escaparHtml(v.criadoPor||'—')+'</td><td>'+escaparHtml((v.criadoEm||'').slice(0,16))+'</td></tr>';
+          }).join('')
+        + '</tbody></table>';
+    });
+  }
+
+  return {
+    abrir: abrir,
+    fechar: fechar,
+    abrirTab: abrirTab,
+    // Metas
+    abrirMetaForm: abrirMetaForm,
+    fecharMetaForm: fecharMetaForm,
+    salvarMeta: salvarMeta,
+    // Rubricas
+    abrirRubricaForm: abrirRubricaForm,
+    editarRubrica: editarRubrica,
+    fecharRubricaForm: fecharRubricaForm,
+    adicionarLinhaMemoria: adicionarLinhaMemoria,
+    salvarRubrica: salvarRubrica,
+    _atualizarLinha: _atualizarLinha,
+    _removerLinha: _removerLinha,
+    // Indicadores
+    recalcularMeses: recalcularMeses,
+    abrirIndicadorForm: abrirIndicadorForm,
+    fecharIndicadorForm: fecharIndicadorForm,
+    salvarIndicador: salvarIndicador
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -3532,6 +4222,389 @@ var AditivosUI = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// ADMIN CADASTROS UI
+// ═══════════════════════════════════════════════════════════
+var AdminCadastrosUI = (function() {
+  var _tabAtual = 'espacos';
+  var _espacos = [], _catItens = [], _modulos = [], _usuarios = [];
+
+  function abrirTab(tab) {
+    _tabAtual = tab;
+    document.querySelectorAll('#admin-cadastros-tabs .tab-btn').forEach(function(b) {
+      b.classList.toggle('ativa', b.dataset.tab === tab);
+    });
+    document.querySelectorAll('.admin-tab-content').forEach(function(el) {
+      el.classList.add('oculto');
+    });
+    var el = document.getElementById('admin-tab-' + tab);
+    if (el) el.classList.remove('oculto');
+    if (tab === 'espacos')   carregarEspacos();
+    if (tab === 'setores')   carregarSetores();
+    if (tab === 'catitens')  carregarCatItens();
+    if (tab === 'modulos')   carregarModulos();
+    if (tab === 'usuarios')  carregarUsuarios();
+  }
+
+  function carregarEspacos() {
+    var el = document.getElementById('lista-admin-espacos');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarEspacos(function(r) {
+      _espacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = _espacos.length ? _espacos.map(function(e) {
+        return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+          '<div><strong>' + escaparHtml(e.nome) + '</strong> <span class="badge badge-muted">' + (e.tipoEspaco||'?') + '</span>' +
+          (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
+          '<br><small class="muted-text">Cap. ' + (e.capacidade||0) + ' · ' +
+          (e.aceitaReserva !== false ? 'Reservável' : 'Não reservável') + ' · ' +
+          (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id) + ')" data-bg-skip="1">Editar</button>' +
+            (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id) + ',this)">Desativar</button>' : '') +
+          '</div></div>';
+      }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
+    }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
+  }
+
+  function carregarSetores() {
+    var el = document.getElementById('lista-admin-setores');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarSetores(function(r) {
+      var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = itens.length ? itens.map(function(s) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
+          '<span>' + escaparHtml(s.label || s.nome || s.id) + '</span>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(' + JSON.stringify(s.id) + ')" data-bg-skip="1">Editar</button>' +
+          '</div>';
+      }).join('') : '<p class="muted-text">Nenhum setor.</p>';
+    });
+  }
+
+  function carregarCatItens() {
+    var el = document.getElementById('lista-admin-catitens');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarCategoriasItens(function(r) {
+      _catItens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = _catItens.length ? _catItens.map(function(c) {
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
+          '<span>' + escaparHtml(c.nome) + '</span>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id) + ')" data-bg-skip="1">Editar</button>' +
+          '</div>';
+      }).join('') : '<p class="muted-text">Nenhuma categoria.</p>';
+    });
+  }
+
+  function carregarModulos() {
+    var el = document.getElementById('lista-admin-modulos');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarModulos(function(r) {
+      _modulos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = '<table class="data-table"><thead><tr><th>Módulo</th><th>Descrição</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
+        _modulos.map(function(m) {
+          return '<tr><td><strong>' + escaparHtml(m.label) + '</strong></td>' +
+            '<td style="font-size:12px;color:var(--muted);">' + escaparHtml(m.descricao) + '</td>' +
+            '<td><span class="badge ' + (m.ativo ? 'badge-success' : 'badge-muted') + '">' + (m.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
+            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.toggleModulo(' + JSON.stringify(m.id) + ',' + !m.ativo + ',this)">' +
+            (m.ativo ? 'Desativar' : 'Ativar') + '</button></td></tr>';
+        }).join('') + '</tbody></table>';
+    });
+  }
+
+  function carregarUsuarios() {
+    var el = document.getElementById('lista-admin-usuarios');
+    var filtro = (document.getElementById('filtro-usuarios-status')||{}).value || '';
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.acesso.listarTodos(function(r) {
+      var todos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _usuarios = filtro ? todos.filter(function(u){ return u.status === filtro; }) : todos;
+      el.innerHTML = _usuarios.length ? '<table class="data-table"><thead><tr><th>Email</th><th>Papel</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+        _usuarios.map(function(u) {
+          var acoes = '';
+          if (u.status === 'pendente') {
+            acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email) + ',this)">Aprovar</button> ' +
+                    '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ',this)">Recusar</button>';
+          } else if (u.status === 'ativo') {
+            acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ',this)">Editar</button> ' +
+                    '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ',this)">Revogar</button>';
+          }
+          return '<tr><td>' + escaparHtml(u.email) + '</td><td>' + escaparHtml(u.papel||'-') + '</td><td>' + escaparHtml(u.setor||'-') + '</td>' +
+            '<td><span class="badge ' + {ativo:'badge-success',pendente:'badge-warning',inativo:'badge-muted'}[u.status||'inativo'] + '">' + (u.status||'?') + '</span></td>' +
+            '<td>' + acoes + '</td></tr>';
+        }).join('') + '</tbody></table>'
+        : '<p class="muted-text">Nenhum usuário.</p>';
+    });
+  }
+
+  function toggleModulo(id, ativar, btn) {
+    BtnGuard.wrap(btn, (ativar ? 'Ativando…' : 'Desativando…'), function(liberar) {
+      GAS.admin.toggleModulo(id, ativar, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Módulo ' + (ativar ? 'ativado' : 'desativado') + '.'); carregarModulos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function aprovarUsuario(email, btn) {
+    var _raw = prompt('Papel do usuário (colaborador/admin/superadmin/habilitador/comunicacao/rh):');
+    if (_raw === null) return;
+    var papel = _raw.trim() || 'colaborador';
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.acesso.aprovar({ email: email, papel: papel }, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Usuário aprovado.'); carregarUsuarios(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function revogarUsuario(email, btn) {
+    if (!confirm('Revogar acesso de ' + email + '?')) return;
+    BtnGuard.wrap(btn, 'Revogando…', function(liberar) {
+      GAS.acesso.revogar({ email: email }, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Acesso revogado.'); carregarUsuarios(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function editarPapel(email, btn) {
+    var _raw = prompt('Novo papel para ' + email + ' (colaborador/admin/superadmin/habilitador/comunicacao/rh):');
+    if (_raw === null) return;
+    var papel = _raw.trim();
+    if (!papel) return;
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.acesso.editarPapel({ email: email, papel: papel }, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Papel atualizado.'); carregarUsuarios(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function desativarEspaco(id, btn) {
+    if (!confirm('Desativar espaço ' + id + '?')) return;
+    BtnGuard.wrap(btn, 'Desativando…', function(liberar) {
+      GAS.admin.desativarEspaco(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Espaço desativado.'); carregarEspacos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function abrirModalEspaco(id) {
+    var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
+    var html = '<div style="padding:16px;">' +
+      '<h3 style="margin-bottom:12px;">' + (id ? 'Editar Espaço' : 'Novo Espaço') + '</h3>' +
+      '<div class="form-grid">' +
+        '<div class="full-width"><label>Nome *</label><input id="esp-nome" class="form-input" value="' + escaparHtml(espaco.nome||'') + '"></div>' +
+        '<div><label>Tipo</label><select id="esp-tipo" class="form-input"><option value="auditorio">Auditório</option><option value="sala_danca">Sala de Dança</option><option value="biblioteca">Biblioteca</option><option value="estudio">Estúdio</option><option value="multiuso">Multiuso</option><option value="praca">Praça</option><option value="externo">Externo</option><option value="outro">Outro</option></select></div>' +
+        '<div><label>Capacidade</label><input id="esp-cap" type="number" class="form-input" value="' + (espaco.capacidade||0) + '"></div>' +
+        '<div><label><input type="checkbox" id="esp-chaves"' + (espaco.possuiChaves?' checked':'') + '> Possui Chaves</label></div>' +
+        '<div><label><input type="checkbox" id="esp-reserva"' + (espaco.aceitaReserva !== false?' checked':'') + '> Aceita Reservas</label></div>' +
+        '<div class="full-width"><label>Abertura / Fechamento</label>' +
+          '<input id="esp-abertura" class="form-input" placeholder="08:00" value="' + ((espaco.horarioFuncionamento||{}).abertura||'08:00') + '" style="width:100px;display:inline-block;margin-right:8px;">' +
+          '<input id="esp-fechamento" class="form-input" placeholder="22:00" value="' + ((espaco.horarioFuncionamento||{}).fechamento||'22:00') + '" style="width:100px;display:inline-block;">' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:16px;">' +
+        '<button class="btn btn-primario" id="btn-salvar-espaco" onclick="AdminCadastrosUI.salvarEspaco(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>';
+    _abrirModalSimples(html, 'esp-tipo', espaco.tipoEspaco || 'multiuso');
+  }
+
+  function salvarEspaco(id, btn) {
+    var dados = {
+      id:           id || undefined,
+      nome:         document.getElementById('esp-nome').value.trim(),
+      tipoEspaco:   document.getElementById('esp-tipo').value,
+      capacidade:   Number(document.getElementById('esp-cap').value)||0,
+      possuiChaves: document.getElementById('esp-chaves').checked,
+      aceitaReserva:document.getElementById('esp-reserva').checked,
+      horarioFuncionamento: {
+        abertura:   document.getElementById('esp-abertura').value.trim() || '08:00',
+        fechamento: document.getElementById('esp-fechamento').value.trim() || '22:00'
+      }
+    };
+    if (!dados.nome) { Toast.aviso('Nome é obrigatório.'); return; }
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.admin.salvarEspaco(dados, function(r) {
+        liberar();
+        if (r && r.ok) {
+          Toast.sucesso('Espaço salvo.');
+          document.querySelector('.modal-simples') && document.querySelector('.modal-simples').remove();
+          carregarEspacos();
+        } else Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar.');
+      });
+    });
+  }
+
+  function abrirModalSetor(id) {
+    var html = '<div style="padding:16px;"><h3 style="margin-bottom:12px;">' + (id ? 'Editar Setor' : 'Novo Setor') + '</h3>' +
+      '<label>Nome *</label><input id="set-nome" class="form-input" style="margin-bottom:8px;" value="' + escaparHtml(id||'') + '">' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button class="btn btn-primario" id="btn-salvar-setor" onclick="AdminCadastrosUI.salvarSetor(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>';
+    _abrirModalSimples(html);
+  }
+
+  function salvarSetor(id, btn) {
+    var nome = document.getElementById('set-nome').value.trim();
+    if (!nome) { Toast.aviso('Nome é obrigatório.'); return; }
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.admin.salvarSetor({ id: id || undefined, nome: nome }, function(r) {
+        liberar();
+        if (r && r.ok) {
+          Toast.sucesso('Setor salvo.');
+          document.querySelector('.modal-simples') && document.querySelector('.modal-simples').remove();
+          carregarSetores();
+        } else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function abrirModalCategoriaItem(id) {
+    var cat = id ? (_catItens.find(function(c){ return c.id === id; }) || {}) : {};
+    var html = '<div style="padding:16px;"><h3 style="margin-bottom:12px;">' + (id ? 'Editar Categoria' : 'Nova Categoria de Item') + '</h3>' +
+      '<label>Nome *</label><input id="cat-nome" class="form-input" style="margin-bottom:8px;" value="' + escaparHtml(cat.nome||'') + '">' +
+      '<label>Descrição</label><input id="cat-desc" class="form-input" value="' + escaparHtml(cat.descricao||'') + '">' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button class="btn btn-primario" id="btn-salvar-catitem" onclick="AdminCadastrosUI.salvarCategoriaItem(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>';
+    _abrirModalSimples(html);
+  }
+
+  function salvarCategoriaItem(id, btn) {
+    var nome = document.getElementById('cat-nome').value.trim();
+    if (!nome) { Toast.aviso('Nome é obrigatório.'); return; }
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.admin.salvarCategoriaItem({ id: id || undefined, nome: nome, descricao: document.getElementById('cat-desc').value.trim() }, function(r) {
+        liberar();
+        if (r && r.ok) {
+          Toast.sucesso('Categoria salva.');
+          document.querySelector('.modal-simples') && document.querySelector('.modal-simples').remove();
+          carregarCatItens();
+        } else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function _abrirModalSimples(html, selectId, selectVal) {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-simples';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface1);border-radius:12px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;';
+    box.innerHTML = html;
+    overlay.appendChild(box);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    if (selectId && selectVal) {
+      var sel = document.getElementById(selectId);
+      if (sel) sel.value = selectVal;
+    }
+  }
+
+  function aoAbrir() { abrirTab('espacos'); }
+
+  return {
+    abrirTab: abrirTab, aoAbrir: aoAbrir,
+    carregarEspacos: carregarEspacos, carregarSetores: carregarSetores,
+    carregarCatItens: carregarCatItens, carregarModulos: carregarModulos,
+    carregarUsuarios: carregarUsuarios,
+    toggleModulo: toggleModulo, aprovarUsuario: aprovarUsuario,
+    revogarUsuario: revogarUsuario, editarPapel: editarPapel,
+    desativarEspaco: desativarEspaco, abrirModalEspaco: abrirModalEspaco,
+    salvarEspaco: salvarEspaco, abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
+    abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// APROVAÇÃO DE RESERVA UI
+// ═══════════════════════════════════════════════════════════
+var AprovacaoReservaUI = (function() {
+  var _carregado = false;
+
+  function carregar() {
+    var el = document.getElementById('lista-solicitacoes');
+    if (!el) return;
+    var status = (document.getElementById('filtro-sol-status')||{}).value || 'PENDENTE';
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    var fn = status === 'TODOS' ? GAS.solicitacoes.listarTodas : GAS.solicitacoes.listar;
+    fn(function(r) {
+      var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _carregado = true;
+      _atualizarBadge(itens.filter(function(s){ return s.status === 'PENDENTE'; }).length);
+      if (!itens.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;">Nenhuma solicitação.</p>'; return; }
+      el.innerHTML = itens.map(function(s) {
+        var isPendente = s.status === 'PENDENTE';
+        var badgeCls = s.status === 'PENDENTE' ? 'badge-warning' : s.status === 'APROVADO' ? 'badge-success' : 'badge-error';
+        return '<div class="card" style="margin-bottom:12px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+            '<div>' +
+              '<strong>' + escaparHtml(s.tipo || 'RESERVA') + '</strong> — <span class="badge ' + badgeCls + '">' + s.status + '</span><br>' +
+              '<small class="muted-text">Espaço: ' + escaparHtml(s.espacoId) + ' · Solicitante: ' + escaparHtml(s.solicitante) + ' · ' + (s.dataSolicitacao||'').slice(0,10) + '</small>' +
+              (s.justificativa ? '<br><em style="font-size:12px;">' + escaparHtml(s.justificativa) + '</em>' : '') +
+              (s.motivoRecusa  ? '<br><span style="color:#ef4444;font-size:12px;">Recusa: ' + escaparHtml(s.motivoRecusa) + '</span>' : '') +
+            '</div>' +
+            (isPendente ? '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+              '<button class="btn btn-primario btn-sm" id="btn-apr-' + s.id + '" onclick="AprovacaoReservaUI.aprovar(' + JSON.stringify(s.id) + ',this)">Aprovar</button>' +
+              '<button class="btn btn-ghost btn-sm" id="btn-rec-' + s.id + '" onclick="AprovacaoReservaUI.recusar(' + JSON.stringify(s.id) + ',this)">Recusar</button>' +
+            '</div>' : '') +
+          '</div></div>';
+      }).join('');
+    }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
+  }
+
+  function aprovar(id, btn) {
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.solicitacoes.aprovar(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Solicitação aprovada!'); carregar(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function recusar(id, btn) {
+    var _raw = prompt('Motivo da recusa (obrigatório):');
+    if (_raw === null) return;
+    var motivo = _raw.trim();
+    if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
+    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+      GAS.solicitacoes.recusar(id, motivo, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Solicitação recusada.'); carregar(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function _atualizarBadge(count) {
+    var badge = document.getElementById('badgeSolicitacoes');
+    if (!badge) return;
+    badge.textContent = count;
+    badge.classList.toggle('oculto', count === 0);
+  }
+
+  function atualizarBadge() {
+    GAS.solicitacoes.contar(function(r) {
+      if (r && r.ok) _atualizarBadge(r.data.count || 0);
+    }, function() {});
+  }
+
+  function aoAbrir() { carregar(); }
+
+  return { carregar: carregar, aprovar: aprovar, recusar: recusar,
+    atualizarBadge: atualizarBadge, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // ROUTER
 // ═══════════════════════════════════════════════════════════
 var Router = (function() {
@@ -3753,10 +4826,33 @@ var ReservasUI = (function() {
     });
   }
 
+  var _espacosCatalogo = [];
+
+  function popularSelectEspacos(valorAtual) {
+    GAS.admin.listarEspacosPublicos(function(r) {
+      _espacosCatalogo = (r && r.ok && Array.isArray(r.data)) ? r.data.filter(function(e){ return e.aceitaReserva !== false; }) : [];
+      var sel = document.getElementById('res-sala');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Selecione o espaço…</option>' +
+        _espacosCatalogo.map(function(e) {
+          return '<option value="' + escaparHtml(e.id) + '"' + (e.id === valorAtual ? ' selected' : '') + '>' +
+            escaparHtml(e.nome) + ' (cap. ' + (e.capacidade||'?') + ')</option>';
+        }).join('');
+      if (valorAtual) aoSelecionarEspaco(sel);
+    }, function() {});
+  }
+
+  function aoSelecionarEspaco(sel) {
+    var id = sel.value;
+    var esp = _espacosCatalogo.find(function(e){ return e.id === id; });
+    var hint = document.getElementById('res-sala-hint');
+    if (hint) hint.textContent = esp ? 'Capacidade: ' + esp.capacidade + ' pessoas' : '';
+  }
+
   function abrirForm(dados) {
     var card = document.getElementById('reservas-form-card');
     document.getElementById('res-id').value        = dados && dados.id || '';
-    document.getElementById('res-sala').value      = dados && dados.sala || '';
+    popularSelectEspacos(dados && dados.sala || '');
     document.getElementById('res-data').value      = dados && dados.data || '';
     document.getElementById('res-hora-ini').value  = dados && dados.horaInicio || '';
     document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';
@@ -3880,7 +4976,9 @@ var ReservasUI = (function() {
     });
   }
 
-  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, verificarDisponibilidade:verificarDisponibilidade };
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+    verificarDisponibilidade:verificarDisponibilidade,
+    popularSelectEspacos:popularSelectEspacos, aoSelecionarEspaco:aoSelecionarEspaco };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -5111,6 +6209,7 @@ var App = (function() {
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'espacos',     label:'Espaços',         icone:'museum',                  modulo:'ESPACOS' },
+    { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
     { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
     { id:'contratacoes',  label:'Contratações',    icone:'handshake',               modulo:'PESSOAS' },
@@ -5155,6 +6254,25 @@ var App = (function() {
 
     document.getElementById('loading-overlay').classList.add('oculto');
     document.getElementById('app').style.display = 'flex';
+
+    // Pré-popular selects de tipo com dados do boot
+    _popularSelectTipos('afa-tipo', _boot.tiposAfastamento || []);
+    _popularSelectTipos('oco-tipo', _boot.tiposOcorrencia  || []);
+
+    // Polling de solicitações pendentes (badge sidebar) a cada 60s
+    AprovacaoReservaUI.atualizarBadge();
+    setInterval(function(){ AprovacaoReservaUI.atualizarBadge(); }, 60000);
+  }
+
+  function _popularSelectTipos(selectId, tipos) {
+    var sel = document.getElementById(selectId);
+    if (!sel || !tipos || !tipos.length) return;
+    var valorAtual = sel.value;
+    sel.innerHTML = tipos.map(function(t) {
+      return '<option value="'+escaparHtml(t.id)+'">'+escaparHtml(t.label||t.id)+'</option>';
+    }).join('');
+    // Restaurar seleção se o valor ainda existe
+    if (valorAtual) sel.value = valorAtual;
   }
 
   function _construirMenu() {
@@ -5172,10 +6290,12 @@ var App = (function() {
       // Item normal
       if(item.modulo && ativos.indexOf(item.modulo) === -1) return;
       var li = document.createElement('li');
+      var badgeHtml = item.badge ? '<span id="'+item.badge+'" class="nav-badge oculto">0</span>' : '';
       li.innerHTML =
         '<a href="#" data-view="'+item.id+'">' +
           '<span class="ms icone">'+item.icone+'</span>' +
           '<span class="label">'+escaparHtml(item.label)+'</span>' +
+          badgeHtml +
         '</a>';
       li.querySelector('a').addEventListener('click', function(e) {
         e.preventDefault();
@@ -5190,7 +6310,8 @@ var App = (function() {
       if(item.id !== 'home') {
         (function(id, label) {
           Router.registrar(id, label,
-            id === 'admin'        ? function(){ IdentidadeAdmin.carregar(); }
+            id === 'admin'        ? function(){ IdentidadeAdmin.carregar(); AdminCadastrosUI.aoAbrir(); }
+            : id === 'aprovacoes' ? function(){ AprovacaoReservaUI.aoAbrir(); }
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }
             : id === 'contratacoes'?function(){ ContratacoesTabs.aoAbrir(); }

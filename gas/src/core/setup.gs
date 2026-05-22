@@ -114,6 +114,15 @@ function inicializarSistema() {
   // Fase 4 — Fontes de Recurso, Remanejamentos e Aditivos (JSON canônico, sem índice Sheet)
   Logger.info('setup', 'inicializarSistema', 'Fase 4: fontes_recurso.json, remanejamentos_orcamentarios.json e aditivos_contratos.json serão criados ao primeiro uso.');
 
+  // Fase 4.5 — Solicitations sheet + seeds de dados iniciais
+  if (typeof SolicitacaoReservaRepository !== 'undefined' &&
+      typeof SolicitacaoReservaRepository.prepararIndice === 'function') {
+    SolicitacaoReservaRepository.prepararIndice();
+  }
+  try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
+  try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
+  try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
+
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
   var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';
@@ -205,6 +214,124 @@ function recriarEstrutura() {
       Logger.warn('setup', 'recriarEstrutura', planilhaNome + ': ' + e.message);
     }
   });
+}
+
+// ─── Seeds de Dados Iniciais ──────────────────────────────────────────────────
+
+/**
+ * Seed: 8 espaços iniciais do CCBJ.
+ * Idempotente: ignora IDs já existentes no espacos_config.json.
+ */
+function setup_espacos_iniciais() {
+  var orgId = getOrgConfig().orgId;
+  var email = Session.getActiveUser().getEmail() || 'setup@sistema';
+  var agora_ = agora();
+
+  var espacos = [
+    { id:'SAL-001', nome:'Teatro',          tipoEspaco:'auditorio',  capacidade:200, possuiChaves:true,  aceitaReserva:true  },
+    { id:'SAL-002', nome:'Sala de Dança',   tipoEspaco:'sala_danca', capacidade:50,  possuiChaves:true,  aceitaReserva:true  },
+    { id:'SAL-003', nome:'Biblioteca',      tipoEspaco:'biblioteca', capacidade:30,  possuiChaves:true,  aceitaReserva:true  },
+    { id:'SAL-004', nome:'Multigaleria',    tipoEspaco:'multiuso',   capacidade:100, possuiChaves:true,  aceitaReserva:true  },
+    { id:'SAL-005', nome:'Estúdio',         tipoEspaco:'estudio',    capacidade:20,  possuiChaves:true,  aceitaReserva:true  },
+    { id:'SAL-006', nome:'Sala Multiuso',   tipoEspaco:'multiuso',   capacidade:40,  possuiChaves:false, aceitaReserva:true  },
+    { id:'SAL-007', nome:'Praça Central',   tipoEspaco:'praca',      capacidade:300, possuiChaves:false, aceitaReserva:false },
+    { id:'SAL-008', nome:'Áreas Abertas',   tipoEspaco:'externo',    capacidade:500, possuiChaves:false, aceitaReserva:false }
+  ];
+
+  var criados = 0;
+  modifyJSON('espacos_config.json', function(lista) {
+    if (!Array.isArray(lista)) lista = [];
+    espacos.forEach(function(e) {
+      if (lista.some(function(l) { return l.id === e.id && l.orgId === orgId; })) return;
+      lista.push(Object.assign({
+        orgId: orgId, descricao: '', horarioFuncionamento: { abertura: '08:00', fechamento: '22:00' },
+        responsaveisPorTurno: [], itensFixos: {}, equipamentosVinculados: [], tags: [],
+        bloqueios: [], ativo: true, criadoEm: agora_, atualizadoEm: agora_, criadoPor: email, versao: 1
+      }, e));
+      criados++;
+    });
+    return lista;
+  });
+
+  if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+  Logger.info('setup', 'setup_espacos_iniciais', 'Criados: ' + criados + ' espaços.');
+  return { criados: criados };
+}
+
+/**
+ * Seed: PCCS inicial com 7 cargos.
+ * Idempotente: não cria se já existir um PCCS ativo com o mesmo nome.
+ */
+function setup_pccs_inicial() {
+  if (typeof PCCSRepository === 'undefined')
+    return { erro: 'PCCSRepository não disponível.' };
+
+  var orgId  = getOrgConfig().orgId;
+  var email  = Session.getActiveUser().getEmail() || 'setup@sistema';
+  var pccsId = 'PCCS-001';
+
+  var existente = PCCSRepository.listarTodos().find(function(p) { return p.id === pccsId; });
+  if (existente) return { criados: 0, msg: 'PCCS ' + pccsId + ' já existe.' };
+
+  var cargos = [
+    { id:'CRG-001', nome:'Diretor',                   tipo:'estrategico', descricao:'Gestão executiva e estratégica',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:8000 }] },
+    { id:'CRG-002', nome:'Coordenador de Projetos',   tipo:'tatico',      descricao:'Coordenação de projetos e equipes',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:4500 }] },
+    { id:'CRG-003', nome:'Técnico Operacional',       tipo:'operacional',  descricao:'Execução técnica de atividades',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:2500 }] },
+    { id:'CRG-004', nome:'Educador / Artista Educador', tipo:'operacional', descricao:'Ensino e mediação cultural',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:2800 }] },
+    { id:'CRG-005', nome:'Assistente Administrativo', tipo:'operacional',  descricao:'Suporte administrativo e financeiro',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:2000 }] },
+    { id:'CRG-006', nome:'Auxiliar',                  tipo:'operacional',  descricao:'Atividades de apoio operacional',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:1800 }] },
+    { id:'CRG-007', nome:'Estagiário',                tipo:'operacional',  descricao:'Estágio curricular ou extracurricular',
+      tabela:[{ nivel:'A', classe:'I', referencia:1, salarioBase:1000 }] }
+  ];
+
+  PCCSRepository.salvar({
+    id: pccsId, nome: 'PCCS CCBJ 2026',
+    vigencia: { inicio: '2026-01-01', fim: '2026-12-31' },
+    ativo: true, cargos: cargos
+  }, email);
+
+  Logger.info('setup', 'setup_pccs_inicial', 'PCCS criado com ' + cargos.length + ' cargos.');
+  return { criados: cargos.length };
+}
+
+/**
+ * Seed: 6 categorias iniciais de itens de almoxarifado.
+ * Idempotente.
+ */
+function setup_categorias_itens_iniciais() {
+  var orgId = getOrgConfig().orgId;
+  var email = Session.getActiveUser().getEmail() || 'setup@sistema';
+  var agora_ = agora();
+
+  var categorias = [
+    { id:'CAT-001', nome:'Equipamento Audiovisual',  descricao:'Câmeras, projetores, caixas de som, microfones' },
+    { id:'CAT-002', nome:'Equipamento de Informática', descricao:'Notebooks, monitores, roteadores' },
+    { id:'CAT-003', nome:'Mobiliário',               descricao:'Cadeiras, mesas, palcos, arquibancadas' },
+    { id:'CAT-004', nome:'Material Gráfico',         descricao:'Banners, faixas, painéis, impressos' },
+    { id:'CAT-005', nome:'Insumo',                   descricao:'Papel, tinta, material de limpeza' },
+    { id:'CAT-006', nome:'Outro',                    descricao:'Itens sem categoria específica' }
+  ];
+
+  var criados = 0;
+  modifyJSON('categorias_itens_config.json', function(lista) {
+    if (!Array.isArray(lista)) lista = [];
+    categorias.forEach(function(c) {
+      if (lista.some(function(l) { return l.id === c.id && l.orgId === orgId; })) return;
+      lista.push(Object.assign({ orgId: orgId, ativo: true,
+        criadoPor: email, atualizadoEm: agora_ }, c));
+      criados++;
+    });
+    return lista;
+  });
+
+  Logger.info('setup', 'setup_categorias_itens_iniciais', 'Criadas: ' + criados + ' categorias.');
+  return { criados: criados };
 }
 
 // ─── Privados ─────────────────────────────────────────────────────────────────

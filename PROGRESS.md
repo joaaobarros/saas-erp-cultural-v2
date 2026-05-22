@@ -23,8 +23,8 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 4 concluída** — Seguir para **Fase 5 (Ação como Núcleo Real)**
-**O que foi feito (2026-05-20 a 2026-05-22)**:
+**Fase atual**: **Fase 4.5 concluída** — Seguir para **Fase 5 (Ação como Núcleo Real)**
+**O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
 - ✅ `USER_DEPLOYING` mantido (correto para Workspace + access:DOMAIN)
@@ -43,15 +43,31 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **Fase 3 entregue** (2026-05-22): `ContratadoRepository` + `ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository` + `SolicitacaoEngine` (FSM aprovação multinível + OrcamentoGuard stub), `contratacoes_controller.gs` (CQRS+cache+RBAC). `pessoas_engine.gs`: Afastamentos (FSM rascunho→ativo→encerrado) + Ocorrências (sem FSM). `colaborador_repository.gs`: afastamentos.json + ocorrencias.json. `pessoas_controller.gs`: ctrl_rh_listar/salvar/ativar/encerrar/cancelar_afastamento + ctrl_rh_listar/registrar/excluir_ocorrencia. View SPA Pessoas com 3 tabs (Colaboradores|Afastamentos|Ocorrências) + view Contratações com 3 tabs (Solicitações|Agentes|Habilitações). GAS.pessoas (afastamentos+ocorrências) + GAS.contratados + GAS.habilitacoes + GAS.contratacoes. setup.gs: `SCHEMA_ABAS` atualizado com `Contratados` (MASTER) e `SolicitacoesContratacao` (FINANCEIRO). Deploy @28.
 - ✅ **Fase 4 entregue** (2026-05-22): `FonteRecursoRepository` + `FonteRecursoEngine` (FSM ativo→suspenso→encerrado, fontes_recurso.json), `OrcamentoGuard` real (verifica saldo em contratos.json, substitui stub F3, com comprometer/liberar/efetivarPagamento/snapshotSaldo), `RemanejamentoRepository` + `RemanejamentoEngine` (FSM 6 estados, snapshot imutável antes de submissão, efetivação em contratos.json, threshold configurável), `AditivoRepository` + `AditivoEngine` (FSM 7 estados, aprovação 2-etapas interno+fundador, efetivação automática em contratos.json), `financeiro_controller.gs` (ctrl_fonte_recurso_*, ctrl_remanejamento_*, ctrl_aditivo_* com RBAC). View Financeiro expandida com 4 tabs (Contratos|Fontes|Remanejamentos|Aditivos). GAS.fontesRecurso + GAS.remanejamentos + GAS.aditivos. FontesUI + RemanejamentosUI + AditivosUI + FinanceiroTabs. Deploy @30.
 
+**O que foi feito (Fase 4.5)**:
+- ✅ `config_org.json` + `config_service.gs`: `tiposOcorrencia` e `tiposAfastamento` estruturados (id/label/ativo)
+- ✅ `config_admin_service.gs`: schema Espaço expandido (tipoEspaco, responsaveisPorTurno, itensFixos, equipamentosVinculados, horarioFuncionamento, versao); helpers `alternarItemFixo()`, `obterResponsavelEspacoPorDia()`, `listarCategoriasItens()`, `salvarCategoriaItem()`
+- ✅ `admin_controller.gs` CRIADO: todos os `ctrl_admin_*` e `ctrl_solicitacoes_*` globais (espaços, turnos, setores, categorias, módulos, solicitações de reserva)
+- ✅ `modulos_registry_service.gs` CRIADO: engine ausente que persistia módulos — referenciado em 6 arquivos mas nunca implementado; persiste para `modulos_config.json`; catálogo de 9 módulos
+- ✅ `pccs_repository.gs` CRIADO: entidade PCCS hierárquica (PCCS → Cargos → Tabela nivel/classe/referencia/salarioBase); `pessoas_controller.gs` expandido com `ctrl_pccs_*`
+- ✅ `setup.gs`: `setup_espacos_iniciais()` (8 espaços SAL-001..008), `setup_pccs_inicial()` (PCCS-001 com 7 cargos), `setup_categorias_itens_iniciais()` (6 categorias); `SCHEMA_ABAS` com `ESPACOS.Solicitacoes`; `inicializarSistema()` chama os seeds
+- ✅ `solicitacao_reserva_repository.gs` + `solicitacao_reserva_engine.gs` CRIADOS: workflow SOL-xxx, criar/listar/aprovar/recusar; roles de aprovação direta; notificações ao responsável da sala + admins
+- ✅ `reserva_engine.gs`: campo `sala` validado contra catálogo SAL-xxx; rota para SolicitacaoReservaEngine para colaboradores sem permissão direta; campo `salaNome` desnormalizado
+- ✅ `almoxarifado_engine.gs`: `assertItemDisponivel()` subtrai itens fixados em outras salas; integração com `itensFixos` do catálogo de espaços
+- ✅ `contratos_engine.gs` + `financeiro_controller.gs`: `adicionarItemMemoriaRubrica()`, `removerItemMemoriaRubrica()`, `calcularTotalRubrica()`, `salvarVersaoContrato()` (snapshot em `contratos_versoes.json`), `listarVersoes()`, `obterVersao()`, `ctrl_contrato_salvar_indicador()`
+- ✅ `acesso_service.gs`: `ctrl_acesso_listarTodos()` e `ctrl_acesso_editarPapel()` adicionados; papéis incluem `habilitador`, `comunicacao`, `rh`
+- ✅ `boot_service.gs`: inclui `tiposAfastamento` e `tiposOcorrencia` no bootstrap — populado nos selects automaticamente
+- ✅ `index.html` UI: GAS.admin/acesso/rh/solicitacoes/contratos expandidos; cargo `<select>` + `_popularSelectCargo()`; tipos afastamento/ocorrência populados do bootstrap; sala `<select>` + `popularSelectEspacos()`; `ContratosDetailUI` (Metas & Rubricas com Memória de Cálculo grid + grid 12 meses de Indicadores + Histórico de Versões); painel Aprovações + badge solicitações; Admin Cadastros (5 tabs: Espaços|Setores|CategItens|Módulos|Usuários); deploy @32
+
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase4_fontes_prepararIndice()` → `{ok:true}`
-> 2. **[GAS EDITOR]** Executar `fase4_remanejamentos_prepararIndice()` → `{ok:true}`
-> 3. **[GAS EDITOR]** Executar `fase4_aditivos_prepararIndice()` → `{ok:true}`
-> 4. **[BROWSER]** Módulo Financeiro → Tab Fontes de Recurso → Nova → preencher nome+tipo → Salvar → aparece na lista
-> 5. **[BROWSER]** Tab Remanejamentos → Novo → preencher contratoId+valor+rubricas+justificativa → Salvar → Submeter → Aprovar Financeiro → Efetivar
-> 6. **[BROWSER]** Tab Aditivos → Novo → preencher contratoId+tipo+objeto → Salvar → Submeter Interno → Aprovar Interno → Submeter Fundador → Aprovar Fundador → Efetivar
-> 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 8. Iniciar **Fase 5 — Ação como Núcleo Real**
+> 1. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` → `{criados: 8}` ou `{jaExistiam: 8}`
+> 2. **[GAS EDITOR]** Executar `setup_pccs_inicial()` → `{ok: true}`
+> 3. **[GAS EDITOR]** Executar `setup_categorias_itens_iniciais()` → `{criados: 6}`
+> 4. **[GAS EDITOR]** Executar `ctrl_solicitacoes_listar()` → array vazio (ok)
+> 5. **[BROWSER]** Admin → Cadastros → Espaços → deve listar 8 espaços
+> 6. **[BROWSER]** Reservas → campo Sala deve ser `<select>` com espaços SAL-001..006
+> 7. **[BROWSER]** Financeiro → Contrato → clicar ⚙ Gerenciar → painel ContratosDetailUI abre com tabs Metas/Indicadores/Histórico
+> 8. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
+> 9. Iniciar **Fase 5 — Ação como Núcleo Real**
 
 **Fase mais urgente agora**: **Fase 5** — Ação conectada a Reservas, Tarefas, Contratos (acaoId).
 
@@ -139,14 +155,15 @@ Um módulo está **completo** quando oferece:
 | 1 | Persistência Canônica | ✅ **Concluída** | — | 2026-05-21 | 2026-05-22 |
 | 2 | Espaços e Almoxarifado | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 3 | Pessoas, RH e Contratações | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
-| 4 | Financeiro e Contratos | ⬜ Aguardando F3 | 🟠 ALTO — métricas retornam zero, orçamento sem controle | — | — |
-| 5 | Ação como Núcleo Real | ⬜ Aguardando F4 | 🟠 ALTO — Ação desconectada dos outros domínios | — | — |
-| 6 | Integração via Eventos | ⬜ Aguardando F5 | 🟡 MÉDIO — EventBus emite mas ninguém consome | — | — |
-| 7 | Portal Externo e Público | ⬜ Aguardando F6 | 🟡 MÉDIO — agentes externos sem canal | — | — |
-| 8 | Agentes, Acervo, Voluntários | ⬜ Aguardando F7 | 🟡 MÉDIO — memória institucional digital | — | — |
+| 3.4 | RH Avançado e Ponto | ⬜ Aguardando F3 | 🟠 ALTO — CLT sem cálculo de custo; ponto ausente | — | — |
+| 4 | Financeiro e Contratos | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
+| 5 | Ação como Núcleo Real | ⬜ Aguardando F4 | 🔴 CRÍTICO — entidade central sem módulo próprio | — | — |
+| 6 | Integração via Eventos + RECE | ⬜ Aguardando F5 | 🟠 ALTO — EventBus emite mas ninguém consome; RECE ausente | — | — |
+| 7 | Portal Externo, Público e CODIP | ⬜ Aguardando F6 | 🟠 ALTO — prestação de contas Secult/CE sem canal | — | — |
+| 8 | Agentes, Acervo, Voluntários, Parcerias | ⬜ Aguardando F7 | 🟡 MÉDIO — memória institucional digital | — | — |
 | 9 | Multi-Tenancy e Config Admin | ⬜ Aguardando F8 | 🟡 MÉDIO — segundo deployment viabiliza SaaS | — | — |
-| 10 | Alertas, TaskHub, Reuniões | ⬜ Aguardando F9 | 🟢 BAIXO — melhoria UX operacional | — | — |
-| 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs | — | — |
+| 10 | Alertas, TaskHub, Reuniões, Auditoria | ⬜ Aguardando F9 | 🟡 MÉDIO — UX operacional e rastreabilidade visual | — | — |
+| 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs reais | — | — |
 
 ### Por que esta ordem de urgência?
 - **F1 antes de tudo**: dual-systems (dados em dois lugares sem sync) causam perda silenciosa de dados em produção.
@@ -385,6 +402,15 @@ Um módulo está **completo** quando oferece:
 6. Browser: tab Chaves → Nova Retirada → preencher sala → Registrar → Devolver
 7. Console F12: `BtnGuard.auditar()` → "✅ todos protegidos"
 
+**Gaps e modos de visualização — Fase 2 (implementar na Fase 5 ao revisar UI de reservas):**
+- [ ] **Calendário de ocupação por sala**: visão semana/mês mostrando quais horários estão ocupados em cada sala
+- [ ] **Heatmap de demanda**: sala × hora × dia da semana — cores por intensidade de uso
+- [ ] **Calendário de disponibilidade por item**: "projetor disponível dias X, Y, Z desta semana" — gap crítico para almoxarife
+- [ ] **Kanban de empréstimos**: colunas por FSM (Solicitado | Aprovado | Retirado | Devolvido | Atrasado)
+- [ ] **Diagrama de ocupação em tempo real**: mapa visual das salas agora — livre/ocupada/em_manutenção
+- [ ] **Lista de reservas**: tabela com filtros por sala, setor, período, status — com exportação
+- [ ] **Modo lote (criação)**: UI para criar reservas recorrentes (semanal, mensal, intervalo)
+
 ---
 
 ## Fase 3 — Pessoas, RH e Contratações
@@ -415,162 +441,397 @@ Um módulo está **completo** quando oferece:
 - [x] CQRS explícito: leitura com cache, escrita invalida cache (contratacoes_controller.gs)
 - [x] Snapshot antes de rejeição/cancelamento (padrão Skill.md)
 
+### Gaps identificados na Fase 3 (análise V1→V2) — corrigir na Fase 5 ou 11.4
+
+- [ ] **Aprovação de férias por link de email**: FSM existe mas gestor precisa estar logado para aprovar — implementar tokens (Fase 6)
+- [ ] **Notificação de férias com link de aprovação**: `NotificationEngine` deve gerar token + link direto no email
+- [ ] **Ponto eletrônico / banco de horas**: totalmente ausente; necessário para CLT (ver Fase 11.4)
+- [ ] **Custo CLT**: não calculado; impede planejamento de folha (ver Fase 11.4)
+- [ ] **Cálculo de rescisão**: não existe (ver Fase 11.4)
+
+**Modos de visualização — Fase 3 (implementar ao expandir):**
+- [ ] **Lista de colaboradores**: tabela com filtros (setor, vínculo, status) + busca por nome
+- [ ] **Card de perfil**: foto/avatar, cargo, setor, vínculos históricos, indicadores (faltas, escalas)
+- [ ] **Agenda de escalas**: calendário semana/mês — quem trabalha em qual turno (por setor)
+- [ ] **Calendário de férias**: linha do tempo de férias aprovadas + alertas de vencimento
+- [ ] **Kanban de contratações**: colunas por estágio da FSM (Rascunho | Submetida | Aprovada Gestor | Aprovada Financeiro | Em Execução | Concluída)
+- [ ] **Lista de habilitações**: agentes por status de habilitação com filtros e ações em lote
+- [ ] **Fluxograma de aprovação**: visualização da FSM de contratação para uma solicitação específica
+
+---
+
+## Fase 3.4 — RH Avançado e Ponto Eletrônico
+
+**Objetivo**: completar o módulo de Pessoas com funcionalidades RH essenciais para CLT e planejamento de folha.
+
+**Status**: ⬜ Não iniciada (pode ser executada em paralelo com Fase 6)
+
+**Próximo passo quando iniciar**:
+> Criar `PontoRepository` + `PontoEngine`; integrar com escalas de `PessoasEngine`.
+
+### 3.4.1 — Ponto Eletrônico e Banco de Horas
+
+- [ ] Criar `gas/src/modules/pessoas/ponto_repository.gs` — fonte: `ponto.json`; índice: `EQUIPES.Ponto`
+- [ ] Criar `gas/src/modules/pessoas/ponto_engine.gs` — registro entrada/saída; cálculo de horas regulares, extras e banco de horas
+- [ ] **Registro via link**: colaborador clica em link no email → registra entrada/saída sem login
+- [ ] Integração com escalas: horas trabalhadas vs horas previstas na escala
+- [ ] **Relatório mensal de ponto** por colaborador (exportável)
+- [ ] **Alertas de irregularidades**: falta não justificada, banco de horas acumulado acima do limite
+
+### 3.4.2 — Custo CLT e Folha de Pagamento
+
+- [ ] **Custo CLT completo**: INSS + Sistema S + FGTS + PIS + benefícios (VT, VA, plano) + provisões (13º, férias+1/3, FGTS rescisório)
+- [ ] **Fluxo de caixa RH**: linha mensal de custo previsto por vínculo para todo o período do contrato
+- [ ] **Simulação de cenário**: reajuste % aplicado em toda a folha + impacto financeiro imediato
+- [ ] Parâmetros via `config_org.json`: tabela INSS, alíquotas encargos, teto benefícios (não hardcoded)
+
+### 3.4.3 — Rescisão e Turnover
+
+- [ ] **Calculadora de rescisão**: estimativa de custo por modalidade (pedido de demissão, demissão sem justa causa, etc.)
+- [ ] **Break-even de demissão**: economia mensal esperada vs custo rescisório total
+- [ ] **Indicadores de turnover**: taxa voluntário/involuntário; custo de rotatividade; comparativo períodos
+- [ ] Geração de PDF de rescisão via `RelatoriosPDFService` (Fase 10)
+
+**Modos de visualização — Fase 3.4:**
+- [ ] **Calendário de ponto**: presença × ausência por colaborador no mês (grid dia × status)
+- [ ] **Heatmap de banco de horas**: por pessoa × mês — excesso acumulado visível
+- [ ] **Dashboard de folha**: custo total por vínculo; comparativo mês a mês; projeção anual
+- [ ] **Gráfico de turnover**: entradas × saídas no período; linha de tendência
+
 ---
 
 ## Fase 4 — Financeiro e Gestão de Contratos
 
 **Objetivo**: módulo financeiro completo, da proposta à prestação de contas.
 
-**Status**: ⬜ Não iniciada
-
-**Próximo passo quando iniciar**:
-> Começar por `4.1 — FonteRecurso como entidade`: criar `fontes_recurso.json` com FSM.
+**Status**: ✅ Concluída (2026-05-22) — gaps identificados em análise comparativa V1→V2 (ver 4.5)
 
 ### 4.1 — FonteRecurso como entidade
 
-- [ ] Criar `gas/src/modules/financeiro/fonte_recurso_engine.gs`
-- [ ] FSM: ativo → suspenso → encerrado
+- [x] Criar `gas/src/modules/financeiro/fonte_recurso_engine.gs`
+- [x] FSM: ativo → suspenso → encerrado
 
 ### 4.2 — Ferramenta de Proposta Orçamentária
 
 - [ ] OrcamentoPropostaEngine com FSM: rascunho → revisao → submetida → aprovada
-- [ ] Validação automática de tetos por edital (Lei Rouanet, etc.)
-- [ ] Exportação para Sheets + PDF
+- [ ] Validação automática de tetos por edital (Lei Rouanet, divulgação ≤ 20%)
+- [ ] Exportação para Sheets + PDF via RelatoriosPDFService (Fase 10)
 
 ### 4.3 — Remanejamentos com aprovação intersetores
 
-- [ ] RemanejamentoEngine com FSM de 6 estados
-- [ ] Snapshot imutável de saldos por aprovação
-- [ ] Thresholds configuráveis por valor
+- [x] RemanejamentoEngine com FSM de 6 estados
+- [x] Snapshot imutável de saldos por aprovação
+- [x] Thresholds configuráveis por valor
 
 ### 4.4 — Aditivos Contratuais
 
-- [ ] AditivoContratoEngine com FSM
-- [ ] Efetivação automática nas rubricas/metas após aprovação
+- [x] AditivoContratoEngine com FSM (7 estados, aprovação 2 etapas)
+- [x] Efetivação automática nas rubricas/metas após aprovação
+
+### 4.5 — Gaps identificados (análise V1→V2) — corrigir retroativamente
+
+- [ ] **Cronograma de desembolso** em FonteRecurso: campo de previsão mensal de recebimento (editais têm cronograma definido)
+- [ ] **Contrapartida obrigatória**: campo em FonteRecurso exigido pela Lei Rouanet
+- [ ] **OrcamentoPropostaEngine** (Fase 4.2 não entregue): formulário de proposta com validação de tetos por rubrica
+- [ ] **Exportação SALIC**: formato XML para prestação de contas Lei Rouanet (entregar na Fase 11)
+- [ ] **Fluxo de caixa por contrato**: linha mensal de recebimentos e pagamentos previstos vs realizados
+
+**Modos de visualização — Fase 4:**
+- [ ] **Lista/tabela**: contratos, fontes de recurso, remanejamentos, aditivos (padrão atual)
+- [ ] **Dashboard financeiro**: execução por contrato/meta/rubrica/setor (barras empilhadas, % executado)
+- [ ] **Fluxo de caixa**: timeline mensal — recebimentos previstos vs realizados por fonte
+- [ ] **Kanban de aprovação**: remanejamentos e aditivos por estágio da FSM (rascunho → aguardando → aprovado → efetivado)
+- [ ] **Comparativo previsto/realizado**: por rubrica, com semáforo de risco (verde/amarelo/vermelho)
+
+---
+
+## Backlog V1→V2 — Funcionalidades Identificadas mas Não Migradas (Fases Futuras)
+
+> Análise linha-a-linha do v1 (mod_comunicacao.gs, mod_relatorios.gs, mod_admin.gs, mod_metrics.gs)
+> revelou funcionalidades implementadas no legado que ainda não existem no v2.
+
+| Funcionalidade | Origem v1 | Status v2 | Fase planejada |
+|---|---|---|---|
+| Agenda RECE (25 campos, CRUD completo) | mod_comunicacao.gs | ❌ ausente | Fase 6 |
+| Sync bidirecional Reservas ↔ RECE | mod_comunicacao.gs | ❌ ausente | Fase 6 |
+| Convites Google Calendar (multi-guest) | mod_comunicacao.gs | ❌ ausente | Fase 6 |
+| Email institucional HTML (branding CCBJ) | mod_comunicacao.gs | ❌ ausente | Fase 6 |
+| Upload de imagem Drive ("CCBJ_RECE_Imagens") | mod_comunicacao.gs | ❌ ausente | Fase 6 |
+| Preferências por usuário (salvarPreferencia/carregarPreferencias) | mod_preferencias.gs | ❌ ausente | Fase 6 |
+| IA conversacional sobre reservas (perguntarIA/sugerirReservaIA) | mod_metrics.gs | ⚠️ parcial em ia_service | Fase 6 |
+| Sugestões de horário livre ao conflito de reserva | mod_reservas.gs | ❌ ausente | Fase 6 |
+| CODIP (34 campos por reserva, relatórios e dashboard) | mod_relatorios.gs | ❌ ausente | Fase 7 |
+| Comparação de versões de contrato (diff+heatmap+ranking) | mod_relatorios.gs | ❌ ausente | Fase 7 |
+| Geração de documentos PPT/DOC/PDF via Drive | mod_relatorios.gs | ❌ ausente | Fase 8 |
+| IA para reescrever descrição de ação (Groq) | mod_relatorios.gs | ❌ ausente | Fase 8 |
+| Dashboard unificado cross-módulo (Reservas+Itens+CODIP+Solicitações) | mod_metrics.gs | ⚠️ existe por módulo, sem unificado | Fase 5/6 |
+| Analisar dashboard por IA (analisarDashboardIA) | mod_metrics.gs | ⚠️ parcial em ia_service | Fase 6 |
+| Rate limiting backend (limitarRequisicoes+detectarComportamentoSuspeito) | mod_admin.gs | ❌ ausente | Fase 9 |
+| Rollback de ações por superadmin | mod_admin.gs | ❌ ausente | Fase 10 |
+| Status HABILITADO nas reservas (FSM + habilitarReservaStatus) | mod_reservas.gs | ❌ ausente | Fase 5 |
+| Export CSV da agenda com BOM UTF-8 | mod_relatorios.gs | ❌ ausente | Fase 7 |
 
 ---
 
 ## Fase 5 — Ação como Núcleo Real
 
-**Objetivo**: Ação conectada de fato com todos os domínios.
+**Objetivo**: Ação conectada de fato com todos os domínios. Entidade central com módulo próprio.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Começar por `5.1 — Vínculos reais da Ação`: adicionar `acaoId` a Reservas, Tarefas, Contratos.
+> 1. Criar `AcaoRepository` + `AcaoEngine` (ENTIDADE CENTRAL — ainda não existe como módulo)
+> 2. Adicionar `acaoId` a Reservas, Tarefas, Contratos (campos opcionais, migração idempotente)
+> 3. Criar `fase5_acoes_prepararIndice()` global
 
-### 5.1 — Vínculos reais
+### 5.1 — AcaoRepository + AcaoEngine (NOVO — não existe no V2)
 
-- [ ] Adicionar `acaoId` às Reservas de Espaço
-- [ ] Adicionar `acaoId` às Reservas de Itens
-- [ ] Adicionar `acaoId` às Contratações e Contratos
-- [ ] AcoesRecursos populado automaticamente em todos os flows
+- [ ] Criar `gas/src/modules/acoes/acao_repository.gs` — fonte canônica: `acoes.json`; índice: `ACOES.Acoes`
+- [ ] Criar `gas/src/modules/acoes/acao_engine.gs` — FSM + cálculos de execução + métricas
+- [ ] Criar `gas/src/modules/acoes/acoes_controller.gs` — `ctrl_acoes_*` com RBAC
+- [ ] `fase5_acoes_prepararIndice()` — garante aba `ACOES.Acoes` com headers
+- [ ] `inicializarSistema()` → incluir chamada ao `prepararIndice()` de Ações
 
-### 5.2 — Painel Integrado da Ação (9 tabs)
+### 5.2 — Campos da Ação
 
-- [ ] [Visão Geral] [Tarefas] [Reservas] [Itens] [Reuniões] [Contratos] [Equipe] [Financeiro] [Entregas]
-- [ ] Timeline cronológica de todos os eventos da Ação
+- [ ] **Campos públicos vs internos**: `visibilidadePublica` separa nome/descrição/data (portal) de orçamento/equipe (interno)
+- [ ] `acaoId` referenciado em: Reservas, Itens Almox, Tarefas, Contratos, Contratações
+- [ ] `AcoesRecursos` populado automaticamente em todos os flows de vínculo
+- [ ] Campo `rider_tecnico`: lista de necessidades técnicas (equipamentos, iluminação, som, palco)
 
 ### 5.3 — FSM de Ação revisada
 
-- [ ] planejada → em_producao → em_execucao → concluida → arquivada
-- [ ] Transições automáticas por eventos
+- [ ] `planejada → em_producao → em_execucao → concluida → arquivada`
+- [ ] Transição automática: 1ª reserva confirmada → Ação muda para `em_producao` (evento `RESERVATION_CREATED`)
+- [ ] Transição automática: Ação concluída → dispara pesquisa de satisfação (evento `ACTION_COMPLETED`)
+- [ ] Snapshot de estado antes de transições críticas (padrão Skill.md)
+
+### 5.4 — Painel Integrado da Ação (9 tabs)
+
+- [ ] **[Visão Geral]** — status, próximas tarefas, alertas, execução financeira %, público previsto
+- [ ] **[Tarefas]** — lista de tarefas vinculadas com status + progresso (Linear-style)
+- [ ] **[Reservas]** — espaços reservados com horários e status de confirmação
+- [ ] **[Itens]** — equipamentos/consumíveis reservados com período e responsável
+- [ ] **[Reuniões]** — reuniões vinculadas com encaminhamentos pendentes
+- [ ] **[Contratos]** — contratos/metas/rubricas que financiam a ação + execução por rubrica
+- [ ] **[Equipe]** — colaboradores internos (papel) + agentes externos (papel + rider)
+- [ ] **[Financeiro]** — previsto/executado/saldo por rubrica, em tempo real
+- [ ] **[Entregas/Evidências]** — acervo (fotos, vídeos, atas, releases) com status LGPD
+
+### 5.5 — Reservas com modo lote (gap V1→V2)
+
+- [ ] **Modo lote**: seleção de múltiplas datas (manual, semanal por dia, intervalo, mensal por data) — recuperar de `mod_reservas.gs: processarAgendamentoLote()`
+- [ ] **Buffer de 5 minutos** entre reservas: margem configurável de limpeza/preparação (1 linha em `reserva_engine.gs: assertSemConflito`)
+- [ ] **Status "Habilitado"**: adicionar à FSM de reservas como estado entre Confirmada e Em Uso
+- [ ] **Cancelamento com justificativa**: distinção UI entre cancelamento simples e com motivo obrigatório
+- [ ] **Notificação urgente** de cancelamento no mesmo dia: `_notificarCancelamentoMesmoDia()` — email para admins
+
+### 5.6 — IA Assistente — integração inicial (gap V1→V2)
+
+- [ ] **Sugestão de horário**: campo "descreva o que precisa" → `ia_service.gs` retorna slots disponíveis com score
+- [ ] **Redação de descrição**: botão "Redigir com IA" no formulário de criação de Ação
+- [ ] **Parser seguro**: `parsearJsonIA()` — fallback para respostas mal formadas da API Groq
+
+**Modos de visualização — Fase 5:**
+- [ ] **Kanban de Ações**: colunas por FSM (Planejada | Em Produção | Em Execução | Concluída | Arquivada) — estilo Linear
+- [ ] **Lista/tabela**: todas as ações com filtros (setor, período, status, responsável) + busca
+- [ ] **Card/Grid**: visão compacta com progresso visual — barra de execução financeira + física
+- [ ] **Calendário/Agenda**: ações ao longo do tempo (início → fim), sobreposição visual de períodos
+- [ ] **Timeline/Gantt**: ações com duração, marco de datas críticas, sobreposição de recursos
+- [ ] **Painel de 9 tabs**: visão detalhada de uma ação específica (detalhe do card)
+- [ ] **Diagrama de ocupação de espaços**: heatmap sala × hora × dia (calendário de calor visual)
 
 ---
 
-## Fase 6 — Integração via Eventos
+## Fase 6 — Integração via Eventos + Módulo RECE
 
-**Objetivo**: EventBus reativo — módulos integram via eventos consumidos.
+**Objetivo**: EventBus reativo funcional; Módulo RECE (Rede de Equipamentos Culturais) implementado.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Implementar os 7 handlers críticos no EventHandlerRegistry (já tem stubs da Fase 0).
+> 1. Implementar os 7 handlers críticos no EventHandlerRegistry (já tem stubs da Fase 0)
+> 2. Criar `MASTER.EventLog` com coluna `processado`
+> 3. Iniciar `RececomunicacaoEngine` para Agenda RECE
 
-### 6.1 — EventHandlerRegistry funcional
+### 6.1 — EventHandlerRegistry funcional (7 handlers críticos)
 
-- [ ] RESERVATION_CREATED → TarefaEngine (prep espaço) + ComunicacaoEngine (notif RECE)
-- [ ] ACTION_STARTED → FinanceiroEngine (ativar linhas de orçamento)
-- [ ] ACTION_COMPLETED → RelatoriosEngine (solicitar CODIP) + PublicoEngine (pesquisa satisfação)
-- [ ] CONTRACT_EXPIRED → TarefaEngine (tarefa renovação)
-- [ ] TASK_COMPLETED → DemandaEngine (verificar avanço processo)
-- [ ] KEY_PROTOCOL_DELAYED → TarefaEngine (cobrança chave)
-- [ ] ITEM_NOT_RETURNED → TarefaEngine (cobrança item)
+- [ ] `RESERVATION_CREATED` → TarefaEngine (cria tarefa prep espaço) + notifica RECE se Ação pública
+- [ ] `ACTION_STARTED` → FinanceiroEngine (ativa linhas de orçamento das rubricas vinculadas)
+- [ ] `ACTION_COMPLETED` → RelatoriosEngine (solicita consolidação CODIP) + PublicoEngine (dispara pesquisa de satisfação)
+- [ ] `CONTRACT_EXPIRED` → TarefaEngine (cria tarefa de renovação com prazo)
+- [ ] `TASK_COMPLETED` → DemandaEngine (verifica avanço do processo vinculado)
+- [ ] `KEY_PROTOCOL_DELAYED` → TarefaEngine (cria tarefa de cobrança de chave)
+- [ ] `ITEM_NOT_RETURNED` → TarefaEngine (cria tarefa de cobrança de item)
 
-### 6.2 — Trigger assíncrono
+### 6.2 — Trigger assíncrono e observabilidade da fila
 
-- [ ] processarEventosPendentes() a cada 30 min
-- [ ] Retry com backoff exponencial (máx 3 tentativas)
-- [ ] Alerta ao admin quando eventos pendentes > 100
+- [ ] `MASTER.EventLog` — criar aba com colunas: `id, tipo, payload, status (pendente/processado/erro), tentativas, ts_criacao, ts_processado`
+- [ ] `processarEventosPendentes()` — time-trigger a cada 30 min; filtra `status = pendente`
+- [ ] Retry com backoff exponencial: máx 3 tentativas; após 3 → marcar `erro` + alertar admin
+- [ ] Alerta ao admin quando eventos pendentes > 100 (via `AlertasEngine`)
+- [ ] `obterStatusFila()` — controller para dashboard de monitoramento de eventos
 
-### 6.3 — DemandaEngine e ProcessoInstitucional
+### 6.3 — Aprovação por link de email (gap V1→V2)
 
-- [ ] DemandaEngine: renomear + FSM real
-- [ ] SolicitacaoEspacoEngine: separar semanticamente
-- [ ] ProcessoInstitucionalEngine: transformar em orquestrador explícito
+- [ ] **Tokens de ação nos emails**: `NotificationEngine` gera token único por aprovação
+- [ ] **doGet com token**: `?token=X&acao=aprovar` → aprova sem login; `?token=X&acao=recusar` → formulário de justificativa
+- [ ] Token tem TTL de 72h; após expiração retorna mensagem de link expirado
+- [ ] Idempotente: mesmo token usado duas vezes retorna "já processado"
+- [ ] Aplicar a: aprovação de férias, remanejamentos, aditivos, solicitações de contratação, cessão de pauta
+
+### 6.4 — DemandaEngine e reorganização semântica
+
+- [ ] `DemandaEngine`: renomear (estava confundido com ProcessoInstitucional), FSM própria
+- [ ] `SolicitacaoEspacoEngine`: separar cessão de pauta pública de reserva interna
+- [ ] `ProcessoInstitucionalEngine`: transformar em orquestrador explícito de processos multi-etapa
+
+### 6.5 — Módulo RECE (Rede de Equipamentos Culturais do Ceará)
+
+> **O RECE é o principal canal de prestação de contas institucional** — não é relatório, é destino de dados para a Secult/CE. 28 equipamentos enviam dados mensalmente.
+
+- [ ] Criar `gas/src/modules/comunicacao/rece_repository.gs` — fonte: `COMUNICACAO.AgendaRECE` (25 colunas)
+- [ ] Criar `gas/src/modules/comunicacao/rece_engine.gs` — FSM rascunho→submetida→publicada→encerrada; sincronização com Reserva Geral
+- [ ] Criar `gas/src/modules/comunicacao/rece_controller.gs` — RBAC papel "comunicacao"; `ctrl_rece_*`
+- [ ] **25 campos da Agenda RECE**: título, data início/término, hora início/término, espaço, categorias, parceiros, acessibilidades, classificação etária, público-alvo, artista/grupo, link inscrição, acesso (gratuito/pago), descrição pública, observações internas, status, responsável RECE, data solicitação, imagem_url, convidados internos, evento institucional (S/N), convidados externos, ID reserva geral vinculado
+- [ ] **Upload de imagem**: `uploadImagemRece()` — base64 → Google Drive pasta `CCBJ_RECE_Imagens`
+- [ ] **Convites Google Calendar**: `enviarConvitesCalendar()` — cria evento com convidados internos/externos
+- [ ] **Email institucional com branding**: `enviarConviteEmailInstitucional()` — template HTML com paleta CCBJ
+- [ ] **Sincronização automática**: ao editar Reserva Geral vinculada → RECE atualizada automaticamente (via evento `RESERVATION_UPDATED`)
+- [ ] `fase6_rece_prepararIndice()` — garante aba `COMUNICACAO.AgendaRECE` com 25 headers
+
+**Modos de visualização — Fase 6 / RECE:**
+- [ ] **Agenda/Calendário RECE**: eventos por semana/mês com cor por status (rascunho/publicado/encerrado)
+- [ ] **Lista**: eventos RECE com filtros (período, espaço, status, responsável)
+- [ ] **Card**: evento RECE com imagem thumbnail, artista, data e badges de categoria
+- [ ] **Painel de status de fila**: lista de eventos pendentes + processados + erros (observabilidade do EventBus — estilo Datadog simplificado)
 
 ---
 
-## Fase 7 — Portal Externo e Gestão de Público
+## Fase 7 — Portal Externo, Público, CODIP e ExportacaoEngine
 
-**Objetivo**: canal externo funcional; dados de público para Lei Rouanet.
+**Objetivo**: canal externo funcional; dados de público para Lei Rouanet/CODIP; engine de exportação institucional.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Estruturar `portal/` com doGet() roteando para contexto público sem autenticação.
+> Reestruturar `portal/` existente: as shells HTML estão criadas (Fase 0) mas sem backends funcionais.
 
-### 7.1 — Portal Externo
+### 7.1 — Portal Externo (backends funcionais)
 
-- [ ] Estrutura `portal/` com controllers públicos separados
-- [ ] Rate limiting + CSRF token para formulários públicos
-- [ ] Cessão de Pauta: formulário público → número de protocolo
-- [ ] Calendário público: ações com `visibilidadePublica: true`
+- [ ] Estrutura `portal/` — controllers públicos separados com RBAC "public"
+- [ ] **Rate limiting** por IP/email + **CSRF token** para formulários públicos
+- [ ] **Cessão de Pauta**: formulário público → validações de negócio (antecedência mínima 15 dias, rider técnico obrigatório, bloqueio de atividades comerciais) → protocolo + email de confirmação
+- [ ] **Mensagens contextualizadas por status**: "Sua cessão está sendo analisada. Prazo estimado: 5 dias úteis" — configuráveis em `config_org.json`
+- [ ] **Calendário público**: ações com `visibilidadePublica: true` + filtros (tipo, gratuito/pago, período, espaço)
+- [ ] **Feed iCal**: exportação de eventos públicos como calendário iCal para integração com Google Calendar/Outlook
+- [ ] **ConsentimentoService**: `gas/src/core/services/consentimento_service.gs` — base legal LGPD + histórico por titular + revogação
 
 ### 7.2 — Gestão de Público (PublicoEngine)
 
-- [ ] Inscrições online com consentimento LGPD explícito
-- [ ] Lista de espera automática
-- [ ] Check-in de presença (QR code ou lista)
-- [ ] Controle de frequência por sessão (para cursos)
-- [ ] Certificado de conclusão com critério de frequência mínima
-- [ ] Exportação para CODIP/SALIC
+- [ ] Criar `gas/src/modules/publico/publico_engine.gs` + `publico_repository.gs` + `publico_controller.gs`
+- [ ] **Inscrições online**: formulário por Ação com dados (nome, email, idade, CEP, ocupação, renda opcional), consentimento LGPD explícito via `ConsentimentoService`
+- [ ] **Lista de espera automática**: quando capacidade atingida → inscrição vai para espera → notificação automática se vaga abrir
+- [ ] **Check-in de presença**: QR code por sessão OU lista manual com confirmação
+- [ ] **Frequência por sessão** (gap crítico V1→V2): registro por aula/encontro (não só por ação) — essencial para cursos e oficinas
+- [ ] **Pesquisa de satisfação**: disparada automaticamente 3-7 dias após Ação concluída (via evento `ACTION_COMPLETED`)
+- [ ] **Certificado de conclusão**: automático ao atingir critério de frequência mínima configurável (ex: 75%); gerado via `RelatoriosPDFService`
+- [ ] **Dashboard de público**: total beneficiários, perfil demográfico agregado (anônimo — LGPD), origem geográfica por CEP/bairro
+- [ ] `fase7_publico_prepararIndice()` — garante aba `PUBLICO.Inscritos` com headers
+
+### 7.3 — LGPD Sistemática (ConsentimentoService)
+
+- [ ] **Registrar base legal** de cada coleta: consentimento, legítimo interesse, obrigação legal
+- [ ] **Histórico de consentimentos** por titular: quando consentiu, para qual finalidade, via qual formulário
+- [ ] **Revogação de consentimento**: titular pode revogar via portal; dados ficam anonimizados
+- [ ] **Log de acessos a dados sensíveis**: quem acessou dados pessoais e quando
+- [ ] **Status LGPD por arquivo de acervo**: imagem/vídeo precisa ter: consentimento coletado? para qual uso? (fotos de eventos são dados sensíveis)
+
+### 7.4 — ExportacaoEngine (engine transversal)
+
+> **Centraliza toda exportação para órgãos externos** — evita que cada módulo implemente o próprio export.
+
+- [ ] Criar `gas/src/engines/exportacao_engine.gs`
+- [ ] **CODIP (Secult/CE)**: 28 campos por evento; consolidação mensal dos dados; exportação JSON/CSV no formato Secult/CE
+- [ ] **SALIC (MinC)**: XML de prestação de contas Lei Rouanet por projeto; validação automática de campos obrigatórios
+- [ ] **SNIIC (MinC)**: indicadores nacionais de produção cultural (anuais)
+- [ ] **ZIP de acervo por Ação**: compila fotos, vídeos, releases, atas com checklist de evidências
+- [ ] **RelatoriosPDFService**: geração de PDFs via Google Docs API com template institucional CCBJ
+  - Ata de reunião (template estruturado aprovado)
+  - Contrato de prestação de serviço (para contratados)
+  - Certificado de participação (voluntários, público de cursos)
+  - Declaração de habilitação (agentes culturais)
+  - Relatório de execução (por ação, por contrato)
+
+**Modos de visualização — Fase 7:**
+- [ ] **Calendário de eventos públicos**: portal externo com filtros visuais (tipo, gratuito, período, espaço)
+- [ ] **Lista de inscrições**: por ação — nome, status (confirmado/lista de espera), check-in, frequência
+- [ ] **Painel de frequência por sessão**: grade sessão × participante (✅/❌) — para cursos
+- [ ] **Dashboard de público**: cartões com métricas (total inscritos, presença média, % satisfação, NPS)
+- [ ] **Funil de inscrição**: inscritos → confirmados → presentes → certificados (funil de conversão visual)
+- [ ] **Status de cessão de pauta**: trilha visual de status para o agente externo (estilo rastreamento de encomenda)
 
 ---
 
-## Fase 8 — Agentes Culturais, Acervo, Voluntários
+## Fase 8 — Agentes Culturais, Acervo, Voluntários e Parcerias
 
-**Objetivo**: banco completo de agentes; memória institucional digital.
+**Objetivo**: banco completo de agentes; memória institucional digital; gestão de parcerias.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Criar `AgenteCultural` como entidade com portal de auto-cadastro.
+> Criar `AgenteCultural` como entidade com portal de auto-cadastro (depende do Portal da Fase 7 estar funcional).
 
 ### 8.1 — Banco de Agentes Culturais
 
-- [ ] Entidade AgenteCultural: portfolio, histórico, rider técnico
-- [ ] Portal de auto-cadastro (extensão do portal externo)
-- [ ] Integração com HabilitacoesEngine e EntidadeContratavel
+- [ ] Criar `gas/src/modules/agentes/agente_repository.gs` — fonte: `agentes_culturais.json`; índice: `MASTER.AgentesculturaisIndex`
+- [ ] Criar `gas/src/modules/agentes/agente_engine.gs` — FSM: rascunho→ativo↔suspenso→descredenciado; integração com `HabilitacoesEngine`
+- [ ] **Perfil completo**: áreas artísticas, linguagens, portfolio (links), histórico de vínculos com a instituição, disponibilidade
+- [ ] **Rider técnico por artista**: banco de necessidades técnicas (equipamentos, iluminação, som, palco, camarim); ao contratar → rider puxado automaticamente para lista de tarefas de infraestrutura
+- [ ] **Portal de auto-cadastro**: extensão do portal externo (Fase 7) — agente preenche próprio perfil sem login interno
+- [ ] **Busca de agentes**: por área, linguagem, disponibilidade, histórico, habilitação
+- [ ] Integração bidirecional: agente habilitado → `EntidadeContratavel`; ao contratar → busca perfil do agente
 
 ### 8.2 — Acervo Digital
 
-- [ ] Upload por Ação: foto, vídeo, release, folder
-- [ ] Status LGPD por arquivo
-- [ ] Checklist de evidências por Ação
-- [ ] Exportação ZIP para prestação de contas
+- [ ] Criar `gas/src/modules/acervo/acervo_repository.gs` + `acervo_engine.gs` + `acervo_controller.gs`
+- [ ] **Upload por Ação**: foto, vídeo, release, poster, folder, ata — com tags + tipo
+- [ ] **Status LGPD por arquivo**: consentimento coletado? para qual uso? — obrigatório para imagens de pessoas
+- [ ] **Checklist de evidências por Ação**: quantas fotos? release publicado? vídeo de qualidade? — visibilidade do estado da prestação de contas
+- [ ] **Exportação ZIP**: compila arquivos de uma Ação com checklist para prestação de contas (via `ExportacaoEngine`)
 
 ### 8.3 — Voluntários
 
-- [ ] Alocação a Ações com função e horário
-- [ ] Confirmação via link
-- [ ] Registro de horas + certificado automático
+- [ ] Criar `gas/src/modules/voluntarios/voluntario_repository.gs` + engine + controller
+- [ ] Cadastro: competências, disponibilidade, histórico de participações
+- [ ] **Alocação a Ações**: função + horário definidos
+- [ ] **Confirmação de presença**: link automático no email de convite
+- [ ] **Registro de horas realizadas**: com rastreamento por Ação
+- [ ] **Certificado automático** de participação: gerado via `RelatoriosPDFService` ao encerrar Ação
+
+### 8.4 — Parcerias e Co-Produções (gap V1→V2 — não estava no PROGRESS.md)
+
+- [ ] Criar `gas/src/modules/parcerias/parceria_repository.gs` + `parceria_engine.gs` + `parceria_controller.gs`
+- [ ] Entidade `Parceria`: organizações, coletivos, entidades co-produtoras
+- [ ] **Co-produção**: divisão de responsabilidades, custos e entregas entre parceiros
+- [ ] **Vinculação de Ações** a parcerias com papel de cada parceiro
+- [ ] **Acompanhamento de entregas** de cada parceiro com status
+- [ ] **Avaliação ao encerrar** parceria: histórico de desempenho por parceiro
+
+**Modos de visualização — Fase 8:**
+- [ ] **Grid de agentes**: cards com foto/avatar, áreas, linguagens e badge de habilitação — estilo diretório
+- [ ] **Lista de agentes**: tabela com busca por área, disponibilidade, histórico
+- [ ] **Galeria de acervo**: grid visual de mídias por Ação — miniatura + tipo + status LGPD
+- [ ] **Lista de acervo**: tabela com filtros (ação, tipo, data, status LGPD, uso autorizado)
+- [ ] **Kanban de voluntários**: por status de alocação (cadastrado → alocado → confirmado → presente)
+- [ ] **Checklist visual de evidências**: progresso de prestação de contas por ação (fotos ✅ | release ✅ | vídeo ❌ | ata ✅)
+- [ ] **Mapa de parcerias**: grafo simples de organizações parceiras × ações vinculadas
 
 ---
 
 ## Fase 9 — Multi-Tenancy e Painel Admin
 
-**Objetivo**: segunda organização provisionada sem alterar código.
+**Objetivo**: segunda organização provisionada sem alterar código. SaaS demonstrável.
 
 **Status**: ⬜ Não iniciada
 
@@ -579,90 +840,178 @@ Um módulo está **completo** quando oferece:
 
 ### 9.1 — orgId em todos os dados
 
-- [ ] Injetar orgId em todo salvar() e filtrar em todo listar()
-- [ ] Script de migração para dados existentes
-- [ ] dataFolder → orgId + '_DATA' em todos os deployments
+- [ ] Injetar `orgId` em todo `salvar()` e filtrar em todo `listar()` (todos os repositórios)
+- [ ] Script de migração idempotente para dados existentes sem `orgId`
+- [ ] `dataFolder` → `orgId + '_DATA'` em todos os deployments
+- [ ] Isolamento garantido por dados, não apenas por scriptId (padrão Skill.md)
 
 ### 9.2 — Wizard de configuração inicial
 
-- [ ] Fluxo guiado: org, setores, turnos, espaços, módulos, roles
-- [ ] Defaults razoáveis para nova organização
-- [ ] Modo demonstração (sandbox) com dados de exemplo
+- [ ] Fluxo guiado: org, setores, turnos, espaços, módulos habilitados, roles
+- [ ] Defaults razoáveis para nova organização (importados de `config_org.json` padrão)
+- [ ] **Modo sandbox/demonstração**: nova org explora com dados de exemplo sem comprometer dados reais
+- [ ] **Checklist de provisionamento**: automatizável em < 30 minutos; `verificarTodasAbas()` como validação final
+
+### 9.3 — Feature flags via config_org.json (gap Skill.md)
+
+- [ ] Habilitar/desabilitar módulos inteiros sem deploy: `modulosAtivos` em `config_org.json`
+- [ ] Feature flags granulares: `features.ia_assistente`, `features.portal_publico`, `features.rece`, etc.
+- [ ] Painel admin de flags: UI para ligar/desligar features sem editar JSON diretamente
+
+**Modos de visualização — Fase 9:**
+- [ ] **Wizard de setup**: fluxo passo a passo com progresso visual (stepper)
+- [ ] **Painel de orgs** (superadmin): lista de organizações provisionadas com status, plano, última atividade
+- [ ] **Checklist de provisionamento**: lista com indicadores ✅/❌ de cada etapa
 
 ---
 
-## Fase 10 — Alertas, TaskHub, Reuniões, Comunicação
+## Fase 10 — Alertas, TaskHub, Reuniões, Comunicação e Auditoria Visual
 
-**Objetivo**: sistema de alertas centralizado; centro de controle de tarefas unificado.
+**Objetivo**: sistema de alertas centralizado; centro de controle de tarefas; auditoria com rollback; UX operacional completa.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Expandir NotificationEngine para todos os 25+ tipos de alerta catalogados.
+> Expandir `AlertasEngine` para todos os 25+ tipos catalogados; implementar `obterMinhaCaixaDeEntrada()`.
 
 ### 10.1 — AlertasEngine completo
 
-- [ ] 25+ tipos de alerta com severidade (INFO / ATENÇÃO / URGENTE)
-- [ ] Alertas in-app: badge no header + painel de notificações
-- [ ] Escalação automática por nível
-- [ ] Preferências por usuário
+- [ ] 25+ tipos de alerta com severidade (INFO / ATENÇÃO / URGENTE) — catálogo já existe em `alertas_engine.gs`
+- [ ] Alertas in-app: badge no header com contador + painel de notificações deslizante
+- [ ] Escalação automática: aprovação pendente > 48h → escala para gestor superior
+- [ ] Preferências por usuário: configurar quais tipos de alerta receber e por qual canal (in-app, email)
+- [ ] **Tipos específicos ativos**:
+  - Contrato vencendo (60/30/7 dias antes)
+  - Rubrica com saldo crítico (< 10% do previsto)
+  - Ação atrasada (execução física < 50% no meio do período)
+  - Item de almoxarifado não devolvido (> prazo)
+  - Processo sem movimentação (> N dias configurável)
+  - Férias vencendo (30 dias antes do prazo legal)
+  - Clima institucional deteriorando (> 15 pontos em 2 semanas)
+  - Painel "Riscos do Mês" consolidado
 
 ### 10.2 — TaskHub (Centro de Controle)
 
-- [ ] Visão "Meu Dia": tarefas + todas pendências de outros módulos
-- [ ] Visão "Meu Time" (gestores): carga por pessoa com heatmap
-- [ ] Visão "Produtividade": métricas do time no período
-- [ ] obterMinhaCaixaDeEntrada() agregando todos os módulos
+- [ ] `obterMinhaCaixaDeEntrada()` — função que agrega de todos os módulos: tarefas atribuídas + aprovações pendentes + demandas em SLA + reuniões com encaminhamentos + alertas não lidos
+- [ ] **Visão "Meu Dia"**: todas as pendências priorizadas por prazo + SLA consumido
+- [ ] **Visão "Meu Time"** (gestores): carga de trabalho por pessoa, identificando sobrecarga/ociosidade
+- [ ] **Visão "Produtividade"**: tarefas concluídas, tempo médio de resolução, taxa on-time no período
+- [ ] **Priorização automática**: TaskHub ordena por prazo + % SLA consumido + urgência declarada
+- [ ] **Sidebar com favoritos** (gap V1→V2): módulos reordenáveis via drag-and-drop; persistência via `PreferenciasUsuarios`
 
 ### 10.3 — Reuniões redesenhadas
 
-- [ ] Ata com template estruturado obrigatório
-- [ ] Versionamento de rascunho + aprovação formal
-- [ ] Exportação PDF com template institucional
-- [ ] Vínculo bidirecional reunião ↔ Ação
+- [ ] Criar `gas/src/modules/reunioes/reuniao_repository.gs` + `reuniao_engine.gs` + `reuniao_controller.gs`
+- [ ] **Ata com template estruturado obrigatório**: presentes, ausentes justificados, pauta executada, decisões, encaminhamentos (responsável + prazo + texto), próxima reunião
+- [ ] **Versionamento de rascunho**: histórico de edições (quem editou o quê); aprovação formal pelo convocador
+- [ ] **Aprovação formal da ata**: imutável após aprovação; FSM: rascunho → em_aprovacao → aprovada
+- [ ] **Exportação PDF** com template institucional via `RelatoriosPDFService`
+- [ ] **Vínculo bidirecional** reunião ↔ Ação: encaminhamentos aparecem como tarefas na Ação vinculada
+- [ ] **Encaminhamentos consolidados**: todos os encaminhamentos de todas as atas por responsável (cross-reuniões)
 
 ### 10.4 — Comunicação / Balcão redesenhado
 
-- [ ] SLA por tipo de demanda configurável
-- [ ] Versionamento de entregas
-- [ ] Motivo de rejeição estruturado
-- [ ] Dashboard de SLA
+- [ ] **SLA por tipo de demanda** configurável em `config_org.json`: Design simples (3d úteis), Foto (2d), Vídeo (5d), Texto (1d)
+- [ ] **Alerta automático**: quando demanda > 60% do SLA consumido → notificação ao executor
+- [ ] **Versionamento de entregas** (gap V1→V2): histórico v1/v2... até aprovação; motivo estruturado de rejeição; contador de rodadas (KPI de qualidade)
+- [ ] **Comentários na demanda**: campo de perguntas/respostas entre demandante e executor dentro da demanda
+- [ ] **Notificação ao demandante**: entrega enviada para revisão; aprovada; devolvida para correção
+- [ ] **Dashboard de SLA**: % entregas no prazo por tipo e período; tempo médio; rodadas de revisão
+- [ ] **Integração com Ações**: Ação sem demanda de divulgação N dias antes → alerta automático
+
+### 10.5 — Auditoria Visual com Rollback (gap V1→V2)
+
+- [ ] **View de auditoria** no SPA: visualização de logs com filtros (usuário, tipo, módulo, período)
+- [ ] **Botão de rollback** por operação: desfazer criação/edição/exclusão usando dados `before` do log
+- [ ] `rollbackAcaoPorTimestamp()` — restore de estado a partir do snapshot `before/after` do `AuditoriaService`
+- [ ] **Log de acessos** separado: rastreamento de login por sessão (quem entrou, quando, qual nível)
+- [ ] **Detecção de comportamento suspeito**: múltiplas operações em curto intervalo → alerta ao admin
+- [ ] **Rate limiting por endpoint** (gap V1→V2): `limitarRequisicoes(chave_endpoint + email, limite, intervaloMs)`
+
+**Modos de visualização — Fase 10:**
+- [ ] **TaskHub "Meu Dia"**: lista priorizada com separadores (Urgente | Hoje | Esta Semana | Mais tarde) — estilo Linear
+- [ ] **Heatmap "Meu Time"**: grade pessoa × dia da semana com cor de intensidade de carga
+- [ ] **Kanban do Balcão**: colunas por status (Rascunho | Submetida | Em Análise | Em Execução | Revisão | Concluída) — estilo Kanban
+- [ ] **Lista do Balcão**: tabela com filtros de SLA, urgência, tipo, responsável; linha vermelha quando SLA vencido
+- [ ] **Cards de demanda**: resumo compacto com barra de SLA colorida (verde → amarelo → vermelho)
+- [ ] **Agenda de reuniões**: calendário semana/mês de próximas reuniões de todos os setores
+- [ ] **Lista de encaminhamentos consolidados**: todos os pendentes cross-reuniões, ordenados por prazo, filtro por responsável
+- [ ] **Timeline de ata**: cada encaminhamento com linha do tempo de criação → atribuição → conclusão
+- [ ] **Painel de auditoria**: lista de operações com filtros + badge de tipo + botão desfazer
+- [ ] **Dashboard de SLA (Comunicação)**: gráfico de barras % no prazo por tipo; tendência mensal; ranking de rodadas de revisão
 
 ---
 
-## Fase 11 — Estratégia e Produto Pronto para Mercado
+## Fase 11 — Estratégia, Dashboards Reais e Produto Pronto para Mercado
 
-**Objetivo**: KPIs reais; observabilidade total; demonstrável para outras organizações.
+**Objetivo**: KPIs reais; observabilidade total; cockpit executivo; demonstrável para outras organizações.
 
 **Status**: ⬜ Não iniciada
 
 **Próximo passo quando iniciar**:
-> Implementar módulo de Estratégia com objetivos estratégicos vinculados a Ações.
+> Corrigir `obterMetricasEficiencia` e `calcularCustoPorMeta` (retornam zero hoje) antes de qualquer dashboard.
 
 ### 11.1 — Módulo de Estratégia
 
-- [ ] Cadastro de objetivos estratégicos (curto/médio/longo prazo)
-- [ ] gerarRelatorioEstrategico(): síntese trimestral/anual
-- [ ] KPIs reais: ocupação espaços, custo/atendimento, taxa on-time
-- [ ] Painel "Riscos do Mês" consolidado
+- [ ] Criar `gas/src/modules/estrategia/estrategia_repository.gs` + engine + controller
+- [ ] **Objetivos estratégicos**: curto (1 ano), médio (3 anos), longo prazo (5 anos) — vinculação de Ações a objetivos
+- [ ] **Monitoramento de progresso**: % de ações vinculadas ao objetivo no prazo; execução financeira associada
+- [ ] `gerarRelatorioEstrategico()`: síntese trimestral/anual — ações concluídas, público, recursos executados, planejado vs realizado
+- [ ] **KPIs consolidados reais** (substituir zeros):
+  - Taxa de ocupação de espaços (média mensal por sala)
+  - Taxa de conclusão de ações no prazo
+  - Custo por ação / custo por atendimento / custo por hora-atividade
+  - Índice de satisfação do público (pesquisas pós-ação)
+  - Execução orçamentária (% executado por contrato/meta)
+  - Taxa de renovação de habilitados / novos agentes culturais
+- [ ] **Painel "Riscos do Mês"**: ações atrasadas + contratos vencendo + rubrica crítica + clima baixo — consolidado executivo
+- [ ] **Calendário estratégico anual**: linha do tempo Ações × Objetivos × Recursos
 
 ### 11.2 — Escuta Institucional completa
 
-- [ ] Pesquisas de clima com análise de sentimento
-- [ ] Cruzamento analítico: clima × escalas × férias × absenteísmo
+- [ ] Criar `gas/src/modules/escuta/escuta_engine.gs` + repository + controller
+- [ ] **8 dimensões científicas** baseadas em UWES, JDC, CVF, NR-1
+- [ ] **Algoritmo de fairness**: cada colaborador recebe pesquisas proporcionalmente; sem sobrecarga de respostas
+- [ ] **Índice de confiança**: representatividade dos dados (% de respostas vs total de colaboradores)
+- [ ] **Cruzamento analítico**: clima × escalas × férias × absenteísmo
+- [ ] **Alerta automático**: clima deteriora > 15 pontos em 2 semanas → alerta ao gestor + RH
+- [ ] **Consentimento LGPD**: dados sensíveis (orientação, raça, saúde) coletados com consentimento explícito via `ConsentimentoService`
 
-### 11.3 — Métricas e dashboards corretos
+### 11.3 — Dashboards reais e IA analítica
 
-- [ ] Corrigir obterMetricasEficiencia e calcularCustoPorMeta
-- [ ] Dashboard estratégico (direção): execução global + KPIs
-- [ ] Dashboard financeiro: por contrato / meta / rubrica / setor
+- [ ] **Corrigir** `obterMetricasEficiencia()` e `calcularCustoPorMeta()` (retornam zero — bug de integração com dados reais)
+- [ ] **Dashboard operacional**: ocupação espaços / agendas / SLAs de demanda em tempo real
+- [ ] **Dashboard financeiro**: por contrato / meta / rubrica / setor; planejado vs realizado; semáforo de risco
+- [ ] **Dashboard estratégico** (direção): execução global + KPIs + riscos + clima
+- [ ] **Métricas de ocupação** (gap V1→V2): obterMetricasDashboard() por sala, setor, período; taxa de cancelamento; pico de demanda por horário/dia
+- [ ] **IA analítica**: `analisarDashboardIA()` — insights automáticos a partir das métricas; `gerarRelatorioIA()` — síntese narrativa do período
 
-### 11.4 — Preparação para mercado
+### 11.4 — Módulo RH Avançado e Ponto (Fase 3.4 consolidada)
 
-- [ ] Zero hardcodes de "CCBJ" em código ou labels
-- [ ] 100% dos labels configuráveis via SistemaConfigService
-- [ ] Documentação de provisionamento para novas orgs
-- [ ] Demonstração do sistema para organização diferente do CCBJ
+- [ ] **Custo CLT completo**: INSS + Sistema S + FGTS + PIS + benefícios + provisões (13º, férias, FGTS rescisório)
+- [ ] **Fluxo de caixa RH**: linha mensal de custo por vínculo para todo o período do contrato
+- [ ] **Simulação de cenário**: reajuste % aplicado em toda folha + impacto financeiro imediato
+- [ ] **Calculadora de rescisão**: break-even (economia mensal vs custo rescisório) + geração de PDF
+- [ ] **Indicadores de turnover**: taxa voluntário/involuntário, custo de rotatividade, comparativo períodos
+
+### 11.5 — Preparação para mercado e exportações institucionais
+
+- [ ] Zero hardcodes de "CCBJ" em código ou labels (auditoria completa)
+- [ ] 100% dos labels configuráveis via `SistemaConfigService` + `config_org.json`
+- [ ] **Exportação SALIC**: XML para prestação de contas Lei Rouanet via `ExportacaoEngine`
+- [ ] **Exportação SNIIC**: indicadores nacionais de produção cultural (MinC) via `ExportacaoEngine`
+- [ ] Documentação de provisionamento para novas orgs (< 30 minutos)
+- [ ] Demonstração com org diferente do CCBJ sem alterar código
+
+**Modos de visualização — Fase 11:**
+- [ ] **Dashboard estratégico**: KPIs em cards com sparklines; semáforo de risco (verde/amarelo/vermelho); tendência 3 meses
+- [ ] **Mapeamento estratégico visual**: eixos temáticos (educação × cultura × território × sustentabilidade) em grid 2D com ações posicionadas
+- [ ] **Calendário estratégico**: linha do tempo anual — ações × objetivos × recursos (Gantt executivo)
+- [ ] **Dashboard de riscos "Riscos do Mês"**: painel consolidado com itens priorizados por urgência; drill-down por item
+- [ ] **Heatmap de ocupação**: salas × horário × dia da semana — calendário de calor visual
+- [ ] **Dashboard de clima**: radar por dimensão + linha do tempo de evolução + comparativo entre setores
+- [ ] **Dashboard financeiro**: stacked bar previsto/executado por rubrica; funil de execução orçamentária
+- [ ] **Funil de turnover**: headcount × entradas × saídas × custo no período
 
 ---
 
@@ -682,6 +1031,8 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Fase 2 | Reservas: `ReservaRepository` + `ReservaEngine` (assertSemConflito+LockService+FSM) + `reservas_controller.gs`. Almoxarifado: `ReservasItensRepository` (MASTER.Itens+EmprestimosItens) + `AlmoxarifadoEngine` (FSM completo+assertItemDisponivel+verificarAtrasos). Chaves: `ChaveRepository` + `ChaveEngine` (FSM+verificarAtrasos+eventos) + `chaves_controller.gs`. View Espaços com 4 tabs (Reservas|Chaves|Empréstimos|Patrimônio) + EspacosUI+ReservasUI+ChavesUI+AlmoxUI. GAS.reservas/chaves/almox. Deploy @24. | Executar os 3 prepararIndice() no GAS Editor → smoke-test no browser → iniciar Fase 3 |
 | 2026-05-22 | Auditoria | 5 bugs corrigidos: (1) `prompt()` null nunca capturado em ChavesUI/ReservasUI/AlmoxUI (padrão `\|\| ''` consumia null antes do if); (2) `ReservasUI.salvar()` sempre criava — adicionado `GAS.reservas.atualizar` e dispatch condicional por id; (3) CSS `badge-accent`/`form-grid` indefinidos; (4) sanitização regex de email inconsistente em `IdentidadeAdmin._aprovar` vs `_carregarPendentes`; (5) `FsmGuardian.transitar()` ausente em `almoxarifado_engine.verificarAtrasos()`. CLAUDE.md atualizado com checklist auditoria pré-deploy. Deploy @26. | Executar prepararIndice() → smoke-test browser → iniciar Fase 3 |
 | 2026-05-22 | Fase 3 | `ContratadoRepository`+`ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository`+`SolicitacaoEngine` (FSM 9 estados + OrcamentoGuard stub + CQRS+cache), `contratacoes_controller.gs` (RBAC gestor/financeiro/rh). `pessoas_engine.gs`: Afastamentos FSM+impacto colaborador + Ocorrências. `colaborador_repository.gs`: afastamentos.json+ocorrencias.json. `pessoas_controller.gs`: 9 novos controllers RH. View SPA Pessoas (3 tabs) + Contratações (3 tabs). `SCHEMA_ABAS` corrigido (Contratados+SolicitacoesContratacao). Deploy @28. | `fase3_contratados_prepararIndice()` → `fase3_contratacoes_prepararIndice()` → smoke-test browser → iniciar Fase 4 |
+| 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
+| 2026-05-22 | Fase 4.5 | Cadastros Base + Gaps Críticos V1→V2: config_org.json (tiposOcorrencia/Afastamento), config_admin_service.gs (schema espaço completo: tipoEspaco/responsaveisPorTurno/itensFixos), admin_controller.gs CRIADO (ctrl_admin_*/ctrl_solicitacoes_*), modulos_registry_service.gs CRIADO (engine ausente referenciado em 6 arquivos), pccs_repository.gs CRIADO (PCCS→Cargos→Tabela salarial + ctrl_pccs_*), setup.gs (seeds: 8 espaços+PCCS+6 categorias), solicitacao_reserva_repository.gs+engine.gs CRIADOS (workflow SOL-xxx), reserva_engine.gs (validação sala contra catálogo SAL-xxx), almoxarifado_engine.gs (itensFixos por sala), contratos_engine.gs+financeiro_controller.gs (memória de cálculo de rubricas + versionamento), acesso_service.gs (ctrl_acesso_listarTodos/editarPapel), boot_service.gs (tiposAfastamento/Ocorrencia no bootstrap), index.html (ContratosDetailUI com grid memória+12 meses+histórico; cargo select; tipos dinâmicos; GAS.admin/acesso/rh/solicitacoes completo). Deploy @32. | setup_espacos_iniciais() + setup_pccs_inicial() no GAS Editor → smoke-test browser (campos select validados, ContratosDetailUI, painel aprovações) → Fase 5 |
 
 ---
 

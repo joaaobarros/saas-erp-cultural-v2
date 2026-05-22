@@ -576,6 +576,58 @@ function ctrl_rh_excluir_ocorrencia(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// PCCS — Plano de Cargos, Carreiras e Salários
+// ═══════════════════════════════════════════════════════════════════
+
+function ctrl_pccs_listar() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem acessar PCCS.');
+    return PCCSRepository.listarTodos();
+  }, 'ctrl_pccs_listar');
+}
+
+function ctrl_pccs_listarCargos() {
+  return GasResponse.wrap(function() {
+    return PCCSRepository.listarCargosParaSelect();
+  }, 'ctrl_pccs_listarCargos');
+}
+
+function ctrl_pccs_salvar(dados) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem salvar PCCS.');
+    return PCCSRepository.salvar(dados, ctx.email);
+  }, 'ctrl_pccs_salvar');
+}
+
+function ctrl_pccs_salvarCargo(pccsId, cargo) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem salvar cargos.');
+    return PCCSRepository.salvarCargo(pccsId, cargo, ctx.email);
+  }, 'ctrl_pccs_salvarCargo');
+}
+
+function ctrl_pccs_excluirCargo(pccsId, cargoId) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem excluir cargos.');
+    return PCCSRepository.excluirCargo(pccsId, cargoId, ctx.email);
+  }, 'ctrl_pccs_excluirCargo');
+}
+
+function ctrl_pccs_obterSalario(cargoId, nivel, classe, referencia) {
+  return GasResponse.wrap(function() {
+    return { salarioBase: PCCSRepository.obterSalarioPorPosicao(cargoId, nivel, classe, referencia) };
+  }, 'ctrl_pccs_obterSalario');
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════
 

@@ -225,6 +225,18 @@ var SistemaConfigService = (function () {
     return cfg.parametrosRH || _defaultParametrosRH();
   }
 
+  // ── Tipos de Ocorrência e Afastamento ────────────────────────────────────
+
+  function getTiposOcorrencia() {
+    var cfg = _getConfigOrg();
+    return (cfg.tiposOcorrencia || []).filter(function(t) { return t.ativo !== false; });
+  }
+
+  function getTiposAfastamento() {
+    var cfg = _getConfigOrg();
+    return (cfg.tiposAfastamento || []).filter(function(t) { return t.ativo !== false; });
+  }
+
   // ── Templates de Notificação ──────────────────────────────────────────────
 
   function getTemplateNotificacao(eventoId) {
@@ -363,6 +375,8 @@ var SistemaConfigService = (function () {
     getCamposCustom:          getCamposCustom,
     getParametrosRH:          getParametrosRH,
     getTemplateNotificacao:   getTemplateNotificacao,
+    getTiposOcorrencia:       getTiposOcorrencia,
+    getTiposAfastamento:      getTiposAfastamento,
     getLogoUrl:               getLogoUrl,
     getPaleta:                getPaleta,
     invalidarCache:           invalidarCache

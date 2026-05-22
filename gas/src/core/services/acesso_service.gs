@@ -424,3 +424,53 @@ function ctrl_acesso_revogar(params) {
     return AcessoService.revogarAcesso(Object.assign(params || {}, { emailAdmin: emailAdmin }));
   }, 'ctrl_acesso_revogar');
 }
+
+function ctrl_acesso_listarTodos() {
+  return GasResponse.wrap(function () {
+    var email = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    var papel  = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
+    var ehAdmin = (papel === 'admin' || papel === 'superadmin');
+    if (!ehAdmin) {
+      var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
+      ehAdmin = superAdmin && email.toLowerCase() === superAdmin;
+    }
+    if (!ehAdmin) throw new Error('Acesso negado: apenas administradores podem listar todos os usuários.');
+    return AcessoService.listarUsuarios();
+  }, 'ctrl_acesso_listarTodos');
+}
+
+function ctrl_acesso_editarPapel(params) {
+  return GasResponse.wrap(function () {
+    var emailAdmin = getEmailSessao();
+    var acesso = AcessoService.verificar(emailAdmin);
+    var papel  = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
+    var ehAdmin = (papel === 'admin' || papel === 'superadmin');
+    if (!ehAdmin) {
+      var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
+      ehAdmin = superAdmin && emailAdmin.toLowerCase() === superAdmin;
+    }
+    if (!ehAdmin) throw new Error('Acesso negado: apenas administradores podem editar papéis.');
+    if (!params || !params.email) throw new Error('Email do usuário é obrigatório.');
+
+    var PAPEIS_VALIDOS = ['colaborador','admin','superadmin','habilitador','comunicacao','rh'];
+    if (params.papel && PAPEIS_VALIDOS.indexOf(params.papel) === -1)
+      throw new Error('Papel inválido: ' + params.papel + '. Válidos: ' + PAPEIS_VALIDOS.join(', '));
+
+    modifyJSON('usuarios_acesso.json', function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var usr = lista.find(function(u) { return u.email === params.email; });
+      if (!usr) throw new Error('Usuário não encontrado: ' + params.email);
+      if (params.papel)  usr.papel  = params.papel;
+      if (params.setor)  usr.setor  = params.setor;
+      if (params.status) usr.status = params.status;
+      usr.atualizadoEm = agora();
+      usr.atualizadoPor = emailAdmin;
+      return lista;
+    });
+
+    AuditoriaService.registrar('USUARIO_PAPEL_EDITADO', 'acesso',
+      { email: params.email, papel: params.papel, setor: params.setor, admin: emailAdmin });
+    return { ok: true, email: params.email, papel: params.papel };
+  }, 'ctrl_acesso_editarPapel');
+}

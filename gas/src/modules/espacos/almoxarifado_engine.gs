@@ -97,7 +97,7 @@ var AlmoxarifadoEngine = (function () {
    * @param {string} orgId
    * @throws Error se item indisponível
    */
-  function assertItemDisponivel(itemId, qtdSolicitada, dataRetirada, dataDevolucao, orgId) {
+  function assertItemDisponivel(itemId, qtdSolicitada, dataRetirada, dataDevolucao, orgId, salaDestino) {
     var item = ReservasItensRepository.buscarItem(itemId, orgId);
     if (!item) throw new Error('Item não encontrado: ' + itemId);
     if (item.quantidadeTotal <= 0) throw new Error('Item "' + item.nome + '" não disponível para empréstimo.');
@@ -106,11 +106,25 @@ var AlmoxarifadoEngine = (function () {
       itemId, dataRetirada, dataDevolucao, orgId
     );
 
-    var disponivel = item.quantidadeTotal - emUso;
+    // Subtrai quantidade fixada em OUTRAS salas (itensFixos por espaço)
+    var fixadoEmOutrasSalas = 0;
+    try {
+      var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+      espacos.forEach(function(e) {
+        if (salaDestino && e.id === salaDestino) return; // mesma sala não bloqueia
+        if (e.itensFixos && e.itensFixos[itemId]) {
+          fixadoEmOutrasSalas += Number(e.itensFixos[itemId]) || 0;
+        }
+      });
+    } catch(_) {}
+
+    var disponivel = item.quantidadeTotal - emUso - fixadoEmOutrasSalas;
     if (qtdSolicitada > disponivel) {
       throw new Error(
         'Estoque insuficiente para "' + item.nome + '". ' +
-        'Disponível: ' + disponivel + ' | Solicitado: ' + qtdSolicitada
+        'Disponível: ' + disponivel +
+        (fixadoEmOutrasSalas > 0 ? ' (' + fixadoEmOutrasSalas + ' fixados em salas)' : '') +
+        ' | Solicitado: ' + qtdSolicitada
       );
     }
   }

@@ -382,6 +382,23 @@ var ContratoRepository = (function () {
 
   // ── Cálculos ──────────────────────────────────────────────────────
 
+  /**
+   * Modifica um contrato via callback transacional (para operações de memória de cálculo).
+   * @param {string} orgId
+   * @param {string} idContrato
+   * @param {function} fn — recebe o contrato e retorna o contrato modificado
+   */
+  function modificarContrato(orgId, idContrato, fn) {
+    modifyJSON(_ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = lista.findIndex(function(c) { return c.id === idContrato && c.orgId === orgId; });
+      if (idx < 0) throw new Error('Contrato não encontrado: ' + idContrato);
+      lista[idx] = fn(lista[idx]);
+      lista[idx].atualizadoEm = agora();
+      return lista;
+    });
+  }
+
   function _somarRubricas(rubricas) {
     return (rubricas || []).reduce(function (s, r) { return s + (r.valorTotal || 0); }, 0);
   }
@@ -510,6 +527,9 @@ var ContratoRepository = (function () {
 
     // Indicadores
     adicionarIndicador: adicionarIndicador,
+
+    // Modificação transacional
+    modificarContrato: modificarContrato,
 
     // Manutenção
     garantirCabecalhoIndice: _garantirCabecalhoIndice,

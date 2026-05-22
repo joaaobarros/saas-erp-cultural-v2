@@ -160,13 +160,36 @@ var ReservaEngine = (function () {
    * @param {string} orgId
    * @returns {Reserva}
    */
-  function criar(dados, autor, orgId) {
+  function criar(dados, autor, orgId, _bypassSolicitacao) {
     if (!dados.sala)       throw new Error('Sala é obrigatória.');
     if (!dados.data)       throw new Error('Data é obrigatória.');
     if (!dados.horaInicio) throw new Error('Horário de início é obrigatório.');
     if (!dados.horaTermino)throw new Error('Horário de término é obrigatório.');
     if (!dados.nomeAcao)   throw new Error('Nome da ação/evento é obrigatório.');
     if (!dados.responsavel)throw new Error('Responsável é obrigatório.');
+
+    // Validar sala contra catálogo (se catálogo tiver dados)
+    var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+    if (espacos && espacos.length > 0) {
+      var esp = espacos.find(function(e) {
+        return e.id === dados.sala && e.ativo !== false && e.aceitaReserva !== false;
+      });
+      if (!esp) throw new Error('Espaço inválido ou não reservável: ' + dados.sala);
+      dados._espacoNome = esp.nome;
+      dados.salaNome    = esp.nome;
+    }
+
+    // Roteamento: colaboradores sem permissão direta geram Solicitação
+    if (!_bypassSolicitacao &&
+        typeof SolicitacaoReservaEngine !== 'undefined' &&
+        !SolicitacaoReservaEngine.podeReservarDiretamente(autor)) {
+      return SolicitacaoReservaEngine.criar({
+        tipo:          'RESERVA',
+        espacoId:      dados.sala,
+        justificativa: dados.justificativa || '',
+        payload:       dados
+      }, autor);
+    }
 
     assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino);
 
@@ -183,6 +206,7 @@ var ReservaEngine = (function () {
         horaInicio:    dados.horaInicio,
         horaTermino:   dados.horaTermino,
         sala:          dados.sala,
+        salaNome:      dados.salaNome || dados.sala,
         turno:         dados.turno || _inferirTurno(dados.horaInicio),
         nomeAcao:      dados.nomeAcao,
         tipoAcao:      dados.tipoAcao || '',

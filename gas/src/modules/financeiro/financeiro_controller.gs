@@ -304,3 +304,44 @@ function fase4_aditivos_prepararIndice() {
     return { ok: true, mensagem: 'Aditivos usam apenas JSON canônico. Nenhum índice Sheet necessário nesta fase.' };
   }, 'fase4_aditivos_prepararIndice');
 }
+
+// ── Memória de Cálculo ────────────────────────────────────────────────────────
+
+function ctrl_contrato_adicionar_memoria_rubrica(idContrato, idMeta, idRubrica, item) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.adicionarItemMemoriaRubrica(idContrato, idMeta, idRubrica, item, ctx.email, ctx.orgId);
+  }, 'ctrl_contrato_adicionar_memoria_rubrica');
+}
+
+function ctrl_contrato_remover_memoria_rubrica(idContrato, idMeta, idRubrica, itemId) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.removerItemMemoriaRubrica(idContrato, idMeta, idRubrica, itemId, ctx.email, ctx.orgId);
+  }, 'ctrl_contrato_remover_memoria_rubrica');
+}
+
+// ── Histórico de Versões ──────────────────────────────────────────────────────
+
+function ctrl_contrato_historico(idContrato) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.listarVersoes(idContrato, ctx.orgId);
+  }, 'ctrl_contrato_historico');
+}
+
+function ctrl_contrato_versao(idContrato, versaoNum) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.obterVersao(idContrato, Number(versaoNum), ctx.orgId);
+  }, 'ctrl_contrato_versao');
+}
+
+// ── Indicadores ───────────────────────────────────────────────────────────────
+
+function ctrl_contrato_salvar_indicador(idContrato, idMeta, dados) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.salvarIndicador(idContrato, idMeta, dados, ctx.email, ctx.orgId);
+  }, 'ctrl_contrato_salvar_indicador');
+}

@@ -44,20 +44,25 @@ var ConfigAdminService = (function () {
     var agora_ = agora();
 
     var registro = {
-      id:                   id,
-      orgId:                orgId,
-      nome:                 String(espaco.nome).trim(),
-      descricao:            String(espaco.descricao || '').trim(),
-      capacidade:           Number(espaco.capacidade) || 0,
-      possuiChaves:         espaco.possuiChaves === true,
-      aceitaReserva:        espaco.aceitaReserva !== false,
-      horarioFuncionamento: espaco.horarioFuncionamento || {},
-      responsavelTurno:     espaco.responsavelTurno || {},
-      bloqueios:            espaco.bloqueios || [],
-      ativo:                espaco.ativo !== false,
-      criadoEm:             espaco.criadoEm || agora_,
-      atualizadoEm:         agora_,
-      criadoPor:            espaco.criadoPor || email
+      id:                     id,
+      orgId:                  orgId,
+      nome:                   String(espaco.nome).trim(),
+      tipoEspaco:             espaco.tipoEspaco || 'multiuso',
+      descricao:              String(espaco.descricao || '').trim(),
+      capacidade:             Number(espaco.capacidade) || 0,
+      possuiChaves:           espaco.possuiChaves === true,
+      aceitaReserva:          espaco.aceitaReserva !== false,
+      horarioFuncionamento:   espaco.horarioFuncionamento || { abertura: '08:00', fechamento: '22:00' },
+      responsaveisPorTurno:   espaco.responsaveisPorTurno || [],
+      itensFixos:             espaco.itensFixos || {},
+      equipamentosVinculados: espaco.equipamentosVinculados || [],
+      tags:                   espaco.tags || [],
+      bloqueios:              espaco.bloqueios || [],
+      ativo:                  espaco.ativo !== false,
+      criadoEm:               espaco.criadoEm || agora_,
+      atualizadoEm:           agora_,
+      criadoPor:              espaco.criadoPor || email,
+      versao:                 (espaco.versao || 0) + 1
     };
 
     modifyJSON('espacos_config.json', function(lista) {
@@ -212,6 +217,97 @@ var ConfigAdminService = (function () {
     return true;
   }
 
+  // ─── Itens Fixos por Espaço ───────────────────────────────────────────────
+
+  /**
+   * Fixa ou libera um item em um espaço (mapa itensFixos).
+   * @param {object} dados — { espacoId, itemId, quantidade, acao: 'fixar'|'liberar' }
+   */
+  function alternarItemFixo(dados) {
+    _assertAdmin();
+    if (!dados || !dados.espacoId || !dados.itemId)
+      throw new Error('alternarItemFixo requer espacoId e itemId.');
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    var resultado = null;
+
+    modifyJSON('espacos_config.json', function(lista) {
+      var espaco = lista.find(function(e) { return e.id === dados.espacoId && e.orgId === orgId; });
+      if (!espaco) throw new Error('Espaço não encontrado: ' + dados.espacoId);
+      if (!espaco.itensFixos) espaco.itensFixos = {};
+      if (dados.acao === 'liberar' || !dados.quantidade || dados.quantidade <= 0) {
+        delete espaco.itensFixos[dados.itemId];
+      } else {
+        espaco.itensFixos[dados.itemId] = Number(dados.quantidade);
+      }
+      espaco.atualizadoEm = agora();
+      resultado = espaco.itensFixos;
+      return lista;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('ITEM_FIXO_ALTERADO', 'espaco',
+      { entidadeId: dados.espacoId, itemId: dados.itemId, acao: dados.acao || 'fixar',
+        quantidade: dados.quantidade, orgId: orgId, usuario: email });
+    return resultado;
+  }
+
+  /**
+   * Retorna o responsável de um espaço para um dia da semana.
+   * @param {string} espacoId
+   * @param {number} diaSemana — 0=domingo … 6=sábado
+   * @returns {string|null} email do responsável
+   */
+  function obterResponsavelEspacoPorDia(espacoId, diaSemana) {
+    var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+    var esp = espacos.find(function(e) { return e.id === espacoId; });
+    if (!esp || !esp.responsaveisPorTurno || !esp.responsaveisPorTurno.length) return null;
+    var r = esp.responsaveisPorTurno.find(function(t) {
+      return !t.dias || t.dias.indexOf(diaSemana) >= 0;
+    });
+    return r ? r.email : null;
+  }
+
+  // ─── Categorias de Itens ──────────────────────────────────────────────────
+
+  /**
+   * Lista categorias de itens de almoxarifado.
+   */
+  function listarCategoriasItens() {
+    _assertAdmin();
+    try {
+      var orgId = getOrgConfig().orgId;
+      var lista = readJSON('categorias_itens_config.json');
+      return Array.isArray(lista)
+        ? lista.filter(function(c) { return c.orgId === orgId && c.ativo !== false; })
+        : [];
+    } catch(e) { return []; }
+  }
+
+  /**
+   * Cria ou atualiza uma categoria de item de almoxarifado.
+   */
+  function salvarCategoriaItem(dados) {
+    _assertAdmin();
+    if (!dados || !dados.nome) throw new Error('Nome da categoria é obrigatório.');
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    var id = dados.id || gerarId('cat');
+
+    modifyJSON('categorias_itens_config.json', function(lista) {
+      var idx = lista.findIndex(function(c) { return c.id === id && c.orgId === orgId; });
+      var registro = { id: id, orgId: orgId, nome: String(dados.nome).trim(),
+        descricao: String(dados.descricao || '').trim(), ativo: dados.ativo !== false,
+        atualizadoEm: agora(), criadoPor: dados.criadoPor || email };
+      if (idx >= 0) lista[idx] = registro; else lista.push(registro);
+      return lista;
+    });
+
+    AuditoriaService.registrar('CATEGORIA_ITEM_SALVA', 'admin',
+      { entidadeId: id, orgId: orgId, usuario: email, nome: dados.nome });
+    return id;
+  }
+
   // ─── Labels organizacionais ───────────────────────────────────────────────
 
   /**
@@ -268,15 +364,19 @@ var ConfigAdminService = (function () {
   }
 
   return {
-    listarEspacos:   listarEspacos,
-    salvarEspaco:    salvarEspaco,
-    desativarEspaco: desativarEspaco,
-    listarTurnos:    listarTurnos,
-    salvarTurno:     salvarTurno,
-    listarSetores:   listarSetores,
-    salvarSetor:     salvarSetor,
-    listarModulos:   listarModulos,
-    toggleModulo:    toggleModulo
+    listarEspacos:               listarEspacos,
+    salvarEspaco:                salvarEspaco,
+    desativarEspaco:             desativarEspaco,
+    alternarItemFixo:            alternarItemFixo,
+    obterResponsavelEspacoPorDia: obterResponsavelEspacoPorDia,
+    listarCategoriasItens:       listarCategoriasItens,
+    salvarCategoriaItem:         salvarCategoriaItem,
+    listarTurnos:                listarTurnos,
+    salvarTurno:                 salvarTurno,
+    listarSetores:               listarSetores,
+    salvarSetor:                 salvarSetor,
+    listarModulos:               listarModulos,
+    toggleModulo:                toggleModulo
   };
 
 })();

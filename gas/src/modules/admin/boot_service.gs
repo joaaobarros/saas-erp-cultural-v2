@@ -61,17 +61,25 @@ var BootService = (function () {
 
     var modulosAtivos = SistemaConfigService.getModulosAtivos();
 
+    var tiposAfastamento = [];
+    var tiposOcorrencia  = [];
+    try {
+      tiposAfastamento = SistemaConfigService.getTiposAfastamento ? SistemaConfigService.getTiposAfastamento() : [];
+      tiposOcorrencia  = SistemaConfigService.getTiposOcorrencia  ? SistemaConfigService.getTiposOcorrencia()  : [];
+    } catch(_e) {}
+
     var resultado = {
-      orgId:        orgId,
-      orgConfig:    orgConfig,
-      usuarioEmail: email,
-      permissoes:   permissoes,
-      modulosAtivos: modulosAtivos,
-      // SistemaConfigService usa 'label' como nome exibível — mapear para 'nome' p/ o frontend
-      setores:      setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
-      espacos:      espacos,
-      itens:        itens,
-      timestamp:    agora()
+      orgId:           orgId,
+      orgConfig:       orgConfig,
+      usuarioEmail:    email,
+      permissoes:      permissoes,
+      modulosAtivos:   modulosAtivos,
+      setores:         setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
+      espacos:         espacos,
+      itens:           itens,
+      tiposAfastamento: tiposAfastamento,
+      tiposOcorrencia:  tiposOcorrencia,
+      timestamp:       agora()
     };
 
     cache.put(chave, JSON.stringify(resultado), _CACHE_TTL);

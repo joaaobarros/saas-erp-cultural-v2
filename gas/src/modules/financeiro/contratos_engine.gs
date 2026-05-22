@@ -245,14 +245,151 @@ var ContratosEngine = (function () {
     if (!idContrato || !idMeta) throw new Error('idContrato e idMeta são obrigatórios.');
     if (!dados || !dados.nome)  throw new Error('Nome da rubrica é obrigatório.');
 
+    // Calcular valorTotal a partir da memória de cálculo, se fornecida
     var mem = Array.isArray(dados.memoriaCalculo) ? dados.memoriaCalculo : [];
-    if (!mem.length) throw new Error('Memória de cálculo é obrigatória (ao menos 1 item).');
+    if (mem.length > 0) {
+      dados.valorTotal = calcularTotalRubrica(mem);
+    }
 
     var idRubrica = ContratoRepository.adicionarRubrica(orgId, idContrato, idMeta, dados);
+
+    // Salvar versão do contrato após cada escrita de rubrica
+    try { salvarVersaoContrato(idContrato, emailOperador, orgId); } catch(_) {}
+
     _audit('CONTRATO_RUBRICA_SALVA', {
       idContrato: idContrato, idMeta: idMeta, idRubrica: idRubrica, operador: emailOperador || ''
     });
     return idRubrica;
+  }
+
+  /**
+   * Adiciona um item à memória de cálculo de uma rubrica.
+   */
+  function adicionarItemMemoriaRubrica(idContrato, idMeta, idRubrica, item, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    var id = item.id || gerarId('mem');
+    var novoItem = {
+      id:        id,
+      descricao: String(item.descricao || '').trim(),
+      metrica:   item.metrica || 'UN',
+      qtd:       Number(item.qtd || 0),
+      valorUnit: Number(item.valorUnit || 0),
+      subtotal:  Number(item.qtd || 0) * Number(item.valorUnit || 0),
+      obs:       String(item.obs || '').trim()
+    };
+
+    ContratoRepository.modificarContrato(orgId, idContrato, function(contrato) {
+      var meta = (contrato.metas || []).find(function(m) { return m.id === idMeta; });
+      if (!meta) throw new Error('Meta não encontrada: ' + idMeta);
+      var rub = (meta.rubricas || []).find(function(r) { return r.id === idRubrica; });
+      if (!rub) throw new Error('Rubrica não encontrada: ' + idRubrica);
+      if (!Array.isArray(rub.memoriaCalculo)) rub.memoriaCalculo = [];
+      var idx = rub.memoriaCalculo.findIndex(function(i) { return i.id === id; });
+      if (idx >= 0) rub.memoriaCalculo[idx] = novoItem; else rub.memoriaCalculo.push(novoItem);
+      rub.valorTotal = calcularTotalRubrica(rub.memoriaCalculo);
+      return contrato;
+    });
+
+    _audit('MEMORIA_CALCULO_ADICIONADA', { idContrato: idContrato, idRubrica: idRubrica, operador: emailOperador || '' });
+    try { salvarVersaoContrato(idContrato, emailOperador, orgId); } catch(_) {}
+    return novoItem;
+  }
+
+  /**
+   * Remove um item da memória de cálculo de uma rubrica.
+   */
+  function removerItemMemoriaRubrica(idContrato, idMeta, idRubrica, itemId, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+
+    ContratoRepository.modificarContrato(orgId, idContrato, function(contrato) {
+      var meta = (contrato.metas || []).find(function(m) { return m.id === idMeta; });
+      if (!meta) throw new Error('Meta não encontrada: ' + idMeta);
+      var rub = (meta.rubricas || []).find(function(r) { return r.id === idRubrica; });
+      if (!rub) throw new Error('Rubrica não encontrada: ' + idRubrica);
+      rub.memoriaCalculo = (rub.memoriaCalculo || []).filter(function(i) { return i.id !== itemId; });
+      rub.valorTotal = calcularTotalRubrica(rub.memoriaCalculo);
+      return contrato;
+    });
+
+    _audit('MEMORIA_CALCULO_REMOVIDA', { idContrato: idContrato, idRubrica: idRubrica, itemId: itemId, operador: emailOperador || '' });
+    return true;
+  }
+
+  /**
+   * Calcula o total de uma rubrica somando os subtotais da memória de cálculo.
+   */
+  function calcularTotalRubrica(memoriaCalculo) {
+    if (!Array.isArray(memoriaCalculo)) return 0;
+    return memoriaCalculo.reduce(function(soma, item) {
+      var sub = item.subtotal !== undefined ? Number(item.subtotal) :
+        (Number(item.qtd || 0) * Number(item.valorUnit || 0));
+      return soma + sub;
+    }, 0);
+  }
+
+  /**
+   * Salva um snapshot do contrato no histórico de versões.
+   * Chamado automaticamente após cada escrita de rubrica/meta.
+   */
+  function salvarVersaoContrato(idContrato, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    var contrato = ContratoRepository.buscarPorId(orgId, idContrato);
+    if (!contrato) return;
+
+    var versaoNum = 1;
+    try {
+      var versoes = readJSON('contratos_versoes.json');
+      if (!Array.isArray(versoes)) versoes = [];
+      var existentes = versoes.filter(function(v) { return v.contratoId === idContrato && v.orgId === orgId; });
+      versaoNum = existentes.length + 1;
+    } catch(_) {}
+
+    var snapshot = {
+      id:          gerarId('csv'),
+      contratoId:  idContrato,
+      orgId:       orgId,
+      versao:      versaoNum,
+      snapshot:    JSON.parse(JSON.stringify(contrato)),
+      criadoEm:    agora(),
+      criadoPor:   emailOperador || ''
+    };
+
+    modifyJSON('contratos_versoes.json', function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      lista.push(snapshot);
+      return lista;
+    });
+
+    return snapshot;
+  }
+
+  /**
+   * Lista histórico de versões de um contrato.
+   */
+  function listarVersoes(idContrato, orgId) {
+    orgId = orgId || _orgId();
+    try {
+      var lista = readJSON('contratos_versoes.json');
+      if (!Array.isArray(lista)) return [];
+      return lista
+        .filter(function(v) { return v.contratoId === idContrato && v.orgId === orgId; })
+        .sort(function(a, b) { return b.versao - a.versao; })
+        .map(function(v) { return { id: v.id, versao: v.versao, criadoEm: v.criadoEm, criadoPor: v.criadoPor }; });
+    } catch(_) { return []; }
+  }
+
+  /**
+   * Retorna o snapshot de uma versão específica.
+   */
+  function obterVersao(idContrato, versaoNum, orgId) {
+    orgId = orgId || _orgId();
+    try {
+      var lista = readJSON('contratos_versoes.json');
+      if (!Array.isArray(lista)) return null;
+      return lista.find(function(v) {
+        return v.contratoId === idContrato && v.orgId === orgId && v.versao === versaoNum;
+      }) || null;
+    } catch(_) { return null; }
   }
 
   function excluirRubrica(idContrato, idMeta, idRubrica, emailOperador, orgId) {
@@ -359,6 +496,16 @@ var ContratosEngine = (function () {
     // Rubricas
     salvarRubrica:     salvarRubrica,
     excluirRubrica:    excluirRubrica,
+
+    // Memória de Cálculo
+    adicionarItemMemoriaRubrica: adicionarItemMemoriaRubrica,
+    removerItemMemoriaRubrica:   removerItemMemoriaRubrica,
+    calcularTotalRubrica:        calcularTotalRubrica,
+
+    // Versionamento
+    salvarVersaoContrato: salvarVersaoContrato,
+    listarVersoes:        listarVersoes,
+    obterVersao:          obterVersao,
 
     // Indicadores
     salvarIndicador:   salvarIndicador,
