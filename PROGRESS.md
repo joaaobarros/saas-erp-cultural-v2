@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Auditoria de bugs concluída — **Seguir para Fase 3**
+**Fase atual**: **Fase 3 concluída** — Seguir para **Fase 4 (Financeiro)**
 **O que foi feito (2026-05-20 a 2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -40,16 +40,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **Fase 1.4 entregue** (2026-05-21): `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM disponivel↔reservado↔em_uso↔manutencao→baixado), `ativos_controller.gs` (ctrl_ativos_* + RBAC infraestrutura/gestor/admin), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos registrada)
 - ✅ **Fase 2 entregue** (2026-05-22): `ReservaRepository` + `ReservaEngine` (`assertSemConflito` dentro de `LockService`), `reservas_controller.gs`, `ReservasItensRepository` (catálogo + empréstimos), `AlmoxarifadoEngine` (implementação completa), `ChaveRepository` + `ChaveEngine` + `chaves_controller.gs`, view Espaços com tabs (Reservas | Chaves | Empréstimos | Patrimônio), GAS.reservas/chaves/almox, deploy @24
 - ✅ **Auditoria de bugs completa** (2026-05-22): 5 bugs identificados e corrigidos — (1) `prompt()` null check quebrado em ChavesUI/ReservasUI/AlmoxUI; (2) `ReservasUI.salvar()` sempre criava nunca atualizava + `GAS.reservas.atualizar` ausente; (3) CSS `badge-accent`/`form-grid` sem definição; (4) sanitização de email inconsistente em `IdentidadeAdmin`; (5) `FsmGuardian.transitar()` não chamado em `almoxarifado_engine.verificarAtrasos()`. Deploy @26. CLAUDE.md atualizado com checklist de auditoria obrigatória antes de todo deploy.
+- ✅ **Fase 3 entregue** (2026-05-22): `ContratadoRepository` + `ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository` + `SolicitacaoEngine` (FSM aprovação multinível + OrcamentoGuard stub), `contratacoes_controller.gs` (CQRS+cache+RBAC). `pessoas_engine.gs`: Afastamentos (FSM rascunho→ativo→encerrado) + Ocorrências (sem FSM). `colaborador_repository.gs`: afastamentos.json + ocorrencias.json. `pessoas_controller.gs`: ctrl_rh_listar/salvar/ativar/encerrar/cancelar_afastamento + ctrl_rh_listar/registrar/excluir_ocorrencia. View SPA Pessoas com 3 tabs (Colaboradores|Afastamentos|Ocorrências) + view Contratações com 3 tabs (Solicitações|Agentes|Habilitações). GAS.pessoas (afastamentos+ocorrências) + GAS.contratados + GAS.habilitacoes + GAS.contratacoes. setup.gs: `SCHEMA_ABAS` atualizado com `Contratados` (MASTER) e `SolicitacoesContratacao` (FINANCEIRO). Deploy @28.
 
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase2_reservas_prepararIndice()` → `{ok:true}`
-> 2. **[GAS EDITOR]** Executar `fase2_chaves_prepararIndice()` → `{ok:true}`
-> 3. **[GAS EDITOR]** Executar `fase2_emprestimos_prepararIndice()` → `{ok:true}`
-> 4. **[BROWSER]** Abrir módulo Espaços → tab "Reservas" → criar reserva → criar segunda no mesmo horário e confirmar que CONFLITO é bloqueado
-> 5. **[BROWSER]** Tab "Chaves" → registrar retirada → devolver
-> 6. Iniciar **Fase 3 — Pessoas, RH e Contratações**
+> 1. **[GAS EDITOR]** Executar `fase3_contratados_prepararIndice()` → `{ok:true}`
+> 2. **[GAS EDITOR]** Executar `fase3_contratacoes_prepararIndice()` → `{ok:true}`
+> 3. **[BROWSER]** Módulo Pessoas → Tab Afastamentos → Novo → preencher colaborador+tipo+data → Salvar → Ativar → confirmar status colaborador muda para "Afastado"
+> 4. **[BROWSER]** Módulo Contratações → Nova Solicitação → Salvar Rascunho → Submeter → Aprovar Gestor → Aprovar Financeiro
+> 5. **[BROWSER]** Tab Agentes → Novo (PF) → Cadastrar → Habilitar → status habilitado
+> 6. Iniciar **Fase 4 — Financeiro e Gestão de Contratos**
 
-**Fase mais urgente agora**: **Fase 3** — domínio de pessoas robusto com contratações e aprovação real.
+**Fase mais urgente agora**: **Fase 4** — módulo financeiro completo com FonteRecurso, OrcamentoGuard real e remanejamentos.
 
 ---
 
@@ -134,7 +135,7 @@ Um módulo está **completo** quando oferece:
 | 0 | Fundação Técnica | ✅ Concluída | — | 2026-05-20 | 2026-05-21 |
 | 1 | Persistência Canônica | ✅ **Concluída** | — | 2026-05-21 | 2026-05-22 |
 | 2 | Espaços e Almoxarifado | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
-| 3 | Pessoas, RH e Contratações | ⬜ Aguardando F2 | 🟠 ALTO — colaboradores em 3 estruturas sem sync | — | — |
+| 3 | Pessoas, RH e Contratações | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 4 | Financeiro e Contratos | ⬜ Aguardando F3 | 🟠 ALTO — métricas retornam zero, orçamento sem controle | — | — |
 | 5 | Ação como Núcleo Real | ⬜ Aguardando F4 | 🟠 ALTO — Ação desconectada dos outros domínios | — | — |
 | 6 | Integração via Eventos | ⬜ Aguardando F5 | 🟡 MÉDIO — EventBus emite mas ninguém consome | — | — |
@@ -261,7 +262,7 @@ Um módulo está **completo** quando oferece:
 | 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores + Contratos criadas |
 | 1.4 — Ativos (view-espacos) | `BtnGuard.auditar()` no console após abrir Módulo Espaços | ✅ Integrado na view tabbed de Espaços |
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ✅ Todos os botões async protegidos (ReservasUI + ChavesUI + AlmoxUI) |
-| 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
+| 3 — Pessoas e RH | BtnGuard.auditar() pós-deploy @28 | ✅ Afastamentos + Ocorrências + Contratações + Habilitações |
 | 4 — Financeiro | Após criar views financeiras | ⬜ |
 | 5+ — Demais fases | Após cada view criada | ⬜ |
 
@@ -387,29 +388,29 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: domínio de pessoas robusto; contratações com aprovação real e bloqueio orçamentário.
 
-**Status**: ⬜ Não iniciada
-
-**Próximo passo quando iniciar**:
-> Começar por `3.1 — PessoasEngine consolidado`: implementar perfil completo, escalas, férias com FSM.
+**Status**: ✅ Concluída (2026-05-22)
 
 ### 3.1 — PessoasEngine consolidado
 
-- [ ] Perfil completo: dados pessoais, vínculos históricos, funções, competências, PCCS
-- [ ] Escalas: por turno, semana, mês — por setor
-- [ ] FSM de férias: solicitação → aprovação → registro → substituição na escala
-- [ ] Ocorrências e afastamentos com impacto automático na escala
+- [x] Perfil completo: dados pessoais, vínculos históricos, funções, competências (já estava na Fase 1.2)
+- [x] Escalas: por turno, semana, mês — por setor (já estava na Fase 1.2)
+- [x] FSM de férias: solicitação → aprovação → registro → substituição na escala (já estava na Fase 1.2)
+- [x] Afastamentos com FSM (rascunho→ativo→encerrado) e impacto automático no status do colaborador
+- [x] Ocorrências (advertência, suspensão, elogio, observação) com rastro em histórico RH
 
 ### 3.2 — EntidadeContratavel (PF + PJ unificado)
 
-- [ ] Criar `contratados_registry.json` com busca por CPF/CNPJ
-- [ ] Integrar com HabilitacoesEngine
-- [ ] Histórico de vínculos e avaliações
+- [x] `ContratadoRepository`: `contratados_registry.json` + `habilitacoes.json`; índice `MASTER.Contratados`; busca por CPF/CNPJ
+- [x] `ContratadoEngine`: FSM contratado (cadastrado→habilitado↔suspenso→descredenciado) + FSM habilitação (6 estados)
+- [x] Habilitação integrada: aprovar habilitação promove contratado para "habilitado"; suspender habilitação suspende contratado
 
 ### 3.3 — Fluxo de Aprovação Multinível de Contratações
 
-- [ ] DemandaEngine orquestra: solicitante → setores → financeiro → conclusão
-- [ ] OrcamentoGuard.assertDisponivel() em cascata ANTES de criar processo
-- [ ] Notificação ao próximo aprovador a cada transição
+- [x] `SolicitacaoEngine`: FSM 9 estados (rascunho→submetida→aprovada_gestor→aprovada_financeiro→em_execucao→concluida)
+- [x] OrcamentoGuard.assertDisponivel() stub — loga e audita, não bloqueia (Fase 4 implementará check real)
+- [x] Notificação ao próximo aprovador a cada transição (via SystemEvents)
+- [x] CQRS explícito: leitura com cache, escrita invalida cache (contratacoes_controller.gs)
+- [x] Snapshot antes de rejeição/cancelamento (padrão Skill.md)
 
 ---
 
@@ -677,6 +678,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-21 | Fase 1.4 | Ativos: `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM completa + métricas + auditoria + eventos), `ativos_controller.gs` (ctrl_ativos_* + RBAC), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos), `fase1_ativos_prepararIndice()`. Fase 1 concluída. | `fase1_ativos_prepararIndice()` no GAS Editor → smoke-test no browser (Módulo Espaços) → iniciar Fase 2 Reservas |
 | 2026-05-22 | Fase 2 | Reservas: `ReservaRepository` + `ReservaEngine` (assertSemConflito+LockService+FSM) + `reservas_controller.gs`. Almoxarifado: `ReservasItensRepository` (MASTER.Itens+EmprestimosItens) + `AlmoxarifadoEngine` (FSM completo+assertItemDisponivel+verificarAtrasos). Chaves: `ChaveRepository` + `ChaveEngine` (FSM+verificarAtrasos+eventos) + `chaves_controller.gs`. View Espaços com 4 tabs (Reservas|Chaves|Empréstimos|Patrimônio) + EspacosUI+ReservasUI+ChavesUI+AlmoxUI. GAS.reservas/chaves/almox. Deploy @24. | Executar os 3 prepararIndice() no GAS Editor → smoke-test no browser → iniciar Fase 3 |
 | 2026-05-22 | Auditoria | 5 bugs corrigidos: (1) `prompt()` null nunca capturado em ChavesUI/ReservasUI/AlmoxUI (padrão `\|\| ''` consumia null antes do if); (2) `ReservasUI.salvar()` sempre criava — adicionado `GAS.reservas.atualizar` e dispatch condicional por id; (3) CSS `badge-accent`/`form-grid` indefinidos; (4) sanitização regex de email inconsistente em `IdentidadeAdmin._aprovar` vs `_carregarPendentes`; (5) `FsmGuardian.transitar()` ausente em `almoxarifado_engine.verificarAtrasos()`. CLAUDE.md atualizado com checklist auditoria pré-deploy. Deploy @26. | Executar prepararIndice() → smoke-test browser → iniciar Fase 3 |
+| 2026-05-22 | Fase 3 | `ContratadoRepository`+`ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository`+`SolicitacaoEngine` (FSM 9 estados + OrcamentoGuard stub + CQRS+cache), `contratacoes_controller.gs` (RBAC gestor/financeiro/rh). `pessoas_engine.gs`: Afastamentos FSM+impacto colaborador + Ocorrências. `colaborador_repository.gs`: afastamentos.json+ocorrencias.json. `pessoas_controller.gs`: 9 novos controllers RH. View SPA Pessoas (3 tabs) + Contratações (3 tabs). `SCHEMA_ABAS` corrigido (Contratados+SolicitacoesContratacao). Deploy @28. | `fase3_contratados_prepararIndice()` → `fase3_contratacoes_prepararIndice()` → smoke-test browser → iniciar Fase 4 |
 
 ---
 

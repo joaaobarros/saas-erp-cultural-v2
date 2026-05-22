@@ -27,6 +27,8 @@ var ColaboradorRepository = (function () {
   var _ARQUIVO_ESCALAS       = 'escalas.json';
   var _ARQUIVO_AVALIACOES    = 'avaliacoes.json';
   var _ARQUIVO_HISTORICO     = 'historico_rh.json';
+  var _ARQUIVO_AFASTAMENTOS  = 'afastamentos.json';
+  var _ARQUIVO_OCORRENCIAS   = 'ocorrencias.json';
 
   var _SHEET_KEY = 'SHEET_ID_EQUIPES';
   var _ABA       = 'Funcionarios';
@@ -368,6 +370,100 @@ var ColaboradorRepository = (function () {
     return true;
   }
 
+  // ── Afastamentos ─────────────────────────────────────────────────
+
+  function listarAfastamentos(filtros) {
+    var todos = lerJSON(_ARQUIVO_AFASTAMENTOS) || [];
+    filtros = filtros || {};
+    return todos.filter(function (a) {
+      if (filtros.orgId          && a.orgId          !== filtros.orgId)          return false;
+      if (filtros.idColaborador  && a.idColaborador  !== filtros.idColaborador)  return false;
+      if (filtros.status         && a.status         !== filtros.status)         return false;
+      if (filtros.tipo           && a.tipo           !== filtros.tipo)           return false;
+      return true;
+    }).sort(function (a, b) {
+      return String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''));
+    });
+  }
+
+  function buscarAfastamentoPorId(id) {
+    var todos = lerJSON(_ARQUIVO_AFASTAMENTOS) || [];
+    for (var i = 0; i < todos.length; i++) {
+      if (todos[i].id === id) return todos[i];
+    }
+    return null;
+  }
+
+  function salvarAfastamento(dados) {
+    dados = dados || {};
+    var isNovo = !dados.id;
+    var agr    = _agora();
+    if (isNovo) {
+      dados.id       = 'afa_' + Date.now();
+      dados.criadoEm = agr;
+      if (!dados.status) dados.status = 'rascunho';
+    }
+    dados.atualizadoEm = agr;
+    modifyJSON(_ARQUIVO_AFASTAMENTOS, function (lista) {
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === dados.id) { idx = i; break; }
+      }
+      if (idx >= 0) lista[idx] = dados; else lista.push(dados);
+      return lista;
+    });
+    return { id: dados.id, isNovo: isNovo };
+  }
+
+  function excluirAfastamento(id) {
+    modifyJSON(_ARQUIVO_AFASTAMENTOS, function (lista) {
+      return lista.filter(function (a) { return a.id !== id; });
+    });
+    return true;
+  }
+
+  // ── Ocorrências ───────────────────────────────────────────────────
+
+  function listarOcorrencias(filtros) {
+    var todos = lerJSON(_ARQUIVO_OCORRENCIAS) || [];
+    filtros = filtros || {};
+    return todos.filter(function (o) {
+      if (filtros.orgId         && o.orgId         !== filtros.orgId)         return false;
+      if (filtros.idColaborador && o.idColaborador !== filtros.idColaborador) return false;
+      if (filtros.tipo          && o.tipo          !== filtros.tipo)          return false;
+      return true;
+    }).sort(function (a, b) {
+      return String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''));
+    });
+  }
+
+  function salvarOcorrencia(dados) {
+    dados = dados || {};
+    var isNovo = !dados.id;
+    var agr    = _agora();
+    if (isNovo) {
+      dados.id       = 'oco_' + Date.now();
+      dados.criadoEm = agr;
+    }
+    dados.atualizadoEm = agr;
+    modifyJSON(_ARQUIVO_OCORRENCIAS, function (lista) {
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === dados.id) { idx = i; break; }
+      }
+      if (idx >= 0) lista[idx] = dados; else lista.push(dados);
+      return lista;
+    });
+    return { id: dados.id, isNovo: isNovo };
+  }
+
+  function excluirOcorrencia(id) {
+    modifyJSON(_ARQUIVO_OCORRENCIAS, function (lista) {
+      return lista.filter(function (o) { return o.id !== id; });
+    });
+    return true;
+  }
+
   // ── Manutenção do índice ──────────────────────────────────────────
 
   function protegerIndice() {
@@ -464,6 +560,17 @@ var ColaboradorRepository = (function () {
     listarHistorico:      listarHistorico,
     salvarHistorico:      salvarHistorico,
     excluirHistorico:     excluirHistorico,
+
+    // Afastamentos
+    listarAfastamentos:       listarAfastamentos,
+    buscarAfastamentoPorId:   buscarAfastamentoPorId,
+    salvarAfastamento:        salvarAfastamento,
+    excluirAfastamento:       excluirAfastamento,
+
+    // Ocorrências
+    listarOcorrencias:        listarOcorrencias,
+    salvarOcorrencia:         salvarOcorrencia,
+    excluirOcorrencia:        excluirOcorrencia,
 
     // Manutenção
     garantirCabecalhoIndice: _garantirCabecalhoIndice,

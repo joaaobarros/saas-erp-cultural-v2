@@ -21,6 +21,15 @@
  *   concluido → [] (terminal)
  *   cancelado → [] (terminal)
  *
+ * FSM — Afastamento:
+ *   rascunho → ativo, cancelado
+ *   ativo    → encerrado, cancelado
+ *   encerrado → [] (terminal)
+ *   cancelado → [] (terminal)
+ *
+ * Ao ativar afastamento: status colaborador → afastado
+ * Ao encerrar/cancelar afastamento (se colaborador estava afastado): status → ativo
+ *
  * @depends modules/pessoas/colaborador_repository.gs (ColaboradorRepository)
  *          core/services/fsm_guardian.gs (FsmGuardian)
  *          core/services/auditoria_service.gs (AuditoriaService)
@@ -77,9 +86,34 @@ var _TRANSICOES_FERIAS = {
   cancelado:       []
 };
 
+var STATUS_AFASTAMENTO = Object.freeze({
+  RASCUNHO:  'rascunho',
+  ATIVO:     'ativo',
+  ENCERRADO: 'encerrado',
+  CANCELADO: 'cancelado'
+});
+
+var TIPO_AFASTAMENTO = Object.freeze({
+  MEDICO:         'medico',      // licença médica / atestado
+  INSS:           'inss',        // auxílio-doença INSS
+  ACIDENTE:       'acidente',    // acidente de trabalho (CAT)
+  MATERNIDADE:    'maternidade',
+  PATERNIDADE:    'paternidade',
+  LICENCA_PESSOAL:'licenca_pessoal',
+  OUTRO:          'outro'
+});
+
+var _TRANSICOES_AFASTAMENTO = {
+  rascunho:  ['ativo', 'cancelado'],
+  ativo:     ['encerrado', 'cancelado'],
+  encerrado: [],
+  cancelado: []
+};
+
 if (typeof FsmGuardian !== 'undefined') {
-  FsmGuardian.registrar('colaborador_status', _TRANSICOES_COLABORADOR);
-  FsmGuardian.registrar('ferias_status',      _TRANSICOES_FERIAS);
+  FsmGuardian.registrar('colaborador_status',  _TRANSICOES_COLABORADOR);
+  FsmGuardian.registrar('ferias_status',       _TRANSICOES_FERIAS);
+  FsmGuardian.registrar('afastamento_status',  _TRANSICOES_AFASTAMENTO);
 }
 
 // ── Engine ────────────────────────────────────────────────────────────
@@ -536,6 +570,167 @@ var PessoasEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // AFASTAMENTOS
+  // ──────────────────────────────────────────────────────────────────
+
+  function _transitarAfastamento(afastamento, novoStatus, emailOperador, dados) {
+    var atual = afastamento.status || 'rascunho';
+    if (typeof FsmGuardian !== 'undefined') {
+      FsmGuardian.validarTransicao('afastamento_status', atual, novoStatus);
+    }
+    dados = dados || {};
+    afastamento.status = novoStatus;
+    afastamento[novoStatus + 'Em']  = new Date().toISOString();
+    afastamento[novoStatus + 'Por'] = emailOperador || '';
+    if (dados.observacao) afastamento.observacao = dados.observacao;
+    if (dados.dataFim)    afastamento.dataFim    = dados.dataFim;
+    ColaboradorRepository.salvarAfastamento(afastamento);
+    _audit('AFASTAMENTO_' + novoStatus.toUpperCase(), {
+      id: afastamento.id, idColaborador: afastamento.idColaborador,
+      de: atual, para: novoStatus, operador: emailOperador
+    });
+    return afastamento;
+  }
+
+  function listarAfastamentos(filtros, orgId) {
+    orgId   = orgId || _orgId();
+    filtros = Object.assign({ orgId: orgId }, filtros || {});
+    return ColaboradorRepository.listarAfastamentos(filtros);
+  }
+
+  function registrarAfastamento(dados, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    dados = dados || {};
+    if (!dados.idColaborador) throw new Error('idColaborador é obrigatório.');
+    if (!dados.tipo)          throw new Error('tipo de afastamento é obrigatório.');
+    if (!dados.dataInicio)    throw new Error('dataInicio é obrigatório.');
+
+    var c = ColaboradorRepository.buscarPorId(orgId, dados.idColaborador);
+    if (!c) throw new Error('Colaborador não encontrado: ' + dados.idColaborador);
+
+    dados.orgId      = orgId;
+    dados.registradoPor = emailOperador || '';
+    dados.status     = STATUS_AFASTAMENTO.RASCUNHO;
+
+    var r = ColaboradorRepository.salvarAfastamento(dados);
+    _audit('AFASTAMENTO_REGISTRADO', {
+      id: r.id, idColaborador: dados.idColaborador,
+      tipo: dados.tipo, operador: emailOperador || ''
+    });
+    return r.id;
+  }
+
+  function ativarAfastamento(id, emailOperador, orgId) {
+    var af = ColaboradorRepository.buscarAfastamentoPorId(id);
+    if (!af) throw new Error('Afastamento não encontrado: ' + id);
+    _transitarAfastamento(af, STATUS_AFASTAMENTO.ATIVO, emailOperador, {});
+
+    // Impacto na escala: muda status do colaborador
+    try {
+      mudarStatus(af.idColaborador, STATUS_COLABORADOR.AFASTADO, emailOperador, af.orgId);
+    } catch (e) {
+      Logger.warn('pessoas_engine', 'ativarAfastamento', 'Falha ao mudar status colaborador: ' + e.message);
+    }
+    return { ok: true, id: id };
+  }
+
+  function encerrarAfastamento(id, dadosConclusao, emailOperador, orgId) {
+    var af = ColaboradorRepository.buscarAfastamentoPorId(id);
+    if (!af) throw new Error('Afastamento não encontrado: ' + id);
+    // Snapshot antes de encerrar (padrão Skill.md)
+    _audit('AFASTAMENTO_SNAPSHOT_ENCERRAR', {
+      snapshot: JSON.parse(JSON.stringify(af)), operador: emailOperador || ''
+    });
+    _transitarAfastamento(af, STATUS_AFASTAMENTO.ENCERRADO, emailOperador, dadosConclusao || {});
+
+    // Retornar colaborador a ativo se estava afastado
+    try {
+      var c = ColaboradorRepository.buscarPorId(af.orgId, af.idColaborador);
+      if (c && c.status === 'afastado') {
+        mudarStatus(af.idColaborador, STATUS_COLABORADOR.ATIVO, emailOperador, af.orgId);
+      }
+    } catch (e) {
+      Logger.warn('pessoas_engine', 'encerrarAfastamento', 'Falha ao reativar colaborador: ' + e.message);
+    }
+    return { ok: true, id: id };
+  }
+
+  function cancelarAfastamento(id, motivo, emailOperador) {
+    var af = ColaboradorRepository.buscarAfastamentoPorId(id);
+    if (!af) throw new Error('Afastamento não encontrado: ' + id);
+    var statusAnterior = af.status;
+    _transitarAfastamento(af, STATUS_AFASTAMENTO.CANCELADO, emailOperador, { observacao: motivo });
+
+    // Se estava ativo, reativar colaborador
+    if (statusAnterior === 'ativo') {
+      try {
+        var c = ColaboradorRepository.buscarPorId(af.orgId, af.idColaborador);
+        if (c && c.status === 'afastado') {
+          mudarStatus(af.idColaborador, STATUS_COLABORADOR.ATIVO, emailOperador, af.orgId);
+        }
+      } catch (e) {
+        Logger.warn('pessoas_engine', 'cancelarAfastamento', 'Falha ao reativar colaborador: ' + e.message);
+      }
+    }
+    return { ok: true, id: id };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // OCORRÊNCIAS
+  // (Advertências, elogios, registros disciplinares — sem FSM)
+  // ──────────────────────────────────────────────────────────────────
+
+  function listarOcorrencias(filtros, orgId) {
+    orgId   = orgId || _orgId();
+    filtros = Object.assign({ orgId: orgId }, filtros || {});
+    return ColaboradorRepository.listarOcorrencias(filtros);
+  }
+
+  function registrarOcorrencia(dados, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    dados = dados || {};
+    if (!dados.idColaborador) throw new Error('idColaborador é obrigatório.');
+    if (!dados.tipo)          throw new Error('tipo de ocorrência é obrigatório.');
+    if (!dados.descricao)     throw new Error('descricao é obrigatória.');
+
+    var tiposPermitidos = ['advertencia', 'suspensao', 'elogio', 'observacao', 'outro'];
+    if (tiposPermitidos.indexOf(dados.tipo) === -1)
+      throw new Error('Tipo inválido. Use: ' + tiposPermitidos.join(', '));
+
+    dados.orgId         = orgId;
+    dados.registradoPor = emailOperador || '';
+
+    var r = ColaboradorRepository.salvarOcorrencia(dados);
+    _audit('OCORRENCIA_' + String(dados.tipo).toUpperCase(), {
+      id: r.id, idColaborador: dados.idColaborador, tipo: dados.tipo, operador: emailOperador || ''
+    });
+
+    // Registrar advertência/suspensão também no histórico RH
+    if (dados.tipo === 'advertencia' || dados.tipo === 'suspensao') {
+      try {
+        ColaboradorRepository.salvarHistorico({
+          tipo:          dados.tipo,
+          idColaborador: dados.idColaborador,
+          orgId:         orgId,
+          descricao:     dados.descricao,
+          registradoPor: emailOperador || '',
+          idOcorrencia:  r.id
+        });
+      } catch (_) {}
+    }
+    return r.id;
+  }
+
+  function excluirOcorrencia(id, emailOperador) {
+    var oc = ColaboradorRepository.listarOcorrencias({}).filter(function(o) { return o.id === id; })[0];
+    ColaboradorRepository.excluirOcorrencia(id);
+    _audit('OCORRENCIA_EXCLUIDA', {
+      id: id, tipo: oc ? oc.tipo : '?', operador: emailOperador || ''
+    });
+    return { ok: true };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // MIGRAÇÃO
   // ──────────────────────────────────────────────────────────────────
 
@@ -590,6 +785,20 @@ var PessoasEngine = (function () {
     registrarEvento:           registrarEvento,
     excluirEvento:             excluirEvento,
     registrarDesligamento:     registrarDesligamento,
+
+    // Afastamentos
+    STATUS_AFASTAMENTO:     STATUS_AFASTAMENTO,
+    TIPO_AFASTAMENTO:       TIPO_AFASTAMENTO,
+    listarAfastamentos:     listarAfastamentos,
+    registrarAfastamento:   registrarAfastamento,
+    ativarAfastamento:      ativarAfastamento,
+    encerrarAfastamento:    encerrarAfastamento,
+    cancelarAfastamento:    cancelarAfastamento,
+
+    // Ocorrências
+    listarOcorrencias:      listarOcorrencias,
+    registrarOcorrencia:    registrarOcorrencia,
+    excluirOcorrencia:      excluirOcorrencia,
 
     // Migração
     migrarFuncionariosParaColaboradores: migrarFuncionariosParaColaboradores

@@ -443,6 +443,139 @@ function ctrl_pessoas_meu_nivel() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// AFASTAMENTOS
+// ═══════════════════════════════════════════════════════════════════
+
+function ctrl_rh_listar_afastamentos(idColaborador) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    var filtros = { orgId: ctx.orgId };
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) !== -1) {
+      if (idColaborador) filtros.idColaborador = idColaborador;
+      return PessoasEngine.listarAfastamentos(filtros, ctx.orgId);
+    }
+    // Colaborador: apenas os próprios
+    var idProprio = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+    if (!idProprio) throw new Error('Colaborador não encontrado no cadastro.');
+    if (idColaborador && idColaborador !== idProprio)
+      throw new Error('Acesso negado: você só pode visualizar seus próprios afastamentos.');
+    filtros.idColaborador = idProprio;
+    return PessoasEngine.listarAfastamentos(filtros, ctx.orgId);
+  }, 'ctrl_rh_listar_afastamentos');
+}
+
+function ctrl_rh_registrar_afastamento(dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode registrar afastamentos.');
+    if (!dados || typeof dados !== 'object') throw new Error('Dados são obrigatórios.');
+    return { id: PessoasEngine.registrarAfastamento(dados, ctx.email, ctx.orgId) };
+  }, 'ctrl_rh_registrar_afastamento');
+}
+
+function ctrl_rh_ativar_afastamento(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode ativar afastamentos.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.ativarAfastamento(id, ctx.email, ctx.orgId);
+  }, 'ctrl_rh_ativar_afastamento');
+}
+
+function ctrl_rh_encerrar_afastamento(id, dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode encerrar afastamentos.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.encerrarAfastamento(id, dados || {}, ctx.email, ctx.orgId);
+  }, 'ctrl_rh_encerrar_afastamento');
+}
+
+function ctrl_rh_cancelar_afastamento(id, motivo) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode cancelar afastamentos.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.cancelarAfastamento(id, motivo || '', ctx.email);
+  }, 'ctrl_rh_cancelar_afastamento');
+}
+
+function ctrl_rh_salvar_afastamento(dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode gerenciar afastamentos.');
+    if (!dados || typeof dados !== 'object') throw new Error('Dados são obrigatórios.');
+    if (!dados.id) {
+      return { id: PessoasEngine.registrarAfastamento(dados, ctx.email, ctx.orgId) };
+    }
+    // Atualizar afastamento existente (apenas rascunho)
+    var af = ColaboradorRepository.buscarAfastamentoPorId(dados.id);
+    if (!af) throw new Error('Afastamento não encontrado: ' + dados.id);
+    if (af.status !== 'rascunho') throw new Error('Apenas afastamentos em rascunho podem ser editados.');
+    dados.orgId = ctx.orgId;
+    var r = ColaboradorRepository.salvarAfastamento(dados);
+    return { id: r.id };
+  }, 'ctrl_rh_salvar_afastamento');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OCORRÊNCIAS
+// ═══════════════════════════════════════════════════════════════════
+
+function ctrl_rh_listar_ocorrencias(idColaborador) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    var filtros = { orgId: ctx.orgId };
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) !== -1) {
+      if (idColaborador) filtros.idColaborador = idColaborador;
+      return PessoasEngine.listarOcorrencias(filtros, ctx.orgId);
+    }
+    // Colaborador: apenas elogios e observações próprias (não advertências)
+    var idProprio = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+    if (!idProprio) throw new Error('Colaborador não encontrado no cadastro.');
+    filtros.idColaborador = idProprio;
+    var lista = PessoasEngine.listarOcorrencias(filtros, ctx.orgId);
+    return lista.filter(function (o) {
+      return o.tipo === 'elogio' || o.tipo === 'observacao';
+    });
+  }, 'ctrl_rh_listar_ocorrencias');
+}
+
+function ctrl_rh_registrar_ocorrencia(dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) === -1)
+      throw new Error('Apenas gestores e RH podem registrar ocorrências.');
+    if (!dados || typeof dados !== 'object') throw new Error('Dados são obrigatórios.');
+    return { id: PessoasEngine.registrarOcorrencia(dados, ctx.email, ctx.orgId) };
+  }, 'ctrl_rh_registrar_ocorrencia');
+}
+
+function ctrl_rh_excluir_ocorrencia(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode excluir ocorrências.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.excluirOcorrencia(id, ctx.email);
+  }, 'ctrl_rh_excluir_ocorrencia');
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════
 

@@ -30,7 +30,7 @@ var PROP_SHEETS = {
 var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
-    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog'
+    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'Contratados'
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas'
@@ -47,7 +47,7 @@ var SCHEMA_ABAS = {
   ],
   FINANCEIRO: [
     'Contratos', 'ContratosVersoes', 'Rubricas', 'Pagamentos',
-    'Contratacoes', 'Orcamentos', 'Remanejamentos', 'Aditivos', 'FontesRecurso'
+    'Contratacoes', 'SolicitacoesContratacao', 'Orcamentos', 'Remanejamentos', 'Aditivos', 'FontesRecurso'
   ],
   RELATORIOS: ['CODIP', 'RelGerencial', 'Exportacoes'],
   REUNIOES:   ['Reunioes', 'Encaminhamentos', 'Atas'],
@@ -97,6 +97,18 @@ function inicializarSistema() {
   if (typeof ChaveRepository !== 'undefined' &&
       typeof ChaveRepository.prepararIndice === 'function') {
     ChaveRepository.prepararIndice();
+  }
+
+  // Fase 3 — Contratados Externos: garante cabeçalho em MASTER.Contratados
+  if (typeof ContratadoRepository !== 'undefined' &&
+      typeof ContratadoRepository.garantirIndice === 'function') {
+    ContratadoRepository.garantirIndice();
+  }
+
+  // Fase 3 — Solicitações de Contratação: garante cabeçalho em FINANCEIRO.SolicitacoesContratacao
+  if (typeof SolicitacaoRepository !== 'undefined' &&
+      typeof SolicitacaoRepository.garantirIndice === 'function') {
+    SolicitacaoRepository.garantirIndice();
   }
 
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)

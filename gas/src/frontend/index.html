@@ -519,6 +519,43 @@ body {
 .badge-accent  { background: #fef3c7; color: #b45309; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TAB BAR (compartilhado: EspacosUI, PessoasTabs, ContratacoesTabs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.tab-bar {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+}
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 8px 16px; font-size: 13.5px; font-weight: 500;
+  color: var(--text2); cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  transition: color .15s, border-color .15s;
+}
+.tab-btn:hover { color: var(--color-primary); }
+/* .pess-tab e .cont-tab são aliases de .tab-btn — estilos via JS (abrirTab) */
+/* .pess-tab-content e .cont-tab-content — display controlado por JS */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TABLE (tabela)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabela th, .tabela td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tabela th { font-weight: 600; color: var(--text2); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; background: var(--surface2); }
+.tabela tr:hover td { background: var(--color-primary-lt); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BOTÕES ADICIONAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.btn-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.btn-success:hover { background: #a7f3d0; }
+.btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.btn-warning:hover { background: #fde68a; }
+.btn-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.btn-error:hover   { background: #fca5a5; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TOAST NOTIFICATIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 #toast-container {
@@ -1046,97 +1083,315 @@ body {
         </div>
       </div><!-- /view-tarefas -->
 
-      <!-- VIEW: Colaboradores / Pessoas — Fase 1.2 -->
+      <!-- VIEW: Pessoas — Fase 3 (tabs: Colaboradores | Afastamentos | Ocorrências) -->
       <div id="view-pessoas" class="view">
         <div class="page-header">
           <div class="page-title">Pessoas</div>
-          <div class="page-subtitle">Colaboradores ativos com persistência canônica em colaboradores.json</div>
+          <div class="page-subtitle">Colaboradores, afastamentos e ocorrências — persistência canônica em colaboradores.json</div>
         </div>
-
-        <!-- Métricas -->
         <div class="stats-grid" id="pessoas-metricas"></div>
 
-        <!-- Formulário novo colaborador -->
-        <div class="card" id="pessoas-form-card" style="display:none">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">person_add</span> <span id="pessoas-form-titulo">Novo Colaborador</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="PessoasUI.fecharForm()" data-bg-skip="1">
-              <span class="ms ms-sm">close</span> Cancelar
-            </button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="form-group">
-              <label class="form-label">Nome completo *</label>
-              <input id="pf-nome" class="form-input" type="text" placeholder="Nome do colaborador">
-            </div>
-            <div class="form-group">
-              <label class="form-label">E-mail institucional</label>
-              <input id="pf-email-inst" class="form-input" type="email" placeholder="nome@org.br">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Setor</label>
-              <input id="pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Cargo</label>
-              <input id="pf-cargo" class="form-input" type="text" placeholder="Ex: Técnico Cultural">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Tipo de Vínculo</label>
-              <select id="pf-vinculo" class="form-input">
-                <option value="clt">CLT</option>
-                <option value="pj">PJ</option>
-                <option value="estagio">Estágio</option>
-                <option value="voluntario">Voluntário</option>
-                <option value="bolsista">Bolsista</option>
-                <option value="temporario">Temporário</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Data de Admissão</label>
-              <input id="pf-admissao" class="form-input" type="date">
-            </div>
-          </div>
-          <input type="hidden" id="pf-id">
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="btn btn-primario" id="btn-pessoas-salvar" onclick="PessoasUI.salvar()">
-              <span class="ms ms-sm">save</span> Salvar
-            </button>
-          </div>
+        <!-- Tab bar -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn pess-tab" data-tab="colaboradores" onclick="PessoasTabs.abrirTab('colaboradores')">
+            <span class="ms ms-sm">group</span> Colaboradores
+          </button>
+          <button class="tab-btn pess-tab" data-tab="afastamentos" onclick="PessoasTabs.abrirTab('afastamentos')">
+            <span class="ms ms-sm">sick</span> Afastamentos
+          </button>
+          <button class="tab-btn pess-tab" data-tab="ocorrencias" onclick="PessoasTabs.abrirTab('ocorrencias')">
+            <span class="ms ms-sm">report</span> Ocorrências
+          </button>
         </div>
 
-        <!-- Listagem -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">group</span> Colaboradores
+        <!-- Tab: Colaboradores -->
+        <div id="pess-tab-colaboradores" class="pess-tab-content">
+          <!-- Formulário -->
+          <div class="card" id="pessoas-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">person_add</span> <span id="pessoas-form-titulo">Novo Colaborador</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="PessoasUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <select id="pf-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="PessoasUI.carregar()">
-                <option value="">Todos os status</option>
-                <option value="ativo" selected>Ativos</option>
-                <option value="afastado">Afastados</option>
-                <option value="ferias">Em férias</option>
-                <option value="desligado">Desligados</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" id="btn-pessoas-recarregar" onclick="PessoasUI.carregar()">
-                <span class="ms ms-sm">refresh</span> Atualizar
-              </button>
-              <button class="btn btn-primario btn-sm" id="btn-pessoas-novo" onclick="PessoasUI.abrirForm()">
-                <span class="ms ms-sm">person_add</span> Novo
-              </button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group"><label class="form-label">Nome completo *</label><input id="pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
+              <div class="form-group"><label class="form-label">E-mail institucional</label><input id="pf-email-inst" class="form-input" type="email" placeholder="nome@org.br"></div>
+              <div class="form-group"><label class="form-label">Setor</label><input id="pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
+              <div class="form-group"><label class="form-label">Cargo</label><input id="pf-cargo" class="form-input" type="text" placeholder="Ex: Técnico Cultural"></div>
+              <div class="form-group"><label class="form-label">Tipo de Vínculo</label>
+                <select id="pf-vinculo" class="form-input">
+                  <option value="clt">CLT</option><option value="pj">PJ</option>
+                  <option value="estagio">Estágio</option><option value="voluntario">Voluntário</option>
+                  <option value="bolsista">Bolsista</option><option value="temporario">Temporário</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Data de Admissão</label><input id="pf-admissao" class="form-input" type="date"></div>
+            </div>
+            <input type="hidden" id="pf-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-pessoas-salvar" onclick="PessoasUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
             </div>
           </div>
-          <div id="pessoas-lista">
-            <div class="empty-state" style="min-height:120px;padding:20px;">
-              <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
-              <p style="font-size:13px;color:var(--muted)">Carregando colaboradores…</p>
+          <!-- Listagem -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">group</span> Colaboradores</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="pf-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="PessoasUI.carregar()">
+                  <option value="">Todos os status</option>
+                  <option value="ativo" selected>Ativos</option>
+                  <option value="afastado">Afastados</option>
+                  <option value="ferias">Em férias</option>
+                  <option value="desligado">Desligados</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-pessoas-recarregar" onclick="PessoasUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
+                <button class="btn btn-primario btn-sm" id="btn-pessoas-novo" onclick="PessoasUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
+              </div>
+            </div>
+            <div id="pessoas-lista"><div class="empty-state" style="min-height:120px;padding:20px;"><span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando colaboradores…</p></div></div>
+          </div>
+        </div><!-- /tab colaboradores -->
+
+        <!-- Tab: Afastamentos -->
+        <div id="pess-tab-afastamentos" class="pess-tab-content" style="display:none">
+          <!-- Formulário Afastamento -->
+          <div class="card" id="afa-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">sick</span> <span id="afa-form-titulo">Novo Afastamento</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="AfastamentosUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group"><label class="form-label">Colaborador *</label><input id="afa-colaborador-nome" class="form-input" type="text" placeholder="Nome do colaborador" readonly><input type="hidden" id="afa-colaborador-id"></div>
+              <div class="form-group"><label class="form-label">Tipo de Afastamento *</label>
+                <select id="afa-tipo" class="form-input">
+                  <option value="medico">Licença Médica</option>
+                  <option value="inss">Auxílio-Doença INSS</option>
+                  <option value="acidente">Acidente de Trabalho</option>
+                  <option value="maternidade">Maternidade</option>
+                  <option value="paternidade">Paternidade</option>
+                  <option value="licenca_pessoal">Licença Pessoal</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Data de Início *</label><input id="afa-inicio" class="form-input" type="date"></div>
+              <div class="form-group"><label class="form-label">Data de Fim Prevista</label><input id="afa-fim" class="form-input" type="date"></div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição / CID</label><input id="afa-descricao" class="form-input" type="text" placeholder="Descrição, CID ou código do atestado"></div>
+            </div>
+            <input type="hidden" id="afa-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-afa-salvar" onclick="AfastamentosUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
             </div>
           </div>
-        </div>
+          <!-- Listagem Afastamentos -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">sick</span> Afastamentos</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="afa-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="AfastamentosUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="rascunho">Rascunho</option>
+                  <option value="ativo" selected>Ativos</option>
+                  <option value="encerrado">Encerrados</option>
+                  <option value="cancelado">Cancelados</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="AfastamentosUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="btn-afa-novo" onclick="AfastamentosUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo</button>
+              </div>
+            </div>
+            <div id="afa-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
+          </div>
+        </div><!-- /tab afastamentos -->
+
+        <!-- Tab: Ocorrências -->
+        <div id="pess-tab-ocorrencias" class="pess-tab-content" style="display:none">
+          <!-- Formulário Ocorrência -->
+          <div class="card" id="oco-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">report</span> Nova Ocorrência</div>
+              <button class="btn btn-ghost btn-sm" onclick="OcorrenciasUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group"><label class="form-label">Colaborador *</label><input id="oco-colaborador-nome" class="form-input" type="text" placeholder="Nome do colaborador" readonly><input type="hidden" id="oco-colaborador-id"></div>
+              <div class="form-group"><label class="form-label">Tipo *</label>
+                <select id="oco-tipo" class="form-input">
+                  <option value="advertencia">Advertência</option>
+                  <option value="suspensao">Suspensão</option>
+                  <option value="elogio">Elogio</option>
+                  <option value="observacao">Observação</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição *</label><textarea id="oco-descricao" class="form-input" rows="3" placeholder="Descreva o ocorrido…" style="resize:vertical"></textarea></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-oco-salvar" onclick="OcorrenciasUI.salvar()"><span class="ms ms-sm">save</span> Registrar</button>
+            </div>
+          </div>
+          <!-- Listagem Ocorrências -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">report</span> Ocorrências</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="oco-filtro-tipo" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="OcorrenciasUI.carregar()">
+                  <option value="">Todos os tipos</option>
+                  <option value="advertencia">Advertências</option>
+                  <option value="suspensao">Suspensões</option>
+                  <option value="elogio">Elogios</option>
+                  <option value="observacao">Observações</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="OcorrenciasUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="btn-oco-novo" onclick="OcorrenciasUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">add</span> Registrar</button>
+              </div>
+            </div>
+            <div id="oco-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
+          </div>
+        </div><!-- /tab ocorrencias -->
+
       </div><!-- /view-pessoas -->
+
+      <!-- VIEW: Contratações — Fase 3 (tabs: Solicitações | Agentes Externos | Habilitações) -->
+      <div id="view-contratacoes" class="view">
+        <div class="page-header">
+          <div class="page-title">Contratações</div>
+          <div class="page-subtitle">Solicitações com aprovação multinível · Agentes externos · Habilitações</div>
+        </div>
+        <div class="stats-grid" id="cont-metricas"></div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn cont-tab" data-tab="solicitacoes" onclick="ContratacoesTabs.abrirTab('solicitacoes')">
+            <span class="ms ms-sm">assignment</span> Solicitações
+          </button>
+          <button class="tab-btn cont-tab" data-tab="agentes" onclick="ContratacoesTabs.abrirTab('agentes')">
+            <span class="ms ms-sm">badge</span> Agentes Externos
+          </button>
+          <button class="tab-btn cont-tab" data-tab="habilitacoes" onclick="ContratacoesTabs.abrirTab('habilitacoes')">
+            <span class="ms ms-sm">verified</span> Habilitações
+          </button>
+        </div>
+
+        <!-- Tab: Solicitações -->
+        <div id="cont-tab-solicitacoes" class="cont-tab-content">
+          <!-- Formulário Solicitação -->
+          <div class="card" id="sol-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">assignment</span> <span id="sol-form-titulo">Nova Solicitação</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="SolicitacoesUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">Objeto da Contratação *</label><input id="sol-objeto" class="form-input" type="text" placeholder="Descreva o serviço ou fornecimento a ser contratado"></div>
+              <div class="form-group"><label class="form-label">Tipo de Serviço *</label>
+                <select id="sol-tipo" class="form-input">
+                  <option value="prestacao_servico">Prestação de Serviço</option>
+                  <option value="fornecimento">Fornecimento</option>
+                  <option value="locacao">Locação</option>
+                  <option value="consultoria">Consultoria</option>
+                  <option value="cache_artistico">Cachê Artístico</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group"><label class="form-label">Setor Solicitante *</label><input id="sol-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
+              <div class="form-group"><label class="form-label">Valor Estimado (R$)</label><input id="sol-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00"></div>
+              <div class="form-group"><label class="form-label">Contrato de Origem (ID)</label><input id="sol-contrato" class="form-input" type="text" placeholder="ID do contrato / fonte de recurso"></div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">Justificativa</label><textarea id="sol-justificativa" class="form-input" rows="2" placeholder="Justifique a necessidade da contratação…" style="resize:vertical"></textarea></div>
+            </div>
+            <input type="hidden" id="sol-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-sol-salvar" onclick="SolicitacoesUI.salvar()"><span class="ms ms-sm">save</span> Salvar Rascunho</button>
+              <button class="btn btn-success" id="btn-sol-submeter" onclick="SolicitacoesUI.submeter()" style="display:none"><span class="ms ms-sm">send</span> Submeter para Aprovação</button>
+            </div>
+          </div>
+          <!-- Listagem Solicitações -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">assignment</span> Solicitações de Contratação</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="sol-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="SolicitacoesUI.carregar()">
+                  <option value="">Todos os status</option>
+                  <option value="rascunho">Rascunho</option>
+                  <option value="submetida">Aguardando Gestor</option>
+                  <option value="aprovada_gestor">Aguardando Financeiro</option>
+                  <option value="aprovada_financeiro">Liberada</option>
+                  <option value="em_execucao">Em execução</option>
+                  <option value="concluida">Concluída</option>
+                  <option value="rejeitada">Rejeitada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="SolicitacoesUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="btn-sol-novo" onclick="SolicitacoesUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova</button>
+              </div>
+            </div>
+            <div id="sol-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
+          </div>
+        </div><!-- /tab solicitacoes -->
+
+        <!-- Tab: Agentes Externos -->
+        <div id="cont-tab-agentes" class="cont-tab-content" style="display:none">
+          <!-- Formulário Agente -->
+          <div class="card" id="ag-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">badge</span> <span id="ag-form-titulo">Novo Agente Externo</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="AgentesUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group"><label class="form-label">Nome / Razão Social *</label><input id="ag-nome" class="form-input" type="text" placeholder="Nome completo ou razão social"></div>
+              <div class="form-group"><label class="form-label">Tipo de Pessoa *</label>
+                <select id="ag-tipo" class="form-input" onchange="AgentesUI.toggleDocumento(this.value)">
+                  <option value="pf">Pessoa Física</option>
+                  <option value="pj">Pessoa Jurídica</option>
+                </select>
+              </div>
+              <div class="form-group" id="ag-cpf-group"><label class="form-label">CPF *</label><input id="ag-cpf" class="form-input" type="text" placeholder="000.000.000-00"></div>
+              <div class="form-group" id="ag-cnpj-group" style="display:none"><label class="form-label">CNPJ *</label><input id="ag-cnpj" class="form-input" type="text" placeholder="00.000.000/0000-00"></div>
+              <div class="form-group"><label class="form-label">E-mail</label><input id="ag-email" class="form-input" type="email" placeholder="contato@email.com"></div>
+              <div class="form-group"><label class="form-label">Telefone</label><input id="ag-telefone" class="form-input" type="tel" placeholder="(85) 99999-9999"></div>
+              <div class="form-group" style="grid-column:span 2"><label class="form-label">Tipos de Atuação</label><input id="ag-atuacoes" class="form-input" type="text" placeholder="Ex: musica, teatro, audiovisual (separar por vírgula)"></div>
+            </div>
+            <input type="hidden" id="ag-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-ag-salvar" onclick="AgentesUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
+            </div>
+          </div>
+          <!-- Listagem Agentes -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">badge</span> Agentes Externos / Fornecedores</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="ag-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="AgentesUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="cadastrado">Cadastrado</option>
+                  <option value="habilitado" selected>Habilitado</option>
+                  <option value="suspenso">Suspenso</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="AgentesUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="btn-ag-novo" onclick="AgentesUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
+              </div>
+            </div>
+            <div id="ag-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
+          </div>
+        </div><!-- /tab agentes -->
+
+        <!-- Tab: Habilitações -->
+        <div id="cont-tab-habilitacoes" class="cont-tab-content" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">verified</span> Processos de Habilitação</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="hab-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="HabilitacoesUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="submetido">Submetido</option>
+                  <option value="em_analise">Em análise</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="reprovado">Reprovado</option>
+                  <option value="devolvido">Devolvido</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="HabilitacoesUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+              </div>
+            </div>
+            <div id="hab-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
+          </div>
+        </div><!-- /tab habilitacoes -->
+
+      </div><!-- /view-contratacoes -->
 
       <!-- VIEW: Financeiro / Contratos — Fase 1.3 -->
       <div id="view-financeiro" class="view">
@@ -1638,7 +1893,46 @@ var GAS = {
     salvar:       function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar(d); },
     metricas:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_metricas(); },
     meuNivel:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_meu_nivel(); },
-    mudarStatus:  function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_mudar_status(id,s); }
+    mudarStatus:  function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_mudar_status(id,s); },
+    // Afastamentos
+    listarAfastamentos:    function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_afastamentos(id||null); },
+    salvarAfastamento:     function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_salvar_afastamento(d); },
+    ativarAfastamento:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_ativar_afastamento(id); },
+    encerrarAfastamento:   function(id,d,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_encerrar_afastamento(id,d||{}); },
+    cancelarAfastamento:   function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_cancelar_afastamento(id,m||''); },
+    // Ocorrências
+    listarOcorrencias:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_ocorrencias(id||null); },
+    registrarOcorrencia:   function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_ocorrencia(d); },
+    excluirOcorrencia:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_ocorrencia(id); }
+  },
+  contratados: {
+    listar:        function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_listar(f||{}); },
+    metricas:      function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_metricas(); },
+    salvar:        function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_salvar(d); },
+    mudarStatus:   function(id,s,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_mudar_status(id,s); },
+    buscarDocumento:function(doc,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_buscar_documento(doc); }
+  },
+  habilitacoes: {
+    listar:    function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_listar(id||null); },
+    submeter:  function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_submeter(d); },
+    analisar:  function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_analisar(id); },
+    aprovar:   function(id,p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_aprovar(id,p||''); },
+    reprovar:  function(id,p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_reprovar(id,p||''); },
+    devolver:  function(id,obs,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_habilitacoes_devolver(id,obs||''); }
+  },
+  contratacoes: {
+    listar:            function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_listar(f||{}); },
+    obter:             function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_obter(id); },
+    metricas:          function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_metricas(); },
+    salvar:            function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_salvar(d); },
+    submeter:          function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_submeter(id); },
+    aprovarGestor:     function(id,p,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_aprovar_gestor(id,p||''); },
+    aprovarFinanceiro: function(id,p,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_aprovar_financeiro(id,p||''); },
+    iniciarExecucao:   function(id,d,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_iniciar_execucao(id,d||{}); },
+    concluir:          function(id,d,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_concluir(id,d||{}); },
+    rejeitar:          function(id,p,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_rejeitar(id,p||''); },
+    devolver:          function(id,o,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_devolver(id,o||''); },
+    cancelar:          function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_cancelar(id,m||''); }
   },
   contratos: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_listar(f||{}); },
@@ -3269,6 +3563,734 @@ var AtivosUI = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// PESSOAS — Controlador de Tabs (Fase 3)
+// ═══════════════════════════════════════════════════════════
+var PessoasTabs = (function() {
+  var _tabAtual   = null;
+  var _carregados = {};
+
+  function abrirTab(tab) {
+    document.querySelectorAll('.pess-tab-content').forEach(function(el){ el.style.display='none'; });
+    document.querySelectorAll('.pess-tab').forEach(function(btn){
+      btn.style.color='var(--text2)'; btn.style.borderBottomColor='transparent'; btn.style.fontWeight='500';
+    });
+    var painel = document.getElementById('pess-tab-'+tab);
+    if (painel) painel.style.display='';
+    var btn = document.querySelector('.pess-tab[data-tab="'+tab+'"]');
+    if (btn){ btn.style.color='var(--color-primary)'; btn.style.borderBottomColor='var(--color-primary)'; btn.style.fontWeight='600'; }
+    _tabAtual = tab;
+    if (!_carregados[tab]) {
+      _carregados[tab] = true;
+      if (tab === 'colaboradores') PessoasUI.carregar();
+      if (tab === 'afastamentos')  AfastamentosUI.carregar();
+      if (tab === 'ocorrencias')   OcorrenciasUI.carregar();
+    }
+  }
+
+  function aoAbrir() {
+    GAS.pessoas.metricas(function(resp) {
+      var d = (resp&&resp.ok)?resp.data:{};
+      document.getElementById('pessoas-metricas').innerHTML = [
+        { valor: d.ativos||0,    label:'Colaboradores ativos', icone:'group',        classe:'primary' },
+        { valor: d.afastados||0, label:'Afastados',            icone:'sick',         classe:'warning' },
+        { valor: d.ferias||0,    label:'Em férias',            icone:'beach_access', classe:'success' },
+        { valor: d.desligados||0,label:'Desligados',           icone:'person_off',   classe:'error'   }
+      ].map(function(s){
+        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+          +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+      }).join('');
+    }, function(){});
+    abrirTab('colaboradores');
+  }
+
+  return { abrirTab: abrirTab, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// AFASTAMENTOS — Fase 3
+// ═══════════════════════════════════════════════════════════
+var AfastamentosUI = (function() {
+  var _STATUS_LABEL = { rascunho:'Rascunho', ativo:'Ativo', encerrado:'Encerrado', cancelado:'Cancelado' };
+  var _STATUS_CLASS = { rascunho:'badge-primary', ativo:'badge-warning', encerrado:'badge-success', cancelado:'badge-error' };
+  var _TIPO_LABEL   = { medico:'Licença Médica', inss:'INSS', acidente:'Acidente Trab.', maternidade:'Maternidade', paternidade:'Paternidade', licenca_pessoal:'Lic. Pessoal', outro:'Outro' };
+
+  function _badge(s) { return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>'; }
+
+  function carregar() {
+    var status = document.getElementById('afa-filtro-status') ? document.getElementById('afa-filtro-status').value : 'ativo';
+    var filtros = status ? { status: status } : {};
+    GAS.pessoas.listarAfastamentos(null, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      if (status) lista = lista.filter(function(a){ return a.status === status; });
+      var el = document.getElementById('afa-lista');
+      if (!el) return;
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">sick</span><p style="font-size:13px;color:var(--muted)">Nenhum afastamento encontrado.</p></div>';
+        return;
+      }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Colaborador</th><th>Tipo</th><th>Início</th><th>Fim Previsto</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+        + lista.map(function(a){
+          var pode = true;
+          return '<tr>'
+            +'<td>'+escaparHtml(a.nomeColaborador||a.idColaborador||'—')+'</td>'
+            +'<td>'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'—')+'</td>'
+            +'<td>'+escaparHtml(a.dataInicio||'—')+'</td>'
+            +'<td>'+escaparHtml(a.dataFim||'—')+'</td>'
+            +'<td>'+_badge(a.status)+'</td>'
+            +'<td style="display:flex;gap:4px;flex-wrap:wrap;">'
+            +(a.status==='rascunho'?'<button class="btn btn-success btn-sm" id="btn-afa-ativar-'+a.id+'" onclick="AfastamentosUI.ativar(\''+a.id+'\')"><span class="ms ms-sm">play_arrow</span>Ativar</button>':'')
+            +(a.status==='ativo'?'<button class="btn btn-ghost btn-sm" id="btn-afa-encerrar-'+a.id+'" onclick="AfastamentosUI.encerrar(\''+a.id+'\')"><span class="ms ms-sm">stop</span>Encerrar</button>':'')
+            +((a.status==='rascunho'||a.status==='ativo')?'<button class="btn btn-error btn-sm" id="btn-afa-cancelar-'+a.id+'" onclick="AfastamentosUI.cancelar(\''+a.id+'\')"><span class="ms ms-sm">cancel</span></button>':'')
+            +'</td></tr>';
+        }).join('')
+        + '</tbody></table>';
+    }, function(e){ Toast.erro('Erro ao carregar afastamentos: '+(e.message||e)); });
+  }
+
+  function abrirForm() {
+    document.getElementById('afa-id').value = '';
+    document.getElementById('afa-colaborador-nome').value = '';
+    document.getElementById('afa-colaborador-id').value = '';
+    document.getElementById('afa-tipo').value = 'medico';
+    document.getElementById('afa-inicio').value = '';
+    document.getElementById('afa-fim').value = '';
+    document.getElementById('afa-descricao').value = '';
+    document.getElementById('afa-form-titulo').textContent = 'Novo Afastamento';
+    document.getElementById('afa-form-card').style.display = '';
+    // Preencher colaborador com lista para seleção
+    GAS.pessoas.listar({status:'ativo'}, function(resp){
+      var lista = (resp&&resp.ok)?resp.data:[];
+      var sel = '<select class="form-input" onchange="AfastamentosUI._selecionarColaborador(this)">'
+        +'<option value="">Selecionar colaborador…</option>'
+        + lista.map(function(c){ return '<option value="'+escaparHtml(c.id)+'|'+escaparHtml(c.nome)+'">'+escaparHtml(c.nome)+'</option>'; }).join('')
+        +'</select>';
+      var g = document.getElementById('afa-colaborador-nome').parentNode;
+      g.innerHTML = '<label class="form-label">Colaborador *</label>'+sel+'<input type="hidden" id="afa-colaborador-id">';
+    }, function(){});
+  }
+
+  function _selecionarColaborador(sel) {
+    var parts = (sel.value||'').split('|');
+    document.getElementById('afa-colaborador-id').value = parts[0]||'';
+  }
+
+  function fecharForm() { document.getElementById('afa-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var idColaborador = document.getElementById('afa-colaborador-id').value;
+    var tipo          = document.getElementById('afa-tipo').value;
+    var dataInicio    = document.getElementById('afa-inicio').value;
+    if (!idColaborador) { Toast.erro('Selecione um colaborador.'); return; }
+    if (!tipo)          { Toast.erro('Selecione o tipo de afastamento.'); return; }
+    if (!dataInicio)    { Toast.erro('Informe a data de início.'); return; }
+    var dados = {
+      idColaborador: idColaborador,
+      tipo:          tipo,
+      dataInicio:    dataInicio,
+      dataFim:       document.getElementById('afa-fim').value || '',
+      descricao:     document.getElementById('afa-descricao').value || ''
+    };
+    var id = document.getElementById('afa-id').value;
+    if (id) dados.id = id;
+    BtnGuard.wrap('btn-afa-salvar', 'Salvando…', function() {
+      GAS.pessoas.salvarAfastamento(dados, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro ao salvar.'); return; }
+        Toast.sucesso('Afastamento salvo com sucesso!');
+        fecharForm(); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function ativar(id) {
+    if (!confirm('Ativar este afastamento? O colaborador será marcado como Afastado.')) return;
+    BtnGuard.wrap('btn-afa-ativar-'+id, 'Ativando…', function(){
+      GAS.pessoas.ativarAfastamento(id, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Afastamento ativado.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function encerrar(id) {
+    var _raw = prompt('Data de encerramento (AAAA-MM-DD):');
+    if (_raw === null) return;
+    var dataFim = _raw || '';
+    BtnGuard.wrap('btn-afa-encerrar-'+id, 'Encerrando…', function(){
+      GAS.pessoas.encerrarAfastamento(id, { dataFim: dataFim }, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Afastamento encerrado. Colaborador reativado.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function cancelar(id) {
+    var _raw = prompt('Motivo do cancelamento:');
+    if (_raw === null) return;
+    var motivo = _raw || '';
+    BtnGuard.wrap('btn-afa-cancelar-'+id, 'Cancelando…', function(){
+      GAS.pessoas.cancelarAfastamento(id, motivo, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Afastamento cancelado.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, ativar: ativar, encerrar: encerrar, cancelar: cancelar, _selecionarColaborador: _selecionarColaborador };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// OCORRÊNCIAS — Fase 3
+// ═══════════════════════════════════════════════════════════
+var OcorrenciasUI = (function() {
+  var _TIPO_LABEL = { advertencia:'Advertência', suspensao:'Suspensão', elogio:'Elogio', observacao:'Observação', outro:'Outro' };
+  var _TIPO_CLASS = { advertencia:'badge-warning', suspensao:'badge-error', elogio:'badge-success', observacao:'badge-primary', outro:'badge-primary' };
+
+  function _badge(t) { return '<span class="badge '+(_TIPO_CLASS[t]||'badge-primary')+'">'+escaparHtml(_TIPO_LABEL[t]||t)+'</span>'; }
+
+  function carregar() {
+    var tipo = document.getElementById('oco-filtro-tipo') ? document.getElementById('oco-filtro-tipo').value : '';
+    GAS.pessoas.listarOcorrencias(null, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      if (tipo) lista = lista.filter(function(o){ return o.tipo === tipo; });
+      var el = document.getElementById('oco-lista');
+      if (!el) return;
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">report_off</span><p style="font-size:13px;color:var(--muted)">Nenhuma ocorrência registrada.</p></div>';
+        return;
+      }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Colaborador</th><th>Tipo</th><th>Descrição</th><th>Registrado por</th><th>Data</th><th></th></tr></thead><tbody>'
+        + lista.map(function(o){
+          return '<tr>'
+            +'<td>'+escaparHtml(o.nomeColaborador||o.idColaborador||'—')+'</td>'
+            +'<td>'+_badge(o.tipo)+'</td>'
+            +'<td style="max-width:200px;white-space:normal">'+escaparHtml(o.descricao||'—')+'</td>'
+            +'<td>'+escaparHtml(o.registradoPor||'—')+'</td>'
+            +'<td>'+escaparHtml((o.criadoEm||'').slice(0,10))+'</td>'
+            +'<td><button class="btn btn-error btn-sm" id="btn-oco-del-'+o.id+'" onclick="OcorrenciasUI.excluir(\''+o.id+'\')"><span class="ms ms-sm">delete</span></button></td>'
+            +'</tr>';
+        }).join('')+'</tbody></table>';
+    }, function(e){ Toast.erro('Erro ao carregar: '+(e.message||e)); });
+  }
+
+  function abrirForm() {
+    document.getElementById('oco-colaborador-nome').value = '';
+    document.getElementById('oco-colaborador-id').value = '';
+    document.getElementById('oco-tipo').value = 'advertencia';
+    document.getElementById('oco-descricao').value = '';
+    document.getElementById('oco-form-card').style.display = '';
+    GAS.pessoas.listar({status:'ativo'}, function(resp){
+      var lista = (resp&&resp.ok)?resp.data:[];
+      var sel = '<select class="form-input" onchange="OcorrenciasUI._selecionar(this)">'
+        +'<option value="">Selecionar colaborador…</option>'
+        + lista.map(function(c){ return '<option value="'+escaparHtml(c.id)+'|'+escaparHtml(c.nome)+'">'+escaparHtml(c.nome)+'</option>'; }).join('')
+        +'</select>';
+      var g = document.getElementById('oco-colaborador-nome').parentNode;
+      g.innerHTML = '<label class="form-label">Colaborador *</label>'+sel+'<input type="hidden" id="oco-colaborador-id">';
+    }, function(){});
+  }
+
+  function _selecionar(sel) {
+    var p = (sel.value||'').split('|');
+    document.getElementById('oco-colaborador-id').value = p[0]||'';
+  }
+
+  function fecharForm() { document.getElementById('oco-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var idColaborador = document.getElementById('oco-colaborador-id').value;
+    var tipo          = document.getElementById('oco-tipo').value;
+    var descricao     = document.getElementById('oco-descricao').value.trim();
+    if (!idColaborador) { Toast.erro('Selecione um colaborador.'); return; }
+    if (!tipo)          { Toast.erro('Selecione o tipo.'); return; }
+    if (!descricao)     { Toast.erro('Informe a descrição.'); return; }
+    BtnGuard.wrap('btn-oco-salvar', 'Registrando…', function() {
+      GAS.pessoas.registrarOcorrencia({ idColaborador: idColaborador, tipo: tipo, descricao: descricao }, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Ocorrência registrada!'); fecharForm(); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluir(id) {
+    if (!confirm('Excluir esta ocorrência? Esta ação não pode ser desfeita.')) return;
+    BtnGuard.wrap('btn-oco-del-'+id, 'Excluindo…', function(){
+      GAS.pessoas.excluirOcorrencia(id, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Ocorrência excluída.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir, _selecionar: _selecionar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CONTRATAÇÕES — Controlador de Tabs (Fase 3)
+// ═══════════════════════════════════════════════════════════
+var ContratacoesTabs = (function() {
+  var _tabAtual   = null;
+  var _carregados = {};
+
+  function abrirTab(tab) {
+    document.querySelectorAll('.cont-tab-content').forEach(function(el){ el.style.display='none'; });
+    document.querySelectorAll('.cont-tab').forEach(function(btn){
+      btn.style.color='var(--text2)'; btn.style.borderBottomColor='transparent'; btn.style.fontWeight='500';
+    });
+    var painel = document.getElementById('cont-tab-'+tab);
+    if (painel) painel.style.display='';
+    var btn = document.querySelector('.cont-tab[data-tab="'+tab+'"]');
+    if (btn){ btn.style.color='var(--color-primary)'; btn.style.borderBottomColor='var(--color-primary)'; btn.style.fontWeight='600'; }
+    _tabAtual = tab;
+    if (!_carregados[tab]) {
+      _carregados[tab] = true;
+      if (tab === 'solicitacoes') SolicitacoesUI.carregar();
+      if (tab === 'agentes')      AgentesUI.carregar();
+      if (tab === 'habilitacoes') HabilitacoesUI.carregar();
+    }
+  }
+
+  function aoAbrir() {
+    GAS.contratacoes.metricas(function(resp) {
+      var d = (resp&&resp.ok)?resp.data:{};
+      document.getElementById('cont-metricas').innerHTML = [
+        { valor: (d.porStatus&&d.porStatus['submetida']||0)+(d.porStatus&&d.porStatus['aprovada_gestor']||0), label:'Pendentes de aprovação', icone:'pending_actions', classe:'warning' },
+        { valor: d.emExecucao||0, label:'Em execução',       icone:'construction',   classe:'primary' },
+        { valor: d.concluidas||0, label:'Concluídas',        icone:'task_alt',       classe:'success' },
+        { valor: d.total||0,      label:'Total',             icone:'assignment',     classe:'primary' }
+      ].map(function(s){
+        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+          +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+      }).join('');
+    }, function(){});
+    abrirTab('solicitacoes');
+  }
+
+  return { abrirTab: abrirTab, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// SOLICITAÇÕES DE CONTRATAÇÃO — Fase 3
+// ═══════════════════════════════════════════════════════════
+var SolicitacoesUI = (function() {
+  var _STATUS_LABEL = {
+    rascunho:'Rascunho', submetida:'Aguard. Gestor', devolvida:'Devolvida',
+    aprovada_gestor:'Aguard. Financeiro', aprovada_financeiro:'Liberada',
+    em_execucao:'Em execução', concluida:'Concluída', rejeitada:'Rejeitada', cancelada:'Cancelada'
+  };
+  var _STATUS_CLASS = {
+    rascunho:'badge-primary', submetida:'badge-warning', devolvida:'badge-warning',
+    aprovada_gestor:'badge-accent', aprovada_financeiro:'badge-success',
+    em_execucao:'badge-accent', concluida:'badge-success', rejeitada:'badge-error', cancelada:'badge-error'
+  };
+
+  function _badge(s){ return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>'; }
+
+  function carregar() {
+    var status = document.getElementById('sol-filtro-status') ? document.getElementById('sol-filtro-status').value : '';
+    var filtros = status ? { status: status } : {};
+    GAS.contratacoes.listar(filtros, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      var el = document.getElementById('sol-lista');
+      if (!el) return;
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">assignment</span><p style="font-size:13px;color:var(--muted)">Nenhuma solicitação encontrada.</p></div>';
+        return;
+      }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Nº</th><th>Objeto</th><th>Tipo</th><th>Setor</th><th>Valor Est.</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+        + lista.map(function(s){
+          var acoes = '';
+          if (s.status==='rascunho'||s.status==='devolvida'){
+            acoes += '<button class="btn btn-success btn-sm" id="btn-sol-sub-'+s.id+'" onclick="SolicitacoesUI.submeterItem(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">send</span>Submeter</button> ';
+          }
+          if (s.status==='submetida'){
+            acoes += '<button class="btn btn-primario btn-sm" id="btn-sol-apg-'+s.id+'" onclick="SolicitacoesUI.aprovarGestor(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">thumb_up</span>Apr. Gestor</button> ';
+          }
+          if (s.status==='aprovada_gestor'){
+            acoes += '<button class="btn btn-primario btn-sm" id="btn-sol-apf-'+s.id+'" onclick="SolicitacoesUI.aprovarFinanceiro(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">payments</span>Apr. Fin.</button> ';
+          }
+          if (s.status==='aprovada_financeiro'){
+            acoes += '<button class="btn btn-success btn-sm" id="btn-sol-exe-'+s.id+'" onclick="SolicitacoesUI.iniciarExecucao(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">play_circle</span>Executar</button> ';
+          }
+          if (s.status==='em_execucao'){
+            acoes += '<button class="btn btn-success btn-sm" id="btn-sol-con-'+s.id+'" onclick="SolicitacoesUI.concluir(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">task_alt</span>Concluir</button> ';
+          }
+          if (['submetida','aprovada_gestor','aprovada_financeiro'].indexOf(s.status)!==-1){
+            acoes += '<button class="btn btn-ghost btn-sm" id="btn-sol-dev-'+s.id+'" onclick="SolicitacoesUI.devolver(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">undo</span></button> ';
+            acoes += '<button class="btn btn-error btn-sm" id="btn-sol-rej-'+s.id+'" onclick="SolicitacoesUI.rejeitar(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">thumb_down</span></button> ';
+          }
+          if (['rascunho','submetida','devolvida'].indexOf(s.status)!==-1){
+            acoes += '<button class="btn btn-error btn-sm" id="btn-sol-can-'+s.id+'" onclick="SolicitacoesUI.cancelar(\''+s.id+'\')">'
+              +'<span class="ms ms-sm">cancel</span></button>';
+          }
+          return '<tr>'
+            +'<td>'+escaparHtml(s.numero||'—')+'</td>'
+            +'<td style="max-width:160px;white-space:normal">'+escaparHtml(s.objeto||'—')+'</td>'
+            +'<td>'+escaparHtml(s.tipoServico||'—')+'</td>'
+            +'<td>'+escaparHtml(s.setorSolicitante||'—')+'</td>'
+            +'<td>R$ '+escaparHtml(Number(s.valorEstimado||0).toFixed(2))+'</td>'
+            +'<td>'+_badge(s.status)+'</td>'
+            +'<td style="white-space:nowrap">'+acoes+'</td>'
+            +'</tr>';
+        }).join('')+'</tbody></table>';
+    }, function(e){ Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function abrirForm() {
+    document.getElementById('sol-id').value = '';
+    document.getElementById('sol-objeto').value = '';
+    document.getElementById('sol-tipo').value = 'prestacao_servico';
+    document.getElementById('sol-setor').value = '';
+    document.getElementById('sol-valor').value = '';
+    document.getElementById('sol-contrato').value = '';
+    document.getElementById('sol-justificativa').value = '';
+    document.getElementById('sol-form-titulo').textContent = 'Nova Solicitação de Contratação';
+    document.getElementById('btn-sol-salvar').style.display = '';
+    document.getElementById('btn-sol-submeter').style.display = 'none';
+    document.getElementById('sol-form-card').style.display = '';
+  }
+
+  function fecharForm() { document.getElementById('sol-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var objeto = document.getElementById('sol-objeto').value.trim();
+    var tipo   = document.getElementById('sol-tipo').value;
+    var setor  = document.getElementById('sol-setor').value.trim();
+    if (!objeto){ Toast.erro('Objeto da contratação é obrigatório.'); return; }
+    if (!setor) { Toast.erro('Setor solicitante é obrigatório.'); return; }
+    var dados = {
+      objeto:           objeto,
+      tipoServico:      tipo,
+      setorSolicitante: setor,
+      valorEstimado:    parseFloat(document.getElementById('sol-valor').value)||0,
+      contratoId:       document.getElementById('sol-contrato').value||'',
+      justificativa:    document.getElementById('sol-justificativa').value||''
+    };
+    var id = document.getElementById('sol-id').value;
+    if (id) dados.id = id;
+    BtnGuard.wrap('btn-sol-salvar', 'Salvando…', function(){
+      GAS.contratacoes.salvar(dados, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação salva! Nº '+escaparHtml(resp.data&&resp.data.numero||''));
+        fecharForm(); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function submeterItem(id) {
+    if (!confirm('Submeter solicitação para aprovação?')) return;
+    BtnGuard.wrap('btn-sol-sub-'+id, 'Submetendo…', function(){
+      GAS.contratacoes.submeter(id, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação submetida para aprovação do gestor.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function aprovarGestor(id) {
+    var _raw = prompt('Parecer de aprovação (gestor):');
+    if (_raw === null) return;
+    var parecer = _raw || '';
+    BtnGuard.wrap('btn-sol-apg-'+id, 'Aprovando…', function(){
+      GAS.contratacoes.aprovarGestor(id, parecer, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Aprovado pelo gestor. Aguardando financeiro.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function aprovarFinanceiro(id) {
+    var _raw = prompt('Parecer de aprovação (financeiro):');
+    if (_raw === null) return;
+    var parecer = _raw || '';
+    BtnGuard.wrap('btn-sol-apf-'+id, 'Aprovando…', function(){
+      GAS.contratacoes.aprovarFinanceiro(id, parecer, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Aprovado pelo financeiro. Execução liberada.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function iniciarExecucao(id) {
+    if (!confirm('Marcar como em execução?')) return;
+    BtnGuard.wrap('btn-sol-exe-'+id, 'Iniciando…', function(){
+      GAS.contratacoes.iniciarExecucao(id, {}, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Execução iniciada.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function concluir(id) {
+    if (!confirm('Marcar solicitação como concluída?')) return;
+    BtnGuard.wrap('btn-sol-con-'+id, 'Concluindo…', function(){
+      GAS.contratacoes.concluir(id, {}, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação concluída!'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function rejeitar(id) {
+    var _raw = prompt('Informe o motivo da rejeição (obrigatório):');
+    if (_raw === null) return;
+    var parecer = _raw || '';
+    if (!parecer){ Toast.erro('Motivo é obrigatório para rejeição.'); return; }
+    BtnGuard.wrap('btn-sol-rej-'+id, 'Rejeitando…', function(){
+      GAS.contratacoes.rejeitar(id, parecer, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação rejeitada.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function devolver(id) {
+    var _raw = prompt('Observação para devolução (obrigatório):');
+    if (_raw === null) return;
+    var obs = _raw || '';
+    if (!obs){ Toast.erro('Observação é obrigatória para devolução.'); return; }
+    BtnGuard.wrap('btn-sol-dev-'+id, 'Devolvendo…', function(){
+      GAS.contratacoes.devolver(id, obs, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação devolvida para ajuste.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function cancelar(id) {
+    var _raw = prompt('Motivo do cancelamento:');
+    if (_raw === null) return;
+    var motivo = _raw || '';
+    BtnGuard.wrap('btn-sol-can-'+id, 'Cancelando…', function(){
+      GAS.contratacoes.cancelar(id, motivo, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Solicitação cancelada.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function submeter() {
+    var id = document.getElementById('sol-id') ? document.getElementById('sol-id').value : '';
+    if (!id) { Toast.erro('Salve a solicitação antes de submeter.'); return; }
+    submeterItem(id);
+  }
+
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
+    submeter: submeter, submeterItem: submeterItem, aprovarGestor: aprovarGestor, aprovarFinanceiro: aprovarFinanceiro,
+    iniciarExecucao: iniciarExecucao, concluir: concluir, rejeitar: rejeitar, devolver: devolver, cancelar: cancelar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// AGENTES EXTERNOS — Fase 3
+// ═══════════════════════════════════════════════════════════
+var AgentesUI = (function() {
+  var _STATUS_LABEL = { cadastrado:'Cadastrado', habilitado:'Habilitado', suspenso:'Suspenso', descredenciado:'Descred.' };
+  var _STATUS_CLASS = { cadastrado:'badge-primary', habilitado:'badge-success', suspenso:'badge-warning', descredenciado:'badge-error' };
+
+  function _badge(s){ return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>'; }
+
+  function carregar() {
+    var status = document.getElementById('ag-filtro-status') ? document.getElementById('ag-filtro-status').value : '';
+    var filtros = status ? { status: status } : {};
+    GAS.contratados.listar(filtros, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      var el = document.getElementById('ag-lista');
+      if (!el) return;
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">badge</span><p style="font-size:13px;color:var(--muted)">Nenhum agente externo cadastrado.</p></div>';
+        return;
+      }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Nome</th><th>Tipo</th><th>E-mail</th><th>Atuações</th><th>Status</th><th>Ações</th></tr></thead><tbody>'
+        + lista.map(function(c){
+          return '<tr>'
+            +'<td>'+escaparHtml(c.nome||'—')+'</td>'
+            +'<td>'+escaparHtml(c.tipoPessoa==='pf'?'PF':'PJ')+'</td>'
+            +'<td>'+escaparHtml(c.email||'—')+'</td>'
+            +'<td>'+escaparHtml((c.tiposAtuacao||[]).join(', ')||'—')+'</td>'
+            +'<td>'+_badge(c.status)+'</td>'
+            +'<td style="white-space:nowrap">'
+            +(c.status!=='habilitado'?'<button class="btn btn-success btn-sm" id="btn-ag-hab-'+c.id+'" onclick="AgentesUI.habilitar(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">verified</span>Habilitar</button>':'')
+            +(c.status==='habilitado'?'<button class="btn btn-warning btn-sm" id="btn-ag-sus-'+c.id+'" onclick="AgentesUI.suspender(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">pause</span>Suspender</button>':'')
+            +'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }, function(e){ Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function toggleDocumento(tipo) {
+    var cpfG  = document.getElementById('ag-cpf-group');
+    var cnpjG = document.getElementById('ag-cnpj-group');
+    if (tipo === 'pf') { if(cpfG) cpfG.style.display=''; if(cnpjG) cnpjG.style.display='none'; }
+    else               { if(cpfG) cpfG.style.display='none'; if(cnpjG) cnpjG.style.display=''; }
+  }
+
+  function abrirForm() {
+    document.getElementById('ag-id').value='';
+    document.getElementById('ag-nome').value='';
+    document.getElementById('ag-tipo').value='pf';
+    document.getElementById('ag-cpf').value='';
+    document.getElementById('ag-cnpj').value='';
+    document.getElementById('ag-email').value='';
+    document.getElementById('ag-telefone').value='';
+    document.getElementById('ag-atuacoes').value='';
+    document.getElementById('ag-form-titulo').textContent='Novo Agente Externo';
+    toggleDocumento('pf');
+    document.getElementById('ag-form-card').style.display='';
+  }
+
+  function fecharForm() { document.getElementById('ag-form-card').style.display='none'; }
+
+  function salvar() {
+    var nome  = document.getElementById('ag-nome').value.trim();
+    var tipo  = document.getElementById('ag-tipo').value;
+    var cpf   = document.getElementById('ag-cpf').value.trim();
+    var cnpj  = document.getElementById('ag-cnpj').value.trim();
+    if (!nome){ Toast.erro('Nome é obrigatório.'); return; }
+    if (tipo==='pf' && !cpf)   { Toast.erro('CPF é obrigatório.'); return; }
+    if (tipo==='pj' && !cnpj)  { Toast.erro('CNPJ é obrigatório.'); return; }
+    var atuacoes = document.getElementById('ag-atuacoes').value
+      .split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var dados = { nome: nome, tipoPessoa: tipo, cpf: tipo==='pf'?cpf:'', cnpj: tipo==='pj'?cnpj:'',
+      email: document.getElementById('ag-email').value||'',
+      telefone: document.getElementById('ag-telefone').value||'',
+      tiposAtuacao: atuacoes };
+    var id = document.getElementById('ag-id').value;
+    if (id) dados.id = id;
+    BtnGuard.wrap('btn-ag-salvar', 'Salvando…', function(){
+      GAS.contratados.salvar(dados, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Agente salvo com sucesso!'); fecharForm(); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function habilitar(id) {
+    if (!confirm('Habilitar este agente?')) return;
+    BtnGuard.wrap('btn-ag-hab-'+id, 'Habilitando…', function(){
+      GAS.contratados.mudarStatus(id, 'habilitado', function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Agente habilitado.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function suspender(id) {
+    var _raw = prompt('Motivo da suspensão:');
+    if (_raw === null) return;
+    BtnGuard.wrap('btn-ag-sus-'+id, 'Suspendendo…', function(){
+      GAS.contratados.mudarStatus(id, 'suspenso', function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Agente suspenso.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
+    habilitar: habilitar, suspender: suspender, toggleDocumento: toggleDocumento };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// HABILITAÇÕES — Fase 3
+// ═══════════════════════════════════════════════════════════
+var HabilitacoesUI = (function() {
+  var _STATUS_LABEL = { submetido:'Submetido', em_analise:'Em análise', aprovado:'Aprovado',
+    reprovado:'Reprovado', devolvido:'Devolvido', suspenso:'Suspenso', cancelado:'Cancelado' };
+  var _STATUS_CLASS = { submetido:'badge-primary', em_analise:'badge-warning', aprovado:'badge-success',
+    reprovado:'badge-error', devolvido:'badge-warning', suspenso:'badge-warning', cancelado:'badge-error' };
+
+  function _badge(s){ return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>'; }
+
+  function carregar() {
+    var status = document.getElementById('hab-filtro-status') ? document.getElementById('hab-filtro-status').value : '';
+    GAS.habilitacoes.listar(null, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      if (status) lista = lista.filter(function(h){ return h.status === status; });
+      var el = document.getElementById('hab-lista');
+      if (!el) return;
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">verified</span><p style="font-size:13px;color:var(--muted)">Nenhuma habilitação encontrada.</p></div>';
+        return;
+      }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Contratado</th><th>Docs submetidos</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead><tbody>'
+        + lista.map(function(h){
+          var acoes = '';
+          if (h.status==='submetido'){
+            acoes = '<button class="btn btn-primario btn-sm" id="btn-hab-ana-'+h.id+'" onclick="HabilitacoesUI.analisar(\''+h.id+'\')" style="margin-right:4px"><span class="ms ms-sm">search</span>Analisar</button>';
+          }
+          if (h.status==='em_analise'){
+            acoes = '<button class="btn btn-success btn-sm" id="btn-hab-apr-'+h.id+'" onclick="HabilitacoesUI.aprovar(\''+h.id+'\')" style="margin-right:4px"><span class="ms ms-sm">check</span>Aprovar</button>'
+              +'<button class="btn btn-ghost btn-sm" id="btn-hab-dev-'+h.id+'" onclick="HabilitacoesUI.devolver(\''+h.id+'\')" style="margin-right:4px"><span class="ms ms-sm">undo</span>Devolver</button>'
+              +'<button class="btn btn-error btn-sm" id="btn-hab-rep-'+h.id+'" onclick="HabilitacoesUI.reprovar(\''+h.id+'\')"><span class="ms ms-sm">close</span>Reprovar</button>';
+          }
+          return '<tr>'
+            +'<td>'+escaparHtml(h.idContratado||'—')+'</td>'
+            +'<td>'+escaparHtml((h.documentos||[]).length + ' doc(s)')+'</td>'
+            +'<td>'+_badge(h.status)+'</td>'
+            +'<td>'+escaparHtml((h.criadoEm||'').slice(0,10))+'</td>'
+            +'<td style="white-space:nowrap">'+acoes+'</td>'
+            +'</tr>';
+        }).join('')+'</tbody></table>';
+    }, function(e){ Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function analisar(id) {
+    BtnGuard.wrap('btn-hab-ana-'+id, 'Iniciando análise…', function(){
+      GAS.habilitacoes.analisar(id, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Habilitação em análise.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function aprovar(id) {
+    var _raw = prompt('Parecer de aprovação:');
+    if (_raw === null) return;
+    var parecer = _raw || '';
+    BtnGuard.wrap('btn-hab-apr-'+id, 'Aprovando…', function(){
+      GAS.habilitacoes.aprovar(id, parecer, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Habilitação aprovada. Agente habilitado.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function reprovar(id) {
+    var _raw = prompt('Motivo da reprovação (obrigatório):');
+    if (_raw === null) return;
+    var parecer = _raw || '';
+    if (!parecer){ Toast.erro('Motivo é obrigatório.'); return; }
+    BtnGuard.wrap('btn-hab-rep-'+id, 'Reprovando…', function(){
+      GAS.habilitacoes.reprovar(id, parecer, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Habilitação reprovada.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  function devolver(id) {
+    var _raw = prompt('Observação para devolução:');
+    if (_raw === null) return;
+    var obs = _raw || '';
+    if (!obs){ Toast.erro('Observação é obrigatória.'); return; }
+    BtnGuard.wrap('btn-hab-dev-'+id, 'Devolvendo…', function(){
+      GAS.habilitacoes.devolver(id, obs, function(resp){
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Habilitação devolvida para complementação.'); carregar();
+      }, function(e){ Toast.erro(e.message||e); });
+    });
+  }
+
+  return { carregar: carregar, analisar: analisar, aprovar: aprovar, reprovar: reprovar, devolver: devolver };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // APP — Bootstrap e inicialização
 // ═══════════════════════════════════════════════════════════
 var App = (function() {
@@ -3281,8 +4303,9 @@ var App = (function() {
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'espacos',     label:'Espaços',         icone:'museum',                  modulo:'ESPACOS' },
     { secao:'GESTÃO' },
-    { id:'pessoas',     label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
-    { id:'financeiro',  label:'Financeiro',      icone:'account_balance_wallet',  modulo:'FINANCEIRO' },
+    { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
+    { id:'contratacoes',  label:'Contratações',    icone:'handshake',               modulo:'PESSOAS' },
+    { id:'financeiro',    label:'Financeiro',      icone:'account_balance_wallet',  modulo:'FINANCEIRO' },
     { id:'tarefas',     label:'Tarefas',         icone:'task_alt',                modulo:'TAREFAS' },
     { id:'reunioes',    label:'Reuniões',         icone:'groups',                  modulo:'REUNIOES' },
     { secao:'SISTEMA' },
@@ -3358,9 +4381,10 @@ var App = (function() {
       if(item.id !== 'home') {
         (function(id, label) {
           Router.registrar(id, label,
-            id === 'admin'      ? function(){ IdentidadeAdmin.carregar(); }
+            id === 'admin'        ? function(){ IdentidadeAdmin.carregar(); }
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
-            : id === 'pessoas'    ? function(){ PessoasUI.aoAbrir(); }
+            : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }
+            : id === 'contratacoes'?function(){ ContratacoesTabs.aoAbrir(); }
             : id === 'financeiro' ? function(){ ContratosUI.aoAbrir(); }
             : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
             : null
