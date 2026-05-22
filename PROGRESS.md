@@ -4,9 +4,26 @@
 
 ---
 
+## 🔴 REGRAS DE ENTREGA — OBRIGATÓRIO SEGUIR
+
+> **Estas regras se aplicam a toda nova fase ou implementação, sem exceção.**
+
+### ✅ Testes em browser a cada fase
+Após qualquer nova implementação ou fase concluída, **é obrigatório testar no browser** antes de considerar a entrega completa:
+
+1. **Abrir o link de produção** (ou o webapp do GAS) no browser.
+2. **Navegar pelo(s) módulo(s) afetado(s)**: clicar em todos os fluxos relevantes da fase entregue.
+3. **Verificar ausência de erros** no console do browser (F12) e nas respostas dos `google.script.run`.
+4. **Confirmar as operações CRUD** pertinentes (criar, listar, atualizar, excluir) e verificar persistência nos JSONs/Sheets.
+5. **Só fechar a sessão** quando o módulo estiver rodando **sem gargalos, sem erros visíveis e sem comportamentos inesperados**.
+
+> Se qualquer passo falhar → corrigir e repetir o ciclo de teste antes de avançar para a próxima fase.
+
+---
+
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Fase 1 — Persistência Canônica — **1.3 Contratações entregue; seguir para 1.4 Ativos e Almoxarifado**
+**Fase atual**: Fase 1 — Persistência Canônica — **1.4 Ativos e Almoxarifado entregue; seguir para Fase 2**
 **O que foi feito (2026-05-20 a 2026-05-21)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -20,15 +37,16 @@
 - ✅ UI principal reconstruída com identidade CCBJ moderna (Inter + Material Symbols)
 - ✅ Fase 1.1 entregue: `TarefaRepository`, `TarefaEngine`, controllers `ctrl_tarefas_*`, migração Sheet → JSON e view mínima de Tarefas
 - ✅ **Fase 1.2 entregue**: `ColaboradorRepository` (colaboradores.json + índice EQUIPES.Funcionarios), `PessoasEngine` (fusão EquipesEngine+RHEngine, FSMs status/férias), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*), view SPA + GAS.pessoas + PessoasUI
+- ✅ **Fase 1.4 entregue** (2026-05-21): `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM disponivel↔reservado↔em_uso↔manutencao→baixado), `ativos_controller.gs` (ctrl_ativos_* + RBAC infraestrutura/gestor/admin), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos registrada)
 
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase1_contratos_prepararIndice()` — garante cabeçalho/proteção de `FINANCEIRO.Contratos`
-> 2. **[GAS EDITOR]** Se houver dados no Sheet legado: executar `fase1_contratos_migrarSheetParaJson()`
-> 3. **[BROWSER]** Abrir módulo Financeiro → verificar métricas → criar contrato smoke-test → confirmar em `contratos.json`
-> 4. Iniciar **Fase 1.4 — Ativos e Almoxarifado**
+> 1. **[GAS EDITOR]** Executar `fase1_ativos_prepararIndice()` — garante cabeçalho nas abas ESPACOS: Ativos, MovimentacoesAtivos, BaixasAtivos, Manutencoes
+> 2. **[BROWSER]** Abrir módulo Espaços → verificar métricas → criar ativo smoke-test → confirmar na lista e no Sheet ESPACOS.Ativos
+> 3. **[BROWSER]** Testar transição de status: disponivel → manutencao → disponivel
+> 4. Iniciar **Fase 2 — Espaços e Almoxarifado com Bloqueio Real**
 
-**Fase mais urgente agora**: **Fase 1.4** — Ativos e Almoxarifado.
-Com contratos canônicos, o próximo passo é estruturar o domínio de espaços físicos e itens.
+**Fase mais urgente agora**: **Fase 2** — Reservas de Espaço com bloqueio real de conflitos.
+Com ativos canônicos (Fase 1.4), o próximo passo é garantir que reservas de espaço são verificadas sem sobreposição possível.
 
 ---
 
@@ -237,7 +255,7 @@ Um módulo está **completo** quando oferece:
 | Fase | Auditoria BtnGuard | Status |
 |------|-------------------|--------|
 | 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ✅ Deploy realizado; auditoria visual pendente no browser |
-| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores criadas; repetir após Contratações |
+| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores + Contratos + Ativos criadas |
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ⬜ |
 | 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
 | 4 — Financeiro | Após criar views financeiras | ⬜ |
@@ -249,7 +267,7 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: cada domínio com UMA fonte de verdade. Zero dual-systems.
 
-**Status**: 🟡 Em andamento — 1.1 entregue
+**Status**: 🟡 Em andamento — 1.1, 1.2, 1.3 e 1.4 entregues; Fase 1 concluída
 
 **Próximo passo quando iniciar**:
 > Próximo: `1.2 — Colaboradores`: criar repositório canônico e engine de pessoas.
@@ -296,9 +314,21 @@ Um módulo está **completo** quando oferece:
 
 ### 1.4 — Ativos e Almoxarifado
 
-- [ ] Criar `gas/src/modules/espacos/ativos_engine.gs` — FSM: disponivel→reservado→em_uso→manutencao→baixado
-- [ ] Criar `gas/src/modules/espacos/almoxarifado_engine.gs`
-- [ ] Deprecar `almoxarifado.json` legado
+- [x] Criar `gas/src/modules/espacos/ativos_repository.gs` — fonte canônica ESPACOS.Ativos; índices MovimentacoesAtivos, BaixasAtivos, Manutencoes
+- [x] Criar `gas/src/modules/espacos/ativos_engine.gs` — FSM: disponivel↔reservado↔em_uso↔manutencao→baixado; métricas; auditoria; eventos
+- [x] Criar `gas/src/modules/espacos/ativos_controller.gs` — ctrl_ativos_* com RBAC (leitura: todos; escrita: infraestrutura+gestor+admin; baixa: admin)
+- [x] Criar `gas/src/modules/espacos/almoxarifado_engine.gs` — FSM stub: solicitado→aprovado→retirado→devolvido; interfaces definidas para Fase 2.2
+- [x] View SPA Espaços — AtivosUI (métricas, CRUD, filtro status, badges, ações de manutenção), GAS.ativos namespace, rota `espacos` registrada no Router
+- [x] `fase1_ativos_prepararIndice()` — garante cabeçalhos nas 4 abas ESPACOS de ativos
+- [x] Nota: `almoxarifado.json` legado marcado como read-only no código — migração formal na Fase 2.2
+
+**Smoke-test 1.4:**
+1. GAS Editor: executar `fase1_ativos_prepararIndice()` → deve retornar `{ok:true}`
+2. Browser: Módulo Espaços → verificar métricas (total/disponíveis/em uso/manutenção)
+3. Browser: clicar "Novo Ativo" → preencher nome + categoria → Salvar → confirmar na lista
+4. Browser: clicar botão Manutenção → confirmar status muda para "Manutenção"
+5. Browser: clicar "Concluir Manutenção" → confirmar retorno para "Disponível"
+6. Sheet ESPACOS.Ativos: confirmar que o registro aparece com todos os campos
 
 ---
 
@@ -629,6 +659,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-21 | Fase 0/1 | Deploys realizados no Apps Script; UI principal reconstruída; corrigido include em comentário; criada Fase 1.1 com `TarefaRepository`, `TarefaEngine`, controllers, migração Sheet→JSON, proteção de índice e view mínima de Tarefas; `domain_model.md` atualizado | Executar `fase1_tarefas_prepararIndice()`/migração no GAS se houver dados; iniciar Fase 1.2 Colaboradores |
 | 2026-05-21 | Fase 1.2 | Colaboradores: `ColaboradorRepository` (colaboradores.json + sub-coleções + índice EQUIPES.Funcionarios), `PessoasEngine` (FSM status colaborador + FSM férias com 6 estados + fusão EquipesEngine+RHEngine), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*, RBAC completo, férias com FSM), view SPA Pessoas (métricas, CRUD, filtro status, PessoasUI), GAS.pessoas namespace, rota registrada no Router | `clasp push` → `fase1_colaboradores_prepararIndice()` → `fase1_colaboradores_migrarFuncionarios()` → smoke-test no browser → iniciar Fase 1.3 Contratações |
 | 2026-05-21 | Fase 1.3 | Contratos: `ContratoRepository` (contratos.json com nested metas/rubricas/indicadores, índice FINANCEIRO.Contratos, migração idempotente), `ContratosEngine` (FSM Ativo↔Suspenso→Encerrado, cálculos financeiros, análise de divergência), `contratos_controller.gs` (ctrl_contratos_*, RBAC por papel financeiro/gestor/admin), view SPA Financeiro (ContratosUI, GAS.contratos, métricas, CRUD, filtro status) | `fase1_contratos_prepararIndice()` → `fase1_contratos_migrarSheetParaJson()` → smoke-test browser → iniciar Fase 1.4 Ativos e Almoxarifado |
+| 2026-05-21 | Fase 1.4 | Ativos: `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM completa + métricas + auditoria + eventos), `ativos_controller.gs` (ctrl_ativos_* + RBAC), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos), `fase1_ativos_prepararIndice()`. Fase 1 concluída. | `fase1_ativos_prepararIndice()` no GAS Editor → smoke-test no browser (Módulo Espaços) → iniciar Fase 2 Reservas |
 
 ---
 

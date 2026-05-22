@@ -1222,6 +1222,104 @@ body {
         </div>
       </div><!-- /view-financeiro -->
 
+      <!-- VIEW: Espaços / Ativos — Fase 1.4 -->
+      <div id="view-espacos" class="view">
+        <div class="page-header">
+          <div class="page-title">Espaços &amp; Ativos</div>
+          <div class="page-subtitle">Patrimônio, equipamentos e reservas de espaço</div>
+        </div>
+
+        <!-- Métricas -->
+        <div class="stats-grid" id="ativos-metricas"></div>
+
+        <!-- Formulário de cadastro -->
+        <div class="card" id="ativos-form-card" style="display:none">
+          <div class="card-header">
+            <div class="card-titulo">
+              <span class="ms">add_box</span> <span id="ativos-form-titulo">Novo Ativo</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="AtivosUI.fecharForm()" data-bg-skip="1">
+              <span class="ms ms-sm">close</span>
+            </button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Nome *</label>
+              <input type="text" id="at-nome" class="form-input" placeholder="Ex: Câmera Sony A7">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Código / Tombamento</label>
+              <input type="text" id="at-codigo" class="form-input" placeholder="Ex: PAT-001">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Categoria</label>
+              <select id="at-categoria" class="form-input">
+                <option value="audiovisual">Audiovisual</option>
+                <option value="informatica">Informática</option>
+                <option value="mobiliario">Mobiliário</option>
+                <option value="infraestrutura">Infraestrutura</option>
+                <option value="outro" selected>Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Localização atual</label>
+              <input type="text" id="at-localizacao" class="form-input" placeholder="Ex: Sala de Mídia">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor de aquisição (R$)</label>
+              <input type="number" id="at-valor" class="form-input" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data de aquisição</label>
+              <input type="date" id="at-data-aquis" class="form-input">
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label">Descrição / Observações</label>
+              <textarea id="at-descricao" class="form-input" rows="2" placeholder="Descrição, número de série, características…"></textarea>
+            </div>
+          </div>
+          <input type="hidden" id="at-id">
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+            <button class="btn btn-ghost" onclick="AtivosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+            <button class="btn btn-primario" id="btn-ativos-salvar" onclick="AtivosUI.salvar()">
+              <span class="ms ms-sm">save</span> Salvar
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de ações + filtros -->
+        <div class="card">
+          <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+            <div class="card-titulo"><span class="ms">inventory_2</span> Patrimônio</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+              <select id="at-filtro-status" class="form-input"
+                      style="width:auto;padding:6px 10px;font-size:13px;"
+                      onchange="AtivosUI.carregar()">
+                <option value="">Todos os status</option>
+                <option value="disponivel" selected>Disponíveis</option>
+                <option value="reservado">Reservados</option>
+                <option value="em_uso">Em uso</option>
+                <option value="manutencao">Manutenção</option>
+                <option value="baixado">Baixados</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" id="btn-ativos-recarregar" onclick="AtivosUI.carregar()">
+                <span class="ms ms-sm">refresh</span>
+              </button>
+              <button class="btn btn-primario btn-sm" id="btn-ativos-novo" onclick="AtivosUI.abrirForm()">
+                <span class="ms ms-sm">add</span> Novo Ativo
+              </button>
+            </div>
+          </div>
+          <div id="ativos-lista">
+            <div class="empty-state" style="min-height:120px;padding:20px;">
+              <span class="ms" style="font-size:32px;color:var(--muted)">inventory_2</span>
+              <p style="font-size:13px;color:var(--muted)">Carregando ativos…</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /view-espacos -->
+
       <!-- Views de módulos — injetadas dinamicamente por cada módulo -->
 
     </div><!-- /conteudo -->
@@ -1271,6 +1369,16 @@ var GAS = {
     analisar:    function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_analisar(id); },
     mudarStatus: function(id,s,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_status(id,s); },
     excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir(id); }
+  },
+  ativos: {
+    listar:      function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_listar(f||{}); },
+    obter:       function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_obter(id); },
+    salvar:      function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_salvar(d); },
+    metricas:    function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_metricas(); },
+    status:      function(id,s,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_status(id,s,m||''); },
+    manutencao:  function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_manutencao(id,d||''); },
+    devolver:    function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_devolver(id,m||''); },
+    baixar:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_baixar(id,m||''); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -2067,6 +2175,203 @@ var Router = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// ATIVOS — Fase 1.4
+// ═══════════════════════════════════════════════════════════
+var AtivosUI = (function() {
+  var _carregado = false;
+
+  var _STATUS_LABEL = {
+    disponivel: 'Disponível',
+    reservado:  'Reservado',
+    em_uso:     'Em uso',
+    manutencao: 'Manutenção',
+    baixado:    'Baixado'
+  };
+  var _STATUS_CLASS = {
+    disponivel: 'badge-success',
+    reservado:  'badge-primary',
+    em_uso:     'badge-accent',
+    manutencao: 'badge-warning',
+    baixado:    'badge-error'
+  };
+
+  function _badge(status) {
+    var label = _STATUS_LABEL[status] || status || '—';
+    var cls   = _STATUS_CLASS[status] || 'badge-primary';
+    return '<span class="badge '+cls+'">'+escaparHtml(label)+'</span>';
+  }
+
+  function _renderMetricas(m) {
+    m = m || {};
+    document.getElementById('ativos-metricas').innerHTML = [
+      { valor:m.total      ||0, label:'Total cadastrado', icone:'inventory_2',      classe:'primary' },
+      { valor:m.disponivel ||0, label:'Disponíveis',      icone:'check_circle',     classe:'success' },
+      { valor:m.em_uso     ||0, label:'Em uso',           icone:'play_circle',      classe:'accent'  },
+      { valor:m.manutencao ||0, label:'Em manutenção',    icone:'build',            classe:'warning' }
+    ].map(function(s) {
+      return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+        + '<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+        + '<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+    }).join('');
+  }
+
+  function _botoesAcao(a) {
+    var btns = '';
+    if(a.status === 'disponivel') {
+      btns += '<button class="btn btn-ghost btn-sm btn-ativo-manut" data-id="'+escaparHtml(a.id)+'"><span class="ms ms-sm">build</span> Manutenção</button>';
+    }
+    if(a.status === 'manutencao') {
+      btns += '<button class="btn btn-ghost btn-sm btn-ativo-concl" data-id="'+escaparHtml(a.id)+'"><span class="ms ms-sm">check</span> Concluir Manutenção</button>';
+    }
+    if(a.status !== 'baixado') {
+      btns += '<button class="btn btn-ghost btn-sm btn-ativo-edit" data-id="'+escaparHtml(a.id)+'"'
+        +' data-nome="'+escaparHtml(a.nome)+'" data-codigo="'+escaparHtml(a.codigo||'')+'"'
+        +' data-cat="'+escaparHtml(a.categoria||'outro')+'" data-loc="'+escaparHtml(a.localizacao||'')+'"'
+        +' data-val="'+escaparHtml(String(a.valorAquisicao||''))+'" data-descr="'+escaparHtml(a.descricao||'')+'">'
+        +'<span class="ms ms-sm">edit</span></button>';
+    }
+    return btns;
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('ativos-lista');
+    if(!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:120px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">inventory_2</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhum ativo cadastrado com este filtro.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(a) {
+      return '<div class="pendente-item">'
+        +'<div class="pendente-info">'
+        +'<div class="pendente-nome">'+escaparHtml(a.nome)
+        +(a.codigo ? ' <span style="font-size:11px;color:var(--muted)">['+escaparHtml(a.codigo)+']</span>' : '')
+        +'</div>'
+        +'<div class="pendente-meta">'
+        +escaparHtml(_STATUS_LABEL[a.categoria]||a.categoria||'Outro')
+        +(a.localizacao ? ' · '+escaparHtml(a.localizacao) : '')
+        +(a.responsavel ? ' · <em>'+escaparHtml(a.responsavel)+'</em>' : '')
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +_badge(a.status)+_botoesAcao(a)
+        +'</div></div>';
+    }).join('');
+
+    // Vincular botões
+    el.querySelectorAll('.btn-ativo-manut').forEach(function(btn) {
+      btn.addEventListener('click', function() { _enviarManutencao(this.getAttribute('data-id')); });
+    });
+    el.querySelectorAll('.btn-ativo-concl').forEach(function(btn) {
+      btn.addEventListener('click', function() { _concluirManutencao(this.getAttribute('data-id')); });
+    });
+    el.querySelectorAll('.btn-ativo-edit').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        abrirForm({
+          id:           this.getAttribute('data-id'),
+          nome:         this.getAttribute('data-nome'),
+          codigo:       this.getAttribute('data-codigo'),
+          categoria:    this.getAttribute('data-cat'),
+          localizacao:  this.getAttribute('data-loc'),
+          valorAquisicao: this.getAttribute('data-val'),
+          descricao:    this.getAttribute('data-descr')
+        });
+      });
+    });
+  }
+
+  function carregar() {
+    var filtroStatus = (document.getElementById('at-filtro-status')||{}).value || '';
+    BtnGuard.wrap('btn-ativos-recarregar', 'Atualizando…', function(done) {
+      GAS.ativos.metricas(function(respM) {
+        if(respM && respM.ok) _renderMetricas(respM.data);
+        GAS.ativos.listar(filtroStatus ? {status:filtroStatus} : {}, function(resp) {
+          done();
+          if(!resp || !resp.ok) { Toast.erro('Erro ao carregar ativos.'); return; }
+          _renderLista(resp.data || []);
+          _carregado = true;
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); Toast.erro('Erro ao carregar métricas: '+(err.message||err)); });
+    });
+  }
+
+  function abrirForm(dados) {
+    var card = document.getElementById('ativos-form-card');
+    var titulo = document.getElementById('ativos-form-titulo');
+    card.style.display = '';
+    document.getElementById('at-id').value        = dados && dados.id         || '';
+    document.getElementById('at-nome').value      = dados && dados.nome       || '';
+    document.getElementById('at-codigo').value    = dados && dados.codigo     || '';
+    document.getElementById('at-localizacao').value = dados && dados.localizacao || '';
+    document.getElementById('at-valor').value     = dados && dados.valorAquisicao || '';
+    document.getElementById('at-descricao').value = dados && dados.descricao  || '';
+    if(dados && dados.categoria) document.getElementById('at-categoria').value = dados.categoria;
+    titulo.textContent = dados && dados.id ? 'Editar Ativo' : 'Novo Ativo';
+    document.getElementById('at-nome').focus();
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function fecharForm() {
+    document.getElementById('ativos-form-card').style.display = 'none';
+  }
+
+  function salvar() {
+    var nome = (document.getElementById('at-nome').value||'').trim();
+    if(!nome) { Toast.aviso('Nome do ativo é obrigatório.'); return; }
+    var id = (document.getElementById('at-id').value||'').trim();
+    var dados = {
+      nome:          nome,
+      codigo:        (document.getElementById('at-codigo').value||'').trim(),
+      categoria:     document.getElementById('at-categoria').value || 'outro',
+      localizacao:   (document.getElementById('at-localizacao').value||'').trim(),
+      valorAquisicao:parseFloat(document.getElementById('at-valor').value||'0') || 0,
+      descricao:     (document.getElementById('at-descricao').value||'').trim()
+    };
+    if(id) dados.id = id;
+    BtnGuard.wrap('btn-ativos-salvar', 'Salvando…', function(done) {
+      GAS.ativos.salvar(dados, function(resp) {
+        done();
+        if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar ativo.'); return; }
+        fecharForm();
+        Toast.sucesso(id ? 'Ativo atualizado.' : 'Ativo cadastrado.');
+        carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function _enviarManutencao(id) {
+    if(!id) return;
+    var descr = prompt('Descreva o problema ou motivo da manutenção:');
+    if(descr === null) return; // cancelado
+    BtnGuard.wrap(null, 'Registrando…', function(done) {
+      GAS.ativos.manutencao(id, descr, function(resp) {
+        done();
+        if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao enviar para manutenção.'); return; }
+        Toast.sucesso('Ativo enviado para manutenção.');
+        carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function _concluirManutencao(id) {
+    if(!id) return;
+    BtnGuard.wrap(null, 'Concluindo…', function(done) {
+      GAS.ativos.status(id, 'disponivel', 'Manutenção concluída', function(resp) {
+        done();
+        if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao concluir manutenção.'); return; }
+        Toast.sucesso('Manutenção concluída — ativo disponível.');
+        carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function aoAbrir() {
+    if(!_carregado) carregar();
+  }
+
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // APP — Bootstrap e inicialização
 // ═══════════════════════════════════════════════════════════
 var App = (function() {
@@ -2160,6 +2465,7 @@ var App = (function() {
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasUI.aoAbrir(); }
             : id === 'financeiro' ? function(){ ContratosUI.aoAbrir(); }
+            : id === 'espacos'    ? function(){ AtivosUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);
