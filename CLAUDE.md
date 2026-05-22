@@ -4,6 +4,50 @@
 
 ---
 
+## 📐 SKILL.MD — LEITURA OBRIGATÓRIA PARA DECISÕES ARQUITETURAIS
+
+**Arquivo**: [`Skill.md`](Skill.md)
+
+Ler `Skill.md` **antes de qualquer decisão arquitetural**, incluindo:
+
+- Criar um novo módulo, engine, repositório ou serviço
+- Refatorar código existente
+- Escolher padrões de persistência, cache ou eventos
+- Definir como módulos se comunicam entre si
+- Planejar evolução do sistema (novas fases)
+- Avaliar trade-offs de performance, observabilidade ou resiliência
+
+### Por que ler Skill.md
+
+O documento disseca a arquitetura de platform engineering da Atlassian (Jira, Confluence, Bitbucket em escala global) e mapeia cada padrão diretamente para o sistema CCBJ na **seção 7**. Os padrões já implementados e os gaps identificados estão listados lá.
+
+### Padrões do Skill.md já presentes neste projeto
+
+| Padrão | Onde está no v2 |
+|--------|----------------|
+| **Control Plane central** | `utils.gs → ABA_PARA_MODULO` + `DataGateway` |
+| **Auth Sidecar** | `AcessoService.verificar()` chamado em todos os controllers |
+| **Audit Logging** | `AuditoriaService.registrar()` em toda escrita |
+| **Status rastreável** | FSMs via `FsmGuardian` + `SystemEvents.emit()` |
+| **Lock com retry** | `data_layer.gs → modifyJSON()` com `LockService` |
+| **Async-first** | `EventHandlerRegistry` + fila de eventos pendentes |
+| **Self-service** | Portal público sem intervenção de admin |
+| **Idempotência** | `gerarId()` + scripts de migração idempotentes |
+| **Observabilidade** | `Logger` estruturado + `AuditoriaStore` |
+
+### Gaps identificados no Skill.md para aplicar nas próximas fases
+
+- **Cache por namespace** com invalidação seletiva (Fase 6+)
+- **Logs em JSON estruturado** com contexto rico (Fase 6+)
+- **Alertas por threshold** (Fase 10 — AlertasEngine já tem catálogo)
+- **Feature flags via config_org.json** — habilitar módulos sem deploy
+- **CQRS explícito** — separar `ctrl_*_listar` (leitura) de `ctrl_*_salvar` (escrita) com cache diferenciado
+- **Snapshot de estado** antes de operações críticas (rollback robusto — Fase 4+)
+
+> Antes de implementar qualquer um dos itens acima, ler a seção correspondente no `Skill.md` para usar o padrão de forma consistente com a arquitetura planejada.
+
+---
+
 ## 🔴 REGRAS ABSOLUTAS — APLICAM-SE A TODO CÓDIGO PRODUZIDO
 
 ### 1. DEPLOY OBRIGATÓRIO a cada fase ou correção
