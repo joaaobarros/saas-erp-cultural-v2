@@ -17,8 +17,7 @@
  * Notificações assíncronas a cada transição (via SystemEvents).
  *
  * OrcamentoGuard — validação orçamentária antes de submeter.
- * Fase 3: stub com aviso (não bloqueia).
- * Fase 4: check real contra contratos.json saldos.
+ * Implementação real em modules/financeiro/orcamento_guard.gs (Fase 4).
  *
  * Skill.md aplicado:
  *   - Snapshot antes de rejeição/cancelamento (reversibilidade auditável)
@@ -71,34 +70,7 @@ if (typeof FsmGuardian !== 'undefined') {
   FsmGuardian.registrar('solicitacao_status', _TRANSICOES_SOLICITACAO);
 }
 
-// ── OrcamentoGuard ────────────────────────────────────────────────
-// Fase 3: stub com log. Fase 4: implementação real contra contratos.json.
-
-var OrcamentoGuard = (function () {
-  function assertDisponivel(contratoId, rubricaId, valor, orgId) {
-    // Stub Fase 3 — não bloqueia, apenas loga para auditoria
-    Logger.info('orcamento_guard', 'assertDisponivel',
-      'STUB F3 — contratoId:' + contratoId +
-      ' rubricaId:'           + rubricaId  +
-      ' valor:'               + valor +
-      ' [F4: verificar saldo real]'
-    );
-    try {
-      if (typeof AuditoriaService !== 'undefined') {
-        AuditoriaService.registrar('ORCAMENTO_VERIFICACAO_STUB', 'contratacoes', {
-          contratoId: contratoId, rubricaId: rubricaId,
-          valor: valor, orgId: orgId,
-          aviso: 'Verificação real implementada na Fase 4'
-        });
-      }
-    } catch (_) {}
-    // Fase 4: lerJSON('contratos.json'), encontrar rubrica, calcular saldo
-    // e lançar Error se valor > saldo
-    return { ok: true, aviso: 'Verificação orçamentária pendente (Fase 4)' };
-  }
-
-  return { assertDisponivel: assertDisponivel };
-})();
+// OrcamentoGuard definido em modules/financeiro/orcamento_guard.gs (Fase 4).
 
 // ── Engine ────────────────────────────────────────────────────────
 

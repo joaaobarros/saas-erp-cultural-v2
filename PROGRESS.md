@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 3 concluída** — Seguir para **Fase 4 (Financeiro)**
+**Fase atual**: **Fase 4 concluída** — Seguir para **Fase 5 (Ação como Núcleo Real)**
 **O que foi feito (2026-05-20 a 2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -41,16 +41,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **Fase 2 entregue** (2026-05-22): `ReservaRepository` + `ReservaEngine` (`assertSemConflito` dentro de `LockService`), `reservas_controller.gs`, `ReservasItensRepository` (catálogo + empréstimos), `AlmoxarifadoEngine` (implementação completa), `ChaveRepository` + `ChaveEngine` + `chaves_controller.gs`, view Espaços com tabs (Reservas | Chaves | Empréstimos | Patrimônio), GAS.reservas/chaves/almox, deploy @24
 - ✅ **Auditoria de bugs completa** (2026-05-22): 5 bugs identificados e corrigidos — (1) `prompt()` null check quebrado em ChavesUI/ReservasUI/AlmoxUI; (2) `ReservasUI.salvar()` sempre criava nunca atualizava + `GAS.reservas.atualizar` ausente; (3) CSS `badge-accent`/`form-grid` sem definição; (4) sanitização de email inconsistente em `IdentidadeAdmin`; (5) `FsmGuardian.transitar()` não chamado em `almoxarifado_engine.verificarAtrasos()`. Deploy @26. CLAUDE.md atualizado com checklist de auditoria obrigatória antes de todo deploy.
 - ✅ **Fase 3 entregue** (2026-05-22): `ContratadoRepository` + `ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository` + `SolicitacaoEngine` (FSM aprovação multinível + OrcamentoGuard stub), `contratacoes_controller.gs` (CQRS+cache+RBAC). `pessoas_engine.gs`: Afastamentos (FSM rascunho→ativo→encerrado) + Ocorrências (sem FSM). `colaborador_repository.gs`: afastamentos.json + ocorrencias.json. `pessoas_controller.gs`: ctrl_rh_listar/salvar/ativar/encerrar/cancelar_afastamento + ctrl_rh_listar/registrar/excluir_ocorrencia. View SPA Pessoas com 3 tabs (Colaboradores|Afastamentos|Ocorrências) + view Contratações com 3 tabs (Solicitações|Agentes|Habilitações). GAS.pessoas (afastamentos+ocorrências) + GAS.contratados + GAS.habilitacoes + GAS.contratacoes. setup.gs: `SCHEMA_ABAS` atualizado com `Contratados` (MASTER) e `SolicitacoesContratacao` (FINANCEIRO). Deploy @28.
+- ✅ **Fase 4 entregue** (2026-05-22): `FonteRecursoRepository` + `FonteRecursoEngine` (FSM ativo→suspenso→encerrado, fontes_recurso.json), `OrcamentoGuard` real (verifica saldo em contratos.json, substitui stub F3, com comprometer/liberar/efetivarPagamento/snapshotSaldo), `RemanejamentoRepository` + `RemanejamentoEngine` (FSM 6 estados, snapshot imutável antes de submissão, efetivação em contratos.json, threshold configurável), `AditivoRepository` + `AditivoEngine` (FSM 7 estados, aprovação 2-etapas interno+fundador, efetivação automática em contratos.json), `financeiro_controller.gs` (ctrl_fonte_recurso_*, ctrl_remanejamento_*, ctrl_aditivo_* com RBAC). View Financeiro expandida com 4 tabs (Contratos|Fontes|Remanejamentos|Aditivos). GAS.fontesRecurso + GAS.remanejamentos + GAS.aditivos. FontesUI + RemanejamentosUI + AditivosUI + FinanceiroTabs. Deploy @30.
 
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase3_contratados_prepararIndice()` → `{ok:true}`
-> 2. **[GAS EDITOR]** Executar `fase3_contratacoes_prepararIndice()` → `{ok:true}`
-> 3. **[BROWSER]** Módulo Pessoas → Tab Afastamentos → Novo → preencher colaborador+tipo+data → Salvar → Ativar → confirmar status colaborador muda para "Afastado"
-> 4. **[BROWSER]** Módulo Contratações → Nova Solicitação → Salvar Rascunho → Submeter → Aprovar Gestor → Aprovar Financeiro
-> 5. **[BROWSER]** Tab Agentes → Novo (PF) → Cadastrar → Habilitar → status habilitado
-> 6. Iniciar **Fase 4 — Financeiro e Gestão de Contratos**
+> 1. **[GAS EDITOR]** Executar `fase4_fontes_prepararIndice()` → `{ok:true}`
+> 2. **[GAS EDITOR]** Executar `fase4_remanejamentos_prepararIndice()` → `{ok:true}`
+> 3. **[GAS EDITOR]** Executar `fase4_aditivos_prepararIndice()` → `{ok:true}`
+> 4. **[BROWSER]** Módulo Financeiro → Tab Fontes de Recurso → Nova → preencher nome+tipo → Salvar → aparece na lista
+> 5. **[BROWSER]** Tab Remanejamentos → Novo → preencher contratoId+valor+rubricas+justificativa → Salvar → Submeter → Aprovar Financeiro → Efetivar
+> 6. **[BROWSER]** Tab Aditivos → Novo → preencher contratoId+tipo+objeto → Salvar → Submeter Interno → Aprovar Interno → Submeter Fundador → Aprovar Fundador → Efetivar
+> 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
+> 8. Iniciar **Fase 5 — Ação como Núcleo Real**
 
-**Fase mais urgente agora**: **Fase 4** — módulo financeiro completo com FonteRecurso, OrcamentoGuard real e remanejamentos.
+**Fase mais urgente agora**: **Fase 5** — Ação conectada a Reservas, Tarefas, Contratos (acaoId).
 
 ---
 
@@ -263,7 +266,7 @@ Um módulo está **completo** quando oferece:
 | 1.4 — Ativos (view-espacos) | `BtnGuard.auditar()` no console após abrir Módulo Espaços | ✅ Integrado na view tabbed de Espaços |
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ✅ Todos os botões async protegidos (ReservasUI + ChavesUI + AlmoxUI) |
 | 3 — Pessoas e RH | BtnGuard.auditar() pós-deploy @28 | ✅ Afastamentos + Ocorrências + Contratações + Habilitações |
-| 4 — Financeiro | Após criar views financeiras | ⬜ |
+| 4 — Financeiro | Após criar views financeiras | ✅ FontesUI + RemanejamentosUI + AditivosUI + FinanceiroTabs; Deploy @30 |
 | 5+ — Demais fases | Após cada view criada | ⬜ |
 
 ---

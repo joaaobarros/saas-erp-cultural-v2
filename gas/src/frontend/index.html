@@ -1393,96 +1393,323 @@ body {
 
       </div><!-- /view-contratacoes -->
 
-      <!-- VIEW: Financeiro / Contratos — Fase 1.3 -->
+      <!-- VIEW: Financeiro — Fase 4 (Contratos | Fontes | Remanejamentos | Aditivos) -->
       <div id="view-financeiro" class="view">
         <div class="page-header">
           <div class="page-title">Financeiro</div>
-          <div class="page-subtitle">Gestão de contratos com persistência canônica em contratos.json</div>
+          <div class="page-subtitle">Gestão financeira, contratos, fontes de recurso e orçamento</div>
         </div>
 
-        <!-- Métricas -->
-        <div class="stats-grid" id="contratos-metricas"></div>
-
-        <!-- Formulário novo contrato -->
-        <div class="card" id="contratos-form-card" style="display:none">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">description</span> <span id="contratos-form-titulo">Novo Contrato</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="ContratosUI.fecharForm()" data-bg-skip="1">
-              <span class="ms ms-sm">close</span> Cancelar
-            </button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="form-group">
-              <label class="form-label">Nome do contrato *</label>
-              <input id="cf-nome" class="form-input" type="text" placeholder="Ex: Lei de Fomento 2024">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Fonte de recurso *</label>
-              <input id="cf-fonte" class="form-input" type="text" placeholder="Ex: Secretaria de Cultura">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Valor total (R$)</label>
-              <input id="cf-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Status</label>
-              <select id="cf-status" class="form-input">
-                <option value="Ativo">Ativo</option>
-                <option value="Suspenso">Suspenso</option>
-                <option value="Encerrado">Encerrado</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Vigência início</label>
-              <input id="cf-inicio" class="form-input" type="date">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Vigência fim</label>
-              <input id="cf-fim" class="form-input" type="date">
-            </div>
-            <div class="form-group" style="grid-column:1/-1;">
-              <label class="form-label">Objeto / Descrição</label>
-              <input id="cf-objeto" class="form-input" type="text" placeholder="Breve descrição do objeto contratual">
-            </div>
-          </div>
-          <input type="hidden" id="cf-id">
-          <div style="display:flex;gap:8px;margin-top:4px;">
-            <button class="btn btn-primario" id="btn-contratos-salvar" onclick="ContratosUI.salvar()">
-              <span class="ms ms-sm">save</span> Salvar
-            </button>
-          </div>
+        <!-- Tab Nav -->
+        <div class="tab-bar" style="margin-bottom:16px">
+          <button class="tab-btn fin-tab" data-tab="contratos" onclick="FinanceiroTabs.abrirTab('contratos')">
+            <span class="ms ms-sm">description</span> Contratos
+          </button>
+          <button class="tab-btn fin-tab" data-tab="fontes" onclick="FinanceiroTabs.abrirTab('fontes')">
+            <span class="ms ms-sm">account_balance</span> Fontes de Recurso
+          </button>
+          <button class="tab-btn fin-tab" data-tab="remanejamentos" onclick="FinanceiroTabs.abrirTab('remanejamentos')">
+            <span class="ms ms-sm">swap_horiz</span> Remanejamentos
+          </button>
+          <button class="tab-btn fin-tab" data-tab="aditivos" onclick="FinanceiroTabs.abrirTab('aditivos')">
+            <span class="ms ms-sm">add_circle</span> Aditivos
+          </button>
         </div>
 
-        <!-- Listagem -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">folder_open</span> Contratos
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <select id="cf-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="ContratosUI.carregar()">
-                <option value="">Todos os status</option>
-                <option value="Ativo" selected>Ativos</option>
-                <option value="Suspenso">Suspensos</option>
-                <option value="Encerrado">Encerrados</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" id="btn-contratos-recarregar" onclick="ContratosUI.carregar()">
-                <span class="ms ms-sm">refresh</span> Atualizar
+        <!-- ── TAB: Contratos ── -->
+        <div class="fin-tab-content" data-tab="contratos">
+          <div class="stats-grid" id="contratos-metricas"></div>
+
+          <div class="card" id="contratos-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">description</span> <span id="contratos-form-titulo">Novo Contrato</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="ContratosUI.fecharForm()" data-bg-skip="1">
+                <span class="ms ms-sm">close</span> Cancelar
               </button>
-              <button class="btn btn-primario btn-sm" id="btn-contratos-novo" onclick="ContratosUI.abrirForm()" style="display:none">
-                <span class="ms ms-sm">add</span> Novo
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group">
+                <label class="form-label">Nome do contrato *</label>
+                <input id="cf-nome" class="form-input" type="text" placeholder="Ex: Lei de Fomento 2024">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fonte de recurso *</label>
+                <input id="cf-fonte" class="form-input" type="text" placeholder="Ex: Secretaria de Cultura">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor total (R$)</label>
+                <input id="cf-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select id="cf-status" class="form-input">
+                  <option value="Ativo">Ativo</option>
+                  <option value="Suspenso">Suspenso</option>
+                  <option value="Encerrado">Encerrado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vigência início</label>
+                <input id="cf-inicio" class="form-input" type="date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vigência fim</label>
+                <input id="cf-fim" class="form-input" type="date">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Objeto / Descrição</label>
+                <input id="cf-objeto" class="form-input" type="text" placeholder="Breve descrição do objeto contratual">
+              </div>
+            </div>
+            <input type="hidden" id="cf-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-contratos-salvar" onclick="ContratosUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar
               </button>
             </div>
           </div>
-          <div id="contratos-lista">
-            <div class="empty-state" style="min-height:120px;padding:20px;">
-              <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
-              <p style="font-size:13px;color:var(--muted)">Carregando contratos…</p>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">folder_open</span> Contratos</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="cf-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="ContratosUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="Ativo" selected>Ativos</option>
+                  <option value="Suspenso">Suspensos</option>
+                  <option value="Encerrado">Encerrados</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-contratos-recarregar" onclick="ContratosUI.carregar()">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-contratos-novo" onclick="ContratosUI.abrirForm()" style="display:none">
+                  <span class="ms ms-sm">add</span> Novo
+                </button>
+              </div>
+            </div>
+            <div id="contratos-lista">
+              <div class="empty-state" style="min-height:120px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando contratos…</p>
+              </div>
             </div>
           </div>
-        </div>
+        </div><!-- /tab contratos -->
+
+        <!-- ── TAB: Fontes de Recurso ── -->
+        <div class="fin-tab-content" data-tab="fontes" style="display:none">
+          <div class="stats-grid" id="fontes-metricas"></div>
+
+          <div class="card" id="fontes-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">account_balance</span> <span id="fontes-form-titulo">Nova Fonte de Recurso</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="FontesUI.fecharForm()" data-bg-skip="1">
+                <span class="ms ms-sm">close</span> Cancelar
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Nome *</label>
+                <input id="ff-nome" class="form-input" type="text" placeholder="Ex: Lei de Fomento Municipal 2024">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo *</label>
+                <select id="ff-tipo" class="form-input">
+                  <option value="contrato_gestao">Contrato de Gestão</option>
+                  <option value="lei_rouanet">Lei Rouanet</option>
+                  <option value="procultura">ProCultura</option>
+                  <option value="edital_municipal">Edital Municipal</option>
+                  <option value="edital_federal">Edital Federal</option>
+                  <option value="fundo_setorial">Fundo Setorial</option>
+                  <option value="receita_propria">Receita Própria</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Órgão Financiador</label>
+                <input id="ff-orgao" class="form-input" type="text" placeholder="Ex: Secretaria de Cultura do Ceará">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor Total (R$)</label>
+                <input id="ff-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vigência início</label>
+                <input id="ff-inicio" class="form-input" type="date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vigência fim</label>
+                <input id="ff-fim" class="form-input" type="date">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Instrumento / Observações</label>
+                <input id="ff-obs" class="form-input" type="text" placeholder="Número do instrumento, edital ou observação">
+              </div>
+            </div>
+            <input type="hidden" id="ff-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-fontes-salvar" onclick="FontesUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">account_balance</span> Fontes de Recurso</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-ghost btn-sm" id="btn-fontes-recarregar" onclick="FontesUI.carregar()">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-fontes-novo" onclick="FontesUI.abrirForm()" style="display:none">
+                  <span class="ms ms-sm">add</span> Nova
+                </button>
+              </div>
+            </div>
+            <div id="fontes-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando…</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab fontes -->
+
+        <!-- ── TAB: Remanejamentos ── -->
+        <div class="fin-tab-content" data-tab="remanejamentos" style="display:none">
+          <div class="stats-grid" id="rem-metricas"></div>
+
+          <div class="card" id="rem-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">swap_horiz</span> <span id="rem-form-titulo">Novo Remanejamento</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.fecharForm()" data-bg-skip="1">
+                <span class="ms ms-sm">close</span> Cancelar
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group">
+                <label class="form-label">Contrato *</label>
+                <input id="rem-contrato-id" class="form-input" type="text" placeholder="ID do contrato">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor (R$) *</label>
+                <input id="rem-valor" class="form-input" type="number" min="0.01" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Rubrica Origem (ID) *</label>
+                <input id="rem-origem" class="form-input" type="text" placeholder="ID da rubrica de origem">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Rubrica Destino (ID) *</label>
+                <input id="rem-destino" class="form-input" type="text" placeholder="ID da rubrica de destino">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Justificativa *</label>
+                <input id="rem-justificativa" class="form-input" type="text" placeholder="Motivo do remanejamento">
+              </div>
+            </div>
+            <input type="hidden" id="rem-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-rem-salvar" onclick="RemanejamentosUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar Rascunho
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">swap_horiz</span> Remanejamentos Orçamentários</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-ghost btn-sm" id="btn-rem-recarregar" onclick="RemanejamentosUI.carregar()">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-rem-novo" onclick="RemanejamentosUI.abrirForm()" style="display:none">
+                  <span class="ms ms-sm">add</span> Novo
+                </button>
+              </div>
+            </div>
+            <div id="rem-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando…</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab remanejamentos -->
+
+        <!-- ── TAB: Aditivos ── -->
+        <div class="fin-tab-content" data-tab="aditivos" style="display:none">
+          <div class="stats-grid" id="adt-metricas"></div>
+
+          <div class="card" id="adt-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">add_circle</span> <span id="adt-form-titulo">Novo Aditivo</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="AditivosUI.fecharForm()" data-bg-skip="1">
+                <span class="ms ms-sm">close</span> Cancelar
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group">
+                <label class="form-label">Contrato *</label>
+                <input id="adt-contrato-id" class="form-input" type="text" placeholder="ID do contrato">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo de Aditivo *</label>
+                <select id="adt-tipo" class="form-input">
+                  <option value="valor">Valor</option>
+                  <option value="prazo">Prazo</option>
+                  <option value="escopo">Escopo</option>
+                  <option value="metas">Metas</option>
+                  <option value="rubricas">Rubricas</option>
+                  <option value="misto">Misto</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor Adicional (R$)</label>
+                <input id="adt-valor-adicional" class="form-input" type="number" step="0.01" placeholder="0,00 (deixar em branco se sem acréscimo)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nova Vigência Fim</label>
+                <input id="adt-novo-prazo" class="form-input" type="date">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">Objeto / Justificativa *</label>
+                <input id="adt-objeto" class="form-input" type="text" placeholder="Objeto e justificativa do aditivo">
+              </div>
+              <div class="form-group" style="grid-column:1/-1;">
+                <label class="form-label">URL do Documento Assinado</label>
+                <input id="adt-documento-url" class="form-input" type="text" placeholder="https://drive.google.com/... (obrigatório para submeter ao fundador)">
+              </div>
+            </div>
+            <input type="hidden" id="adt-id">
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-adt-salvar" onclick="AditivosUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">add_circle</span> Aditivos Contratuais</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-ghost btn-sm" id="btn-adt-recarregar" onclick="AditivosUI.carregar()">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-adt-novo" onclick="AditivosUI.abrirForm()" style="display:none">
+                  <span class="ms ms-sm">add</span> Novo
+                </button>
+              </div>
+            </div>
+            <div id="adt-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando…</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab aditivos -->
+
       </div><!-- /view-financeiro -->
 
       <!-- VIEW: Espaços — Fase 2 (Reservas + Chaves + Empréstimos + Patrimônio) -->
@@ -1938,10 +2165,42 @@ var GAS = {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_listar(f||{}); },
     obter:       function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_obter(id); },
     salvar:      function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar(d); },
+    atualizar:   function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar(d); },
     metricas:    function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_metricas(); },
     analisar:    function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_analisar(id); },
     mudarStatus: function(id,s,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_status(id,s); },
     excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir(id); }
+  },
+  fontesRecurso: {
+    listar:      function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_listar(f||{}); },
+    metricas:    function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_metricas(); },
+    salvar:      function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_salvar(d); },
+    atualizar:   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_salvar(d); },
+    status:      function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_status(id,s); },
+    excluir:     function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_fonte_recurso_excluir(id); }
+  },
+  remanejamentos: {
+    listar:              function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_listar(f||{}); },
+    metricas:            function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_metricas(); },
+    salvar:              function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_salvar(d); },
+    atualizar:           function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_salvar(d); },
+    submeter:            function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_submeter(id); },
+    aprovarFinanceiro:   function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_aprovar_financeiro(id,p||''); },
+    aprovarDirecao:      function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_aprovar_direcao(id,p||''); },
+    rejeitar:            function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_rejeitar(id,p||''); },
+    efetivar:            function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_remanejamento_efetivar(id); }
+  },
+  aditivos: {
+    listar:            function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_listar(f||{}); },
+    metricas:          function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_metricas(); },
+    salvar:            function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_salvar(d); },
+    atualizar:         function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_salvar(d); },
+    submeterInterno:   function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_submeter_interno(id); },
+    aprovarInterno:    function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_aprovar_interno(id,p||''); },
+    submeterFundador:  function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_submeter_fundador(id); },
+    aprovarFundador:   function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_aprovar_fundador(id,p||''); },
+    rejeitar:          function(id,p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_rejeitar(id,p||''); },
+    efetivar:          function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_aditivo_efetivar(id); }
   },
   ativos: {
     listar:      function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_listar(f||{}); },
@@ -2720,6 +2979,556 @@ var ContratosUI = (function() {
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// FINANCEIRO — Tab Controller (Fase 4)
+// ═══════════════════════════════════════════════════════════
+var FinanceiroTabs = (function() {
+  var _tabAtual = 'contratos';
+  var _carregados = {};
+
+  function abrirTab(tab) {
+    _tabAtual = tab;
+    document.querySelectorAll('.fin-tab-content').forEach(function(el) {
+      el.style.display = el.getAttribute('data-tab') === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.tab-btn.fin-tab').forEach(function(btn) {
+      var ativo = btn.getAttribute('data-tab') === tab;
+      btn.style.color = ativo ? 'var(--color-primary)' : '';
+      btn.style.borderBottomColor = ativo ? 'var(--color-primary)' : 'transparent';
+    });
+    if (!_carregados[tab]) {
+      _carregados[tab] = true;
+      if (tab === 'contratos')      ContratosUI.carregar();
+      if (tab === 'fontes')         FontesUI.carregar();
+      if (tab === 'remanejamentos') RemanejamentosUI.carregar();
+      if (tab === 'aditivos')       AditivosUI.carregar();
+    }
+  }
+
+  function aoAbrir() { abrirTab(_tabAtual); }
+
+  return { abrirTab:abrirTab, aoAbrir:aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// FONTES DE RECURSO — Fase 4
+// ═══════════════════════════════════════════════════════════
+var FontesUI = (function() {
+  var _meuNivel   = 'colaborador';
+  var _podeEditar = false;
+
+  var _TIPO_LABEL = {
+    contrato_gestao:'Contrato de Gestão', lei_rouanet:'Lei Rouanet',
+    procultura:'ProCultura', edital_municipal:'Edital Municipal',
+    edital_federal:'Edital Federal', fundo_setorial:'Fundo Setorial',
+    receita_propria:'Receita Própria', outro:'Outro'
+  };
+
+  var _STATUS_BADGE = { ativo:'badge-success', suspenso:'badge-warning', encerrado:'badge-muted' };
+
+  function _fmt(v){ return v ? 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : 'R$ 0,00'; }
+
+  function carregar() {
+    GAS.fontesRecurso.metricas(function(r) {
+      if (!r || !r.ok) return;
+      var m = r.dados;
+      var el = document.getElementById('fontes-metricas');
+      if (el) el.innerHTML =
+        '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+m.ativos+'</div><div class="stat-label">Ativas</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+_fmt(m.valorAtivos)+'</div><div class="stat-label">Valor Ativas</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+_fmt(m.valorTotal)+'</div><div class="stat-label">Valor Total</div></div>';
+    });
+    GAS.fontesRecurso.listar({}, function(r) {
+      var lista = document.getElementById('fontes-lista');
+      if (!lista) return;
+      if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar fontes.</p></div>'; return; }
+      var itens = r.dados || [];
+      if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">account_balance</span><p style="font-size:13px;color:var(--muted)">Nenhuma fonte cadastrada.</p></div>'; return; }
+      var html = '<table class="tabela"><thead><tr><th>Nome</th><th>Tipo</th><th>Órgão</th><th>Valor Total</th><th>Vigência</th><th>Status</th>';
+      if (_podeEditar) html += '<th></th>';
+      html += '</tr></thead><tbody>';
+      itens.forEach(function(f) {
+        var badge = _STATUS_BADGE[f.status] || 'badge-muted';
+        var tipo  = _TIPO_LABEL[f.tipo] || f.tipo || '—';
+        html += '<tr><td><strong>'+escaparHtml(f.nome||'—')+'</strong></td>'+
+          '<td>'+escaparHtml(tipo)+'</td>'+
+          '<td>'+escaparHtml(f.orgaoFinanciador||'—')+'</td>'+
+          '<td>'+_fmt(f.valorTotal)+'</td>'+
+          '<td>'+(f.vigenciaFim?f.vigenciaFim:'—')+'</td>'+
+          '<td><span class="badge '+badge+'">'+escaparHtml(f.status||'—')+'</span></td>';
+        if (_podeEditar) {
+          html += '<td style="white-space:nowrap">';
+          html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.abrirForm('+JSON.stringify(f)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+          if (f.status === 'ativo')     html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'suspenso\')"><span class="ms ms-sm">pause_circle</span></button> ';
+          if (f.status === 'suspenso')  html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'ativo\')"><span class="ms ms-sm">play_circle</span></button> ';
+          if (f.status !== 'encerrado') html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'encerrado\')"><span class="ms ms-sm">stop_circle</span></button>';
+          html += '</td>';
+        }
+        html += '</tr>';
+      });
+      lista.innerHTML = html + '</tbody></table>';
+    });
+  }
+
+  function abrirForm(dados) {
+    dados = dados || {};
+    document.getElementById('fontes-form-titulo').textContent = dados.id ? 'Editar Fonte de Recurso' : 'Nova Fonte de Recurso';
+    document.getElementById('ff-id').value    = dados.id   || '';
+    document.getElementById('ff-nome').value  = dados.nome || '';
+    document.getElementById('ff-tipo').value  = dados.tipo || 'contrato_gestao';
+    document.getElementById('ff-orgao').value = dados.orgaoFinanciador || '';
+    document.getElementById('ff-valor').value = dados.valorTotal || '';
+    document.getElementById('ff-inicio').value= dados.vigenciaInicio || '';
+    document.getElementById('ff-fim').value   = dados.vigenciaFim   || '';
+    document.getElementById('ff-obs').value   = dados.instrumento   || '';
+    document.getElementById('fontes-form-card').style.display = '';
+  }
+
+  function fecharForm() { document.getElementById('fontes-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var id     = document.getElementById('ff-id').value.trim();
+    var nome   = document.getElementById('ff-nome').value.trim();
+    var tipo   = document.getElementById('ff-tipo').value;
+    var orgao  = document.getElementById('ff-orgao').value.trim();
+    var valor  = parseFloat(document.getElementById('ff-valor').value) || 0;
+    var inicio = document.getElementById('ff-inicio').value;
+    var fim    = document.getElementById('ff-fim').value;
+    var obs    = document.getElementById('ff-obs').value.trim();
+    if (!nome) { Toast.erro('Nome é obrigatório.'); return; }
+    if (!tipo) { Toast.erro('Tipo é obrigatório.'); return; }
+    var dados = { nome:nome, tipo:tipo, orgaoFinanciador:orgao, valorTotal:valor,
+      vigenciaInicio:inicio, vigenciaFim:fim, instrumento:obs };
+    if (id) dados.id = id;
+    var fn = id ? GAS.fontesRecurso.atualizar : GAS.fontesRecurso.salvar;
+    BtnGuard.wrap('btn-fontes-salvar', 'Salvando…', function() {
+      fn(dados, function(r) {
+        if (r && r.ok) { Toast.sucesso('Fonte salva!'); fecharForm(); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro ao salvar.');
+      });
+    });
+  }
+
+  function mudarStatus(id, novoStatus) {
+    if (!confirm('Confirmar mudança de status para "' + novoStatus + '"?')) return;
+    GAS.fontesRecurso.status(id, novoStatus, function(r) {
+      if (r && r.ok) { Toast.sucesso('Status atualizado.'); carregar(); }
+      else Toast.erro((r && r.mensagem) || 'Erro.');
+    });
+  }
+
+  function aoAbrir() {
+    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
+      if (r && r.ok && r.dados) {
+        _meuNivel   = r.dados.papel || 'colaborador';
+        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+        var btn = document.getElementById('btn-fontes-novo');
+        if (btn) btn.style.display = _podeEditar ? '' : 'none';
+      }
+      carregar();
+    }) : carregar();
+  }
+
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, mudarStatus:mudarStatus };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// REMANEJAMENTOS — Fase 4
+// ═══════════════════════════════════════════════════════════
+var RemanejamentosUI = (function() {
+  var _meuNivel   = 'colaborador';
+  var _podeEditar = false;
+
+  var _STATUS_LABEL = {
+    rascunho:'Rascunho', aguard_financeiro:'Aguard. Financeiro',
+    aguard_direcao:'Aguard. Direção', aprovado:'Aprovado',
+    efetivado:'Efetivado', rejeitado:'Rejeitado'
+  };
+  var _STATUS_BADGE = {
+    rascunho:'badge-muted', aguard_financeiro:'badge-accent', aguard_direcao:'badge-accent',
+    aprovado:'badge-success', efetivado:'badge-primary', rejeitado:'badge-error'
+  };
+
+  function _fmt(v){ return v ? 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : 'R$ 0,00'; }
+
+  function carregar() {
+    GAS.remanejamentos.metricas(function(r) {
+      if (!r || !r.ok) return;
+      var m = r.dados;
+      var el = document.getElementById('rem-metricas');
+      if (el) el.innerHTML =
+        '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+m.pendentes+'</div><div class="stat-label">Pendentes</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+m.efetivados+'</div><div class="stat-label">Efetivados</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+_fmt(m.valorEfetivado)+'</div><div class="stat-label">Valor Efetivado</div></div>';
+    });
+    GAS.remanejamentos.listar({}, function(r) {
+      var lista = document.getElementById('rem-lista');
+      if (!lista) return;
+      if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar.</p></div>'; return; }
+      var itens = r.dados || [];
+      if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">swap_horiz</span><p style="font-size:13px;color:var(--muted)">Nenhum remanejamento registrado.</p></div>'; return; }
+      var html = '<table class="tabela"><thead><tr><th>Número</th><th>Contrato</th><th>Valor</th><th>Status</th><th>Criado em</th>';
+      if (_podeEditar) html += '<th>Ações</th>';
+      html += '</tr></thead><tbody>';
+      itens.forEach(function(rem) {
+        var slabel = _STATUS_LABEL[rem.status] || rem.status || '—';
+        var sbadge = _STATUS_BADGE[rem.status] || 'badge-muted';
+        var criado = rem.criadoEm ? rem.criadoEm.slice(0,10) : '—';
+        html += '<tr>'+
+          '<td><strong>'+escaparHtml(rem.numero||'—')+'</strong></td>'+
+          '<td>'+escaparHtml(rem.contratoId||'—')+'</td>'+
+          '<td>'+_fmt(rem.valor)+'</td>'+
+          '<td><span class="badge '+sbadge+'">'+escaparHtml(slabel)+'</span></td>'+
+          '<td>'+criado+'</td>';
+        if (_podeEditar) {
+          html += '<td style="white-space:nowrap">';
+          if (rem.status === 'rascunho') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.abrirForm('+JSON.stringify(rem)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.submeter(this,\''+rem.id+'\')"><span class="ms ms-sm">send</span></button>';
+          }
+          if (rem.status === 'aguard_financeiro') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.aprovarFin(this,\''+rem.id+'\')"><span class="ms ms-sm">check_circle</span> Aprovar</button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.rejeitar(this,\''+rem.id+'\')"><span class="ms ms-sm">cancel</span> Rejeitar</button>';
+          }
+          if (rem.status === 'aguard_direcao') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.aprovarDir(this,\''+rem.id+'\')"><span class="ms ms-sm">check_circle</span> Dir.</button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.rejeitar(this,\''+rem.id+'\')"><span class="ms ms-sm">cancel</span></button>';
+          }
+          if (rem.status === 'aprovado') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.efetivar(this,\''+rem.id+'\')"><span class="ms ms-sm">done_all</span> Efetivar</button>';
+          }
+          html += '</td>';
+        }
+        html += '</tr>';
+      });
+      lista.innerHTML = html + '</tbody></table>';
+    });
+  }
+
+  function abrirForm(dados) {
+    dados = dados || {};
+    document.getElementById('rem-form-titulo').textContent = dados.id ? 'Editar Remanejamento' : 'Novo Remanejamento';
+    document.getElementById('rem-id').value           = dados.id           || '';
+    document.getElementById('rem-contrato-id').value  = dados.contratoId   || '';
+    document.getElementById('rem-valor').value        = dados.valor        || '';
+    document.getElementById('rem-origem').value       = dados.origemRubricaId  || '';
+    document.getElementById('rem-destino').value      = dados.destinoRubricaId || '';
+    document.getElementById('rem-justificativa').value= dados.justificativa || '';
+    document.getElementById('rem-form-card').style.display = '';
+  }
+
+  function fecharForm() { document.getElementById('rem-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var id      = document.getElementById('rem-id').value.trim();
+    var cId     = document.getElementById('rem-contrato-id').value.trim();
+    var valor   = parseFloat(document.getElementById('rem-valor').value) || 0;
+    var origem  = document.getElementById('rem-origem').value.trim();
+    var destino = document.getElementById('rem-destino').value.trim();
+    var just    = document.getElementById('rem-justificativa').value.trim();
+    if (!cId)    { Toast.erro('Contrato é obrigatório.'); return; }
+    if (!valor)  { Toast.erro('Valor é obrigatório.'); return; }
+    if (!origem) { Toast.erro('Rubrica de origem é obrigatória.'); return; }
+    if (!destino){ Toast.erro('Rubrica de destino é obrigatória.'); return; }
+    if (!just)   { Toast.erro('Justificativa é obrigatória.'); return; }
+    var dados = { contratoId:cId, valor:valor, origemRubricaId:origem, destinoRubricaId:destino, justificativa:just };
+    if (id) dados.id = id;
+    var fn = id ? GAS.remanejamentos.atualizar : GAS.remanejamentos.salvar;
+    BtnGuard.wrap('btn-rem-salvar', 'Salvando…', function() {
+      fn(dados, function(r) {
+        if (r && r.ok) { Toast.sucesso('Remanejamento salvo!'); fecharForm(); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro ao salvar.');
+      });
+    });
+  }
+
+  function submeter(btn, id) {
+    BtnGuard.wrap(btn, 'Submetendo…', function(liberar) {
+      GAS.remanejamentos.submeter(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Submetido para aprovação.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aprovarFin(btn, id) {
+    var _raw = prompt('Parecer de aprovação (financeiro):');
+    if (_raw === null) return;
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.remanejamentos.aprovarFinanceiro(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aprovado pelo financeiro.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aprovarDir(btn, id) {
+    var _raw = prompt('Parecer de aprovação (direção):');
+    if (_raw === null) return;
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.remanejamentos.aprovarDirecao(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aprovado pela direção.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function rejeitar(btn, id) {
+    var _raw = prompt('Motivo da rejeição (obrigatório):');
+    if (_raw === null) return;
+    if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
+    BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
+      GAS.remanejamentos.rejeitar(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Remanejamento rejeitado.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function efetivar(btn, id) {
+    if (!confirm('Confirmar efetivação? Esta ação ajustará os saldos em contratos.json e é irreversível.')) return;
+    BtnGuard.wrap(btn, 'Efetivando…', function(liberar) {
+      GAS.remanejamentos.efetivar(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Remanejamento efetivado!'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aoAbrir() {
+    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
+      if (r && r.ok && r.dados) {
+        _meuNivel   = r.dados.papel || 'colaborador';
+        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+        var btn = document.getElementById('btn-rem-novo');
+        if (btn) btn.style.display = _podeEditar ? '' : 'none';
+      }
+      carregar();
+    }) : carregar();
+  }
+
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
+    salvar:salvar, submeter:submeter, aprovarFin:aprovarFin, aprovarDir:aprovarDir,
+    rejeitar:rejeitar, efetivar:efetivar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// ADITIVOS — Fase 4
+// ═══════════════════════════════════════════════════════════
+var AditivosUI = (function() {
+  var _meuNivel   = 'colaborador';
+  var _podeEditar = false;
+  var _isAdmin    = false;
+
+  var _STATUS_LABEL = {
+    elaborando:'Elaborando', submetido_interno:'Aguard. Interno',
+    aprovado_interno:'Aprovado Int.', submetido_fundador:'Aguard. Fundador',
+    aprovado_fundador:'Aprovado Fund.', efetivado:'Efetivado', rejeitado:'Rejeitado'
+  };
+  var _STATUS_BADGE = {
+    elaborando:'badge-muted', submetido_interno:'badge-accent', aprovado_interno:'badge-warning',
+    submetido_fundador:'badge-accent', aprovado_fundador:'badge-success',
+    efetivado:'badge-primary', rejeitado:'badge-error'
+  };
+  var _TIPO_LABEL = {
+    valor:'Valor', prazo:'Prazo', escopo:'Escopo', metas:'Metas', rubricas:'Rubricas', misto:'Misto'
+  };
+
+  function _fmt(v){ return v ? 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'; }
+
+  function carregar() {
+    GAS.aditivos.metricas(function(r) {
+      if (!r || !r.ok) return;
+      var m = r.dados;
+      var el = document.getElementById('adt-metricas');
+      if (el) el.innerHTML =
+        '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+m.pendentes+'</div><div class="stat-label">Pendentes</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+m.efetivados+'</div><div class="stat-label">Efetivados</div></div>'+
+        '<div class="stat-card"><div class="stat-valor">'+_fmt(m.valorAditivado)+'</div><div class="stat-label">Valor Aditivado</div></div>';
+    });
+    GAS.aditivos.listar({}, function(r) {
+      var lista = document.getElementById('adt-lista');
+      if (!lista) return;
+      if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar.</p></div>'; return; }
+      var itens = r.dados || [];
+      if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">add_circle</span><p style="font-size:13px;color:var(--muted)">Nenhum aditivo registrado.</p></div>'; return; }
+      var html = '<table class="tabela"><thead><tr><th>Número</th><th>Contrato</th><th>Tipo</th><th>Status</th><th>Criado em</th>';
+      if (_podeEditar) html += '<th>Ações</th>';
+      html += '</tr></thead><tbody>';
+      itens.forEach(function(adi) {
+        var slabel = _STATUS_LABEL[adi.status] || adi.status || '—';
+        var sbadge = _STATUS_BADGE[adi.status] || 'badge-muted';
+        var tlabel = _TIPO_LABEL[adi.tipo] || adi.tipo || '—';
+        var criado = adi.criadoEm ? adi.criadoEm.slice(0,10) : '—';
+        html += '<tr>'+
+          '<td><strong>'+escaparHtml(adi.numero||'—')+'</strong></td>'+
+          '<td>'+escaparHtml(adi.contratoId||'—')+'</td>'+
+          '<td>'+escaparHtml(tlabel)+'</td>'+
+          '<td><span class="badge '+sbadge+'">'+escaparHtml(slabel)+'</span></td>'+
+          '<td>'+criado+'</td>';
+        if (_podeEditar) {
+          html += '<td style="white-space:nowrap">';
+          if (adi.status === 'elaborando') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.abrirForm('+JSON.stringify(adi)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.submeterInterno(this,\''+adi.id+'\')"><span class="ms ms-sm">send</span> Submeter</button>';
+          }
+          if (adi.status === 'submetido_interno') {
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.aprovarInterno(this,\''+adi.id+'\')"><span class="ms ms-sm">check_circle</span> Aprovar Int.</button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.rejeitar(this,\''+adi.id+'\')"><span class="ms ms-sm">cancel</span></button>';
+          }
+          if (adi.status === 'aprovado_interno' && _isAdmin) {
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.submeterFundador(this,\''+adi.id+'\')"><span class="ms ms-sm">upload</span> Fundador</button>';
+          }
+          if (adi.status === 'submetido_fundador' && _isAdmin) {
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.aprovarFundador(this,\''+adi.id+'\')"><span class="ms ms-sm">verified</span> Apr. Fund.</button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.rejeitar(this,\''+adi.id+'\')"><span class="ms ms-sm">cancel</span></button>';
+          }
+          if (adi.status === 'aprovado_fundador' && _isAdmin) {
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.efetivar(this,\''+adi.id+'\')"><span class="ms ms-sm">done_all</span> Efetivar</button>';
+          }
+          html += '</td>';
+        }
+        html += '</tr>';
+      });
+      lista.innerHTML = html + '</tbody></table>';
+    });
+  }
+
+  function abrirForm(dados) {
+    dados = dados || {};
+    document.getElementById('adt-form-titulo').textContent   = dados.id ? 'Editar Aditivo' : 'Novo Aditivo';
+    document.getElementById('adt-id').value                  = dados.id || '';
+    document.getElementById('adt-contrato-id').value         = dados.contratoId || '';
+    document.getElementById('adt-tipo').value                = dados.tipo || 'valor';
+    document.getElementById('adt-valor-adicional').value     = dados.valorAdicional || '';
+    document.getElementById('adt-novo-prazo').value          = dados.novoPrazoVigencia || '';
+    document.getElementById('adt-objeto').value              = dados.objeto || '';
+    document.getElementById('adt-documento-url').value       = dados.documentoUrl || '';
+    document.getElementById('adt-form-card').style.display   = '';
+  }
+
+  function fecharForm() { document.getElementById('adt-form-card').style.display = 'none'; }
+
+  function salvar() {
+    var id      = document.getElementById('adt-id').value.trim();
+    var cId     = document.getElementById('adt-contrato-id').value.trim();
+    var tipo    = document.getElementById('adt-tipo').value;
+    var valAdt  = parseFloat(document.getElementById('adt-valor-adicional').value) || 0;
+    var prazo   = document.getElementById('adt-novo-prazo').value;
+    var objeto  = document.getElementById('adt-objeto').value.trim();
+    var docUrl  = document.getElementById('adt-documento-url').value.trim();
+    if (!cId)    { Toast.erro('Contrato é obrigatório.'); return; }
+    if (!objeto) { Toast.erro('Objeto/justificativa é obrigatório.'); return; }
+    var dados = { contratoId:cId, tipo:tipo, objeto:objeto };
+    if (valAdt)  dados.valorAdicional   = valAdt;
+    if (prazo)   dados.novoPrazoVigencia = prazo;
+    if (docUrl)  dados.documentoUrl     = docUrl;
+    if (id) dados.id = id;
+    var fn = id ? GAS.aditivos.atualizar : GAS.aditivos.salvar;
+    BtnGuard.wrap('btn-adt-salvar', 'Salvando…', function() {
+      fn(dados, function(r) {
+        if (r && r.ok) { Toast.sucesso('Aditivo salvo!'); fecharForm(); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro ao salvar.');
+      });
+    });
+  }
+
+  function submeterInterno(btn, id) {
+    BtnGuard.wrap(btn, 'Submetendo…', function(liberar) {
+      GAS.aditivos.submeterInterno(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Submetido para aprovação interna.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aprovarInterno(btn, id) {
+    var _raw = prompt('Parecer de aprovação interna:');
+    if (_raw === null) return;
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.aditivos.aprovarInterno(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aprovado internamente.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function submeterFundador(btn, id) {
+    if (!confirm('Confirmar submissão ao fundador? Verifique se o documento URL está preenchido.')) return;
+    BtnGuard.wrap(btn, 'Submetendo…', function(liberar) {
+      GAS.aditivos.submeterFundador(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Submetido ao fundador.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aprovarFundador(btn, id) {
+    var _raw = prompt('Parecer de aprovação do fundador:');
+    if (_raw === null) return;
+    BtnGuard.wrap(btn, 'Registrando…', function(liberar) {
+      GAS.aditivos.aprovarFundador(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aprovação do fundador registrada.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function rejeitar(btn, id) {
+    var _raw = prompt('Motivo da rejeição (obrigatório):');
+    if (_raw === null) return;
+    if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
+    BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
+      GAS.aditivos.rejeitar(id, _raw, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aditivo rejeitado.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function efetivar(btn, id) {
+    if (!confirm('Confirmar efetivação? O contrato será atualizado com os novos valores/prazos.')) return;
+    BtnGuard.wrap(btn, 'Efetivando…', function(liberar) {
+      GAS.aditivos.efetivar(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Aditivo efetivado! Contrato atualizado.'); carregar(); }
+        else Toast.erro((r && r.mensagem) || 'Erro.');
+      });
+    });
+  }
+
+  function aoAbrir() {
+    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
+      if (r && r.ok && r.dados) {
+        _meuNivel   = r.dados.papel || 'colaborador';
+        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+        _isAdmin    = ['superadmin','admin'].indexOf(_meuNivel) !== -1;
+        var btn = document.getElementById('btn-adt-novo');
+        if (btn) btn.style.display = _podeEditar ? '' : 'none';
+      }
+      carregar();
+    }) : carregar();
+  }
+
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
+    salvar:salvar, submeterInterno:submeterInterno, aprovarInterno:aprovarInterno,
+    submeterFundador:submeterFundador, aprovarFundador:aprovarFundador,
+    rejeitar:rejeitar, efetivar:efetivar};
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -4385,7 +5194,7 @@ var App = (function() {
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }
             : id === 'contratacoes'?function(){ ContratacoesTabs.aoAbrir(); }
-            : id === 'financeiro' ? function(){ ContratosUI.aoAbrir(); }
+            : id === 'financeiro' ? function(){ FinanceiroTabs.aoAbrir(); }
             : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
             : null
           );

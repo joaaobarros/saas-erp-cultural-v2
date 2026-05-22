@@ -111,6 +111,9 @@ function inicializarSistema() {
     SolicitacaoRepository.garantirIndice();
   }
 
+  // Fase 4 — Fontes de Recurso, Remanejamentos e Aditivos (JSON canônico, sem índice Sheet)
+  Logger.info('setup', 'inicializarSistema', 'Fase 4: fontes_recurso.json, remanejamentos_orcamentarios.json e aditivos_contratos.json serão criados ao primeiro uso.');
+
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
   var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';
