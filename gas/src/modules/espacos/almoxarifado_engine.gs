@@ -1,10 +1,7 @@
 /**
  * @file modules/espacos/almoxarifado_engine.gs
  * @layer modules/espacos
- * @description Engine de Almoxarifado — controle de empréstimos de itens.
- *
- * FASE ATUAL (1.4): Stub com FSM e interfaces definidas.
- * Implementação completa: Fase 2.2 — Sistema de Empréstimo de Itens.
+ * @description Engine de Almoxarifado — controle de empréstimos de itens (Fase 2.2).
  *
  * FSM de empréstimo de item:
  *   solicitado → aprovado → retirado → devolvido
@@ -12,22 +9,15 @@
  *   aprovado   → cancelado
  *   retirado   → atrasado → devolvido
  *
- * RESPONSABILIDADES (Fase 2+):
- *   - Catálogo de itens emprestáveis (MASTER.Itens)
- *   - Controle de disponibilidade com lock exclusivo (assertItemDisponivel)
- *   - Empréstimos com aprovação e prazo
- *   - Alertas de atraso via EventHandlerRegistry
- *   - Integração com Ações (acaoId no empréstimo)
+ * DESIGN: assertItemDisponivel() é chamado dentro de LockService antes de qualquer escrita.
+ * Isso garante que nenhum empréstimo pode ser criado quando o estoque está esgotado.
  *
- * @depends modules/espacos/ativos_repository.gs (AtivoRepository)
+ * @depends modules/espacos/reservas_itens_repository.gs (ReservasItensRepository)
  *          core/services/auditoria_service.gs (AuditoriaService)
  *          core/event_bus_backend.gs (SystemEvents)
+ *          core/services/fsm_guardian.gs (FsmGuardian)
  *          core/config.gs (getOrgConfig)
  *          core/logger.gs (Logger)
- *
- * @todo Fase 2.2: implementar assertItemDisponivel com LockService
- * @todo Fase 2.2: criar reservas_itens_repository.gs
- * @todo Fase 2.2: conectar alertas de atraso via EventHandlerRegistry
  */
 
 // ── Constantes de domínio ─────────────────────────────────────────────
@@ -62,110 +52,286 @@ var AlmoxarifadoEngine = (function () {
 
   function _orgId() { return getOrgConfig().orgId; }
 
-  function _notImplemented(metodo) {
-    Logger.warn('almoxarifado_engine', metodo, 'Stub — implementar na Fase 2.2');
-    throw new Error('[AlmoxarifadoEngine.' + metodo + '] Não implementado. Previsto para Fase 2.2.');
-  }
-
   // ──────────────────────────────────────────────────────────────────
-  // CATÁLOGO DE ITENS (referência em MASTER.Itens)
+  // CATÁLOGO DE ITENS
   // ──────────────────────────────────────────────────────────────────
 
   /**
    * Lista itens disponíveis para empréstimo.
-   * Fase 2.2: ler de MASTER.Itens + calcular disponibilidade real.
-   * @stub
+   * @param {Object} filtros
+   * @param {string} orgId
+   * @returns {Item[]}
    */
   function listarItens(filtros, orgId) {
-    Logger.info('almoxarifado_engine', 'listarItens', 'Stub — retorna lista vazia até Fase 2.2');
-    return [];
+    return ReservasItensRepository.listarItens(orgId || _orgId());
   }
 
   /**
-   * Verifica se um item está disponível para empréstimo no período.
-   * Fase 2.2: usar LockService + verificar ESPACOS.EmprestimosItens.
-   *
-   * @param {string} itemId
-   * @param {string} dataInicio — ISO date
-   * @param {string} dataFim — ISO date
+   * Salva (cria ou atualiza) um item no catálogo.
+   * @param {Object} dados
+   * @param {string} autor
    * @param {string} orgId
-   * @throws Error se item indisponível (Fase 2.2+)
-   * @stub
    */
-  function assertItemDisponivel(itemId, dataInicio, dataFim, orgId) {
-    // Fase 2.2: implementar verificação real com LockService
-    Logger.info('almoxarifado_engine', 'assertItemDisponivel',
-      'Stub — item ' + itemId + ' assumido disponível até Fase 2.2');
-    return true;
+  function salvarItem(dados, autor, orgId) {
+    if (!dados.nome) throw new Error('Nome do item é obrigatório.');
+    if ((dados.quantidadeTotal || 0) < 0) throw new Error('Quantidade não pode ser negativa.');
+    var item = ReservasItensRepository.salvarItem(dados, orgId || _orgId());
+    AuditoriaService.registrar('ITEM_SALVO', 'espacos', {
+      itemId: item.id, nome: item.nome, autor: autor, orgId: orgId
+    });
+    return item;
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // EMPRÉSTIMOS
-  // Fase 2.2: persistência em ESPACOS.EmprestimosItens
+  // GUARDA DE DISPONIBILIDADE
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Verifica se há estoque suficiente para o empréstimo no período.
+   * DEVE ser chamado dentro de LockService para garantir atomicidade.
+   *
+   * @param {string} itemId
+   * @param {number} qtdSolicitada
+   * @param {string} dataRetirada — ISO date
+   * @param {string} dataDevolucao — ISO date
+   * @param {string} orgId
+   * @throws Error se item indisponível
+   */
+  function assertItemDisponivel(itemId, qtdSolicitada, dataRetirada, dataDevolucao, orgId) {
+    var item = ReservasItensRepository.buscarItem(itemId, orgId);
+    if (!item) throw new Error('Item não encontrado: ' + itemId);
+    if (item.quantidadeTotal <= 0) throw new Error('Item "' + item.nome + '" não disponível para empréstimo.');
+
+    var emUso = ReservasItensRepository.quantidadeEmUsoPeriodo(
+      itemId, dataRetirada, dataDevolucao, orgId
+    );
+
+    var disponivel = item.quantidadeTotal - emUso;
+    if (qtdSolicitada > disponivel) {
+      throw new Error(
+        'Estoque insuficiente para "' + item.nome + '". ' +
+        'Disponível: ' + disponivel + ' | Solicitado: ' + qtdSolicitada
+      );
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // FLUXO DE EMPRÉSTIMOS
   // ──────────────────────────────────────────────────────────────────
 
   /**
    * Registra uma solicitação de empréstimo de item.
-   * @stub Fase 2.2
+   *
+   * @param {Object} dados — { itemId, quantidade, dataRetirada, dataDevolucao, responsavel, ... }
+   * @param {string} autor
+   * @param {string} orgId
+   * @returns {Emprestimo}
    */
   function solicitarEmprestimo(dados, autor, orgId) {
-    _notImplemented('solicitarEmprestimo');
+    if (!dados.itemId)       throw new Error('Item é obrigatório.');
+    if (!dados.dataRetirada) throw new Error('Data de retirada é obrigatória.');
+    if (!dados.dataDevolucao)throw new Error('Data de devolução é obrigatória.');
+    if (!dados.responsavel)  throw new Error('Responsável é obrigatório.');
+
+    var qtd = Number(dados.quantidade || 1);
+    if (qtd <= 0) throw new Error('Quantidade deve ser maior que zero.');
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+
+    try {
+      // Verificar disponibilidade dentro do lock — atomicidade garantida
+      assertItemDisponivel(dados.itemId, qtd, dados.dataRetirada, dados.dataDevolucao, orgId);
+
+      var item = ReservasItensRepository.buscarItem(dados.itemId, orgId);
+
+      var emprestimo = {
+        orgId:        orgId,
+        itemId:       dados.itemId,
+        nomeItem:     item ? item.nome : dados.nomeItem || '',
+        quantidade:   qtd,
+        acaoId:       dados.acaoId    || '',
+        reservaId:    dados.reservaId || '',
+        responsavel:  dados.responsavel,
+        setor:        dados.setor || '',
+        dataRetirada:     dados.dataRetirada,
+        dataDevolucao:    dados.dataDevolucao,
+        dataRetiradaReal: '',
+        dataDevolucaoReal:'',
+        status:       STATUS_EMPRESTIMO.SOLICITADO,
+        aprovadoPor:  '',
+        motivoCancelamento: '',
+        observacoes:  dados.observacoes || '',
+        criadoPor:    autor
+      };
+
+      var salvo = ReservasItensRepository.salvarEmprestimo(emprestimo);
+
+      AuditoriaService.registrar('EMPRESTIMO_SOLICITADO', 'espacos', {
+        emprestimoId: salvo.id, itemId: dados.itemId, nomeItem: salvo.nomeItem,
+        quantidade: qtd, responsavel: dados.responsavel, autor: autor, orgId: orgId
+      });
+
+      Logger.info('almoxarifado_engine', 'solicitarEmprestimo', 'Solicitado: ' + salvo.id);
+      return salvo;
+
+    } finally {
+      lock.releaseLock();
+    }
   }
 
   /**
    * Aprova uma solicitação de empréstimo.
-   * @stub Fase 2.2
+   * @param {string} emprestimoId
+   * @param {string} ator
+   * @param {string} orgId
    */
   function aprovarEmprestimo(emprestimoId, ator, orgId) {
-    _notImplemented('aprovarEmprestimo');
+    var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
+    if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
+
+    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.APROVADO,
+      'Empréstimo ' + emprestimoId);
+
+    ReservasItensRepository.atualizarStatusEmprestimo(
+      emprestimoId, STATUS_EMPRESTIMO.APROVADO, orgId, { AprovadoPor: ator }
+    );
+
+    AuditoriaService.registrar('EMPRESTIMO_APROVADO', 'espacos', {
+      emprestimoId: emprestimoId, ator: ator, orgId: orgId
+    });
+
+    return { id: emprestimoId, status: STATUS_EMPRESTIMO.APROVADO };
   }
 
   /**
    * Registra retirada do item (empréstimo efetivado).
-   * @stub Fase 2.2
+   * @param {string} emprestimoId
+   * @param {string} ator
+   * @param {string} orgId
    */
   function registrarRetirada(emprestimoId, ator, orgId) {
-    _notImplemented('registrarRetirada');
+    var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
+    if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
+
+    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.RETIRADO,
+      'Empréstimo ' + emprestimoId);
+
+    var agr = agora ? agora() : new Date().toISOString();
+    ReservasItensRepository.atualizarStatusEmprestimo(
+      emprestimoId, STATUS_EMPRESTIMO.RETIRADO, orgId, { DataRetiradaReal: agr }
+    );
+
+    AuditoriaService.registrar('EMPRESTIMO_RETIRADO', 'espacos', {
+      emprestimoId: emprestimoId, ator: ator, orgId: orgId, dataRetirada: agr
+    });
+
+    return { id: emprestimoId, status: STATUS_EMPRESTIMO.RETIRADO, dataRetiradaReal: agr };
   }
 
   /**
    * Registra devolução do item.
-   * @stub Fase 2.2
+   * @param {string} emprestimoId
+   * @param {string} ator
+   * @param {string} observacao
+   * @param {string} orgId
    */
   function registrarDevolucao(emprestimoId, ator, observacao, orgId) {
-    _notImplemented('registrarDevolucao');
+    var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
+    if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
+
+    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.DEVOLVIDO,
+      'Empréstimo ' + emprestimoId);
+
+    var agr = agora ? agora() : new Date().toISOString();
+    ReservasItensRepository.atualizarStatusEmprestimo(
+      emprestimoId, STATUS_EMPRESTIMO.DEVOLVIDO, orgId, {
+        DataDevolucaoReal: agr,
+        Observacoes: observacao || ''
+      }
+    );
+
+    AuditoriaService.registrar('EMPRESTIMO_DEVOLVIDO', 'espacos', {
+      emprestimoId: emprestimoId, ator: ator, observacao: observacao || '',
+      dataDevolucao: agr, orgId: orgId
+    });
+
+    Logger.info('almoxarifado_engine', 'registrarDevolucao', 'Devolvido: ' + emprestimoId);
+    return { id: emprestimoId, status: STATUS_EMPRESTIMO.DEVOLVIDO, dataDevolucaoReal: agr };
   }
 
   /**
    * Cancela um empréstimo pendente.
-   * @stub Fase 2.2
+   * @param {string} emprestimoId
+   * @param {string} ator
+   * @param {string} motivo
+   * @param {string} orgId
    */
   function cancelarEmprestimo(emprestimoId, ator, motivo, orgId) {
-    _notImplemented('cancelarEmprestimo');
+    var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
+    if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
+
+    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.CANCELADO,
+      'Empréstimo ' + emprestimoId);
+
+    ReservasItensRepository.atualizarStatusEmprestimo(
+      emprestimoId, STATUS_EMPRESTIMO.CANCELADO, orgId, {
+        MotivoCancelamento: motivo || ''
+      }
+    );
+
+    AuditoriaService.registrar('EMPRESTIMO_CANCELADO', 'espacos', {
+      emprestimoId: emprestimoId, ator: ator, motivo: motivo || '', orgId: orgId
+    });
+
+    return { id: emprestimoId, status: STATUS_EMPRESTIMO.CANCELADO };
   }
 
   /**
    * Verifica empréstimos vencidos e marca como atrasados.
-   * Fase 2.2: disparado por trigger de tempo via EventHandlerRegistry.
-   * @stub Fase 2.2
+   * Disparado por trigger de tempo via EventHandlerRegistry.
+   * @param {string} orgId
    */
   function verificarAtrasos(orgId) {
-    Logger.info('almoxarifado_engine', 'verificarAtrasos', 'Stub — implementar na Fase 2.2');
-    return { verificados: 0, atrasados: 0 };
+    var hoje = new Date().toISOString().substring(0, 10);
+    var emp  = ReservasItensRepository.listarEmprestimos({}, orgId || _orgId());
+    var atrasados = 0;
+
+    emp.forEach(function (e) {
+      if (e.status !== STATUS_EMPRESTIMO.RETIRADO) return;
+      if (e.dataDevolucao && e.dataDevolucao < hoje) {
+        try {
+          ReservasItensRepository.atualizarStatusEmprestimo(
+            e.id, STATUS_EMPRESTIMO.ATRASADO, orgId, {}
+          );
+          atrasados++;
+          SystemEvents.emit(SystemEventTypes.ITEM_NOT_RETURNED || 'ITEM_NOT_RETURNED', {
+            emprestimoId: e.id, itemId: e.itemId, nomeItem: e.nomeItem,
+            responsavel: e.responsavel, diasAtraso: e.dataDevolucao, orgId: orgId
+          });
+        } catch (err) {
+          Logger.warn('almoxarifado_engine', 'verificarAtrasos', 'Erro ao marcar ' + e.id + ': ' + err.message);
+        }
+      }
+    });
+
+    Logger.info('almoxarifado_engine', 'verificarAtrasos',
+      'Verificados: ' + emp.length + ', atrasados: ' + atrasados);
+    return { verificados: emp.length, atrasados: atrasados };
+  }
+
+  /**
+   * Lista empréstimos com filtros.
+   */
+  function listarEmprestimos(filtros, orgId) {
+    return ReservasItensRepository.listarEmprestimos(filtros || {}, orgId || _orgId());
   }
 
   /**
    * Métricas do almoxarifado.
-   * @stub Fase 2.2
    */
   function metricas(orgId) {
-    Logger.info('almoxarifado_engine', 'metricas', 'Stub — retorna zeros até Fase 2.2');
-    return {
-      itensDisponiveis: 0,
-      emprestimosAtivos: 0,
-      emprestimosPendentes: 0,
-      emprestimosAtrasados: 0
-    };
+    return ReservasItensRepository.metricas(orgId || _orgId());
   }
 
   // ── Interface pública ─────────────────────────────────────────────
@@ -173,9 +339,11 @@ var AlmoxarifadoEngine = (function () {
   return {
     // Catálogo
     listarItens:          listarItens,
+    salvarItem:           salvarItem,
     assertItemDisponivel: assertItemDisponivel,
 
-    // Fluxo de empréstimo (Fase 2.2)
+    // Fluxo de empréstimo
+    listarEmprestimos:    listarEmprestimos,
     solicitarEmprestimo:  solicitarEmprestimo,
     aprovarEmprestimo:    aprovarEmprestimo,
     registrarRetirada:    registrarRetirada,
@@ -187,14 +355,7 @@ var AlmoxarifadoEngine = (function () {
     metricas:             metricas,
 
     // Constantes
-    STATUS:               STATUS_EMPRESTIMO
+    STATUS: STATUS_EMPRESTIMO
   };
 
 })();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTA: almoxarifado.json legado (se existir no Drive da organização)
-// deve ser tratado como APENAS LEITURA até Fase 2.2.
-// Nenhum módulo do v2 grava em almoxarifado.json.
-// A migração formal para ESPACOS.EmprestimosItens será realizada na Fase 2.2.
-// ─────────────────────────────────────────────────────────────────────────────

@@ -1222,101 +1222,372 @@ body {
         </div>
       </div><!-- /view-financeiro -->
 
-      <!-- VIEW: Espaços / Ativos — Fase 1.4 -->
+      <!-- VIEW: Espaços — Fase 2 (Reservas + Chaves + Empréstimos + Patrimônio) -->
       <div id="view-espacos" class="view">
         <div class="page-header">
-          <div class="page-title">Espaços &amp; Ativos</div>
-          <div class="page-subtitle">Patrimônio, equipamentos e reservas de espaço</div>
+          <div class="page-title">Espaços</div>
+          <div class="page-subtitle">Reservas, chaves, patrimônio e almoxarifado</div>
         </div>
 
-        <!-- Métricas -->
-        <div class="stats-grid" id="ativos-metricas"></div>
+        <!-- Métricas consolidadas -->
+        <div class="stats-grid" id="espacos-metricas-topo"></div>
 
-        <!-- Formulário de cadastro -->
-        <div class="card" id="ativos-form-card" style="display:none">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">add_box</span> <span id="ativos-form-titulo">Novo Ativo</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="AtivosUI.fecharForm()" data-bg-skip="1">
-              <span class="ms ms-sm">close</span>
-            </button>
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Nome *</label>
-              <input type="text" id="at-nome" class="form-input" placeholder="Ex: Câmera Sony A7">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Código / Tombamento</label>
-              <input type="text" id="at-codigo" class="form-input" placeholder="Ex: PAT-001">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Categoria</label>
-              <select id="at-categoria" class="form-input">
-                <option value="audiovisual">Audiovisual</option>
-                <option value="informatica">Informática</option>
-                <option value="mobiliario">Mobiliário</option>
-                <option value="infraestrutura">Infraestrutura</option>
-                <option value="outro" selected>Outro</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Localização atual</label>
-              <input type="text" id="at-localizacao" class="form-input" placeholder="Ex: Sala de Mídia">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Valor de aquisição (R$)</label>
-              <input type="number" id="at-valor" class="form-input" placeholder="0.00" min="0" step="0.01">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Data de aquisição</label>
-              <input type="date" id="at-data-aquis" class="form-input">
-            </div>
-            <div class="form-group" style="grid-column:1/-1">
-              <label class="form-label">Descrição / Observações</label>
-              <textarea id="at-descricao" class="form-input" rows="2" placeholder="Descrição, número de série, características…"></textarea>
-            </div>
-          </div>
-          <input type="hidden" id="at-id">
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-            <button class="btn btn-ghost" onclick="AtivosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
-            <button class="btn btn-primario" id="btn-ativos-salvar" onclick="AtivosUI.salvar()">
-              <span class="ms ms-sm">save</span> Salvar
-            </button>
-          </div>
+        <!-- Tabs de navegação -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;">
+          <button class="esp-tab" data-tab="reservas" onclick="EspacosUI.abrirTab('reservas')"
+            style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;
+                   color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            <span class="ms ms-sm">event</span> Reservas
+          </button>
+          <button class="esp-tab" data-tab="chaves" onclick="EspacosUI.abrirTab('chaves')"
+            style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;
+                   color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            <span class="ms ms-sm">key</span> Chaves
+          </button>
+          <button class="esp-tab" data-tab="emprestimos" onclick="EspacosUI.abrirTab('emprestimos')"
+            style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;
+                   color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            <span class="ms ms-sm">handshake</span> Empréstimos
+          </button>
+          <button class="esp-tab" data-tab="ativos" onclick="EspacosUI.abrirTab('ativos')"
+            style="padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;
+                   color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            <span class="ms ms-sm">inventory_2</span> Patrimônio
+          </button>
         </div>
 
-        <!-- Barra de ações + filtros -->
-        <div class="card">
-          <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-            <div class="card-titulo"><span class="ms">inventory_2</span> Patrimônio</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
-              <select id="at-filtro-status" class="form-input"
-                      style="width:auto;padding:6px 10px;font-size:13px;"
-                      onchange="AtivosUI.carregar()">
-                <option value="">Todos os status</option>
-                <option value="disponivel" selected>Disponíveis</option>
-                <option value="reservado">Reservados</option>
-                <option value="em_uso">Em uso</option>
-                <option value="manutencao">Manutenção</option>
-                <option value="baixado">Baixados</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" id="btn-ativos-recarregar" onclick="AtivosUI.carregar()">
-                <span class="ms ms-sm">refresh</span>
+        <!-- ═══ TAB RESERVAS ═══ -->
+        <div id="esp-tab-reservas" class="esp-tab-content">
+          <div class="stats-grid" id="reservas-metricas"></div>
+
+          <!-- Form nova reserva -->
+          <div class="card" id="reservas-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">event</span> <span id="reservas-form-titulo">Nova Reserva</span></div>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Sala / Espaço *</label>
+                <input type="text" id="res-sala" class="form-input" placeholder="Ex: Auditório Principal">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data *</label>
+                <input type="date" id="res-data" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hora início *</label>
+                <input type="time" id="res-hora-ini" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hora término *</label>
+                <input type="time" id="res-hora-fim" class="form-input">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Nome da Ação / Evento *</label>
+                <input type="text" id="res-nome-acao" class="form-input" placeholder="Ex: Oficina de Teatro">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo de ação</label>
+                <input type="text" id="res-tipo-acao" class="form-input" placeholder="Ex: Oficina, Espetáculo…">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Setor</label>
+                <input type="text" id="res-setor" class="form-input" placeholder="Ex: RECE">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Observações</label>
+                <textarea id="res-obs" class="form-input" rows="2" placeholder="Equipamentos necessários, configuração…"></textarea>
+              </div>
+            </div>
+            <input type="hidden" id="res-id">
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" id="btn-res-checar" onclick="ReservasUI.verificarDisponibilidade()">
+                <span class="ms ms-sm">search</span> Checar disponibilidade
               </button>
-              <button class="btn btn-primario btn-sm" id="btn-ativos-novo" onclick="AtivosUI.abrirForm()">
-                <span class="ms ms-sm">add</span> Novo Ativo
+              <button class="btn btn-ghost" onclick="ReservasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button class="btn btn-primario" id="btn-res-salvar" onclick="ReservasUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar
+              </button>
+            </div>
+            <div id="res-disp-resultado" style="display:none;margin-top:12px;"></div>
+          </div>
+
+          <!-- Lista reservas -->
+          <div class="card">
+            <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+              <div class="card-titulo"><span class="ms">event</span> Reservas de Espaço</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                <select id="res-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="ReservasUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="pendente">Pendentes</option>
+                  <option value="confirmado">Confirmadas</option>
+                  <option value="em_uso">Em uso</option>
+                  <option value="concluido">Concluídas</option>
+                  <option value="cancelado">Canceladas</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
+                  <span class="ms ms-sm">refresh</span>
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-res-novo" onclick="ReservasUI.abrirForm()">
+                  <span class="ms ms-sm">add</span> Nova Reserva
+                </button>
+              </div>
+            </div>
+            <div id="reservas-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">event</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando reservas…</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-reservas -->
+
+        <!-- ═══ TAB CHAVES ═══ -->
+        <div id="esp-tab-chaves" class="esp-tab-content" style="display:none">
+          <div class="stats-grid" id="chaves-metricas"></div>
+
+          <!-- Form novo protocolo -->
+          <div class="card" id="chaves-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">key</span> Novo Protocolo de Chave</div>
+              <button class="btn btn-ghost btn-sm" onclick="ChavesUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Sala / Espaço *</label>
+                <input type="text" id="chv-sala" class="form-input" placeholder="Ex: Auditório Principal">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nome do responsável</label>
+                <input type="text" id="chv-nome-resp" class="form-input" placeholder="Nome completo">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Setor</label>
+                <input type="text" id="chv-setor" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Turno</label>
+                <select id="chv-turno" class="form-input">
+                  <option value="manha">Manhã</option>
+                  <option value="tarde">Tarde</option>
+                  <option value="noite">Noite</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Previsão de devolução</label>
+                <input type="date" id="chv-data-dev" class="form-input">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Observações</label>
+                <textarea id="chv-obs" class="form-input" rows="2"></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+              <button class="btn btn-ghost" onclick="ChavesUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button class="btn btn-primario" id="btn-chv-salvar" onclick="ChavesUI.salvar()">
+                <span class="ms ms-sm">save</span> Registrar Retirada
               </button>
             </div>
           </div>
-          <div id="ativos-lista">
-            <div class="empty-state" style="min-height:120px;padding:20px;">
-              <span class="ms" style="font-size:32px;color:var(--muted)">inventory_2</span>
-              <p style="font-size:13px;color:var(--muted)">Carregando ativos…</p>
+
+          <!-- Lista protocolos -->
+          <div class="card">
+            <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+              <div class="card-titulo"><span class="ms">key</span> Protocolos de Chave</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                <select id="chv-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="ChavesUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="aberto" selected>Em aberto</option>
+                  <option value="atrasado">Atrasados</option>
+                  <option value="devolvido">Devolvidos</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-chv-recarregar" onclick="ChavesUI.carregar()">
+                  <span class="ms ms-sm">refresh</span>
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-chv-novo" onclick="ChavesUI.abrirForm()">
+                  <span class="ms ms-sm">add</span> Nova Retirada
+                </button>
+              </div>
+            </div>
+            <div id="chaves-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">key</span>
+                <p style="font-size:13px;color:var(--muted)">Nenhum protocolo em aberto.</p>
+              </div>
             </div>
           </div>
-        </div>
+        </div><!-- /tab-chaves -->
+
+        <!-- ═══ TAB EMPRÉSTIMOS ═══ -->
+        <div id="esp-tab-emprestimos" class="esp-tab-content" style="display:none">
+          <div class="stats-grid" id="almox-metricas"></div>
+
+          <!-- Form novo empréstimo -->
+          <div class="card" id="almox-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">handshake</span> Solicitar Empréstimo</div>
+              <button class="btn btn-ghost btn-sm" onclick="AlmoxUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Item *</label>
+                <select id="almox-item" class="form-input">
+                  <option value="">Selecione um item…</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quantidade *</label>
+                <input type="number" id="almox-qtd" class="form-input" value="1" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data de retirada *</label>
+                <input type="date" id="almox-data-ret" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data de devolução *</label>
+                <input type="date" id="almox-data-dev" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Setor</label>
+                <input type="text" id="almox-setor" class="form-input">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Observações</label>
+                <textarea id="almox-obs" class="form-input" rows="2"></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+              <button class="btn btn-ghost" onclick="AlmoxUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button class="btn btn-primario" id="btn-almox-salvar" onclick="AlmoxUI.solicitar()">
+                <span class="ms ms-sm">send</span> Solicitar
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista empréstimos -->
+          <div class="card">
+            <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+              <div class="card-titulo"><span class="ms">handshake</span> Empréstimos</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                <select id="almox-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="AlmoxUI.carregar()">
+                  <option value="">Todos</option>
+                  <option value="solicitado">Solicitados</option>
+                  <option value="aprovado">Aprovados</option>
+                  <option value="retirado">Em uso</option>
+                  <option value="atrasado">Atrasados</option>
+                  <option value="devolvido">Devolvidos</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-almox-recarregar" onclick="AlmoxUI.carregar()">
+                  <span class="ms ms-sm">refresh</span>
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-almox-novo" onclick="AlmoxUI.abrirForm()">
+                  <span class="ms ms-sm">add</span> Solicitar
+                </button>
+              </div>
+            </div>
+            <div id="almox-lista">
+              <div class="empty-state" style="min-height:100px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">handshake</span>
+                <p style="font-size:13px;color:var(--muted)">Nenhum empréstimo encontrado.</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-emprestimos -->
+
+        <!-- ═══ TAB PATRIMÔNIO (Ativos — Fase 1.4) ═══ -->
+        <div id="esp-tab-ativos" class="esp-tab-content" style="display:none">
+          <div class="stats-grid" id="ativos-metricas"></div>
+
+          <!-- Formulário de cadastro -->
+          <div class="card" id="ativos-form-card" style="display:none">
+            <div class="card-header">
+              <div class="card-titulo">
+                <span class="ms">add_box</span> <span id="ativos-form-titulo">Novo Ativo</span>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="AtivosUI.fecharForm()" data-bg-skip="1">
+                <span class="ms ms-sm">close</span>
+              </button>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Nome *</label>
+                <input type="text" id="at-nome" class="form-input" placeholder="Ex: Câmera Sony A7">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Código / Tombamento</label>
+                <input type="text" id="at-codigo" class="form-input" placeholder="Ex: PAT-001">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Categoria</label>
+                <select id="at-categoria" class="form-input">
+                  <option value="audiovisual">Audiovisual</option>
+                  <option value="informatica">Informática</option>
+                  <option value="mobiliario">Mobiliário</option>
+                  <option value="infraestrutura">Infraestrutura</option>
+                  <option value="outro" selected>Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Localização atual</label>
+                <input type="text" id="at-localizacao" class="form-input" placeholder="Ex: Sala de Mídia">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Valor de aquisição (R$)</label>
+                <input type="number" id="at-valor" class="form-input" placeholder="0.00" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data de aquisição</label>
+                <input type="date" id="at-data-aquis" class="form-input">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Descrição / Observações</label>
+                <textarea id="at-descricao" class="form-input" rows="2" placeholder="Descrição, número de série, características…"></textarea>
+              </div>
+            </div>
+            <input type="hidden" id="at-id">
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+              <button class="btn btn-ghost" onclick="AtivosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button class="btn btn-primario" id="btn-ativos-salvar" onclick="AtivosUI.salvar()">
+                <span class="ms ms-sm">save</span> Salvar
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de ações + filtros -->
+          <div class="card">
+            <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+              <div class="card-titulo"><span class="ms">inventory_2</span> Patrimônio</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                <select id="at-filtro-status" class="form-input"
+                        style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="AtivosUI.carregar()">
+                  <option value="">Todos os status</option>
+                  <option value="disponivel" selected>Disponíveis</option>
+                  <option value="reservado">Reservados</option>
+                  <option value="em_uso">Em uso</option>
+                  <option value="manutencao">Manutenção</option>
+                  <option value="baixado">Baixados</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" id="btn-ativos-recarregar" onclick="AtivosUI.carregar()">
+                  <span class="ms ms-sm">refresh</span>
+                </button>
+                <button class="btn btn-primario btn-sm" id="btn-ativos-novo" onclick="AtivosUI.abrirForm()">
+                  <span class="ms ms-sm">add</span> Novo Ativo
+                </button>
+              </div>
+            </div>
+            <div id="ativos-lista">
+              <div class="empty-state" style="min-height:120px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">inventory_2</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando ativos…</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-ativos -->
 
       </div><!-- /view-espacos -->
 
@@ -1379,6 +1650,34 @@ var GAS = {
     manutencao:  function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_manutencao(id,d||''); },
     devolver:    function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_devolver(id,m||''); },
     baixar:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_baixar(id,m||''); }
+  },
+  reservas: {
+    listar:                  function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_listar(f||{}); },
+    metricas:                function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_metricas(); },
+    verificarDisponibilidade:function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_verificar_disponibilidade(p); },
+    criar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar(d); },
+    criarLote:               function(d,ds,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar_lote(d,ds); },
+    cancelar:                function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar(id,m||''); },
+    confirmar:               function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_confirmar(id); },
+    iniciar:                 function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_iniciar(id); },
+    concluir:                function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); }
+  },
+  chaves: {
+    listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
+    metricas:        function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_metricas(); },
+    abrir:           function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_abrir(d); },
+    devolver:        function(id,obs,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_devolver(id,obs||''); },
+    verificarAtrasos:function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_verificar_atrasos(); }
+  },
+  almox: {
+    listarItens:      function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_listar_itens(f||{}); },
+    listarEmprestimos:function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_listar_emprestimos(f||{}); },
+    metricas:         function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_metricas(); },
+    solicitar:        function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_solicitar(d); },
+    aprovar:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_aprovar(id); },
+    retirar:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_retirar(id); },
+    devolver:         function(id,obs,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_devolver(id,obs||''); },
+    cancelar:         function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_cancelar(id,m||''); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -2175,6 +2474,578 @@ var Router = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// ESPAÇOS — Controlador de Tabs (Fase 2)
+// ═══════════════════════════════════════════════════════════
+var EspacosUI = (function() {
+  var _tabAtual    = null;
+  var _carregados  = {};
+
+  var _STATUS_RES_LABEL = {
+    pendente:'Pendente', confirmado:'Confirmada', em_uso:'Em uso',
+    concluido:'Concluída', cancelado:'Cancelada'
+  };
+  var _STATUS_RES_CLASS = {
+    pendente:'badge-warning', confirmado:'badge-success', em_uso:'badge-accent',
+    concluido:'badge-primary', cancelado:'badge-error'
+  };
+
+  function abrirTab(tab) {
+    // Ocultar todas
+    document.querySelectorAll('.esp-tab-content').forEach(function(el){ el.style.display='none'; });
+    // Desmarcar todos os botões de tab
+    document.querySelectorAll('.esp-tab').forEach(function(btn){
+      btn.style.color='var(--text2)';
+      btn.style.borderBottomColor='transparent';
+      btn.style.fontWeight='500';
+    });
+    // Mostrar a tab selecionada
+    var painel = document.getElementById('esp-tab-'+tab);
+    if (painel) painel.style.display='';
+    // Marcar botão ativo
+    var btn = document.querySelector('.esp-tab[data-tab="'+tab+'"]');
+    if (btn) {
+      btn.style.color='var(--color-primary)';
+      btn.style.borderBottomColor='var(--color-primary)';
+      btn.style.fontWeight='600';
+    }
+    _tabAtual = tab;
+    // Carregar dados da tab se ainda não carregou
+    if (!_carregados[tab]) {
+      _carregados[tab] = true;
+      if (tab === 'reservas')    ReservasUI.carregar();
+      if (tab === 'chaves')      ChavesUI.carregar();
+      if (tab === 'emprestimos') AlmoxUI.carregar();
+      if (tab === 'ativos')      AtivosUI.carregar();
+    }
+  }
+
+  function aoAbrir() {
+    // Carregar métricas topo e abrir tab padrão (Reservas)
+    GAS.reservas.metricas(function(rM) {
+      GAS.chaves.metricas(function(cM) {
+        GAS.ativos.metricas(function(aM) {
+          var rm = (rM&&rM.ok)?rM.data:{};
+          var cm = (cM&&cM.ok)?cM.data:{};
+          var am = (aM&&aM.ok)?aM.data:{};
+          document.getElementById('espacos-metricas-topo').innerHTML = [
+            { valor: (rm.pendente||0)+(rm.confirmado||0), label:'Reservas ativas',   icone:'event',       classe:'primary' },
+            { valor: cm.abertos||0,                       label:'Chaves em aberto',  icone:'key',         classe:'warning' },
+            { valor: cm.atrasados||0,                     label:'Chaves atrasadas',  icone:'warning',     classe:'error'   },
+            { valor: am.disponivel||0,                    label:'Ativos disponíveis',icone:'inventory_2', classe:'success' }
+          ].map(function(s) {
+            return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+              +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+              +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+          }).join('');
+        });
+      });
+    });
+    abrirTab('reservas');
+  }
+
+  return { abrirTab: abrirTab, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// RESERVAS — Fase 2.1
+// ═══════════════════════════════════════════════════════════
+var ReservasUI = (function() {
+  var _STATUS_LABEL = {
+    pendente:'Pendente', confirmado:'Confirmada', em_uso:'Em uso',
+    concluido:'Concluída', cancelado:'Cancelada'
+  };
+  var _STATUS_CLASS = {
+    pendente:'badge-warning', confirmado:'badge-success', em_uso:'badge-accent',
+    concluido:'badge-primary', cancelado:'badge-error'
+  };
+
+  function _badge(s) {
+    return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
+  }
+
+  function _renderMetricas(m) {
+    m = m || {};
+    document.getElementById('reservas-metricas').innerHTML = [
+      { valor:(m.pendente||0),   label:'Pendentes',    icone:'schedule',      classe:'warning' },
+      { valor:(m.confirmado||0), label:'Confirmadas',  icone:'check_circle',  classe:'success' },
+      { valor:(m.em_uso||0),     label:'Em uso agora', icone:'play_circle',   classe:'accent'  },
+      { valor:(m.hoje||0),       label:'Hoje',         icone:'today',         classe:'primary' }
+    ].map(function(s) {
+      return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+        +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+        +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+    }).join('');
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('reservas-lista');
+    if (!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">event</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhuma reserva encontrada com este filtro.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(r) {
+      var btns = '';
+      if (r.status === 'pendente') {
+        btns += '<button class="btn btn-ghost btn-sm btn-res-confirmar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">check</span> Confirmar</button>';
+        btns += '<button class="btn btn-ghost btn-sm btn-res-cancelar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">cancel</span> Cancelar</button>';
+      }
+      if (r.status === 'confirmado') {
+        btns += '<button class="btn btn-ghost btn-sm btn-res-iniciar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">play_arrow</span> Iniciar</button>';
+        btns += '<button class="btn btn-ghost btn-sm btn-res-cancelar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">cancel</span> Cancelar</button>';
+      }
+      if (r.status === 'em_uso') {
+        btns += '<button class="btn btn-ghost btn-sm btn-res-concluir" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">done_all</span> Concluir</button>';
+      }
+      return '<div class="pendente-item">'
+        +'<div class="pendente-info">'
+        +'<div class="pendente-nome">'+escaparHtml(r.nomeAcao||'—')+'</div>'
+        +'<div class="pendente-meta">'
+        +escaparHtml(r.sala||'—')
+        +' · '+escaparHtml(r.data||'')
+        +' · '+escaparHtml(r.horaInicio||'')+'–'+escaparHtml(r.horaTermino||'')
+        +(r.responsavel?' · <em>'+escaparHtml(r.responsavel)+'</em>':'')
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +_badge(r.status)+btns+'</div></div>';
+    }).join('');
+
+    // Vincular ações
+    el.querySelectorAll('.btn-res-confirmar').forEach(function(btn) {
+      btn.addEventListener('click', function() { _confirmar(this.getAttribute('data-id'), this); });
+    });
+    el.querySelectorAll('.btn-res-iniciar').forEach(function(btn) {
+      btn.addEventListener('click', function() { _iniciar(this.getAttribute('data-id'), this); });
+    });
+    el.querySelectorAll('.btn-res-concluir').forEach(function(btn) {
+      btn.addEventListener('click', function() { _concluir(this.getAttribute('data-id'), this); });
+    });
+    el.querySelectorAll('.btn-res-cancelar').forEach(function(btn) {
+      btn.addEventListener('click', function() { _cancelar(this.getAttribute('data-id'), this); });
+    });
+  }
+
+  function carregar() {
+    var filtroStatus = (document.getElementById('res-filtro-status')||{}).value || '';
+    BtnGuard.wrap('btn-res-recarregar', 'Carregando…', function(done) {
+      GAS.reservas.metricas(function(respM) {
+        if (respM && respM.ok) _renderMetricas(respM.data);
+        GAS.reservas.listar(filtroStatus ? {status:filtroStatus} : {}, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
+          _renderLista(resp.data || []);
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); });
+    });
+  }
+
+  function abrirForm(dados) {
+    var card = document.getElementById('reservas-form-card');
+    document.getElementById('res-id').value        = dados && dados.id || '';
+    document.getElementById('res-sala').value      = dados && dados.sala || '';
+    document.getElementById('res-data').value      = dados && dados.data || '';
+    document.getElementById('res-hora-ini').value  = dados && dados.horaInicio || '';
+    document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';
+    document.getElementById('res-nome-acao').value = dados && dados.nomeAcao || '';
+    document.getElementById('res-tipo-acao').value = dados && dados.tipoAcao || '';
+    document.getElementById('res-setor').value     = dados && dados.setor || '';
+    document.getElementById('res-obs').value       = dados && dados.observacoes || '';
+    document.getElementById('reservas-form-titulo').textContent = dados && dados.id ? 'Editar Reserva' : 'Nova Reserva';
+    document.getElementById('res-disp-resultado').style.display = 'none';
+    card.style.display = '';
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function fecharForm() {
+    document.getElementById('reservas-form-card').style.display = 'none';
+  }
+
+  function verificarDisponibilidade() {
+    var sala = (document.getElementById('res-sala').value||'').trim();
+    var data = (document.getElementById('res-data').value||'').trim();
+    var ini  = (document.getElementById('res-hora-ini').value||'').trim();
+    var fim  = (document.getElementById('res-hora-fim').value||'').trim();
+    if (!sala||!data||!ini||!fim) { Toast.aviso('Preencha sala, data e horários para verificar.'); return; }
+    BtnGuard.wrap('btn-res-checar', 'Verificando…', function(done) {
+      GAS.reservas.verificarDisponibilidade({sala:sala,data:data,horaInicio:ini,horaTermino:fim}, function(resp) {
+        done();
+        var divRes = document.getElementById('res-disp-resultado');
+        divRes.style.display = '';
+        if (!resp || !resp.ok) { divRes.innerHTML='<div class="alert alert-error">Erro ao verificar disponibilidade.</div>'; return; }
+        var d = resp.data || {};
+        if (d.temConflito) {
+          var conf = d.conflitos.map(function(c){ return escaparHtml(c.nome)+' ('+escaparHtml(c.horaInicio)+'-'+escaparHtml(c.horaTermino)+')'; }).join('; ');
+          divRes.innerHTML = '<div style="padding:10px 14px;background:var(--color-error)10;border-radius:var(--r-sm);border-left:3px solid var(--color-error);font-size:13px;">'
+            +'<strong>⚠️ Conflito detectado</strong><br>'+conf+'</div>';
+        } else {
+          divRes.innerHTML = '<div style="padding:10px 14px;background:var(--color-success)10;border-radius:var(--r-sm);border-left:3px solid var(--color-success);font-size:13px;">'
+            +'✅ Horário disponível</div>';
+        }
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function salvar() {
+    var sala = (document.getElementById('res-sala').value||'').trim();
+    var data = (document.getElementById('res-data').value||'').trim();
+    var ini  = (document.getElementById('res-hora-ini').value||'').trim();
+    var fim  = (document.getElementById('res-hora-fim').value||'').trim();
+    var nome = (document.getElementById('res-nome-acao').value||'').trim();
+    if (!sala) { Toast.aviso('Sala é obrigatória.'); return; }
+    if (!data) { Toast.aviso('Data é obrigatória.'); return; }
+    if (!ini||!fim) { Toast.aviso('Horário de início e término são obrigatórios.'); return; }
+    if (!nome) { Toast.aviso('Nome da ação/evento é obrigatório.'); return; }
+    var dados = {
+      sala: sala, data: data, horaInicio: ini, horaTermino: fim,
+      nomeAcao: nome,
+      tipoAcao:     (document.getElementById('res-tipo-acao').value||'').trim(),
+      setor:        (document.getElementById('res-setor').value||'').trim(),
+      observacoes:  (document.getElementById('res-obs').value||'').trim()
+    };
+    var id = (document.getElementById('res-id').value||'').trim();
+    if (id) dados.id = id;
+    BtnGuard.wrap('btn-res-salvar', 'Salvando…', function(done) {
+      GAS.reservas.criar(dados, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar reserva.'); return; }
+        fecharForm();
+        Toast.sucesso('Reserva criada com sucesso.');
+        carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function _confirmar(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Confirmando…', function(done) {
+      GAS.reservas.confirmar(id, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Reserva confirmada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _iniciar(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Iniciando…', function(done) {
+      GAS.reservas.iniciar(id, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Uso iniciado.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _concluir(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Concluindo…', function(done) {
+      GAS.reservas.concluir(id, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Uso concluído.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _cancelar(id, btnEl) {
+    var motivo = prompt('Motivo do cancelamento (opcional):') || '';
+    if (motivo === null) return;
+    BtnGuard.wrap(btnEl, 'Cancelando…', function(done) {
+      GAS.reservas.cancelar(id, motivo, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Reserva cancelada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, verificarDisponibilidade:verificarDisponibilidade };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CHAVES — Fase 2.3
+// ═══════════════════════════════════════════════════════════
+var ChavesUI = (function() {
+  var _STATUS_LABEL = { aberto:'Aberto', atrasado:'Atrasado', devolvido:'Devolvido' };
+  var _STATUS_CLASS = { aberto:'badge-primary', atrasado:'badge-error', devolvido:'badge-success' };
+
+  function _badge(s) {
+    return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
+  }
+
+  function _renderMetricas(m) {
+    m = m || {};
+    document.getElementById('chaves-metricas').innerHTML = [
+      { valor:m.total||0,     label:'Total de protocolos', icone:'key',     classe:'primary' },
+      { valor:m.abertos||0,   label:'Em aberto',           icone:'lock',    classe:'accent'  },
+      { valor:m.atrasados||0, label:'Atrasados',           icone:'warning', classe:'error'   },
+      { valor:m.devolvidos||0,label:'Devolvidos',          icone:'check',   classe:'success' }
+    ].map(function(s) {
+      return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+        +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+        +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+    }).join('');
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('chaves-lista');
+    if (!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">key</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhum protocolo encontrado.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(p) {
+      var btns = '';
+      if (p.status !== 'devolvido') {
+        btns = '<button class="btn btn-ghost btn-sm btn-chv-devolver" data-id="'+escaparHtml(p.id)+'"><span class="ms ms-sm">key_off</span> Devolver</button>';
+      }
+      return '<div class="pendente-item">'
+        +'<div class="pendente-info">'
+        +'<div class="pendente-nome">'+escaparHtml(p.nomeSala||'—')+'</div>'
+        +'<div class="pendente-meta">'
+        +escaparHtml(p.nomeResponsavel||p.responsavel||'—')
+        +(p.setor?' · '+escaparHtml(p.setor):'')
+        +' · Retirada: '+escaparHtml(String(p.dataRetirada||'').substring(0,10))
+        +(p.dataDevolucao?' · Prev: '+escaparHtml(String(p.dataDevolucao||'').substring(0,10)):'')
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +_badge(p.status)+btns+'</div></div>';
+    }).join('');
+
+    el.querySelectorAll('.btn-chv-devolver').forEach(function(btn) {
+      btn.addEventListener('click', function() { _devolver(this.getAttribute('data-id'), this); });
+    });
+  }
+
+  function carregar() {
+    var filtro = (document.getElementById('chv-filtro-status')||{}).value || '';
+    BtnGuard.wrap('btn-chv-recarregar', 'Carregando…', function(done) {
+      GAS.chaves.metricas(function(respM) {
+        if (respM && respM.ok) _renderMetricas(respM.data);
+        GAS.chaves.listar(filtro ? {status:filtro} : {}, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar chaves.'); return; }
+          _renderLista(resp.data || []);
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); });
+    });
+  }
+
+  function abrirForm() {
+    document.getElementById('chv-sala').value     = '';
+    document.getElementById('chv-nome-resp').value= '';
+    document.getElementById('chv-setor').value    = '';
+    document.getElementById('chv-obs').value      = '';
+    document.getElementById('chv-data-dev').value = '';
+    var now = new Date();
+    var hora = now.getHours();
+    document.getElementById('chv-turno').value = hora < 12 ? 'manha' : hora < 18 ? 'tarde' : 'noite';
+    document.getElementById('chaves-form-card').style.display = '';
+    document.getElementById('chaves-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function fecharForm() {
+    document.getElementById('chaves-form-card').style.display = 'none';
+  }
+
+  function salvar() {
+    var sala = (document.getElementById('chv-sala').value||'').trim();
+    if (!sala) { Toast.aviso('Nome da sala é obrigatório.'); return; }
+    var dados = {
+      nomeSala:        sala,
+      nomeResponsavel: (document.getElementById('chv-nome-resp').value||'').trim(),
+      setor:           (document.getElementById('chv-setor').value||'').trim(),
+      turno:           document.getElementById('chv-turno').value || 'manha',
+      dataDevolucao:   document.getElementById('chv-data-dev').value || '',
+      observacoes:     (document.getElementById('chv-obs').value||'').trim()
+    };
+    BtnGuard.wrap('btn-chv-salvar', 'Registrando…', function(done) {
+      GAS.chaves.abrir(dados, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao registrar.'); return; }
+        fecharForm(); Toast.sucesso('Retirada de chave registrada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function _devolver(id, btnEl) {
+    var obs = prompt('Observações da devolução (opcional):') || '';
+    if (obs === null) return;
+    BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
+      GAS.chaves.devolver(id, obs, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Devolução registrada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// ALMOXARIFADO — Fase 2.2
+// ═══════════════════════════════════════════════════════════
+var AlmoxUI = (function() {
+  var _itens = [];
+  var _STATUS_LABEL = {
+    solicitado:'Solicitado', aprovado:'Aprovado', retirado:'Em uso',
+    atrasado:'Atrasado', devolvido:'Devolvido', cancelado:'Cancelado'
+  };
+  var _STATUS_CLASS = {
+    solicitado:'badge-warning', aprovado:'badge-primary', retirado:'badge-accent',
+    atrasado:'badge-error', devolvido:'badge-success', cancelado:'badge-error'
+  };
+
+  function _badge(s) {
+    return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
+  }
+
+  function _renderMetricas(m) {
+    m = m || {};
+    document.getElementById('almox-metricas').innerHTML = [
+      { valor:m.itensNoCatalogo||0,      label:'Itens no catálogo',  icone:'category',   classe:'primary' },
+      { valor:m.emprestimosPendentes||0, label:'Pendentes/Aprovados',icone:'hourglass',  classe:'warning' },
+      { valor:m.emprestimosAtivos||0,    label:'Em uso',             icone:'play_circle',classe:'accent'  },
+      { valor:m.emprestimosAtrasados||0, label:'Atrasados',          icone:'warning',    classe:'error'   }
+    ].map(function(s) {
+      return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+        +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+        +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+    }).join('');
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('almox-lista');
+    if (!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">handshake</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhum empréstimo encontrado.</p></div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(e) {
+      var btns = '';
+      if (e.status === 'solicitado') btns += '<button class="btn btn-ghost btn-sm btn-alm-aprovar" data-id="'+escaparHtml(e.id)+'"><span class="ms ms-sm">thumb_up</span> Aprovar</button>';
+      if (e.status === 'aprovado')   btns += '<button class="btn btn-ghost btn-sm btn-alm-retirar" data-id="'+escaparHtml(e.id)+'"><span class="ms ms-sm">output</span> Retirar</button>';
+      if (e.status === 'retirado' || e.status === 'atrasado') btns += '<button class="btn btn-ghost btn-sm btn-alm-devolver" data-id="'+escaparHtml(e.id)+'"><span class="ms ms-sm">input</span> Devolver</button>';
+      if (e.status === 'solicitado' || e.status === 'aprovado') btns += '<button class="btn btn-ghost btn-sm btn-alm-cancelar" data-id="'+escaparHtml(e.id)+'"><span class="ms ms-sm">cancel</span></button>';
+      return '<div class="pendente-item">'
+        +'<div class="pendente-info">'
+        +'<div class="pendente-nome">'+escaparHtml(e.nomeItem||'—')+' <span style="font-size:12px;color:var(--text2)">×'+escaparHtml(String(e.quantidade||1))+'</span></div>'
+        +'<div class="pendente-meta">'
+        +escaparHtml(e.responsavel||'—')
+        +' · Ret: '+escaparHtml(e.dataRetirada||'')
+        +' · Dev: '+escaparHtml(e.dataDevolucao||'')
+        +'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +_badge(e.status)+btns+'</div></div>';
+    }).join('');
+
+    el.querySelectorAll('.btn-alm-aprovar').forEach(function(btn) { btn.addEventListener('click', function(){ _aprovar(this.getAttribute('data-id'),this); }); });
+    el.querySelectorAll('.btn-alm-retirar').forEach(function(btn) { btn.addEventListener('click', function(){ _retirar(this.getAttribute('data-id'),this); }); });
+    el.querySelectorAll('.btn-alm-devolver').forEach(function(btn) { btn.addEventListener('click', function(){ _devolver(this.getAttribute('data-id'),this); }); });
+    el.querySelectorAll('.btn-alm-cancelar').forEach(function(btn) { btn.addEventListener('click', function(){ _cancelar(this.getAttribute('data-id'),this); }); });
+  }
+
+  function carregar() {
+    var filtro = (document.getElementById('almox-filtro-status')||{}).value || '';
+    BtnGuard.wrap('btn-almox-recarregar', 'Carregando…', function(done) {
+      GAS.almox.metricas(function(respM) {
+        if (respM && respM.ok) _renderMetricas(respM.data);
+        GAS.almox.listarEmprestimos(filtro ? {status:filtro} : {}, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar empréstimos.'); return; }
+          _renderLista(resp.data || []);
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); });
+    });
+  }
+
+  function abrirForm() {
+    // Carregar catálogo de itens
+    GAS.almox.listarItens({}, function(resp) {
+      _itens = (resp && resp.ok && resp.data) ? resp.data : [];
+      var sel = document.getElementById('almox-item');
+      sel.innerHTML = '<option value="">Selecione um item…</option>'
+        + _itens.map(function(i){ return '<option value="'+escaparHtml(i.id)+'">'+escaparHtml(i.nome)+' (disp: '+i.quantidadeTotal+')</option>'; }).join('');
+    });
+    document.getElementById('almox-qtd').value = '1';
+    document.getElementById('almox-data-ret').value = '';
+    document.getElementById('almox-data-dev').value = '';
+    document.getElementById('almox-setor').value = '';
+    document.getElementById('almox-obs').value = '';
+    document.getElementById('almox-form-card').style.display = '';
+    document.getElementById('almox-form-card').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function fecharForm() {
+    document.getElementById('almox-form-card').style.display = 'none';
+  }
+
+  function solicitar() {
+    var itemId = document.getElementById('almox-item').value;
+    if (!itemId) { Toast.aviso('Selecione um item.'); return; }
+    var qtd    = parseInt(document.getElementById('almox-qtd').value || '1', 10);
+    var dataRet= document.getElementById('almox-data-ret').value;
+    var dataDev= document.getElementById('almox-data-dev').value;
+    if (!dataRet || !dataDev) { Toast.aviso('Datas de retirada e devolução são obrigatórias.'); return; }
+    var dados = {
+      itemId: itemId, quantidade: qtd,
+      dataRetirada: dataRet, dataDevolucao: dataDev,
+      setor:       (document.getElementById('almox-setor').value||'').trim(),
+      observacoes: (document.getElementById('almox-obs').value||'').trim()
+    };
+    BtnGuard.wrap('btn-almox-salvar', 'Enviando…', function(done) {
+      GAS.almox.solicitar(dados, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao solicitar.'); return; }
+        fecharForm(); Toast.sucesso('Solicitação enviada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  function _aprovar(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Aprovando…', function(done) {
+      GAS.almox.aprovar(id, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Aprovado.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _retirar(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
+      GAS.almox.retirar(id, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Retirada registrada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _devolver(id, btnEl) {
+    var obs = prompt('Observações da devolução (opcional):') || '';
+    if (obs === null) return;
+    BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
+      GAS.almox.devolver(id, obs, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Devolução registrada.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+  function _cancelar(id, btnEl) {
+    var motivo = prompt('Motivo do cancelamento:') || '';
+    if (motivo === null) return;
+    BtnGuard.wrap(btnEl, 'Cancelando…', function(done) {
+      GAS.almox.cancelar(id, motivo, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Empréstimo cancelado.'); carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, solicitar:solicitar };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // ATIVOS — Fase 1.4
 // ═══════════════════════════════════════════════════════════
 var AtivosUI = (function() {
@@ -2466,7 +3337,7 @@ var App = (function() {
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasUI.aoAbrir(); }
             : id === 'financeiro' ? function(){ ContratosUI.aoAbrir(); }
-            : id === 'espacos'    ? function(){ AtivosUI.aoAbrir(); }
+            : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);

@@ -174,6 +174,80 @@ Tarefa = {
 
 ---
 
+## Reserva de Espaço (Fase 2.1)
+
+```javascript
+Reserva = {
+  orgId, id, criadoEm, atualizadoEm, criadoPor, versao,
+
+  data, horaInicio, horaTermino,   // YYYY-MM-DD; HH:MM
+  sala,       // nome ou ID da sala/espaço
+  turno,      // manha | tarde | noite | integral (inferido pelo sistema)
+
+  nomeAcao, tipoAcao, responsavel, setor, coResponsavel,
+  release,     // texto de divulgação
+  itensVolantes, // string descritiva (migração legado)
+
+  status,      // FSM abaixo
+  motivoCancelamento,
+  observacoes,
+
+  acaoId,      // vínculo com Ação (Fase 5)
+  idLote       // ID para agendamentos múltiplos
+}
+```
+
+**assertSemConflito()** é chamado dentro de `LockService.waitLock()` antes de qualquer
+inserção — tornando conflito de horário impossível por design.
+
+---
+
+## Protocolo de Chave (Fase 2.3)
+
+```javascript
+Protocolo = {
+  orgId, id, criadoEm, atualizadoEm, criadoPor, versao,
+
+  nomeSala,
+  responsavel, nomeResponsavel, setor, turno,
+
+  dataRetirada,      // ISO datetime
+  dataDevolucao,     // ISO date (previsto)
+  dataDevolucaoReal, // ISO datetime (efetivo)
+
+  reservaId,  // vínculo com Reserva (opcional)
+  status,     // FSM: aberto | atrasado | devolvido
+  observacoes
+}
+```
+
+---
+
+## Empréstimo de Item (Fase 2.2)
+
+```javascript
+Emprestimo = {
+  orgId, id, criadoEm, atualizadoEm, criadoPor, versao,
+
+  itemId, nomeItem, quantidade,
+
+  acaoId, reservaId,
+  responsavel, setor,
+
+  dataRetirada, dataDevolucao,         // planejado
+  dataRetiradaReal, dataDevolucaoReal, // efetivo
+
+  status,          // FSM: solicitado | aprovado | retirado | atrasado | devolvido | cancelado
+  aprovadoPor, motivoCancelamento, observacoes
+}
+```
+
+**Catálogo de Itens** (`MASTER.Itens`): `{ id, orgId, nome, descricao, quantidadeTotal, localizacao, categoria }`
+
+**assertItemDisponivel()** verifica estoque disponível no período dentro de `LockService`.
+
+---
+
 ## FSMs por Domínio
 
 ### Reserva de Espaço

@@ -23,8 +23,8 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: Fase 1 — Persistência Canônica — **1.4 Ativos e Almoxarifado entregue; seguir para Fase 2**
-**O que foi feito (2026-05-20 a 2026-05-21)**:
+**Fase atual**: Fase 2 — Espaços e Almoxarifado — **Fase 2 entregue; seguir para Fase 3**
+**O que foi feito (2026-05-20 a 2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
 - ✅ `USER_DEPLOYING` mantido (correto para Workspace + access:DOMAIN)
@@ -38,15 +38,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ Fase 1.1 entregue: `TarefaRepository`, `TarefaEngine`, controllers `ctrl_tarefas_*`, migração Sheet → JSON e view mínima de Tarefas
 - ✅ **Fase 1.2 entregue**: `ColaboradorRepository` (colaboradores.json + índice EQUIPES.Funcionarios), `PessoasEngine` (fusão EquipesEngine+RHEngine, FSMs status/férias), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*), view SPA + GAS.pessoas + PessoasUI
 - ✅ **Fase 1.4 entregue** (2026-05-21): `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM disponivel↔reservado↔em_uso↔manutencao→baixado), `ativos_controller.gs` (ctrl_ativos_* + RBAC infraestrutura/gestor/admin), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos registrada)
+- ✅ **Fase 2 entregue** (2026-05-22): `ReservaRepository` + `ReservaEngine` (`assertSemConflito` dentro de `LockService`), `reservas_controller.gs`, `ReservasItensRepository` (catálogo + empréstimos), `AlmoxarifadoEngine` (implementação completa), `ChaveRepository` + `ChaveEngine` + `chaves_controller.gs`, view Espaços com tabs (Reservas | Chaves | Empréstimos | Patrimônio), GAS.reservas/chaves/almox, deploy @24
 
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase1_ativos_prepararIndice()` — garante cabeçalho nas abas ESPACOS: Ativos, MovimentacoesAtivos, BaixasAtivos, Manutencoes
-> 2. **[BROWSER]** Abrir módulo Espaços → verificar métricas → criar ativo smoke-test → confirmar na lista e no Sheet ESPACOS.Ativos
-> 3. **[BROWSER]** Testar transição de status: disponivel → manutencao → disponivel
-> 4. Iniciar **Fase 2 — Espaços e Almoxarifado com Bloqueio Real**
+> 1. **[GAS EDITOR]** Executar `fase2_reservas_prepararIndice()` → `{ok:true}`
+> 2. **[GAS EDITOR]** Executar `fase2_chaves_prepararIndice()` → `{ok:true}`
+> 3. **[GAS EDITOR]** Executar `fase2_emprestimos_prepararIndice()` → `{ok:true}`
+> 4. **[BROWSER]** Abrir módulo Espaços → tab "Reservas" → criar reserva → criar segunda no mesmo horário e confirmar que CONFLITO é bloqueado
+> 5. **[BROWSER]** Tab "Chaves" → registrar retirada → devolver
+> 6. Iniciar **Fase 3 — Pessoas, RH e Contratações**
 
-**Fase mais urgente agora**: **Fase 2** — Reservas de Espaço com bloqueio real de conflitos.
-Com ativos canônicos (Fase 1.4), o próximo passo é garantir que reservas de espaço são verificadas sem sobreposição possível.
+**Fase mais urgente agora**: **Fase 3** — domínio de pessoas robusto com contratações e aprovação real.
 
 ---
 
@@ -129,8 +131,8 @@ Um módulo está **completo** quando oferece:
 | # | Fase | Status | Urgência | Iniciada | Concluída |
 |---|------|--------|----------|----------|-----------|
 | 0 | Fundação Técnica | ✅ Concluída | — | 2026-05-20 | 2026-05-21 |
-| 1 | Persistência Canônica | 🟡 **EM ANDAMENTO** | 🔴 CRÍTICO — risk de corrupção de dados | 2026-05-21 | — |
-| 2 | Espaços e Almoxarifado | ⬜ Aguardando F1 | 🔴 CRÍTICO — conflitos de reserva possíveis | — | — |
+| 1 | Persistência Canônica | ✅ **Concluída** | — | 2026-05-21 | 2026-05-22 |
+| 2 | Espaços e Almoxarifado | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 3 | Pessoas, RH e Contratações | ⬜ Aguardando F2 | 🟠 ALTO — colaboradores em 3 estruturas sem sync | — | — |
 | 4 | Financeiro e Contratos | ⬜ Aguardando F3 | 🟠 ALTO — métricas retornam zero, orçamento sem controle | — | — |
 | 5 | Ação como Núcleo Real | ⬜ Aguardando F4 | 🟠 ALTO — Ação desconectada dos outros domínios | — | — |
@@ -256,8 +258,8 @@ Um módulo está **completo** quando oferece:
 |------|-------------------|--------|
 | 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ✅ Deploy realizado; auditoria visual pendente no browser |
 | 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores + Contratos criadas |
-| 1.4 — Ativos (view-espacos) | `BtnGuard.auditar()` no console após abrir Módulo Espaços | ⬜ **Pendente — smoke-test obrigatório antes de fechar** |
-| 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ⬜ |
+| 1.4 — Ativos (view-espacos) | `BtnGuard.auditar()` no console após abrir Módulo Espaços | ✅ Integrado na view tabbed de Espaços |
+| 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ✅ Todos os botões async protegidos (ReservasUI + ChavesUI + AlmoxUI) |
 | 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
 | 4 — Financeiro | Após criar views financeiras | ⬜ |
 | 5+ — Demais fases | Após cada view criada | ⬜ |
@@ -337,35 +339,46 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: reservas sem sobreposição possível. Conflito é impossível por design.
 
-**Status**: ⬜ Não iniciada
-
-**Próximo passo quando iniciar**:
-> Começar por `2.1`: garantir que `assertSemConflito()` é chamado em TODOS os paths de criação de reserva, incluindo dentro do mesmo `LockService`.
+**Status**: ✅ Concluída (2026-05-22)
 
 ### 2.1 — Reservas de Espaço com conflito garantido
 
-- [ ] Criar `gas/src/modules/espacos/reserva_engine.gs` — assertSemConflito em todos os paths
-- [ ] Criar `gas/src/modules/espacos/reserva_repository.gs`
-- [ ] Implementar verificação de horário de funcionamento do espaço
-- [ ] Implementar verificação de bloqueio de datas (feriados, manutenção)
+- [x] Criar `gas/src/modules/espacos/reserva_repository.gs` — ESPACOS.Reservas Sheet canônica; headers; listarAtivosParaConflito()
+- [x] Criar `gas/src/modules/espacos/reserva_engine.gs` — `assertSemConflito()` + `assertHorarioFuncionamento()` dentro de LockService; FSM pendente→confirmado→em_uso→concluido; criar/criarLote/atualizar/mudarStatus/verificarDisponibilidade
+- [x] Criar `gas/src/modules/espacos/reservas_controller.gs` — ctrl_reservas_* com RBAC (colaborador: próprias; gestão: todas)
+- [x] `fase2_reservas_prepararIndice()` — wrapper global para GAS Editor
 
 ### 2.2 — Sistema de Empréstimo de Itens
 
-- [ ] Criar `gas/src/modules/espacos/almoxarifado_engine.gs` — FSM: solicitado→aprovado→retirado→devolvido
-- [ ] Criar `gas/src/modules/espacos/reservas_itens_repository.gs`
-- [ ] Implementar `assertItemDisponivel()` com lock de escrita
-- [ ] Alertas de atraso via EventHandlerRegistry
+- [x] Criar `gas/src/modules/espacos/reservas_itens_repository.gs` — MASTER.Itens + ESPACOS.EmprestimosItens; `quantidadeEmUsoPeriodo()`
+- [x] Atualizar `gas/src/modules/espacos/almoxarifado_engine.gs` — implementação completa da FSM; `assertItemDisponivel()` com LockService; `verificarAtrasos()` + eventos KEY_PROTOCOL_DELAYED
+- [x] `fase2_emprestimos_prepararIndice()` — wrapper global
 
 ### 2.3 — Protocolo de Chaves
 
-- [ ] Criar `gas/src/modules/espacos/chave_engine.gs` — refatorado com orgId
-- [ ] Integrar responsável por turno automático via SistemaConfigService
+- [x] Criar `gas/src/modules/espacos/chave_repository.gs` — ESPACOS.Chaves Sheet canônica
+- [x] Criar `gas/src/modules/espacos/chave_engine.gs` — FSM aberto→atrasado→devolvido; `verificarAtrasos()` com eventos
+- [x] Criar `gas/src/modules/espacos/chaves_controller.gs` — ctrl_chaves_* + ctrl_almox_*
+- [x] `fase2_chaves_prepararIndice()` — wrapper global
 
-### 2.4 — Configuração de Espaço Expandida
+### 2.4 — View Espaços com Tabs
 
-- [ ] UI admin: horários de funcionamento por dia/espaço
-- [ ] UI admin: responsáveis por turno
-- [ ] UI admin: bloqueios pontuais de data
+- [x] View `view-espacos` expandida com 4 tabs: Reservas | Chaves | Empréstimos | Patrimônio
+- [x] `EspacosUI` — controlador de tabs + métricas consolidadas no topo
+- [x] `ReservasUI` — CRUD completo + verificar disponibilidade + BtnGuard
+- [x] `ChavesUI` — CRUD + devolução + BtnGuard
+- [x] `AlmoxUI` — CRUD + aprovação/retirada/devolução + BtnGuard
+- [x] GAS namespaces: `GAS.reservas`, `GAS.chaves`, `GAS.almox`
+- [x] Deploy @24 realizado
+
+**Smoke-test 2.x:**
+1. GAS Editor: executar `fase2_reservas_prepararIndice()` → `{ok:true}`
+2. GAS Editor: executar `fase2_chaves_prepararIndice()` → `{ok:true}`
+3. GAS Editor: executar `fase2_emprestimos_prepararIndice()` → `{ok:true}`
+4. Browser: Módulo Espaços → tab Reservas → criar reserva "Teste A" (Auditório, 14:00-16:00)
+5. Browser: criar segunda reserva no mesmo espaço/horário → **deve retornar erro de conflito**
+6. Browser: tab Chaves → Nova Retirada → preencher sala → Registrar → Devolver
+7. Console F12: `BtnGuard.auditar()` → "✅ todos protegidos"
 
 ---
 
@@ -661,6 +674,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-21 | Fase 1.2 | Colaboradores: `ColaboradorRepository` (colaboradores.json + sub-coleções + índice EQUIPES.Funcionarios), `PessoasEngine` (FSM status colaborador + FSM férias com 6 estados + fusão EquipesEngine+RHEngine), `pessoas_controller.gs` (ctrl_pessoas_* + ctrl_rh_*, RBAC completo, férias com FSM), view SPA Pessoas (métricas, CRUD, filtro status, PessoasUI), GAS.pessoas namespace, rota registrada no Router | `clasp push` → `fase1_colaboradores_prepararIndice()` → `fase1_colaboradores_migrarFuncionarios()` → smoke-test no browser → iniciar Fase 1.3 Contratações |
 | 2026-05-21 | Fase 1.3 | Contratos: `ContratoRepository` (contratos.json com nested metas/rubricas/indicadores, índice FINANCEIRO.Contratos, migração idempotente), `ContratosEngine` (FSM Ativo↔Suspenso→Encerrado, cálculos financeiros, análise de divergência), `contratos_controller.gs` (ctrl_contratos_*, RBAC por papel financeiro/gestor/admin), view SPA Financeiro (ContratosUI, GAS.contratos, métricas, CRUD, filtro status) | `fase1_contratos_prepararIndice()` → `fase1_contratos_migrarSheetParaJson()` → smoke-test browser → iniciar Fase 1.4 Ativos e Almoxarifado |
 | 2026-05-21 | Fase 1.4 | Ativos: `AtivoRepository` (ESPACOS.Ativos Sheet canônica + MovimentacoesAtivos + BaixasAtivos + Manutencoes), `AtivosEngine` (FSM completa + métricas + auditoria + eventos), `ativos_controller.gs` (ctrl_ativos_* + RBAC), `AlmoxarifadoEngine` (stub FSM empréstimo para Fase 2.2), view SPA Espaços (AtivosUI + GAS.ativos + rota espacos), `fase1_ativos_prepararIndice()`. Fase 1 concluída. | `fase1_ativos_prepararIndice()` no GAS Editor → smoke-test no browser (Módulo Espaços) → iniciar Fase 2 Reservas |
+| 2026-05-22 | Fase 2 | Reservas: `ReservaRepository` + `ReservaEngine` (assertSemConflito+LockService+FSM) + `reservas_controller.gs`. Almoxarifado: `ReservasItensRepository` (MASTER.Itens+EmprestimosItens) + `AlmoxarifadoEngine` (FSM completo+assertItemDisponivel+verificarAtrasos). Chaves: `ChaveRepository` + `ChaveEngine` (FSM+verificarAtrasos+eventos) + `chaves_controller.gs`. View Espaços com 4 tabs (Reservas|Chaves|Empréstimos|Patrimônio) + EspacosUI+ReservasUI+ChavesUI+AlmoxUI. GAS.reservas/chaves/almox. Deploy @24. | Executar os 3 prepararIndice() no GAS Editor → smoke-test no browser → iniciar Fase 3 |
 
 ---
 

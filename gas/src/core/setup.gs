@@ -81,6 +81,24 @@ function inicializarSistema() {
     AtivoRepository.prepararIndice();
   }
 
+  // Fase 2.1 — Reservas: garante cabeçalho em ESPACOS.Reservas
+  if (typeof ReservaRepository !== 'undefined' &&
+      typeof ReservaRepository.prepararIndice === 'function') {
+    ReservaRepository.prepararIndice();
+  }
+
+  // Fase 2.2 — Empréstimos: garante cabeçalhos em MASTER.Itens + ESPACOS.EmprestimosItens
+  if (typeof ReservasItensRepository !== 'undefined' &&
+      typeof ReservasItensRepository.prepararIndice === 'function') {
+    ReservasItensRepository.prepararIndice();
+  }
+
+  // Fase 2.3 — Chaves: garante cabeçalho em ESPACOS.Chaves
+  if (typeof ChaveRepository !== 'undefined' &&
+      typeof ChaveRepository.prepararIndice === 'function') {
+    ChaveRepository.prepararIndice();
+  }
+
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
   var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';
