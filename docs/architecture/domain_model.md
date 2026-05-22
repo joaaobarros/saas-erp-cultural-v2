@@ -102,6 +102,45 @@ Colaborador = {
 
 ---
 
+## Ativo (Patrimônio/Equipamento — Fase 1.4)
+
+```javascript
+Ativo = {
+  // base
+  orgId, id, criadoEm, atualizadoEm, criadoPor, versao,
+
+  // identificação
+  nome,         // "Câmera Sony A7", "Projetor Epson EB-X51"
+  codigo,       // número de tombamento/patrimônio: "PAT-001"
+  categoria,    // 'audiovisual' | 'informatica' | 'mobiliario' | 'infraestrutura' | 'outro'
+  descricao,    // número de série, características técnicas, observações
+
+  // estado atual
+  status,       // FSM: disponivel | reservado | em_uso | manutencao | baixado
+  localizacao,  // onde está agora: "Sala de Mídia", "Auditório"
+  responsavel,  // email de quem está usando (preenchido ao ir para em_uso)
+  acaoId,       // ID da ação que está usando (se aplicável)
+
+  // dados patrimoniais
+  valorAquisicao, // valor em R$
+  dataAquisicao,  // ISO date
+  fornecedor,
+  notaFiscal,
+  vidaUtilAnos,   // vida útil estimada em anos
+
+  // manutenção
+  proximaManutencao, // ISO date da próxima manutenção preventiva
+  ultimaManutencao,  // ISO date da última manutenção realizada
+}
+```
+
+**Fonte de verdade**: `ESPACOS.Ativos` (Sheet canônica — tabular, visível à equipe)
+**Histórico de movimentações**: `ESPACOS.MovimentacoesAtivos` (append-only)
+**Baixas formais**: `ESPACOS.BaixasAtivos` (append-only)
+**Registros de manutenção**: `ESPACOS.Manutencoes` (append-only)
+
+---
+
 ## Tarefa (persistência canônica — Fase 1.1)
 
 ```javascript

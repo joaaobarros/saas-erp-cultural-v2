@@ -75,6 +75,12 @@ function inicializarSistema() {
     TarefaRepository.protegerIndice();
   }
 
+  // Fase 1.4 — Ativos: garante cabeçalhos nas abas ESPACOS de patrimônio
+  if (typeof AtivoRepository !== 'undefined' &&
+      typeof AtivoRepository.prepararIndice === 'function') {
+    AtivoRepository.prepararIndice();
+  }
+
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
   var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';

@@ -255,7 +255,8 @@ Um módulo está **completo** quando oferece:
 | Fase | Auditoria BtnGuard | Status |
 |------|-------------------|--------|
 | 0 — Frontend shell + portais | `BtnGuard.auditar()` pós-deploy | ✅ Deploy realizado; auditoria visual pendente no browser |
-| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores + Contratos + Ativos criadas |
+| 1 — Persistência Canônica | Após criar views de tarefas/colaboradores | ✅ Tarefas + Colaboradores + Contratos criadas |
+| 1.4 — Ativos (view-espacos) | `BtnGuard.auditar()` no console após abrir Módulo Espaços | ⬜ **Pendente — smoke-test obrigatório antes de fechar** |
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ⬜ |
 | 3 — Pessoas e RH | Após criar views de escalas/férias | ⬜ |
 | 4 — Financeiro | Após criar views financeiras | ⬜ |

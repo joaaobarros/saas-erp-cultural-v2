@@ -2257,12 +2257,12 @@ var AtivosUI = (function() {
         +'</div></div>';
     }).join('');
 
-    // Vincular botões
+    // Vincular botões — passa o elemento para BtnGuard poder travá-lo
     el.querySelectorAll('.btn-ativo-manut').forEach(function(btn) {
-      btn.addEventListener('click', function() { _enviarManutencao(this.getAttribute('data-id')); });
+      btn.addEventListener('click', function() { _enviarManutencao(this.getAttribute('data-id'), this); });
     });
     el.querySelectorAll('.btn-ativo-concl').forEach(function(btn) {
-      btn.addEventListener('click', function() { _concluirManutencao(this.getAttribute('data-id')); });
+      btn.addEventListener('click', function() { _concluirManutencao(this.getAttribute('data-id'), this); });
     });
     el.querySelectorAll('.btn-ativo-edit').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -2338,11 +2338,12 @@ var AtivosUI = (function() {
     });
   }
 
-  function _enviarManutencao(id) {
+  function _enviarManutencao(id, btnEl) {
     if(!id) return;
     var descr = prompt('Descreva o problema ou motivo da manutenção:');
-    if(descr === null) return; // cancelado
-    BtnGuard.wrap(null, 'Registrando…', function(done) {
+    if(descr === null) return; // cancelado pelo usuário
+    // btnEl é o elemento DOM — BtnGuard aceita ID string OU elemento DOM
+    BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
       GAS.ativos.manutencao(id, descr, function(resp) {
         done();
         if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao enviar para manutenção.'); return; }
@@ -2352,9 +2353,9 @@ var AtivosUI = (function() {
     });
   }
 
-  function _concluirManutencao(id) {
+  function _concluirManutencao(id, btnEl) {
     if(!id) return;
-    BtnGuard.wrap(null, 'Concluindo…', function(done) {
+    BtnGuard.wrap(btnEl, 'Concluindo…', function(done) {
       GAS.ativos.status(id, 'disponivel', 'Manutenção concluída', function(resp) {
         done();
         if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao concluir manutenção.'); return; }
