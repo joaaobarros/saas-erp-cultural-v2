@@ -114,6 +114,7 @@ var DataGateway = (function () {
   }
 
   return {
+    obterAba:                _aba,
     obterTodos:              obterTodos,
     buscarPorColuna:         buscarPorColuna,
     filtrarPorColuna:        filtrarPorColuna,
