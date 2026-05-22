@@ -471,6 +471,13 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    FORMULÁRIOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 680px) { .form-grid { grid-template-columns: 1fr; } }
+
 .form-group { margin-bottom: 14px; }
 .form-label {
   display: block;
@@ -509,6 +516,7 @@ body {
 .badge-warning { background: #fef3c7; color: #92400e; }
 .badge-error   { background: #fee2e2; color: #991b1b; }
 .badge-muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.badge-accent  { background: #fef3c7; color: #b45309; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TOAST NOTIFICATIONS
@@ -1652,15 +1660,16 @@ var GAS = {
     baixar:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_baixar(id,m||''); }
   },
   reservas: {
-    listar:                  function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_listar(f||{}); },
-    metricas:                function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_metricas(); },
-    verificarDisponibilidade:function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_verificar_disponibilidade(p); },
-    criar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar(d); },
-    criarLote:               function(d,ds,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar_lote(d,ds); },
-    cancelar:                function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar(id,m||''); },
-    confirmar:               function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_confirmar(id); },
-    iniciar:                 function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_iniciar(id); },
-    concluir:                function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); }
+    listar:                  function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_listar(f||{}); },
+    metricas:                function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_metricas(); },
+    verificarDisponibilidade:function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_verificar_disponibilidade(p); },
+    criar:                   function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar(d); },
+    atualizar:               function(id,d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_atualizar(id,d); },
+    criarLote:               function(d,ds,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_criar_lote(d,ds); },
+    cancelar:                function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar(id,m||''); },
+    confirmar:               function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_confirmar(id); },
+    iniciar:                 function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_iniciar(id); },
+    concluir:                function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -1919,7 +1928,8 @@ var IdentidadeAdmin = (function() {
   }
 
   function aprovar(email) {
-    var btnId='btn-aprovar-'+email.replace(/[@.]/g,'-');
+    // Mesma sanitização de _carregarPendentes para garantir que o ID bate
+    var btnId='btn-aprovar-'+String(email).replace(/[^a-zA-Z0-9_-]/g,'-');
     BtnGuard.wrap(btnId,'Aprovando…',function(done){
       GAS.admin.aprovarAcesso({emailAlvo:email,papel:'colaborador',setor:''},function(resp){
         done();
@@ -2704,15 +2714,26 @@ var ReservasUI = (function() {
       observacoes:  (document.getElementById('res-obs').value||'').trim()
     };
     var id = (document.getElementById('res-id').value||'').trim();
-    if (id) dados.id = id;
     BtnGuard.wrap('btn-res-salvar', 'Salvando…', function(done) {
-      GAS.reservas.criar(dados, function(resp) {
-        done();
-        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar reserva.'); return; }
-        fecharForm();
-        Toast.sucesso('Reserva criada com sucesso.');
-        carregar();
-      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      if (id) {
+        // EDIÇÃO — chama atualizar com o ID separado dos dados
+        GAS.reservas.atualizar(id, dados, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao atualizar reserva.'); return; }
+          fecharForm();
+          Toast.sucesso('Reserva atualizada com sucesso.');
+          carregar();
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      } else {
+        // CRIAÇÃO
+        GAS.reservas.criar(dados, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar reserva.'); return; }
+          fecharForm();
+          Toast.sucesso('Reserva criada com sucesso.');
+          carregar();
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }
     });
   }
 
@@ -2744,8 +2765,9 @@ var ReservasUI = (function() {
     });
   }
   function _cancelar(id, btnEl) {
-    var motivo = prompt('Motivo do cancelamento (opcional):') || '';
-    if (motivo === null) return;
+    var _rawMotivo = prompt('Motivo do cancelamento (opcional):');
+    if (_rawMotivo === null) return; // usuário cancelou
+    var motivo = _rawMotivo;
     BtnGuard.wrap(btnEl, 'Cancelando…', function(done) {
       GAS.reservas.cancelar(id, motivo, function(resp) {
         done();
@@ -2866,8 +2888,9 @@ var ChavesUI = (function() {
   }
 
   function _devolver(id, btnEl) {
-    var obs = prompt('Observações da devolução (opcional):') || '';
-    if (obs === null) return;
+    var _rawObs = prompt('Observações da devolução (opcional):');
+    if (_rawObs === null) return; // usuário cancelou
+    var obs = _rawObs;
     BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
       GAS.chaves.devolver(id, obs, function(resp) {
         done();
@@ -3020,8 +3043,9 @@ var AlmoxUI = (function() {
     });
   }
   function _devolver(id, btnEl) {
-    var obs = prompt('Observações da devolução (opcional):') || '';
-    if (obs === null) return;
+    var _rawObs = prompt('Observações da devolução (opcional):');
+    if (_rawObs === null) return; // usuário cancelou
+    var obs = _rawObs;
     BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
       GAS.almox.devolver(id, obs, function(resp) {
         done();
@@ -3031,8 +3055,9 @@ var AlmoxUI = (function() {
     });
   }
   function _cancelar(id, btnEl) {
-    var motivo = prompt('Motivo do cancelamento:') || '';
-    if (motivo === null) return;
+    var _rawMotivo = prompt('Motivo do cancelamento:');
+    if (_rawMotivo === null) return; // usuário cancelou
+    var motivo = _rawMotivo;
     BtnGuard.wrap(btnEl, 'Cancelando…', function(done) {
       GAS.almox.cancelar(id, motivo, function(resp) {
         done();

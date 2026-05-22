@@ -48,6 +48,54 @@ O documento disseca a arquitetura de platform engineering da Atlassian (Jira, Co
 
 ---
 
+## 🧪 AUDITORIA DE BUGS — OBRIGATÓRIA ANTES DE QUALQUER DEPLOY
+
+> Diretriz adicionada após sessão de auditoria (2026-05-22) que identificou 5 bugs ativos no sistema.
+
+Antes de executar `clasp push` / `clasp deploy` em **qualquer entrega ou fase**, o Claude DEVE realizar sistematicamente:
+
+### A. Revisão de chamadas `prompt()` / `confirm()`
+
+Toda chamada a `prompt()` ou `confirm()` deve:
+1. Capturar o valor em variável separada: `var _raw = prompt('...');`
+2. Checar `null` **antes** de qualquer fallback: `if (_raw === null) return;`
+3. Só então aplicar fallback: `var val = _raw || '';`
+
+> **Anti-padrão proibido**: `var x = prompt('...') || ''; if (x === null) return;`  
+> O `|| ''` consome o `null` antes da checagem — o `if` nunca executa.
+
+### B. Revisão de namespace `GAS.*` no frontend
+
+Todo controller backend (`ctrl_*`) que tem contraparte no frontend **deve** ter entrada correspondente no objeto `GAS.*` em `index.html`. Checar especialmente:
+- Operações de **atualizar/editar** (frequentemente omitidas)
+- Que `salvar()` despacha para `criar` OU `atualizar` conforme `id` presente
+
+### C. Revisão de CSS — classes usadas vs. definidas
+
+Buscar no HTML todas as classes `badge-*`, `form-*` usadas e confirmar que existem regras CSS correspondentes no `<style>`.
+
+### D. Revisão de IDs de DOM — consistência entre criação e busca
+
+Quando um elemento é criado com ID derivado de dados (ex.: email sanitizado), a sanitização (`replace()`) deve usar **exatamente o mesmo padrão regex** em todos os lugares que geram ou buscam esse ID.
+
+### E. Revisão de FSM — FsmGuardian em toda transição de status
+
+Toda função que chama `*.atualizarStatus*()` ou equivalente **deve** chamar `FsmGuardian.transitar()` **antes**, com os parâmetros corretos de `(tipo, statusAtual, statusNovo, contexto)`. Verificar em especial funções `verificarAtrasos()`.
+
+### Checklist de auditoria (executar antes de cada deploy)
+
+```
+[ ] prompt()/confirm() — _raw separado, null-check antes do fallback
+[ ] GAS.* namespace — todos os ctrl_* têm binding; editar despacha para atualizar
+[ ] CSS — zero classes usadas sem definição correspondente no <style>
+[ ] IDs de DOM — regex de sanitização idêntica em todos os pontos de uso
+[ ] FsmGuardian.transitar() — chamado antes de toda atualizarStatus*()
+[ ] BtnGuard.auditar() — retorna "✅ todos protegidos"
+[ ] Console F12 — zero TypeError / undefined
+```
+
+---
+
 ## 🔴 REGRAS ABSOLUTAS — APLICAM-SE A TODO CÓDIGO PRODUZIDO
 
 ### 1. DEPLOY OBRIGATÓRIO a cada fase ou correção

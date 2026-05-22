@@ -301,6 +301,8 @@ var AlmoxarifadoEngine = (function () {
       if (e.status !== STATUS_EMPRESTIMO.RETIRADO) return;
       if (e.dataDevolucao && e.dataDevolucao < hoje) {
         try {
+          FsmGuardian.transitar('emprestimos', e.status, STATUS_EMPRESTIMO.ATRASADO,
+            'Verificação automática de atrasos');
           ReservasItensRepository.atualizarStatusEmprestimo(
             e.id, STATUS_EMPRESTIMO.ATRASADO, orgId, {}
           );
