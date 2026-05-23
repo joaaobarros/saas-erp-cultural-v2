@@ -140,19 +140,25 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ Todos os botões do modal marcados com `data-bg-skip="1"` — BtnGuard.auditar() passa
 - ✅ Deploy @82
 
+**O que foi feito (Editor de Terreno — 2026-05-23)**:
+- ✅ `TerrenoEditorUI` (terreno_editor.html): editor full-screen de contorno do campus com pontos arrastáveis, curvas bezier, zoom/pan, redefinir para hexágono padrão
+- ✅ `ConfigAdminService.lerTerreno/salvarTerreno`: persiste `mapaTerrenoConfig: { pontos, svgPath }` em `config_org.json`
+- ✅ `ctrl_admin_lerTerreno/salvarTerreno`: controllers com RBAC admin
+- ✅ `InfraConfigUI` (index.html): toolbar "Editar Terreno" + label indicando padrão/personalizado; canvas carrega terreno salvo; `MapaUI.atualizarTerreno()` chamado ao salvar novo terreno
+- ✅ `MapaUI` (mapa_ui.html): `_aplicarTerreno()` substitui `.mapa-bg`/`.mapa-borda` pelo `svgPath` personalizado; terreno carregado via `GAS.admin.lerTerreno()` na primeira abertura (cacheado); `atualizarTerreno()` exposto na API pública
+- ✅ Deploy @100
+
 **Próximo passo imediato**:
-> **[BROWSER] Smoke-tests CCBJ Fechado:**
-> 1. Login como gestor/admin → Espaços → Reservas → botão `🔒 CCBJ Fechado` visível
-> 2. Clicar → modal abre com Turno, Motivo e 4 abas de modo
-> 3. Modo Manual: selecionar data futura → chip aparece com dia da semana + data
-> 4. Modo Semanal: marcar Seg+Qua, range de 1 semana → "Gerar datas" → chips corretos
-> 5. Confirmar bloqueio → loader aparece → toast "N dias bloqueados em M espaços"
-> 6. Lista de reservas → bloqueios aparecem com badge vermelho `🔒 BLOQUEIO`
-> 7. Diagrama → bloco vermelho com `🔒` no horário bloqueado
-> 8. Toast → clicar "↩ Desfazer" → bloqueios cancelados → lista atualiza
-> 9. Login como colaborador → botão CCBJ Fechado **não aparece**
-> 10. Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 11. Iniciar **Fase 6 — Integração via Eventos + RECE**
+> **[BROWSER] Smoke-tests Editor de Terreno + Mapa:**
+> 1. Configurações → Mapa → label mostra "Padrão (6 pts)" ou "Personalizado (N pts)"
+> 2. "Editar Terreno" → editor abre full-screen com contorno hexagonal
+> 3. Arrastar ponto → contorno atualiza em tempo real
+> 4. Duplo clique num segmento → alça ◇ aparece → arrastar → curva bezier renderizada
+> 5. Salvar → toast "Terreno do campus salvo (N pontos)" → label atualiza
+> 6. Espaços → Mapa → ao carregar, contorno do mapa reflete o terreno personalizado
+> 7. Console F12 → zero TypeError
+
+> 8. Iniciar **Fase 6 — Integração via Eventos + RECE**
 
 **Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
 

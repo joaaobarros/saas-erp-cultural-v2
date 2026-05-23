@@ -13,6 +13,7 @@ var MapaUI=(function(){
   var _reservasDoDia={};  // { [espacoId]: Reserva[] }
   var _zoom=1,_panX=0,_panY=0,_drag={ativo:false,sx:0,sy:0};
   var _filtros={tipo:'todos',status:'todos'};
+  var _terrenoCarregado=false,_terrenoConfig=null;
   var _SL={disponivel:'Disponível',ocupado:'Ocupado',em_uso:'Em uso',
     aguardando:'Aguardando',manutencao:'Manutenção',bloqueado:'Bloqueado',default:'—'};
   var _SC={disponivel:'badge-success',ocupado:'badge-error',em_uso:'badge-accent',
@@ -24,6 +25,26 @@ var MapaUI=(function(){
     return (inp&&inp.value)||new Date().toISOString().slice(0,10);
   }
 
+  // ─── Aplicar terreno personalizado ao SVG ──────────────────
+  function _aplicarTerreno(cfg){
+    if(!cfg||!cfg.svgPath)return;
+    var NS='http://www.w3.org/2000/svg';
+    var svgEl=document.querySelector('#mapa-svg-inner svg');
+    if(!svgEl)return;
+    ['mapa-bg','mapa-borda'].forEach(function(cls){
+      var el=svgEl.querySelector('.'+cls);
+      if(!el)return;
+      if(el.tagName.toLowerCase()==='path'){
+        el.setAttribute('d',cfg.svgPath);
+      } else {
+        var p=document.createElementNS(NS,'path');
+        p.setAttribute('class',cls);
+        p.setAttribute('d',cfg.svgPath);
+        el.parentNode.replaceChild(p,el);
+      }
+    });
+  }
+
   // ─── Carregar / atualizar ───────────────────────────────────
   function carregar(){
     _carregado=true;
@@ -31,6 +52,16 @@ var MapaUI=(function(){
     if(inp&&!inp.value)inp.value=new Date().toISOString().slice(0,10);
     var data=_getDataAtual();
     _skeleton();
+    // Carregar terreno uma vez (cacheado); aplicar imediatamente se já disponível
+    if(!_terrenoCarregado){
+      GAS.admin.lerTerreno(function(r){
+        _terrenoConfig=(r&&r.ok&&r.data)?r.data:null;
+        _terrenoCarregado=true;
+        _aplicarTerreno(_terrenoConfig);
+      },function(){_terrenoCarregado=true;});
+    } else {
+      _aplicarTerreno(_terrenoConfig);
+    }
     GAS.mapa.statusEspacos({data:data},function(r){
       if(!r||!r.ok){Toast.erro('Erro ao carregar mapa');return;}
       _statusMap={};
@@ -738,6 +769,12 @@ var MapaUI=(function(){
   function setFiltro(campo,valor){_filtros[campo]=valor;_cores();}
 
   // ─── API pública ────────────────────────────────────────────
+  function atualizarTerreno(cfg){
+    _terrenoConfig=cfg;
+    _terrenoCarregado=true;
+    _aplicarTerreno(cfg);
+  }
+
   return{
     carregar:carregar,
     zoom:zoom,
@@ -746,6 +783,7 @@ var MapaUI=(function(){
     fecharModal:fecharModal,
     setFiltro:setFiltro,
     solicitarReserva:solicitarReserva,
-    solicitarChave:solicitarChave
+    solicitarChave:solicitarChave,
+    atualizarTerreno:atualizarTerreno
   };
 })();
