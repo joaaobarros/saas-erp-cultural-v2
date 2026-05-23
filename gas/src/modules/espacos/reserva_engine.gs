@@ -503,6 +503,160 @@ var ReservaEngine = (function () {
     return ReservaRepository.listar(filtros || {}, orgId);
   }
 
+  // ── CCBJ Fechado — Bloqueio institucional ───────────────────────────
+
+  /**
+   * Cancela reservas ativas que conflitam com um bloqueio CCBJ Fechado.
+   * Não cancela reservas já do tipo BLOQUEIO (bloqueio não cancela bloqueio).
+   * Para cada cancelamento: AuditoriaService + SystemEvents + email ao responsável.
+   *
+   * @param {string} sala
+   * @param {string} data — YYYY-MM-DD
+   * @param {string} horaInicio — "HH:MM"
+   * @param {string} horaTermino — "HH:MM"
+   * @param {string} motivo
+   * @param {string} emailAdmin
+   * @param {string} orgId
+   * @returns {{ id, nomeAcao, responsavel }[]} array dos registros cancelados
+   */
+  function _cancelarConflitantes(sala, data, horaInicio, horaTermino, motivo, emailAdmin, orgId) {
+    var ativas = ReservaRepository.listarAtivosParaConflito(sala, data, orgId, null);
+    var iniMin = _horaParaMin(horaInicio);
+    var fimMin = _horaParaMin(horaTermino);
+    var cancelados = [];
+
+    ativas.forEach(function (r) {
+      // Não cancela outros bloqueios
+      if (String(r.tipoAcao || '').toUpperCase() === 'BLOQUEIO') return;
+
+      var rIni = _horaParaMin(r.horaInicio);
+      var rFim = _horaParaMin(r.horaTermino);
+      if (rIni < 0 || rFim < 0) return;
+      if (!_horariosSobrepoem(iniMin, fimMin, rIni, rFim)) return;
+
+      // Cancela diretamente — bloqueio tem prioridade máxima, bypassa FSM
+      ReservaRepository.atualizarStatus(r.id, STATUS_RESERVA.CANCELADO, orgId,
+        'CCBJ Fechado — ' + motivo);
+
+      cancelados.push({ id: r.id, nomeAcao: r.nomeAcao, responsavel: r.responsavel });
+
+      AuditoriaService.registrar('RESERVA_CANCELADA_BLOQUEIO_CCBJ', 'espacos', {
+        reservaId: r.id, sala: sala, data: data,
+        motivo: 'CCBJ Fechado — ' + motivo,
+        emailAdmin: emailAdmin, orgId: orgId
+      });
+
+      try {
+        SystemEvents.emit(SystemEventTypes.RESERVATION_CANCELLED, {
+          reservaId: r.id, sala: sala, data: data,
+          motivo: 'CCBJ Fechado — ' + motivo,
+          autor: emailAdmin, orgId: orgId, automatico: true
+        });
+      } catch (_) {}
+
+      // Notifica o responsável por email
+      try {
+        if (r.responsavel && r.responsavel.indexOf('@') !== -1 && r.responsavel !== emailAdmin) {
+          GmailApp.sendEmail(
+            r.responsavel,
+            '❌ Sua reserva foi cancelada — CCBJ Fechado',
+            'Olá,\n\nSua reserva "' + r.nomeAcao + '" em ' + data +
+            ' (' + horaInicio + '–' + horaTermino + ') foi cancelada automaticamente.' +
+            '\n\nMotivo: CCBJ estará fechado nesse período — ' + motivo + '.' +
+            '\n\nEntre em contato com a equipe de gestão para mais informações.'
+          );
+        }
+      } catch (e) {
+        Logger.warn('reserva_engine', '_cancelarConflitantes',
+          'Email ao responsável falhou: ' + (e.message || ''));
+      }
+    });
+
+    return cancelados;
+  }
+
+  /**
+   * Cria um bloqueio CCBJ Fechado em múltiplas datas para uma sala.
+   * Bypassa assertSemConflito: cancela conflitos automaticamente.
+   * Deve ser chamado em loop por sala (o controller itera todas as salas).
+   *
+   * @param {Object} dados — { sala, horaInicio, horaTermino, motivo, turno? }
+   * @param {string[]} datas — YYYY-MM-DD[]
+   * @param {string} emailAdmin
+   * @param {string} orgId
+   * @returns {{ total, idLote, cancelados, ids }}
+   */
+  function criarBloqueio(dados, datas, emailAdmin, orgId) {
+    if (!dados.sala || !dados.horaInicio || !dados.horaTermino) {
+      throw new Error('sala, horaInicio e horaTermino são obrigatórios para bloqueio.');
+    }
+    if (!Array.isArray(datas) || datas.length === 0) {
+      throw new Error('Informe ao menos uma data para o bloqueio.');
+    }
+
+    var motivo = dados.motivo || 'CCBJ Fechado';
+    var agr    = agora ? agora() : new Date().toISOString();
+    var idLote = gerarId('BLQ');
+    var linhas = [];
+    var totalCancelados = 0;
+
+    // Verificar datas duplicadas
+    var setDatas = {};
+    datas.forEach(function (d) {
+      if (setDatas[d]) throw new Error('Data duplicada: ' + d);
+      setDatas[d] = true;
+    });
+
+    datas.forEach(function (data) {
+      // 1. Cancela conflitos nesta sala/data
+      var cancelados = _cancelarConflitantes(
+        dados.sala, data, dados.horaInicio, dados.horaTermino,
+        motivo, emailAdmin, orgId
+      );
+      totalCancelados += cancelados.length;
+
+      // 2. Monta o registro de bloqueio
+      linhas.push({
+        orgId:              orgId,
+        data:               data,
+        horaInicio:         dados.horaInicio,
+        horaTermino:        dados.horaTermino,
+        sala:               dados.sala,
+        turno:              dados.turno || _inferirTurno(dados.horaInicio, dados.horaTermino),
+        nomeAcao:           '🔒 CCBJ FECHADO — ' + motivo.toUpperCase(),
+        tipoAcao:           'BLOQUEIO',
+        responsavel:        emailAdmin,
+        setor:              'GESTÃO',
+        coResponsavel:      '',
+        release:            motivo,
+        itensVolantes:      '',
+        status:             STATUS_RESERVA.CONFIRMADO,
+        motivoCancelamento: '',
+        observacoes:        '',
+        acaoId:             '',
+        criadoPor:          emailAdmin
+      });
+    });
+
+    var salvas = ReservaRepository.salvarLote(linhas);
+
+    AuditoriaService.registrar('BLOQUEIO_CCBJ_CRIADO', 'espacos', {
+      sala: dados.sala, datas: datas, motivo: motivo,
+      total: salvas.length, totalCancelados: totalCancelados,
+      idLote: idLote, autor: emailAdmin, orgId: orgId
+    });
+
+    Logger.info('reserva_engine', 'criarBloqueio',
+      salvas.length + ' bloqueios, ' + totalCancelados + ' cancelados — ' + dados.sala);
+
+    return {
+      total:     salvas.length,
+      idLote:    idLote,
+      cancelados: totalCancelados,
+      ids:       salvas.map(function (r) { return r.id; })
+    };
+  }
+
   // ── Helpers privados ────────────────────────────────────────────────
 
   function _inferirTurno(horaInicio, horaTermino) {
@@ -535,10 +689,11 @@ var ReservaEngine = (function () {
     verificarDisponibilidade: verificarDisponibilidade,
 
     // Escrita
-    criar:       criar,
-    criarLote:   criarLote,
-    atualizar:   atualizar,
-    mudarStatus: mudarStatus,
+    criar:         criar,
+    criarLote:     criarLote,
+    criarBloqueio: criarBloqueio,
+    atualizar:     atualizar,
+    mudarStatus:   mudarStatus,
 
     // Guarda de conflito (exposta para testes)
     assertSemConflito:          assertSemConflito,

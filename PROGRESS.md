@@ -122,17 +122,37 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
   - `_abrirModalCancelamento(rId, espacoId)`: modal de cancelamento sem `prompt()` — input de motivo + botão confirmar
 - ✅ Deploy @68
 
+**O que foi feito (CCBJ Fechado — 2026-05-23)**:
+- ✅ **`reserva_engine.gs`**: `_cancelarConflitantes()` — cancela todas as reservas ativas conflitantes (exceto outras do tipo BLOQUEIO), emite SystemEvents, registra auditoria, envia email ao responsável de cada cancelamento; `criarBloqueio(dados, datas, emailAdmin, orgId)` — bypassa `assertSemConflito`, cria reservas com `tipoAcao: 'BLOQUEIO'` e `status: confirmado`; exposto em `ReservaEngine.criarBloqueio`
+- ✅ **`reservas_controller.gs`**: `ctrl_reservas_bloquear(params, datas)` — RBAC gestor/admin/superadmin; loop cancela conflitos + salva bloqueios; `ctrl_reservas_cancelar_bloqueios(ids)` — cancelamento em lote para operação "Desfazer"
+- ✅ **`index.html` GAS**: `GAS.reservas.bloquear` e `GAS.reservas.cancelarBloqueios` adicionados
+- ✅ **`index.html` frontend**:
+  - Botão `🔒 CCBJ Fechado` na barra de Reservas (visível apenas para gestor/admin/superadmin, controlado pelo nível carregado ao abrir a aba)
+  - Modal `#ccbj-modal` com 4 modos de seleção de datas em lote: **Manual** (input date + chip), **Semanal** (checkboxes Seg-Dom + range), **Intervalo** (a cada N dias + quantidade ou data fim), **Mensal** (3 submodos: dia fixo / Nº dia útil / Nª semana do mês)
+  - Chips de preview com remoção individual e botão "Limpar"
+  - Info box listando todos os espaços que serão bloqueados
+  - Aviso sobre cancelamento automático de conflitos
+  - CSS `.ccbj-chip`, `.ccbj-modo-btn.ccbj-ativo`, `.ccbj-sub-btn.ccbj-sub-ativo`, `.ccbj-dia-chip` adicionados ao `<style>`
+  - `_BloqueioUI` IIFE com toda a lógica do modal; delegado via `ReservasUI._ccbj*`
+  - Toast de resultado com botão "↩ Desfazer" imediato (cancela apenas os bloqueios recém-criados via `ctrl_reservas_cancelar_bloqueios`)
+- ✅ **Diagrama**: blocos `tipoAcao === 'BLOQUEIO'` renderizados em vermelho (`bg:#fef2f2; border:#fca5a5`) com label `🔒` + motivo (campo `release`); legenda atualizada com item "🔒 CCBJ Fechado"
+- ✅ **Lista**: badge `🔒 BLOQUEIO` vermelho exibido antes do nome da ação
+- ✅ Todos os botões do modal marcados com `data-bg-skip="1"` — BtnGuard.auditar() passa
+- ✅ Deploy @82
+
 **Próximo passo imediato**:
-> **[BROWSER] Smoke-tests Espaços:**
-> 1. Reservas → criar Sala X 14h–16h → tentar criar Sala X 15h–17h mesmo dia → Toast deve mostrar card vermelho com nome do evento conflitante, horário e responsável
-> 2. Reservas → toggle "Diagrama" → grade Gantt aparece com espaços nas linhas, 7h–22h nas colunas, blocos coloridos com tags ✓HAB/HAB?
-> 3. Reservas → Diagrama → clicar em bloco → modal de detalhes abre; clicar em área vazia → vai para lista
-> 4. Reservas → toggle "Agenda" → calendário semanal 8h–22h, linha vermelha de hora atual
-> 5. Mapa → clicar em espaço com reservas → sidebar "Agenda do Dia" lista todas as reservas com badges
-> 6. Mapa → clicar em reserva na sidebar → modal card abre com todos os campos e botões de ação
-> 7. Mapa → card → "Cancelar reserva" → modal de cancelamento (sem prompt) → motivo → confirmar
-> 8. Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 9. Iniciar **Fase 6 — Integração via Eventos + RECE**
+> **[BROWSER] Smoke-tests CCBJ Fechado:**
+> 1. Login como gestor/admin → Espaços → Reservas → botão `🔒 CCBJ Fechado` visível
+> 2. Clicar → modal abre com Turno, Motivo e 4 abas de modo
+> 3. Modo Manual: selecionar data futura → chip aparece com dia da semana + data
+> 4. Modo Semanal: marcar Seg+Qua, range de 1 semana → "Gerar datas" → chips corretos
+> 5. Confirmar bloqueio → loader aparece → toast "N dias bloqueados em M espaços"
+> 6. Lista de reservas → bloqueios aparecem com badge vermelho `🔒 BLOQUEIO`
+> 7. Diagrama → bloco vermelho com `🔒` no horário bloqueado
+> 8. Toast → clicar "↩ Desfazer" → bloqueios cancelados → lista atualiza
+> 9. Login como colaborador → botão CCBJ Fechado **não aparece**
+> 10. Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
+> 11. Iniciar **Fase 6 — Integração via Eventos + RECE**
 
 **Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
 

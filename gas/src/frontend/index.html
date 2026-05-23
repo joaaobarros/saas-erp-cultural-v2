@@ -1234,6 +1234,30 @@ textarea.input { resize: vertical; }
   padding: 14px 22px; border-top: 1px solid var(--border);
   display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0;
 }
+/* CCBJ Fechado modal chips */
+.ccbj-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #fee2e2; border: 1px solid #fca5a5; border-radius: 20px;
+  padding: 2px 8px 2px 10px; font-size: 11px; font-weight: 700; color: #991b1b;
+}
+.ccbj-chip button {
+  background: none; border: none; cursor: pointer; color: #dc2626;
+  font-size: 13px; line-height: 1; padding: 0 0 0 2px; margin: 0;
+}
+.ccbj-chip button:hover { color: #7f1d1d; }
+.ccbj-modo-btn.ccbj-ativo { background: #fee2e2 !important; border-color: #fca5a5 !important; color: #dc2626 !important; }
+.ccbj-sub-btn.ccbj-sub-ativo { background: #fee2e2 !important; border-color: #fca5a5 !important; color: #dc2626 !important; }
+.ccbj-dia-label { cursor: pointer; }
+.ccbj-dia-label input { display: none; }
+.ccbj-dia-chip {
+  display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px;
+  font-weight: 700; border: 1px solid var(--border); background: var(--surface2);
+  color: var(--muted); cursor: pointer; user-select: none;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.ccbj-dia-label input:checked + .ccbj-dia-chip {
+  background: #fee2e2; border-color: #fca5a5; color: #991b1b;
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    INFO CARD SMALL (painel de detalhes)
@@ -2619,6 +2643,9 @@ textarea.input { resize: vertical; }
                 <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
                   <span class="ms ms-sm">refresh</span>
                 </button>
+                <button class="btn btn-ghost btn-sm" id="btn-ccbj-fechado" style="display:none;color:#dc2626;border-color:#fca5a5;" onclick="ReservasUI.bloquearCCBJ()" data-bg-skip="1">
+                  <span class="ms ms-sm">lock</span> CCBJ Fechado
+                </button>
                 <button class="btn btn-primario btn-sm" id="btn-res-novo" onclick="ReservasUI.abrirForm()">
                   <span class="ms ms-sm">add</span> Nova Reserva
                 </button>
@@ -2633,6 +2660,234 @@ textarea.input { resize: vertical; }
           </div><!-- /card lista -->
 
           </div><!-- /res-modo-lista -->
+
+          <!-- ═══════════════════════════════════════════════════════════
+               MODAL: CCBJ Fechado — Bloqueio em Lote
+               ═══════════════════════════════════════════════════════════ -->
+          <div id="ccbj-modal" class="modal-overlay oculto" onclick="if(event.target===this)ReservasUI._ccbjFecharModal()">
+            <div class="modal-box" style="max-width:760px;">
+              <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                  <span class="ms" style="color:#dc2626;">lock</span>
+                  CCBJ Fechado
+                  <span style="font-size:12px;font-weight:400;color:var(--muted);">— bloqueio em lote de todos os espaços</span>
+                </h3>
+                <button class="modal-close" onclick="ReservasUI._ccbjFecharModal()" data-bg-skip="1">✕</button>
+              </div>
+
+              <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+                <!-- Col esquerda: configuração -->
+                <div style="display:flex;flex-direction:column;gap:14px;">
+
+                  <!-- Turno -->
+                  <div class="form-group">
+                    <label class="form-label">Turno do bloqueio</label>
+                    <select id="ccbj-turno" class="form-input">
+                      <option value="integral">Integral — 08:00 às 22:00</option>
+                      <option value="manha">Manhã — 08:00 às 12:00</option>
+                      <option value="tarde">Tarde — 12:00 às 18:00</option>
+                      <option value="noite">Noite — 18:00 às 22:00</option>
+                      <option value="manha_tarde">Manhã/Tarde — 08:00 às 18:00</option>
+                      <option value="tarde_noite">Tarde/Noite — 12:00 às 22:00</option>
+                    </select>
+                  </div>
+
+                  <!-- Motivo -->
+                  <div class="form-group">
+                    <label class="form-label">Motivo</label>
+                    <input type="text" id="ccbj-motivo" class="form-input" placeholder="Ex: Feriado, Recesso, Manutenção…">
+                  </div>
+
+                  <!-- Separador -->
+                  <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+                    <div style="flex:1;height:1px;background:var(--border);"></div>
+                    <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Modo de seleção de datas</span>
+                    <div style="flex:1;height:1px;background:var(--border);"></div>
+                  </div>
+
+                  <!-- Contador -->
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;">Datas selecionadas</span>
+                    <span id="ccbj-contador" style="font-size:11px;font-weight:700;color:var(--muted);background:var(--surface2);padding:2px 8px;border-radius:8px;">0 datas</span>
+                  </div>
+
+                  <!-- Botões de modo -->
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <button type="button" onclick="ReservasUI._ccbjSelecionarModo('manual')" id="ccbj-btn-manual" data-bg-skip="1"
+                      class="ccbj-modo-btn btn btn-ghost btn-sm" style="flex-direction:column;gap:2px;height:auto;padding:8px 4px;font-size:10px;text-transform:uppercase;font-weight:700;">
+                      <span class="ms ms-sm">touch_app</span>Manual
+                    </button>
+                    <button type="button" onclick="ReservasUI._ccbjSelecionarModo('semanal')" id="ccbj-btn-semanal" data-bg-skip="1"
+                      class="ccbj-modo-btn btn btn-ghost btn-sm" style="flex-direction:column;gap:2px;height:auto;padding:8px 4px;font-size:10px;text-transform:uppercase;font-weight:700;">
+                      <span class="ms ms-sm">calendar_view_week</span>Semanal
+                    </button>
+                    <button type="button" onclick="ReservasUI._ccbjSelecionarModo('intervalo')" id="ccbj-btn-intervalo" data-bg-skip="1"
+                      class="ccbj-modo-btn btn btn-ghost btn-sm" style="flex-direction:column;gap:2px;height:auto;padding:8px 4px;font-size:10px;text-transform:uppercase;font-weight:700;">
+                      <span class="ms ms-sm">repeat</span>Intervalo
+                    </button>
+                    <button type="button" onclick="ReservasUI._ccbjSelecionarModo('mensal')" id="ccbj-btn-mensal" data-bg-skip="1"
+                      class="ccbj-modo-btn btn btn-ghost btn-sm" style="flex-direction:column;gap:2px;height:auto;padding:8px 4px;font-size:10px;text-transform:uppercase;font-weight:700;">
+                      <span class="ms ms-sm">calendar_month</span>Mensal
+                    </button>
+                  </div>
+
+                  <!-- Painel Manual -->
+                  <div id="ccbj-painel-manual" class="ccbj-painel" style="display:flex;gap:6px;align-items:flex-end;">
+                    <div class="form-group" style="flex:1;margin:0;">
+                      <label class="form-label">Data</label>
+                      <input type="date" id="ccbj-manual-data" class="form-input">
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._ccbjAdicionarManual()" style="flex-shrink:0;" data-bg-skip="1">
+                      <span class="ms ms-sm">add</span> Adicionar
+                    </button>
+                  </div>
+
+                  <!-- Painel Semanal -->
+                  <div id="ccbj-painel-semanal" class="ccbj-painel" style="display:none;flex-direction:column;gap:10px;">
+                    <div>
+                      <label class="form-label">Dias da semana</label>
+                      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="1"><span class="ccbj-dia-chip">Seg</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="2"><span class="ccbj-dia-chip">Ter</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="3"><span class="ccbj-dia-chip">Qua</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="4"><span class="ccbj-dia-chip">Qui</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="5"><span class="ccbj-dia-chip">Sex</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="6"><span class="ccbj-dia-chip">Sáb</span></label>
+                        <label class="ccbj-dia-label"><input type="checkbox" class="ccbj-dia-check" value="0"><span class="ccbj-dia-chip">Dom</span></label>
+                      </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                      <div class="form-group" style="margin:0;"><label class="form-label">Data início</label><input type="date" id="ccbj-sem-ini" class="form-input"></div>
+                      <div class="form-group" style="margin:0;"><label class="form-label">Data fim</label><input type="date" id="ccbj-sem-fim" class="form-input"></div>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._ccbjGerarDatas('semanal')" style="align-self:flex-start;" data-bg-skip="1">
+                      <span class="ms ms-sm">auto_fix_high</span> Gerar datas
+                    </button>
+                  </div>
+
+                  <!-- Painel Intervalo -->
+                  <div id="ccbj-painel-intervalo" class="ccbj-painel" style="display:none;flex-direction:column;gap:10px;">
+                    <div style="display:grid;grid-template-columns:80px 1fr 80px;gap:8px;align-items:end;">
+                      <div class="form-group" style="margin:0;">
+                        <label class="form-label">A cada</label>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                          <input type="number" id="ccbj-int-n" value="7" min="1" max="365" class="form-input" style="text-align:center;">
+                          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">dias</span>
+                        </div>
+                      </div>
+                      <div class="form-group" style="margin:0;"><label class="form-label">Data início</label><input type="date" id="ccbj-int-ini" class="form-input"></div>
+                      <div class="form-group" style="margin:0;">
+                        <label class="form-label">Repetir</label>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                          <input type="number" id="ccbj-int-qtd" value="4" min="1" max="52" class="form-input" style="text-align:center;">
+                          <span style="font-size:11px;color:var(--muted);">×</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                      <label class="form-label">Ou até a data (ignora "Repetir" se preenchida)</label>
+                      <input type="date" id="ccbj-int-fim" class="form-input">
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._ccbjGerarDatas('intervalo')" style="align-self:flex-start;" data-bg-skip="1">
+                      <span class="ms ms-sm">auto_fix_high</span> Gerar datas
+                    </button>
+                  </div>
+
+                  <!-- Painel Mensal -->
+                  <div id="ccbj-painel-mensal" class="ccbj-painel" style="display:none;flex-direction:column;gap:10px;">
+                    <div style="display:flex;gap:4px;">
+                      <button type="button" id="ccbj-men-btn-diaFixo" class="ccbj-sub-btn btn btn-ghost btn-sm" onclick="ReservasUI._ccbjSubModo('diaFixo')" style="flex:1;font-size:10px;font-weight:700;text-transform:uppercase;" data-bg-skip="1">Dia fixo</button>
+                      <button type="button" id="ccbj-men-btn-diaUtil" class="ccbj-sub-btn btn btn-ghost btn-sm" onclick="ReservasUI._ccbjSubModo('diaUtil')" style="flex:1;font-size:10px;font-weight:700;text-transform:uppercase;" data-bg-skip="1">Dia útil</button>
+                      <button type="button" id="ccbj-men-btn-semana"  class="ccbj-sub-btn btn btn-ghost btn-sm" onclick="ReservasUI._ccbjSubModo('semana')"  style="flex:1;font-size:10px;font-weight:700;text-transform:uppercase;" data-bg-skip="1">Nª semana</button>
+                    </div>
+                    <!-- Sub: Dia fixo -->
+                    <div id="ccbj-sub-diaFixo" class="ccbj-sub-painel" style="display:flex;flex-direction:column;gap:8px;">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group" style="margin:0;"><label class="form-label">Dia do mês</label><input type="number" id="ccbj-men-dia" value="1" min="1" max="31" class="form-input"></div>
+                        <div class="form-group" style="margin:0;"><label class="form-label">Nº de meses</label><input type="number" id="ccbj-men-qtd" value="3" min="1" max="24" class="form-input"></div>
+                      </div>
+                      <div class="form-group" style="margin:0;"><label class="form-label">Mês inicial</label><input type="date" id="ccbj-men-ini" class="form-input"></div>
+                    </div>
+                    <!-- Sub: Dia útil -->
+                    <div id="ccbj-sub-diaUtil" class="ccbj-sub-painel" style="display:none;flex-direction:column;gap:8px;">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group" style="margin:0;"><label class="form-label">Nº do dia útil</label><input type="number" id="ccbj-men-nutil" value="1" min="1" max="23" class="form-input"></div>
+                        <div class="form-group" style="margin:0;"><label class="form-label">Nº de meses</label><input type="number" id="ccbj-men-util-qtd" value="3" min="1" max="24" class="form-input"></div>
+                      </div>
+                      <div class="form-group" style="margin:0;"><label class="form-label">Mês inicial</label><input type="date" id="ccbj-men-util-ini" class="form-input"></div>
+                    </div>
+                    <!-- Sub: Nª semana -->
+                    <div id="ccbj-sub-semana" class="ccbj-sub-painel" style="display:none;flex-direction:column;gap:8px;">
+                      <div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:8px;">
+                        <div class="form-group" style="margin:0;">
+                          <label class="form-label">Semana</label>
+                          <select id="ccbj-men-nsem" class="form-input">
+                            <option value="1">1ª</option><option value="2">2ª</option><option value="3">3ª</option><option value="4">4ª</option><option value="-1">Última</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                          <label class="form-label">Dia</label>
+                          <select id="ccbj-men-diasem" class="form-input">
+                            <option value="1">Seg</option><option value="2">Ter</option><option value="3">Qua</option><option value="4">Qui</option><option value="5">Sex</option><option value="6">Sáb</option><option value="0">Dom</option>
+                          </select>
+                        </div>
+                        <div class="form-group" style="margin:0;"><label class="form-label">Meses</label><input type="number" id="ccbj-men-sem-qtd" value="3" min="1" max="24" class="form-input"></div>
+                      </div>
+                      <div class="form-group" style="margin:0;"><label class="form-label">Mês inicial</label><input type="date" id="ccbj-men-sem-ini" class="form-input"></div>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._ccbjGerarDatas('mensal')" style="align-self:flex-start;" data-bg-skip="1">
+                      <span class="ms ms-sm">auto_fix_high</span> Gerar datas
+                    </button>
+                  </div>
+
+                </div><!-- /col esquerda -->
+
+                <!-- Col direita: preview de datas + espaços -->
+                <div style="display:flex;flex-direction:column;gap:14px;">
+
+                  <!-- Preview chips -->
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                      <label class="form-label" style="margin:0;">Datas selecionadas</label>
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._ccbjLimparDatas()" style="font-size:11px;color:#dc2626;padding:2px 8px;" data-bg-skip="1">
+                        <span class="ms ms-sm">delete</span> Limpar
+                      </button>
+                    </div>
+                    <div id="ccbj-chips" style="display:flex;flex-wrap:wrap;gap:4px;min-height:40px;max-height:180px;overflow-y:auto;padding:6px;background:var(--surface2);border-radius:var(--r-md);border:1px solid var(--border);">
+                      <span style="font-size:12px;color:var(--muted);align-self:center;" id="ccbj-chips-vazio">Nenhuma data selecionada</span>
+                    </div>
+                  </div>
+
+                  <!-- Espaços afetados -->
+                  <div style="padding:10px 12px;background:#fff5f5;border:1px solid #fca5a5;border-radius:var(--r-md);">
+                    <p style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px;">
+                      <span class="ms ms-sm">info</span> Espaços que serão bloqueados
+                    </p>
+                    <p id="ccbj-espacos-info" style="font-size:12px;color:#7f1d1d;margin:0;line-height:1.5;">—</p>
+                  </div>
+
+                  <!-- Aviso -->
+                  <div style="padding:10px 12px;background:var(--surface2);border-radius:var(--r-md);">
+                    <p style="font-size:11px;color:var(--muted);margin:0;line-height:1.5;">
+                      <span class="ms ms-sm" style="color:#f59e0b;vertical-align:middle;">warning</span>
+                      Reservas existentes nos períodos selecionados serão <strong>canceladas automaticamente</strong> e seus responsáveis notificados por email.
+                    </p>
+                  </div>
+
+                </div><!-- /col direita -->
+
+              </div><!-- /modal-body -->
+
+              <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="ReservasUI._ccbjFecharModal()" data-bg-skip="1">Cancelar</button>
+                <button class="btn btn-primario" id="btn-ccbj-confirmar" onclick="ReservasUI._ccbjConfirmar()"
+                  style="background:#dc2626;border-color:#dc2626;" data-bg-skip="1">
+                  <span class="ms ms-sm">lock</span> Bloquear
+                </button>
+              </div>
+            </div>
+          </div><!-- /ccbj-modal -->
 
           <!-- MODO AGENDA -->
           <div id="res-modo-agenda" style="display:none;">
@@ -3491,7 +3746,9 @@ var GAS = {
     cancelar:                function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar(id,m||''); },
     confirmar:               function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_confirmar(id); },
     iniciar:                 function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_iniciar(id); },
-    concluir:                function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); }
+    concluir:                function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); },
+    bloquear:                function(p,ds,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_bloquear(p,ds); },
+    cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -5272,8 +5529,8 @@ var AdminCadastrosUI = (function() {
           (e.aceitaReserva !== false ? 'Reservável' : 'Não reservável') + ' · ' +
           (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
           '<div style="display:flex;gap:6px;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id) + ')" data-bg-skip="1">Editar</button>' +
-            (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id) + ',this)">Desativar</button>' : '') +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+            (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Desativar</button>' : '') +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
@@ -5288,7 +5545,7 @@ var AdminCadastrosUI = (function() {
         var corDot = s.cor ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + escaparHtml(s.cor) + ';margin-right:6px;vertical-align:middle;"></span>' : '';
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
           '<span>' + corDot + escaparHtml(s.label || s.nome || s.id) + '</span>' +
-          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(' + JSON.stringify(s.id) + ')" data-bg-skip="1">Editar</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(' + JSON.stringify(s.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
           '</div>';
       }).join('') : '<p class="muted-text">Nenhum setor.</p>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>'; });
@@ -5320,7 +5577,7 @@ var AdminCadastrosUI = (function() {
             '<td>' + escaparHtml(t.fim) + '</td>' +
             '<td style="font-size:12px;color:var(--muted);">' + escaparHtml(diasLabel) + '</td>' +
             '<td><span class="badge ' + (t.ativo !== false ? 'badge-success' : 'badge-muted') + '">' + (t.ativo !== false ? 'Ativo' : 'Inativo') + '</span></td>' +
-            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalTurno(' + JSON.stringify(t.id) + ')" data-bg-skip="1">Editar</button></td>' +
+            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalTurno(' + JSON.stringify(t.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button></td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>'; });
@@ -5347,7 +5604,7 @@ var AdminCadastrosUI = (function() {
       '<label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;">Dias da semana</label>' +
       '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">' + checkboxes + '</div>' +
       '<div style="display:flex;gap:8px;">' +
-        '<button class="btn btn-primario" id="btn-salvar-turno" onclick="AdminCadastrosUI.salvarTurno(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-primario" id="btn-salvar-turno" onclick="AdminCadastrosUI.salvarTurno(' + JSON.stringify(id||null).replace(/"/g,"'") + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>';
     _abrirModalSimples(html);
@@ -5382,7 +5639,7 @@ var AdminCadastrosUI = (function() {
       el.innerHTML = _catItens.length ? _catItens.map(function(c) {
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
           '<span>' + escaparHtml(c.nome) + '</span>' +
-          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id) + ')" data-bg-skip="1">Editar</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
           '</div>';
       }).join('') : '<p class="muted-text">Nenhuma categoria.</p>';
     });
@@ -5398,7 +5655,7 @@ var AdminCadastrosUI = (function() {
           return '<tr><td><strong>' + escaparHtml(m.label) + '</strong></td>' +
             '<td style="font-size:12px;color:var(--muted);">' + escaparHtml(m.descricao) + '</td>' +
             '<td><span class="badge ' + (m.ativo ? 'badge-success' : 'badge-muted') + '">' + (m.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
-            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.toggleModulo(' + JSON.stringify(m.id) + ',' + !m.ativo + ',this)">' +
+            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.toggleModulo(' + JSON.stringify(m.id).replace(/"/g,"'") + ',' + !m.ativo + ',this)">' +
             (m.ativo ? 'Desativar' : 'Ativar') + '</button></td></tr>';
         }).join('') + '</tbody></table>';
     });
@@ -5601,7 +5858,7 @@ var AdminCadastrosUI = (function() {
       '<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
           '<label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Posição no Mapa</label>' +
-          '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="AdminCadastrosUI._editarMapa(' + JSON.stringify(id||null) + ')" ' +
+          '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="AdminCadastrosUI._editarMapa(' + JSON.stringify(id||null).replace(/"/g,"'") + ')" ' +
             'style="display:flex;align-items:center;gap:4px;">' +
             '<span class="ms ms-sm">edit_location</span> ' + (temMapa ? 'Editar posição' : 'Definir no mapa') +
           '</button>' +
@@ -5613,7 +5870,7 @@ var AdminCadastrosUI = (function() {
         '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:16px;">' +
-        '<button class="btn btn-primario" id="btn-salvar-espaco" onclick="AdminCadastrosUI.salvarEspaco(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-primario" id="btn-salvar-espaco" onclick="AdminCadastrosUI.salvarEspaco(' + JSON.stringify(id||null).replace(/"/g,"'") + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>';
     _abrirModalSimples(html, 'esp-tipo', espaco.tipoEspaco || 'multiuso');
@@ -5682,7 +5939,7 @@ var AdminCadastrosUI = (function() {
         '<input type="text" id="set-cor-hex" class="form-input" value="' + escaparHtml(corAtual) + '" maxlength="7" placeholder="#4f46e5" style="width:100px;" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById(\'set-cor-picker\').value=this.value">' +
       '</div>' +
       '<div style="display:flex;gap:8px;">' +
-        '<button class="btn btn-primario" id="btn-salvar-setor" onclick="AdminCadastrosUI.salvarSetor(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-primario" id="btn-salvar-setor" onclick="AdminCadastrosUI.salvarSetor(' + JSON.stringify(id||null).replace(/"/g,"'") + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>';
     _abrirModalSimples(html);
@@ -5710,7 +5967,7 @@ var AdminCadastrosUI = (function() {
       '<label>Nome *</label><input id="cat-nome" class="form-input" style="margin-bottom:8px;" value="' + escaparHtml(cat.nome||'') + '">' +
       '<label>Descrição</label><input id="cat-desc" class="form-input" value="' + escaparHtml(cat.descricao||'') + '">' +
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
-        '<button class="btn btn-primario" id="btn-salvar-catitem" onclick="AdminCadastrosUI.salvarCategoriaItem(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
+        '<button class="btn btn-primario" id="btn-salvar-catitem" onclick="AdminCadastrosUI.salvarCategoriaItem(' + JSON.stringify(id||null).replace(/"/g,"'") + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>';
     _abrirModalSimples(html);
@@ -5765,7 +6022,21 @@ var AdminCadastrosUI = (function() {
     abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
     abrirModalTurno: abrirModalTurno, salvarTurno: salvarTurno,
     abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem,
-    getEspacos: function() { return _espacos; }
+    getEspacos: function() { return _espacos; },
+    // Permite que outros módulos (ex: InfraConfigUI) pre-injetem dados
+    // para que o modal de edição abra com os campos preenchidos
+    injetarEspacos: function(lista) {
+      (lista || []).forEach(function(e) {
+        var idx = _espacos.findIndex(function(x){ return x.id === e.id; });
+        if (idx >= 0) _espacos[idx] = e; else _espacos.push(e);
+      });
+    },
+    injetarCatItens: function(lista) {
+      (lista || []).forEach(function(c) {
+        var idx = _catItens.findIndex(function(x){ return x.id === c.id; });
+        if (idx >= 0) _catItens[idx] = c; else _catItens.push(c);
+      });
+    }
   };
 })();
 
@@ -6031,6 +6302,8 @@ var EspacosUI = (function() {
 // ═══════════════════════════════════════════════════════════
 var InfraConfigUI = (function() {
   var _tabAtual = 'espacos';
+  var _listaEspacos  = [];  // cache local para injetar no AdminCadastrosUI
+  var _listaCatItens = [];  // idem para categorias de item
 
   var _PAPEIS = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
 
@@ -6104,18 +6377,21 @@ var InfraConfigUI = (function() {
       var exp = r.data || {};
       var ini = document.getElementById('infra-exp-inicio');
       var fim = document.getElementById('infra-exp-fim');
-      if (ini) ini.value = exp.inicio || exp.abertura || '08:00';
-      if (fim) fim.value = exp.fim    || exp.fechamento || '22:00';
+      // backend retorna reservaHoraInicio/reservaHoraFim
+      if (ini) ini.value = exp.reservaHoraInicio || exp.inicio || exp.abertura || '08:00';
+      if (fim) fim.value = exp.reservaHoraFim    || exp.fim    || exp.fechamento || '22:00';
     });
   }
 
   function salvarHorarios() {
-    var ini = (document.getElementById('infra-exp-inicio') || {}).value || '08:00';
-    var fim = (document.getElementById('infra-exp-fim') || {}).value || '22:00';
+    var ini = (document.getElementById('infra-exp-inicio') || {}).value || '';
+    var fim = (document.getElementById('infra-exp-fim') || {}).value || '';
+    if (!ini || !fim) { Toast.aviso('Informe os horários de abertura e encerramento.'); return; }
     var btn = document.getElementById('btn-salvar-infra-exp');
     if (!btn) return;
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
-      GAS.admin.salvarConfigExpediente({ inicio: ini, fim: fim }, function(r) {
+      // backend espera reservaHoraInicio / reservaHoraFim
+      GAS.admin.salvarConfigExpediente({ reservaHoraInicio: ini, reservaHoraFim: fim }, function(r) {
         liberar();
         if (r && r.ok) Toast.sucesso('Horários salvos.');
         else Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar.');
@@ -6253,7 +6529,12 @@ var ReservasUI = (function() {
 
       return '<div class="pendente-item">'
         +'<div class="pendente-info">'
-        +'<div class="pendente-nome">'+escaparHtml(r.nomeAcao||'—')+(r.tipoAcao?' <span style="font-size:11px;font-weight:400;color:var(--muted);">('+escaparHtml(r.tipoAcao)+')</span>':'')+'</div>'
+        +'<div class="pendente-nome">'
+        +((r.tipoAcao||'').toUpperCase()==='BLOQUEIO'
+          ? '<span style="font-size:11px;font-weight:900;color:#dc2626;background:#fee2e2;border-radius:4px;padding:1px 6px;margin-right:5px;">🔒 BLOQUEIO</span>'
+          : (r.tipoAcao ? '<span style="font-size:11px;font-weight:400;color:var(--muted);">('+escaparHtml(r.tipoAcao)+') </span>' : ''))
+        +escaparHtml(r.nomeAcao||'—')
+        +'</div>'
         + linhas
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">'
@@ -6285,7 +6566,12 @@ var ReservasUI = (function() {
   function carregar() {
     if (!_nivelCarregado) {
       _nivelCarregado = true;
-      GAS.pessoas.meuNivel(function(r){ if(r&&r.ok&&r.data) _meuNivel = r.data.nivel||'colaborador'; }, function(){});
+      GAS.pessoas.meuNivel(function(r){
+        if (r&&r.ok&&r.data) _meuNivel = r.data.nivel||'colaborador';
+        // Exibe botão CCBJ Fechado apenas para gestão
+        var btnCCBJ = document.getElementById('btn-ccbj-fechado');
+        if (btnCCBJ) btnCCBJ.style.display = ['superadmin','admin','gestor'].indexOf(_meuNivel)!==-1?'':'none';
+      }, function(){});
     }
     var filtroStatus = (document.getElementById('res-filtro-status')||{}).value || '';
     var filtros = {};
@@ -6705,24 +6991,31 @@ var ReservasUI = (function() {
         var pxL = _pxFromMin(iniMin);
         var pxW = Math.max(6, (fimMin - iniMin) * _MIN_PX_RDG);
         var noFuturo = (_diagramaDia !== hoje) || (iniMin > agoraMin);
-        var estBg, estClr, tag;
-        if (r.status === 'confirmado') {
+        var estBg, estClr, tag, labelBloco;
+        var _isBloqueio = (r.tipoAcao||'').toUpperCase() === 'BLOQUEIO';
+        if (_isBloqueio) {
+          estBg  = 'background:#fef2f2;border:2px solid #fca5a5;';
+          estClr = 'color:#dc2626;';
+          tag    = '🔒';
+          labelBloco = r.release || 'CCBJ Fechado';
+        } else if (r.status === 'confirmado') {
           estBg = noFuturo ? 'background:#059669;' : 'background:#bbf7d0;';
           estClr = noFuturo ? 'color:#fff;' : 'color:#14532d;';
-          tag = '✓HAB';
+          tag = '✓HAB'; labelBloco = r.nomeAcao||'';
         } else if (r.status === 'em_uso') {
-          estBg = 'background:#4c1d95;'; estClr = 'color:#fff;'; tag = 'EM USO';
+          estBg = 'background:#4c1d95;'; estClr = 'color:#fff;'; tag = 'EM USO'; labelBloco = r.nomeAcao||'';
         } else if (r.status === 'pendente') {
           estBg = noFuturo ? 'background:#fff;border:2px dashed #f59e0b;' : 'background:#fef3c7;border:2px solid #fbbf24;';
-          estClr = noFuturo ? 'color:#78350f;' : 'color:#92400e;'; tag = 'HAB?';
+          estClr = noFuturo ? 'color:#78350f;' : 'color:#92400e;'; tag = 'HAB?'; labelBloco = r.nomeAcao||'';
         } else {
-          estBg = 'background:#e2e8f0;'; estClr = 'color:#64748b;'; tag = '';
+          estBg = 'background:#e2e8f0;'; estClr = 'color:#64748b;'; tag = ''; labelBloco = r.nomeAcao||'';
         }
         html += '<div class="rdg-bloco" style="left:' + pxL + 'px;width:' + pxW + 'px;' + estBg + estClr + '"'
-          + ' title="' + escaparHtml((r.nomeAcao||'') + ' · ' + (r.horaInicio||'') + '–' + (r.horaTermino||'')) + '"'
-          + ' onclick="ReservasUI._abrirDetalheReserva(\'' + escaparHtml(r.id) + '\')">';
+          + ' title="' + escaparHtml(labelBloco + ' · ' + (r.horaInicio||'') + '–' + (r.horaTermino||'')) + '"'
+          + (_isBloqueio ? '' : ' onclick="ReservasUI._abrirDetalheReserva(\'' + escaparHtml(r.id) + '\')"')
+          + '>';
         if (tag) html += '<span class="rdg-bloco-tag">' + tag + '</span>';
-        if (pxW > 50) html += '<span class="rdg-bloco-label">' + escaparHtml(r.nomeAcao||'') + '</span>';
+        if (pxW > 50) html += '<span class="rdg-bloco-label">' + escaparHtml(labelBloco) + '</span>';
         html += '</div>';
       });
       html += '</div></div>';
@@ -6732,6 +7025,7 @@ var ReservasUI = (function() {
 
     // Legenda
     html += '<div class="rdg-legenda">';
+    html += '<div class="rdg-legenda-item"><div class="rdg-legenda-dot" style="background:#fef2f2;border:2px solid #fca5a5;"></div><span style="color:#dc2626;font-weight:700;">🔒 CCBJ Fechado</span></div>';
     html += '<div class="rdg-legenda-item"><div class="rdg-legenda-dot" style="background:#059669;"></div><span>Confirmada (✓HAB)</span></div>';
     html += '<div class="rdg-legenda-item"><div class="rdg-legenda-dot" style="background:#4c1d95;"></div><span>Em uso</span></div>';
     html += '<div class="rdg-legenda-item"><div class="rdg-legenda-dot" style="background:#fff;border:2px dashed #f59e0b;width:8px;height:8px;"></div><span>Pendente (HAB?)</span></div>';
@@ -7022,7 +7316,277 @@ var ReservasUI = (function() {
       _semanaOffset = Math.floor(diffMs / (7*24*3600*1000));
       carregar();
     },
-    _garantirEspacosPorId:_garantirEspacosPorId };
+    _garantirEspacosPorId:_garantirEspacosPorId,
+    // CCBJ Fechado — delega para _BloqueioUI (inicializado logo abaixo)
+    bloquearCCBJ:       function()   { window._BloqueioUI && window._BloqueioUI.abrir(); },
+    _ccbjFecharModal:   function()   { window._BloqueioUI && window._BloqueioUI.fechar(); },
+    _ccbjSelecionarModo:function(m)  { window._BloqueioUI && window._BloqueioUI.selecionarModo(m); },
+    _ccbjSubModo:       function(s)  { window._BloqueioUI && window._BloqueioUI.subModo(s); },
+    _ccbjAdicionarManual:function()  { window._BloqueioUI && window._BloqueioUI.adicionarManual(); },
+    _ccbjRemoverData:   function(d)  { window._BloqueioUI && window._BloqueioUI.removerData(d); },
+    _ccbjLimparDatas:   function()   { window._BloqueioUI && window._BloqueioUI.limparDatas(); },
+    _ccbjGerarDatas:    function(t)  { window._BloqueioUI && window._BloqueioUI.gerarDatas(t); },
+    _ccbjConfirmar:     function()   { window._BloqueioUI && window._BloqueioUI.confirmar(); }
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CCBJ FECHADO — Bloqueio Institucional em Lote
+// ═══════════════════════════════════════════════════════════
+(function() {
+  var _datasSet = {};  // { 'YYYY-MM-DD': true }
+  var _subModo  = 'diaFixo';
+
+  var _TURNOS = {
+    integral:    { ini: '08:00', fim: '22:00' },
+    manha:       { ini: '08:00', fim: '12:00' },
+    tarde:       { ini: '12:00', fim: '18:00' },
+    noite:       { ini: '18:00', fim: '22:00' },
+    manha_tarde: { ini: '08:00', fim: '18:00' },
+    tarde_noite: { ini: '12:00', fim: '22:00' }
+  };
+
+  function _today()   { return new Date().toISOString().slice(0,10); }
+  function _parseDate(s) { if (!s) return null; var d=new Date(s+'T00:00:00'); return isNaN(d)?null:d; }
+  function _fmtISO(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function _fmtPTBR(iso) { var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  function _ehUtil(d) { return d.getDay()!==0 && d.getDay()!==6; }
+
+  function abrir() {
+    _datasSet = {};
+    var hoje = _today();
+    ['ccbj-manual-data','ccbj-sem-ini','ccbj-sem-fim','ccbj-int-ini',
+     'ccbj-men-ini','ccbj-men-util-ini','ccbj-men-sem-ini'].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el && !el.value) el.value = hoje;
+      if (el) el.min = hoje;
+    });
+    var boot = App.getBoot ? App.getBoot() : null;
+    var espacos = (boot && boot.espacos) || [];
+    var info = document.getElementById('ccbj-espacos-info');
+    if (info) info.textContent = espacos.length
+      ? espacos.map(function(e){ return e.nome||e.id; }).join(', ')
+      : 'Nenhum espaço cadastrado';
+    document.getElementById('ccbj-motivo').value = '';
+    document.getElementById('ccbj-turno').value  = 'integral';
+    _renderChips();
+    _selecionarModo('manual');
+    document.getElementById('ccbj-modal').classList.remove('oculto');
+  }
+
+  function fechar() { document.getElementById('ccbj-modal').classList.add('oculto'); }
+
+  function _selecionarModo(modo) {
+    ['manual','semanal','intervalo','mensal'].forEach(function(m) {
+      document.getElementById('ccbj-btn-'+m).classList.toggle('ccbj-ativo', m===modo);
+      var p = document.getElementById('ccbj-painel-'+m);
+      if (p) p.style.display = (m===modo?'flex':'none');
+    });
+  }
+
+  function _subModoFn(sub) {
+    _subModo = sub;
+    ['diaFixo','diaUtil','semana'].forEach(function(s) {
+      document.getElementById('ccbj-men-btn-'+s).classList.toggle('ccbj-sub-ativo', s===sub);
+      document.getElementById('ccbj-sub-'+s).style.display = (s===sub?'flex':'none');
+    });
+  }
+
+  function _adicionarDatas(arr) {
+    var hoje = _today();
+    arr.forEach(function(d){ if (d>=hoje) _datasSet[d]=true; });
+    _renderChips();
+  }
+
+  function _renderChips() {
+    var container = document.getElementById('ccbj-chips');
+    var vazio     = document.getElementById('ccbj-chips-vazio');
+    var contador  = document.getElementById('ccbj-contador');
+    if (!container) return;
+    var datas = Object.keys(_datasSet).sort();
+    if (!datas.length) {
+      container.innerHTML = '<span style="font-size:12px;color:var(--muted);" id="ccbj-chips-vazio">Nenhuma data selecionada</span>';
+      if (contador) contador.textContent = '0 datas';
+      return;
+    }
+    container.innerHTML = datas.map(function(iso) {
+      var dia = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(iso+'T00:00:00').getDay()];
+      return '<span class="ccbj-chip">'
+        +'<span style="font-size:9px;color:#dc2626;font-weight:900;">'+dia+'</span>'
+        +escaparHtml(_fmtPTBR(iso))
+        +'<button type="button" onclick="ReservasUI._ccbjRemoverData(\''+iso+'\')" title="Remover">×</button>'
+        +'</span>';
+    }).join('');
+    if (contador) contador.textContent = datas.length+(datas.length===1?' data':' datas');
+  }
+
+  function _adicionarManual() {
+    var el = document.getElementById('ccbj-manual-data');
+    if (!el||!el.value) { alert('Selecione uma data.'); return; }
+    _adicionarDatas([el.value]); el.value='';
+  }
+
+  function _gerarDatas(tipo) {
+    var datas = [];
+    var hoje  = new Date(); hoje.setHours(0,0,0,0);
+
+    if (tipo==='semanal') {
+      var dias = Array.from(document.querySelectorAll('#ccbj-painel-semanal .ccbj-dia-check:checked'))
+                   .map(function(c){ return Number(c.value); });
+      if (!dias.length) { alert('Selecione pelo menos um dia da semana.'); return; }
+      var ini = _parseDate(document.getElementById('ccbj-sem-ini').value);
+      var fim = _parseDate(document.getElementById('ccbj-sem-fim').value);
+      if (!ini||!fim) { alert('Preencha as datas de início e fim.'); return; }
+      if (fim<ini)    { alert('A data fim deve ser posterior ao início.'); return; }
+      var cur = new Date(ini);
+      while (cur<=fim) { if (cur>=hoje && dias.indexOf(cur.getDay())!==-1) datas.push(_fmtISO(cur)); cur.setDate(cur.getDate()+1); }
+    }
+
+    else if (tipo==='intervalo') {
+      var n   = parseInt(document.getElementById('ccbj-int-n').value)||7;
+      var ini = _parseDate(document.getElementById('ccbj-int-ini').value);
+      var fimStr = document.getElementById('ccbj-int-fim').value;
+      var fim = fimStr ? _parseDate(fimStr) : null;
+      var qtd = parseInt(document.getElementById('ccbj-int-qtd').value)||4;
+      if (!ini) { alert('Informe a data de início.'); return; }
+      var cur = new Date(ini); var ct=0; var max=fim?3650:qtd;
+      while (ct<max) {
+        if (fim&&cur>fim) break;
+        if (cur>=hoje) datas.push(_fmtISO(cur));
+        cur.setDate(cur.getDate()+n); ct++;
+        if (!fim&&ct>=qtd) break;
+      }
+    }
+
+    else if (tipo==='mensal') {
+      if (_subModo==='diaFixo') {
+        var dia = parseInt(document.getElementById('ccbj-men-dia').value)||1;
+        var qtd = parseInt(document.getElementById('ccbj-men-qtd').value)||3;
+        var ini = _parseDate(document.getElementById('ccbj-men-ini').value);
+        if (!ini) { alert('Informe o mês inicial.'); return; }
+        var ano=ini.getFullYear(), mes=ini.getMonth();
+        for (var i=0;i<qtd;i++) {
+          var d=new Date(ano,mes+i,dia);
+          if (d.getMonth()!==((mes+i)%12+12)%12) d=new Date(ano,mes+i+1,0);
+          if (d>=hoje) datas.push(_fmtISO(d));
+        }
+      } else if (_subModo==='diaUtil') {
+        var nU  = parseInt(document.getElementById('ccbj-men-nutil').value)||1;
+        var qtd = parseInt(document.getElementById('ccbj-men-util-qtd').value)||3;
+        var ini = _parseDate(document.getElementById('ccbj-men-util-ini').value);
+        if (!ini) { alert('Informe o mês inicial.'); return; }
+        var ano=ini.getFullYear(), mes=ini.getMonth();
+        for (var i=0;i<qtd;i++) {
+          var cur=new Date(ano,mes+i,1); var mesAlvo=cur.getMonth(); var ct=0;
+          while (cur.getMonth()===mesAlvo) {
+            if (_ehUtil(cur)) { ct++; if (ct===nU) { if (cur>=hoje) datas.push(_fmtISO(cur)); break; } }
+            cur.setDate(cur.getDate()+1);
+          }
+        }
+      } else {
+        var nSem   = parseInt(document.getElementById('ccbj-men-nsem').value)||1;
+        var diaSem = parseInt(document.getElementById('ccbj-men-diasem').value);
+        var qtd    = parseInt(document.getElementById('ccbj-men-sem-qtd').value)||3;
+        var ini    = _parseDate(document.getElementById('ccbj-men-sem-ini').value);
+        if (!ini) { alert('Informe o mês inicial.'); return; }
+        var ano=ini.getFullYear(), mes=ini.getMonth();
+        for (var i=0;i<qtd;i++) {
+          var mA=(mes+i)%12; var aA=ano+Math.floor((mes+i)/12); var res=null;
+          if (nSem===-1) {
+            var u=new Date(aA,mA+1,0); while(u.getDay()!==diaSem) u.setDate(u.getDate()-1); res=u;
+          } else {
+            var cur=new Date(aA,mA,1); var ct=0;
+            while (cur.getMonth()===mA) { if (cur.getDay()===diaSem) { ct++; if (ct===nSem){res=new Date(cur);break;} } cur.setDate(cur.getDate()+1); }
+          }
+          if (res&&res>=hoje) datas.push(_fmtISO(res));
+        }
+      }
+    }
+
+    if (!datas.length) { alert('Nenhuma data gerada. Verifique os parâmetros (datas passadas são ignoradas).'); return; }
+    _adicionarDatas(datas);
+  }
+
+  function _confirmar() {
+    var datas = Object.keys(_datasSet).sort();
+    if (!datas.length) { alert('Selecione pelo menos uma data para bloquear.'); return; }
+    var turno  = document.getElementById('ccbj-turno').value  || 'integral';
+    var motivo = (document.getElementById('ccbj-motivo').value||'').trim() || 'CCBJ Fechado';
+    var ht     = _TURNOS[turno] || _TURNOS.integral;
+    var boot   = App.getBoot ? App.getBoot() : null;
+    var espacos = (boot && boot.espacos) || [];
+    if (!espacos.length) { alert('Nenhum espaço cadastrado.'); return; }
+
+    fechar();
+    var total=espacos.length*datas.length, processados=0, erros=0, todosIds=[];
+    showLoader(true);
+
+    espacos.forEach(function(esp) {
+      var params = { sala:esp.id, horaInicio:ht.ini, horaTermino:ht.fim, motivo:motivo, turno:turno };
+      GAS.reservas.bloquear(params, datas,
+        function(resp) {
+          if (resp&&resp.ok&&resp.dados&&resp.dados.ids) todosIds=todosIds.concat(resp.dados.ids);
+          processados+=datas.length;
+          _concluir(processados,total,erros,datas,motivo,todosIds,espacos.length);
+        },
+        function() {
+          erros+=datas.length; processados+=datas.length;
+          _concluir(processados,total,erros,datas,motivo,todosIds,espacos.length);
+        }
+      );
+    });
+  }
+
+  function _concluir(processados,total,erros,datas,motivo,todosIds,nSalas) {
+    if (processados<total) return;
+    showLoader(false);
+    if (typeof ReservasUI!=='undefined'&&ReservasUI.carregar) ReservasUI.carregar();
+    window._ultimosBloqueiosCCBJ = { ids:todosIds, datas:datas, motivo:motivo };
+    var msg = erros>0
+      ? (total-erros)+' bloqueio(s) criados. Alguns falharam.'
+      : datas.length===1
+        ? 'Todas as '+nSalas+' salas bloqueadas em '+_fmtPTBR(datas[0])+'. Reservas conflitantes canceladas.'
+        : datas.length+' dias bloqueados em '+nSalas+' espaço(s). Reservas conflitantes canceladas.';
+    if (typeof Swal!=='undefined') {
+      Swal.fire({
+        icon:erros>0?'warning':'success',
+        title:erros>0?'Bloqueio parcial':'🔒 Dias bloqueados!',
+        html:'<p style="font-size:13px;">'+msg+'</p>'
+          +'<p style="font-size:11px;color:#6b7280;margin-top:6px;">Datas: '+datas.map(_fmtPTBR).join(', ')+'</p>',
+        showConfirmButton:true, confirmButtonText:'OK',
+        showDenyButton:todosIds.length>0, denyButtonText:'↩ Desfazer', denyButtonColor:'#6b7280'
+      }).then(function(r){ if (r.isDenied) _desfazer(); });
+    } else { alert(msg); }
+  }
+
+  function _desfazer() {
+    var d=window._ultimosBloqueiosCCBJ;
+    if (!d||!d.ids||!d.ids.length) { alert('Nenhum bloqueio recente para desfazer.'); return; }
+    if (!confirm('Desfazer bloqueios das datas: '+d.datas.map(_fmtPTBR).join(', ')+'?')) return;
+    showLoader(true);
+    GAS.reservas.cancelarBloqueios(d.ids,
+      function() {
+        showLoader(false); window._ultimosBloqueiosCCBJ=null;
+        if (typeof ReservasUI!=='undefined'&&ReservasUI.carregar) ReservasUI.carregar();
+        if (typeof Swal!=='undefined') Swal.fire('Feito','Bloqueios desfeitos com sucesso.','success');
+      },
+      function(err) { showLoader(false); alert('Erro ao desfazer: '+(err&&err.message?err.message:err)); }
+    );
+  }
+
+  // ── API pública (injetada no namespace ReservasUI via patch abaixo) ──
+  window._BloqueioUI = {
+    abrir:          abrir,
+    fechar:         fechar,
+    selecionarModo: _selecionarModo,
+    subModo:        _subModoFn,
+    adicionarManual:_adicionarManual,
+    removerData:    function(iso){ delete _datasSet[iso]; _renderChips(); },
+    limparDatas:    function(){ _datasSet={}; _renderChips(); },
+    gerarDatas:     _gerarDatas,
+    confirmar:      _confirmar,
+    desfazer:       _desfazer
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════

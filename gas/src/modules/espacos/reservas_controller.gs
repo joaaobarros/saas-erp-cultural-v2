@@ -226,3 +226,64 @@ function ctrl_reservas_concluir(id) {
     return ReservaEngine.mudarStatus(id, 'concluido', ctx.email, ctx.orgId);
   }, 'ctrl_reservas_concluir');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// BLOQUEIO CCBJ FECHADO
+// ═══════════════════════════════════════════════════════════════
+
+var _NIVEL_BLOQUEIO = ['superadmin', 'admin', 'gestor'];
+
+/**
+ * Cria bloqueio CCBJ Fechado em lote: uma sala × N datas.
+ * O frontend itera todos os espaços, chamando este controller por sala.
+ * Cancela automaticamente reservas conflitantes e notifica os responsáveis.
+ *
+ * @param {Object} params — { sala, horaInicio, horaTermino, motivo, turno? }
+ * @param {string[]} datas — YYYY-MM-DD[]
+ * @returns {{ total, idLote, cancelados, ids }}
+ */
+function ctrl_reservas_bloquear(params, datas) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    var nivel = _nivelReservas(ctx.email);
+    if (_NIVEL_BLOQUEIO.indexOf(nivel) === -1) {
+      throw new Error('Sem permissão para criar bloqueios CCBJ. Requer gestor, admin ou superadmin.');
+    }
+    if (!params || !params.sala)       throw new Error('Parâmetro "sala" é obrigatório.');
+    if (!params.horaInicio)            throw new Error('Parâmetro "horaInicio" é obrigatório.');
+    if (!params.horaTermino)           throw new Error('Parâmetro "horaTermino" é obrigatório.');
+    if (!Array.isArray(datas) || datas.length === 0) throw new Error('Informe ao menos uma data.');
+    if (datas.length > 120)            throw new Error('Máximo de 120 datas por operação de bloqueio.');
+
+    return ReservaEngine.criarBloqueio(params, datas, ctx.email, ctx.orgId);
+  }, 'ctrl_reservas_bloquear');
+}
+
+/**
+ * Cancela um lote de bloqueios pelo ID (operação "Desfazer").
+ * @param {string[]} ids — IDs dos bloqueios a cancelar
+ * @returns {{ cancelados, total }}
+ */
+function ctrl_reservas_cancelar_bloqueios(ids) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    var nivel = _nivelReservas(ctx.email);
+    if (_NIVEL_BLOQUEIO.indexOf(nivel) === -1) {
+      throw new Error('Sem permissão para desfazer bloqueios CCBJ.');
+    }
+    if (!Array.isArray(ids) || ids.length === 0) throw new Error('Informe ao menos um ID.');
+
+    var cancelados = 0;
+    ids.forEach(function (id) {
+      try {
+        ReservaEngine.mudarStatus(id, 'cancelado', ctx.email, ctx.orgId, 'Desfazer CCBJ Fechado');
+        cancelados++;
+      } catch (e) {
+        Logger.warn('reservas_controller', 'ctrl_reservas_cancelar_bloqueios',
+          'Falhou para ' + id + ': ' + e.message);
+      }
+    });
+
+    return { cancelados: cancelados, total: ids.length };
+  }, 'ctrl_reservas_cancelar_bloqueios');
+}
