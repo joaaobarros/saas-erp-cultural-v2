@@ -87,6 +87,50 @@ var ConfigAdminService = (function () {
   }
 
   /**
+   * Atualiza apenas o campo mapaConfig de um espaço,
+   * preservando todos os demais campos da configuração existente.
+   *
+   * @param {Object} params  { id: string, mapaConfig: Object|null }
+   * @returns {{ id: string, nome: string }}
+   */
+  function salvarMapaEspaco(params) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+
+    if (!params || !params.id) throw new Error('ID do espaço é obrigatório.');
+
+    var registro;
+    modifyJSON('espacos_config.json', function(lista) {
+      var idx = lista.findIndex(function(e) {
+        return e.id === params.id && e.orgId === orgId;
+      });
+      if (idx < 0) throw new Error('Espaço não encontrado: ' + params.id);
+      lista[idx] = JSON.parse(JSON.stringify(lista[idx]));
+      lista[idx].mapaConfig   = params.mapaConfig || null;
+      lista[idx].atualizadoEm = agora();
+      lista[idx].versao       = (lista[idx].versao || 0) + 1;
+      registro = lista[idx];
+      return lista;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    if (typeof BootService         !== 'undefined') BootService.limparCache(email);
+
+    AuditoriaService.registrar('ESPACO_MAPA_SALVO', 'espaco', {
+      entidadeId: params.id,
+      orgId:      orgId,
+      usuario:    email,
+      temMapa:    !!params.mapaConfig
+    });
+
+    Logger.info('config_admin_service', 'salvarMapaEspaco',
+      params.id + ' temMapa=' + !!params.mapaConfig);
+
+    return { id: params.id, nome: registro && registro.nome };
+  }
+
+  /**
    * Desativa um espaço (não exclui — preserva histórico de reservas).
    */
   function desativarEspaco(espacoId) {
@@ -377,7 +421,8 @@ var ConfigAdminService = (function () {
     listarSetores:               listarSetores,
     salvarSetor:                 salvarSetor,
     listarModulos:               listarModulos,
-    toggleModulo:                toggleModulo
+    toggleModulo:                toggleModulo,
+    salvarMapaEspaco:            salvarMapaEspaco
   };
 
 })();

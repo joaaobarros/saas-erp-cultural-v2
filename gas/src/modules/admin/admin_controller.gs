@@ -46,6 +46,18 @@ function ctrl_admin_salvarEspaco(dados) {
   }, 'ctrl_admin_salvarEspaco');
 }
 
+/**
+ * Atualiza apenas o campo mapaConfig de um espaço,
+ * preservando todos os demais campos da configuração.
+ *
+ * @param {Object} params  { id: string, mapaConfig: Object|null }
+ */
+function ctrl_admin_salvarMapaEspaco(params) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.salvarMapaEspaco(params);
+  }, 'ctrl_admin_salvarMapaEspaco');
+}
+
 function ctrl_admin_desativarEspaco(espacoId) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.desativarEspaco(espacoId);

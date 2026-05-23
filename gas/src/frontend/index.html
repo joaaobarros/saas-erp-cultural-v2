@@ -2539,6 +2539,9 @@ textarea.input { resize: vertical; }
             <button class="tab-btn" data-tab="horarios" onclick="InfraConfigUI.abrirTab('horarios')">
               <span class="ms ms-sm">schedule</span> Horários
             </button>
+            <button class="tab-btn" data-tab="mapa" onclick="InfraConfigUI.abrirTab('mapa')">
+              <span class="ms ms-sm">edit_location</span> Mapa
+            </button>
           </div>
 
           <!-- Sub-tab: Espaços -->
@@ -2578,6 +2581,32 @@ textarea.input { resize: vertical; }
               </button>
             </div>
           </div>
+          <!-- Sub-tab: Mapa de Espaços (editor de posições) -->
+          <div id="infra-conf-tab-mapa" class="infra-conf-tab" style="display:none;">
+            <div style="display:flex;gap:0;height:430px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);">
+              <!-- Sidebar: lista de espaços com/sem posição -->
+              <div id="cfg-mapa-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;">
+                <p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>
+              </div>
+              <!-- Canvas SVG do mapa -->
+              <div style="flex:1;position:relative;overflow:hidden;">
+                <div id="cfg-mapa-canvas" style="width:100%;height:100%;overflow:hidden;cursor:grab;background:var(--surface2);">
+                  <p class="muted-text" style="padding:20px;font-size:12px;">Carregando mapa…</p>
+                </div>
+                <!-- Zoom controls -->
+                <div style="position:absolute;bottom:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:4px;">
+                  <button onclick="InfraConfigMapaUI.zoom(1)" data-bg-skip="1" class="mapa-zoom-btn" title="Ampliar">+</button>
+                  <button onclick="InfraConfigMapaUI.zoom(-1)" data-bg-skip="1" class="mapa-zoom-btn" title="Reduzir">−</button>
+                  <button onclick="InfraConfigMapaUI.resetZoom()" data-bg-skip="1" class="mapa-zoom-btn" title="Ajustar ao tamanho" style="font-size:14px;"><span class="ms" style="font-size:15px;vertical-align:middle;">fit_screen</span></button>
+                </div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin:8px 0 0;">
+              <span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">info</span>
+              Clique num espaço no mapa ou na lista lateral para editar sua posição. Alterações são vinculadas automaticamente a todas as abas.
+            </p>
+          </div>
+
         </div><!-- /esp-tab-config -->
 
         <!-- ═══ TAB RESERVAS ═══ -->
@@ -3626,6 +3655,7 @@ var GAS = {
     listarEspacos:        function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarEspacos(); },
     listarEspacosPublicos:function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarEspacosPublicos(); },
     salvarEspaco:         function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarEspaco(d); },
+    salvarMapaEspaco:     function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarMapaEspaco(d); },
     desativarEspaco:      function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_desativarEspaco(id); },
     alternarItemFixo:     function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarItemFixo(d); },
     obterDadosParaConfig: function(aba,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterDadosParaConfig(aba); },
@@ -6370,6 +6400,7 @@ var InfraConfigUI = (function() {
     if (tab === 'espacos')  _carregarEspacos();
     if (tab === 'itens')    _carregarItens();
     if (tab === 'horarios') _carregarHorarios();
+    if (tab === 'mapa')     InfraConfigMapaUI.aoAbrir();
   }
 
   function aoAbrir() {
@@ -6463,6 +6494,340 @@ var InfraConfigUI = (function() {
     salvarHorarios: salvarHorarios,
     editarEspaco: editarEspaco,
     editarCatItem: editarCatItem
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG MAPA — sub-aba Mapa em Configurações de Espaços
+// Permite visualizar e editar as posições dos espaços no SVG.
+// Alterações em mapaConfig são salvas via ctrl_admin_salvarMapaEspaco
+// e refletem imediatamente no modo Mapa das Reservas.
+// ═══════════════════════════════════════════════════════════
+var InfraConfigMapaUI = (function() {
+  var _espacos   = [];
+  var _carregado = false;
+  var _zoom = 1, _panX = 0, _panY = 0;
+  var _NS = 'http://www.w3.org/2000/svg';
+
+  // ── Figuras (mesmas do MapaEditorUI) ────────────────────
+  function _polyCirclePts(n, rx, ry, startDeg) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = (startDeg + i * (360 / n)) * Math.PI / 180;
+      pts.push((rx * Math.cos(a)).toFixed(1) + ',' + (ry * Math.sin(a)).toFixed(1));
+    }
+    return pts.join(' ');
+  }
+
+  function _criarForma(cfg) {
+    var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
+    var el;
+    switch (cfg.forma) {
+      case 'rect': case 'square':
+        el = document.createElementNS(_NS, 'rect');
+        el.setAttribute('x', -hw); el.setAttribute('y', -hh);
+        el.setAttribute('width',  cfg.w || 100);
+        el.setAttribute('height', cfg.h || 80);
+        el.setAttribute('rx', '3');
+        return el;
+      case 'circle':
+        el = document.createElementNS(_NS, 'circle');
+        el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
+        el.setAttribute('r', cfg.r || Math.min(hw, hh));
+        return el;
+      case 'ellipse':
+        el = document.createElementNS(_NS, 'ellipse');
+        el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
+        el.setAttribute('rx', hw); el.setAttribute('ry', hh);
+        return el;
+      default:
+        var pontosMap = {
+          tri:     '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh,
+          hex:     _polyCirclePts(6, hw, hh, -30),
+          trap:    (-hw * 0.7) + ',' + (-hh) + ' ' + (hw * 0.7) + ',' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh,
+          diamond: '0,' + (-hh) + ' ' + hw + ',0 0,' + hh + ' ' + (-hw) + ',0',
+          pent:    _polyCirclePts(5, hw, hh, -90)
+        };
+        el = document.createElementNS(_NS, 'polygon');
+        el.setAttribute('points', pontosMap[cfg.forma] || pontosMap.tri);
+        return el;
+    }
+  }
+
+  // ── Background do campus (mesmo do MapaEditorUI) ─────────
+  function _buildBgSvgContent() {
+    return '<defs><filter id="cfg-mapa-shadow">' +
+             '<feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/>' +
+           '</filter></defs>' +
+           '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="#dde3ea"/>' +
+           '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="none" stroke="#8fa0b4" stroke-width="2"/>' +
+           '<circle cx="490" cy="400" r="80" fill="#c8d3de" opacity=".25"/>' +
+           '<g transform="translate(855,558)" opacity=".5">' +
+             '<circle cx="0" cy="0" r="16" fill="#fff" stroke="#8fa0b4" stroke-width="1"/>' +
+             '<text x="0" y="1" text-anchor="middle" dominant-baseline="middle" font-size="8" font-weight="700" fill="#4c1d95">N</text>' +
+           '</g>';
+  }
+
+  // ── Render map ───────────────────────────────────────────
+  function _renderMapa() {
+    var canvas = document.getElementById('cfg-mapa-canvas');
+    if (!canvas) return;
+
+    // Criar SVG
+    var svgEl = document.createElementNS(_NS, 'svg');
+    svgEl.setAttribute('id', 'cfg-mapa-svg');
+    svgEl.setAttribute('viewBox', '0 0 900 660');
+    svgEl.style.cssText = 'width:100%;height:100%;display:block;transform-origin:top left;';
+    svgEl.innerHTML = _buildBgSvgContent();
+
+    // Camada de espaços configurados
+    var layer = document.createElementNS(_NS, 'g');
+    layer.id  = 'cfg-mapa-layer';
+
+    _espacos.forEach(function(esp) {
+      if (!esp.mapaConfig) return;
+      var cfg = esp.mapaConfig;
+      var g   = document.createElementNS(_NS, 'g');
+      g.setAttribute('class', 'cfg-espaco-g');
+      g.setAttribute('data-id', esp.id);
+      g.setAttribute('transform',
+        'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+      g.style.cursor = 'pointer';
+
+      var ativo = esp.ativo !== false;
+      var sh = _criarForma(cfg);
+      sh.setAttribute('fill',         ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
+      sh.setAttribute('stroke',       ativo ? '#4f46e5' : '#94a3b8');
+      sh.setAttribute('stroke-width', '1.5');
+      sh.setAttribute('filter', 'url(#cfg-mapa-shadow)');
+      g.appendChild(sh);
+
+      var txt = document.createElementNS(_NS, 'text');
+      txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('dominant-baseline', 'middle');
+      txt.setAttribute('font-size', '10');
+      txt.setAttribute('font-weight', '600');
+      txt.setAttribute('fill', ativo ? '#312e81' : '#64748b');
+      txt.setAttribute('pointer-events', 'none');
+      txt.setAttribute('paint-order', 'stroke');
+      txt.setAttribute('stroke', '#fff8');
+      txt.setAttribute('stroke-width', '2');
+      txt.textContent = (esp.nome || '').substring(0, 12);
+      g.appendChild(txt);
+
+      // Número da planta (pequeno, canto superior esq)
+      if (esp.numeroPlanta) {
+        var np = document.createElementNS(_NS, 'text');
+        np.setAttribute('x', '0'); np.setAttribute('y', '-12');
+        np.setAttribute('text-anchor', 'middle');
+        np.setAttribute('font-size', '8');
+        np.setAttribute('fill', '#6366f1');
+        np.setAttribute('pointer-events', 'none');
+        np.textContent = '#' + esp.numeroPlanta;
+        g.appendChild(np);
+      }
+
+      // Hover: destaque
+      g.addEventListener('mouseenter', function() {
+        sh.setAttribute('stroke-width', '2.5');
+        sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.38)' : 'rgba(148,163,184,0.38)');
+      });
+      g.addEventListener('mouseleave', function() {
+        sh.setAttribute('stroke-width', '1.5');
+        sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
+      });
+      g.addEventListener('click', function() { _editarPosicao(esp.id); });
+
+      layer.appendChild(g);
+    });
+
+    svgEl.appendChild(layer);
+
+    // Legenda de contagem
+    var comMapa = _espacos.filter(function(e) { return !!e.mapaConfig; }).length;
+    var semMapa = _espacos.filter(function(e) { return !e.mapaConfig; }).length;
+    var legTxt  = document.createElementNS(_NS, 'text');
+    legTxt.setAttribute('x', '96'); legTxt.setAttribute('y', '46');
+    legTxt.setAttribute('font-size', '10');
+    legTxt.setAttribute('fill', '#64748b');
+    legTxt.textContent = comMapa + ' posicionado(s)' +
+      (semMapa > 0 ? ' · ' + semMapa + ' sem posição' : '');
+    svgEl.appendChild(legTxt);
+
+    canvas.innerHTML = '';
+    canvas.appendChild(svgEl);
+    _tr();
+    _initIO();
+  }
+
+  // ── Render sidebar ───────────────────────────────────────
+  function _renderSidebar() {
+    var sidebar = document.getElementById('cfg-mapa-sidebar');
+    if (!sidebar) return;
+
+    var comMapa = _espacos.filter(function(e) { return !!e.mapaConfig; });
+    var semMapa = _espacos.filter(function(e) { return !e.mapaConfig; });
+
+    function _itemHtml(e, temMapa) {
+      var cor   = temMapa ? 'var(--color-primary)' : 'var(--muted)';
+      var icone = temMapa ? 'room' : 'add_location_alt';
+      var title = temMapa ? 'Editar posição no mapa' : 'Definir posição no mapa';
+      return '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;' +
+               'border-bottom:1px solid var(--border);cursor:pointer;' +
+               'transition:background .1s;" ' +
+             'onmouseenter="this.style.background=\'var(--surface2)\'" ' +
+             'onmouseleave="this.style.background=\'\'" ' +
+             'onclick="InfraConfigMapaUI._editarPosicao(\'' + e.id.replace(/'/g,"\\'") + '\')" ' +
+             'title="' + escaparHtml(title) + '">' +
+             '<span class="ms ms-sm" style="color:' + cor + ';flex-shrink:0;font-size:15px;">' + icone + '</span>' +
+             '<span style="font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' +
+               escaparHtml(e.nome) + '</span>' +
+             (temMapa ? '<span class="ms ms-sm" style="color:var(--muted);font-size:13px;flex-shrink:0;">edit</span>' : '') +
+             '</div>';
+    }
+
+    var html = '';
+
+    if (comMapa.length > 0) {
+      html += '<div style="padding:8px 10px 4px;font-size:10px;font-weight:700;text-transform:uppercase;' +
+              'color:var(--muted);letter-spacing:.05em;background:var(--surface);">' +
+              '<span class="ms ms-sm" style="vertical-align:middle;font-size:12px;color:var(--color-primary);">room</span> ' +
+              'No mapa (' + comMapa.length + ')</div>';
+      html += comMapa.map(function(e) { return _itemHtml(e, true); }).join('');
+    }
+
+    if (semMapa.length > 0) {
+      html += '<div style="padding:8px 10px 4px;font-size:10px;font-weight:700;text-transform:uppercase;' +
+              'color:var(--muted);letter-spacing:.05em;background:var(--surface);margin-top:4px;">' +
+              '<span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">add_location_alt</span> ' +
+              'Sem posição (' + semMapa.length + ')</div>';
+      html += semMapa.map(function(e) { return _itemHtml(e, false); }).join('');
+    }
+
+    if (!comMapa.length && !semMapa.length) {
+      html = '<p class="muted-text" style="padding:12px;font-size:12px;">Nenhum espaço cadastrado.</p>';
+    }
+
+    sidebar.innerHTML = html;
+  }
+
+  // ── Editar posição ───────────────────────────────────────
+  function _editarPosicao(id) {
+    var espaco = _espacos.filter(function(e) { return e.id === id; })[0];
+    if (!espaco) return;
+
+    MapaEditorUI.abrir(
+      id,
+      espaco.nome || 'Espaço',
+      espaco.mapaConfig || null,
+      _espacos,
+      function(cfg, saved) {
+        // saved=true → usuário clicou "Concluir"; saved=false → clicou "Voltar"
+        if (!saved) return;
+
+        var btn = { style: {} }; // BtnGuard não é necessário aqui (overlay já fechou)
+        GAS.admin.salvarMapaEspaco(
+          { id: id, mapaConfig: cfg },
+          function(r) {
+            if (r && r.ok) {
+              Toast.sucesso('Posição de "' + escaparHtml(espaco.nome || id) + '" salva no mapa.');
+              // Atualizar cache local imediatamente
+              var idx = _espacos.findIndex(function(e) { return e.id === id; });
+              if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg || null });
+              _renderMapa();
+              _renderSidebar();
+            } else {
+              Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar posição.');
+            }
+          },
+          function(err) {
+            Toast.erro('Erro: ' + ((err && err.message) || String(err)));
+          }
+        );
+      }
+    );
+  }
+
+  // ── Carregar dados ───────────────────────────────────────
+  function _carregar() {
+    var sidebar = document.getElementById('cfg-mapa-sidebar');
+    if (sidebar) sidebar.innerHTML = '<p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>';
+    var canvas  = document.getElementById('cfg-mapa-canvas');
+    if (canvas)  canvas.innerHTML  = '<p class="muted-text" style="padding:20px;font-size:12px;">Carregando mapa…</p>';
+
+    GAS.admin.listarEspacos(function(r) {
+      _espacos   = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _carregado = true;
+      _renderMapa();
+      _renderSidebar();
+    }, function(err) {
+      if (sidebar) sidebar.innerHTML = '<p class="muted-text" style="padding:12px;font-size:12px;">Erro ao carregar.</p>';
+      if (canvas)  canvas.innerHTML  = '';
+    });
+  }
+
+  function aoAbrir() {
+    if (!_carregado) _carregar();
+  }
+
+  function recarregar() {
+    _carregado = false;
+    _carregar();
+  }
+
+  // ── Zoom / pan ───────────────────────────────────────────
+  function zoom(d) {
+    _zoom = Math.max(0.4, Math.min(5, _zoom + d * 0.2));
+    _tr();
+  }
+
+  function resetZoom() { _zoom = 1; _panX = 0; _panY = 0; _tr(); }
+
+  function _tr() {
+    var svg = document.getElementById('cfg-mapa-svg');
+    if (svg) svg.style.transform =
+      'scale(' + _zoom + ') translate(' + _panX + 'px,' + _panY + 'px)';
+  }
+
+  function _initIO() {
+    var canvas = document.getElementById('cfg-mapa-canvas');
+    if (!canvas || canvas._cfgMaIO) return;
+    canvas._cfgMaIO = true;
+    var _dragPan = null;
+
+    canvas.addEventListener('mousedown', function(e) {
+      // Clique em espaço → editar (tratado pelo listener do g.cfg-espaco-g)
+      if (e.target.closest && e.target.closest('.cfg-espaco-g')) return;
+      _dragPan = { sx: e.clientX - _panX * _zoom, sy: e.clientY - _panY * _zoom };
+      canvas.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!_dragPan) return;
+      _panX = (e.clientX - _dragPan.sx) / _zoom;
+      _panY = (e.clientY - _dragPan.sy) / _zoom;
+      _tr();
+    });
+    document.addEventListener('mouseup', function() {
+      if (_dragPan) {
+        _dragPan = null;
+        var c2 = document.getElementById('cfg-mapa-canvas');
+        if (c2) c2.style.cursor = 'grab';
+      }
+    });
+    canvas.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      zoom(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+  }
+
+  // ── API pública ──────────────────────────────────────────
+  return {
+    aoAbrir:        aoAbrir,
+    recarregar:     recarregar,
+    zoom:           zoom,
+    resetZoom:      resetZoom,
+    _editarPosicao: _editarPosicao
   };
 })();
 
