@@ -1139,6 +1139,51 @@ textarea.input { resize: vertical; }
 .stats-strip .stat-label { font-size: 11.5px; color: var(--muted); font-weight: 500; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   METRICS TOGGLE (retração/expansão de métricas)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.metrics-toggle-wrap {
+  /* absorbe o margin-bottom dos filhos diretos */
+}
+.metrics-toggle-header {
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; user-select: none;
+  padding: 4px 2px 8px;
+  color: var(--muted); font-size: 11.5px; font-weight: 600;
+  letter-spacing: .04em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  transition: color var(--fast, .12s) ease;
+}
+.metrics-toggle-header:hover { color: var(--text); }
+.metrics-toggle-header .mt-chevron {
+  font-size: 18px; margin-left: auto;
+  transition: transform var(--mid, .22s) ease;
+  line-height: 1;
+}
+.metrics-toggle-wrap.mt-collapsed .mt-chevron {
+  transform: rotate(-90deg);
+}
+.metrics-toggle-body {
+  overflow: hidden;
+  max-height: 600px;
+  opacity: 1;
+  transition: max-height var(--mid, .22s) ease, opacity var(--mid, .22s) ease;
+  /* empurra o conteúdo para baixo quando aberto */
+  padding-top: 14px;
+}
+.metrics-toggle-wrap.mt-collapsed .metrics-toggle-body {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  pointer-events: none;
+}
+/* garante que stats-grid/strip dentro do wrapper não dupliquem margem */
+.metrics-toggle-body > .stats-grid,
+.metrics-toggle-body > .stats-strip {
+  margin-bottom: 0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    FILTER BAR
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .filter-bar {
@@ -6338,8 +6383,8 @@ var InfraConfigUI = (function() {
     if (!el) return;
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarEspacos(function(r) {
-      var lista = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      el.innerHTML = lista.length ? lista.map(function(e) {
+      _listaEspacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = _listaEspacos.length ? _listaEspacos.map(function(e) {
         return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
           '<div><strong>' + escaparHtml(e.nome) + '</strong> <span class="badge badge-muted">' + escaparHtml(e.tipoEspaco||'?') + '</span>' +
           (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
@@ -6348,10 +6393,17 @@ var InfraConfigUI = (function() {
           (e.aceitaReserva !== false ? 'Reservável' : 'Não reservável') + ' · ' +
           (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
           '<div style="display:flex;gap:6px;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id) + ')" data-bg-skip="1">Editar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="InfraConfigUI.editarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
     }, function(err) { if (el) el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||String(err)) + '</p>'; });
+  }
+
+  /** Injeta o espaço no AdminCadastrosUI e abre o modal com os dados preenchidos */
+  function editarEspaco(id) {
+    var espaco = _listaEspacos.find(function(e){ return e.id === id; }) || {};
+    AdminCadastrosUI.injetarEspacos([espaco]);
+    AdminCadastrosUI.abrirModalEspaco(id);
   }
 
   // ── Itens / Categorias ───────────────────────────────────
@@ -6360,14 +6412,21 @@ var InfraConfigUI = (function() {
     if (!el) return;
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarCategoriasItens(function(r) {
-      var lista = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      el.innerHTML = lista.length ? '<table class="data-table" style="width:100%;"><thead><tr><th>Nome</th><th>Ativo</th><th></th></tr></thead><tbody>' +
-        lista.map(function(c) {
+      _listaCatItens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = _listaCatItens.length ? '<table class="data-table" style="width:100%;"><thead><tr><th>Nome</th><th>Ativo</th><th></th></tr></thead><tbody>' +
+        _listaCatItens.map(function(c) {
           return '<tr><td><strong>' + escaparHtml(c.nome||c.label||'') + '</strong></td>' +
             '<td>' + (c.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-error">Inativo</span>') + '</td>' +
-            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id) + ')" data-bg-skip="1">Editar</button></td></tr>';
+            '<td><button class="btn btn-ghost btn-sm" onclick="InfraConfigUI.editarCatItem(' + JSON.stringify(c.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button></td></tr>';
         }).join('') + '</tbody></table>' : '<p class="muted-text">Nenhuma categoria cadastrada.</p>';
     }, function() { if (el) el.innerHTML = '<p class="muted-text">Categorias de itens não disponíveis.</p>'; });
+  }
+
+  /** Injeta a categoria no AdminCadastrosUI e abre o modal com os dados preenchidos */
+  function editarCatItem(id) {
+    var cat = _listaCatItens.find(function(c){ return c.id === id; }) || {};
+    AdminCadastrosUI.injetarCatItens([cat]);
+    AdminCadastrosUI.abrirModalCategoriaItem(id);
   }
 
   // ── Horários ─────────────────────────────────────────────
@@ -6399,7 +6458,12 @@ var InfraConfigUI = (function() {
     });
   }
 
-  return { abrirTab: abrirTab, aoAbrir: aoAbrir, salvarHorarios: salvarHorarios };
+  return {
+    abrirTab: abrirTab, aoAbrir: aoAbrir,
+    salvarHorarios: salvarHorarios,
+    editarEspaco: editarEspaco,
+    editarCatItem: editarCatItem
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -9629,8 +9693,95 @@ var App = (function() {
   return { iniciar, getBoot: function(){return _boot;}, Toast, BtnGuard, Router };
 })();
 
+/* ══════════════════════════════════════════════════════════════
+   MetricsToggle — retração/expansão de blocos de métricas
+   Padrão global: todo .stats-grid[id] e .stats-strip[id] é
+   automaticamente envolvido em um wrapper colapsável.
+   Estado persistido em localStorage (prefixo "mt_<id>").
+   Default: expandido na primeira visita.
+══════════════════════════════════════════════════════════════ */
+var MetricsToggle = (function() {
+  var LS_PREFIX = 'mt_';
+
+  function _getState(id) {
+    var v = localStorage.getItem(LS_PREFIX + id);
+    return v === null ? true : v === '1'; // default = expandido
+  }
+
+  function _setState(id, open) {
+    try { localStorage.setItem(LS_PREFIX + id, open ? '1' : '0'); } catch(e) {}
+  }
+
+  // Envolve um elemento .stats-grid ou .stats-strip com o wrapper colapsável.
+  // Pode ser chamado manualmente para elementos criados dinâmicamente.
+  function wrap(el, label) {
+    if (!el) return;
+    // Já foi envolvido?
+    if (el.parentNode && el.parentNode.classList.contains('metrics-toggle-body')) return;
+
+    var id = el.id || ('mt' + Math.random().toString(36).slice(2, 7));
+    if (!el.id) el.id = id;
+
+    var open = _getState(id);
+
+    var wrapEl = document.createElement('div');
+    wrapEl.className = 'metrics-toggle-wrap' + (open ? '' : ' mt-collapsed');
+
+    var headerEl = document.createElement('div');
+    headerEl.className = 'metrics-toggle-header';
+    headerEl.setAttribute('title', open ? 'Recolher métricas' : 'Expandir métricas');
+    headerEl.innerHTML =
+      '<span class="ms ms-sm" style="font-size:15px;opacity:.7;">bar_chart</span>' +
+      '<span>' + (label || 'Métricas') + '</span>' +
+      '<span class="ms mt-chevron">expand_more</span>';
+
+    var bodyEl = document.createElement('div');
+    bodyEl.className = 'metrics-toggle-body';
+
+    var parent = el.parentNode;
+    var sibling = el.nextSibling;
+    parent.insertBefore(wrapEl, el);
+    wrapEl.appendChild(headerEl);
+    wrapEl.appendChild(bodyEl);
+    bodyEl.appendChild(el);
+    // re-insere após o wrapper se havia irmão — já está correto pois insertBefore usou el
+    void sibling; // unused, apenas documentação
+
+    headerEl.addEventListener('click', function() {
+      var isOpen = !wrapEl.classList.contains('mt-collapsed');
+      if (isOpen) {
+        wrapEl.classList.add('mt-collapsed');
+        headerEl.setAttribute('title', 'Expandir métricas');
+        _setState(id, false);
+      } else {
+        wrapEl.classList.remove('mt-collapsed');
+        headerEl.setAttribute('title', 'Recolher métricas');
+        _setState(id, true);
+      }
+    });
+  }
+
+  // Inicializa: descobre todos os .stats-grid[id] e .stats-strip[id] no DOM.
+  // Chamado uma vez após DOMContentLoaded.
+  function init() {
+    var sels = ['.stats-grid[id]', '.stats-strip[id]'];
+    sels.forEach(function(sel) {
+      document.querySelectorAll(sel).forEach(function(el) {
+        // Pula o painel Home (dashboard — sempre visível)
+        if (el.id === 'home-stats') return;
+        wrap(el);
+      });
+    });
+  }
+
+  return { init: init, wrap: wrap };
+})();
+
 // Boot
-document.addEventListener('DOMContentLoaded', function() { App.iniciar(); });
+document.addEventListener('DOMContentLoaded', function() {
+  MetricsToggle.init();
+  App.iniciar();
+});
 </script>
 </body>
 </html>
