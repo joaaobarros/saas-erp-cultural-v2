@@ -96,16 +96,43 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **F3 — Configuração de Expediente**: card "Expediente & Horários" na view-admin com inputs de abertura/encerramento; `ExpedienteUI` module; `ctrl_admin_obterConfigExpediente` + `ctrl_admin_salvarConfigExpediente` no backend; persiste em `config_org.json`
 - ✅ Deploy @64
 
+**O que foi feito (Espaços — Toast, Sidebar e Modos de Visualização — 2026-05-23)**:
+- ✅ **`response.gs`**: `GasResponse.wrap()` agora propaga `e.code` e `e.details` de erros throwados — zero risco de regressão (usa `||` com fallbacks)
+- ✅ **`reserva_engine.gs`**: erro estruturado `CONFLITO_RESERVA` — `_errConflito.code = 'CONFLITO_RESERVA'` e `.details = { sala, salaNome, nomeAcao, horaInicio, horaTermino, responsavel, setor }`. `salaNome` resolvido via `SistemaConfigService.getEspacos()`
+- ✅ **`index.html` CSS**: `.res-modo-btn.active`, `.rdg-row/sala-label/grid-area/bloco`, `.rag-bloco`, `.mapa-res-item` com hover — todas as classes usadas
+- ✅ **`index.html` HTML**: toggle Lista/Agenda/Diagrama inserido; conteúdo da lista envolvido em `#res-modo-lista`; containers `#res-modo-agenda` e `#res-modo-diagrama` adicionados
+- ✅ **`index.html` JS — ReservasUI**:
+  - `_mostrarToastConflito(err)`: toast vermelho com card interno mostrando nome do evento conflitante, espaço, horário, responsável e setor
+  - `salvar()`: detecta `CONFLITO_RESERVA` e chama `_mostrarToastConflito` em vez de Toast simples
+  - `_cancelar(id)`: prompt() removido → overlay modal com input de motivo e botão de confirmação
+  - Estado: `_modo`, `_listaCacheTotal`, `_espacosPorId`, `_semanaOffset`, `_diagramaDia`
+  - `setModo(modo)`: toggle containers + limpa clock do diagrama ao sair
+  - `_getSemana(offset)`: retorna 7 strings YYYY-MM-DD (Seg–Dom)
+  - `_garantirEspacosPorId()`: lazy-load de `App.getBoot().espacos`, fallback para `_espacosCatalogo`
+  - `carregar()`: suporte a `dateRange` para modos agenda/diagrama
+  - `_renderDiagrama()`: Gantt 7h–22h (3.2px/min = 2880px), colunas por espaço (120px, cor dedicada), régua de horas, marcador "agora" vermelho, blocos coloridos (✓HAB verde, HAB? âmbar dashed, EM USO roxo, concluído cinza), filtros texto+espaço (client-side), navegação por dia e semana, relógio auto-refresh 60s, auto-scroll para hora atual
+  - `_renderAgenda()`: calendário semanal 8h–22h (2.4px/min), 7 colunas, linha "agora" vermelho, sub-colunas para sobreposição, filtro por espaço, navegação ←/→, auto-scroll
+  - `_abrirDetalheReserva(id)`: modal com todos os campos, badge HAB, botões de ação por status
+- ✅ **`mapa_ui.html` — Sidebar interativa**:
+  - Estado `_reservasDoDia` armazena reservas carregadas por espaço
+  - `_ag(total)`: placeholder de carregando enquanto timeline carrega
+  - `_carregarTimeline()`: armazena resultado em `_reservasDoDia` e chama `_renderAgendaReservas`
+  - `_renderAgendaReservas()`: lista clicável ordenada por horário, borda colorida por status, badges ✓HAB/HAB?/EM USO
+  - `_abrirCardReserva(r)`: modal completo via `_abrirModal` — todos os campos + botões confirmar/iniciar/concluir/cancelar por status
+  - `_abrirModalCancelamento(rId, espacoId)`: modal de cancelamento sem `prompt()` — input de motivo + botão confirmar
+- ✅ Deploy @68
+
 **Próximo passo imediato**:
-> 1. **[BROWSER]** Admin → Espaços → Editar → modal deve abrir com dados corretos
-> 2. **[BROWSER]** Admin → Setores → Editar → campo Nome deve mostrar nome legível (ex: "Direção"), não ID
-> 3. **[BROWSER]** Admin → Turnos → "Novo Turno" → preencher Manhã 08:00–12:00, Seg–Sex → Salvar → aparece na lista
-> 4. **[BROWSER]** Admin → Usuários → clicar "Editar" em usuário ativo → modal deve ter select de Papel E select de Setor
-> 5. **[BROWSER]** Admin → Usuários → clicar "Aprovar" em usuário pendente → deve aprovar com sucesso (antes falhava silenciosamente)
-> 6. **[BROWSER]** Admin → "Expediente & Horários" → alterar horário → Salvar → Toast de sucesso
-> 7. **[BROWSER]** Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 8. Iniciar **Fase 6 — Integração via Eventos + RECE**
+> **[BROWSER] Smoke-tests Espaços:**
+> 1. Reservas → criar Sala X 14h–16h → tentar criar Sala X 15h–17h mesmo dia → Toast deve mostrar card vermelho com nome do evento conflitante, horário e responsável
+> 2. Reservas → toggle "Diagrama" → grade Gantt aparece com espaços nas linhas, 7h–22h nas colunas, blocos coloridos com tags ✓HAB/HAB?
+> 3. Reservas → Diagrama → clicar em bloco → modal de detalhes abre; clicar em área vazia → vai para lista
+> 4. Reservas → toggle "Agenda" → calendário semanal 8h–22h, linha vermelha de hora atual
+> 5. Mapa → clicar em espaço com reservas → sidebar "Agenda do Dia" lista todas as reservas com badges
+> 6. Mapa → clicar em reserva na sidebar → modal card abre com todos os campos e botões de ação
+> 7. Mapa → card → "Cancelar reserva" → modal de cancelamento (sem prompt) → motivo → confirmar
+> 8. Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
+> 9. Iniciar **Fase 6 — Integração via Eventos + RECE**
 
 **Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
 
