@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 5 concluída** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
+**Fase atual**: **Administração funcional concluída (2026-05-23)** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -87,13 +87,23 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ `index.html`: view-acoes com Kanban 4 colunas + Lista + métricas; modal criar/editar; painel detalhe 6 tabs; GAS.acoes namespace; AcoesUI module; CSS aliases (btn-primary, modal, kanban, table); BtnGuard completo
 - ✅ Deploy @61
 
+**O que foi feito (Administração funcional — 2026-05-23)**:
+- ✅ **BUG CRÍTICO corrigido**: `_confirmarAprovar` e `_confirmarRevogar` enviavam `{email}` mas backend espera `{emailAlvo}` → aprovação e revogação de usuários agora funcionam
+- ✅ **BUG CRÍTICO corrigido**: `abrirModalSetor(id)` pré-preenchia campo Nome com o ID (ex: `direcao`), não com o nome legível → adicionado cache `_setores[]` e lookup correto
+- ✅ **F4 — Campo Cor no setor**: modal de setor agora tem color picker + campo hex; `salvarSetor` envia `{id, nome, cor}`; lista exibe dot colorido
+- ✅ **F1 — Tab Turnos**: adicionada tab "Turnos" na seção Admin com CRUD completo (listar, criar, editar) — modal com Nome, Início, Fim e checkboxes Seg-Dom; backend `ctrl_admin_listarTurnos/salvarTurno` já existia
+- ✅ **F2 — Setor no modal de editar usuário**: modal de editar papel agora inclui select de setor (alimentado por `_setores`); `editarPapel` envia `{email, papel, setor}`
+- ✅ **F3 — Configuração de Expediente**: card "Expediente & Horários" na view-admin com inputs de abertura/encerramento; `ExpedienteUI` module; `ctrl_admin_obterConfigExpediente` + `ctrl_admin_salvarConfigExpediente` no backend; persiste em `config_org.json`
+- ✅ Deploy @64
+
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `fase5_acoes_prepararIndice()` → `{ok: true, mensagem: 'Índice ACOES.Acoes preparado.'}`
-> 2. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` (se ainda não feito) → `{criados: 8}`
-> 3. **[BROWSER]** Módulo Ações → deve carregar com Kanban de 4 colunas (vazio inicialmente)
-> 4. **[BROWSER]** "Nova Ação" → preencher campos → Salvar → deve aparecer na coluna "Planejada"
-> 5. **[BROWSER]** Clicar no card → painel detalhe deve abrir com 6 tabs
-> 6. **[BROWSER]** Tab "Geral" → botões de transição FSM devem aparecer (Ex: "Iniciar Produção")
+> 1. **[BROWSER]** Admin → Espaços → Editar → modal deve abrir com dados corretos
+> 2. **[BROWSER]** Admin → Setores → Editar → campo Nome deve mostrar nome legível (ex: "Direção"), não ID
+> 3. **[BROWSER]** Admin → Turnos → "Novo Turno" → preencher Manhã 08:00–12:00, Seg–Sex → Salvar → aparece na lista
+> 4. **[BROWSER]** Admin → Usuários → clicar "Editar" em usuário ativo → modal deve ter select de Papel E select de Setor
+> 5. **[BROWSER]** Admin → Usuários → clicar "Aprovar" em usuário pendente → deve aprovar com sucesso (antes falhava silenciosamente)
+> 6. **[BROWSER]** Admin → "Expediente & Horários" → alterar horário → Salvar → Toast de sucesso
+> 7. **[BROWSER]** Console F12 → zero TypeError → `BtnGuard.auditar()` → "✅ todos protegidos"
 > 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
 > 8. Iniciar **Fase 6 — Integração via Eventos + RECE**
 

@@ -188,3 +188,59 @@ function ctrl_solicitacoes_contarPendentes() {
     return { count: pendentes.length };
   }, 'ctrl_solicitacoes_contarPendentes');
 }
+
+// ── Configurações de Expediente ───────────────────────────────────────────────
+
+function ctrl_admin_obterConfigExpediente() {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    var cfg = getOrgConfig();
+    return {
+      reservaHoraInicio: cfg.reservaHoraInicio || '08:00',
+      reservaHoraFim:    cfg.reservaHoraFim    || '22:00'
+    };
+  }, 'ctrl_admin_obterConfigExpediente');
+}
+
+function ctrl_admin_salvarConfigExpediente(dados) {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    if (!dados || !dados.reservaHoraInicio || !dados.reservaHoraFim)
+      throw new Error('Horários de início e fim são obrigatórios.');
+
+    var _HH_MM = /^\d{2}:\d{2}$/;
+    if (!_HH_MM.test(dados.reservaHoraInicio) || !_HH_MM.test(dados.reservaHoraFim))
+      throw new Error('Formato inválido. Use HH:MM (ex: 08:00).');
+
+    var email = getEmailSessao();
+    var orgId = getOrgConfig().orgId;
+
+    modifyJSON('config_org.json', function(cfg) {
+      cfg.reservaHoraInicio = dados.reservaHoraInicio;
+      cfg.reservaHoraFim    = dados.reservaHoraFim;
+      return cfg;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    if (typeof BootService !== 'undefined') BootService.limparCache(email);
+
+    AuditoriaService.registrar('EXPEDIENTE_SALVO', 'admin',
+      { orgId: orgId, usuario: email,
+        inicio: dados.reservaHoraInicio, fim: dados.reservaHoraFim });
+
+    return { reservaHoraInicio: dados.reservaHoraInicio, reservaHoraFim: dados.reservaHoraFim };
+  }, 'ctrl_admin_salvarConfigExpediente');
+}
+
+// ─── helper de RBAC local ────────────────────────────────────────────────────
+function _assertAdmin() {
+  var email = getEmailSessao();
+  var acesso = AcessoService.verificar(email);
+  var papel  = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
+  var ehAdmin = papel === 'admin' || papel === 'superadmin';
+  if (!ehAdmin) {
+    var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
+    ehAdmin = superAdmin && email.toLowerCase() === superAdmin;
+  }
+  if (!ehAdmin) throw new Error('Acesso negado: operação restrita a administradores.');
+}
