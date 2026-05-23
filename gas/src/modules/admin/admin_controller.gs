@@ -245,7 +245,10 @@ function ctrl_solicitacoes_contarPendentes() {
 function ctrl_admin_obterConfigExpediente() {
   return GasResponse.wrap(function() {
     _assertAdmin();
-    var cfg = getOrgConfig();
+    // Lê diretamente de config_org.json, pois é lá que salvarConfigExpediente persiste.
+    // getOrgConfig() lê apenas de PropertiesService e não contém esses campos.
+    var cfg = {};
+    try { cfg = readJSON('config_org.json') || {}; } catch(_) {}
     return {
       reservaHoraInicio: cfg.reservaHoraInicio || '08:00',
       reservaHoraFim:    cfg.reservaHoraFim    || '22:00'

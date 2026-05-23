@@ -1539,104 +1539,112 @@ textarea.input { resize: vertical; }
             </div>
           </div><!-- /card cadastros -->
 
-          <!-- Card: Expediente & Horários -->
+          <!-- Card: Configurações do Sistema (sub-abas: Expediente | Identidade Visual) -->
           <div class="card" style="grid-column:1/-1;">
             <div class="card-header">
-              <div class="card-titulo"><span class="ms">schedule</span> Expediente &amp; Horários</div>
+              <div class="card-titulo"><span class="ms">tune</span> Configurações do Sistema</div>
             </div>
-            <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Horário global de funcionamento da instituição. Reservas só podem ser criadas dentro deste intervalo.</p>
-            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
-              <div>
-                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Abertura do expediente</label>
-                <input type="time" id="exp-inicio" class="form-input" style="width:130px;" value="08:00">
-              </div>
-              <div>
-                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Encerramento do expediente</label>
-                <input type="time" id="exp-fim" class="form-input" style="width:130px;" value="22:00">
-              </div>
-              <button class="btn btn-primario" id="btn-salvar-expediente" onclick="ExpedienteUI.salvar()">
-                <span class="ms ms-sm">save</span> Salvar
+            <!-- Sub-abas -->
+            <div class="tab-bar" id="admin-config-tabs" style="margin-bottom:20px;">
+              <button class="tab-btn ativa" data-tab="expediente" onclick="AdminConfigTabsUI.abrirTab('expediente')">
+                <span class="ms ms-sm">schedule</span> Expediente &amp; Horários
               </button>
-            </div>
-          </div><!-- /card expediente -->
-
-          <!-- Card: Identidade Visual (personalização, raramente alterada) -->
-          <div class="card" style="grid-column: 1 / -1;">
-            <div class="card-header">
-              <div class="card-titulo">
-                <span class="ms">palette</span> Identidade Visual
-              </div>
-            </div>
-
-            <div class="identidade-preview" id="iv-preview-wrap">
-              <div class="sem-logo" id="iv-sem-logo">🏛️</div>
-              <img id="iv-preview-img" src="" alt="Logo" crossorigin="anonymous" style="display:none">
-              <div class="preview-info" id="iv-preview-info">Nenhuma logomarca configurada.</div>
-            </div>
-
-            <div class="admin-section-titulo">URL da Logomarca</div>
-            <div style="display:flex;gap:8px;margin-bottom:14px;">
-              <input type="text" id="iv-logo-url" class="form-input"
-                     placeholder="https://… (Google Drive, CDN público)"
-                     oninput="IdentidadeAdmin.previewLogo()">
-              <button class="btn btn-ghost btn-sm" onclick="IdentidadeAdmin.removerLogo()" data-bg-skip="1">
-                <span class="ms ms-sm">delete</span> Remover
+              <button class="tab-btn" data-tab="identidade" onclick="AdminConfigTabsUI.abrirTab('identidade')">
+                <span class="ms ms-sm">palette</span> Identidade Visual
               </button>
             </div>
 
-            <button class="btn-extrair" onclick="IdentidadeAdmin.extrairCores()" id="btn-extrair-cores">
-              <span class="ms ms-sm">colorize</span> Extrair cores do logo automaticamente
-            </button>
+            <!-- Sub-aba: Expediente -->
+            <div id="admin-config-tab-expediente">
+              <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Horário global de funcionamento da instituição. Reservas só podem ser criadas dentro deste intervalo.</p>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Abertura do expediente</label>
+                  <input type="time" id="exp-inicio" class="form-input" style="width:130px;" value="08:00">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Encerramento do expediente</label>
+                  <input type="time" id="exp-fim" class="form-input" style="width:130px;" value="22:00">
+                </div>
+                <button class="btn btn-primario" id="btn-salvar-expediente" onclick="ExpedienteUI.salvar()">
+                  <span class="ms ms-sm">save</span> Salvar
+                </button>
+              </div>
+            </div><!-- /sub-aba expediente -->
 
-            <div class="admin-section-titulo">Paleta de Cores</div>
-            <div class="paleta-grid">
-              <div class="cor-item">
-                <label>Cor Primária</label>
-                <div class="cor-input-wrap">
-                  <input type="color" id="cp-primaria" oninput="IdentidadeAdmin.sincronizarCor('primaria')">
-                  <input type="text"  id="ct-primaria" placeholder="#4f46e5" maxlength="7"
-                         oninput="IdentidadeAdmin.sincronizarHex('primaria')">
+            <!-- Sub-aba: Identidade Visual -->
+            <div id="admin-config-tab-identidade" class="oculto">
+              <div class="identidade-preview" id="iv-preview-wrap">
+                <div class="sem-logo" id="iv-sem-logo">🏛️</div>
+                <img id="iv-preview-img" src="" alt="Logo" crossorigin="anonymous" style="display:none">
+                <div class="preview-info" id="iv-preview-info">Nenhuma logomarca configurada.</div>
+              </div>
+
+              <div class="admin-section-titulo">URL da Logomarca</div>
+              <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <input type="text" id="iv-logo-url" class="form-input"
+                       placeholder="https://… (Google Drive, CDN público)"
+                       oninput="IdentidadeAdmin.previewLogo()">
+                <button class="btn btn-ghost btn-sm" onclick="IdentidadeAdmin.removerLogo()" data-bg-skip="1">
+                  <span class="ms ms-sm">delete</span> Remover
+                </button>
+              </div>
+
+              <button class="btn-extrair" onclick="IdentidadeAdmin.extrairCores()" id="btn-extrair-cores">
+                <span class="ms ms-sm">colorize</span> Extrair cores do logo automaticamente
+              </button>
+
+              <div class="admin-section-titulo">Paleta de Cores</div>
+              <div class="paleta-grid">
+                <div class="cor-item">
+                  <label>Cor Primária</label>
+                  <div class="cor-input-wrap">
+                    <input type="color" id="cp-primaria" oninput="IdentidadeAdmin.sincronizarCor('primaria')">
+                    <input type="text"  id="ct-primaria" placeholder="#4f46e5" maxlength="7"
+                           oninput="IdentidadeAdmin.sincronizarHex('primaria')">
+                  </div>
+                </div>
+                <div class="cor-item">
+                  <label>Cor de Destaque</label>
+                  <div class="cor-input-wrap">
+                    <input type="color" id="cp-destaque" oninput="IdentidadeAdmin.sincronizarCor('destaque')">
+                    <input type="text"  id="ct-destaque" placeholder="#f59e0b" maxlength="7"
+                           oninput="IdentidadeAdmin.sincronizarHex('destaque')">
+                  </div>
+                </div>
+                <div class="cor-item">
+                  <label>Cor do Menu Lateral</label>
+                  <div class="cor-input-wrap">
+                    <input type="color" id="cp-sidebar" oninput="IdentidadeAdmin.sincronizarCor('sidebar')">
+                    <input type="text"  id="ct-sidebar" placeholder="#1e1b4b" maxlength="7"
+                           oninput="IdentidadeAdmin.sincronizarHex('sidebar')">
+                  </div>
                 </div>
               </div>
-              <div class="cor-item">
-                <label>Cor de Destaque</label>
-                <div class="cor-input-wrap">
-                  <input type="color" id="cp-destaque" oninput="IdentidadeAdmin.sincronizarCor('destaque')">
-                  <input type="text"  id="ct-destaque" placeholder="#f59e0b" maxlength="7"
-                         oninput="IdentidadeAdmin.sincronizarHex('destaque')">
-                </div>
+
+              <div class="cor-derivadas" id="iv-derivadas">
+                As cores derivadas (clara, escura, secundária) são calculadas automaticamente a partir da Cor Primária.<br>
+                A cor do texto do menu é ajustada automaticamente para garantir contraste ideal.
               </div>
-              <div class="cor-item">
-                <label>Cor do Menu Lateral</label>
-                <div class="cor-input-wrap">
-                  <input type="color" id="cp-sidebar" oninput="IdentidadeAdmin.sincronizarCor('sidebar')">
-                  <input type="text"  id="ct-sidebar" placeholder="#1e1b4b" maxlength="7"
-                         oninput="IdentidadeAdmin.sincronizarHex('sidebar')">
-                </div>
+
+              <div class="mini-preview-sidebar" id="iv-mini-sidebar">
+                <span class="ms ms-sm">view_sidebar</span>
+                <span id="iv-mini-sidebar-inner" style="flex:1;padding:4px 8px;border-radius:4px;">
+                  Prévia do menu lateral
+                </span>
               </div>
-            </div>
 
-            <div class="cor-derivadas" id="iv-derivadas">
-              As cores derivadas (clara, escura, secundária) são calculadas automaticamente a partir da Cor Primária.<br>
-              A cor do texto do menu é ajustada automaticamente para garantir contraste ideal.
-            </div>
+              <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+                <button class="btn btn-primario" id="btn-salvar-identidade" onclick="IdentidadeAdmin.salvar()">
+                  <span class="ms ms-sm">save</span> Salvar identidade visual
+                </button>
+                <button class="btn btn-ghost" id="btn-restaurar-padrao" onclick="IdentidadeAdmin.restaurarPadrao()">
+                  <span class="ms ms-sm">restart_alt</span> Restaurar padrão
+                </button>
+              </div>
+            </div><!-- /sub-aba identidade -->
 
-            <div class="mini-preview-sidebar" id="iv-mini-sidebar">
-              <span class="ms ms-sm">view_sidebar</span>
-              <span id="iv-mini-sidebar-inner" style="flex:1;padding:4px 8px;border-radius:4px;">
-                Prévia do menu lateral
-              </span>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
-              <button class="btn btn-primario" id="btn-salvar-identidade" onclick="IdentidadeAdmin.salvar()">
-                <span class="ms ms-sm">save</span> Salvar identidade visual
-              </button>
-              <button class="btn btn-ghost" id="btn-restaurar-padrao" onclick="IdentidadeAdmin.restaurarPadrao()">
-                <span class="ms ms-sm">restart_alt</span> Restaurar padrão
-              </button>
-            </div>
-          </div><!-- /card identidade -->
+          </div><!-- /card configurações do sistema -->
 
         </div><!-- /admin-grid -->
       </div><!-- /view-admin -->
@@ -5967,8 +5975,23 @@ var AdminCadastrosUI = (function() {
     BtnGuard.wrap(btn, (ativar ? 'Ativando…' : 'Desativando…'), function(liberar) {
       GAS.admin.toggleModulo(id, ativar, function(r) {
         liberar();
-        if (r && r.ok) { Toast.sucesso('Módulo ' + (ativar ? 'ativado' : 'desativado') + '.'); carregarModulos(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        if (r && r.ok) {
+          Toast.sucesso('Módulo ' + (ativar ? 'ativado' : 'desativado') + '. O menu lateral foi atualizado.');
+          carregarModulos();
+          // Atualizar lista de módulos ativos no boot e reconstruir o menu lateral
+          var boot = App.getBoot ? App.getBoot() : null;
+          if (boot) {
+            if (ativar) {
+              if ((boot.modulosAtivos||[]).indexOf(id.toUpperCase()) === -1)
+                boot.modulosAtivos = (boot.modulosAtivos||[]).concat([id.toUpperCase()]);
+            } else {
+              boot.modulosAtivos = (boot.modulosAtivos||[]).filter(function(m){ return m !== id.toUpperCase(); });
+            }
+            App.reconstruirMenu && App.reconstruirMenu();
+          }
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        }
       });
     });
   }
@@ -6075,16 +6098,16 @@ var AdminCadastrosUI = (function() {
 
   function desativarEspaco(id) {
     var espaco = _espacos.find(function(e){ return e.id === id; }) || {};
-    var html =
-      '<div style="padding:20px 24px;">' +
-        '<h3 style="margin:0 0 4px;">Desativar espaço</h3>' +
-        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Desativar <strong>' + escaparHtml(espaco.nome || id) + '</strong>? O espaço ficará indisponível para reservas.</p>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="btn-confirmar-desativar" onclick="AdminCadastrosUI._confirmarDesativarEspaco(' + JSON.stringify(id) + ',this)">Sim, desativar</button>' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
-        '</div>' +
-      '</div>';
-    _abrirModalSimples(html);
+    _abrirModalConfirmar({
+      titulo: 'Desativar espaço',
+      icone: 'block',
+      corIcone: '#f59e0b',
+      mensagem: 'Desativar <strong>' + escaparHtml(espaco.nome || id) + '</strong>?',
+      detalhe: 'O espaço ficará indisponível para novas reservas. Reservas existentes não são afetadas.',
+      labelConfirmar: 'Sim, desativar',
+      idBtn: 'btn-confirmar-desativar',
+      onConfirm: 'AdminCadastrosUI._confirmarDesativarEspaco(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+    });
   }
 
   function _confirmarDesativarEspaco(id, btn) {
@@ -6100,15 +6123,16 @@ var AdminCadastrosUI = (function() {
 
   function excluirSetor(id) {
     var s = _setores.find(function(x){ return x.id === id; }) || {};
-    _abrirModalSimples(
-      '<div style="padding:20px 24px;">' +
-        '<h3 style="margin:0 0 4px;">Excluir setor</h3>' +
-        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(s.label || s.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="btn-confirmar-excluir-setor" onclick="AdminCadastrosUI._confirmarExcluirSetor(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
-        '</div>' +
-      '</div>');
+    _abrirModalConfirmar({
+      titulo: 'Excluir setor',
+      icone: 'delete_forever',
+      corIcone: '#ef4444',
+      mensagem: 'Excluir <strong>' + escaparHtml(s.label || s.nome || id) + '</strong>?',
+      detalhe: 'Esta ação é irreversível. O setor será removido permanentemente.',
+      labelConfirmar: 'Sim, excluir',
+      idBtn: 'btn-confirmar-excluir-setor',
+      onConfirm: 'AdminCadastrosUI._confirmarExcluirSetor(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+    });
   }
 
   function _confirmarExcluirSetor(id, btn) {
@@ -6124,15 +6148,16 @@ var AdminCadastrosUI = (function() {
 
   function excluirTurno(id) {
     var t = _turnos.find(function(x){ return x.id === id; }) || {};
-    _abrirModalSimples(
-      '<div style="padding:20px 24px;">' +
-        '<h3 style="margin:0 0 4px;">Excluir turno</h3>' +
-        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(t.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="btn-confirmar-excluir-turno" onclick="AdminCadastrosUI._confirmarExcluirTurno(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
-        '</div>' +
-      '</div>');
+    _abrirModalConfirmar({
+      titulo: 'Excluir turno',
+      icone: 'delete_forever',
+      corIcone: '#ef4444',
+      mensagem: 'Excluir o turno <strong>' + escaparHtml(t.nome || id) + '</strong>?',
+      detalhe: 'Esta ação é irreversível. O turno será removido permanentemente.',
+      labelConfirmar: 'Sim, excluir',
+      idBtn: 'btn-confirmar-excluir-turno',
+      onConfirm: 'AdminCadastrosUI._confirmarExcluirTurno(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+    });
   }
 
   function _confirmarExcluirTurno(id, btn) {
@@ -6148,15 +6173,16 @@ var AdminCadastrosUI = (function() {
 
   function excluirCategoriaItem(id) {
     var c = _catItens.find(function(x){ return x.id === id; }) || {};
-    _abrirModalSimples(
-      '<div style="padding:20px 24px;">' +
-        '<h3 style="margin:0 0 4px;">Excluir categoria</h3>' +
-        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(c.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
-        '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="btn-confirmar-excluir-catitem" onclick="AdminCadastrosUI._confirmarExcluirCategoriaItem(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
-        '</div>' +
-      '</div>');
+    _abrirModalConfirmar({
+      titulo: 'Excluir categoria',
+      icone: 'delete_forever',
+      corIcone: '#ef4444',
+      mensagem: 'Excluir <strong>' + escaparHtml(c.nome || id) + '</strong>?',
+      detalhe: 'Esta ação é irreversível. A categoria será removida permanentemente.',
+      labelConfirmar: 'Sim, excluir',
+      idBtn: 'btn-confirmar-excluir-catitem',
+      onConfirm: 'AdminCadastrosUI._confirmarExcluirCategoriaItem(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+    });
   }
 
   function _confirmarExcluirCategoriaItem(id, btn) {
@@ -6513,6 +6539,41 @@ var AdminCadastrosUI = (function() {
     }
   }
 
+  /**
+   * Abre modal de confirmação de ação (excluir / desativar) com design melhorado.
+   * @param {Object} opts — { titulo, icone, corIcone, mensagem, detalhe, labelConfirmar, idBtn, onConfirm }
+   */
+  function _abrirModalConfirmar(opts) {
+    var html =
+      '<div style="border-radius:12px;overflow:hidden;">' +
+        // Cabeçalho colorido
+        '<div style="background:linear-gradient(135deg,#fff8f8 0%,#fff 100%);border-bottom:1px solid var(--border);padding:20px 24px;display:flex;align-items:center;gap:14px;">' +
+          '<div style="width:44px;height:44px;border-radius:50%;background:' + (opts.corIcone||'#ef4444') + '18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            '<span class="ms" style="color:' + (opts.corIcone||'#ef4444') + ';font-size:22px;">' + (opts.icone||'warning') + '</span>' +
+          '</div>' +
+          '<div>' +
+            '<h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text);">' + escaparHtml(opts.titulo||'Confirmar') + '</h3>' +
+          '</div>' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" ' +
+            'style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:6px;display:flex;align-items:center;">' +
+            '<span class="ms" style="font-size:20px;">close</span>' +
+          '</button>' +
+        '</div>' +
+        // Corpo
+        '<div style="padding:20px 24px;">' +
+          '<p style="font-size:14px;color:var(--text);margin:0 0 6px;">' + (opts.mensagem||'') + '</p>' +
+          (opts.detalhe ? '<p style="font-size:12px;color:var(--muted);margin:0 0 20px;">' + escaparHtml(opts.detalhe) + '</p>' : '<div style="height:20px;"></div>') +
+          '<div style="display:flex;gap:8px;">' +
+            '<button class="btn btn-perigo" id="' + escaparHtml(opts.idBtn||'btn-confirmar-acao') + '" onclick="' + (opts.onConfirm||'') + '">' +
+              escaparHtml(opts.labelConfirmar||'Confirmar') +
+            '</button>' +
+            '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
   function aoAbrir() { abrirTab('espacos'); }
 
   return {
@@ -6551,6 +6612,31 @@ var AdminCadastrosUI = (function() {
       });
     }
   };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN CONFIG TABS UI — controla sub-abas Expediente | Identidade Visual
+// ═══════════════════════════════════════════════════════════
+var AdminConfigTabsUI = (function() {
+  var _tabAtual = 'expediente';
+
+  function abrirTab(tab) {
+    _tabAtual = tab;
+    // Atualizar botões
+    document.querySelectorAll('#admin-config-tabs .tab-btn').forEach(function(btn) {
+      btn.classList.toggle('ativa', btn.getAttribute('data-tab') === tab);
+    });
+    // Mostrar/ocultar conteúdo
+    ['expediente', 'identidade'].forEach(function(t) {
+      var el = document.getElementById('admin-config-tab-' + t);
+      if (el) el.classList.toggle('oculto', t !== tab);
+    });
+    // Carregar dados da aba ao abrí-la
+    if (tab === 'identidade') IdentidadeAdmin.carregar();
+    if (tab === 'expediente') ExpedienteUI.carregar();
+  }
+
+  return { abrirTab: abrirTab };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -6955,6 +7041,21 @@ var InfraConfigMapaUI = (function() {
   var _zoom = 1, _panX = 0, _panY = 0;
   var _NS = 'http://www.w3.org/2000/svg';
 
+  // ── Edição inline (sem overlay) ──────────────────────────
+  var _modoEdicao = null; // null | { id, cfg, cfgOrig, nome, drag }
+
+  var _FORMAS_INLINE = [
+    { id:'rect',    label:'Retângulo', w:120, h:80,  r:0  },
+    { id:'square',  label:'Quadrado',  w:90,  h:90,  r:0  },
+    { id:'circle',  label:'Círculo',   w:80,  h:80,  r:40 },
+    { id:'ellipse', label:'Elipse',    w:130, h:75,  r:0  },
+    { id:'tri',     label:'Triângulo', w:100, h:86,  r:0  },
+    { id:'hex',     label:'Hexágono',  w:100, h:88,  r:0  },
+    { id:'trap',    label:'Trapézio',  w:120, h:70,  r:0  },
+    { id:'diamond', label:'Losango',   w:90,  h:110, r:0  },
+    { id:'pent',    label:'Pentágono', w:100, h:95,  r:0  }
+  ];
+
   // ── Figuras (mesmas do MapaEditorUI) ────────────────────
   function _polyCirclePts(n, rx, ry, startDeg) {
     var pts = [];
@@ -7000,6 +7101,48 @@ var InfraConfigMapaUI = (function() {
     }
   }
 
+  // ── Helpers de edição inline ─────────────────────────────
+  function _bboxHW(cfg) {
+    if (cfg.forma === 'circle') { var r = cfg.r || 40; return { hw: r, hh: r }; }
+    return { hw: (cfg.w || 100) / 2, hh: (cfg.h || 80) / 2 };
+  }
+
+  function _svgIconeInline(f) {
+    var fill = '#c7d2fe';
+    switch (f.id) {
+      case 'rect':    return '<rect x="-18" y="-12" width="36" height="24" rx="2" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'square':  return '<rect x="-13" y="-13" width="26" height="26" rx="2" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'circle':  return '<circle cx="0" cy="0" r="14" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'ellipse': return '<ellipse cx="0" cy="0" rx="19" ry="12" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'tri':     return '<polygon points="0,-13 16,13 -16,13" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'hex':     return '<polygon points="' + _polyCirclePts(6, 15, 14, -30) + '" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'trap':    return '<polygon points="-11,-11 11,-11 18,11 -18,11" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'diamond': return '<polygon points="0,-14 18,0 0,14 -18,0" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'pent':    return '<polygon points="' + _polyCirclePts(5, 16, 14, -90) + '" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      default:        return '<rect x="-14" y="-10" width="28" height="20" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+    }
+  }
+
+  // Converte coords do mouse para coordenadas do viewBox SVG
+  function _svgPt(e) {
+    var svg = document.getElementById('cfg-mapa-svg');
+    if (!svg) return { x: e.clientX, y: e.clientY };
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  // Converte coords do mouse para sistema local do grupo editado
+  function _localEdPt(e) {
+    var g = document.getElementById('cfg-ed-shape-g');
+    if (!g) return _svgPt(e);
+    var svg = document.getElementById('cfg-mapa-svg');
+    if (!svg) return { x: e.clientX, y: e.clientY };
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(g.getScreenCTM().inverse());
+  }
+
   // ── Background do campus (usa terreno salvo ou padrão) ───
   function _buildBgSvgContent() {
     // Prioridade: terreno salvo pelo usuário → polígono padrão (hexagonal)
@@ -7037,6 +7180,8 @@ var InfraConfigMapaUI = (function() {
     var canvas = document.getElementById('cfg-mapa-canvas');
     if (!canvas) return;
 
+    var editId = _modoEdicao ? _modoEdicao.id : null;
+
     // Criar SVG
     var svgEl = document.createElementNS(_NS, 'svg');
     svgEl.setAttribute('id', 'cfg-mapa-svg');
@@ -7050,15 +7195,21 @@ var InfraConfigMapaUI = (function() {
 
     _espacos.forEach(function(esp) {
       if (!esp.mapaConfig) return;
+      // Em modo edição, o espaço editado é renderizado como handles (abaixo); aqui só contexto
+      if (editId && esp.id === editId) return;
       var cfg = esp.mapaConfig;
       var g   = document.createElementNS(_NS, 'g');
       g.setAttribute('class', 'cfg-espaco-g');
       g.setAttribute('data-id', esp.id);
       g.setAttribute('transform',
         'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
-      g.style.cursor = 'pointer';
 
       var ativo = esp.ativo !== false;
+      // Em modo edição, os outros espaços ficam dimidos e sem clique
+      var dimmed = !!editId;
+      g.style.cursor  = dimmed ? 'default' : 'pointer';
+      g.style.opacity = dimmed ? '0.35' : '1';
+
       var sh = _criarForma(cfg);
       sh.setAttribute('fill',         ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
       sh.setAttribute('stroke',       ativo ? '#4f46e5' : '#94a3b8');
@@ -7080,7 +7231,6 @@ var InfraConfigMapaUI = (function() {
       txt.textContent = (esp.nome || '').substring(0, 12);
       g.appendChild(txt);
 
-      // Número da planta (pequeno, canto superior esq)
       if (esp.numeroPlanta) {
         var np = document.createElementNS(_NS, 'text');
         np.setAttribute('x', '0'); np.setAttribute('y', '-12');
@@ -7092,16 +7242,17 @@ var InfraConfigMapaUI = (function() {
         g.appendChild(np);
       }
 
-      // Hover: destaque
-      g.addEventListener('mouseenter', function() {
-        sh.setAttribute('stroke-width', '2.5');
-        sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.38)' : 'rgba(148,163,184,0.38)');
-      });
-      g.addEventListener('mouseleave', function() {
-        sh.setAttribute('stroke-width', '1.5');
-        sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
-      });
-      g.addEventListener('click', function() { _editarPosicao(esp.id); });
+      if (!dimmed) {
+        g.addEventListener('mouseenter', function() {
+          sh.setAttribute('stroke-width', '2.5');
+          sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.38)' : 'rgba(148,163,184,0.38)');
+        });
+        g.addEventListener('mouseleave', function() {
+          sh.setAttribute('stroke-width', '1.5');
+          sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
+        });
+        g.addEventListener('click', function() { _editarPosicao(esp.id); });
+      }
 
       layer.appendChild(g);
     });
@@ -7112,13 +7263,16 @@ var InfraConfigMapaUI = (function() {
     if (staticBase) {
       _espacos.forEach(function(esp) {
         if (esp.mapaConfig) return;
+        if (editId && esp.id === editId) return;
         var staticG = staticBase.querySelector('.mapa-espaco[data-id="' + esp.id + '"]');
         if (!staticG) return;
         staticVisiveis++;
         var g = staticG.cloneNode(true);
         g.setAttribute('class', 'cfg-espaco-g cfg-espaco-static');
         g.setAttribute('data-id', esp.id);
-        g.style.cursor = 'pointer';
+        var dimmed = !!editId;
+        g.style.cursor  = dimmed ? 'default' : 'pointer';
+        g.style.opacity = dimmed ? '0.35' : '1';
         var shapes = g.querySelectorAll('polygon, circle, rect');
         shapes.forEach(function(sh) {
           sh.style.fill         = 'rgba(148,163,184,0.22)';
@@ -7131,37 +7285,44 @@ var InfraConfigMapaUI = (function() {
         g.querySelectorAll('text').forEach(function(t) {
           t.style.fill = '#64748b';
         });
-        g.addEventListener('mouseenter', function() {
-          shapes.forEach(function(sh) {
-            sh.style.fill        = 'rgba(99,102,241,0.22)';
-            sh.style.stroke      = '#6366f1';
-            sh.style.strokeWidth = '2';
+        if (!dimmed) {
+          g.addEventListener('mouseenter', function() {
+            shapes.forEach(function(sh) {
+              sh.style.fill        = 'rgba(99,102,241,0.22)';
+              sh.style.stroke      = '#6366f1';
+              sh.style.strokeWidth = '2';
+            });
           });
-        });
-        g.addEventListener('mouseleave', function() {
-          shapes.forEach(function(sh) {
-            sh.style.fill        = 'rgba(148,163,184,0.22)';
-            sh.style.stroke      = '#94a3b8';
-            sh.style.strokeWidth = '1.5';
+          g.addEventListener('mouseleave', function() {
+            shapes.forEach(function(sh) {
+              sh.style.fill        = 'rgba(148,163,184,0.22)';
+              sh.style.stroke      = '#94a3b8';
+              sh.style.strokeWidth = '1.5';
+            });
           });
-        });
-        g.addEventListener('click', function() { _editarPosicao(esp.id); });
+          g.addEventListener('click', function() { _editarPosicao(esp.id); });
+        }
         layer.appendChild(g);
       });
     }
 
     svgEl.appendChild(layer);
 
+    // Handles de edição inline (sobre os outros espaços)
+    if (_modoEdicao) _renderHandlesEdicao(svgEl);
+
     // Legenda de contagem
-    var comMapa     = _espacos.filter(function(e) { return !!e.mapaConfig; }).length;
-    var semPosicao  = _espacos.filter(function(e) { return !e.mapaConfig; }).length - staticVisiveis;
-    var legTxt      = document.createElementNS(_NS, 'text');
+    var comMapa    = _espacos.filter(function(e) { return !!e.mapaConfig; }).length;
+    var semPosicao = _espacos.filter(function(e) { return !e.mapaConfig; }).length - staticVisiveis;
+    var legTxt     = document.createElementNS(_NS, 'text');
     legTxt.setAttribute('x', '96'); legTxt.setAttribute('y', '46');
     legTxt.setAttribute('font-size', '10');
     legTxt.setAttribute('fill', '#64748b');
-    legTxt.textContent = comMapa + ' posicionado(s)' +
-      (staticVisiveis > 0 ? ' · ' + staticVisiveis + ' do mapa base' : '') +
-      (semPosicao     > 0 ? ' · ' + semPosicao     + ' sem posição'   : '');
+    legTxt.textContent = editId
+      ? ('Editando: ' + escaparHtml(_modoEdicao.nome))
+      : (comMapa + ' posicionado(s)' +
+         (staticVisiveis > 0 ? ' · ' + staticVisiveis + ' do mapa base' : '') +
+         (semPosicao     > 0 ? ' · ' + semPosicao     + ' sem posição'  : ''));
     svgEl.appendChild(legTxt);
 
     canvas.innerHTML = '';
@@ -7170,8 +7331,98 @@ var InfraConfigMapaUI = (function() {
     _initIO();
   }
 
+  // ── Renderizar handles do espaço sendo editado ───────────
+  function _renderHandlesEdicao(svgEl) {
+    if (!_modoEdicao) return;
+    var cfg = _modoEdicao.cfg;
+    if (!cfg) return; // espaço novo sem forma definida ainda
+
+    var bbox = _bboxHW(cfg);
+    var hw = bbox.hw, hh = bbox.hh;
+
+    var g = document.createElementNS(_NS, 'g');
+    g.id = 'cfg-ed-shape-g';
+    g.setAttribute('transform',
+      'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+    g.style.cursor = 'move';
+
+    // Forma destacada
+    var sh = _criarForma(cfg);
+    sh.setAttribute('fill',   'rgba(99,102,241,0.38)');
+    sh.setAttribute('stroke', '#4f46e5');
+    sh.setAttribute('stroke-width', '2.5');
+    sh.setAttribute('filter', 'url(#cfg-mapa-shadow)');
+    g.appendChild(sh);
+
+    // Label
+    var lbl = document.createElementNS(_NS, 'text');
+    lbl.setAttribute('x', '0'); lbl.setAttribute('y', '4');
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('dominant-baseline', 'middle');
+    lbl.setAttribute('font-size', Math.max(9, Math.min(14, hw * 0.25)).toFixed(0));
+    lbl.setAttribute('font-weight', '700');
+    lbl.setAttribute('fill', '#312e81');
+    lbl.setAttribute('pointer-events', 'none');
+    lbl.textContent = _modoEdicao.nome.substring(0, 12);
+    g.appendChild(lbl);
+
+    // Handles de resize (8 pontos cardeais)
+    var HANDLES = [
+      { id:'nw', x:-hw, y:-hh }, { id:'n',  x:0,   y:-hh }, { id:'ne', x:hw,  y:-hh },
+      { id:'w',  x:-hw, y:0   },                              { id:'e',  x:hw,  y:0   },
+      { id:'sw', x:-hw, y:hh  }, { id:'s',  x:0,   y:hh  }, { id:'se', x:hw,  y:hh  }
+    ];
+    HANDLES.forEach(function(h) {
+      var c = document.createElementNS(_NS, 'circle');
+      c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
+      c.setAttribute('r', '6');
+      c.setAttribute('fill', '#fff');
+      c.setAttribute('stroke', '#4f46e5');
+      c.setAttribute('stroke-width', '2');
+      c.style.cursor = (h.id === 'n' || h.id === 's') ? 'ns-resize'
+                     : (h.id === 'e' || h.id === 'w') ? 'ew-resize' : 'nwse-resize';
+      c.setAttribute('data-ed-handle', h.id);
+      g.appendChild(c);
+    });
+
+    // Handle de rotação (acima do centro)
+    var rotOffset = hh + 24;
+    var rotLine = document.createElementNS(_NS, 'line');
+    rotLine.setAttribute('x1', '0'); rotLine.setAttribute('y1', -(hh + 2));
+    rotLine.setAttribute('x2', '0'); rotLine.setAttribute('y2', -(hh + 18));
+    rotLine.setAttribute('stroke', '#4f46e5');
+    rotLine.setAttribute('stroke-width', '1.5');
+    rotLine.setAttribute('stroke-dasharray', '3,2');
+    rotLine.setAttribute('pointer-events', 'none');
+    g.appendChild(rotLine);
+
+    var rotC = document.createElementNS(_NS, 'circle');
+    rotC.setAttribute('cx', '0'); rotC.setAttribute('cy', -rotOffset);
+    rotC.setAttribute('r', '7');
+    rotC.setAttribute('fill', '#4f46e5');
+    rotC.setAttribute('stroke', '#fff');
+    rotC.setAttribute('stroke-width', '2');
+    rotC.style.cursor = 'crosshair';
+    rotC.setAttribute('data-ed-handle', 'rot');
+    g.appendChild(rotC);
+
+    svgEl.appendChild(g);
+  }
+
+  // Atualizar apenas o grupo de handles (sem re-render completo)
+  function _atualizarHandles() {
+    var svg = document.getElementById('cfg-mapa-svg');
+    if (!svg || !_modoEdicao) return;
+    var old = document.getElementById('cfg-ed-shape-g');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    _renderHandlesEdicao(svg);
+    _atualizarInputsInline();
+  }
+
   // ── Render sidebar ───────────────────────────────────────
   function _renderSidebar() {
+    if (_modoEdicao) { _renderSidebarEdicao(); return; }
+
     var sidebar = document.getElementById('cfg-mapa-sidebar');
     if (!sidebar) return;
 
@@ -7221,41 +7472,210 @@ var InfraConfigMapaUI = (function() {
     sidebar.innerHTML = html;
   }
 
-  // ── Editar posição ───────────────────────────────────────
+  // ── Painel de edição inline na sidebar ───────────────────
+  function _inputInline(id, label) {
+    return '<div style="margin-bottom:5px;">' +
+      '<label style="font-size:10px;color:var(--text2);display:block;margin-bottom:2px;">' + label + '</label>' +
+      '<input id="' + id + '" type="number" step="1" ' +
+        'style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;box-sizing:border-box;background:var(--surface2);color:var(--text);" ' +
+        'onchange="InfraConfigMapaUI._onInputInlineChange()">' +
+      '</div>';
+  }
+
+  function _renderSidebarEdicao() {
+    var sidebar = document.getElementById('cfg-mapa-sidebar');
+    if (!sidebar || !_modoEdicao) return;
+    var cfg  = _modoEdicao.cfg;
+    var nome = _modoEdicao.nome;
+
+    var html =
+      // Cabeçalho com nome + botões
+      '<div style="background:var(--color-primary);color:#fff;padding:10px 12px;">' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:3px;">Editando espaço</div>' +
+        '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(nome) + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:5px;padding:8px 8px 6px;border-bottom:1px solid var(--border);">' +
+        '<button onclick="InfraConfigMapaUI._cancelarEdicao()" data-bg-skip="1" ' +
+          'style="flex:1;padding:5px 6px;background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;color:var(--text2);">' +
+          '<span class="ms ms-sm" style="font-size:14px;">arrow_back</span>Voltar</button>' +
+        '<button onclick="InfraConfigMapaUI._concluirEdicao()" data-bg-skip="1" ' +
+          'style="flex:1;padding:5px 6px;background:var(--color-primary);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:3px;">' +
+          '<span class="ms ms-sm" style="font-size:14px;">check</span>Salvar</button>' +
+      '</div>' +
+      // Paleta de figuras
+      '<div style="padding:8px 8px 4px;">' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:6px;">Figura</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
+          _FORMAS_INLINE.map(function(f) {
+            var sel = cfg && cfg.forma === f.id;
+            return '<button id="cfged-pal-' + f.id + '" ' +
+              'onclick="InfraConfigMapaUI._selecionarFormaInline(\'' + f.id + '\')" data-bg-skip="1" ' +
+              'style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;' +
+              'background:' + (sel ? '#eef2ff' : 'var(--surface2)') + ';' +
+              'border:1.5px solid ' + (sel ? 'var(--color-primary)' : 'var(--border)') + ';' +
+              'color:' + (sel ? 'var(--color-primary)' : 'var(--text2)') + ';' +
+              'border-radius:6px;cursor:pointer;font-size:10px;">' +
+              '<svg width="28" height="22" viewBox="-20 -15 40 30">' + _svgIconeInline(f) + '</svg>' +
+              escaparHtml(f.label) + '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+
+    if (cfg) {
+      html +=
+        '<div style="padding:6px 8px 4px;border-top:1px solid var(--border);margin-top:4px;">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:6px;">Propriedades</div>' +
+          _inputInline('cfged-cx',  'Posição X') +
+          _inputInline('cfged-cy',  'Posição Y') +
+          _inputInline('cfged-w',   'Largura') +
+          _inputInline('cfged-h',   'Altura') +
+          _inputInline('cfged-rot', 'Rotação °') +
+        '</div>' +
+        '<div style="padding:4px 8px 8px;">' +
+          '<button onclick="InfraConfigMapaUI._removerDoMapaInline()" data-bg-skip="1" ' +
+            'style="width:100%;padding:5px 6px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;">' +
+            '<span class="ms ms-sm" style="font-size:14px;">delete</span>Remover do mapa</button>' +
+        '</div>';
+    } else {
+      html += '<p style="padding:6px 10px;font-size:10px;color:var(--muted);">Selecione uma figura acima para posicionar o espaço no mapa.</p>';
+    }
+
+    html += '<p style="padding:4px 8px 8px;font-size:9.5px;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);">Arraste no mapa para mover · Alças brancas: redimensionar · Alça roxa: girar</p>';
+
+    sidebar.innerHTML = html;
+    if (cfg) _atualizarInputsInline();
+  }
+
+  // ── Inputs de propriedades (edição inline) ───────────────
+  function _atualizarInputsInline() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg  = _modoEdicao.cfg;
+    var bbox = _bboxHW(cfg);
+    function setV(id, v) {
+      var el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = Math.round(v);
+    }
+    setV('cfged-cx',  cfg.cx  || 450);
+    setV('cfged-cy',  cfg.cy  || 330);
+    setV('cfged-w',   bbox.hw * 2);
+    setV('cfged-h',   bbox.hh * 2);
+    setV('cfged-rot', cfg.rotacao || 0);
+  }
+
+  function _onInputInlineChange() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg = _modoEdicao.cfg;
+    function getV(id) { return parseFloat((document.getElementById(id) || {}).value) || 0; }
+    var cx  = getV('cfged-cx') || cfg.cx;
+    var cy  = getV('cfged-cy') || cfg.cy;
+    var w   = Math.max(20, getV('cfged-w')   || 80);
+    var h   = Math.max(20, getV('cfged-h')   || 60);
+    var rot = getV('cfged-rot');
+    cfg.cx = cx; cfg.cy = cy;
+    if (cfg.forma === 'circle') { cfg.r = Math.min(w, h) / 2; cfg.w = w; cfg.h = h; }
+    else { cfg.w = w; cfg.h = h; }
+    cfg.rotacao = ((rot % 360) + 360) % 360;
+    _atualizarHandles();
+  }
+
+  // ── Ações de edição inline ───────────────────────────────
+  function _selecionarFormaInline(formaId) {
+    if (!_modoEdicao) return;
+    var f = _FORMAS_INLINE.filter(function(x) { return x.id === formaId; })[0];
+    if (!f) return;
+    if (!_modoEdicao.cfg) {
+      _modoEdicao.cfg = { forma: formaId, cx: 450, cy: 330, w: f.w, h: f.h, r: f.r, rotacao: 0 };
+    } else {
+      _modoEdicao.cfg.forma = formaId;
+      if (formaId === 'circle') {
+        _modoEdicao.cfg.r = Math.min(_modoEdicao.cfg.w || f.w, _modoEdicao.cfg.h || f.h) / 2;
+      }
+    }
+    _renderSidebarEdicao();
+    _atualizarHandles();
+  }
+
+  function _removerDoMapaInline() {
+    if (!_modoEdicao) return;
+    _modoEdicao.cfg = null;
+    _renderSidebarEdicao();
+    var old = document.getElementById('cfg-ed-shape-g');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+  }
+
+  function _cancelarEdicao() {
+    _modoEdicao = null;
+    _renderMapa();
+    _renderSidebar();
+  }
+
+  function _concluirEdicao() {
+    if (!_modoEdicao) return;
+    var id       = _modoEdicao.id;
+    var cfg      = _modoEdicao.cfg ? JSON.parse(JSON.stringify(_modoEdicao.cfg)) : null;
+    var espNome  = _modoEdicao.nome;
+    // Sair do modo antes do save (UI responde imediatamente)
+    _modoEdicao = null;
+    var idx = _espacos.findIndex(function(e) { return e.id === id; });
+    if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg });
+    _renderMapa();
+    _renderSidebar();
+    GAS.admin.salvarMapaEspaco(
+      { id: id, mapaConfig: cfg },
+      function(r) {
+        if (r && r.ok) {
+          Toast.sucesso('Posição de "' + escaparHtml(espNome) + '" salva.');
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar posição.');
+          // Reverter cache local
+          if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: null });
+          _renderMapa(); _renderSidebar();
+        }
+      },
+      function(err) {
+        Toast.erro('Erro: ' + ((err && err.message) || String(err)));
+      }
+    );
+  }
+
+  // ── Resize inline ────────────────────────────────────────
+  function _resizeInline(lp) {
+    if (!_modoEdicao || !_modoEdicao.drag || !_modoEdicao.cfg) return;
+    var drag = _modoEdicao.drag;
+    var cfg  = _modoEdicao.cfg;
+    var h    = drag.handle;
+    var minSz = 20;
+
+    if (cfg.forma === 'circle') {
+      var dist = Math.sqrt(lp.x * lp.x + lp.y * lp.y);
+      var newR = Math.max(minSz / 2, dist);
+      cfg.r = newR; cfg.w = newR * 2; cfg.h = newR * 2;
+      var g2 = document.getElementById('cfg-ed-shape-g');
+      if (g2) { var c2 = g2.querySelector('circle'); if (c2 && c2.getAttribute('r')) c2.setAttribute('r', newR); }
+      _atualizarInputsInline(); return;
+    }
+
+    var newHW = Math.max(minSz / 2, Math.abs(lp.x));
+    var newHH = Math.max(minSz / 2, Math.abs(lp.y));
+    if (h === 'n' || h === 's') newHW = drag.origW / 2;
+    if (h === 'e' || h === 'w') newHH = drag.origH / 2;
+    cfg.w = newHW * 2; cfg.h = newHH * 2;
+    _atualizarInputsInline();
+  }
+
+  // ── Editar posição (entra no modo inline) ────────────────
   function _editarPosicao(id) {
     var espaco = _espacos.filter(function(e) { return e.id === id; })[0];
     if (!espaco) return;
-
-    MapaEditorUI.abrir(
-      id,
-      espaco.nome || 'Espaço',
-      espaco.mapaConfig || null,
-      _espacos,
-      function(cfg, saved) {
-        // saved=true → usuário clicou "Concluir"; saved=false → clicou "Voltar"
-        if (!saved) return;
-
-        var btn = { style: {} }; // BtnGuard não é necessário aqui (overlay já fechou)
-        GAS.admin.salvarMapaEspaco(
-          { id: id, mapaConfig: cfg },
-          function(r) {
-            if (r && r.ok) {
-              Toast.sucesso('Posição de "' + escaparHtml(espaco.nome || id) + '" salva no mapa.');
-              // Atualizar cache local imediatamente
-              var idx = _espacos.findIndex(function(e) { return e.id === id; });
-              if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg || null });
-              _renderMapa();
-              _renderSidebar();
-            } else {
-              Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar posição.');
-            }
-          },
-          function(err) {
-            Toast.erro('Erro: ' + ((err && err.message) || String(err)));
-          }
-        );
-      }
-    );
+    _modoEdicao = {
+      id:      id,
+      cfg:     espaco.mapaConfig ? JSON.parse(JSON.stringify(espaco.mapaConfig)) : null,
+      cfgOrig: espaco.mapaConfig ? JSON.parse(JSON.stringify(espaco.mapaConfig)) : null,
+      nome:    espaco.nome || id,
+      drag:    null
+    };
+    _renderSidebar();
+    _renderMapa();
   }
 
   // ── Carregar dados (terreno + espaços em paralelo) ───────
@@ -7357,24 +7777,90 @@ var InfraConfigMapaUI = (function() {
     var _dragPan = null;
 
     canvas.addEventListener('mousedown', function(e) {
-      // Clique em espaço → editar (tratado pelo listener do g.cfg-espaco-g)
+      // ── Modo edição inline ──
+      if (_modoEdicao && _modoEdicao.cfg) {
+        var handle = e.target && e.target.getAttribute && e.target.getAttribute('data-ed-handle');
+        if (handle) {
+          e.stopPropagation(); e.preventDefault();
+          var svgP = _svgPt(e);
+          if (handle === 'rot') {
+            var startAngle = Math.atan2(svgP.y - _modoEdicao.cfg.cy, svgP.x - _modoEdicao.cfg.cx) * 180 / Math.PI;
+            _modoEdicao.drag = { type: 'rotate', startAngle: startAngle, origRot: _modoEdicao.cfg.rotacao || 0 };
+          } else {
+            var lp = _localEdPt(e);
+            _modoEdicao.drag = { type: 'resize', handle: handle, localPt: lp,
+              origW: _modoEdicao.cfg.w, origH: _modoEdicao.cfg.h, origR: _modoEdicao.cfg.r };
+          }
+          return;
+        }
+        // Clique no corpo da forma editada → move
+        var shapeG = document.getElementById('cfg-ed-shape-g');
+        if (shapeG && (e.target === shapeG || shapeG.contains(e.target))) {
+          e.stopPropagation(); e.preventDefault();
+          var svgP2 = _svgPt(e);
+          _modoEdicao.drag = { type: 'body',
+            startX: svgP2.x, startY: svgP2.y,
+            origCX: _modoEdicao.cfg.cx, origCY: _modoEdicao.cfg.cy };
+          canvas.style.cursor = 'grabbing';
+          return;
+        }
+      }
+      // Clique em espaço normal → editar (handler adicionado no g.cfg-espaco-g)
       if (e.target.closest && e.target.closest('.cfg-espaco-g')) return;
+      // Pan
       _dragPan = { sx: e.clientX - _panX * _zoom, sy: e.clientY - _panY * _zoom };
       canvas.style.cursor = 'grabbing';
     });
+
     document.addEventListener('mousemove', function(e) {
+      // ── Modo edição: arrastar shape ──
+      if (_modoEdicao && _modoEdicao.drag) {
+        e.preventDefault();
+        var drag = _modoEdicao.drag;
+        var cfg  = _modoEdicao.cfg;
+        if (drag.type === 'body') {
+          var svgP = _svgPt(e);
+          cfg.cx = drag.origCX + (svgP.x - drag.startX);
+          cfg.cy = drag.origCY + (svgP.y - drag.startY);
+          // Mover o grupo diretamente (evita re-render completo)
+          var g = document.getElementById('cfg-ed-shape-g');
+          if (g) g.setAttribute('transform',
+            'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+          _atualizarInputsInline();
+        } else if (drag.type === 'resize') {
+          _resizeInline(_localEdPt(e));
+        } else if (drag.type === 'rotate') {
+          var svgP2 = _svgPt(e);
+          var curAngle = Math.atan2(svgP2.y - cfg.cy, svgP2.x - cfg.cx) * 180 / Math.PI;
+          cfg.rotacao = (((drag.origRot + curAngle - drag.startAngle) % 360) + 360) % 360;
+          _atualizarHandles();
+        }
+        return;
+      }
+      // ── Pan normal ──
       if (!_dragPan) return;
       _panX = (e.clientX - _dragPan.sx) / _zoom;
       _panY = (e.clientY - _dragPan.sy) / _zoom;
       _tr();
     });
+
     document.addEventListener('mouseup', function() {
+      if (_modoEdicao && _modoEdicao.drag) {
+        var tipo = _modoEdicao.drag.type;
+        // Resize e rotate precisam re-renderizar os handles com novas dimensões
+        if (tipo === 'resize' || tipo === 'rotate') _atualizarHandles();
+        _modoEdicao.drag = null;
+        var cv = document.getElementById('cfg-mapa-canvas');
+        if (cv) cv.style.cursor = 'default';
+        return;
+      }
       if (_dragPan) {
         _dragPan = null;
         var c2 = document.getElementById('cfg-mapa-canvas');
         if (c2) c2.style.cursor = 'grab';
       }
     });
+
     canvas.addEventListener('wheel', function(e) {
       e.preventDefault();
       zoom(e.deltaY < 0 ? 1 : -1);
@@ -7383,12 +7869,17 @@ var InfraConfigMapaUI = (function() {
 
   // ── API pública ──────────────────────────────────────────
   return {
-    aoAbrir:         aoAbrir,
-    recarregar:      recarregar,
-    zoom:            zoom,
-    resetZoom:       resetZoom,
-    _editarPosicao:  _editarPosicao,
-    _editarTerreno:  _editarTerreno
+    aoAbrir:               aoAbrir,
+    recarregar:            recarregar,
+    zoom:                  zoom,
+    resetZoom:             resetZoom,
+    _editarPosicao:        _editarPosicao,
+    _editarTerreno:        _editarTerreno,
+    _cancelarEdicao:       _cancelarEdicao,
+    _concluirEdicao:       _concluirEdicao,
+    _selecionarFormaInline:_selecionarFormaInline,
+    _removerDoMapaInline:  _removerDoMapaInline,
+    _onInputInlineChange:  _onInputInlineChange
   };
 })();
 
@@ -10638,8 +11129,17 @@ var App = (function() {
   }
 
   function _construirMenu() {
+    _reconstruirMenu(true);
+  }
+
+  /**
+   * Reconstrói o menu lateral sem reinicializar o roteador.
+   * Chamado também após toggleModulo para refletir mudanças imediatamente.
+   */
+  function _reconstruirMenu(primeiraVez) {
     var ul = document.getElementById('nav-lista');
     var ativos = (_boot.modulosAtivos||[]).map(function(m){return String(m).toUpperCase();});
+    var ehSuperadmin = (_boot.usuarioPapel || '') === 'superadmin';
     ul.innerHTML = '';
 
     _MODULOS_MENU.forEach(function(item) {
@@ -10649,19 +11149,28 @@ var App = (function() {
         li.innerHTML = '<div class="nav-secao">'+escaparHtml(item.secao)+'</div>';
         ul.appendChild(li); return;
       }
-      // Item normal
-      if(item.modulo && ativos.indexOf(item.modulo) === -1) return;
-      if(item.superadmin && (_boot.usuarioPapel || '') !== 'superadmin') return;
+      // Itens exclusivos de superadmin (ex: Observabilidade)
+      if(item.superadmin && !ehSuperadmin) return;
+
+      // Módulo desativado: ocultar para usuários normais; exibir para superadmin com indicador
+      var moduloInativo = item.modulo && ativos.indexOf(item.modulo) === -1;
+      if(moduloInativo && !ehSuperadmin) return;
+
       var li = document.createElement('li');
       var badgeHtml = item.badge ? '<span id="'+item.badge+'" class="nav-badge oculto">0</span>' : '';
+      // Superadmin vê módulos inativos com estilo atenuado + tag "inativo"
+      var inativoTag = (moduloInativo && ehSuperadmin)
+        ? '<span style="font-size:9px;font-weight:600;background:rgba(255,255,255,.18);color:inherit;border-radius:3px;padding:1px 4px;margin-left:4px;opacity:.8;">inativo</span>'
+        : '';
       li.innerHTML =
-        '<a href="#" data-view="'+item.id+'">' +
+        '<a href="#" data-view="'+item.id+'"' + (moduloInativo ? ' style="opacity:.5;"' : '') + '>' +
           '<span class="ms icone">'+item.icone+'</span>' +
-          '<span class="label">'+escaparHtml(item.label)+'</span>' +
+          '<span class="label">'+escaparHtml(item.label)+inativoTag+'</span>' +
           badgeHtml +
         '</a>';
       li.querySelector('a').addEventListener('click', function(e) {
         e.preventDefault();
+        if(moduloInativo) { Toast.aviso('Módulo "' + item.label + '" está desativado.'); return; }
         Router.navegar(item.id);
         if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
           document.getElementById('sidebar').classList.remove('aberto');
@@ -10669,11 +11178,11 @@ var App = (function() {
       });
       ul.appendChild(li);
 
-      // Registrar view
-      if(item.id !== 'home') {
+      // Registrar view (apenas na primeira construção do menu)
+      if(primeiraVez && item.id !== 'home') {
         (function(id, label) {
           Router.registrar(id, label,
-            id === 'admin'        ? function(){ IdentidadeAdmin.carregar(); AdminCadastrosUI.aoAbrir(); ExpedienteUI.carregar(); }
+            id === 'admin'        ? function(){ AdminCadastrosUI.aoAbrir(); ExpedienteUI.carregar(); AdminConfigTabsUI.abrirTab('expediente'); }
             : id === 'aprovacoes' ? function(){ AprovacaoReservaUI.aoAbrir(); }
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }
@@ -10688,8 +11197,10 @@ var App = (function() {
       }
     });
 
-    Router.registrar('home', 'Início', null);
-    Router.navegar('home');
+    if(primeiraVez) {
+      Router.registrar('home', 'Início', null);
+      Router.navegar('home');
+    }
   }
 
   function _renderizarHome() {
@@ -10760,7 +11271,12 @@ var App = (function() {
     });
   });
 
-  return { iniciar, getBoot: function(){return _boot;}, Toast, BtnGuard, Router };
+  return {
+    iniciar,
+    getBoot: function(){ return _boot; },
+    reconstruirMenu: function(){ _reconstruirMenu(false); },
+    Toast, BtnGuard, Router
+  };
 })();
 
 /* ══════════════════════════════════════════════════════════════

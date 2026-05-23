@@ -48,10 +48,21 @@ var SistemaConfigService = (function () {
 
   /**
    * Retorna todos os setores ativos da organização.
-   * Nunca retorna constante hardcoded — sempre lê de config_org.json.
+   * Prioridade: setores_config.json (persistência primária) → config_org.json.setores → defaults.
    * @returns {Array<{ id, label, descricao, cor, ativo, modulosPrioritarios, dashboardWidgets, permissaoBase }>}
    */
   function getSetores() {
+    // Fonte primária: setores_config.json (escrita por ConfigAdminService.salvarSetor)
+    try {
+      var orgId = getOrgConfig().orgId;
+      var lista = readJSON('setores_config.json');
+      if (Array.isArray(lista) && lista.length > 0) {
+        return lista.filter(function(s) { return s.ativo !== false && s.orgId === orgId; });
+      }
+    } catch(e) {
+      Logger.warn('config_service', 'getSetores', 'setores_config.json indisponível: ' + e.message);
+    }
+    // Fallback: config_org.json legado ou defaults
     var cfg = _getConfigOrg();
     return (cfg.setores || _defaultSetores()).filter(function(s) { return s.ativo !== false; });
   }
@@ -190,6 +201,17 @@ var SistemaConfigService = (function () {
    * @returns {Array<{ id, label, ini, fim }>}
    */
   function getTurnos() {
+    // Fonte primária: turnos_config.json (escrita por ConfigAdminService.salvarTurno)
+    try {
+      var orgId = getOrgConfig().orgId;
+      var lista = readJSON('turnos_config.json');
+      if (Array.isArray(lista) && lista.length > 0) {
+        return lista.filter(function(t) { return t.ativo !== false && t.orgId === orgId; });
+      }
+    } catch(e) {
+      Logger.warn('config_service', 'getTurnos', 'turnos_config.json indisponível: ' + e.message);
+    }
+    // Fallback: config_org.json legado ou defaults
     var cfg = _getConfigOrg();
     return cfg.turnos || _defaultTurnos();
   }
