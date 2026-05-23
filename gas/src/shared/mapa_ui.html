@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 var MapaUI=(function(){
   var _carregado=false,_statusMap={},_selecionado=null;
+  var _reservasDoDia={};  // { [espacoId]: Reserva[] }
   var _zoom=1,_panX=0,_panY=0,_drag={ativo:false,sx:0,sy:0};
   var _filtros={tipo:'todos',status:'todos'};
   var _SL={disponivel:'Disponível',ocupado:'Ocupado',em_uso:'Em uso',
@@ -149,8 +150,8 @@ var MapaUI=(function(){
           _row('N&#xBA; planta',info.numeroPlanta?'#'+info.numeroPlanta:'—')+
           _row('Reservas hoje',String(info.totalReservasHoje||0))+
         '</div>'+
-        '<div class="mapa-pl-agenda"><h4>Agenda</h4>'+
-          _ag(info.reservaAtiva,info.proximaReserva,info.totalReservasHoje)+
+        '<div class="mapa-pl-agenda"><h4>Agenda do Dia</h4>'+
+          '<div id="mapa-ag-body">'+_ag(info.totalReservasHoje)+'</div>'+
         '</div>'+
       '</div>'+
       // Timeline hora a hora
@@ -204,23 +205,13 @@ var MapaUI=(function(){
     return m[c]||(c||'—');
   }
 
-  function _ag(ativa,proxima,total){
+  function _ag(total){
     if(!total)return '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sem reservas hoje</div>';
-    var html='';
-    if(ativa)html+=
-      '<div class="mapa-reserva-item"><strong>'+
-      escaparHtml(ativa.horaInicio)+' – '+escaparHtml(ativa.horaTermino)+
-      '</strong> · '+escaparHtml(ativa.nomeAcao||'Reserva ativa')+'</div>';
-    if(proxima)html+=
-      '<div class="mapa-reserva-item" style="border-left-color:var(--color-warning)"><strong>'+
-      escaparHtml(proxima.horaInicio)+' – '+escaparHtml(proxima.horaTermino)+
-      '</strong> · '+escaparHtml(proxima.nomeAcao||'Próxima')+'</div>';
-    var extras=total-(ativa?1:0)-(proxima?1:0);
-    if(extras>0)html+=
-      '<div style="color:var(--text2);font-size:11px;margin-top:4px;padding:4px 0">+'+
-      extras+' reserva(s) no dia</div>';
-    return html;
+    return '<div style="color:var(--muted);font-size:12px;padding:4px 0;">'
+      +'<span class="ms ms-sm" style="vertical-align:middle;">hourglass_top</span>'
+      +' Carregando '+total+' reserva(s)…</div>';
   }
+
 
   // ─── Timeline hora a hora ───────────────────────────────────
   var HORA_INI=7, HORA_FIM=22;  // 7h às 22h
@@ -235,7 +226,10 @@ var MapaUI=(function(){
           el.innerHTML='<span style="color:var(--muted);font-size:11px">Não foi possível carregar a agenda.</span>';
           return;
         }
-        el.innerHTML=_renderTimeline(r.data.reservas||[], data);
+        var reservas=r.data.reservas||[];
+        _reservasDoDia[espacoId]=reservas;
+        el.innerHTML=_renderTimeline(reservas, data);
+        _renderAgendaReservas(espacoId, reservas);
       },
       function(){
         var el=document.getElementById('mapa-tl-wrap-'+espacoId);
@@ -478,6 +472,163 @@ var MapaUI=(function(){
           done();
           Toast.erro('Erro: '+((err&&err.message)||err));
         });
+      });
+    });
+  }
+
+  // ─── Agenda de reservas (lista clicável) ───────────────────────────
+  function _renderAgendaReservas(espacoId, reservas) {
+    var el = document.getElementById('mapa-ag-body');
+    if (!el) return;
+    if (!reservas || !reservas.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sem reservas hoje</div>';
+      return;
+    }
+    var sorted = reservas.slice().sort(function(a,b){
+      return (a.horaInicio||'').localeCompare(b.horaInicio||'');
+    });
+    el.innerHTML = sorted.map(function(r) {
+      var cor = r.status==='confirmado' ? '#059669'
+              : r.status==='em_uso'     ? '#4c1d95'
+              : r.status==='pendente'   ? '#f59e0b' : '#94a3b8';
+      var habBadge = r.status==='confirmado'
+        ? '<span style="font-size:9px;padding:1px 6px;border-radius:99px;background:#059669;color:#fff;font-weight:700;">\u2713HAB</span>'
+        : r.status==='pendente'
+        ? '<span style="font-size:9px;padding:1px 6px;border-radius:99px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-weight:700;">HAB?</span>'
+        : r.status==='em_uso'
+        ? '<span style="font-size:9px;padding:1px 6px;border-radius:99px;background:#4c1d95;color:#fff;font-weight:700;">EM USO</span>'
+        : '';
+      return '<div class="mapa-res-item" style="border-left:3px solid '+cor+';cursor:pointer;" data-rid="'+escaparHtml(r.id)+'">'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+        +'<strong style="font-size:12px;">'+escaparHtml((r.horaInicio||'')+'\u2013'+(r.horaTermino||''))+'</strong>'
+        +habBadge+'</div>'
+        +'<div style="font-size:11px;color:var(--text);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+        +escaparHtml(r.nomeAcao||'Reserva')+'</div>'
+        +(r.responsavel?'<div style="font-size:10px;color:var(--muted);">'+escaparHtml(r.responsavel)+'</div>':'')
+        +'</div>';
+    }).join('');
+    el.querySelectorAll('.mapa-res-item').forEach(function(item){
+      var rid = item.getAttribute('data-rid');
+      var r2 = sorted.filter(function(x){ return x.id===rid; })[0];
+      if (r2) item.addEventListener('click', function(){ _abrirCardReserva(r2); });
+    });
+  }
+
+  // ─── Card completo de reserva ────────────────────────────────
+  function _abrirCardReserva(r) {
+    var salaNome = (_statusMap[r.sala] && (_statusMap[r.sala].nome || r.sala)) || r.sala || '\u2014';
+    var habBadge = r.status==='confirmado'
+      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#059669;color:#fff;font-weight:700;">\u2713 HAB</span>'
+      : r.status==='pendente'
+      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-weight:700;">HAB?</span>'
+      : r.status==='em_uso'
+      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#4c1d95;color:#fff;font-weight:700;">EM USO</span>'
+      : '';
+    function _linha(label,val){
+      if(!val)return '';
+      return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12.5px;">'
+        +'<span style="color:var(--muted);min-width:90px;">'+label+'</span>'
+        +'<span style="flex:1;">'+escaparHtml(val)+'</span></div>';
+    }
+    var btnsHtml='';
+    if(r.status==='pendente'){
+      btnsHtml+='<button id="mcard-confirmar" class="btn btn-primary btn-sm">Confirmar</button>'
+        +'<button id="mcard-cancelar" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar reserva</button>';
+    } else if(r.status==='confirmado'){
+      btnsHtml+='<button id="mcard-iniciar" class="btn btn-primary btn-sm">Iniciar uso</button>'
+        +'<button id="mcard-cancelar" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar reserva</button>';
+    } else if(r.status==='em_uso'){
+      btnsHtml+='<button id="mcard-concluir" class="btn btn-primary btn-sm">Concluir</button>';
+    }
+    btnsHtml+='<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="btn btn-secondary btn-sm">Fechar</button>';
+
+    _abrirModal(
+      '<div class="mapa-modal-header">'
+        +'<span class="ms ms-sm" style="color:var(--color-primary)">event</span>'
+        +'<div style="flex:1;min-width:0;"><strong>'+escaparHtml(r.nomeAcao||'Reserva')+'</strong></div>'
+        +habBadge
+        +'<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="mapa-modal-close">&#x2715;</button>'
+      +'</div>'
+      +'<div class="mapa-modal-body">'
+        +_linha('Espa\u00e7o', salaNome)
+        +_linha('Data', r.data)
+        +_linha('Hor\u00e1rio', (r.horaInicio||'')+' \u2013 '+(r.horaTermino||''))
+        +_linha('Respons\u00e1vel', r.responsavel)
+        +_linha('Setor', r.setor)
+        +_linha('Tipo', r.tipoAcao)
+        +_linha('Observa\u00e7\u00f5es', r.observacoes)
+      +'</div>'
+      +'<div class="mapa-modal-footer">'+btnsHtml+'</div>'
+    );
+
+    var bConf=document.getElementById('mcard-confirmar');
+    if(bConf)bConf.addEventListener('click',function(){
+      BtnGuard.wrap(bConf,'Confirmando…',function(done){
+        GAS.reservas.confirmar(r.id,function(resp){
+          done();fecharModal();
+          if(!resp||!resp.ok){Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.');return;}
+          Toast.sucesso('Reserva confirmada.');carregar();
+        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+      });
+    });
+    var bIni=document.getElementById('mcard-iniciar');
+    if(bIni)bIni.addEventListener('click',function(){
+      BtnGuard.wrap(bIni,'Iniciando…',function(done){
+        GAS.reservas.iniciar(r.id,function(resp){
+          done();fecharModal();
+          if(!resp||!resp.ok){Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.');return;}
+          Toast.sucesso('Uso iniciado.');carregar();
+        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+      });
+    });
+    var bConc=document.getElementById('mcard-concluir');
+    if(bConc)bConc.addEventListener('click',function(){
+      BtnGuard.wrap(bConc,'Concluindo…',function(done){
+        GAS.reservas.concluir(r.id,function(resp){
+          done();fecharModal();
+          if(!resp||!resp.ok){Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.');return;}
+          Toast.sucesso('Uso conclufdo.');carregar();
+        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+      });
+    });
+    var bCanc=document.getElementById('mcard-cancelar');
+    if(bCanc)bCanc.addEventListener('click',function(){
+      fecharModal();_abrirModalCancelamento(r.id,r.sala);
+    });
+  }
+
+  // ─── Modal de cancelamento (sem prompt) ──────────────────────
+  function _abrirModalCancelamento(rId, espacoId){
+    _abrirModal(
+      '<div class="mapa-modal-header">'
+        +'<span class="ms ms-sm" style="color:var(--color-error)">cancel</span>'
+        +'<strong>Cancelar Reserva</strong>'
+        +'<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="mapa-modal-close">&#x2715;</button>'
+      +'</div>'
+      +'<div class="mapa-modal-body">'
+        +'<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Esta a\u00e7\u00e3o n\u00e3o pode ser desfeita.</p>'
+        +'<div class="form-group">'
+          +'<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">Motivo (opcional)</label>'
+          +'<input id="mcanc-motivo" type="text" class="form-control" placeholder="Ex: Evento cancelado">'
+        +'</div>'
+      +'</div>'
+      +'<div class="mapa-modal-footer">'
+        +'<button id="mcanc-confirmar" class="btn btn-perigo" style="flex:1">Confirmar cancelamento</button>'
+        +'<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="btn btn-secondary">Voltar</button>'
+      +'</div>'
+    );
+    var btn=document.getElementById('mcanc-confirmar');
+    if(!btn)return;
+    btn.addEventListener('click',function(){
+      var motivo=(document.getElementById('mcanc-motivo')||{}).value||'';
+      BtnGuard.wrap(btn,'Cancelando…',function(done){
+        GAS.reservas.cancelar(rId,motivo,function(resp){
+          done();fecharModal();
+          if(!resp||!resp.ok){Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.');return;}
+          Toast.sucesso('Reserva cancelada.');
+          _carregarTimeline(espacoId,_getDataAtual());
+          carregar();
+        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
       });
     });
   }

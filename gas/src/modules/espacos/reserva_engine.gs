@@ -121,10 +121,28 @@ var ReservaEngine = (function () {
         var fmt = function(m) {
           return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
         };
-        throw new Error(
-          'Conflito de reserva: "' + (r.nomeAcao || r.sala) + '" já reservada das ' +
-          fmt(rIni) + ' às ' + fmt(rFim) + '. Escolha outro horário ou sala.'
-        );
+        var _msgConflito = 'Conflito de horário: "' + (r.nomeAcao || r.sala) +
+          '" já ocupa ' + fmt(rIni) + '–' + fmt(rFim) + ' neste espaço.';
+        var _errConflito = new Error(_msgConflito);
+        _errConflito.code = 'CONFLITO_RESERVA';
+        // Resolve nome legível do espaço (SistemaConfigService já usado neste arquivo)
+        var _salaNome = r.sala;
+        try {
+          var _esps = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+          for (var _ei = 0; _ei < _esps.length; _ei++) {
+            if (_esps[_ei].id === sala) { _salaNome = _esps[_ei].nome || sala; break; }
+          }
+        } catch (_) {}
+        _errConflito.details = {
+          sala:        r.sala,
+          salaNome:    _salaNome,
+          nomeAcao:    r.nomeAcao    || '—',
+          horaInicio:  fmt(rIni),
+          horaTermino: fmt(rFim),
+          responsavel: r.responsavel || '',
+          setor:       r.setor       || ''
+        };
+        throw _errConflito;
       }
     }
   }

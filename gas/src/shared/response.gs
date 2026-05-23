@@ -46,7 +46,7 @@ var GasResponse = (function () {
       return ok(fn(), origem);
     } catch (e) {
       if (typeof Logger !== 'undefined') Logger.error(origem || 'gas_response', 'wrap', e.message);
-      return error(e.message, 'ERRO_INTERNO', null, origem);
+      return error(e.message, e.code || 'ERRO_INTERNO', e.details || null, origem);
     }
   }
 
