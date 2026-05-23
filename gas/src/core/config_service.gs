@@ -293,9 +293,12 @@ var SistemaConfigService = (function () {
 
   function _defaultTurnos() {
     return [
-      { id: 'manha',  label: 'Manhã',  ini: '08:00', fim: '12:00' },
-      { id: 'tarde',  label: 'Tarde',  ini: '12:00', fim: '18:00' },
-      { id: 'noite',  label: 'Noite',  ini: '18:00', fim: '22:00' }
+      { id: 'manha',       label: 'Manhã',       ini: '08:00', fim: '12:00' },
+      { id: 'tarde',       label: 'Tarde',       ini: '12:00', fim: '18:00' },
+      { id: 'noite',       label: 'Noite',       ini: '18:00', fim: '22:00' },
+      { id: 'manha_tarde', label: 'Manhã/Tarde', ini: '08:00', fim: '18:00' },
+      { id: 'tarde_noite', label: 'Tarde/Noite', ini: '12:00', fim: '22:00' },
+      { id: 'integral',    label: 'Integral',    ini: '08:00', fim: '22:00' }
     ];
   }
 

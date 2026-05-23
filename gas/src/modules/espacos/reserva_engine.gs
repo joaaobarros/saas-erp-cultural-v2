@@ -225,7 +225,7 @@ var ReservaEngine = (function () {
         horaTermino:   dados.horaTermino,
         sala:          dados.sala,
         salaNome:      dados.salaNome || dados.sala,
-        turno:         dados.turno || _inferirTurno(dados.horaInicio),
+        turno:         dados.turno || _inferirTurno(dados.horaInicio, dados.horaTermino),
         nomeAcao:      dados.nomeAcao,
         tipoAcao:      dados.tipoAcao || '',
         responsavel:   dados.responsavel,
@@ -314,7 +314,7 @@ var ReservaEngine = (function () {
           horaInicio:    dados.horaInicio,
           horaTermino:   dados.horaTermino,
           sala:          dados.sala,
-          turno:         dados.turno || _inferirTurno(dados.horaInicio),
+          turno:         dados.turno || _inferirTurno(dados.horaInicio, dados.horaTermino),
           nomeAcao:      dados.nomeAcao,
           tipoAcao:      dados.tipoAcao || '',
           responsavel:   dados.responsavel || autor,
@@ -505,12 +505,25 @@ var ReservaEngine = (function () {
 
   // ── Helpers privados ────────────────────────────────────────────────
 
-  function _inferirTurno(horaInicio) {
-    var min = _horaParaMin(horaInicio);
-    if (min < 0) return '';
-    if (min < 12 * 60) return 'manha';
-    if (min < 18 * 60) return 'tarde';
-    return 'noite';
+  function _inferirTurno(horaInicio, horaTermino) {
+    var iniMin = _horaParaMin(horaInicio);
+    if (iniMin < 0) return '';
+    var fimMin = _horaParaMin(horaTermino);
+    if (fimMin <= 0) {
+      // sem horário fim: inferir pelo início
+      if (iniMin < 12 * 60) return 'manha';
+      if (iniMin < 18 * 60) return 'tarde';
+      return 'noite';
+    }
+    var cobManha = iniMin < 12 * 60 && fimMin > 8  * 60;
+    var cobTarde = iniMin < 18 * 60 && fimMin > 12 * 60;
+    var cobNoite = iniMin < 22 * 60 && fimMin > 18 * 60;
+    if (cobManha && cobTarde && cobNoite) return 'integral';
+    if (cobTarde && cobNoite) return 'tarde_noite';
+    if (cobManha && cobTarde) return 'manha_tarde';
+    if (cobNoite) return 'noite';
+    if (cobTarde) return 'tarde';
+    return 'manha';
   }
 
   // ── Interface pública ────────────────────────────────────────────────

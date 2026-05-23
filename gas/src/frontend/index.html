@@ -2420,10 +2420,10 @@ textarea.input { resize: vertical; }
 
       </div><!-- /view-financeiro -->
 
-      <!-- VIEW: Espaços — Fase 2 (Reservas + Chaves + Empréstimos + Patrimônio) -->
+      <!-- VIEW: Infraestrutura — Fase 2 (Reservas + Chaves + Empréstimos + Patrimônio) -->
       <div id="view-espacos" class="view">
         <div class="page-header">
-          <div class="page-title">Espaços</div>
+          <div class="page-title">Infraestrutura</div>
           <div class="page-subtitle">Reservas, chaves, patrimônio e almoxarifado</div>
         </div>
 
@@ -2670,6 +2670,9 @@ textarea.input { resize: vertical; }
                   <option value="manha">Manhã</option>
                   <option value="tarde">Tarde</option>
                   <option value="noite">Noite</option>
+                  <option value="manha_tarde">Manhã/Tarde</option>
+                  <option value="tarde_noite">Tarde/Noite</option>
+                  <option value="integral">Integral</option>
                 </select>
               </div>
               <div class="form-group">
@@ -2829,12 +2832,25 @@ textarea.input { resize: vertical; }
                 </select>
               </div>
               <div class="form-group">
+                <label class="form-label">Tipo de ativo</label>
+                <select id="at-tipo" class="form-input">
+                  <option value="volante">Volante — circula entre espaços</option>
+                  <option value="fixo">Fixo — permanece no espaço</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label class="form-label">Localização atual</label>
-                <input type="text" id="at-localizacao" class="form-input" placeholder="Ex: Sala de Mídia">
+                <select id="at-localizacao" class="form-input">
+                  <option value="">— Sem localização —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quantidade</label>
+                <input type="number" id="at-quantidade" class="form-input" value="1" min="1" step="1">
               </div>
               <div class="form-group">
                 <label class="form-label">Valor de aquisição (R$)</label>
-                <input type="number" id="at-valor" class="form-input" placeholder="0.00" min="0" step="0.01">
+                <input type="text" id="at-valor" class="form-input" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00">
               </div>
               <div class="form-group">
                 <label class="form-label">Data de aquisição</label>
@@ -2859,6 +2875,13 @@ textarea.input { resize: vertical; }
             <div class="card-header" style="flex-wrap:wrap;gap:8px;">
               <div class="card-titulo"><span class="ms">inventory_2</span> Patrimônio</div>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                <select id="at-filtro-tipo" class="form-input"
+                        style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="AtivosUI.carregar()">
+                  <option value="">Todos os tipos</option>
+                  <option value="fixo">Fixos</option>
+                  <option value="volante">Volantes</option>
+                </select>
                 <select id="at-filtro-status" class="form-input"
                         style="width:auto;padding:6px 10px;font-size:13px;"
                         onchange="AtivosUI.carregar()">
@@ -6510,6 +6533,12 @@ var ReservasUI = (function() {
       ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#4c1d95;color:#fff;font-weight:700;">EM USO</span>'
       : '';
 
+    var _LABEL_TURNO = {
+      manha: 'Manhã', tarde: 'Tarde', noite: 'Noite',
+      manha_tarde: 'Manhã/Tarde', tarde_noite: 'Tarde/Noite', integral: 'Integral'
+    };
+    function _labelTurno(id) { return _LABEL_TURNO[id] || id; }
+
     function _linha(label, val) {
       if (!val) return '';
       return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">'
@@ -6542,7 +6571,7 @@ var ReservasUI = (function() {
       + _linha('Espaço', salaNome)
       + _linha('Data', r.data)
       + _linha('Horário', (r.horaInicio||'') + ' – ' + (r.horaTermino||''))
-      + _linha('Turno', r.turno)
+      + _linha('Turno', _labelTurno(r.turno))
       + _linha('Tipo', r.tipoAcao)
       + _linha('Responsável', r.responsavel)
       + _linha('Setor', r.setor)
@@ -8398,7 +8427,7 @@ var App = (function() {
     { secao:'PRINCIPAL' },
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
-    { id:'espacos',     label:'Espaços',         icone:'museum',                  modulo:'ESPACOS' },
+    { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
     { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
     { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
@@ -8548,7 +8577,7 @@ var App = (function() {
     var ativos = (_boot.modulosAtivos||[]).map(function(m){return String(m).toUpperCase();});
     var qas = [
       { label:'Nova Ação',    icone:'theater_comedy',  modulo:'ACOES',     view:'acoes' },
-      { label:'Ver Espaços',  icone:'museum',          modulo:'ESPACOS',   view:'espacos' },
+      { label:'Infraestrutura', icone:'museum',          modulo:'ESPACOS',   view:'espacos' },
       { label:'Financeiro',   icone:'payments',        modulo:'FINANCEIRO',view:'financeiro' },
       { label:'Relatórios',   icone:'bar_chart',       modulo:'RELATORIOS',view:'relatorios' }
     ].filter(function(q){ return ativos.indexOf(q.modulo) !== -1; });
