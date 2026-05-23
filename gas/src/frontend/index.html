@@ -810,12 +810,12 @@ body {
 .res-modo-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
 .rdg-row { display: flex; position: relative; border-bottom: 1px solid var(--border); height: 52px; }
 .rdg-sala-label {
-  width: 120px; flex-shrink: 0; position: sticky; left: 0; z-index: 2;
+  width: 160px; flex-shrink: 0; position: sticky; left: 0; z-index: 2;
   background: var(--color-primary); color: rgba(255,255,255,.88);
   font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .04em; padding: 0 8px;
+  letter-spacing: .04em; padding: 4px 8px;
   display: flex; align-items: center; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
+  white-space: normal; word-break: break-word; line-height: 1.3;
 }
 .rdg-grid-area { position: relative; flex: 1; overflow: hidden; cursor: crosshair; }
 .rdg-bloco {
@@ -876,8 +876,7 @@ body {
   .stats-grid, .quick-actions, #view-admin .admin-grid, .paleta-grid { grid-template-columns: 1fr; }
   .card { padding: 18px; }
   .mapa-wrap { flex-direction: column; height: auto; }
-  .mapa-svg-area { height: 380px; }
-  .mapa-painel-lateral { width: 100% !important; min-width: unset !important; }
+  .mapa-svg-area { height: 380px; flex-shrink: 0; }
 }
 
   /* ═══════════════════════════════════════════════════════
@@ -1020,7 +1019,7 @@ body {
   /* ── Modal inline do mapa ── */
   .mapa-modal-overlay {
     position:fixed; inset:0; z-index:9000;
-    background:rgba(0,0,0,.45); backdrop-filter:blur(2px);
+    background:rgba(15,23,42,.65); backdrop-filter:blur(2px);
     display:flex; align-items:center; justify-content:center;
     padding:16px;
     animation:mapa-modal-in .15s ease;
@@ -1060,6 +1059,30 @@ body {
     padding:12px 16px; border-top:1px solid var(--border);
     display:flex; gap:8px;
   }
+
+/* ── Mapa: bottom sheet no mobile (aparece APÓS as regras globais → prevalece) ── */
+@media (max-width: 680px) {
+  .mapa-painel-lateral {
+    position: fixed;
+    left: 0; right: 0; bottom: 0; top: auto;
+    width: 100% !important; min-width: unset !important;
+    height: auto; max-height: 78vh;
+    border-radius: 16px 16px 0 0;
+    z-index: 5000;
+    transform: translateY(0);
+    transition: transform .25s cubic-bezier(.4,0,.2,1), width 0s, min-width 0s;
+    box-shadow: 0 -8px 40px rgba(15,23,42,.22);
+    overflow-y: auto;
+    border: none;
+  }
+  .mapa-painel-lateral.fechado {
+    transform: translateY(110%) !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: hidden !important;
+    border: none !important;
+  }
+}
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ALIASES UTILITÁRIOS (compatibilidade com Fase 5+)
@@ -1186,7 +1209,7 @@ textarea.input { resize: vertical; }
    MODAL (compartilhado: Ações + outros módulos F5+)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(15,23,42,.45);
+  position: fixed; inset: 0; background: rgba(15,23,42,.65);
   z-index: 900; display: flex; align-items: center; justify-content: center;
   padding: 20px;
 }
@@ -2421,9 +2444,6 @@ textarea.input { resize: vertical; }
           <button class="tab-btn esp-tab" data-tab="ativos" onclick="EspacosUI.abrirTab('ativos')">
             <span class="ms ms-sm">inventory_2</span> Patrimônio
           </button>
-          <button class="tab-btn esp-tab" data-tab="mapa" onclick="EspacosUI.abrirTab('mapa')" data-bg-skip="1">
-            <span class="ms ms-sm">map</span> Mapa
-          </button>
         </div>
 
         <!-- ═══ TAB RESERVAS ═══ -->
@@ -2443,6 +2463,10 @@ textarea.input { resize: vertical; }
             <button class="btn btn-ghost btn-sm res-modo-btn" data-modo="diagrama"
                     onclick="ReservasUI.setModo('diagrama')" data-bg-skip="1">
               <span class="ms ms-sm">view_timeline</span> Diagrama
+            </button>
+            <button class="btn btn-ghost btn-sm res-modo-btn" data-modo="mapa"
+                    onclick="ReservasUI.setModo('mapa')" data-bg-skip="1">
+              <span class="ms ms-sm">map</span> Mapa
             </button>
           </div>
 
@@ -2550,6 +2574,70 @@ textarea.input { resize: vertical; }
               <div class="empty-state" style="padding:30px;"><p class="muted-text">Carregando…</p></div>
             </div>
           </div>
+
+          <!-- MODO MAPA -->
+          <div id="res-modo-mapa" style="display:none;">
+            <!-- Barra de controles -->
+            <div class="mapa-controles">
+              <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;">
+                <span class="ms ms-sm" style="color:var(--color-primary)">calendar_today</span>
+                <input type="date" id="mapa-data" onchange="MapaUI.carregar()"
+                  style="border:1px solid var(--border);border-radius:var(--r-sm);
+                         padding:5px 8px;font-size:12px;background:var(--surface);
+                         color:var(--text);outline:none;cursor:pointer;">
+              </label>
+              <select id="mapa-filtro-tipo" onchange="MapaUI.setFiltro('tipo',this.value)"
+                style="border:1px solid var(--border);border-radius:var(--r-sm);
+                       padding:5px 10px;font-size:12px;background:var(--surface);
+                       color:var(--text);outline:none;cursor:pointer;">
+                <option value="todos">Todos os tipos</option>
+                <option value="uso_publico">Uso público</option>
+                <option value="equipes">Equipes internas</option>
+                <option value="tecnico">Técnico</option>
+                <option value="servicos">Serviços</option>
+                <option value="externo">Externo</option>
+              </select>
+              <select id="mapa-filtro-status" onchange="MapaUI.setFiltro('status',this.value)"
+                style="border:1px solid var(--border);border-radius:var(--r-sm);
+                       padding:5px 10px;font-size:12px;background:var(--surface);
+                       color:var(--text);outline:none;cursor:pointer;">
+                <option value="todos">Todos os status</option>
+                <option value="disponivel">Disponível</option>
+                <option value="ocupado">Ocupado</option>
+                <option value="em_uso">Em uso</option>
+                <option value="aguardando">Aguardando</option>
+                <option value="manutencao">Manutenção</option>
+              </select>
+              <div class="mapa-legenda">
+                <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#10b981"></div>Disponível</div>
+                <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#ef4444"></div>Ocupado</div>
+                <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#4c1d95"></div>Em uso</div>
+                <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#f59e0b"></div>Aguardando</div>
+                <div class="mapa-legenda-item"><div class="mapa-legenda-dot" style="background:#94a3b8"></div>Manutenção</div>
+              </div>
+              <button onclick="MapaUI.resetZoom()" data-bg-skip="1" title="Ajustar ao tamanho"
+                style="margin-left:4px;background:none;border:1px solid var(--border);border-radius:var(--r-sm);
+                       padding:5px 8px;cursor:pointer;color:var(--text2);font-size:12px;
+                       display:flex;align-items:center;gap:4px;">
+                <span class="ms ms-sm">fit_screen</span>
+              </button>
+            </div>
+            <!-- Layout: mapa + painel lateral -->
+            <div class="mapa-wrap">
+              <div class="mapa-svg-area" id="mapa-svg-area">
+                <div class="mapa-svg-inner" id="mapa-svg-inner">
+                  <?!= include('shared/mapa_ccbj'); ?>
+                </div>
+                <div class="mapa-zoom-ctrl">
+                  <button class="mapa-zoom-btn" onclick="MapaUI.zoom(1)" data-bg-skip="1" title="Ampliar">+</button>
+                  <button class="mapa-zoom-btn" onclick="MapaUI.zoom(-1)" data-bg-skip="1" title="Reduzir">−</button>
+                </div>
+              </div>
+              <div class="mapa-painel-lateral fechado" id="mapa-painel-lateral"></div>
+            </div>
+            <!-- Dashboard de métricas rápidas -->
+            <div class="mapa-dashboard-strip" id="mapa-dashboard"></div>
+          </div><!-- /res-modo-mapa -->
 
         </div><!-- /tab-reservas -->
 
@@ -2797,91 +2885,6 @@ textarea.input { resize: vertical; }
             </div>
           </div>
         </div><!-- /tab-ativos -->
-
-        <!-- ═══ TAB MAPA ═══ -->
-        <div id="esp-tab-mapa" class="esp-tab-content" style="display:none">
-
-          <!-- Barra de controles -->
-          <div class="mapa-controles">
-            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;">
-              <span class="ms ms-sm" style="color:var(--color-primary)">calendar_today</span>
-              <input type="date" id="mapa-data" onchange="MapaUI.carregar()"
-                style="border:1px solid var(--border);border-radius:var(--r-sm);
-                       padding:5px 8px;font-size:12px;background:var(--surface);
-                       color:var(--text);outline:none;cursor:pointer;">
-            </label>
-            <select id="mapa-filtro-tipo" onchange="MapaUI.setFiltro('tipo',this.value)"
-              style="border:1px solid var(--border);border-radius:var(--r-sm);
-                     padding:5px 10px;font-size:12px;background:var(--surface);
-                     color:var(--text);outline:none;cursor:pointer;">
-              <option value="todos">Todos os tipos</option>
-              <option value="uso_publico">Uso público</option>
-              <option value="equipes">Equipes internas</option>
-              <option value="tecnico">Técnico</option>
-              <option value="servicos">Serviços</option>
-              <option value="externo">Externo</option>
-            </select>
-            <select id="mapa-filtro-status" onchange="MapaUI.setFiltro('status',this.value)"
-              style="border:1px solid var(--border);border-radius:var(--r-sm);
-                     padding:5px 10px;font-size:12px;background:var(--surface);
-                     color:var(--text);outline:none;cursor:pointer;">
-              <option value="todos">Todos os status</option>
-              <option value="disponivel">Disponível</option>
-              <option value="ocupado">Ocupado</option>
-              <option value="em_uso">Em uso</option>
-              <option value="aguardando">Aguardando</option>
-              <option value="manutencao">Manutenção</option>
-            </select>
-            <div class="mapa-legenda">
-              <div class="mapa-legenda-item">
-                <div class="mapa-legenda-dot" style="background:#10b981"></div>Disponível
-              </div>
-              <div class="mapa-legenda-item">
-                <div class="mapa-legenda-dot" style="background:#ef4444"></div>Ocupado
-              </div>
-              <div class="mapa-legenda-item">
-                <div class="mapa-legenda-dot" style="background:#4c1d95"></div>Em uso
-              </div>
-              <div class="mapa-legenda-item">
-                <div class="mapa-legenda-dot" style="background:#f59e0b"></div>Aguardando
-              </div>
-              <div class="mapa-legenda-item">
-                <div class="mapa-legenda-dot" style="background:#94a3b8"></div>Manutenção
-              </div>
-            </div>
-            <button onclick="MapaUI.resetZoom()" data-bg-skip="1" title="Ajustar ao tamanho"
-              style="margin-left:4px;background:none;border:1px solid var(--border);border-radius:var(--r-sm);
-                     padding:5px 8px;cursor:pointer;color:var(--text2);font-size:12px;
-                     display:flex;align-items:center;gap:4px;">
-              <span class="ms ms-sm">fit_screen</span>
-            </button>
-          </div>
-
-          <!-- Layout principal: mapa + painel lateral -->
-          <div class="mapa-wrap">
-
-            <!-- SVG da planta -->
-            <div class="mapa-svg-area" id="mapa-svg-area">
-              <div class="mapa-svg-inner" id="mapa-svg-inner">
-                <?!= include('shared/mapa_ccbj'); ?>
-              </div>
-              <div class="mapa-zoom-ctrl">
-                <button class="mapa-zoom-btn" onclick="MapaUI.zoom(1)" data-bg-skip="1" title="Ampliar">+</button>
-                <button class="mapa-zoom-btn" onclick="MapaUI.zoom(-1)" data-bg-skip="1" title="Reduzir">−</button>
-              </div>
-            </div>
-
-            <!-- Painel lateral (fechado por padrão) -->
-            <div class="mapa-painel-lateral fechado" id="mapa-painel-lateral">
-              <!-- conteúdo injetado por MapaUI._renderPainel() -->
-            </div>
-
-          </div><!-- /mapa-wrap -->
-
-          <!-- Dashboard de métricas rápidas -->
-          <div class="mapa-dashboard-strip" id="mapa-dashboard"></div>
-
-        </div><!-- /tab-mapa -->
 
       </div><!-- /view-espacos -->
 
@@ -5806,7 +5809,6 @@ var EspacosUI = (function() {
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
       if (tab === 'ativos')      AtivosUI.carregar();
-      if (tab === 'mapa')        MapaUI.carregar();
     }
   }
 
@@ -6185,7 +6187,7 @@ var ReservasUI = (function() {
     document.querySelectorAll('.res-modo-btn').forEach(function(b) {
       b.classList.toggle('active', b.getAttribute('data-modo') === modo);
     });
-    ['lista','agenda','diagrama'].forEach(function(m) {
+    ['lista','agenda','diagrama','mapa'].forEach(function(m) {
       var el = document.getElementById('res-modo-' + m);
       if (el) el.style.display = (m === modo) ? '' : 'none';
     });
@@ -6197,13 +6199,15 @@ var ReservasUI = (function() {
       carregar();
     } else if (modo === 'agenda') {
       carregar();
+    } else if (modo === 'mapa') {
+      MapaUI.carregar();
     }
   }
 
   // ── Diagrama (Gantt hora×espaço) ─────────────────────────────────────────
   var _HORA_INI_RDG = 7, _HORA_FIM_RDG = 22, _MIN_PX_RDG = 3.2;
   var _TOTAL_PX_RDG = (_HORA_FIM_RDG - _HORA_INI_RDG) * 60 * _MIN_PX_RDG; // 2880
-  var _SALA_W_RDG = 120, _ROW_H_RDG = 52;
+  var _SALA_W_RDG = 160, _ROW_H_RDG = 52;
   var _COR_SALA = ['#3b82f6','#06b6d4','#6366f1','#ec4899','#f472b6','#14b8a6','#8b5cf6','#0ea5e9'];
 
   function _minFromHHMM(s) {
@@ -6302,7 +6306,7 @@ var ReservasUI = (function() {
       });
 
       html += '<div class="rdg-row" style="height:' + _ROW_H_RDG + 'px;">';
-      html += '<div class="rdg-sala-label" style="width:' + _SALA_W_RDG + 'px;background:' + corSala + ';">' + escaparHtml(nomeSala) + '</div>';
+      html += '<div class="rdg-sala-label" style="width:' + _SALA_W_RDG + 'px;background:' + corSala + ';" title="' + escaparHtml(nomeSala) + '">' + escaparHtml(nomeSala) + '</div>';
       html += '<div class="rdg-grid-area" style="width:' + _TOTAL_PX_RDG + 'px;flex-shrink:0;position:relative;">';
 
       // Linhas verticais de hora
@@ -6526,9 +6530,9 @@ var ReservasUI = (function() {
     btnsHtml += '<button id="det-fechar" class="btn btn-ghost" data-bg-skip="1">Fechar</button>';
 
     var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML =
-      '<div style="background:var(--surface1);border-radius:12px;padding:20px 24px;max-width:460px;width:100%;'
+      '<div style="background:var(--surface);border-radius:12px;padding:20px 24px;max-width:460px;width:100%;'
         + 'box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:88vh;overflow-y:auto;">'
       + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Detalhes da Reserva</div>'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
