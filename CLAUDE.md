@@ -82,6 +82,22 @@ Quando um elemento é criado com ID derivado de dados (ex.: email sanitizado), a
 
 Toda função que chama `*.atualizarStatus*()` ou equivalente **deve** chamar `FsmGuardian.transitar()` **antes**, com os parâmetros corretos de `(tipo, statusAtual, statusNovo, contexto)`. Verificar em especial funções `verificarAtrasos()`.
 
+### F. Revisão de Modais — fundo NUNCA transparente
+
+Todo modal criado no sistema (estático no HTML ou gerado dinamicamente via JS) deve ter fundo **opaco**. Regras:
+
+1. **Caixa do modal** → `background: var(--surface)` ou `background: #ffffff`. **NUNCA** `var(--surface1)` sem antes confirmar que `--surface1` está definido no `:root`.
+2. **Overlay/backdrop** → `background: rgba(0,0,0,.5)` ou mais escuro. Nunca abaixo de `.4` de opacidade.
+3. **Ao criar qualquer novo modal** verificar visualmente que o conteúdo ao fundo **não aparece** através da caixa do modal.
+4. **Variáveis CSS não definidas** resolvem como `transparent` silenciosamente — conferir sempre no `:root` se a variável existe antes de usá-la.
+
+> **Anti-padrão proibido**: `background: var(--surface1)` quando `--surface1` não está declarado no `:root`. Use `var(--surface)` que está sempre definido.
+
+> **Padrão correto para `_abrirModalSimples` e congêneres**:
+> ```javascript
+> box.style.cssText = 'background:var(--surface);border-radius:12px;...;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+> ```
+
 ### Checklist de auditoria (executar antes de cada deploy)
 
 ```
@@ -90,6 +106,8 @@ Toda função que chama `*.atualizarStatus*()` ou equivalente **deve** chamar `F
 [ ] CSS — zero classes usadas sem definição correspondente no <style>
 [ ] IDs de DOM — regex de sanitização idêntica em todos os pontos de uso
 [ ] FsmGuardian.transitar() — chamado antes de toda atualizarStatus*()
+[ ] Modais — caixa com background:var(--surface) opaco; overlay ≥ rgba(0,0,0,.4)
+[ ] onclick em HTML — JSON.stringify(id) usa .replace(/"/g,"'") para IDs string
 [ ] BtnGuard.auditar() — retorna "✅ todos protegidos"
 [ ] Console F12 — zero TypeError / undefined
 ```
