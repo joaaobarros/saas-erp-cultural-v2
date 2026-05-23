@@ -15,7 +15,7 @@
  *   - Consequências secundárias que podem ser adiadas (ex: notificar RECE após reserva)
  *   - Automações não-críticas disparadas por eventos
  *
- * STATUS: stubs implementados (Fase 0) — lógica real implementada nas fases correspondentes.
+ * STATUS: Fase 5 — onAcaoIniciada e onAcaoConcluida com lógica real.
  *
  * @depends event_bus_backend.gs, events_constants.gs
  */

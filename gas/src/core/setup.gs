@@ -119,6 +119,12 @@ function inicializarSistema() {
       typeof SolicitacaoReservaRepository.prepararIndice === 'function') {
     SolicitacaoReservaRepository.prepararIndice();
   }
+
+  // Fase 5 — Ações: garante cabeçalho em ACOES.Acoes
+  if (typeof AcaoRepository !== 'undefined' &&
+      typeof AcaoRepository.prepararIndice === 'function') {
+    AcaoRepository.prepararIndice();
+  }
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
