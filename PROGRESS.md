@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **UX Infraestrutura + R$ mask concluídos (2026-05-23)** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
+**Fase atual**: **Mapa de Evento entregue (2026-05-23)** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -148,17 +148,26 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ `MapaUI` (mapa_ui.html): `_aplicarTerreno()` substitui `.mapa-bg`/`.mapa-borda` pelo `svgPath` personalizado; terreno carregado via `GAS.admin.lerTerreno()` na primeira abertura (cacheado); `atualizarTerreno()` exposto na API pública
 - ✅ Deploy @100
 
-**Próximo passo imediato**:
-> **[BROWSER] Smoke-tests Editor de Terreno + Mapa:**
-> 1. Configurações → Mapa → label mostra "Padrão (6 pts)" ou "Personalizado (N pts)"
-> 2. "Editar Terreno" → editor abre full-screen com contorno hexagonal
-> 3. Arrastar ponto → contorno atualiza em tempo real
-> 4. Duplo clique num segmento → alça ◇ aparece → arrastar → curva bezier renderizada
-> 5. Salvar → toast "Terreno do campus salvo (N pontos)" → label atualiza
-> 6. Espaços → Mapa → ao carregar, contorno do mapa reflete o terreno personalizado
-> 7. Console F12 → zero TypeError
+**O que foi feito (Observabilidade — 2026-05-23)**:
+- ✅ `sistema_metricas_controller.gs` CRIADO: `ctrl_sistema_metricas_obter(params)` — superadmin only (RBAC via AcessoService), coleta AuditoriaStore (stats globais + eventos críticos recentes + módulos com atividade) + MetricsEngine (fsm/seguranca/governanca/usuarios/performance) + falhas por módulo via consulta separada; gera insights classificados (FSM violations, erros arquiteturais, hotspots de erro >15%, falhas de auth, acessos negados repetidos, módulos inativos); retorna rankingModulos, rankingUsuarios, eventosCriticos
+- ✅ `index.html` — Menu: entrada `{ id:'sistema-metricas', label:'Observabilidade', icone:'monitoring', modulo:null, superadmin:true }` em `_MODULOS_MENU`; guard `if(item.superadmin && _boot.usuarioPapel !== 'superadmin') return;` em `_construirMenu()`; rota `SistemaMetricasUI.aoAbrir()` registrada
+- ✅ `index.html` — GAS namespace: `GAS.sistemaMetricas.obter(params, cb, err)` adicionado
+- ✅ `index.html` — View HTML `#view-sistema-metricas`: header com seletor de período (7/30/90d), stats strip de resumo, seção de insights e alertas, tabela de módulos com mini-barra de proporção, grid de segurança/FSM/governança, ranking de usuários, lista de eventos críticos recentes
+- ✅ `index.html` — `SistemaMetricasUI` JS module: `aoAbrir()` verifica superadmin no frontend; `carregar()` mostra loading → chama backend → renderiza; `setPeriodo()` atualiza botão ativo e recarrega; 6 funções de renderização (`_renderResumo`, `_renderInsights`, `_renderModulos`, `_renderSegurancaGrid`, `_renderUsuarios`, `_renderEventosCriticos`)
+- ✅ `index.html` CSS: variáveis aliases `--primary/--success/--warning/--danger/--info/--bg-card` adicionadas ao `:root` (corrige também usos existentes em outros módulos); `.sm-periodo-btn.ativo` para seletor de período
+- ✅ Deploy @104
 
-> 8. Iniciar **Fase 6 — Integração via Eventos + RECE**
+**Próximo passo imediato**:
+> **[BROWSER] Smoke-test Observabilidade (como superadmin):**
+> 1. Logar como superadmin → "Observabilidade" aparece no sidebar
+> 2. Logar como admin/colaborador → menu NÃO aparece
+> 3. Clicar "Observabilidade" → spinner → stats carregam sem erro no F12
+> 4. Mudar período 7d/30d/90d → botão ativo muda, dados recarregam
+> 5. Insights mostrados com severidade correta (vermelho=crítico, amarelo=aviso)
+> 6. Tabela de módulos com barras de proporção
+> 7. BtnGuard.auditar() → "✅ todos protegidos"
+
+> Depois: iniciar **Fase 6 — Integração via Eventos + RECE**
 
 **Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
 
@@ -1126,6 +1135,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-23 | Mapa de Evento | Ferramenta de desenho de mapa de evento dentro do painel da Ação. Múltiplos mapas por ação (um por local de execução). Cada mapa tem camadas (layers) nomeadas, coloridas e configuráveis. **Backend**: `mapa_acao_repository.gs` (mapaAcoes.json), `mapa_acao_engine.gs` (salvar, criarDeEspacos — importa espaços posicionados do mapa CCBJ, excluir, reservarEspacoOriginal — cria Reserva vinculada ao acaoId), `mapa_acao_controller.gs` (ctrl_mapa_acao_listar/obter/salvar/excluir/criar_de_espacos/reservar_espaco + RBAC). **Frontend**: `shared/mapa_acao_editor.html` (MapaAcaoEditorUI: canvas SVG zoom/pan, palette de espaços + 12 categorias de objetos com ícones SVG inline, sidebar de layers toggle/criar/editar/excluir, legenda visual no canvas, painel de propriedades do elemento selecionado, drag-and-drop para mover e resize, modal de reserva do espaço original). `index.html`: aba "Mapa do Evento" no painel da ação (lazy-load ao clicar), MapaAcaoUI (lista de locais/cards, modal novo local, abre editor), GAS.acoes.mapaAcao namespace, include shared/mapa_acao_editor. Deploy @102. `fase1_mapaAcao_prepararIndice()` disponível. | fase1_mapaAcao_prepararIndice() no GAS Editor → smoke-test browser (criar local, adicionar camada, arrastar objeto, salvar, recarregar) → Fase 6 |
 | 2026-05-22 | Fase 4.5 | Cadastros Base + Gaps Críticos V1→V2: config_org.json (tiposOcorrencia/Afastamento), config_admin_service.gs (schema espaço completo: tipoEspaco/responsaveisPorTurno/itensFixos), admin_controller.gs CRIADO (ctrl_admin_*/ctrl_solicitacoes_*), modulos_registry_service.gs CRIADO (engine ausente referenciado em 6 arquivos), pccs_repository.gs CRIADO (PCCS→Cargos→Tabela salarial + ctrl_pccs_*), setup.gs (seeds: 8 espaços+PCCS+6 categorias), solicitacao_reserva_repository.gs+engine.gs CRIADOS (workflow SOL-xxx), reserva_engine.gs (validação sala contra catálogo SAL-xxx), almoxarifado_engine.gs (itensFixos por sala), contratos_engine.gs+financeiro_controller.gs (memória de cálculo de rubricas + versionamento), acesso_service.gs (ctrl_acesso_listarTodos/editarPapel), boot_service.gs (tiposAfastamento/Ocorrencia no bootstrap), index.html (ContratosDetailUI com grid memória+12 meses+histórico; cargo select; tipos dinâmicos; GAS.admin/acesso/rh/solicitacoes completo). Deploy @32. | setup_espacos_iniciais() + setup_pccs_inicial() no GAS Editor → smoke-test browser (campos select validados, ContratosDetailUI, painel aprovações) → Fase 5 |
 
 ---

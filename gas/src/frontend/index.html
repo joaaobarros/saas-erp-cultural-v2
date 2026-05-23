@@ -80,6 +80,14 @@
   /* Tokens extras (usados em tabelas, bordas internas) */
   --surface3:            #f1f5f9;
   --divider:             var(--border);
+
+  /* Aliases curtos (usados em código inline e módulos) */
+  --primary:             var(--color-primary);
+  --success:             var(--color-success);
+  --warning:             var(--color-warning);
+  --danger:              var(--color-error);
+  --info:                var(--color-info);
+  --bg-card:             var(--surface);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -474,6 +482,7 @@ body {
 .btn-perigo { background: var(--color-error); color: #fff; }
 .btn-perigo:hover:not(:disabled) { background: #dc2626; }
 .btn-sm { padding: 5px 12px; font-size: 12.5px; }
+.sm-periodo-btn.ativo { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    FORMULÁRIOS
@@ -3579,6 +3588,9 @@ textarea.input { resize: vertical; }
             <button class="tab-btn" onclick="AcoesUI._abrirTab('financeiro', this)" data-tab="financeiro">
               <span class="ms ms-sm">account_balance_wallet</span> Financeiro
             </button>
+            <button class="tab-btn" onclick="AcoesUI._abrirTab('mapa', this)" data-tab="mapa">
+              <span class="ms ms-sm">map</span> Mapa do Evento
+            </button>
           </div>
         </div>
         <!-- Conteúdo do painel -->
@@ -3636,6 +3648,10 @@ textarea.input { resize: vertical; }
             </div>
             <p class="muted-text" id="painel-fin-loading" style="font-size:13px;">Carregando dados financeiros…</p>
           </div>
+          <!-- Aba Mapa do Evento -->
+          <div id="painel-tab-mapa" class="oculto" style="height:100%;min-height:480px;">
+            <div id="painel-mapa-container" style="height:100%;"></div>
+          </div>
         </div>
       </div>
       <!-- Overlay do painel detalhe -->
@@ -3645,6 +3661,111 @@ textarea.input { resize: vertical; }
         onclick="AcoesUI.fecharPainel()"></div>
 
       <!-- Views de módulos — injetadas dinamicamente por cada módulo -->
+
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- OBSERVABILIDADE DO SISTEMA — superadmin only               -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <div id="view-sistema-metricas" class="view">
+
+        <!-- Cabeçalho -->
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="ms" style="font-size:28px;color:var(--primary);">monitoring</span>
+            <div>
+              <h2 style="margin:0;font-size:18px;font-weight:600;">Observabilidade do Sistema</h2>
+              <p id="sm-gerado-em" class="muted-text" style="font-size:12px;margin:2px 0 0;"></p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="muted-text" style="font-size:12px;">Período:</span>
+            <div id="sm-periodo-btns" style="display:flex;gap:4px;">
+              <button class="btn-sm sm-periodo-btn"       data-periodo="7"  onclick="SistemaMetricasUI.setPeriodo(7)"  data-bg-skip="1">7 dias</button>
+              <button class="btn-sm sm-periodo-btn ativo" data-periodo="30" onclick="SistemaMetricasUI.setPeriodo(30)" data-bg-skip="1">30 dias</button>
+              <button class="btn-sm sm-periodo-btn"       data-periodo="90" onclick="SistemaMetricasUI.setPeriodo(90)" data-bg-skip="1">90 dias</button>
+            </div>
+            <button class="btn-sm" onclick="SistemaMetricasUI.atualizar()" data-bg-skip="1" style="margin-left:4px;">
+              <span class="ms" style="font-size:14px;vertical-align:middle;">refresh</span> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="sm-loading" style="text-align:center;padding:48px 0;color:var(--muted);">
+          <span class="ms" style="font-size:40px;animation:spin 1s linear infinite;display:inline-block;">progress_activity</span>
+          <p style="margin-top:12px;font-size:14px;">Carregando métricas…</p>
+        </div>
+
+        <!-- Erro -->
+        <div id="sm-erro" class="oculto" style="text-align:center;padding:48px 0;color:var(--danger);">
+          <span class="ms" style="font-size:36px;">error_outline</span>
+          <p id="sm-erro-msg" style="margin-top:8px;font-size:14px;"></p>
+        </div>
+
+        <!-- Conteúdo principal (oculto até carregar) -->
+        <div id="sm-conteudo" class="oculto">
+
+          <!-- 1. Resumo global -->
+          <div class="stats-strip" id="sm-stats-topo" style="margin-bottom:24px;"></div>
+
+          <!-- 2. Insights e Alertas -->
+          <div id="sm-insights-wrap" style="margin-bottom:28px;">
+            <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;">
+              <span class="ms" style="font-size:16px;vertical-align:middle;margin-right:4px;">lightbulb</span>
+              Insights e Alertas
+            </h3>
+            <div id="sm-insights-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <p id="sm-insights-vazio" class="oculto muted-text" style="font-size:13px;padding:12px 0;">
+              <span class="ms" style="vertical-align:middle;color:var(--success);">check_circle</span>
+              Nenhum insight crítico identificado no período.
+            </p>
+          </div>
+
+          <!-- 3. Uso por Módulo -->
+          <div style="margin-bottom:28px;">
+            <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;">
+              <span class="ms" style="font-size:16px;vertical-align:middle;margin-right:4px;">widgets</span>
+              Uso por Módulo
+            </h3>
+            <div class="table-responsive">
+              <table class="table-lista" id="sm-tabela-modulos">
+                <thead>
+                  <tr>
+                    <th>Módulo</th>
+                    <th style="text-align:right;">Total Eventos</th>
+                    <th style="text-align:right;">Falhas</th>
+                    <th style="text-align:right;">Taxa de Erro</th>
+                    <th>Atividade</th>
+                  </tr>
+                </thead>
+                <tbody id="sm-tabela-modulos-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 4. Segurança + FSM + Governança (grid de cards) -->
+          <div class="stats-grid" id="sm-stats-seg" style="margin-bottom:28px;"></div>
+
+          <!-- 5. Usuários mais ativos -->
+          <div style="margin-bottom:28px;">
+            <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;">
+              <span class="ms" style="font-size:16px;vertical-align:middle;margin-right:4px;">people</span>
+              Usuários Mais Ativos
+            </h3>
+            <div id="sm-usuarios-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+
+          <!-- 6. Eventos críticos recentes -->
+          <div style="margin-bottom:16px;">
+            <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;">
+              <span class="ms" style="font-size:16px;vertical-align:middle;margin-right:4px;">crisis_alert</span>
+              Eventos Críticos Recentes
+            </h3>
+            <div id="sm-eventos-criticos" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;"></div>
+            <p id="sm-eventos-vazio" class="oculto muted-text" style="font-size:13px;padding:8px 0;">Nenhum evento crítico registrado.</p>
+          </div>
+
+        </div><!-- /sm-conteudo -->
+      </div><!-- /view-sistema-metricas -->
 
     </div><!-- /conteudo -->
   </div><!-- /main -->
@@ -3882,7 +4003,18 @@ var GAS = {
     metricas:    function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_metricas(); },
     mudarStatus: function(p,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_mudar_status(p); },
     excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_excluir(id); },
-    painel:      function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_painel(id); }
+    painel:      function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_painel(id); },
+    mapaAcao: {
+      listar:         function(acaoId,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_listar(acaoId); },
+      obter:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_obter(id); },
+      salvar:         function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_salvar(d); },
+      excluir:        function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_excluir(id); },
+      criarDeEspacos: function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_espacos(p); },
+      reservarEspaco: function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_reservar_espaco(p); }
+    }
+  },
+  sistemaMetricas: {
+    obter: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sistema_metricas_obter(p||{}); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -8947,6 +9079,7 @@ var AtivosUI = (function() {
 <?!= include('shared/mapa_ui'); ?>
 <?!= include('shared/mapa_editor'); ?>
 <?!= include('shared/terreno_editor'); ?>
+<?!= include('shared/mapa_acao_editor'); ?>
 // ═══════════════════════════════════════════════════════════
 // PESSOAS — Controlador de Tabs (Fase 3)
 // ═══════════════════════════════════════════════════════════
@@ -10065,11 +10198,15 @@ var AcoesUI = (function() {
   }
 
   function _abrirTab(tabId, btnEl) {
-    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro'];
+    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro','mapa'];
     tabs.forEach(function(t) {
       var content = document.getElementById('painel-tab-'+t);
       if (content) content.classList.toggle('oculto', t !== tabId);
     });
+    // Lazy-load aba Mapa
+    if (tabId === 'mapa' && _painelAcao && typeof MapaAcaoUI !== 'undefined') {
+      MapaAcaoUI.aoAbrir(_painelAcao);
+    }
     // Atualizar botão ativo
     var painel = document.getElementById('acao-painel');
     if (painel) {
@@ -10242,6 +10379,141 @@ var AcoesUI = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// MAPA ACAO UI — Gerenciador de Mapas de Evento por Ação
+// ═══════════════════════════════════════════════════════════
+var MapaAcaoUI = (function() {
+
+  var _acaoAtual = null;
+  var _mapas     = [];
+  var _carregado = false;
+
+  function _getAcao() { return _acaoAtual; }
+
+  function aoAbrir(acao) {
+    if (!acao) return;
+    if (!_acaoAtual || _acaoAtual.id !== acao.id) { _acaoAtual = acao; _carregado = false; }
+    if (!_carregado) _carregarMapas();
+    else _renderizarLista();
+  }
+
+  function _carregarMapas() {
+    var c = document.getElementById('painel-mapa-container');
+    if (!c) return;
+    c.innerHTML = '<p class="muted-text" style="padding:20px;font-size:13px;">Carregando mapas…</p>';
+    GAS.acoes.mapaAcao.listar(_acaoAtual.id, function(r) {
+      if (!r || !r.ok) { c.innerHTML = '<p style="color:var(--color-error,#ef4444);padding:20px;font-size:13px;">Erro ao carregar mapas.</p>'; return; }
+      _mapas = r.data || []; _carregado = true; _renderizarLista();
+    }, function() {
+      var c2 = document.getElementById('painel-mapa-container');
+      if (c2) c2.innerHTML = '<p style="color:var(--color-error,#ef4444);padding:20px;font-size:13px;">Erro de comunicação.</p>';
+    });
+  }
+
+  function _renderizarLista() {
+    var c = document.getElementById('painel-mapa-container');
+    if (!c) return;
+    var html = '<div style="padding:4px 0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h4 style="font-size:14px;font-weight:700;color:var(--text,#1e293b);margin:0;">Locais do Evento</h4>' +
+      '<button id="btn-novo-local" data-bg-skip="1" onclick="MapaAcaoUI._abrirModalNovoMapa()" style="display:flex;align-items:center;gap:5px;padding:6px 14px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">' +
+        '<span class="ms ms-sm">add_location</span> Novo Local</button></div>';
+    if (_mapas.length === 0) {
+      html += '<div style="padding:32px;text-align:center;"><span class="ms" style="font-size:48px;color:var(--muted,#94a3b8);">map</span><p style="font-weight:600;margin:10px 0 4px;color:var(--text,#1e293b);">Nenhum mapa criado</p><p class="muted-text" style="font-size:13px;">Crie um local para desenhar o mapa do evento.</p></div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+      _mapas.forEach(function(mapa) {
+        var nL=(mapa.layers||[]).length, nE=(mapa.elementos||[]).length;
+        var badge=mapa.tipoBase==='espacos'
+          ?'<span style="font-size:10px;background:#e0e7ff;color:#4f46e5;padding:2px 7px;border-radius:10px;font-weight:600;">Espaços CCBJ</span>'
+          :'<span style="font-size:10px;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;">Novo</span>';
+        html+='<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border,#e2e8f0);border-radius:10px;background:var(--surface,#fff);">' +
+          '<span class="ms" style="font-size:28px;color:var(--color-primary,#4f46e5);flex-shrink:0;">map</span>' +
+          '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><strong style="font-size:14px;color:var(--text,#1e293b);">'+escaparHtml(mapa.nome)+'</strong>'+badge+'</div>' +
+          (mapa.descricao?'<div style="font-size:12px;color:var(--text2,#64748b);margin-bottom:4px;">'+escaparHtml(mapa.descricao)+'</div>':'') +
+          '<div style="font-size:11px;color:var(--muted,#94a3b8);">'+nL+' camada(s) · '+nE+' elemento(s)</div></div>' +
+          '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+            '<button data-bg-skip="1" onclick="MapaAcaoUI._abrirEditor(\''+escaparHtml(mapa.id)+'\')" style="padding:6px 14px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Abrir</button>' +
+            '<button data-bg-skip="1" onclick="MapaAcaoUI._excluirMapa(\''+escaparHtml(mapa.id)+'\')" style="padding:6px 10px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:6px;cursor:pointer;font-size:12px;"><span class="ms ms-sm">delete</span></button>' +
+          '</div></div>';
+      });
+      html+='</div>';
+    }
+    c.innerHTML=html+'</div>';
+  }
+
+  function _abrirModalNovoMapa() {
+    var html='<div style="padding:20px;min-width:360px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="font-size:1rem;font-weight:700;margin:0;">Novo Local do Evento</h3>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2,#64748b);">✕</button></div>' +
+      '<div style="margin-bottom:10px;"><label style="font-size:12px;color:var(--text2,#64748b);display:block;margin-bottom:4px;">Nome do local *</label>' +
+        '<input id="nl-nome-modal" type="text" placeholder="Ex: Palco Principal, Foyer, Jardim…" style="width:100%;padding:8px 10px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;"></div>' +
+      '<div style="margin-bottom:14px;"><label style="font-size:12px;color:var(--text2,#64748b);display:block;margin-bottom:4px;">Descrição</label>' +
+        '<input id="nl-desc-modal" type="text" placeholder="Breve descrição…" style="width:100%;padding:8px 10px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;"></div>' +
+      '<div style="margin-bottom:16px;"><label style="font-size:12px;font-weight:600;color:var(--text,#1e293b);display:block;margin-bottom:8px;">Origem do mapa</label>' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;margin-bottom:8px;">' +
+          '<input type="radio" name="nl-tipo" value="novo" checked style="margin-top:2px;">' +
+          '<div><strong style="font-size:13px;">Criar novo mapa</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Canvas em branco com camadas padrão.</span></div></label>' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;">' +
+          '<input type="radio" name="nl-tipo" value="espacos" style="margin-top:2px;">' +
+          '<div><strong style="font-size:13px;">Aproveitar mapa dos espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Importa espaços posicionados do mapa CCBJ.</span></div></label></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 16px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>' +
+        '<button id="btn-criar-local" data-bg-skip="1" onclick="MapaAcaoUI._criarMapa()" style="padding:8px 20px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Criar</button>' +
+      '</div></div>';
+    _abrirModalSimples(html);
+  }
+
+  function _criarMapa() {
+    var nome=(document.getElementById('nl-nome-modal')||{}).value||'';
+    var desc=(document.getElementById('nl-desc-modal')||{}).value||'';
+    var tipo='novo';
+    document.querySelectorAll('input[name="nl-tipo"]').forEach(function(el){if(el.checked)tipo=el.value;});
+    if(!nome.trim()){Toast.aviso('Nome do local é obrigatório.');return;}
+    document.querySelectorAll('.modal-simples').forEach(function(m){m.remove();});
+    if(tipo==='espacos'){
+      GAS.acoes.mapaAcao.criarDeEspacos({acaoId:_acaoAtual.id,nome:nome.trim()},function(r){
+        if(r&&r.ok){Toast.sucesso('Mapa criado!');_carregado=false;_carregarMapas();}
+        else Toast.erro('Erro: '+(r&&r.error?r.error.message:'Tente novamente.'));
+      },function(){Toast.erro('Erro de comunicação.');});
+    } else {
+      GAS.acoes.mapaAcao.salvar({acaoId:_acaoAtual.id,nome:nome.trim(),descricao:desc.trim(),tipoBase:'novo'},function(r){
+        if(r&&r.ok){Toast.sucesso('Mapa criado!');_carregado=false;_carregarMapas();}
+        else Toast.erro('Erro: '+(r&&r.error?r.error.message:'Tente novamente.'));
+      },function(){Toast.erro('Erro de comunicação.');});
+    }
+  }
+
+  function _abrirEditor(mapaId) {
+    var mapa=_mapas.filter(function(m){return m.id===mapaId;})[0];
+    if(!mapa)return;
+    var container=document.getElementById('painel-mapa-container');
+    if(!container)return;
+    MapaAcaoEditorUI.init(container,mapa,
+      function(mapaAtualizado){
+        GAS.acoes.mapaAcao.salvar(mapaAtualizado,function(r){
+          if(r&&r.ok){Toast.sucesso('Mapa salvo!');for(var i=0;i<_mapas.length;i++){if(_mapas[i].id===mapaAtualizado.id){_mapas[i]=mapaAtualizado;break;}}}
+          else Toast.erro('Erro ao salvar: '+(r&&r.error?r.error.message:'Tente novamente.'));
+        },function(){Toast.erro('Erro de comunicação ao salvar.');});
+      },
+      function(){_renderizarLista();}
+    );
+  }
+
+  function _excluirMapa(mapaId) {
+    var mapa=_mapas.filter(function(m){return m.id===mapaId;})[0];
+    if(!mapa)return;
+    var _raw=confirm('Excluir o local "'+mapa.nome+'" e todos os seus elementos?');
+    if(_raw===null)return;
+    if(!_raw)return;
+    GAS.acoes.mapaAcao.excluir(mapaId,function(r){
+      if(r&&r.ok){Toast.sucesso('Local excluído.');_mapas=_mapas.filter(function(m){return m.id!==mapaId;});_renderizarLista();}
+      else Toast.erro('Erro ao excluir: '+(r&&r.error?r.error.message:'Tente novamente.'));
+    },function(){Toast.erro('Erro de comunicação.');});
+  }
+
+  return{aoAbrir:aoAbrir,_abrirModalNovoMapa:_abrirModalNovoMapa,_criarMapa:_criarMapa,_abrirEditor:_abrirEditor,_excluirMapa:_excluirMapa,_getAcao:_getAcao};
+
+})();
+
+// ═══════════════════════════════════════════════════════════
 // APP — Bootstrap e inicialização
 // ═══════════════════════════════════════════════════════════
 var App = (function() {
@@ -10263,7 +10535,8 @@ var App = (function() {
     { secao:'SISTEMA' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
-    { id:'admin',       label:'Administração',   icone:'admin_panel_settings',    modulo:'ADMIN' }
+    { id:'admin',       label:'Administração',   icone:'admin_panel_settings',    modulo:'ADMIN' },
+    { id:'sistema-metricas', label:'Observabilidade', icone:'monitoring', modulo:null, superadmin:true }
   ];
 
   function iniciar() {
@@ -10333,6 +10606,7 @@ var App = (function() {
       }
       // Item normal
       if(item.modulo && ativos.indexOf(item.modulo) === -1) return;
+      if(item.superadmin && (_boot.usuarioPapel || '') !== 'superadmin') return;
       var li = document.createElement('li');
       var badgeHtml = item.badge ? '<span id="'+item.badge+'" class="nav-badge oculto">0</span>' : '';
       li.innerHTML =
@@ -10361,7 +10635,8 @@ var App = (function() {
             : id === 'contratacoes'?function(){ ContratacoesTabs.aoAbrir(); }
             : id === 'financeiro' ? function(){ FinanceiroTabs.aoAbrir(); }
             : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
-            : id === 'acoes'      ? function(){ AcoesUI.aoAbrir(); }
+            : id === 'acoes'           ? function(){ AcoesUI.aoAbrir(); }
+            : id === 'sistema-metricas'? function(){ SistemaMetricasUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);
@@ -10525,6 +10800,244 @@ var MetricsToggle = (function() {
   }
 
   return { init: init, wrap: wrap };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// SistemaMetricasUI — Observabilidade (superadmin only)
+// ═══════════════════════════════════════════════════════════
+var SistemaMetricasUI = (function() {
+  var _carregado = false;
+  var _dados     = null;
+  var _periodo   = 30;
+
+  // ── Ciclo de vida ─────────────────────────────────────────
+  function aoAbrir() {
+    var boot = App.getBoot ? App.getBoot() : {};
+    if ((boot.usuarioPapel || '') !== 'superadmin') {
+      document.getElementById('sm-loading').classList.add('oculto');
+      document.getElementById('sm-erro').classList.remove('oculto');
+      document.getElementById('sm-erro-msg').textContent = 'Acesso restrito a superadmin.';
+      return;
+    }
+    if (!_carregado) _carregar();
+  }
+
+  function atualizar() {
+    _carregado = false;
+    _carregar();
+  }
+
+  function setPeriodo(p) {
+    _periodo = Number(p) || 30;
+    // atualizar botões
+    document.querySelectorAll('.sm-periodo-btn').forEach(function(b) {
+      b.classList.toggle('ativo', Number(b.dataset.periodo) === _periodo);
+    });
+    atualizar();
+  }
+
+  // ── Carregamento ──────────────────────────────────────────
+  function _carregar() {
+    document.getElementById('sm-loading').classList.remove('oculto');
+    document.getElementById('sm-erro').classList.add('oculto');
+    document.getElementById('sm-conteudo').classList.add('oculto');
+
+    GAS.sistemaMetricas.obter({ periodo: _periodo }, function(resp) {
+      document.getElementById('sm-loading').classList.add('oculto');
+      if (!resp || !resp.ok) {
+        document.getElementById('sm-erro').classList.remove('oculto');
+        document.getElementById('sm-erro-msg').textContent =
+          (resp && resp.error && resp.error.message) || 'Erro ao carregar métricas.';
+        return;
+      }
+      _dados = resp.data;
+      _carregado = true;
+      _renderizar(_dados);
+      document.getElementById('sm-conteudo').classList.remove('oculto');
+      MetricsToggle.init();
+    });
+  }
+
+  // ── Renderização ──────────────────────────────────────────
+  function _renderizar(d) {
+    // Timestamp
+    var el = document.getElementById('sm-gerado-em');
+    if (el && d.geradoEm) {
+      var dt = new Date(d.geradoEm);
+      el.textContent = 'Atualizado em ' + dt.toLocaleDateString('pt-BR') + ' às ' +
+                       dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    }
+    _renderResumo(d.resumo || {});
+    _renderInsights(d.insights || []);
+    _renderModulos(d.rankingModulos || []);
+    _renderSegurancaGrid(d);
+    _renderUsuarios(d.rankingUsuarios || []);
+    _renderEventosCriticos(d.eventosCriticos || []);
+  }
+
+  // ── Resumo global (stats-strip) ───────────────────────────
+  function _renderResumo(r) {
+    var cards = [
+      { valor: r.totalEventos    || 0, label: 'Eventos registrados', icone: 'timeline',        classe: 'primary' },
+      { valor: r.modulosAtivos   || 0, label: 'Módulos ativos',      icone: 'widgets',          classe: 'info' },
+      { valor: r.usuariosUnicos  || 0, label: 'Usuários únicos',     icone: 'people',           classe: 'success' },
+      { valor: r.eventosCriticos || 0, label: 'Eventos críticos',    icone: 'crisis_alert',     classe: r.eventosCriticos > 0 ? 'error' : 'success' },
+      { valor: r.falhasGlobal    || 0, label: 'Falhas registradas',  icone: 'error_outline',    classe: r.falhasGlobal > 0 ? 'warning' : 'success' }
+    ];
+    document.getElementById('sm-stats-topo').innerHTML = cards.map(function(c) {
+      return '<div class="stat-card">' +
+               '<div class="stat-icon ' + c.classe + '"><span class="ms">' + c.icone + '</span></div>' +
+               '<div class="stat-info"><div class="stat-valor">' + c.valor + '</div><div class="stat-label">' + c.label + '</div></div>' +
+             '</div>';
+    }).join('');
+  }
+
+  // ── Insights ──────────────────────────────────────────────
+  function _renderInsights(insights) {
+    var lista = document.getElementById('sm-insights-lista');
+    var vazio = document.getElementById('sm-insights-vazio');
+    if (!insights.length) {
+      lista.innerHTML = '';
+      vazio.classList.remove('oculto');
+      return;
+    }
+    vazio.classList.add('oculto');
+
+    var _ICONE_SEV = { critico: 'error', aviso: 'warning' };
+    var _COR_SEV   = { critico: 'var(--danger)', aviso: 'var(--warning)' };
+    var _BG_SEV    = { critico: 'rgba(220,53,69,.06)', aviso: 'rgba(255,152,0,.06)' };
+
+    lista.innerHTML = insights.map(function(ins) {
+      var icSev = _ICONE_SEV[ins.severidade] || 'info';
+      var cor   = _COR_SEV[ins.severidade]   || 'var(--primary)';
+      var bg    = _BG_SEV[ins.severidade]    || 'var(--bg-card)';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;background:' + bg + ';border-left:3px solid ' + cor + ';">' +
+               '<span class="ms" style="color:' + cor + ';font-size:20px;margin-top:1px;flex-shrink:0;">' + icSev + '</span>' +
+               '<div>' +
+                 '<div style="font-weight:600;font-size:13px;color:var(--text);">' + escaparHtml(ins.titulo) + '</div>' +
+                 '<div style="font-size:12px;color:var(--muted);margin-top:2px;">' + escaparHtml(ins.descricao) + '</div>' +
+               '</div>' +
+             '</div>';
+    }).join('');
+  }
+
+  // ── Tabela de módulos ─────────────────────────────────────
+  function _renderModulos(ranking) {
+    var tbody = document.getElementById('sm-tabela-modulos-body');
+    if (!ranking.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted-text" style="text-align:center;padding:20px;">Nenhum dado de módulo disponível.</td></tr>';
+      return;
+    }
+    var max = ranking[0].total || 1;
+    tbody.innerHTML = ranking.map(function(m) {
+      var pct    = Math.round((m.total / max) * 100);
+      var corBar = m.taxaErro > 15 ? 'var(--danger)' : m.taxaErro > 5 ? 'var(--warning)' : 'var(--primary)';
+      var taxaBadge = m.taxaErro > 15
+        ? '<span class="badge badge-error">' + m.taxaErro + '%</span>'
+        : m.taxaErro > 0
+          ? '<span class="badge badge-warning">' + m.taxaErro + '%</span>'
+          : '<span class="badge badge-success">0%</span>';
+      return '<tr>' +
+               '<td><code style="font-size:12px;">' + escaparHtml(m.modulo) + '</code></td>' +
+               '<td style="text-align:right;font-weight:600;">' + m.total + '</td>' +
+               '<td style="text-align:right;">' + m.falhas + '</td>' +
+               '<td style="text-align:right;">' + taxaBadge + '</td>' +
+               '<td style="min-width:100px;">' +
+                 '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">' +
+                   '<div style="height:100%;width:' + pct + '%;background:' + corBar + ';border-radius:3px;transition:width .4s;"></div>' +
+                 '</div>' +
+               '</td>' +
+             '</tr>';
+    }).join('');
+  }
+
+  // ── Grid de Segurança / FSM / Governança ──────────────────
+  function _renderSegurancaGrid(d) {
+    var fsm  = d.fsm        || {};
+    var seg  = d.seguranca  || {};
+    var gov  = d.governanca || {};
+    var cards = [
+      { valor: fsm.totalViolacoes   || 0, label: 'Violações FSM',           icone: 'account_tree', classe: fsm.totalViolacoes   > 0 ? 'error'   : 'success' },
+      { valor: seg.totalFalhas      || 0, label: 'Falhas de autenticação',   icone: 'lock_open',    classe: seg.totalFalhas      > 0 ? 'error'   : 'success' },
+      { valor: seg.usuariosAfetados || 0, label: 'Usuários com auth-fail',   icone: 'person_alert', classe: seg.usuariosAfetados > 0 ? 'warning' : 'success' },
+      { valor: gov.totalViolacoes   || 0, label: 'Violações arquiteturais',  icone: 'policy',       classe: gov.totalViolacoes   > 0 ? 'error'   : 'success' }
+    ];
+    document.getElementById('sm-stats-seg').innerHTML = cards.map(function(c) {
+      return '<div class="stat-card">' +
+               '<div class="stat-icon ' + c.classe + '"><span class="ms">' + c.icone + '</span></div>' +
+               '<div class="stat-info"><div class="stat-valor">' + c.valor + '</div><div class="stat-label">' + c.label + '</div></div>' +
+             '</div>';
+    }).join('');
+  }
+
+  // ── Ranking de usuários ───────────────────────────────────
+  function _renderUsuarios(ranking) {
+    var el = document.getElementById('sm-usuarios-lista');
+    if (!ranking.length) {
+      el.innerHTML = '<p class="muted-text" style="font-size:13px;">Nenhum dado de usuário disponível.</p>';
+      return;
+    }
+    var max = ranking[0].eventos || 1;
+    el.innerHTML = ranking.map(function(u, i) {
+      var pct = Math.round((u.eventos / max) * 100);
+      return '<div style="display:flex;align-items:center;gap:10px;">' +
+               '<span style="font-size:11px;color:var(--muted);width:18px;text-align:right;">' + (i+1) + '</span>' +
+               '<span class="ms" style="font-size:18px;color:var(--muted);">person</span>' +
+               '<div style="flex:1;">' +
+                 '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
+                   '<span style="font-size:13px;">' + escaparHtml(u.usuario) + '</span>' +
+                   '<span style="font-size:12px;font-weight:600;color:var(--primary);">' + u.eventos + '</span>' +
+                 '</div>' +
+                 '<div style="height:4px;background:var(--border);border-radius:2px;">' +
+                   '<div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:2px;"></div>' +
+                 '</div>' +
+               '</div>' +
+             '</div>';
+    }).join('');
+  }
+
+  // ── Eventos críticos recentes ─────────────────────────────
+  function _renderEventosCriticos(eventos) {
+    var el     = document.getElementById('sm-eventos-criticos');
+    var vazio  = document.getElementById('sm-eventos-vazio');
+    if (!eventos.length) {
+      el.innerHTML = '';
+      vazio.classList.remove('oculto');
+      return;
+    }
+    vazio.classList.add('oculto');
+    var _ICONES_TIPO = {
+      FSM_INVALID_TRANSITION: 'account_tree', FSM_BYPASS_DETECTED: 'account_tree',
+      AUTH_FAILED: 'lock_open', ACCESS_DENIED: 'no_accounts', AUTH_FAILURE_TRACKED: 'lock_open',
+      GOVERNANCE_VIOLATION: 'policy', ARCHITECTURAL_REGRESSION: 'policy',
+      SYSTEM_ERROR: 'error', MUTATION_CRITICAL: 'dangerous',
+      USER_CREATED: 'person_add', ROLE_UPDATED: 'manage_accounts',
+      MODULE_ACTIVATED: 'power', MODULE_DEACTIVATED: 'power_off'
+    };
+    el.innerHTML = eventos.map(function(ev) {
+      var icone = _ICONES_TIPO[ev.tipo] || 'crisis_alert';
+      var dt    = ev.timestamp ? new Date(ev.timestamp).toLocaleString('pt-BR') : '';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:6px;background:var(--bg-card);border:1px solid var(--border);">' +
+               '<span class="ms" style="font-size:18px;color:var(--danger);flex-shrink:0;margin-top:1px;">' + icone + '</span>' +
+               '<div style="flex:1;min-width:0;">' +
+                 '<div style="display:flex;justify-content:space-between;gap:8px;">' +
+                   '<span style="font-size:12px;font-weight:600;color:var(--text);">' + escaparHtml(ev.tipo || '') + '</span>' +
+                   '<span style="font-size:11px;color:var(--muted);flex-shrink:0;">' + escaparHtml(dt) + '</span>' +
+                 '</div>' +
+                 '<div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                   escaparHtml(ev.mensagem || '') +
+                   (ev.usuario ? ' <span style="color:var(--primary);"> — ' + escaparHtml(ev.usuario) + '</span>' : '') +
+                 '</div>' +
+               '</div>' +
+             '</div>';
+    }).join('');
+  }
+
+  return {
+    aoAbrir:   aoAbrir,
+    atualizar: atualizar,
+    setPeriodo: setPeriodo
+  };
 })();
 
 // Boot
