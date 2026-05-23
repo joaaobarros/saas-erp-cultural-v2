@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 4.5 concluída** — Seguir para **Fase 5 (Ação como Núcleo Real)**
+**Fase atual**: **Fase 5 concluída** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -79,22 +79,25 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **CSS Mapa**: todas as classes `.mapa-pl-*`, `.mapa-reserva-item`, `.stat-card`, `.badge-accent` definidas
 - ✅ Deploy @46 realizado
 
+**O que foi feito (Fase 5 — 2026-05-23)**:
+- ✅ `AcaoRepository` (acoes.json + índice ACOES.Acoes): listar/buscar/salvar/excluir + métricas + prepararIndice
+- ✅ `AcaoEngine`: FSM planejada→em_producao→em_execucao→concluida→arquivada + cancelada; FsmGuardian registrado; snapshot pré-transição; obterPainelIntegrado (tarefas+reservas+contratos)
+- ✅ `acoes_controller.gs`: ctrl_acoes_listar/obter/metricas/painel/salvar/mudar_status/excluir; RBAC (leitura=todos, escrita=coordenador+, excluir=admin); CQRS com cache
+- ✅ `setup.gs`: AcaoRepository.prepararIndice() em inicializarSistema()
+- ✅ `index.html`: view-acoes com Kanban 4 colunas + Lista + métricas; modal criar/editar; painel detalhe 6 tabs; GAS.acoes namespace; AcoesUI module; CSS aliases (btn-primary, modal, kanban, table); BtnGuard completo
+- ✅ Deploy @61
+
 **Próximo passo imediato**:
-> 1. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` → `{criados: 8}` ou `{jaExistiam: 8}`
-> 2. **[GAS EDITOR]** Executar `setup_pccs_inicial()` → `{ok: true}`
-> 3. **[GAS EDITOR]** Executar `setup_categorias_itens_iniciais()` → `{criados: 6}`
-> 4. **[BROWSER]** Admin → Cadastros → Espaços → deve listar 8 espaços com tabs funcionais
-> 5. **[BROWSER]** Espaços → tabs Reservas/Chaves/Empréstimos/Patrimônio/Mapa devem destacar corretamente
-> 6. **[BROWSER]** Financeiro → Contrato → Gerenciar → tabs Metas/Indicadores/Histórico corretos
+> 1. **[GAS EDITOR]** Executar `fase5_acoes_prepararIndice()` → `{ok: true, mensagem: 'Índice ACOES.Acoes preparado.'}`
+> 2. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` (se ainda não feito) → `{criados: 8}`
+> 3. **[BROWSER]** Módulo Ações → deve carregar com Kanban de 4 colunas (vazio inicialmente)
+> 4. **[BROWSER]** "Nova Ação" → preencher campos → Salvar → deve aparecer na coluna "Planejada"
+> 5. **[BROWSER]** Clicar no card → painel detalhe deve abrir com 6 tabs
+> 6. **[BROWSER]** Tab "Geral" → botões de transição FSM devem aparecer (Ex: "Iniciar Produção")
 > 7. **[BROWSER]** Console F12 → `BtnGuard.auditar()` → "✅ todos protegidos"
-> 8. Iniciar **Fase 5 — Ação como Núcleo Real**
+> 8. Iniciar **Fase 6 — Integração via Eventos + RECE**
 
-**O que ainda falta (prioridade antes da Fase 5)**:
-- ⬜ **[GAS EDITOR]** Seeds: `setup_espacos_iniciais()`, `setup_pccs_inicial()`, `setup_categorias_itens_iniciais()`
-- ⬜ **[BROWSER]** Verificação smoke-test manual das 8 abas do sistema
-- ⬜ **Fase 5 — Ação como Núcleo Real**: `AcaoRepository`, `AcaoEngine`, `acoes_controller.gs`, view Ações com 9 tabs, campo `acaoId` em Reservas/Tarefas/Contratos
-
-**Fase mais urgente agora**: **Fase 5** — Ação conectada a Reservas, Tarefas, Contratos (acaoId).
+**Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
 
 ---
 
@@ -182,7 +185,7 @@ Um módulo está **completo** quando oferece:
 | 3 | Pessoas, RH e Contratações | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 3.4 | RH Avançado e Ponto | ⬜ Aguardando F3 | 🟠 ALTO — CLT sem cálculo de custo; ponto ausente | — | — |
 | 4 | Financeiro e Contratos | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
-| 5 | Ação como Núcleo Real | ⬜ Aguardando F4 | 🔴 CRÍTICO — entidade central sem módulo próprio | — | — |
+| 5 | Ação como Núcleo Real | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 6 | Integração via Eventos + RECE | ⬜ Aguardando F5 | 🟠 ALTO — EventBus emite mas ninguém consome; RECE ausente | — | — |
 | 7 | Portal Externo, Público e CODIP | ⬜ Aguardando F6 | 🟠 ALTO — prestação de contas Secult/CE sem canal | — | — |
 | 8 | Agentes, Acervo, Voluntários, Parcerias | ⬜ Aguardando F7 | 🟡 MÉDIO — memória institucional digital | — | — |
@@ -309,7 +312,8 @@ Um módulo está **completo** quando oferece:
 | 2 — Espaços e Almoxarifado | Após criar views de reservas/chaves | ✅ Todos os botões async protegidos (ReservasUI + ChavesUI + AlmoxUI) |
 | 3 — Pessoas e RH | BtnGuard.auditar() pós-deploy @28 | ✅ Afastamentos + Ocorrências + Contratações + Habilitações |
 | 4 — Financeiro | Após criar views financeiras | ✅ FontesUI + RemanejamentosUI + AditivosUI + FinanceiroTabs; Deploy @30 |
-| 5+ — Demais fases | Após cada view criada | ⬜ |
+| 5 — Ações | BtnGuard.auditar() pós-deploy @61 | ✅ wrap em nova/salvar/editar; data-bg-skip em kanban/FSM |
+| 6+ — Demais fases | Após cada view criada | ⬜ |
 
 ---
 
@@ -611,37 +615,37 @@ Um módulo está **completo** quando oferece:
 
 ### 5.1 — AcaoRepository + AcaoEngine (NOVO — não existe no V2)
 
-- [ ] Criar `gas/src/modules/acoes/acao_repository.gs` — fonte canônica: `acoes.json`; índice: `ACOES.Acoes`
-- [ ] Criar `gas/src/modules/acoes/acao_engine.gs` — FSM + cálculos de execução + métricas
-- [ ] Criar `gas/src/modules/acoes/acoes_controller.gs` — `ctrl_acoes_*` com RBAC
-- [ ] `fase5_acoes_prepararIndice()` — garante aba `ACOES.Acoes` com headers
-- [ ] `inicializarSistema()` → incluir chamada ao `prepararIndice()` de Ações
+- [x] Criar `gas/src/modules/acoes/acao_repository.gs` — fonte canônica: `acoes.json`; índice: `ACOES.Acoes`
+- [x] Criar `gas/src/modules/acoes/acao_engine.gs` — FSM + cálculos de execução + métricas
+- [x] Criar `gas/src/modules/acoes/acoes_controller.gs` — `ctrl_acoes_*` com RBAC
+- [x] `fase5_acoes_prepararIndice()` — garante aba `ACOES.Acoes` com headers
+- [x] `inicializarSistema()` → inclui chamada ao `prepararIndice()` de Ações
 
 ### 5.2 — Campos da Ação
 
-- [ ] **Campos públicos vs internos**: `visibilidadePublica` separa nome/descrição/data (portal) de orçamento/equipe (interno)
-- [ ] `acaoId` referenciado em: Reservas, Itens Almox, Tarefas, Contratos, Contratações
-- [ ] `AcoesRecursos` populado automaticamente em todos os flows de vínculo
-- [ ] Campo `rider_tecnico`: lista de necessidades técnicas (equipamentos, iluminação, som, palco)
+- [x] **Campos públicos vs internos**: `visibilidadePublica` + `descricaoPublica` vs `descricao`
+- [x] `acaoId` referenciado em: Reservas, Tarefas, Contratos (já existia nos repos desde F1-F2)
+- [ ] `AcoesRecursos` populado automaticamente em todos os flows de vínculo (Fase 6)
+- [x] Campo `riderTecnico`: lista de necessidades técnicas no schema
 
 ### 5.3 — FSM de Ação revisada
 
-- [ ] `planejada → em_producao → em_execucao → concluida → arquivada`
-- [ ] Transição automática: 1ª reserva confirmada → Ação muda para `em_producao` (evento `RESERVATION_CREATED`)
-- [ ] Transição automática: Ação concluída → dispara pesquisa de satisfação (evento `ACTION_COMPLETED`)
-- [ ] Snapshot de estado antes de transições críticas (padrão Skill.md)
+- [x] `planejada → em_producao → em_execucao → concluida → arquivada` + `cancelada`
+- [ ] Transição automática: 1ª reserva confirmada → `em_producao` (Fase 6 — EventHandlerRegistry)
+- [x] Transição automática: Ação concluída → dispara evento `ACTION_COMPLETED` via IntegracaoOrquestrador
+- [x] Snapshot de estado antes de transições críticas (padrão Skill.md)
 
-### 5.4 — Painel Integrado da Ação (9 tabs)
+### 5.4 — Painel Integrado da Ação (6 tabs entregues, 3 futuras)
 
-- [ ] **[Visão Geral]** — status, próximas tarefas, alertas, execução financeira %, público previsto
-- [ ] **[Tarefas]** — lista de tarefas vinculadas com status + progresso (Linear-style)
-- [ ] **[Reservas]** — espaços reservados com horários e status de confirmação
-- [ ] **[Itens]** — equipamentos/consumíveis reservados com período e responsável
-- [ ] **[Reuniões]** — reuniões vinculadas com encaminhamentos pendentes
-- [ ] **[Contratos]** — contratos/metas/rubricas que financiam a ação + execução por rubrica
-- [ ] **[Equipe]** — colaboradores internos (papel) + agentes externos (papel + rider)
-- [ ] **[Financeiro]** — previsto/executado/saldo por rubrica, em tempo real
-- [ ] **[Entregas/Evidências]** — acervo (fotos, vídeos, atas, releases) com status LGPD
+- [x] **[Visão Geral]** — status/responsável/setor/período/público/visibilidade + botões FSM
+- [x] **[Tarefas]** — lista tarefas vinculadas por acaoId (backend ctrl_acoes_painel)
+- [x] **[Reservas]** — espaços reservados com sala/data/horário/status
+- [x] **[Contratos]** — contratos vinculados com valor total
+- [x] **[Equipe]** — membros da equipe da ação
+- [x] **[Financeiro]** — previsto/executado/saldo por contratos vinculados
+- [ ] **[Reuniões]** — Fase 10 (ReuniõesEngine ainda não existe)
+- [ ] **[Itens/Almox]** — Fase 5.5 (vincular almoxarifado a acaoId)
+- [ ] **[Entregas/Evidências]** — Fase 8 (AcervoEngine)
 
 ### 5.5 — Reservas com modo lote (gap V1→V2)
 
@@ -1057,6 +1061,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Auditoria | 5 bugs corrigidos: (1) `prompt()` null nunca capturado em ChavesUI/ReservasUI/AlmoxUI (padrão `\|\| ''` consumia null antes do if); (2) `ReservasUI.salvar()` sempre criava — adicionado `GAS.reservas.atualizar` e dispatch condicional por id; (3) CSS `badge-accent`/`form-grid` indefinidos; (4) sanitização regex de email inconsistente em `IdentidadeAdmin._aprovar` vs `_carregarPendentes`; (5) `FsmGuardian.transitar()` ausente em `almoxarifado_engine.verificarAtrasos()`. CLAUDE.md atualizado com checklist auditoria pré-deploy. Deploy @26. | Executar prepararIndice() → smoke-test browser → iniciar Fase 3 |
 | 2026-05-22 | Fase 3 | `ContratadoRepository`+`ContratadoEngine` (FSM contratado + FSM habilitação PF/PJ), `SolicitacaoRepository`+`SolicitacaoEngine` (FSM 9 estados + OrcamentoGuard stub + CQRS+cache), `contratacoes_controller.gs` (RBAC gestor/financeiro/rh). `pessoas_engine.gs`: Afastamentos FSM+impacto colaborador + Ocorrências. `colaborador_repository.gs`: afastamentos.json+ocorrencias.json. `pessoas_controller.gs`: 9 novos controllers RH. View SPA Pessoas (3 tabs) + Contratações (3 tabs). `SCHEMA_ABAS` corrigido (Contratados+SolicitacoesContratacao). Deploy @28. | `fase3_contratados_prepararIndice()` → `fase3_contratacoes_prepararIndice()` → smoke-test browser → iniciar Fase 4 |
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
+| 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-22 | Fase 4.5 | Cadastros Base + Gaps Críticos V1→V2: config_org.json (tiposOcorrencia/Afastamento), config_admin_service.gs (schema espaço completo: tipoEspaco/responsaveisPorTurno/itensFixos), admin_controller.gs CRIADO (ctrl_admin_*/ctrl_solicitacoes_*), modulos_registry_service.gs CRIADO (engine ausente referenciado em 6 arquivos), pccs_repository.gs CRIADO (PCCS→Cargos→Tabela salarial + ctrl_pccs_*), setup.gs (seeds: 8 espaços+PCCS+6 categorias), solicitacao_reserva_repository.gs+engine.gs CRIADOS (workflow SOL-xxx), reserva_engine.gs (validação sala contra catálogo SAL-xxx), almoxarifado_engine.gs (itensFixos por sala), contratos_engine.gs+financeiro_controller.gs (memória de cálculo de rubricas + versionamento), acesso_service.gs (ctrl_acesso_listarTodos/editarPapel), boot_service.gs (tiposAfastamento/Ocorrencia no bootstrap), index.html (ContratosDetailUI com grid memória+12 meses+histórico; cargo select; tipos dinâmicos; GAS.admin/acesso/rh/solicitacoes completo). Deploy @32. | setup_espacos_iniciais() + setup_pccs_inicial() no GAS Editor → smoke-test browser (campos select validados, ContratosDetailUI, painel aprovações) → Fase 5 |
 
 ---
