@@ -1,0 +1,691 @@
+
+// shared/terreno_editor.html — Editor de Terreno do Campus (contorno do mapa)
+// Incluir via: <?!= include('shared/terreno_editor'); ?>
+// ATENCAO: NAO envolver em tags script.
+
+// ═══════════════════════════════════════════════════════════
+// TERRENO EDITOR — Editor de caminho (path) do contorno do campus
+// Suporta segmentos retos (L) e curvas quadráticas (Q).
+// Pontos de ancoragem: arrastáveis.
+// Alças de curva (diamante): arrastáveis para ajustar a curvatura.
+// Duplo clique num segmento: alterna entre reto e curvo.
+// Botão direito num ponto: exclui o ponto.
+// ═══════════════════════════════════════════════════════════
+var TerrenoEditorUI = (function () {
+
+  var _NS       = 'http://www.w3.org/2000/svg';
+  var _cb       = null;       // callback(pontos, svgPath, salvo)
+  var _pontos   = [];         // [{ x, y, curve, qcx, qcy }]
+  var _svgEl    = null;
+  var _modo     = 'mover';    // 'mover' | 'adicionar'
+  var _zLvl     = 1;          // zoom level
+  var _panX     = 0;
+  var _panY     = 0;
+  var _drag     = null;       // { tipo:'ponto'|'controle'|'pan', idx, startX, startY, origX, origY }
+  var _dragPan  = null;
+  var _sel      = null;       // { tipo:'ponto'|'controle', idx }
+
+  // Contorno padrão do CCBJ (polígono hexagonal aproximado)
+  var _PADRAO = [
+    { x: 90,  y: 52  },
+    { x: 862, y: 52  },
+    { x: 866, y: 548 },
+    { x: 848, y: 576 },
+    { x: 96,  y: 600 },
+    { x: 90,  y: 572 }
+  ];
+
+  // ── Gerar SVG path a partir dos pontos ───────────────────
+  function _toSvgPath(pts) {
+    if (!pts || pts.length < 3) return '';
+    var n = pts.length;
+    var r = function(v) { return Math.round(v * 10) / 10; };
+    var d = 'M ' + r(pts[0].x) + ',' + r(pts[0].y);
+    for (var i = 0; i < n; i++) {
+      var cur = pts[i];
+      var nxt = pts[(i + 1) % n];
+      if (cur.curve && cur.qcx !== undefined) {
+        d += ' Q ' + r(cur.qcx) + ',' + r(cur.qcy) + ' ' + r(nxt.x) + ',' + r(nxt.y);
+      } else if (i < n - 1) {
+        d += ' L ' + r(nxt.x) + ',' + r(nxt.y);
+      }
+    }
+    d += ' Z';
+    return d;
+  }
+
+  // ── Abrir / Fechar ────────────────────────────────────────
+  function abrir(pontosInicial, callback) {
+    _cb = callback;
+    if (pontosInicial && pontosInicial.length >= 3) {
+      _pontos = JSON.parse(JSON.stringify(pontosInicial));
+    } else {
+      _pontos = JSON.parse(JSON.stringify(_PADRAO));
+    }
+    // Normalizar campos dos pontos
+    _pontos = _pontos.map(function(p) {
+      return {
+        x:     +p.x, y:     +p.y,
+        curve: !!p.curve,
+        qcx:   p.qcx !== undefined ? +p.qcx : +p.x,
+        qcy:   p.qcy !== undefined ? +p.qcy : +p.y
+      };
+    });
+    _sel = null; _drag = null; _dragPan = null;
+    _zLvl = 1; _panX = 0; _panY = 0; _modo = 'mover';
+    _montarOverlay();
+    _render();
+    _initIO();
+    _setModo('mover');
+  }
+
+  function fechar() {
+    var ov = document.getElementById('terreno-editor-overlay');
+    if (ov) ov.parentNode.removeChild(ov);
+    _svgEl = null; _drag = null; _dragPan = null;
+  }
+
+  function _salvar() {
+    var pts = JSON.parse(JSON.stringify(_pontos));
+    if (_cb) _cb(pts, _toSvgPath(pts), true);
+    fechar();
+  }
+
+  function _cancelar() {
+    if (_cb) _cb(null, null, false);
+    fechar();
+  }
+
+  function _redefinir() {
+    var _raw = confirm('Redefinir o terreno para o formato padrão do CCBJ?');
+    if (_raw === null || !_raw) return;
+    _pontos = _PADRAO.map(function(p) {
+      return { x: p.x, y: p.y, curve: false, qcx: p.x, qcy: p.y };
+    });
+    _sel = null;
+    _render();
+    _atualizarSelInfo();
+  }
+
+  // ── Modo de ferramentas ───────────────────────────────────
+  function _setModo(m) {
+    _modo = m;
+    var btnM = document.getElementById('te-btn-mover');
+    var btnA = document.getElementById('te-btn-adicionar');
+    var primario = 'var(--color-primary,#4f46e5)';
+    var verde    = '#16a34a';
+    if (btnM) {
+      btnM.style.borderColor = m === 'mover' ? primario : 'var(--border,#e2e8f0)';
+      btnM.style.background  = m === 'mover' ? '#eef2ff' : 'var(--surface2,#f8fafc)';
+      btnM.style.color       = m === 'mover' ? primario : 'var(--text2,#64748b)';
+    }
+    if (btnA) {
+      btnA.style.borderColor = m === 'adicionar' ? verde : 'var(--border,#e2e8f0)';
+      btnA.style.background  = m === 'adicionar' ? '#f0fdf4' : 'var(--surface2,#f8fafc)';
+      btnA.style.color       = m === 'adicionar' ? verde : 'var(--text2,#64748b)';
+    }
+    var wrap = document.getElementById('te-canvas-wrap');
+    if (wrap) wrap.style.cursor = m === 'adicionar' ? 'crosshair' : 'default';
+    var sb = document.getElementById('te-statusbar');
+    if (sb) {
+      sb.textContent = m === 'mover'
+        ? 'Modo Mover: arraste os pontos ● para reposicionar. Duplo clique num segmento para alternar curva/reta. Botão direito para excluir ponto.'
+        : 'Modo Adicionar: clique no contorno do terreno ou nos pontos verdes para inserir um novo ponto.';
+    }
+  }
+
+  // ── Zoom / Pan ────────────────────────────────────────────
+  function _doZoom(d) {
+    _zLvl = Math.max(0.4, Math.min(5, _zLvl + d * 0.2));
+    _trSvg();
+  }
+
+  function _resetZoom() {
+    _zLvl = 1; _panX = 0; _panY = 0;
+    _trSvg();
+  }
+
+  function _trSvg() {
+    if (_svgEl) {
+      _svgEl.style.transform =
+        'scale(' + _zLvl + ') translate(' + _panX + 'px,' + _panY + 'px)';
+    }
+  }
+
+  // ── SVG coords a partir do evento ─────────────────────────
+  function _svgPt(e) {
+    if (!_svgEl) return { x: 0, y: 0 };
+    var pt = _svgEl.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(_svgEl.getScreenCTM().inverse());
+  }
+
+  // ── Encontrar segmento mais próximo ───────────────────────
+  function _closestSegment(px, py) {
+    var n = _pontos.length;
+    var best = { idx: -1, t: 0.5, dist: Infinity, x: px, y: py };
+    for (var i = 0; i < n; i++) {
+      var a = _pontos[i];
+      var b = _pontos[(i + 1) % n];
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var len2 = dx * dx + dy * dy;
+      if (len2 < 1) continue;
+      var t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / len2));
+      var ix = a.x + t * dx, iy = a.y + t * dy;
+      var d = Math.sqrt((px - ix) * (px - ix) + (py - iy) * (py - iy));
+      if (d < best.dist) {
+        best = { idx: i, t: t, dist: d, x: ix, y: iy };
+      }
+    }
+    return best;
+  }
+
+  // ── Operações nos pontos ──────────────────────────────────
+  function _insertPoint(segIdx, pt) {
+    var novo = {
+      x: Math.round(pt.x), y: Math.round(pt.y),
+      curve: false,
+      qcx: Math.round(pt.x), qcy: Math.round(pt.y)
+    };
+    // Se o segmento era curvo, remover a curva para não deformar o terreno
+    if (_pontos[segIdx] && _pontos[segIdx].curve) {
+      _pontos[segIdx] = Object.assign({}, _pontos[segIdx], { curve: false });
+    }
+    _pontos.splice(segIdx + 1, 0, novo);
+    _sel = { tipo: 'ponto', idx: segIdx + 1 };
+    _render();
+    _atualizarSelInfo();
+  }
+
+  function _deletePoint(idx) {
+    if (_pontos.length <= 3) {
+      var teStatus = document.getElementById('te-statusbar');
+      if (teStatus) teStatus.textContent = '⚠ O terreno deve ter pelo menos 3 pontos.';
+      return;
+    }
+    _pontos.splice(idx, 1);
+    _sel = null;
+    _render();
+    _atualizarSelInfo();
+  }
+
+  function _toggleCurva(segIdx) {
+    if (segIdx < 0 || segIdx >= _pontos.length) return;
+    var p   = _pontos[segIdx];
+    var nxt = _pontos[(segIdx + 1) % _pontos.length];
+    if (p.curve) {
+      _pontos[segIdx] = Object.assign({}, p, { curve: false });
+    } else {
+      // Ponto de controle inicial = midpoint do segmento
+      var mx = (p.x + nxt.x) / 2;
+      var my = (p.y + nxt.y) / 2;
+      _pontos[segIdx] = Object.assign({}, p, { curve: true, qcx: mx, qcy: my });
+    }
+    _render();
+    if (_sel && _sel.tipo === 'ponto' && _sel.idx === segIdx) _atualizarSelInfo();
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function _render() {
+    if (!_svgEl) return;
+    var terrLayer = document.getElementById('te-terrain-layer');
+    var hLayer    = document.getElementById('te-handles-layer');
+    if (!terrLayer || !hLayer) return;
+    terrLayer.innerHTML = '';
+    hLayer.innerHTML    = '';
+
+    var n = _pontos.length;
+    if (n < 3) return;
+
+    // 1) Terreno preenchido
+    var pathEl = document.createElementNS(_NS, 'path');
+    pathEl.setAttribute('d', _toSvgPath(_pontos));
+    pathEl.setAttribute('fill', '#dde3ea');
+    pathEl.setAttribute('stroke', '#8fa0b4');
+    pathEl.setAttribute('stroke-width', '2');
+    pathEl.setAttribute('stroke-linejoin', 'round');
+    pathEl.setAttribute('filter', 'url(#te-shadow)');
+    pathEl.setAttribute('id', 'te-terrain-path');
+    terrLayer.appendChild(pathEl);
+
+    // Indicador norte (canto inferior direito do terreno)
+    var nIndicator = document.createElementNS(_NS, 'g');
+    nIndicator.setAttribute('transform', 'translate(855,558)');
+    nIndicator.setAttribute('opacity', '0.5');
+    nIndicator.innerHTML =
+      '<circle cx="0" cy="0" r="16" fill="#fff" stroke="#8fa0b4" stroke-width="1"/>' +
+      '<text x="0" y="1" text-anchor="middle" dominant-baseline="middle" font-size="8" font-weight="700" fill="#4c1d95">N</text>';
+    terrLayer.appendChild(nIndicator);
+
+    // 2) Pontos de midpoint dos segmentos (dicas de inserção)
+    for (var i = 0; i < n; i++) {
+      var cur = _pontos[i];
+      var nxt = _pontos[(i + 1) % n];
+      if (!cur.curve) {
+        var mx = (cur.x + nxt.x) / 2;
+        var my = (cur.y + nxt.y) / 2;
+        var mid = document.createElementNS(_NS, 'circle');
+        mid.setAttribute('cx', mx); mid.setAttribute('cy', my);
+        mid.setAttribute('r', '5');
+        mid.setAttribute('fill', '#16a34a');
+        mid.setAttribute('stroke', '#fff');
+        mid.setAttribute('stroke-width', '1.5');
+        mid.setAttribute('opacity', _modo === 'adicionar' ? '0.85' : '0.4');
+        mid.setAttribute('cursor', 'pointer');
+        mid.setAttribute('data-seg', i);
+        mid.setAttribute('title', 'Inserir ponto aqui');
+        hLayer.appendChild(mid);
+      }
+    }
+
+    // 3) Alças de curva (para segmentos curvos)
+    for (var i = 0; i < n; i++) {
+      var p = _pontos[i];
+      if (!p.curve) continue;
+      var nxtP = _pontos[(i + 1) % n];
+      var isSelCtrl = _sel && _sel.tipo === 'controle' && _sel.idx === i;
+
+      // Linha guia: ponto → alça
+      var guia1 = document.createElementNS(_NS, 'line');
+      guia1.setAttribute('x1', p.x);   guia1.setAttribute('y1', p.y);
+      guia1.setAttribute('x2', p.qcx); guia1.setAttribute('y2', p.qcy);
+      guia1.setAttribute('stroke', '#f59e0b');
+      guia1.setAttribute('stroke-width', '1');
+      guia1.setAttribute('stroke-dasharray', '4,3');
+      guia1.setAttribute('pointer-events', 'none');
+      hLayer.appendChild(guia1);
+
+      // Linha guia: alça → próximo ponto
+      var guia2 = document.createElementNS(_NS, 'line');
+      guia2.setAttribute('x1', p.qcx);  guia2.setAttribute('y1', p.qcy);
+      guia2.setAttribute('x2', nxtP.x); guia2.setAttribute('y2', nxtP.y);
+      guia2.setAttribute('stroke', '#f59e0b');
+      guia2.setAttribute('stroke-width', '1');
+      guia2.setAttribute('stroke-dasharray', '4,3');
+      guia2.setAttribute('pointer-events', 'none');
+      hLayer.appendChild(guia2);
+
+      // Diamante da alça (arrastável)
+      var cs = 7;
+      var diamond = document.createElementNS(_NS, 'rect');
+      diamond.setAttribute('x',      p.qcx - cs);
+      diamond.setAttribute('y',      p.qcy - cs);
+      diamond.setAttribute('width',  cs * 2);
+      diamond.setAttribute('height', cs * 2);
+      diamond.setAttribute('fill',   isSelCtrl ? '#f59e0b' : '#fffbeb');
+      diamond.setAttribute('stroke', '#f59e0b');
+      diamond.setAttribute('stroke-width', '2');
+      diamond.setAttribute('transform',
+        'rotate(45,' + p.qcx + ',' + p.qcy + ')');
+      diamond.setAttribute('cursor', 'move');
+      diamond.setAttribute('data-ctrl', i);
+      hLayer.appendChild(diamond);
+    }
+
+    // 4) Pontos de ancoragem
+    for (var i = 0; i < n; i++) {
+      var p       = _pontos[i];
+      var isSel   = _sel && _sel.tipo === 'ponto' && _sel.idx === i;
+
+      var c = document.createElementNS(_NS, 'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y);
+      c.setAttribute('r', '8');
+      c.setAttribute('fill',   isSel ? '#4f46e5' : '#fff');
+      c.setAttribute('stroke', isSel ? '#312e81' : '#4f46e5');
+      c.setAttribute('stroke-width', '2.5');
+      c.setAttribute('cursor', 'move');
+      c.setAttribute('data-pt', i);
+      hLayer.appendChild(c);
+
+      // Número do ponto
+      var lbl = document.createElementNS(_NS, 'text');
+      lbl.setAttribute('x', p.x); lbl.setAttribute('y', p.y + 1);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('dominant-baseline', 'middle');
+      lbl.setAttribute('font-size', '9');
+      lbl.setAttribute('font-weight', '700');
+      lbl.setAttribute('fill', isSel ? '#fff' : '#4f46e5');
+      lbl.setAttribute('pointer-events', 'none');
+      lbl.textContent = i + 1;
+      hLayer.appendChild(lbl);
+    }
+
+    _trSvg();
+  }
+
+  // ── Info lateral do ponto selecionado ─────────────────────
+  function _atualizarSelInfo() {
+    var box = document.getElementById('te-sel-info');
+    if (!box) return;
+    if (!_sel) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    if (_sel.tipo === 'ponto') {
+      var p = _pontos[_sel.idx];
+      box.innerHTML =
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:6px;">Ponto ' + (_sel.idx + 1) + '</div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+          '<label style="flex:1;font-size:11px;color:var(--text2,#64748b);">X<br>' +
+            '<input type="number" id="te-inp-x" value="' + Math.round(p.x) + '" style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;" onchange="TerrenoEditorUI._onXY()">' +
+          '</label>' +
+          '<label style="flex:1;font-size:11px;color:var(--text2,#64748b);">Y<br>' +
+            '<input type="number" id="te-inp-y" value="' + Math.round(p.y) + '" style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;" onchange="TerrenoEditorUI._onXY()">' +
+          '</label>' +
+        '</div>' +
+        '<label style="display:flex;align-items:center;gap:5px;margin-bottom:8px;font-size:11px;color:var(--text2,#64748b);cursor:pointer;">' +
+          '<input type="checkbox" id="te-inp-curve"' + (p.curve ? ' checked' : '') + ' onchange="TerrenoEditorUI._onCurve()"> Segmento curvo após este ponto' +
+        '</label>' +
+        '<button onclick="TerrenoEditorUI._deletePoint(' + _sel.idx + ')" data-bg-skip="1" style="width:100%;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;">Excluir ponto ' + (_sel.idx + 1) + '</button>';
+    } else {
+      var i = _sel.idx;
+      box.innerHTML =
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:6px;">Alça de curva ' + (i + 1) + '</div>' +
+        '<div style="font-size:11px;color:var(--text2,#64748b);margin-bottom:8px;">Arraste o diamante ◇ para ajustar a curvatura do segmento.</div>' +
+        '<button onclick="TerrenoEditorUI._toggleCurva(' + i + ')" data-bg-skip="1" style="width:100%;background:none;border:1px solid var(--border,#e2e8f0);color:var(--text2,#64748b);border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;">Converter para reta</button>';
+    }
+  }
+
+  // Callbacks de inputs da sidebar
+  function _onXY() {
+    if (!_sel || _sel.tipo !== 'ponto') return;
+    var p  = _pontos[_sel.idx];
+    var nx = parseFloat((document.getElementById('te-inp-x') || {}).value);
+    var ny = parseFloat((document.getElementById('te-inp-y') || {}).value);
+    if (!isNaN(nx)) p.x = nx;
+    if (!isNaN(ny)) p.y = ny;
+    _render();
+  }
+
+  function _onCurve() {
+    if (!_sel || _sel.tipo !== 'ponto') return;
+    _toggleCurva(_sel.idx);
+    _atualizarSelInfo();
+  }
+
+  // ── Interações ────────────────────────────────────────────
+  function _initIO() {
+    var wrap = document.getElementById('te-canvas-wrap');
+    if (!wrap || !_svgEl) return;
+
+    // Mousedown
+    _svgEl.addEventListener('mousedown', function(e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      var sp     = _svgPt(e);
+      var target = e.target;
+
+      // ── Alça de controle (diamante) ──────────────────────
+      var ctrlAttr = target.getAttribute && target.getAttribute('data-ctrl');
+      if (ctrlAttr !== null && ctrlAttr !== undefined && ctrlAttr !== '') {
+        var ci = parseInt(ctrlAttr);
+        _drag = {
+          tipo:   'controle',
+          idx:    ci,
+          startX: sp.x, startY: sp.y,
+          origX:  _pontos[ci].qcx,
+          origY:  _pontos[ci].qcy
+        };
+        _sel = { tipo: 'controle', idx: ci };
+        _render(); _atualizarSelInfo();
+        return;
+      }
+
+      // ── Midpoint (inserir ponto) ─────────────────────────
+      var segAttr = target.getAttribute && target.getAttribute('data-seg');
+      if (segAttr !== null && segAttr !== undefined && segAttr !== '') {
+        var si = parseInt(segAttr);
+        _insertPoint(si, sp);
+        return;
+      }
+
+      // ── Ponto de ancoragem ───────────────────────────────
+      var ptAttr = target.getAttribute && target.getAttribute('data-pt');
+      if (ptAttr !== null && ptAttr !== undefined && ptAttr !== '') {
+        var pi = parseInt(ptAttr);
+        _drag = {
+          tipo:   'ponto',
+          idx:    pi,
+          startX: sp.x, startY: sp.y,
+          origX:  _pontos[pi].x,
+          origY:  _pontos[pi].y
+        };
+        _sel = { tipo: 'ponto', idx: pi };
+        _render(); _atualizarSelInfo();
+        return;
+      }
+
+      // ── Modo adicionar: clique no terreno → inserir no segmento mais próximo
+      if (_modo === 'adicionar') {
+        var closest = _closestSegment(sp.x, sp.y);
+        if (closest.idx >= 0 && closest.dist < 50) {
+          _insertPoint(closest.idx, closest);
+          return;
+        }
+      }
+
+      // ── Pan ──────────────────────────────────────────────
+      _sel = null;
+      _render(); _atualizarSelInfo();
+      _dragPan = {
+        sx: e.clientX - _panX * _zLvl,
+        sy: e.clientY - _panY * _zLvl
+      };
+      wrap.style.cursor = 'grabbing';
+    });
+
+    // Mousemove
+    document.addEventListener('mousemove', function(e) {
+      if (_drag) {
+        var sp = _svgPt(e);
+        if (_drag.tipo === 'ponto') {
+          var dx = sp.x - _drag.startX;
+          var dy = sp.y - _drag.startY;
+          var p  = _pontos[_drag.idx];
+          // Mover também a alça de controle junto com o ponto, se não foi personalizada
+          var movedCtrl = Math.abs(p.qcx - p.x) < 2 && Math.abs(p.qcy - p.y) < 2;
+          p.x = _drag.origX + dx;
+          p.y = _drag.origY + dy;
+          if (movedCtrl) { p.qcx = p.x; p.qcy = p.y; }
+          _render(); _atualizarSelInfo();
+        } else if (_drag.tipo === 'controle') {
+          var dx2 = sp.x - _drag.startX;
+          var dy2 = sp.y - _drag.startY;
+          _pontos[_drag.idx].qcx = _drag.origX + dx2;
+          _pontos[_drag.idx].qcy = _drag.origY + dy2;
+          _render();
+        }
+      } else if (_dragPan) {
+        _panX = (e.clientX - _dragPan.sx) / _zLvl;
+        _panY = (e.clientY - _dragPan.sy) / _zLvl;
+        _trSvg();
+      }
+    });
+
+    // Mouseup
+    document.addEventListener('mouseup', function() {
+      if (_drag) { _render(); _atualizarSelInfo(); _drag = null; }
+      if (_dragPan) {
+        _dragPan = null;
+        var w = document.getElementById('te-canvas-wrap');
+        if (w) w.style.cursor = _modo === 'adicionar' ? 'crosshair' : 'default';
+      }
+    });
+
+    // Contextmenu = excluir ponto
+    _svgEl.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      var target  = e.target;
+      var ptAttr  = target.getAttribute && target.getAttribute('data-pt');
+      if (ptAttr !== null && ptAttr !== undefined && ptAttr !== '') {
+        _deletePoint(parseInt(ptAttr));
+      }
+    });
+
+    // Duplo clique = alternar curva no segmento
+    _svgEl.addEventListener('dblclick', function(e) {
+      var target = e.target;
+      // Ignorar duplo clique em ponto ou alça
+      if (target.getAttribute && (
+          target.getAttribute('data-pt') !== null ||
+          target.getAttribute('data-ctrl') !== null)
+      ) return;
+      var sp      = _svgPt(e);
+      var segAttr = target.getAttribute && target.getAttribute('data-seg');
+      if (segAttr !== null && segAttr !== undefined && segAttr !== '') {
+        _toggleCurva(parseInt(segAttr));
+        return;
+      }
+      // Encontrar segmento mais próximo
+      var closest = _closestSegment(sp.x, sp.y);
+      if (closest.dist < 30) _toggleCurva(closest.idx);
+    });
+
+    // Wheel = zoom
+    wrap.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      _doZoom(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+  }
+
+  // ── Overlay HTML ──────────────────────────────────────────
+  function _montarOverlay() {
+    fechar();
+    var ov  = document.createElement('div');
+    ov.id   = 'terreno-editor-overlay';
+    ov.style.cssText =
+      'position:fixed;inset:0;z-index:9997;display:flex;flex-direction:column;' +
+      'background:var(--bg,#f1f5f9);';
+
+    ov.innerHTML =
+      // ── Topbar ──
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;' +
+           'background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;">' +
+        '<button onclick="TerrenoEditorUI._cancelar()" data-bg-skip="1" ' +
+                'style="background:none;border:none;cursor:pointer;color:var(--text2,#64748b);' +
+                       'display:flex;align-items:center;gap:4px;font-size:13px;padding:4px 8px;border-radius:6px;" ' +
+                'onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" ' +
+                'onmouseout="this.style.background=\'none\'">' +
+          '<span class="ms ms-sm">arrow_back</span> Voltar' +
+        '</button>' +
+        '<span class="ms" style="color:#16a34a;font-size:22px;">terrain</span>' +
+        '<div style="flex:1;font-size:14px;font-weight:600;color:var(--text,#1e293b);">' +
+          'Editor de Terreno — <span style="color:#16a34a;">Contorno do Campus</span>' +
+        '</div>' +
+        '<button onclick="TerrenoEditorUI._redefinir()" data-bg-skip="1" ' +
+                'style="background:none;border:1px solid var(--border,#e2e8f0);color:var(--text2,#64748b);' +
+                       'cursor:pointer;border-radius:6px;padding:5px 12px;font-size:12px;' +
+                       'display:flex;align-items:center;gap:4px;" ' +
+                'onmouseover="this.style.background=\'var(--surface2)\'" ' +
+                'onmouseout="this.style.background=\'none\'">' +
+          '<span class="ms ms-sm">restart_alt</span> Redefinir padrão' +
+        '</button>' +
+        '<button onclick="TerrenoEditorUI._salvar()" data-bg-skip="1" ' +
+                'style="background:#16a34a;color:#fff;border:none;cursor:pointer;' +
+                       'border-radius:6px;padding:6px 18px;font-weight:600;font-size:13px;' +
+                       'display:flex;align-items:center;gap:4px;">' +
+          '<span class="ms ms-sm">check</span> Concluir' +
+        '</button>' +
+      '</div>' +
+
+      // ── Body ──
+      '<div style="display:flex;flex:1;overflow:hidden;">' +
+
+        // ─ Sidebar ─
+        '<div style="width:220px;flex-shrink:0;background:var(--surface,#fff);' +
+                    'border-right:1px solid var(--border,#e2e8f0);padding:14px;overflow-y:auto;">' +
+
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;' +
+                      'color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Ferramentas</div>' +
+
+          '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">' +
+            '<button id="te-btn-mover" onclick="TerrenoEditorUI._setModo(\'mover\')" data-bg-skip="1" ' +
+                    'style="display:flex;align-items:center;gap:8px;padding:9px 10px;' +
+                           'border:1.5px solid var(--color-primary,#4f46e5);background:#eef2ff;' +
+                           'color:var(--color-primary,#4f46e5);border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;">' +
+              '<span class="ms ms-sm">open_with</span> Mover ponto' +
+            '</button>' +
+            '<button id="te-btn-adicionar" onclick="TerrenoEditorUI._setModo(\'adicionar\')" data-bg-skip="1" ' +
+                    'style="display:flex;align-items:center;gap:8px;padding:9px 10px;' +
+                           'border:1.5px solid var(--border,#e2e8f0);background:var(--surface2,#f8fafc);' +
+                           'color:var(--text2,#64748b);border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;">' +
+              '<span class="ms ms-sm">add_location</span> Adicionar ponto' +
+            '</button>' +
+          '</div>' +
+
+          '<div style="padding:10px;background:var(--surface2,#f8fafc);border-radius:8px;' +
+                      'font-size:10px;color:var(--text2,#64748b);line-height:1.8;">' +
+            '<b>Mover:</b> Arraste pontos <span style="color:#4f46e5;">●</span><br>' +
+            '<b>Adicionar:</b> Clique no contorno <span style="color:#16a34a;">●</span><br>' +
+            '<b>Curva:</b> Duplo clique num segmento<br>' +
+            '<b>Alça ◇:</b> Arraste para curvar<br>' +
+            '<b>Excluir:</b> Botão direito no ponto<br>' +
+            '<b>Zoom:</b> Roda do mouse' +
+          '</div>' +
+
+          '<div id="te-sel-info" style="margin-top:14px;display:none;padding:10px;' +
+                                       'background:var(--surface2,#f8fafc);border-radius:8px;' +
+                                       'font-size:11px;color:var(--text,#1e293b);">' +
+          '</div>' +
+
+        '</div>' +
+
+        // ─ Canvas ─
+        '<div style="flex:1;overflow:hidden;position:relative;">' +
+          '<div style="position:absolute;bottom:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:4px;">' +
+            '<button onclick="TerrenoEditorUI._doZoom(1)" data-bg-skip="1" ' +
+                    'style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);' +
+                           'border-radius:6px;cursor:pointer;font-size:18px;line-height:1;">+</button>' +
+            '<button onclick="TerrenoEditorUI._doZoom(-1)" data-bg-skip="1" ' +
+                    'style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);' +
+                           'border-radius:6px;cursor:pointer;font-size:18px;line-height:1;">−</button>' +
+            '<button onclick="TerrenoEditorUI._resetZoom()" data-bg-skip="1" ' +
+                    'style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);' +
+                           'border-radius:6px;cursor:pointer;font-size:12px;" title="Ajustar">' +
+              '<span class="ms" style="font-size:16px;">fit_screen</span></button>' +
+          '</div>' +
+          '<div id="te-canvas-wrap" style="width:100%;height:100%;overflow:hidden;cursor:default;">' +
+            '<svg id="te-svg" viewBox="0 0 900 660" xmlns="http://www.w3.org/2000/svg" ' +
+                 'style="width:100%;height:100%;display:block;transform-origin:top left;">' +
+              '<defs>' +
+                '<pattern id="te-grid" width="50" height="50" patternUnits="userSpaceOnUse">' +
+                  '<path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(148,163,184,0.25)" stroke-width="0.5"/>' +
+                '</pattern>' +
+                '<filter id="te-shadow">' +
+                  '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>' +
+                '</filter>' +
+              '</defs>' +
+              '<rect width="900" height="660" fill="#f8fafc"/>' +
+              '<rect width="900" height="660" fill="url(#te-grid)"/>' +
+              '<g id="te-terrain-layer"></g>' +
+              '<g id="te-handles-layer"></g>' +
+            '</svg>' +
+          '</div>' +
+        '</div>' +
+
+      '</div>' +
+
+      // ── Status bar ──
+      '<div id="te-statusbar" style="padding:7px 16px;background:var(--surface,#fff);' +
+           'border-top:1px solid var(--border,#e2e8f0);font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' +
+        'Modo Mover: arraste os pontos para remodelar o contorno do terreno.' +
+      '</div>';
+
+    document.body.appendChild(ov);
+    _svgEl = document.getElementById('te-svg');
+  }
+
+  // ── API Pública ───────────────────────────────────────────
+  return {
+    abrir:        abrir,
+    fechar:       fechar,
+    _cancelar:    _cancelar,
+    _salvar:      _salvar,
+    _redefinir:   _redefinir,
+    _setModo:     _setModo,
+    _doZoom:      _doZoom,
+    _resetZoom:   _resetZoom,
+    _deletePoint: _deletePoint,
+    _toggleCurva: _toggleCurva,
+    _onXY:        _onXY,
+    _onCurve:     _onCurve
+  };
+})();

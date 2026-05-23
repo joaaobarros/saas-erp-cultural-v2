@@ -6868,18 +6868,36 @@ var InfraConfigMapaUI = (function() {
     }
   }
 
-  // ── Background do campus (mesmo do MapaEditorUI) ─────────
+  // ── Background do campus (usa terreno salvo ou padrão) ───
   function _buildBgSvgContent() {
+    // Prioridade: terreno salvo pelo usuário → polígono padrão (hexagonal)
+    var svgPath = (_terreno && _terreno.svgPath)
+      ? _terreno.svgPath
+      : 'M 90,52 L 862,52 L 866,548 L 848,576 L 96,600 L 90,572 Z';
     return '<defs><filter id="cfg-mapa-shadow">' +
              '<feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/>' +
            '</filter></defs>' +
-           '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="#dde3ea"/>' +
-           '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="none" stroke="#8fa0b4" stroke-width="2"/>' +
+           '<path d="' + svgPath + '" fill="#dde3ea" stroke="#8fa0b4" stroke-width="2" stroke-linejoin="round"/>' +
            '<circle cx="490" cy="400" r="80" fill="#c8d3de" opacity=".25"/>' +
            '<g transform="translate(855,558)" opacity=".5">' +
              '<circle cx="0" cy="0" r="16" fill="#fff" stroke="#8fa0b4" stroke-width="1"/>' +
              '<text x="0" y="1" text-anchor="middle" dominant-baseline="middle" font-size="8" font-weight="700" fill="#4c1d95">N</text>' +
            '</g>';
+  }
+
+  // ── Atualizar label de terreno na toolbar ────────────────
+  function _atualizarLabelTerreno() {
+    var lbl = document.getElementById('cfg-mapa-terreno-label');
+    if (!lbl) return;
+    if (_terreno && _terreno.pontos && _terreno.pontos.length > 0) {
+      lbl.innerHTML =
+        '<span class="ms ms-sm" style="font-size:13px;color:#16a34a;">landscape</span>' +
+        '<span style="color:#16a34a;">Terreno personalizado (' + _terreno.pontos.length + ' pontos)</span>';
+    } else {
+      lbl.innerHTML =
+        '<span class="ms ms-sm" style="font-size:13px;">landscape</span>' +
+        'Terreno padrão';
+    }
   }
 
   // ── Render map ───────────────────────────────────────────
@@ -7063,21 +7081,45 @@ var InfraConfigMapaUI = (function() {
     );
   }
 
-  // ── Carregar dados ───────────────────────────────────────
+  // ── Carregar dados (terreno + espaços em paralelo) ───────
   function _carregar() {
     var sidebar = document.getElementById('cfg-mapa-sidebar');
     if (sidebar) sidebar.innerHTML = '<p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>';
     var canvas  = document.getElementById('cfg-mapa-canvas');
     if (canvas)  canvas.innerHTML  = '<p class="muted-text" style="padding:20px;font-size:12px;">Carregando mapa…</p>';
 
-    GAS.admin.listarEspacos(function(r) {
-      _espacos   = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+    var _terrenoOk  = false;
+    var _espacosOk  = false;
+
+    function _checkPronto() {
+      if (!_terrenoOk || !_espacosOk) return;
       _carregado = true;
       _renderMapa();
       _renderSidebar();
+      _atualizarLabelTerreno();
+    }
+
+    // Carregar terreno (silencioso — falha graciosamente com padrão)
+    GAS.admin.lerTerreno(function(r) {
+      _terreno   = (r && r.ok && r.data) ? r.data : null;
+      _terrenoOk = true;
+      _checkPronto();
+    }, function() {
+      _terreno   = null;
+      _terrenoOk = true;
+      _checkPronto();
+    });
+
+    // Carregar espaços
+    GAS.admin.listarEspacos(function(r) {
+      _espacos   = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _espacosOk = true;
+      _checkPronto();
     }, function(err) {
       if (sidebar) sidebar.innerHTML = '<p class="muted-text" style="padding:12px;font-size:12px;">Erro ao carregar.</p>';
       if (canvas)  canvas.innerHTML  = '';
+      _espacosOk = true;
+      _checkPronto();
     });
   }
 
@@ -7088,6 +7130,31 @@ var InfraConfigMapaUI = (function() {
   function recarregar() {
     _carregado = false;
     _carregar();
+  }
+
+  // ── Editar terreno (abre TerrenoEditorUI) ────────────────
+  function _editarTerreno() {
+    var pontosAtuais = (_terreno && _terreno.pontos) ? _terreno.pontos : null;
+    TerrenoEditorUI.abrir(pontosAtuais, function(pontos, svgPath, salvo) {
+      if (!salvo) return;
+      // Salvar no backend
+      GAS.admin.salvarTerreno(
+        { pontos: pontos, svgPath: svgPath },
+        function(r) {
+          if (r && r.ok) {
+            _terreno = { pontos: pontos, svgPath: svgPath };
+            Toast.sucesso('Terreno do campus salvo (' + pontos.length + ' pontos).');
+            _renderMapa();
+            _atualizarLabelTerreno();
+          } else {
+            Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar terreno.');
+          }
+        },
+        function(err) {
+          Toast.erro('Erro ao salvar terreno: ' + ((err && err.message) || String(err)));
+        }
+      );
+    });
   }
 
   // ── Zoom / pan ───────────────────────────────────────────
@@ -7137,11 +7204,12 @@ var InfraConfigMapaUI = (function() {
 
   // ── API pública ──────────────────────────────────────────
   return {
-    aoAbrir:        aoAbrir,
-    recarregar:     recarregar,
-    zoom:           zoom,
-    resetZoom:      resetZoom,
-    _editarPosicao: _editarPosicao
+    aoAbrir:         aoAbrir,
+    recarregar:      recarregar,
+    zoom:            zoom,
+    resetZoom:       resetZoom,
+    _editarPosicao:  _editarPosicao,
+    _editarTerreno:  _editarTerreno
   };
 })();
 
@@ -8876,6 +8944,7 @@ var AtivosUI = (function() {
 
 <?!= include('shared/mapa_ui'); ?>
 <?!= include('shared/mapa_editor'); ?>
+<?!= include('shared/terreno_editor'); ?>
 // ═══════════════════════════════════════════════════════════
 // PESSOAS — Controlador de Tabs (Fase 3)
 // ═══════════════════════════════════════════════════════════
