@@ -1,8 +1,8 @@
 
- // shared/mapa_ui.html — Lógica JS do Mapa Interativo CCBJ (Fase 5A)
+ // shared/mapa_ui.html — Lógica JS do Mapa Interativo CCBJ (Fase 5A · rev 2)
  // Incluir via: <?!= include('shared/mapa_ui'); ?>
  // ATENCAO: NAO envolver em tags script — este include ja esta
- // dentro do bloco script principal de index.html (linha 2543-6638).
+ // dentro do bloco script principal de index.html.
 
 
 // ═══════════════════════════════════════════════════════════
@@ -17,11 +17,18 @@ var MapaUI=(function(){
   var _SC={disponivel:'badge-success',ocupado:'badge-error',em_uso:'badge-accent',
     aguardando:'badge-warning',manutencao:'',bloqueado:'badge-error',default:''};
 
+  // ─── Helpers ───────────────────────────────────────────────
+  function _getDataAtual(){
+    var inp=document.getElementById('mapa-data');
+    return (inp&&inp.value)||new Date().toISOString().slice(0,10);
+  }
+
+  // ─── Carregar / atualizar ───────────────────────────────────
   function carregar(){
     _carregado=true;
     var inp=document.getElementById('mapa-data');
     if(inp&&!inp.value)inp.value=new Date().toISOString().slice(0,10);
-    var data=(inp&&inp.value)||new Date().toISOString().slice(0,10);
+    var data=_getDataAtual();
     _skeleton();
     GAS.mapa.statusEspacos({data:data},function(r){
       if(!r||!r.ok){Toast.erro('Erro ao carregar mapa');return;}
@@ -29,6 +36,10 @@ var MapaUI=(function(){
       (r.data.espacos||[]).forEach(function(e){_statusMap[e.id]=e;});
       _cores();
       _dash(r.data.espacos||[]);
+      // Re-selecionar espaço se havia um selecionado
+      if(_selecionado&&_statusMap[_selecionado]){
+        _sel(_selecionado);
+      }
     },function(err){Toast.erro('Mapa: '+(err&&err.message||err));});
     _initIO();
   }
@@ -97,6 +108,7 @@ var MapaUI=(function(){
   function zoom(d){_zoom=Math.max(0.5,Math.min(4,_zoom+d*0.2));_tr();}
   function resetZoom(){_zoom=1;_panX=0;_panY=0;_tr();}
 
+  // ─── Seleção ────────────────────────────────────────────────
   function _sel(id){
     document.querySelectorAll('#mapa-svg-inner .mapa-espaco.selecionado')
       .forEach(function(g){g.classList.remove('selecionado');});
@@ -107,14 +119,18 @@ var MapaUI=(function(){
     _painel(info);
   }
 
+  // ─── Painel lateral ─────────────────────────────────────────
   function _painel(info){
     var painel=document.getElementById('mapa-painel-lateral');
     if(!painel)return;
     painel.classList.remove('fechado');
     var st=info.status||'default';
+    var id=info.id;
+
     painel.innerHTML=
+      // Cabeçalho
       '<div class="mapa-pl-header">'+
-        '<div>'+
+        '<div style="flex:1;min-width:0">'+
           '<div class="mapa-pl-nome">'+escaparHtml(info.nome||'Espaço')+'</div>'+
           '<span class="badge '+(_SC[st]||'')+'" style="margin-top:5px;display:inline-block">'+
             escaparHtml(_SL[st]||st)+'</span>'+
@@ -123,6 +139,7 @@ var MapaUI=(function(){
           'style="background:none;border:none;cursor:pointer;color:var(--muted);'+
                  'font-size:20px;padding:0;line-height:1;flex-shrink:0">&#x2715;</button>'+
       '</div>'+
+      // Corpo: info + agenda
       '<div class="mapa-pl-body">'+
         '<div class="mapa-pl-info">'+
           _row('Capacidade',(info.capacidade||0)>0?info.capacidade+' pessoas':'—')+
@@ -136,25 +153,40 @@ var MapaUI=(function(){
           _ag(info.reservaAtiva,info.proximaReserva,info.totalReservasHoje)+
         '</div>'+
       '</div>'+
+      // Timeline hora a hora
+      '<div class="mapa-pl-timeline">'+
+        '<h4><span class="ms ms-sm" style="vertical-align:middle;margin-right:4px">schedule</span>Timeline do Dia</h4>'+
+        '<div id="mapa-tl-wrap-'+id+'" class="mapa-tl">'+
+          '<div style="color:var(--muted);font-size:11px;padding:6px 0">'+
+            '<span class="ms ms-sm" style="vertical-align:middle;animation:mapa-pulse 1s infinite">hourglass_top</span>'+
+            ' Carregando…</div>'+
+        '</div>'+
+      '</div>'+
+      // Botões de ação
       '<div class="mapa-pl-acoes">'+
         (info.aceitaReserva!==false?
-          '<button id="mapa-btn-reserva" class="btn btn-primary btn-sm" style="width:100%">'+
+          '<button id="mapa-btn-reserva" data-bg-skip="1" class="btn btn-primary btn-sm" style="width:100%">'+
           '<span class="ms ms-sm">event_available</span> Solicitar Reserva</button>':'')+
         (info.possuiChaves?
-          '<button id="mapa-btn-chave" class="btn btn-secondary btn-sm" style="width:100%;margin-top:5px">'+
+          '<button id="mapa-btn-chave" data-bg-skip="1" class="btn btn-secondary btn-sm" style="width:100%;margin-top:5px">'+
           '<span class="ms ms-sm">key</span> Solicitar Chave</button>':'')+
       '</div>';
-    if(typeof BtnGuard!=='undefined'){
-      var bR=document.getElementById('mapa-btn-reserva');
-      var bC=document.getElementById('mapa-btn-chave');
-      if(bR)BtnGuard.wrap(bR,'Abrindo…',function(done){done();MapaUI.solicitarReserva(_selecionado);});
-      if(bC)BtnGuard.wrap(bC,'Abrindo…',function(done){done();MapaUI.solicitarChave(_selecionado);});
-    }
+
+    // ⚠️ FIX: addEventListener — NÃO chamar BtnGuard.wrap aqui pois ele
+    // executa fn(done) imediatamente (não é um registro de click handler).
+    var bR=document.getElementById('mapa-btn-reserva');
+    var bC=document.getElementById('mapa-btn-chave');
+    if(bR)bR.addEventListener('click',function(){MapaUI.solicitarReserva(_selecionado);});
+    if(bC)bC.addEventListener('click',function(){MapaUI.solicitarChave(_selecionado);});
+
+    // Carregar timeline de forma assíncrona
+    _carregarTimeline(id, _getDataAtual());
   }
 
+  // ─── Helpers do painel ─────────────────────────────────────
   function _row(l,v){
     return '<div class="mapa-pl-row"><span>'+escaparHtml(l)+'</span>'+
-           '<strong>'+escaparHtml(String(v))+'</strong></div>';
+           '<strong>'+v+'</strong></div>';
   }
 
   function _tl(t){
@@ -190,17 +222,97 @@ var MapaUI=(function(){
     return html;
   }
 
+  // ─── Timeline hora a hora ───────────────────────────────────
+  var HORA_INI=7, HORA_FIM=22;  // 7h às 22h
+
+  function _carregarTimeline(espacoId, data){
+    GAS.mapa.reservasEspaco(
+      {espacoId:espacoId, de:data, ate:data},
+      function(r){
+        var el=document.getElementById('mapa-tl-wrap-'+espacoId);
+        if(!el)return;
+        if(!r||!r.ok){
+          el.innerHTML='<span style="color:var(--muted);font-size:11px">Não foi possível carregar a agenda.</span>';
+          return;
+        }
+        el.innerHTML=_renderTimeline(r.data.reservas||[], data);
+      },
+      function(){
+        var el=document.getElementById('mapa-tl-wrap-'+espacoId);
+        if(el)el.innerHTML='<span style="color:var(--muted);font-size:11px">—</span>';
+      }
+    );
+  }
+
+  function _renderTimeline(reservas, data){
+    var totalMin=(HORA_FIM-HORA_INI)*60;
+
+    // Cabeçalho de horas (a cada 2h)
+    var horas='';
+    for(var h=HORA_INI;h<=HORA_FIM;h+=2){
+      var pct=((h-HORA_INI)/(HORA_FIM-HORA_INI))*100;
+      horas+='<div class="mapa-tl-hora" style="left:'+pct.toFixed(2)+'%">'+
+        (h<10?'0':'')+h+'h</div>';
+    }
+
+    // Blocos de reservas
+    var blocos='';
+    reservas.forEach(function(r){
+      try{
+        var pi=r.horaInicio.split(':'), pf=r.horaTermino.split(':');
+        var minIni=Number(pi[0])*60+Number(pi[1]);
+        var minFim=Number(pf[0])*60+Number(pf[1]);
+        var cIni=Math.max(HORA_INI*60,minIni);
+        var cFim=Math.min(HORA_FIM*60,minFim);
+        if(cFim<=cIni)return;
+        var left=((cIni-HORA_INI*60)/totalMin)*100;
+        var width=((cFim-cIni)/totalMin)*100;
+        var cls=r.status==='em_uso'?'tl-em_uso':
+                r.status==='confirmado'?'tl-confirmado':
+                r.status==='pendente'?'tl-pendente':'tl-outro';
+        var titulo=escaparHtml((r.nomeAcao||'Reserva')+' ('+r.horaInicio+'–'+r.horaTermino+')');
+        blocos+='<div class="mapa-tl-bloco '+cls+'" '+
+          'style="left:'+left.toFixed(2)+'%;width:'+Math.max(width,0.5).toFixed(2)+'%;" '+
+          'title="'+titulo+'">'+
+          '<span class="mapa-tl-bloco-label">'+escaparHtml(r.nomeAcao||'Reserva')+'</span>'+
+          '</div>';
+      }catch(e_){}
+    });
+
+    // Marcador de hora atual (só para o dia de hoje)
+    var hoje=new Date().toISOString().slice(0,10);
+    var marcador='';
+    if(data===hoje){
+      var agora_=new Date();
+      var minAtual=agora_.getHours()*60+agora_.getMinutes();
+      if(minAtual>=HORA_INI*60&&minAtual<=HORA_FIM*60){
+        var pctAtual=((minAtual-HORA_INI*60)/totalMin)*100;
+        marcador='<div class="mapa-tl-agora" style="left:'+pctAtual.toFixed(2)+'%" title="Agora"></div>';
+      }
+    }
+
+    return '<div class="mapa-tl-horas">'+horas+'</div>'+
+      '<div class="mapa-tl-trilha">'+blocos+marcador+'</div>'+
+      (reservas.length===0?'<div class="mapa-tl-vazio">Sem reservas neste dia</div>':'')+
+      '<div class="mapa-tl-legenda">'+
+        '<div class="mapa-tl-legenda-item"><div class="mapa-tl-legenda-dot" style="background:var(--color-primary)"></div>Confirmada</div>'+
+        '<div class="mapa-tl-legenda-item"><div class="mapa-tl-legenda-dot" style="background:var(--color-warning)"></div>Pendente</div>'+
+        '<div class="mapa-tl-legenda-item"><div class="mapa-tl-legenda-dot" style="background:#4c1d95"></div>Em uso</div>'+
+      '</div>';
+  }
+
+  // ─── Dashboard ──────────────────────────────────────────────
   function _dash(espacos){
     var t={disponivel:0,ocupado:0,em_uso:0,aguardando:0,manutencao:0,bloqueado:0};
     espacos.forEach(function(e){if(t[e.status]!==undefined)t[e.status]++;});
     var el=document.getElementById('mapa-dashboard');if(!el)return;
     el.innerHTML=[
       {k:'disponivel',label:'Disponíveis',cls:'success',i:'check_circle'},
-      {k:'ocupado',   label:'Ocupados',         cls:'error',  i:'block'},
-      {k:'em_uso',    label:'Em uso',            cls:'accent', i:'play_circle'},
-      {k:'aguardando',label:'Aguardando',        cls:'warning',i:'pending'},
-      {k:'manutencao',label:'Manutenção',cls:'',   i:'build'},
-      {k:'bloqueado', label:'Bloqueados',        cls:'',       i:'lock'},
+      {k:'ocupado',   label:'Ocupados',   cls:'error',  i:'block'},
+      {k:'em_uso',    label:'Em uso',     cls:'accent', i:'play_circle'},
+      {k:'aguardando',label:'Aguardando', cls:'warning',i:'pending'},
+      {k:'manutencao',label:'Manutenção', cls:'',       i:'build'},
+      {k:'bloqueado', label:'Bloqueados', cls:'',       i:'lock'},
     ].map(function(s){
       return '<div class="stat-card">'+
         '<div class="stat-icon '+s.cls+'"><span class="ms ms-lg">'+s.i+'</span></div>'+
@@ -209,6 +321,7 @@ var MapaUI=(function(){
     }).join('');
   }
 
+  // ─── Fechar painel ──────────────────────────────────────────
   function fecharPainel(){
     var p=document.getElementById('mapa-painel-lateral');
     if(p)p.classList.add('fechado');
@@ -217,27 +330,170 @@ var MapaUI=(function(){
     _selecionado=null;
   }
 
+  // ─── Modal genérico ─────────────────────────────────────────
+  function _abrirModal(html){
+    fecharModal();
+    var overlay=document.createElement('div');
+    overlay.id='mapa-modal-overlay';
+    overlay.className='mapa-modal-overlay';
+    overlay.innerHTML='<div class="mapa-modal" role="dialog" aria-modal="true">'+html+'</div>';
+    // Fechar ao clicar fora
+    overlay.addEventListener('click',function(ev){
+      if(ev.target===overlay)fecharModal();
+    });
+    // Fechar com Escape
+    overlay._escFn=function(ev){if(ev.key==='Escape')fecharModal();};
+    document.addEventListener('keydown',overlay._escFn);
+    document.body.appendChild(overlay);
+    // Focar primeiro campo interativo
+    var inp=overlay.querySelector('input,select,textarea');
+    if(inp)setTimeout(function(){inp.focus();},80);
+  }
+
+  function fecharModal(){
+    var el=document.getElementById('mapa-modal-overlay');
+    if(!el)return;
+    if(el._escFn)document.removeEventListener('keydown',el._escFn);
+    el.parentNode.removeChild(el);
+  }
+
+  // ─── Modal: Solicitar Reserva ───────────────────────────────
   function solicitarReserva(id){
-    EspacosUI.abrirTab('reservas');
-    if(typeof ReservasUI!=='undefined'&&ReservasUI.abrirFormComEspaco){
-      var info=_statusMap[id]||{};
-      ReservasUI.abrirFormComEspaco(id,info.nome||'');
-    }
+    var info=_statusMap[id]||{id:id,nome:'Espaço'};
+    var data=_getDataAtual();
+    _abrirModal(
+      '<div class="mapa-modal-header">'+
+        '<span class="ms ms-sm" style="color:var(--color-primary)">event_available</span>'+
+        '<strong>Solicitar Reserva</strong>'+
+        '<span class="mapa-modal-espaco">'+escaparHtml(info.nome||'')+'</span>'+
+        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="mapa-modal-close">&#x2715;</button>'+
+      '</div>'+
+      '<div class="mapa-modal-body">'+
+        '<div class="form-group">'+
+          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Nome da Ação *</label>'+
+          '<input id="mr-nome" type="text" class="form-control" placeholder="Ex: Ensaio Grupo Flor do Cerrado" autofocus>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+          '<div class="form-group">'+
+            '<label style="font-size:12px;font-weight:600;color:var(--text2)">Hora Início *</label>'+
+            '<input id="mr-ini" type="time" class="form-control" value="08:00">'+
+          '</div>'+
+          '<div class="form-group">'+
+            '<label style="font-size:12px;font-weight:600;color:var(--text2)">Hora Término *</label>'+
+            '<input id="mr-fim" type="time" class="form-control" value="10:00">'+
+          '</div>'+
+        '</div>'+
+        '<div class="form-group">'+
+          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Data *</label>'+
+          '<input id="mr-data" type="date" class="form-control" value="'+escaparHtml(data)+'">'+
+        '</div>'+
+      '</div>'+
+      '<div class="mapa-modal-footer">'+
+        '<button id="mr-btn-salvar" class="btn btn-primary" style="flex:1">'+
+          '<span class="ms ms-sm">save</span> Solicitar Reserva</button>'+
+        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="btn btn-secondary">Cancelar</button>'+
+      '</div>'
+    );
+
+    var btnSalvar=document.getElementById('mr-btn-salvar');
+    if(!btnSalvar)return;
+    btnSalvar.addEventListener('click',function(){
+      var nome=  (document.getElementById('mr-nome') ||{}).value||'';
+      var ini=   (document.getElementById('mr-ini')  ||{}).value||'';
+      var fim=   (document.getElementById('mr-fim')  ||{}).value||'';
+      var dataR= (document.getElementById('mr-data') ||{}).value||data;
+      if(!nome.trim()){Toast.aviso('Informe o nome da ação.');return;}
+      if(!ini||!fim){Toast.aviso('Informe os horários de início e término.');return;}
+      if(ini>=fim){Toast.aviso('O horário de término deve ser após o início.');return;}
+      BtnGuard.wrap(btnSalvar,'Salvando…',function(done){
+        var dados={sala:id,nomeAcao:nome.trim(),data:dataR,horaInicio:ini,horaTermino:fim};
+        GAS.reservas.criar(dados,function(r){
+          done();
+          if(!r||!r.ok){Toast.erro((r&&r.mensagem)||'Erro ao criar reserva.');return;}
+          Toast.sucesso('Reserva solicitada com sucesso!');
+          fecharModal();
+          carregar(); // Atualiza mapa e timeline
+        },function(err){
+          done();
+          Toast.erro('Erro: '+((err&&err.message)||err));
+        });
+      });
+    });
   }
 
+  // ─── Modal: Solicitar Chave ─────────────────────────────────
   function solicitarChave(id){
-    EspacosUI.abrirTab('chaves');
-    if(typeof ChavesUI!=='undefined'&&ChavesUI.abrirFormComEspaco){
-      var info=_statusMap[id]||{};
-      ChavesUI.abrirFormComEspaco(id,info.nome||'');
-    }
+    var info=_statusMap[id]||{id:id,nome:'Espaço'};
+    _abrirModal(
+      '<div class="mapa-modal-header">'+
+        '<span class="ms ms-sm" style="color:var(--color-warning)">key</span>'+
+        '<strong>Solicitar Chave</strong>'+
+        '<span class="mapa-modal-espaco">'+escaparHtml(info.nome||'')+'</span>'+
+        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="mapa-modal-close">&#x2715;</button>'+
+      '</div>'+
+      '<div class="mapa-modal-body">'+
+        '<div class="mapa-modal-info-box">'+
+          '<span class="ms ms-sm" style="color:var(--color-warning);flex-shrink:0">info</span>'+
+          '<span>A retirada fica registrada em seu nome. Você é responsável pela devolução ao final do uso.</span>'+
+        '</div>'+
+        '<div class="form-group">'+
+          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Observação (opcional)</label>'+
+          '<input id="mc-obs" type="text" class="form-control" '+
+            'placeholder="Ex: uso para reunião de equipe" autofocus>'+
+        '</div>'+
+        '<div class="form-group">'+
+          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Data prevista de devolução</label>'+
+          '<input id="mc-devolucao" type="date" class="form-control">'+
+        '</div>'+
+      '</div>'+
+      '<div class="mapa-modal-footer">'+
+        '<button id="mc-btn-abrir" class="btn btn-primary" style="flex:1">'+
+          '<span class="ms ms-sm">key</span> Confirmar Retirada</button>'+
+        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="btn btn-secondary">Cancelar</button>'+
+      '</div>'
+    );
+
+    // Pré-preencher data de devolução com hoje
+    var inpDev=document.getElementById('mc-devolucao');
+    if(inpDev)inpDev.value=new Date().toISOString().slice(0,10);
+
+    var btnAbrir=document.getElementById('mc-btn-abrir');
+    if(!btnAbrir)return;
+    btnAbrir.addEventListener('click',function(){
+      var obs=     (document.getElementById('mc-obs')      ||{}).value||'';
+      var devData= (document.getElementById('mc-devolucao')||{}).value||'';
+      BtnGuard.wrap(btnAbrir,'Registrando…',function(done){
+        var dados={
+          nomeSala:       info.nome||id,
+          observacao:     obs,
+          dataDevolucao:  devData||undefined
+        };
+        GAS.chaves.abrir(dados,function(r){
+          done();
+          if(!r||!r.ok){Toast.erro((r&&r.mensagem)||'Erro ao registrar retirada.');return;}
+          Toast.sucesso('Retirada de chave registrada com sucesso!');
+          fecharModal();
+          carregar();
+        },function(err){
+          done();
+          Toast.erro('Erro: '+((err&&err.message)||err));
+        });
+      });
+    });
   }
 
+  // ─── Filtros ────────────────────────────────────────────────
   function setFiltro(campo,valor){_filtros[campo]=valor;_cores();}
 
+  // ─── API pública ────────────────────────────────────────────
   return{
-    carregar:carregar,zoom:zoom,resetZoom:resetZoom,
-    fecharPainel:fecharPainel,setFiltro:setFiltro,
-    solicitarReserva:solicitarReserva,solicitarChave:solicitarChave
+    carregar:carregar,
+    zoom:zoom,
+    resetZoom:resetZoom,
+    fecharPainel:fecharPainel,
+    fecharModal:fecharModal,
+    setFiltro:setFiltro,
+    solicitarReserva:solicitarReserva,
+    solicitarChave:solicitarChave
   };
 })();
