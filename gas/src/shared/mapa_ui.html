@@ -134,10 +134,20 @@ var MapaUI=(function(){
     espacos.forEach(function(esp){
       if(!esp.mapaConfig)return;
       var cfg=esp.mapaConfig;
-      // Ocultar elemento estático com mesmo data-id (se existir fora da camada custom)
+      // Ocultar elemento estático com mesmo data-id ou data-nome (cobre diferença de formato de ID)
       var staticG=document.querySelector('#mapa-svg-inner .mapa-espaco[data-id="'+esp.id+'"]');
+      if(!staticG&&esp.nome){
+        var allSt=document.querySelectorAll('#mapa-svg-inner .mapa-espaco');
+        var nomeLow=(esp.nome||'').toLowerCase().trim();
+        for(var si=0;si<allSt.length;si++){
+          if((allSt[si].getAttribute('data-nome')||'').toLowerCase().trim()===nomeLow&&
+             !allSt[si].closest('#mapa-espacos-custom')){
+            staticG=allSt[si];break;
+          }
+        }
+      }
       if(staticG&&!staticG.closest('#mapa-espacos-custom')){
-        staticG.setAttribute('data-id-orig',esp.id);
+        staticG.setAttribute('data-id-orig',staticG.getAttribute('data-id'));
         staticG.setAttribute('data-id','__hidden_'+esp.id);
         staticG.style.display='none';
       }
@@ -150,13 +160,24 @@ var MapaUI=(function(){
       g.setAttribute('data-numero',esp.numeroPlanta||'');
       g.setAttribute('data-aceita',String(esp.aceitaReserva!==false));
       g.setAttribute('transform','translate('+cfg.cx+','+cfg.cy+') rotate('+(cfg.rotacao||0)+')');
+      // Tooltip nativo SVG (aparece ao passar o mouse)
+      if(esp.nome){
+        var title=document.createElementNS(_NS_SVG,'title');
+        title.textContent=esp.nome;
+        g.appendChild(title);
+      }
       var sh=_criarFormaEl(cfg);
       g.appendChild(sh);
-      var lbl=document.createElementNS(_NS_SVG,'text');
-      lbl.setAttribute('class','mapa-label');
-      lbl.setAttribute('x','0');lbl.setAttribute('y','4');
-      lbl.textContent=esp.numeroPlanta||'';
-      g.appendChild(lbl);
+      // Label: apenas número de planta (nome no tooltip); omitir se vazio para não poluir
+      var numLabel=esp.numeroPlanta||'';
+      if(numLabel){
+        var lbl=document.createElementNS(_NS_SVG,'text');
+        lbl.setAttribute('class','mapa-label');
+        lbl.setAttribute('x','0');lbl.setAttribute('y','4');
+        lbl.setAttribute('pointer-events','none');
+        lbl.textContent=numLabel;
+        g.appendChild(lbl);
+      }
       layer.appendChild(g);
     });
   }

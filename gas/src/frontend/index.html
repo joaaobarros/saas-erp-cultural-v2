@@ -2620,6 +2620,13 @@ textarea.input { resize: vertical; }
                              border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">
                 <span class="ms ms-sm">download</span> Importar do mapa base
               </button>
+              <button id="cfg-mapa-btn-desfazer" onclick="InfraConfigMapaUI._desfazer()" data-bg-skip="1"
+                      disabled title="Nada para desfazer"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#fefce8;border:1.5px solid #ca8a04;color:#854d0e;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;opacity:0.4;">
+                <span class="ms ms-sm">undo</span> Desfazer
+              </button>
               <span id="cfg-mapa-terreno-label"
                     style="font-size:11px;color:var(--muted);margin-left:4px;display:flex;align-items:center;gap:4px;">
                 <span class="ms ms-sm" style="font-size:13px;">landscape</span>
@@ -7047,6 +7054,62 @@ var InfraConfigMapaUI = (function() {
   var _zoom = 1, _panX = 0, _panY = 0;
   var _NS = 'http://www.w3.org/2000/svg';
 
+  // ── Histórico para Desfazer (máx 10 ações) ───────────────
+  // Cada entrada: { label: string, itens: [{id, cfgAntes, cfgDepois}] }
+  var _historico = [];
+
+  function _pushHistorico(label, itens) {
+    _historico.push({ label: label, itens: itens });
+    if (_historico.length > 10) _historico.shift();
+    _atualizarBtnDesfazer();
+  }
+
+  function _atualizarBtnDesfazer() {
+    var btn = document.getElementById('cfg-mapa-btn-desfazer');
+    if (!btn) return;
+    if (_historico.length === 0) {
+      btn.disabled = true;
+      btn.style.opacity = '0.4';
+      btn.title = 'Nada para desfazer';
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.title = 'Desfazer: ' + _historico[_historico.length - 1].label;
+    }
+  }
+
+  function _desfazer() {
+    if (_historico.length === 0) return;
+    var acao = _historico.pop();
+    _atualizarBtnDesfazer();
+
+    // Reverter cache local imediatamente
+    acao.itens.forEach(function(item) {
+      var idx = _espacos.findIndex(function(e) { return e.id === item.id; });
+      if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: item.cfgAntes });
+    });
+    _renderMapa();
+    _renderSidebar();
+    Toast.info('Desfeito: ' + acao.label + '. Salvando…');
+
+    // Persistir reversão sequencialmente
+    var total = acao.itens.length, salvo = 0, erros = 0;
+    function _prox(i) {
+      if (i >= acao.itens.length) {
+        if (erros) Toast.aviso(salvo + '/' + total + ' revertidos (' + erros + ' erro(s)).');
+        else       Toast.sucesso(salvo + '/' + total + ' revertidos com sucesso.');
+        return;
+      }
+      var item = acao.itens[i];
+      GAS.admin.salvarMapaEspaco(
+        { id: item.id, mapaConfig: item.cfgAntes },
+        function(r) { if (r && r.ok) salvo++; else erros++; _prox(i + 1); },
+        function()  { erros++; _prox(i + 1); }
+      );
+    }
+    _prox(0);
+  }
+
   // ── Edição inline (sem overlay) ──────────────────────────
   var _modoEdicao = null; // null | { id, cfg, cfgOrig, nome, drag }
 
@@ -7270,7 +7333,18 @@ var InfraConfigMapaUI = (function() {
       _espacos.forEach(function(esp) {
         if (esp.mapaConfig) return;
         if (editId && esp.id === editId) return;
+        // Tenta por data-id; fallback por data-nome (cobre diferença de formato de ID)
         var staticG = staticBase.querySelector('.mapa-espaco[data-id="' + esp.id + '"]');
+        if (!staticG && esp.nome) {
+          var allStatic = staticBase.querySelectorAll('.mapa-espaco');
+          var nomeLow = (esp.nome || '').toLowerCase().trim();
+          for (var si = 0; si < allStatic.length; si++) {
+            if ((allStatic[si].getAttribute('data-nome') || '').toLowerCase().trim() === nomeLow) {
+              staticG = allStatic[si];
+              break;
+            }
+          }
+        }
         if (!staticG) return;
         staticVisiveis++;
         var g = staticG.cloneNode(true);
@@ -7544,10 +7618,13 @@ var InfraConfigMapaUI = (function() {
           _inputInline('cfged-h',   'Altura') +
           _inputInline('cfged-rot', 'Rotação °') +
         '</div>' +
-        '<div style="padding:4px 8px 8px;">' +
+        '<div style="padding:4px 8px 4px;display:flex;gap:5px;">' +
+          '<button onclick="InfraConfigMapaUI._restaurarPadrao()" data-bg-skip="1" ' +
+            'style="flex:1;padding:5px 6px;background:none;border:1px solid #ca8a04;color:#854d0e;border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;">' +
+            '<span class="ms ms-sm" style="font-size:14px;">restart_alt</span>Padrão</button>' +
           '<button onclick="InfraConfigMapaUI._removerDoMapaInline()" data-bg-skip="1" ' +
-            'style="width:100%;padding:5px 6px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;">' +
-            '<span class="ms ms-sm" style="font-size:14px;">delete</span>Remover do mapa</button>' +
+            'style="flex:1;padding:5px 6px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;">' +
+            '<span class="ms ms-sm" style="font-size:14px;">delete</span>Remover</button>' +
         '</div>';
     } else if (_modoEdicao && _modoEdicao.importouBase) {
       // Não deve chegar aqui (importouBase implica cfg definido), mas deixado por segurança
@@ -7613,10 +7690,33 @@ var InfraConfigMapaUI = (function() {
 
   function _removerDoMapaInline() {
     if (!_modoEdicao) return;
+    // Remover a forma do canvas mas NÃO concluir edição; usuário ainda pode salvar sem posição
     _modoEdicao.cfg = null;
     _renderSidebarEdicao();
     var old = document.getElementById('cfg-ed-shape-g');
     if (old && old.parentNode) old.parentNode.removeChild(old);
+    // Remove handles also
+    ['cfg-ed-handles-g'].forEach(function(hid) {
+      var hel = document.getElementById(hid);
+      if (hel && hel.parentNode) hel.parentNode.removeChild(hel);
+    });
+  }
+
+  // ── Restaurar posição original (geometria do SVG base) ────
+  function _restaurarPadrao() {
+    if (!_modoEdicao) return;
+    var id   = _modoEdicao.id;
+    var nome = _modoEdicao.nome;
+    var cfgBase = _extrairCfgDoSvgEstatico(id, nome);
+    if (!cfgBase) {
+      Toast.aviso('Nenhuma geometria padrão encontrada no mapa base para "' + escaparHtml(nome) + '".');
+      return;
+    }
+    _modoEdicao.cfg = cfgBase;
+    _modoEdicao.importouBase = true;
+    _renderSidebarEdicao();
+    _atualizarHandles();
+    Toast.info('Geometria restaurada do mapa base. Clique em Salvar para confirmar.');
   }
 
   function _cancelarEdicao() {
@@ -7630,6 +7730,11 @@ var InfraConfigMapaUI = (function() {
     var id       = _modoEdicao.id;
     var cfg      = _modoEdicao.cfg ? JSON.parse(JSON.stringify(_modoEdicao.cfg)) : null;
     var espNome  = _modoEdicao.nome;
+    var cfgAntes = _modoEdicao.cfgOrig;  // cfg original antes da edição
+    // Registrar no histórico ANTES de alterar
+    _pushHistorico('Editar posição de "' + espNome + '"', [
+      { id: id, cfgAntes: cfgAntes, cfgDepois: cfg }
+    ]);
     // Sair do modo antes do save (UI responde imediatamente)
     _modoEdicao = null;
     var idx = _espacos.findIndex(function(e) { return e.id === id; });
@@ -7680,24 +7785,81 @@ var InfraConfigMapaUI = (function() {
   }
 
   // ── Extrair cfg do espaço estático via getBBox ──────────
-  function _extrairCfgDoSvgEstatico(id) {
+  // Calcula bbox a partir de atributos do elemento (sem getBBox),
+  // o que funciona mesmo quando o SVG está dentro de display:none.
+  function _bboxFromEl(el) {
+    if (!el) return null;
+    var tag = (el.tagName || '').toLowerCase();
+    try {
+      if (tag === 'polygon') {
+        var raw = (el.getAttribute('points') || '').trim().split(/[\s,]+/);
+        var xs = [], ys = [];
+        for (var i = 0; i + 1 < raw.length; i += 2) {
+          xs.push(parseFloat(raw[i]));
+          ys.push(parseFloat(raw[i + 1]));
+        }
+        if (xs.length < 2) return null;
+        var mnX = Math.min.apply(null, xs), mxX = Math.max.apply(null, xs);
+        var mnY = Math.min.apply(null, ys), mxY = Math.max.apply(null, ys);
+        return { x: mnX, y: mnY, width: mxX - mnX, height: mxY - mnY };
+      }
+      if (tag === 'rect') {
+        return {
+          x:      parseFloat(el.getAttribute('x')      || 0),
+          y:      parseFloat(el.getAttribute('y')      || 0),
+          width:  parseFloat(el.getAttribute('width')  || 0),
+          height: parseFloat(el.getAttribute('height') || 0)
+        };
+      }
+      if (tag === 'circle' || tag === 'ellipse') {
+        var cx2 = parseFloat(el.getAttribute('cx') || 0);
+        var cy2 = parseFloat(el.getAttribute('cy') || 0);
+        var rx  = parseFloat(el.getAttribute('rx') || el.getAttribute('r') || 0);
+        var ry  = parseFloat(el.getAttribute('ry') || el.getAttribute('r') || 0);
+        return { x: cx2 - rx, y: cy2 - ry, width: rx * 2, height: ry * 2 };
+      }
+    } catch (e2) { return null; }
+    return null;
+  }
+
+  function _extrairCfgDoSvgEstatico(id, nome) {
     var staticBase = document.getElementById('mapa-svg-inner');
     if (!staticBase) return null;
+
+    // 1ª tentativa: por data-id exato
     var staticG = staticBase.querySelector('.mapa-espaco[data-id="' + id + '"]');
+
+    // 2ª tentativa: por nome (cobre diferença de formato de ID — ex: esp_xxx vs esp-25)
+    if (!staticG && nome) {
+      var all  = staticBase.querySelectorAll('.mapa-espaco');
+      var nLow = nome.toLowerCase().trim();
+      for (var i = 0; i < all.length; i++) {
+        if ((all[i].getAttribute('data-nome') || '').toLowerCase().trim() === nLow) {
+          staticG = all[i];
+          break;
+        }
+      }
+    }
     if (!staticG) return null;
-    try {
-      var bbox = staticG.getBBox();
-      if (!bbox || bbox.width < 5 || bbox.height < 5) return null;
-      return {
-        forma:   'rect',
-        cx:      Math.round(bbox.x + bbox.width  / 2),
-        cy:      Math.round(bbox.y + bbox.height / 2),
-        w:       Math.round(bbox.width),
-        h:       Math.round(bbox.height),
-        r:       0,
-        rotacao: 0
-      };
-    } catch (e_) { return null; }
+
+    // Calcular bbox a partir dos atributos (sem getBBox, funciona em display:none)
+    var shape = staticG.querySelector('polygon, rect, circle, ellipse');
+    var bbox  = _bboxFromEl(shape);
+    // Fallback para getBBox() quando visível
+    if (!bbox || bbox.width < 5 || bbox.height < 5) {
+      try { bbox = staticG.getBBox(); } catch (e_) { bbox = null; }
+    }
+    if (!bbox || bbox.width < 5 || bbox.height < 5) return null;
+
+    return {
+      forma:   'rect',
+      cx:      Math.round(bbox.x + bbox.width  / 2),
+      cy:      Math.round(bbox.y + bbox.height / 2),
+      w:       Math.round(bbox.width),
+      h:       Math.round(bbox.height),
+      r:       0,
+      rotacao: 0
+    };
   }
 
   // ── Editar posição (entra no modo inline) ────────────────
@@ -7707,7 +7869,7 @@ var InfraConfigMapaUI = (function() {
     var temCfg = !!espaco.mapaConfig;
     var cfgInicial = temCfg
       ? JSON.parse(JSON.stringify(espaco.mapaConfig))
-      : _extrairCfgDoSvgEstatico(id);  // auto-importa do SVG estático se disponível
+      : _extrairCfgDoSvgEstatico(id, espaco.nome);  // auto-importa do SVG estático se disponível
     _modoEdicao = {
       id:          id,
       cfg:         cfgInicial,
@@ -7725,14 +7887,21 @@ var InfraConfigMapaUI = (function() {
     var candidatos = [];
     _espacos.forEach(function(esp) {
       if (esp.mapaConfig) return; // já tem posição definida
-      var cfg = _extrairCfgDoSvgEstatico(esp.id);
+      var cfg = _extrairCfgDoSvgEstatico(esp.id, esp.nome);
       if (cfg) candidatos.push({ esp: esp, cfg: cfg });
     });
 
     if (candidatos.length === 0) {
-      Toast.aviso('Todos os espaços já têm posição ou nenhum tem correspondência no mapa base.');
+      Toast.aviso('Nenhum espaço sem posição tem correspondência no mapa base.');
       return;
     }
+
+    // Registrar no histórico ANTES de alterar (para poder desfazer)
+    _pushHistorico('Importar ' + candidatos.length + ' espaço(s) do mapa base',
+      candidatos.map(function(c) {
+        return { id: c.esp.id, cfgAntes: c.esp.mapaConfig || null, cfgDepois: c.cfg };
+      })
+    );
 
     // Atualizar cache local imediatamente (UI responsiva)
     candidatos.forEach(function(c) {
@@ -7964,7 +8133,9 @@ var InfraConfigMapaUI = (function() {
     _selecionarFormaInline:_selecionarFormaInline,
     _removerDoMapaInline:  _removerDoMapaInline,
     _onInputInlineChange:  _onInputInlineChange,
-    _importarTodosDoMapa:  _importarTodosDoMapa
+    _importarTodosDoMapa:  _importarTodosDoMapa,
+    _desfazer:             _desfazer,
+    _restaurarPadrao:      _restaurarPadrao
   };
 })();
 
