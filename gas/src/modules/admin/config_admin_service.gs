@@ -68,6 +68,7 @@ var ConfigAdminService = (function () {
       id:                     id,
       orgId:                  orgId,
       nome:                   String(espaco.nome).trim(),
+      numeroPlanta:           espaco.numeroPlanta != null ? String(espaco.numeroPlanta).trim() : undefined,
       tipoEspaco:             espaco.tipoEspaco || 'multiuso',
       categoria:              espaco.categoria  || 'uso_publico',
       descricao:              String(espaco.descricao || '').trim(),
@@ -171,6 +172,32 @@ var ConfigAdminService = (function () {
     if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
     AuditoriaService.registrar('ESPACO_DESATIVADO', 'espaco',
       { entidadeId: espacoId, orgId: orgId, usuario: email });
+    return true;
+  }
+
+  /**
+   * Exclui um espaço permanentemente do JSON.
+   * Atenção: não verifica reservas existentes — uso exclusivo do admin.
+   */
+  function excluirEspaco(espacoId) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    var nomeSalvo = '';
+
+    modifyJSON('espacos_config.json', function(lista) {
+      var idx = lista.findIndex(function(e) { return e.id === espacoId && e.orgId === orgId; });
+      if (idx < 0) throw new Error('Espaço não encontrado: ' + espacoId);
+      nomeSalvo = lista[idx].nome || espacoId;
+      lista.splice(idx, 1);
+      return lista;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    if (typeof BootService         !== 'undefined') BootService.limparCache(email);
+    AuditoriaService.registrar('ESPACO_EXCLUIDO', 'espaco',
+      { entidadeId: espacoId, orgId: orgId, usuario: email, nome: nomeSalvo });
+    Logger.info('config_admin_service', 'excluirEspaco', espacoId + ': ' + nomeSalvo);
     return true;
   }
 
@@ -489,6 +516,7 @@ var ConfigAdminService = (function () {
     listarEspacos:               listarEspacos,
     salvarEspaco:                salvarEspaco,
     desativarEspaco:             desativarEspaco,
+    excluirEspaco:               excluirEspaco,
     alternarItemFixo:            alternarItemFixo,
     obterResponsavelEspacoPorDia: obterResponsavelEspacoPorDia,
     listarCategoriasItens:       listarCategoriasItens,

@@ -85,6 +85,12 @@ function ctrl_admin_desativarEspaco(espacoId) {
   }, 'ctrl_admin_desativarEspaco');
 }
 
+function ctrl_admin_excluirEspaco(espacoId) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.excluirEspaco(espacoId);
+  }, 'ctrl_admin_excluirEspaco');
+}
+
 function ctrl_admin_alternarItemFixo(dados) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.alternarItemFixo(dados);

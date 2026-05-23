@@ -3829,6 +3829,7 @@ var GAS = {
     salvarEspaco:         function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarEspaco(d); },
     salvarMapaEspaco:     function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarMapaEspaco(d); },
     desativarEspaco:      function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_desativarEspaco(id); },
+    excluirEspaco:        function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirEspaco(id); },
     alternarItemFixo:     function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarItemFixo(d); },
     obterDadosParaConfig: function(aba,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterDadosParaConfig(aba); },
     // Turnos e Setores
@@ -5811,7 +5812,8 @@ var AdminCadastrosUI = (function() {
           (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
           '<div style="display:flex;gap:6px;">' +
             '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
-            (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Desativar</button>' : '') +
+            (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Desativar</button>' : '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.reativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Reativar</button>') +
+            '<button class="btn btn-ghost btn-sm" style="color:var(--color-error,#ef4444);" onclick="AdminCadastrosUI.excluirEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')">Excluir</button>' +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
@@ -6142,6 +6144,43 @@ var AdminCadastrosUI = (function() {
     });
   }
 
+  function reativarEspaco(id, btn) {
+    var espaco = _espacos.find(function(e){ return e.id === id; }) || {};
+    BtnGuard.wrap(btn, 'Reativando…', function(liberar) {
+      var dados = Object.assign({}, espaco, { ativo: true });
+      GAS.admin.salvarEspaco(dados, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Espaço reativado.'); carregarEspacos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function excluirEspaco(id) {
+    var espaco = _espacos.find(function(e){ return e.id === id; }) || {};
+    _abrirModalConfirmar({
+      titulo: 'Excluir espaço permanentemente',
+      icone: 'delete_forever',
+      corIcone: '#ef4444',
+      mensagem: 'Excluir <strong>' + escaparHtml(espaco.nome || id) + '</strong>?',
+      detalhe: 'Esta ação é irreversível. O espaço será removido permanentemente do sistema. Reservas históricas associadas ficam órfãs — desative o espaço se preferir mantê-lo no histórico.',
+      labelConfirmar: 'Sim, excluir permanentemente',
+      idBtn: 'btn-confirmar-excluir-espaco',
+      onConfirm: 'AdminCadastrosUI._confirmarExcluirEspaco(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+    });
+  }
+
+  function _confirmarExcluirEspaco(id, btn) {
+    BtnGuard.wrap(btn, 'Excluindo…', function(liberar) {
+      GAS.admin.excluirEspaco(id, function(r) {
+        liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
+        if (r && r.ok) { Toast.sucesso('Espaço excluído permanentemente.'); carregarEspacos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
   function excluirSetor(id) {
     var s = _setores.find(function(x){ return x.id === id; }) || {};
     _abrirModalConfirmar({
@@ -6338,6 +6377,7 @@ var AdminCadastrosUI = (function() {
       '<h3 style="margin-bottom:12px;">' + (id ? 'Editar Espaço' : 'Novo Espaço') + '</h3>' +
       '<div class="form-grid">' +
         '<div class="full-width"><label>Nome *</label><input id="esp-nome" class="form-input" value="' + escaparHtml(espaco.nome||'') + '"></div>' +
+        '<div><label>N&#xBA; da planta <span style="font-size:11px;color:var(--muted);font-weight:400;">(exibido no mapa)</span></label><input id="esp-num-planta" class="form-input" value="' + escaparHtml(espaco.numeroPlanta||'') + '" placeholder="Ex: 25"></div>' +
         '<div><label>Tipo de Espaço</label><select id="esp-tipo" class="form-input">' +
           '<optgroup label="Cultura / Artes">' +
             '<option value="auditorio">Auditório</option>' +
@@ -6455,14 +6495,16 @@ var AdminCadastrosUI = (function() {
       ? _pendingResponsaveis
       : _respLerEstado();
 
+    var _numPlantaRaw = (document.getElementById('esp-num-planta') || {}).value;
     var dados = {
-      id:           id || undefined,
-      nome:         document.getElementById('esp-nome').value.trim(),
-      tipoEspaco:   document.getElementById('esp-tipo').value,
-      categoria:    (document.getElementById('esp-cat') || {}).value || espaco.categoria || 'uso_publico',
-      capacidade:   Number(document.getElementById('esp-cap').value)||0,
-      possuiChaves: document.getElementById('esp-chaves').checked,
-      aceitaReserva:document.getElementById('esp-reserva').checked,
+      id:            id || undefined,
+      nome:          document.getElementById('esp-nome').value.trim(),
+      numeroPlanta:  _numPlantaRaw != null ? (_numPlantaRaw.trim() || undefined) : (espaco.numeroPlanta || undefined),
+      tipoEspaco:    document.getElementById('esp-tipo').value,
+      categoria:     (document.getElementById('esp-cat') || {}).value || espaco.categoria || 'uso_publico',
+      capacidade:    Number(document.getElementById('esp-cap').value)||0,
+      possuiChaves:  document.getElementById('esp-chaves').checked,
+      aceitaReserva: document.getElementById('esp-reserva').checked,
       horarioFuncionamento: {
         abertura:   document.getElementById('esp-abertura').value.trim() || '08:00',
         fechamento: document.getElementById('esp-fechamento').value.trim() || '22:00'
@@ -6608,6 +6650,8 @@ var AdminCadastrosUI = (function() {
     revogarUsuario: revogarUsuario,   _confirmarRevogar: _confirmarRevogar,
     editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel,
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
+    reativarEspaco: reativarEspaco,
+    excluirEspaco: excluirEspaco, _confirmarExcluirEspaco: _confirmarExcluirEspaco,
     abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
     _editarMapa: _editarMapa,
     _respRemover: _respRemover, _respAdicionar: _respAdicionar,
@@ -7274,62 +7318,96 @@ var InfraConfigMapaUI = (function() {
       if (!esp.mapaConfig) return;
       // Em modo edição, o espaço editado é renderizado como handles (abaixo); aqui só contexto
       if (editId && esp.id === editId) return;
-      var cfg = esp.mapaConfig;
-      var g   = document.createElementNS(_NS, 'g');
-      g.setAttribute('class', 'cfg-espaco-g');
-      g.setAttribute('data-id', esp.id);
-      g.setAttribute('transform',
-        'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+      try {
+        var cfg = esp.mapaConfig;
+        // Validar coords mínimas — protege contra mapaConfig corrompido
+        var cxVal = Number(cfg.cx), cyVal = Number(cfg.cy);
+        var posValida = isFinite(cxVal) && isFinite(cyVal);
+        var g = document.createElementNS(_NS, 'g');
+        g.setAttribute('class', 'cfg-espaco-g' + (posValida ? '' : ' cfg-espaco-corrompido'));
+        g.setAttribute('data-id', esp.id);
+        g.setAttribute('transform',
+          posValida
+            ? 'translate(' + cxVal + ',' + cyVal + ') rotate(' + (cfg.rotacao || 0) + ')'
+            : 'translate(96,590)'); // canto inferior-esquerdo se coords inválidas
 
-      var ativo = esp.ativo !== false;
-      // Em modo edição, os outros espaços ficam dimidos e sem clique
-      var dimmed = !!editId;
-      g.style.cursor  = dimmed ? 'default' : 'pointer';
-      g.style.opacity = dimmed ? '0.35' : '1';
+        var ativo = esp.ativo !== false;
+        // Em modo edição, os outros espaços ficam dimidos e sem clique
+        var dimmed = !!editId;
+        g.style.cursor  = dimmed ? 'default' : 'pointer';
+        g.style.opacity = dimmed ? '0.35' : (posValida ? '1' : '0.6');
 
-      var sh = _criarForma(cfg);
-      sh.setAttribute('fill',         ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
-      sh.setAttribute('stroke',       ativo ? '#4f46e5' : '#94a3b8');
-      sh.setAttribute('stroke-width', '1.5');
-      sh.setAttribute('filter', 'url(#cfg-mapa-shadow)');
-      g.appendChild(sh);
+        var sh = _criarForma(cfg);
+        var corFill   = !posValida ? 'rgba(239,68,68,0.25)' : (ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
+        var corStroke = !posValida ? '#ef4444'              : (ativo ? '#4f46e5' : '#94a3b8');
+        sh.setAttribute('fill',         corFill);
+        sh.setAttribute('stroke',       corStroke);
+        sh.setAttribute('stroke-width', posValida ? '1.5' : '2');
+        if (!posValida) sh.setAttribute('stroke-dasharray', '4,2');
+        sh.setAttribute('filter', 'url(#cfg-mapa-shadow)');
+        g.appendChild(sh);
 
-      // Tooltip nativo SVG — nome completo ao passar o mouse
-      var titleEl = document.createElementNS(_NS, 'title');
-      titleEl.textContent = esp.nome || esp.id;
-      g.appendChild(titleEl);
+        // Tooltip nativo SVG — nome completo ao passar o mouse
+        var titleEl = document.createElementNS(_NS, 'title');
+        titleEl.textContent = (posValida ? '' : '⚠ Posição inválida — ') + (esp.nome || esp.id);
+        g.appendChild(titleEl);
 
-      // Label: apenas número de planta; se não tiver, omitir (nome fica só no tooltip)
-      var labelNum = esp.numeroPlanta ? String(esp.numeroPlanta) : '';
-      if (labelNum) {
-        var txt = document.createElementNS(_NS, 'text');
-        txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
-        txt.setAttribute('text-anchor', 'middle');
-        txt.setAttribute('dominant-baseline', 'middle');
-        txt.setAttribute('font-size', '11');
-        txt.setAttribute('font-weight', '700');
-        txt.setAttribute('fill', ativo ? '#312e81' : '#64748b');
-        txt.setAttribute('pointer-events', 'none');
-        txt.setAttribute('paint-order', 'stroke');
-        txt.setAttribute('stroke', '#fff8');
-        txt.setAttribute('stroke-width', '2');
-        txt.textContent = labelNum;
-        g.appendChild(txt);
+        // Label: número de planta se existir, senão nome curto como fallback
+        var labelNum = esp.numeroPlanta ? String(esp.numeroPlanta) : (esp.nome ? esp.nome.substring(0, 6) : '');
+        if (labelNum) {
+          var txt = document.createElementNS(_NS, 'text');
+          txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('dominant-baseline', 'middle');
+          txt.setAttribute('font-size', '11');
+          txt.setAttribute('font-weight', '700');
+          txt.setAttribute('fill', posValida ? (ativo ? '#312e81' : '#64748b') : '#dc2626');
+          txt.setAttribute('pointer-events', 'none');
+          txt.setAttribute('paint-order', 'stroke');
+          txt.setAttribute('stroke', '#fff8');
+          txt.setAttribute('stroke-width', '2');
+          txt.textContent = labelNum;
+          g.appendChild(txt);
+        }
+
+        if (!dimmed) {
+          g.addEventListener('mouseenter', function() {
+            sh.setAttribute('stroke-width', '2.5');
+            sh.setAttribute('fill', posValida ? (ativo ? 'rgba(79,70,229,0.38)' : 'rgba(148,163,184,0.38)') : 'rgba(239,68,68,0.38)');
+          });
+          g.addEventListener('mouseleave', function() {
+            sh.setAttribute('stroke-width', posValida ? '1.5' : '2');
+            sh.setAttribute('fill', corFill);
+          });
+          g.addEventListener('click', function() { _editarPosicao(esp.id); });
+        }
+
+        layer.appendChild(g);
+      } catch (e_) {
+        // Espaço com mapaConfig corrompido: renderiza marcador de aviso para permitir edição
+        try {
+          var gErr = document.createElementNS(_NS, 'g');
+          gErr.setAttribute('class', 'cfg-espaco-g cfg-espaco-corrompido');
+          gErr.setAttribute('data-id', esp.id);
+          gErr.setAttribute('transform', 'translate(96,590)');
+          gErr.style.cursor = 'pointer';
+          var cErr = document.createElementNS(_NS, 'circle');
+          cErr.setAttribute('cx', '0'); cErr.setAttribute('cy', '0'); cErr.setAttribute('r', '18');
+          cErr.setAttribute('fill', 'rgba(239,68,68,0.3)'); cErr.setAttribute('stroke', '#ef4444'); cErr.setAttribute('stroke-width', '2');
+          gErr.appendChild(cErr);
+          var tErr = document.createElementNS(_NS, 'text');
+          tErr.setAttribute('x', '0'); tErr.setAttribute('y', '4');
+          tErr.setAttribute('text-anchor', 'middle'); tErr.setAttribute('dominant-baseline', 'middle');
+          tErr.setAttribute('font-size', '10'); tErr.setAttribute('fill', '#dc2626'); tErr.setAttribute('pointer-events', 'none');
+          tErr.textContent = '!';
+          gErr.appendChild(tErr);
+          var title2 = document.createElementNS(_NS, 'title');
+          title2.textContent = '⚠ Erro ao renderizar: ' + (esp.nome || esp.id) + ' — clique para editar';
+          gErr.appendChild(title2);
+          gErr.addEventListener('click', function() { _editarPosicao(esp.id); });
+          layer.appendChild(gErr);
+        } catch (e2_) {}
       }
-
-      if (!dimmed) {
-        g.addEventListener('mouseenter', function() {
-          sh.setAttribute('stroke-width', '2.5');
-          sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.38)' : 'rgba(148,163,184,0.38)');
-        });
-        g.addEventListener('mouseleave', function() {
-          sh.setAttribute('stroke-width', '1.5');
-          sh.setAttribute('fill', ativo ? 'rgba(79,70,229,0.22)' : 'rgba(148,163,184,0.22)');
-        });
-        g.addEventListener('click', function() { _editarPosicao(esp.id); });
-      }
-
-      layer.appendChild(g);
     });
 
     // Espaços sem mapaConfig: renderizar a partir da geometria do SVG estático
