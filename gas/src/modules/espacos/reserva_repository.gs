@@ -51,8 +51,8 @@ var ReservaRepository = (function () {
       id:                row[_COL.ID]                || '',
       orgId:             row[_COL.OrgId]             || '',
       data:              row[_COL.Data]              ? _normalizarData(row[_COL.Data]) : '',
-      horaInicio:        String(row[_COL.HoraInicio]  || ''),
-      horaTermino:       String(row[_COL.HoraTermino] || ''),
+      horaInicio:        _normalizarHora(row[_COL.HoraInicio]),
+      horaTermino:       _normalizarHora(row[_COL.HoraTermino]),
       sala:              row[_COL.Sala]              || '',
       turno:             row[_COL.Turno]             || '',
       nomeAcao:          row[_COL.NomeAcao]          || '',
@@ -118,6 +118,28 @@ var ReservaRepository = (function () {
       if (p.length === 3) return p[2] + '-' + p[1] + '-' + p[0];
     }
     return s;
+  }
+
+  /**
+   * Normaliza horários de Sheet para string "HH:MM".
+   * Google Sheets armazena horários como objetos Date (epoch: 30/12/1899).
+   * String(dateObj) → "Sat Dec 30 1899 07:22:00..." quebra parseInt.
+   * @param {Date|string|number} h
+   * @returns {string} "HH:MM" ou '' se inválido
+   */
+  function _normalizarHora(h) {
+    if (h === null || h === undefined || h === '') return '';
+    if (h instanceof Date) {
+      return String(h.getHours()).padStart(2, '0') + ':' +
+             String(h.getMinutes()).padStart(2, '0');
+    }
+    // Número fracionário (0..1) = fração do dia (formato interno do Sheets)
+    if (typeof h === 'number' && h >= 0 && h < 1) {
+      var totalMin = Math.round(h * 24 * 60);
+      return String(Math.floor(totalMin / 60)).padStart(2, '0') + ':' +
+             String(totalMin % 60).padStart(2, '0');
+    }
+    return String(h);
   }
 
   // ── Operações públicas ────────────────────────────────────────────────

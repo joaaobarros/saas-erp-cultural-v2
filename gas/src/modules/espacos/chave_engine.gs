@@ -103,8 +103,8 @@ var ChaveEngine = (function () {
     var protocolo = ChaveRepository.buscarPorId(protocoloId, orgId);
     if (!protocolo) throw new Error('Protocolo não encontrado: ' + protocoloId);
 
-    FsmGuardian.transitar('protocolo_chave', protocolo.status, STATUS_PROTOCOLO.DEVOLVIDO,
-      'Protocolo ' + protocoloId);
+    FsmGuardian.assertValida('protocolo_chave', protocolo.status, STATUS_PROTOCOLO.DEVOLVIDO,
+      protocoloId, ator);
 
     var agr = agora ? agora() : new Date().toISOString();
     ChaveRepository.atualizarStatus(protocoloId, STATUS_PROTOCOLO.DEVOLVIDO, orgId, {
@@ -143,8 +143,8 @@ var ChaveEngine = (function () {
       var datadev = String(p.dataDevolucao).substring(0, 10);
       if (datadev < hoje) {
         try {
-          FsmGuardian.transitar('protocolo_chave', p.status, STATUS_PROTOCOLO.ATRASADO,
-            'Verificação automática de atrasos');
+          FsmGuardian.assertValida('protocolo_chave', p.status, STATUS_PROTOCOLO.ATRASADO,
+            p.id, 'sistema');
           ChaveRepository.atualizarStatus(p.id, STATUS_PROTOCOLO.ATRASADO, orgId || _orgId(), {});
           atrasados++;
 

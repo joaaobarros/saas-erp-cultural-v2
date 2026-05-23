@@ -204,8 +204,8 @@ var AlmoxarifadoEngine = (function () {
     var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
     if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
 
-    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.APROVADO,
-      'Empréstimo ' + emprestimoId);
+    FsmGuardian.assertValida('emprestimos', emp.status, STATUS_EMPRESTIMO.APROVADO,
+      emprestimoId, ator);
 
     ReservasItensRepository.atualizarStatusEmprestimo(
       emprestimoId, STATUS_EMPRESTIMO.APROVADO, orgId, { AprovadoPor: ator }
@@ -228,8 +228,8 @@ var AlmoxarifadoEngine = (function () {
     var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
     if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
 
-    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.RETIRADO,
-      'Empréstimo ' + emprestimoId);
+    FsmGuardian.assertValida('emprestimos', emp.status, STATUS_EMPRESTIMO.RETIRADO,
+      emprestimoId, ator);
 
     var agr = agora ? agora() : new Date().toISOString();
     ReservasItensRepository.atualizarStatusEmprestimo(
@@ -254,8 +254,8 @@ var AlmoxarifadoEngine = (function () {
     var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
     if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
 
-    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.DEVOLVIDO,
-      'Empréstimo ' + emprestimoId);
+    FsmGuardian.assertValida('emprestimos', emp.status, STATUS_EMPRESTIMO.DEVOLVIDO,
+      emprestimoId, ator);
 
     var agr = agora ? agora() : new Date().toISOString();
     ReservasItensRepository.atualizarStatusEmprestimo(
@@ -285,8 +285,8 @@ var AlmoxarifadoEngine = (function () {
     var emp = ReservasItensRepository.buscarEmprestimo(emprestimoId, orgId);
     if (!emp) throw new Error('Empréstimo não encontrado: ' + emprestimoId);
 
-    FsmGuardian.transitar('emprestimos', emp.status, STATUS_EMPRESTIMO.CANCELADO,
-      'Empréstimo ' + emprestimoId);
+    FsmGuardian.assertValida('emprestimos', emp.status, STATUS_EMPRESTIMO.CANCELADO,
+      emprestimoId, ator);
 
     ReservasItensRepository.atualizarStatusEmprestimo(
       emprestimoId, STATUS_EMPRESTIMO.CANCELADO, orgId, {
@@ -315,8 +315,8 @@ var AlmoxarifadoEngine = (function () {
       if (e.status !== STATUS_EMPRESTIMO.RETIRADO) return;
       if (e.dataDevolucao && e.dataDevolucao < hoje) {
         try {
-          FsmGuardian.transitar('emprestimos', e.status, STATUS_EMPRESTIMO.ATRASADO,
-            'Verificação automática de atrasos');
+          FsmGuardian.assertValida('emprestimos', e.status, STATUS_EMPRESTIMO.ATRASADO,
+            e.id, 'sistema');
           ReservasItensRepository.atualizarStatusEmprestimo(
             e.id, STATUS_EMPRESTIMO.ATRASADO, orgId, {}
           );
