@@ -2614,6 +2614,13 @@ textarea.input { resize: vertical; }
                       class="btn btn-ghost btn-sm" title="Recarregar mapa">
                 <span class="ms ms-sm">refresh</span> Recarregar
               </button>
+              <button id="cfg-mapa-btn-novo-espaco" onclick="InfraConfigMapaUI._iniciarNovoEspaco()" data-bg-skip="1"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#f5f3ff;border:1.5px solid #7c3aed;color:#6d28d9;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;"
+                      title="Criar um novo espaço clicando no mapa">
+                <span class="ms ms-sm">add_location</span> Novo espaço
+              </button>
               <button id="cfg-mapa-btn-importar" onclick="InfraConfigMapaUI._importarTodosDoMapa()" data-bg-skip="1"
                       style="display:flex;align-items:center;gap:5px;padding:6px 12px;
                              background:#eff6ff;border:1.5px solid #3b82f6;color:#1d4ed8;
@@ -5801,9 +5808,11 @@ var AdminCadastrosUI = (function() {
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarEspacos(function(r) {
       _espacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _espacos.sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt'); });
       el.innerHTML = _espacos.length ? _espacos.map(function(e) {
         return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
           '<div><strong>' + escaparHtml(e.nome) + '</strong>' +
+          (e.numeroPlanta ? ' <span class="badge badge-muted" style="font-size:10px;opacity:.8;">#' + escaparHtml(String(e.numeroPlanta)) + '</span>' : '') +
           ' <span class="badge badge-muted">' + escaparHtml(_TIPO_LABEL[e.tipoEspaco] || e.tipoEspaco || '?') + '</span>' +
           ' <span class="badge badge-muted" style="opacity:.7;">' + escaparHtml(_CAT_LABEL[e.categoria] || e.categoria || 'Público') + '</span>' +
           (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
@@ -5813,7 +5822,7 @@ var AdminCadastrosUI = (function() {
           '<div style="display:flex;gap:6px;">' +
             '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
             (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Desativar</button>' : '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.reativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Reativar</button>') +
-            '<button class="btn btn-ghost btn-sm" style="color:var(--color-error,#ef4444);" onclick="AdminCadastrosUI.excluirEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')">Excluir</button>' +
+            '<button class="btn btn-ghost btn-sm" style="color:var(--color-error,#ef4444);" onclick="AdminCadastrosUI.excluirEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Excluir</button>' +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
@@ -6166,18 +6175,25 @@ var AdminCadastrosUI = (function() {
       detalhe: 'Esta ação é irreversível. O espaço será removido permanentemente do sistema. Reservas históricas associadas ficam órfãs — desative o espaço se preferir mantê-lo no histórico.',
       labelConfirmar: 'Sim, excluir permanentemente',
       idBtn: 'btn-confirmar-excluir-espaco',
-      onConfirm: 'AdminCadastrosUI._confirmarExcluirEspaco(' + JSON.stringify(id).replace(/"/g,"'") + ',this)'
+      onConfirm: 'AdminCadastrosUI._confirmarExcluirEspaco(' + JSON.stringify(id).replace(/"/g,"'") + ')'
     });
   }
 
-  function _confirmarExcluirEspaco(id, btn) {
-    BtnGuard.wrap(btn, 'Excluindo…', function(liberar) {
-      GAS.admin.excluirEspaco(id, function(r) {
-        liberar();
-        var m = document.querySelector('.modal-simples'); if (m) m.remove();
-        if (r && r.ok) { Toast.sucesso('Espaço excluído permanentemente.'); carregarEspacos(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
-      });
+  function _confirmarExcluirEspaco(id) {
+    BtnGuard.wrap('btn-confirmar-excluir-espaco', 'Excluindo…', function(liberar) {
+      GAS.admin.excluirEspaco(id,
+        function(r) {
+          liberar();
+          var m = document.querySelector('.modal-simples'); if (m) m.remove();
+          if (r && r.ok) { Toast.sucesso('Espaço excluído permanentemente.'); carregarEspacos(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro ao excluir.');
+        },
+        function(err) {
+          liberar();
+          var m = document.querySelector('.modal-simples'); if (m) m.remove();
+          Toast.erro(err && err.message ? err.message : 'Erro ao excluir espaço.');
+        }
+      );
     });
   }
 
@@ -6377,7 +6393,6 @@ var AdminCadastrosUI = (function() {
       '<h3 style="margin-bottom:12px;">' + (id ? 'Editar Espaço' : 'Novo Espaço') + '</h3>' +
       '<div class="form-grid">' +
         '<div class="full-width"><label>Nome *</label><input id="esp-nome" class="form-input" value="' + escaparHtml(espaco.nome||'') + '"></div>' +
-        '<div><label>N&#xBA; da planta <span style="font-size:11px;color:var(--muted);font-weight:400;">(exibido no mapa)</span></label><input id="esp-num-planta" class="form-input" value="' + escaparHtml(espaco.numeroPlanta||'') + '" placeholder="Ex: 25"></div>' +
         '<div><label>Tipo de Espaço</label><select id="esp-tipo" class="form-input">' +
           '<optgroup label="Cultura / Artes">' +
             '<option value="auditorio">Auditório</option>' +
@@ -6495,11 +6510,9 @@ var AdminCadastrosUI = (function() {
       ? _pendingResponsaveis
       : _respLerEstado();
 
-    var _numPlantaRaw = (document.getElementById('esp-num-planta') || {}).value;
     var dados = {
       id:            id || undefined,
       nome:          document.getElementById('esp-nome').value.trim(),
-      numeroPlanta:  _numPlantaRaw != null ? (_numPlantaRaw.trim() || undefined) : (espaco.numeroPlanta || undefined),
       tipoEspaco:    document.getElementById('esp-tipo').value,
       categoria:     (document.getElementById('esp-cat') || {}).value || espaco.categoria || 'uso_publico',
       capacidade:    Number(document.getElementById('esp-cap').value)||0,
@@ -6651,7 +6664,7 @@ var AdminCadastrosUI = (function() {
     editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel,
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
     reativarEspaco: reativarEspaco,
-    excluirEspaco: excluirEspaco, _confirmarExcluirEspaco: _confirmarExcluirEspaco,
+    excluirEspaco: excluirEspaco, _confirmarExcluirEspaco: _confirmarExcluirEspaco, injetarEspacos: function(lista) { lista.forEach(function(e){ var i=_espacos.findIndex(function(x){return x.id===e.id;}); if(i>=0)_espacos[i]=e; else _espacos.push(e); }); },
     abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
     _editarMapa: _editarMapa,
     _respRemover: _respRemover, _respAdicionar: _respAdicionar,
@@ -7004,6 +7017,7 @@ var InfraConfigUI = (function() {
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarEspacos(function(r) {
       _listaEspacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _listaEspacos.sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt'); });
       var _TL = {auditorio:'Auditório',sala_espetaculo:'Sala Espetáculo',galeria:'Galeria',
         biblioteca:'Biblioteca',sala_danca:'Sala Dança',estudio:'Estúdio',oficina:'Oficina',
         sala_reuniao:'Sala Reunião',escritorio:'Escritório',multiuso:'Multiuso',praca:'Praça',
@@ -7012,6 +7026,7 @@ var InfraConfigUI = (function() {
       el.innerHTML = _listaEspacos.length ? _listaEspacos.map(function(e) {
         return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
           '<div><strong>' + escaparHtml(e.nome) + '</strong>' +
+          (e.numeroPlanta ? ' <span class="badge badge-muted" style="font-size:10px;opacity:.8;">#' + escaparHtml(String(e.numeroPlanta)) + '</span>' : '') +
           ' <span class="badge badge-muted">' + escaparHtml(_TL[e.tipoEspaco] || e.tipoEspaco || '?') + '</span>' +
           ' <span class="badge badge-muted" style="opacity:.7;">' + escaparHtml(_CL[e.categoria] || e.categoria || 'Público') + '</span>' +
           (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
@@ -7021,6 +7036,7 @@ var InfraConfigUI = (function() {
           (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
           '<div style="display:flex;gap:6px;">' +
             '<button class="btn btn-ghost btn-sm" onclick="InfraConfigUI.editarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+            '<button class="btn btn-ghost btn-sm" style="color:var(--color-error,#ef4444);" onclick="InfraConfigUI.excluirEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Excluir</button>' +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
     }, function(err) { if (el) el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||String(err)) + '</p>'; });
@@ -7085,10 +7101,30 @@ var InfraConfigUI = (function() {
     });
   }
 
+  function excluirEspaco(id) {
+    var espaco = _listaEspacos.find(function(e){ return e.id === id; }) || {};
+    // Delegamos para AdminCadastrosUI que já tem toda a lógica de confirmação/exclusão
+    AdminCadastrosUI.injetarEspacos([espaco]);
+    AdminCadastrosUI.excluirEspaco(id);
+    // Após fechar o modal de confirmação, o AdminCadastrosUI.carregarEspacos() é chamado;
+    // Precisamos também recarregar esta lista. Usamos um observer simples via timeout.
+    var _poll = 0;
+    function _checarFechamento() {
+      if (_poll++ > 20) return;
+      if (!document.querySelector('.modal-simples')) {
+        _carregarEspacos();
+        return;
+      }
+      setTimeout(_checarFechamento, 300);
+    }
+    setTimeout(_checarFechamento, 400);
+  }
+
   return {
     abrirTab: abrirTab, aoAbrir: aoAbrir,
     salvarHorarios: salvarHorarios,
     editarEspaco: editarEspaco,
+    excluirEspaco: excluirEspaco,
     editarCatItem: editarCatItem
   };
 })();
@@ -7160,6 +7196,141 @@ var InfraConfigMapaUI = (function() {
       );
     }
     _prox(0);
+  }
+
+  // ── Modo: criar novo espaço clicando no mapa ────────────
+  var _modoNovoEspaco = false;
+
+  function _iniciarNovoEspaco() {
+    if (_modoEdicao) _cancelarEdicao();
+    _modoNovoEspaco = true;
+    var canvas = document.getElementById('cfg-mapa-canvas');
+    if (canvas) canvas.style.cursor = 'crosshair';
+    var btn = document.getElementById('cfg-mapa-btn-novo-espaco');
+    if (btn) { btn.style.background = '#ede9fe'; btn.textContent = ''; btn.innerHTML = '<span class="ms ms-sm">close</span> Cancelar'; btn.onclick = function() { _cancelarNovoEspaco(); }; }
+    _renderSidebarNovoEspaco();
+  }
+
+  function _cancelarNovoEspaco() {
+    _modoNovoEspaco = false;
+    var canvas = document.getElementById('cfg-mapa-canvas');
+    if (canvas) canvas.style.cursor = 'grab';
+    var btn = document.getElementById('cfg-mapa-btn-novo-espaco');
+    if (btn) { btn.style.background = '#f5f3ff'; btn.innerHTML = '<span class="ms ms-sm">add_location</span> Novo espaço'; btn.onclick = function() { _iniciarNovoEspaco(); }; }
+    _renderSidebar();
+  }
+
+  function _renderSidebarNovoEspaco() {
+    var sidebar = document.getElementById('cfg-mapa-sidebar');
+    if (!sidebar) return;
+    sidebar.innerHTML =
+      '<div style="background:#7c3aed;color:#fff;padding:12px;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.8;margin-bottom:4px;">Novo espaço</div>' +
+        '<div style="font-size:12px;">Clique em qualquer ponto do mapa para posicionar o novo espaço.</div>' +
+      '</div>' +
+      '<div style="padding:10px;">' +
+        '<button onclick="InfraConfigMapaUI._cancelarNovoEspaco()" data-bg-skip="1" ' +
+          'style="width:100%;padding:7px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;background:var(--surface2);color:var(--text2);">' +
+          'Cancelar' +
+        '</button>' +
+      '</div>';
+  }
+
+  function _mostrarModalNovoEspaco(cx, cy) {
+    // Modal inline para capturar nome + forma do novo espaço
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-novo-espaco';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:12px;max-width:380px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;';
+    var formasOpts = _FORMAS_INLINE.map(function(f) {
+      return '<option value="' + f.id + '">' + f.label + '</option>';
+    }).join('');
+    box.innerHTML =
+      '<div style="background:#7c3aed;color:#fff;padding:16px 20px;">' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">Novo espaço no mapa</h3>' +
+        '<div style="font-size:11px;opacity:.8;margin-top:3px;">Posição: (' + cx + ', ' + cy + ')</div>' +
+      '</div>' +
+      '<div style="padding:16px 20px;">' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">Nome do espaço *</label>' +
+          '<input id="novo-esp-nome" class="form-input" placeholder="Ex: Sala de Ensaio 1" ' +
+            'style="width:100%;box-sizing:border-box;" autofocus>' +
+        '</div>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">Forma</label>' +
+          '<select id="novo-esp-forma" class="form-input" style="width:100%;box-sizing:border-box;">' + formasOpts + '</select>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="btn-confirmar-novo-espaco" class="btn btn-primario" ' +
+            'onclick="InfraConfigMapaUI._confirmarNovoEspaco(' + cx + ',' + cy + ')">' +
+            'Adicionar ao mapa' +
+          '</button>' +
+          '<button class="btn btn-ghost" onclick="document.querySelector(\'.modal-novo-espaco\').remove();InfraConfigMapaUI._cancelarNovoEspaco();" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    overlay.appendChild(box);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) { overlay.remove(); _cancelarNovoEspaco(); } });
+    document.body.appendChild(overlay);
+    setTimeout(function() { var n = document.getElementById('novo-esp-nome'); if (n) n.focus(); }, 50);
+  }
+
+  function _confirmarNovoEspaco(cx, cy) {
+    var nomeEl  = document.getElementById('novo-esp-nome');
+    var formaEl = document.getElementById('novo-esp-forma');
+    var nome    = (nomeEl  ? nomeEl.value.trim()  : '');
+    var formaId = (formaEl ? formaEl.value : 'rect');
+    if (!nome) { Toast.aviso('O nome do espaço é obrigatório.'); if (nomeEl) nomeEl.focus(); return; }
+
+    var formaObj = null;
+    for (var fi = 0; fi < _FORMAS_INLINE.length; fi++) {
+      if (_FORMAS_INLINE[fi].id === formaId) { formaObj = _FORMAS_INLINE[fi]; break; }
+    }
+    if (!formaObj) formaObj = _FORMAS_INLINE[0];
+
+    BtnGuard.wrap('btn-confirmar-novo-espaco', 'Criando…', function(liberar) {
+      GAS.admin.salvarEspaco({ nome: nome, tipoEspaco: 'multiuso' },
+        function(r) {
+          if (!r || !r.ok) {
+            liberar();
+            Toast.erro((r && r.error && r.error.message) || 'Erro ao criar espaço.');
+            return;
+          }
+          var novoEspaco = r.data;
+          var cfg = { forma: formaObj.id, cx: cx, cy: cy,
+                      w: formaObj.w, h: formaObj.h, r: formaObj.r || 0, rotacao: 0 };
+          GAS.admin.salvarMapaEspaco({ id: novoEspaco.id, mapaConfig: cfg },
+            function(r2) {
+              liberar();
+              var m = document.querySelector('.modal-novo-espaco'); if (m) m.remove();
+              if (r2 && r2.ok) {
+                Toast.sucesso('"' + nome + '" adicionado ao mapa.');
+                // Adicionar ao cache local e entrar em modo edição
+                novoEspaco.mapaConfig = cfg;
+                _espacos.push(novoEspaco);
+                _cancelarNovoEspaco();
+                _editarPosicao(novoEspaco.id);
+              } else {
+                Toast.erro('Espaço criado mas erro ao salvar posição.');
+                _cancelarNovoEspaco();
+                recarregar();
+              }
+            },
+            function(err) {
+              liberar();
+              var m = document.querySelector('.modal-novo-espaco'); if (m) m.remove();
+              Toast.erro('Espaço criado mas erro ao salvar posição: ' + (err && err.message || ''));
+              _cancelarNovoEspaco();
+              recarregar();
+            }
+          );
+        },
+        function(err) {
+          liberar();
+          Toast.erro('Erro ao criar espaço: ' + (err && err.message || ''));
+        }
+      );
+    });
   }
 
   // ── Edição inline (sem overlay) ──────────────────────────
@@ -8206,6 +8377,20 @@ var InfraConfigMapaUI = (function() {
     var _dragPan = null;
 
     canvas.addEventListener('mousedown', function(e) {
+      // ── Modo novo espaço: capturar posição de clique ──
+      if (_modoNovoEspaco) {
+        e.stopPropagation(); e.preventDefault();
+        var pt = _svgPt(e);
+        // Reset mode first so button/sidebar return to normal state, then show modal
+        _modoNovoEspaco = false;
+        var canvas3 = document.getElementById('cfg-mapa-canvas');
+        if (canvas3) canvas3.style.cursor = 'grab';
+        var btn3 = document.getElementById('cfg-mapa-btn-novo-espaco');
+        if (btn3) { btn3.style.background = '#f5f3ff'; btn3.innerHTML = '<span class="ms ms-sm">add_location</span> Novo espaço'; btn3.onclick = function() { _iniciarNovoEspaco(); }; }
+        _renderSidebar();
+        _mostrarModalNovoEspaco(Math.round(pt.x), Math.round(pt.y));
+        return;
+      }
       // ── Modo edição inline ──
       if (_modoEdicao && _modoEdicao.cfg) {
         var handle = e.target && e.target.getAttribute && e.target.getAttribute('data-ed-handle');
@@ -8313,7 +8498,10 @@ var InfraConfigMapaUI = (function() {
     _importarTodosDoMapa:   _importarTodosDoMapa,
     _desfazer:              _desfazer,
     _restaurarPadrao:       _restaurarPadrao,
-    _restaurarTodosPadrao:  _restaurarTodosPadrao
+    _restaurarTodosPadrao:  _restaurarTodosPadrao,
+    _iniciarNovoEspaco:     _iniciarNovoEspaco,
+    _cancelarNovoEspaco:    _cancelarNovoEspaco,
+    _confirmarNovoEspaco:   _confirmarNovoEspaco
   };
 })();
 

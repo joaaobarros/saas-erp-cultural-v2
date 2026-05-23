@@ -90,6 +90,17 @@ var ConfigAdminService = (function () {
     };
 
     modifyJSON('espacos_config.json', function(lista) {
+      // Auto-assign numeroPlanta: max existing + 1 for new or blank
+      if (!registro.numeroPlanta) {
+        var maxN = 0;
+        lista.forEach(function(e) {
+          if (e.orgId === orgId && e.id !== id) {
+            var n = parseInt(e.numeroPlanta, 10);
+            if (!isNaN(n) && n > maxN) maxN = n;
+          }
+        });
+        registro.numeroPlanta = String(maxN + 1);
+      }
       var idx = lista.findIndex(function(e) { return e.id === id && e.orgId === orgId; });
       if (idx >= 0) {
         lista[idx] = registro;
