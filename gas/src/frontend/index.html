@@ -2509,7 +2509,7 @@ textarea.input { resize: vertical; }
               </div>
               <div class="form-group">
                 <label class="form-label">Setor</label>
-                <input type="text" id="res-setor" class="form-input" placeholder="Ex: RECE">
+                <select id="res-setor" class="form-input"><option value="">Selecione o setor…</option></select>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Observações</label>
@@ -2543,6 +2543,14 @@ textarea.input { resize: vertical; }
                   <option value="concluido">Concluídas</option>
                   <option value="cancelado">Canceladas</option>
                 </select>
+                <input type="date" id="res-filtro-data" class="form-input" style="padding:6px 10px;font-size:13px;width:auto;"
+                       title="Mostrar a partir de" onchange="ReservasUI._aplicarFiltroLista()">
+                <select id="res-sort" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;"
+                        onchange="ReservasUI._aplicarFiltroLista()">
+                  <option value="data-hora">↑ Data/Hora</option>
+                  <option value="data-hora-desc">↓ Data/Hora</option>
+                  <option value="espaco">↑ Espaço</option>
+                </select>
                 <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
                   <span class="ms ms-sm">refresh</span>
                 </button>
@@ -2563,14 +2571,14 @@ textarea.input { resize: vertical; }
 
           <!-- MODO AGENDA -->
           <div id="res-modo-agenda" style="display:none;">
-            <div class="card" id="res-agenda-container" style="overflow:hidden;padding:0;min-height:200px;">
+            <div class="card" id="res-agenda-container" style="padding:0;min-height:200px;overflow:visible;">
               <div class="empty-state" style="padding:30px;"><p class="muted-text">Carregando…</p></div>
             </div>
           </div>
 
           <!-- MODO DIAGRAMA -->
           <div id="res-modo-diagrama" style="display:none;">
-            <div class="card" id="res-diagrama-container" style="overflow:hidden;padding:0;min-height:200px;">
+            <div class="card" id="res-diagrama-container" style="padding:0;min-height:200px;overflow:visible;">
               <div class="empty-state" style="padding:30px;"><p class="muted-text">Carregando…</p></div>
             </div>
           </div>
@@ -3461,6 +3469,13 @@ function escaparHtml(valor) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// ── Utilitário de data (YYYY-MM-DD → DD/MM/YYYY) ────────────
+function fmtDataPtBR(d) {
+  if (!d) return '';
+  var p = String(d).split('-');
+  return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
 }
 
 // ── Utilitários de moeda (R$ 0,00) ──────────────────────────
@@ -5698,7 +5713,7 @@ var AprovacaoReservaUI = (function() {
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
             '<div>' +
               '<strong>' + escaparHtml(s.tipo || 'RESERVA') + '</strong> — <span class="badge ' + badgeCls + '">' + s.status + '</span><br>' +
-              '<small class="muted-text">Espaço: ' + escaparHtml(s.espacoId) + ' · Solicitante: ' + escaparHtml(s.solicitante) + ' · ' + (s.dataSolicitacao||'').slice(0,10) + '</small>' +
+              '<small class="muted-text">Espaço: ' + escaparHtml(s.espacoId) + ' · Solicitante: ' + escaparHtml(s.solicitante) + ' · ' + fmtDataPtBR((s.dataSolicitacao||'').slice(0,10)) + '</small>' +
               (s.justificativa ? '<br><em style="font-size:12px;">' + escaparHtml(s.justificativa) + '</em>' : '') +
               (s.motivoRecusa  ? '<br><span style="color:#ef4444;font-size:12px;">Recusa: ' + escaparHtml(s.motivoRecusa) + '</span>' : '') +
             '</div>' +
@@ -5901,9 +5916,23 @@ var ReservasUI = (function() {
   var _espacosPorId    = {};        // { [id]: nome } — lazy-load via boot
   var _semanaOffset    = 0;         // semanas relativas à atual (0 = esta semana)
   var _diagramaDia     = null;      // YYYY-MM-DD do dia ativo no diagrama
+  var _meuNivel        = 'colaborador';
+  var _nivelCarregado  = false;
+
+  var _NIVEL_GESTAO_RES = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
 
   function _badge(s) {
     return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
+  }
+
+  function _fmtDataPtBR(d) { return fmtDataPtBR(d); }
+
+  function _nomeSetor(id) {
+    if (!id) return '';
+    var boot = App.getBoot ? App.getBoot() : null;
+    var setores = (boot && boot.setores) || [];
+    var s = setores.filter(function(x){ return x.id === id || x.nome === id; })[0];
+    return s ? s.nome : id;
   }
 
   function _renderMetricas(m) {
@@ -5920,15 +5949,53 @@ var ReservasUI = (function() {
     }).join('');
   }
 
+  var _LABEL_TURNO_LISTA = {
+    manha:'Manhã', tarde:'Tarde', noite:'Noite',
+    manha_tarde:'Manhã/Tarde', tarde_noite:'Tarde/Noite', integral:'Integral'
+  };
+
+  function _aplicarFiltroLista() {
+    _renderLista(_listaCacheTotal);
+  }
+
   function _renderLista(lista) {
+    _garantirEspacosPorId();
     var el = document.getElementById('reservas-lista');
-    if (!lista || !lista.length) {
+
+    // Inicializar datepicker com hoje se ainda não tiver valor
+    var dpEl = document.getElementById('res-filtro-data');
+    if (dpEl && !dpEl.value) dpEl.value = new Date().toISOString().slice(0, 10);
+    var dataMin = (dpEl && dpEl.value) || new Date().toISOString().slice(0, 10);
+
+    var sort = (document.getElementById('res-sort')||{}).value || 'data-hora';
+
+    // Filtrar: apenas registros a partir de dataMin
+    var exibir = (lista || []).filter(function(r) {
+      return (r.data || '') >= dataMin;
+    });
+
+    // Ordenar
+    exibir.sort(function(a, b) {
+      if (sort === 'espaco') {
+        var na = _espacosPorId[a.sala] || a.sala || '';
+        var nb = _espacosPorId[b.sala] || b.sala || '';
+        return na.localeCompare(nb);
+      }
+      var ka = (a.data||'') + (a.horaInicio||'');
+      var kb = (b.data||'') + (b.horaInicio||'');
+      return sort === 'data-hora-desc' ? kb.localeCompare(ka) : ka.localeCompare(kb);
+    });
+
+    if (!exibir.length) {
       el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
         +'<span class="ms" style="font-size:32px;color:var(--muted)">event</span>'
         +'<p style="font-size:13px;color:var(--muted)">Nenhuma reserva encontrada com este filtro.</p></div>';
       return;
     }
-    el.innerHTML = lista.map(function(r) {
+
+    el.innerHTML = exibir.map(function(r) {
+      var nomeEspaco = _espacosPorId[r.sala] || r.sala || '—';
+      var turnoLabel = _LABEL_TURNO_LISTA[r.turno] || r.turno || '';
       var btns = '';
       if (r.status === 'pendente') {
         btns += '<button class="btn btn-ghost btn-sm btn-res-confirmar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">check</span> Confirmar</button>';
@@ -5941,16 +6008,26 @@ var ReservasUI = (function() {
       if (r.status === 'em_uso') {
         btns += '<button class="btn btn-ghost btn-sm btn-res-concluir" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">done_all</span> Concluir</button>';
       }
+      btns += '<button class="btn btn-ghost btn-sm btn-res-editar" data-id="'+escaparHtml(r.id)+'" title="Editar"><span class="ms ms-sm">edit</span></button>';
+
+      var linhas = '';
+      linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;">';
+      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">location_on</span> '+escaparHtml(nomeEspaco)+'</span>';
+      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">event</span> '+escaparHtml(_fmtDataPtBR(r.data))+'</span>';
+      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">schedule</span> '+escaparHtml(r.horaInicio||'')+'–'+escaparHtml(r.horaTermino||'')+'</span>';
+      if (turnoLabel) linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">wb_sunny</span> '+escaparHtml(turnoLabel)+'</span>';
+      if (r.setor)    linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">apartment</span> '+escaparHtml(_nomeSetor(r.setor))+'</span>';
+      if (r.responsavel) linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">person</span> <em>'+escaparHtml(r.responsavel)+'</em></span>';
+      linhas += '</div>';
+      if (r.itensVolantes) linhas += '<div style="font-size:11px;color:var(--muted);margin-top:3px;"><span class="ms ms-sm" style="font-size:11px;vertical-align:middle;">inventory_2</span> <em>Itens: '+escaparHtml(r.itensVolantes)+'</em></div>';
+      if (r.observacoes)   linhas += '<div style="font-size:11px;color:var(--muted);margin-top:3px;"><span class="ms ms-sm" style="font-size:11px;vertical-align:middle;">notes</span> '+escaparHtml(r.observacoes)+'</div>';
+
       return '<div class="pendente-item">'
         +'<div class="pendente-info">'
-        +'<div class="pendente-nome">'+escaparHtml(r.nomeAcao||'—')+'</div>'
-        +'<div class="pendente-meta">'
-        +escaparHtml(r.sala||'—')
-        +' · '+escaparHtml(r.data||'')
-        +' · '+escaparHtml(r.horaInicio||'')+'–'+escaparHtml(r.horaTermino||'')
-        +(r.responsavel?' · <em>'+escaparHtml(r.responsavel)+'</em>':'')
-        +'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+        +'<div class="pendente-nome">'+escaparHtml(r.nomeAcao||'—')+(r.tipoAcao?' <span style="font-size:11px;font-weight:400;color:var(--muted);">('+escaparHtml(r.tipoAcao)+')</span>':'')+'</div>'
+        + linhas
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">'
         +_badge(r.status)+btns+'</div></div>';
     }).join('');
 
@@ -5967,9 +6044,20 @@ var ReservasUI = (function() {
     el.querySelectorAll('.btn-res-cancelar').forEach(function(btn) {
       btn.addEventListener('click', function() { _cancelar(this.getAttribute('data-id')); });
     });
+    el.querySelectorAll('.btn-res-editar').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        var r = _listaCacheTotal.filter(function(x){ return x.id === id; })[0];
+        if (r) abrirForm(r);
+      });
+    });
   }
 
   function carregar() {
+    if (!_nivelCarregado) {
+      _nivelCarregado = true;
+      GAS.pessoas.meuNivel(function(r){ if(r&&r.ok&&r.data) _meuNivel = r.data.nivel||'colaborador'; }, function(){});
+    }
     var filtroStatus = (document.getElementById('res-filtro-status')||{}).value || '';
     var filtros = {};
     if (_modo === 'lista' && filtroStatus) filtros.status = filtroStatus;
@@ -5977,19 +6065,26 @@ var ReservasUI = (function() {
       var sem = _getSemana(_semanaOffset);
       filtros.dateRange = { de: sem[0], ate: sem[6] };
     }
-    BtnGuard.wrap('btn-res-recarregar', 'Carregando…', function(done) {
+
+    function _executar(done) {
       GAS.reservas.metricas(function(respM) {
         if (respM && respM.ok) _renderMetricas(respM.data);
         GAS.reservas.listar(filtros, function(resp) {
-          done();
+          if (done) done();
           if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
           _listaCacheTotal = resp.data || [];
           if (_modo === 'lista')    _renderLista(_listaCacheTotal);
           if (_modo === 'diagrama') _renderDiagrama();
           if (_modo === 'agenda')   _renderAgenda();
-        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
-      }, function(err) { done(); });
-    });
+        }, function(err) { if (done) done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { if (done) done(); });
+    }
+
+    if (_modo === 'lista') {
+      BtnGuard.wrap('btn-res-recarregar', 'Carregando…', _executar);
+    } else {
+      _executar(null);
+    }
   }
 
   var _espacosCatalogo = [];
@@ -6024,7 +6119,17 @@ var ReservasUI = (function() {
     document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';
     document.getElementById('res-nome-acao').value = dados && dados.nomeAcao || '';
     document.getElementById('res-tipo-acao').value = dados && dados.tipoAcao || '';
-    document.getElementById('res-setor').value     = dados && dados.setor || '';
+    var _valorSetor = (dados && dados.setor) || '';
+    var _selSetor = document.getElementById('res-setor');
+    if (_selSetor) {
+      var _bootData = App.getBoot ? App.getBoot() : null;
+      var _setoresLista = (_bootData && _bootData.setores) || [];
+      _selSetor.innerHTML = '<option value="">Selecione o setor…</option>' +
+        _setoresLista.map(function(s) {
+          var sel = (s.id === _valorSetor || s.nome === _valorSetor) ? ' selected' : '';
+          return '<option value="'+escaparHtml(s.id)+'"'+sel+'>'+escaparHtml(s.nome)+'</option>';
+        }).join('');
+    }
     document.getElementById('res-obs').value       = dados && dados.observacoes || '';
     document.getElementById('reservas-form-titulo').textContent = dados && dados.id ? 'Editar Reserva' : 'Nova Reserva';
     document.getElementById('res-disp-resultado').style.display = 'none';
@@ -6308,15 +6413,17 @@ var ReservasUI = (function() {
         + diasLabel[i] + ' ' + partes[2] + '</button>';
     });
     html += '</div>';
-    html += '<div style="display:flex;gap:6px;align-items:center;">';
-    html += '<input id="rdg-filtro-texto" class="form-input" style="width:130px;height:30px;font-size:12px;" placeholder="Buscar…"'
+    html += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">';
+    html += '<input id="rdg-filtro-texto" class="form-input" style="width:120px;height:30px;font-size:12px;" placeholder="Buscar…"'
       + ' value="' + escaparHtml(fTxt) + '" oninput="ReservasUI._renderDiagrama()">';
     html += '<select id="rdg-filtro-espaco" class="form-select" style="width:130px;height:30px;font-size:12px;" onchange="ReservasUI._renderDiagrama()">';
     html += '<option value="">Todos espaços</option>';
     Object.keys(_espacosPorId).forEach(function(id) {
       html += '<option value="' + escaparHtml(id) + '"' + (id === fEsp ? ' selected' : '') + '>' + escaparHtml(_espacosPorId[id]||id) + '</option>';
     });
-    html += '</select></div></div>';
+    html += '</select>';
+    html += '<input type="date" id="rdg-datepicker" class="form-input" style="width:140px;height:30px;font-size:12px;" value="' + escaparHtml(_diagramaDia||'') + '" onchange="ReservasUI._rdgJumpDate(this.value)" title="Ir para data">';
+    html += '</div></div>';
 
     // Grade scrollável
     html += '<div style="overflow-x:auto;overflow-y:auto;max-height:500px;">';
@@ -6439,7 +6546,8 @@ var ReservasUI = (function() {
     html += '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="ReservasUI._ragHoje()">Hoje</button>';
     html += '<span style="font-size:12px;color:var(--muted);">'
       + semana[0].slice(5).split('-').reverse().join('/') + ' – ' + semana[6].slice(5).split('-').reverse().join('/') + '</span>';
-    html += '<div style="margin-left:auto;">';
+    html += '<div style="margin-left:auto;display:flex;gap:6px;align-items:center;">';
+    html += '<input type="date" id="rag-datepicker" class="form-input" style="width:140px;height:30px;font-size:12px;" value="' + escaparHtml(semana[0]) + '" onchange="ReservasUI._ragJumpDate(this.value)" title="Ir para semana">';
     html += '<select id="rag-filtro-espaco" class="form-select" style="width:140px;height:30px;font-size:12px;" onchange="ReservasUI._renderAgenda()">';
     html += '<option value="">Todos os espaços</option>';
     Object.keys(_espacosPorId).forEach(function(id) {
@@ -6545,12 +6653,16 @@ var ReservasUI = (function() {
     if (!r) { Toast.aviso('Reserva não encontrada. Recarregue.'); return; }
     _garantirEspacosPorId();
     var salaNome = _espacosPorId[r.sala] || r.sala || '—';
+    var _podeHabilitar = _NIVEL_GESTAO_RES.indexOf(_meuNivel) !== -1;
+    var _estiloHab = 'font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;';
     var habBadge = r.status==='confirmado'
-      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#059669;color:#fff;font-weight:700;">✓ HAB</span>'
+      ? '<span style="'+_estiloHab+'background:#059669;color:#fff;">✓ HAB</span>'
       : r.status==='pendente'
-      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-weight:700;">HAB?</span>'
+      ? (_podeHabilitar
+          ? '<button id="btn-hab-confirmar" style="'+_estiloHab+'background:#fef3c7;border:1px solid #f59e0b;color:#92400e;cursor:pointer;" title="Clique para habilitar esta reserva">HAB?</button>'
+          : '<span style="'+_estiloHab+'background:#fef3c7;border:1px solid #f59e0b;color:#92400e;">HAB?</span>')
       : r.status==='em_uso'
-      ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#4c1d95;color:#fff;font-weight:700;">EM USO</span>'
+      ? '<span style="'+_estiloHab+'background:#4c1d95;color:#fff;">EM USO</span>'
       : '';
 
     var _LABEL_TURNO = {
@@ -6589,12 +6701,12 @@ var ReservasUI = (function() {
         + habBadge
       + '</div>'
       + _linha('Espaço', salaNome)
-      + _linha('Data', r.data)
+      + _linha('Data', _fmtDataPtBR(r.data))
       + _linha('Horário', (r.horaInicio||'') + ' – ' + (r.horaTermino||''))
       + _linha('Turno', _labelTurno(r.turno))
       + _linha('Tipo', r.tipoAcao)
       + _linha('Responsável', r.responsavel)
-      + _linha('Setor', r.setor)
+      + _linha('Setor', _nomeSetor(r.setor))
       + _linha('Co-responsável', r.coResponsavel)
       + _linha('Observações', r.observacoes)
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">' + btnsHtml + '</div>'
@@ -6603,6 +6715,17 @@ var ReservasUI = (function() {
 
     overlay.addEventListener('click', function(e) { if (e.target===overlay) overlay.remove(); });
     overlay.querySelector('#det-fechar').addEventListener('click', function() { overlay.remove(); });
+
+    var bHab = overlay.querySelector('#btn-hab-confirmar');
+    if (bHab) bHab.addEventListener('click', function() {
+      BtnGuard.wrap(bHab, 'Habilitando…', function(done) {
+        GAS.reservas.confirmar(id, function(resp) {
+          done(); overlay.remove();
+          if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+          Toast.sucesso('Reserva habilitada.'); carregar();
+        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      });
+    });
 
     var bConf = overlay.querySelector('#det-confirmar');
     if (bConf) bConf.addEventListener('click', function() {
@@ -6641,14 +6764,35 @@ var ReservasUI = (function() {
   return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
     verificarDisponibilidade:verificarDisponibilidade,
     popularSelectEspacos:popularSelectEspacos, aoSelecionarEspaco:aoSelecionarEspaco,
-    setModo:setModo,
+    setModo:setModo, _aplicarFiltroLista:_aplicarFiltroLista,
     _renderDiagrama:_renderDiagrama, _renderAgenda:_renderAgenda,
     _abrirDetalheReserva:_abrirDetalheReserva,
     _rdgNavSemana: function(d) { _semanaOffset += d; _diagramaDia = _getSemana(_semanaOffset)[0]; carregar(); },
     _rdgSetDia:    function(d) { _diagramaDia = d; _renderDiagrama(); },
     _rdgHoje:      function()  { _semanaOffset=0; _diagramaDia=new Date().toISOString().slice(0,10); carregar(); },
+    _rdgJumpDate:  function(d) {
+      if (!d) return;
+      // Calcular offset de semana relativo à semana atual
+      var alvo = new Date(d + 'T00:00:00');
+      var base = new Date(); base.setHours(0,0,0,0);
+      var dow = base.getDay(); var diffToMon = (dow===0?-6:1-dow);
+      base.setDate(base.getDate() + diffToMon); // segunda da semana atual
+      var diffMs = alvo.getTime() - base.getTime();
+      _semanaOffset = Math.floor(diffMs / (7*24*3600*1000));
+      _diagramaDia = d; carregar();
+    },
     _ragNavSemana: function(d) { _semanaOffset += d; carregar(); },
     _ragHoje:      function()  { _semanaOffset=0; carregar(); },
+    _ragJumpDate:  function(d) {
+      if (!d) return;
+      var alvo = new Date(d + 'T00:00:00');
+      var base = new Date(); base.setHours(0,0,0,0);
+      var dow = base.getDay(); var diffToMon = (dow===0?-6:1-dow);
+      base.setDate(base.getDate() + diffToMon);
+      var diffMs = alvo.getTime() - base.getTime();
+      _semanaOffset = Math.floor(diffMs / (7*24*3600*1000));
+      carregar();
+    },
     _garantirEspacosPorId:_garantirEspacosPorId };
 })();
 
@@ -6696,8 +6840,8 @@ var ChavesUI = (function() {
         +'<div class="pendente-meta">'
         +escaparHtml(p.nomeResponsavel||p.responsavel||'—')
         +(p.setor?' · '+escaparHtml(p.setor):'')
-        +' · Retirada: '+escaparHtml(String(p.dataRetirada||'').substring(0,10))
-        +(p.dataDevolucao?' · Prev: '+escaparHtml(String(p.dataDevolucao||'').substring(0,10)):'')
+        +' · Retirada: '+escaparHtml(fmtDataPtBR(String(p.dataRetirada||'').substring(0,10)))
+        +(p.dataDevolucao?' · Prev: '+escaparHtml(fmtDataPtBR(String(p.dataDevolucao||'').substring(0,10))):'')
         +'</div></div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
         +_badge(p.status)+btns+'</div></div>';
@@ -6826,8 +6970,8 @@ var AlmoxUI = (function() {
         +'<div class="pendente-nome">'+escaparHtml(e.nomeItem||'—')+' <span style="font-size:12px;color:var(--text2)">×'+escaparHtml(String(e.quantidade||1))+'</span></div>'
         +'<div class="pendente-meta">'
         +escaparHtml(e.responsavel||'—')
-        +' · Ret: '+escaparHtml(e.dataRetirada||'')
-        +' · Dev: '+escaparHtml(e.dataDevolucao||'')
+        +' · Ret: '+escaparHtml(fmtDataPtBR(e.dataRetirada)||'')
+        +' · Dev: '+escaparHtml(fmtDataPtBR(e.dataDevolucao)||'')
         +'</div></div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
         +_badge(e.status)+btns+'</div></div>';
@@ -7268,8 +7412,8 @@ var AfastamentosUI = (function() {
           return '<tr>'
             +'<td>'+escaparHtml(a.nomeColaborador||a.idColaborador||'—')+'</td>'
             +'<td>'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'—')+'</td>'
-            +'<td>'+escaparHtml(a.dataInicio||'—')+'</td>'
-            +'<td>'+escaparHtml(a.dataFim||'—')+'</td>'
+            +'<td>'+escaparHtml(fmtDataPtBR(a.dataInicio)||'—')+'</td>'
+            +'<td>'+escaparHtml(fmtDataPtBR(a.dataFim)||'—')+'</td>'
             +'<td>'+_badge(a.status)+'</td>'
             +'<td style="display:flex;gap:4px;flex-wrap:wrap;">'
             +(a.status==='rascunho'?'<button class="btn btn-success btn-sm" id="btn-afa-ativar-'+a.id+'" onclick="AfastamentosUI.ativar(\''+a.id+'\')"><span class="ms ms-sm">play_arrow</span>Ativar</button>':'')
@@ -8106,7 +8250,7 @@ var AcoesUI = (function() {
           '<div class="kanban-card-meta">' +
             '<span class="badge badge-muted" style="font-size:10.5px;">'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</span>' +
             (a.responsavel ? '<span>'+escaparHtml(a.responsavel.split('@')[0])+'</span>' : '') +
-            (a.dataInicio  ? '<span>'+escaparHtml(a.dataInicio)+'</span>' : '') +
+            (a.dataInicio  ? '<span>'+escaparHtml(fmtDataPtBR(a.dataInicio))+'</span>' : '') +
           '</div>' +
         '</div>';
       }).join('');
@@ -8122,7 +8266,7 @@ var AcoesUI = (function() {
         '<td>'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</td>' +
         '<td>'+_badgeStatus(a.status)+'</td>' +
         '<td>'+escaparHtml((a.responsavel||'').split('@')[0])+'</td>' +
-        '<td>'+(a.dataInicio ? escaparHtml(a.dataInicio) + (a.dataFim?' → '+escaparHtml(a.dataFim):'') : '—')+'</td>' +
+        '<td>'+(a.dataInicio ? escaparHtml(fmtDataPtBR(a.dataInicio)) + (a.dataFim?' → '+escaparHtml(fmtDataPtBR(a.dataFim)):'') : '—')+'</td>' +
         '<td>'+(a.publicoPrevisto||0)+'</td>' +
         '<td class="acoes-col">' +
           '<button class="btn btn-secondary btn-sm" data-bg-skip="1" onclick="event.stopPropagation();AcoesUI.abrirForm(JSON.parse(this.dataset.acao))" data-acao=\''+JSON.stringify(a).replace(/'/g,'&#39;')+'\'>'+
@@ -8268,8 +8412,8 @@ var AcoesUI = (function() {
     // Aba Geral
     if (el('painel-g-responsavel')) el('painel-g-responsavel').textContent = acao.responsavel || '—';
     if (el('painel-g-setor'))       el('painel-g-setor').textContent       = acao.setor       || '—';
-    if (el('painel-g-inicio'))      el('painel-g-inicio').textContent      = acao.dataInicio  || '—';
-    if (el('painel-g-fim'))         el('painel-g-fim').textContent         = acao.dataFim     || '—';
+    if (el('painel-g-inicio'))      el('painel-g-inicio').textContent      = fmtDataPtBR(acao.dataInicio)  || '—';
+    if (el('painel-g-fim'))         el('painel-g-fim').textContent         = fmtDataPtBR(acao.dataFim)     || '—';
     if (el('painel-g-publico'))     el('painel-g-publico').textContent     = acao.publicoPrevisto || '0';
     if (el('painel-g-visibilidade'))el('painel-g-visibilidade').textContent= acao.visibilidadePublica ? '✅ Público' : '🔒 Interno';
     if (el('painel-g-descricao'))   el('painel-g-descricao').textContent   = acao.descricao       || '(sem descrição)';
@@ -8359,7 +8503,7 @@ var AcoesUI = (function() {
           : reservas.map(function(rv) {
               return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
                 '<strong>'+escaparHtml(rv.sala||rv.espaco||'')+'</strong> ' +
-                (rv.data ? escaparHtml(rv.data)+' ' : '') +
+                (rv.data ? escaparHtml(fmtDataPtBR(rv.data))+' ' : '') +
                 (rv.inicio&&rv.fim ? escaparHtml(rv.inicio)+' – '+escaparHtml(rv.fim) : '') +
                 ' <span class="badge badge-muted" style="font-size:11px;">'+escaparHtml(rv.status||'')+'</span>' +
               '</div>';
