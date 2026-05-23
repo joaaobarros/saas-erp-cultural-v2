@@ -38,7 +38,8 @@ var AtivoRepository = (function () {
     'Status', 'Localizacao', 'Responsavel', 'AcaoId',
     'ValorAquisicao', 'DataAquisicao', 'Fornecedor', 'NotaFiscal', 'VidaUtilAnos',
     'ProximaManutencao', 'UltimaManutencao',
-    'CriadoEm', 'AtualizadoEm', 'CriadoPor', 'Versao'
+    'CriadoEm', 'AtualizadoEm', 'CriadoPor', 'Versao',
+    'Tipo', 'Quantidade'
   ];
 
   // Mapa coluna → índice 0-based
@@ -72,7 +73,9 @@ var AtivoRepository = (function () {
       criadoEm:           row[_COL.CriadoEm]          || '',
       atualizadoEm:       row[_COL.AtualizadoEm]      || '',
       criadoPor:          row[_COL.CriadoPor]         || '',
-      versao:             Number(row[_COL.Versao] || 1)
+      versao:             Number(row[_COL.Versao] || 1),
+      tipo:               row[_COL.Tipo]              || 'volante',
+      quantidade:         Number(row[_COL.Quantidade] || 1)
     };
   }
 
@@ -99,7 +102,9 @@ var AtivoRepository = (function () {
       a.criadoEm         || '',
       a.atualizadoEm     || '',
       a.criadoPor        || '',
-      a.versao           || 1
+      a.versao           || 1,
+      a.tipo             || 'volante',
+      Number(a.quantidade || 1)
     ];
   }
 
@@ -213,6 +218,7 @@ var AtivoRepository = (function () {
     if (filtros.status    ) lista = lista.filter(function (a) { return a.status    === filtros.status; });
     if (filtros.categoria ) lista = lista.filter(function (a) { return a.categoria === filtros.categoria; });
     if (filtros.localizacao) lista = lista.filter(function (a) { return a.localizacao === filtros.localizacao; });
+    if (filtros.tipo      ) lista = lista.filter(function (a) { return a.tipo === filtros.tipo; });
     return lista;
   }
 
@@ -260,7 +266,9 @@ var AtivoRepository = (function () {
       criadoEm:         agora_,
       atualizadoEm:     agora_,
       criadoPor:        autor || '',
-      versao:           1
+      versao:           1,
+      tipo:             dados.tipo       || 'volante',
+      quantidade:       Number(dados.quantidade || 1)
     };
 
     aba.appendRow(_ativoParaLinha(ativo));
@@ -303,7 +311,9 @@ var AtivoRepository = (function () {
       criadoEm:         ativoAtual.criadoEm,
       atualizadoEm:     agora(),
       criadoPor:        ativoAtual.criadoPor,
-      versao:           ativoAtual.versao + 1
+      versao:           ativoAtual.versao + 1,
+      tipo:             dados.tipo       !== undefined ? dados.tipo       : ativoAtual.tipo,
+      quantidade:       dados.quantidade !== undefined ? Number(dados.quantidade) : ativoAtual.quantidade
     };
 
     aba.getRange(linha, 1, 1, _HEADERS.length).setValues([_ativoParaLinha(ativoAtualizado)]);
@@ -354,7 +364,9 @@ var AtivoRepository = (function () {
       reservado:   lista.filter(function (a) { return a.status === 'reservado'; }).length,
       em_uso:      lista.filter(function (a) { return a.status === 'em_uso'; }).length,
       manutencao:  lista.filter(function (a) { return a.status === 'manutencao'; }).length,
-      baixado:     lista.filter(function (a) { return a.status === 'baixado'; }).length
+      baixado:     lista.filter(function (a) { return a.status === 'baixado'; }).length,
+      fixo:        lista.filter(function (a) { return a.tipo === 'fixo'; }).length,
+      volante:     lista.filter(function (a) { return a.tipo !== 'fixo'; }).length
     };
   }
 

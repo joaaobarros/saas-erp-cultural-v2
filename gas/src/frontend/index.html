@@ -1847,7 +1847,7 @@ textarea.input { resize: vertical; }
                 </select>
               </div>
               <div class="form-group"><label class="form-label">Setor Solicitante *</label><input id="sol-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
-              <div class="form-group"><label class="form-label">Valor Estimado (R$)</label><input id="sol-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00"></div>
+              <div class="form-group"><label class="form-label">Valor Estimado (R$)</label><input id="sol-valor" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00"></div>
               <div class="form-group"><label class="form-label">Contrato de Origem (ID)</label><input id="sol-contrato" class="form-input" type="text" placeholder="ID do contrato / fonte de recurso"></div>
               <div class="form-group" style="grid-column:span 2"><label class="form-label">Justificativa</label><textarea id="sol-justificativa" class="form-input" rows="2" placeholder="Justifique a necessidade da contratação…" style="resize:vertical"></textarea></div>
             </div>
@@ -1995,7 +1995,7 @@ textarea.input { resize: vertical; }
               </div>
               <div class="form-group">
                 <label class="form-label">Valor total (R$)</label>
-                <input id="cf-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
+                <input id="cf-valor" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00">
               </div>
               <div class="form-group">
                 <label class="form-label">Status</label>
@@ -2070,7 +2070,7 @@ textarea.input { resize: vertical; }
               <div id="cd-meta-form" class="oculto" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:12px;">
                 <div class="form-grid">
                   <div class="form-group"><label class="form-label">Nome da Meta *</label><input id="cd-meta-nome" class="form-input" type="text" placeholder="Nome da meta"></div>
-                  <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cd-meta-valor" class="form-input" type="number" min="0" step="0.01" value="0"></div>
+                  <div class="form-group"><label class="form-label">Valor Total (R$)</label><input id="cd-meta-valor" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00"></div>
                   <div class="form-group full-width"><label class="form-label">Descrição</label><input id="cd-meta-descricao" class="form-input" type="text" placeholder="Descrição da meta"></div>
                 </div>
                 <input type="hidden" id="cd-meta-id">
@@ -2096,7 +2096,7 @@ textarea.input { resize: vertical; }
                     </select>
                   </div>
                   <div class="form-group"><label class="form-label">Valor Total (R$)</label>
-                    <input id="cd-rubrica-valor" class="form-input" type="number" min="0" step="0.01" value="0" readonly style="background:var(--surface3);" title="Calculado automaticamente pela memória de cálculo">
+                    <input id="cd-rubrica-valor" class="form-input" type="text" value="R$ 0,00" readonly style="background:var(--surface3);" title="Calculado automaticamente pela memória de cálculo">
                   </div>
                 </div>
                 <!-- Grid de Memória de Cálculo -->
@@ -2239,7 +2239,7 @@ textarea.input { resize: vertical; }
               </div>
               <div class="form-group">
                 <label class="form-label">Valor Total (R$)</label>
-                <input id="ff-valor" class="form-input" type="number" min="0" step="0.01" placeholder="0,00">
+                <input id="ff-valor" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00">
               </div>
               <div class="form-group">
                 <label class="form-label">Vigência início</label>
@@ -2301,7 +2301,7 @@ textarea.input { resize: vertical; }
               </div>
               <div class="form-group">
                 <label class="form-label">Valor (R$) *</label>
-                <input id="rem-valor" class="form-input" type="number" min="0.01" step="0.01" placeholder="0,00">
+                <input id="rem-valor" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00">
               </div>
               <div class="form-group">
                 <label class="form-label">Rubrica Origem (ID) *</label>
@@ -2374,7 +2374,7 @@ textarea.input { resize: vertical; }
               </div>
               <div class="form-group">
                 <label class="form-label">Valor Adicional (R$)</label>
-                <input id="adt-valor-adicional" class="form-input" type="number" step="0.01" placeholder="0,00 (deixar em branco se sem acréscimo)">
+                <input id="adt-valor-adicional" class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00 (deixar em branco se sem acréscimo)">
               </div>
               <div class="form-group">
                 <label class="form-label">Nova Vigência Fim</label>
@@ -3463,6 +3463,26 @@ function escaparHtml(valor) {
     .replace(/'/g, '&#39;');
 }
 
+// ── Utilitários de moeda (R$ 0,00) ──────────────────────────
+function mascaraMoeda(el) {
+  var digits = el.value.replace(/\D/g, '');
+  var n = parseInt(digits || '0', 10) / 100;
+  var parts = n.toFixed(2).split('.');
+  var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  el.value = 'R$ ' + intPart + ',' + parts[1];
+}
+function parseMoeda(str) {
+  if (!str) return 0;
+  var s = String(str).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.');
+  return parseFloat(s) || 0;
+}
+function fmtMoeda(val) {
+  var n = parseFloat(val) || 0;
+  var parts = n.toFixed(2).split('.');
+  var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return 'R$ ' + intPart + ',' + parts[1];
+}
+
 // ═══════════════════════════════════════════════════════════
 // IDENTIDADE VISUAL
 // ═══════════════════════════════════════════════════════════
@@ -4161,7 +4181,7 @@ var ContratosUI = (function() {
     document.getElementById('cf-id').value     = dados && dados.id || '';
     document.getElementById('cf-nome').value   = dados && dados.nome || '';
     document.getElementById('cf-fonte').value  = dados && dados.fonteRecurso || '';
-    document.getElementById('cf-valor').value  = dados && dados.valorTotal || '';
+    document.getElementById('cf-valor').value  = fmtMoeda(dados && dados.valorTotal || 0);
     document.getElementById('cf-status').value = dados && dados.status || 'Ativo';
     document.getElementById('cf-inicio').value = dados && dados.vigenciaInicio || '';
     document.getElementById('cf-fim').value    = dados && dados.vigenciaFim || '';
@@ -4184,7 +4204,7 @@ var ContratosUI = (function() {
       id:             document.getElementById('cf-id').value || undefined,
       nome:           nome,
       fonteRecurso:   fonte,
-      valorTotal:     parseFloat(document.getElementById('cf-valor').value)||0,
+      valorTotal:     parseMoeda(document.getElementById('cf-valor').value),
       status:         document.getElementById('cf-status').value || 'Ativo',
       vigenciaInicio: document.getElementById('cf-inicio').value || '',
       vigenciaFim:    document.getElementById('cf-fim').value || '',
@@ -4303,7 +4323,7 @@ var ContratosDetailUI = (function() {
   function abrirMetaForm() {
     document.getElementById('cd-meta-id').value    = '';
     document.getElementById('cd-meta-nome').value  = '';
-    document.getElementById('cd-meta-valor').value = 0;
+    document.getElementById('cd-meta-valor').value = fmtMoeda(0);
     document.getElementById('cd-meta-descricao').value = '';
     document.getElementById('cd-meta-form').classList.remove('oculto');
     document.getElementById('cd-meta-nome').focus();
@@ -4317,7 +4337,7 @@ var ContratosDetailUI = (function() {
     var dados = {
       id:          document.getElementById('cd-meta-id').value || undefined,
       nome:        nome,
-      valorTotal:  parseFloat(document.getElementById('cd-meta-valor').value) || 0,
+      valorTotal:  parseMoeda(document.getElementById('cd-meta-valor').value),
       descricao:   document.getElementById('cd-meta-descricao').value.trim()
     };
     if (!dados.id) delete dados.id;
@@ -4336,7 +4356,7 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rubrica-id').value      = '';
     document.getElementById('cd-rubrica-nome').value    = '';
     document.getElementById('cd-rubrica-tipo').value    = 'pessoal';
-    document.getElementById('cd-rubrica-valor').value   = 0;
+    document.getElementById('cd-rubrica-valor').value   = fmtMoeda(0);
     _memoriaLinhas = [];
     _renderMemoriaTabela();
     document.getElementById('cd-rubrica-form').classList.remove('oculto');
@@ -4348,7 +4368,7 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rubrica-id').value      = rubrica.id || '';
     document.getElementById('cd-rubrica-nome').value    = rubrica.nome || '';
     document.getElementById('cd-rubrica-tipo').value    = rubrica.tipo || 'pessoal';
-    document.getElementById('cd-rubrica-valor').value   = rubrica.valorTotal || 0;
+    document.getElementById('cd-rubrica-valor').value   = fmtMoeda(rubrica.valorTotal || 0);
     _memoriaLinhas = (rubrica.memoriaCalculo || []).map(function(l) { return Object.assign({}, l); });
     _renderMemoriaTabela();
     document.getElementById('cd-rubrica-form').classList.remove('oculto');
@@ -4414,7 +4434,7 @@ var ContratosDetailUI = (function() {
     var elTotal = document.getElementById('cd-memoria-total');
     var elValor = document.getElementById('cd-rubrica-valor');
     if (elTotal) elTotal.textContent = _fmtMoeda(total);
-    if (elValor) elValor.value = total.toFixed(2);
+    if (elValor) elValor.value = fmtMoeda(total);
   }
 
   function salvarRubrica() {
@@ -4679,7 +4699,7 @@ var FontesUI = (function() {
     document.getElementById('ff-nome').value  = dados.nome || '';
     document.getElementById('ff-tipo').value  = dados.tipo || 'contrato_gestao';
     document.getElementById('ff-orgao').value = dados.orgaoFinanciador || '';
-    document.getElementById('ff-valor').value = dados.valorTotal || '';
+    document.getElementById('ff-valor').value = fmtMoeda(dados.valorTotal || 0);
     document.getElementById('ff-inicio').value= dados.vigenciaInicio || '';
     document.getElementById('ff-fim').value   = dados.vigenciaFim   || '';
     document.getElementById('ff-obs').value   = dados.instrumento   || '';
@@ -4693,7 +4713,7 @@ var FontesUI = (function() {
     var nome   = document.getElementById('ff-nome').value.trim();
     var tipo   = document.getElementById('ff-tipo').value;
     var orgao  = document.getElementById('ff-orgao').value.trim();
-    var valor  = parseFloat(document.getElementById('ff-valor').value) || 0;
+    var valor  = parseMoeda(document.getElementById('ff-valor').value);
     var inicio = document.getElementById('ff-inicio').value;
     var fim    = document.getElementById('ff-fim').value;
     var obs    = document.getElementById('ff-obs').value.trim();
@@ -4814,7 +4834,7 @@ var RemanejamentosUI = (function() {
     document.getElementById('rem-form-titulo').textContent = dados.id ? 'Editar Remanejamento' : 'Novo Remanejamento';
     document.getElementById('rem-id').value           = dados.id           || '';
     document.getElementById('rem-contrato-id').value  = dados.contratoId   || '';
-    document.getElementById('rem-valor').value        = dados.valor        || '';
+    document.getElementById('rem-valor').value        = fmtMoeda(dados.valor || 0);
     document.getElementById('rem-origem').value       = dados.origemRubricaId  || '';
     document.getElementById('rem-destino').value      = dados.destinoRubricaId || '';
     document.getElementById('rem-justificativa').value= dados.justificativa || '';
@@ -4826,7 +4846,7 @@ var RemanejamentosUI = (function() {
   function salvar() {
     var id      = document.getElementById('rem-id').value.trim();
     var cId     = document.getElementById('rem-contrato-id').value.trim();
-    var valor   = parseFloat(document.getElementById('rem-valor').value) || 0;
+    var valor   = parseMoeda(document.getElementById('rem-valor').value);
     var origem  = document.getElementById('rem-origem').value.trim();
     var destino = document.getElementById('rem-destino').value.trim();
     var just    = document.getElementById('rem-justificativa').value.trim();
@@ -5011,7 +5031,7 @@ var AditivosUI = (function() {
     document.getElementById('adt-id').value                  = dados.id || '';
     document.getElementById('adt-contrato-id').value         = dados.contratoId || '';
     document.getElementById('adt-tipo').value                = dados.tipo || 'valor';
-    document.getElementById('adt-valor-adicional').value     = dados.valorAdicional || '';
+    document.getElementById('adt-valor-adicional').value     = dados.valorAdicional ? fmtMoeda(dados.valorAdicional) : '';
     document.getElementById('adt-novo-prazo').value          = dados.novoPrazoVigencia || '';
     document.getElementById('adt-objeto').value              = dados.objeto || '';
     document.getElementById('adt-documento-url').value       = dados.documentoUrl || '';
@@ -5024,7 +5044,7 @@ var AditivosUI = (function() {
     var id      = document.getElementById('adt-id').value.trim();
     var cId     = document.getElementById('adt-contrato-id').value.trim();
     var tipo    = document.getElementById('adt-tipo').value;
-    var valAdt  = parseFloat(document.getElementById('adt-valor-adicional').value) || 0;
+    var valAdt  = parseMoeda(document.getElementById('adt-valor-adicional').value);
     var prazo   = document.getElementById('adt-novo-prazo').value;
     var objeto  = document.getElementById('adt-objeto').value.trim();
     var docUrl  = document.getElementById('adt-documento-url').value.trim();
@@ -6927,6 +6947,8 @@ var AlmoxUI = (function() {
 // ═══════════════════════════════════════════════════════════
 var AtivosUI = (function() {
   var _carregado = false;
+  var _espacosCatalog = [];
+  var _catalogCarregado = false;
 
   var _STATUS_LABEL = {
     disponivel: 'Disponível',
@@ -6942,6 +6964,8 @@ var AtivosUI = (function() {
     manutencao: 'badge-warning',
     baixado:    'badge-error'
   };
+  var _TIPO_LABEL = { fixo: 'Fixo', volante: 'Volante' };
+  var _TIPO_CLASS = { fixo: 'badge-accent', volante: 'badge-primary' };
 
   function _badge(status) {
     var label = _STATUS_LABEL[status] || status || '—';
@@ -6949,18 +6973,51 @@ var AtivosUI = (function() {
     return '<span class="badge '+cls+'">'+escaparHtml(label)+'</span>';
   }
 
+  function _badgeTipo(tipo) {
+    var label = _TIPO_LABEL[tipo] || tipo || 'Volante';
+    var cls   = _TIPO_CLASS[tipo] || 'badge-primary';
+    return '<span class="badge '+cls+'" style="font-size:10px;">'+escaparHtml(label)+'</span>';
+  }
+
   function _renderMetricas(m) {
     m = m || {};
     document.getElementById('ativos-metricas').innerHTML = [
-      { valor:m.total      ||0, label:'Total cadastrado', icone:'inventory_2',      classe:'primary' },
-      { valor:m.disponivel ||0, label:'Disponíveis',      icone:'check_circle',     classe:'success' },
-      { valor:m.em_uso     ||0, label:'Em uso',           icone:'play_circle',      classe:'accent'  },
-      { valor:m.manutencao ||0, label:'Em manutenção',    icone:'build',            classe:'warning' }
+      { valor:m.total      ||0, label:'Total cadastrado', icone:'inventory_2',  classe:'primary' },
+      { valor:m.disponivel ||0, label:'Disponíveis',      icone:'check_circle', classe:'success' },
+      { valor:m.em_uso     ||0, label:'Em uso',           icone:'play_circle',  classe:'accent'  },
+      { valor:m.manutencao ||0, label:'Em manutenção',    icone:'build',        classe:'warning' },
+      { valor:m.fixo       ||0, label:'Ativos fixos',     icone:'push_pin',     classe:'info'    },
+      { valor:m.volante    ||0, label:'Ativos volantes',  icone:'swap_horiz',   classe:'primary' }
     ].map(function(s) {
       return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
         + '<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
         + '<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
     }).join('');
+  }
+
+  function _carregarEspacosParaSelect(callback) {
+    if (_catalogCarregado) { callback(); return; }
+    GAS.admin.listarEspacos(function(r) {
+      _espacosCatalog = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _catalogCarregado = true;
+      callback();
+    }, function() { _catalogCarregado = true; callback(); });
+  }
+
+  function _popularSelectLocalizacao(valorSelecionado) {
+    var sel = document.getElementById('at-localizacao');
+    if (!sel) return;
+    var opts = '<option value="">— Sem localização —</option>';
+    _espacosCatalog.forEach(function(e) {
+      var nome = e.nome || e.id || '';
+      var isSelected = nome === valorSelecionado ? ' selected' : '';
+      opts += '<option value="'+escaparHtml(nome)+'"'+isSelected+'>'+escaparHtml(nome)+'</option>';
+    });
+    // valor legado (texto livre) não presente na lista de espaços
+    if (valorSelecionado && !_espacosCatalog.some(function(e){ return (e.nome||e.id) === valorSelecionado; })) {
+      opts += '<option value="'+escaparHtml(valorSelecionado)+'" selected>'+escaparHtml(valorSelecionado)+'</option>';
+    }
+    sel.innerHTML = opts;
   }
 
   function _botoesAcao(a) {
@@ -6975,7 +7032,8 @@ var AtivosUI = (function() {
       btns += '<button class="btn btn-ghost btn-sm btn-ativo-edit" data-id="'+escaparHtml(a.id)+'"'
         +' data-nome="'+escaparHtml(a.nome)+'" data-codigo="'+escaparHtml(a.codigo||'')+'"'
         +' data-cat="'+escaparHtml(a.categoria||'outro')+'" data-loc="'+escaparHtml(a.localizacao||'')+'"'
-        +' data-val="'+escaparHtml(String(a.valorAquisicao||''))+'" data-descr="'+escaparHtml(a.descricao||'')+'">'
+        +' data-val="'+escaparHtml(String(a.valorAquisicao||''))+'" data-descr="'+escaparHtml(a.descricao||'')+'"'
+        +' data-tipo="'+escaparHtml(a.tipo||'volante')+'" data-qtd="'+escaparHtml(String(a.quantidade||1))+'">'
         +'<span class="ms ms-sm">edit</span></button>';
     }
     return btns;
@@ -6990,22 +7048,24 @@ var AtivosUI = (function() {
       return;
     }
     el.innerHTML = lista.map(function(a) {
+      var qtdStr = (a.quantidade && a.quantidade > 1)
+        ? ' · <strong>'+escaparHtml(String(a.quantidade))+'</strong> unid.' : '';
       return '<div class="pendente-item">'
         +'<div class="pendente-info">'
         +'<div class="pendente-nome">'+escaparHtml(a.nome)
         +(a.codigo ? ' <span style="font-size:11px;color:var(--muted)">['+escaparHtml(a.codigo)+']</span>' : '')
         +'</div>'
         +'<div class="pendente-meta">'
-        +escaparHtml(_STATUS_LABEL[a.categoria]||a.categoria||'Outro')
-        +(a.localizacao ? ' · '+escaparHtml(a.localizacao) : '')
+        +escaparHtml(a.categoria||'outro')
+        +qtdStr
+        +(a.localizacao ? ' · <span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">location_on</span> '+escaparHtml(a.localizacao) : '')
         +(a.responsavel ? ' · <em>'+escaparHtml(a.responsavel)+'</em>' : '')
         +'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-        +_badge(a.status)+_botoesAcao(a)
+        +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+        +_badgeTipo(a.tipo||'volante')+_badge(a.status)+_botoesAcao(a)
         +'</div></div>';
     }).join('');
 
-    // Vincular botões — passa o elemento para BtnGuard poder travá-lo
     el.querySelectorAll('.btn-ativo-manut').forEach(function(btn) {
       btn.addEventListener('click', function() { _enviarManutencao(this.getAttribute('data-id'), this); });
     });
@@ -7015,13 +7075,15 @@ var AtivosUI = (function() {
     el.querySelectorAll('.btn-ativo-edit').forEach(function(btn) {
       btn.addEventListener('click', function() {
         abrirForm({
-          id:           this.getAttribute('data-id'),
-          nome:         this.getAttribute('data-nome'),
-          codigo:       this.getAttribute('data-codigo'),
-          categoria:    this.getAttribute('data-cat'),
-          localizacao:  this.getAttribute('data-loc'),
+          id:             this.getAttribute('data-id'),
+          nome:           this.getAttribute('data-nome'),
+          codigo:         this.getAttribute('data-codigo'),
+          categoria:      this.getAttribute('data-cat'),
+          localizacao:    this.getAttribute('data-loc'),
           valorAquisicao: this.getAttribute('data-val'),
-          descricao:    this.getAttribute('data-descr')
+          descricao:      this.getAttribute('data-descr'),
+          tipo:           this.getAttribute('data-tipo'),
+          quantidade:     this.getAttribute('data-qtd')
         });
       });
     });
@@ -7029,10 +7091,14 @@ var AtivosUI = (function() {
 
   function carregar() {
     var filtroStatus = (document.getElementById('at-filtro-status')||{}).value || '';
+    var filtroTipo   = (document.getElementById('at-filtro-tipo')||{}).value   || '';
+    var filtros = {};
+    if (filtroStatus) filtros.status = filtroStatus;
+    if (filtroTipo)   filtros.tipo   = filtroTipo;
     BtnGuard.wrap('btn-ativos-recarregar', 'Atualizando…', function(done) {
       GAS.ativos.metricas(function(respM) {
         if(respM && respM.ok) _renderMetricas(respM.data);
-        GAS.ativos.listar(filtroStatus ? {status:filtroStatus} : {}, function(resp) {
+        GAS.ativos.listar(filtros, function(resp) {
           done();
           if(!resp || !resp.ok) { Toast.erro('Erro ao carregar ativos.'); return; }
           _renderLista(resp.data || []);
@@ -7043,19 +7109,23 @@ var AtivosUI = (function() {
   }
 
   function abrirForm(dados) {
-    var card = document.getElementById('ativos-form-card');
-    var titulo = document.getElementById('ativos-form-titulo');
-    card.style.display = '';
-    document.getElementById('at-id').value        = dados && dados.id         || '';
-    document.getElementById('at-nome').value      = dados && dados.nome       || '';
-    document.getElementById('at-codigo').value    = dados && dados.codigo     || '';
-    document.getElementById('at-localizacao').value = dados && dados.localizacao || '';
-    document.getElementById('at-valor').value     = dados && dados.valorAquisicao || '';
-    document.getElementById('at-descricao').value = dados && dados.descricao  || '';
-    if(dados && dados.categoria) document.getElementById('at-categoria').value = dados.categoria;
-    titulo.textContent = dados && dados.id ? 'Editar Ativo' : 'Novo Ativo';
-    document.getElementById('at-nome').focus();
-    card.scrollIntoView({behavior:'smooth',block:'start'});
+    _carregarEspacosParaSelect(function() {
+      var card  = document.getElementById('ativos-form-card');
+      var titulo = document.getElementById('ativos-form-titulo');
+      card.style.display = '';
+      document.getElementById('at-id').value         = dados && dados.id          || '';
+      document.getElementById('at-nome').value       = dados && dados.nome        || '';
+      document.getElementById('at-codigo').value     = dados && dados.codigo      || '';
+      document.getElementById('at-quantidade').value = dados && dados.quantidade  || 1;
+      document.getElementById('at-descricao').value  = dados && dados.descricao   || '';
+      document.getElementById('at-valor').value      = fmtMoeda(dados && dados.valorAquisicao || 0);
+      if (dados && dados.categoria) document.getElementById('at-categoria').value = dados.categoria;
+      document.getElementById('at-tipo').value       = (dados && dados.tipo) || 'volante';
+      _popularSelectLocalizacao((dados && dados.localizacao) || '');
+      titulo.textContent = dados && dados.id ? 'Editar Ativo' : 'Novo Ativo';
+      document.getElementById('at-nome').focus();
+      card.scrollIntoView({behavior:'smooth', block:'start'});
+    });
   }
 
   function fecharForm() {
@@ -7070,8 +7140,10 @@ var AtivosUI = (function() {
       nome:          nome,
       codigo:        (document.getElementById('at-codigo').value||'').trim(),
       categoria:     document.getElementById('at-categoria').value || 'outro',
-      localizacao:   (document.getElementById('at-localizacao').value||'').trim(),
-      valorAquisicao:parseFloat(document.getElementById('at-valor').value||'0') || 0,
+      tipo:          document.getElementById('at-tipo').value || 'volante',
+      localizacao:   document.getElementById('at-localizacao').value || '',
+      quantidade:    parseInt(document.getElementById('at-quantidade').value||'1', 10) || 1,
+      valorAquisicao:parseMoeda(document.getElementById('at-valor').value),
       descricao:     (document.getElementById('at-descricao').value||'').trim()
     };
     if(id) dados.id = id;
@@ -7089,8 +7161,7 @@ var AtivosUI = (function() {
   function _enviarManutencao(id, btnEl) {
     if(!id) return;
     var descr = prompt('Descreva o problema ou motivo da manutenção:');
-    if(descr === null) return; // cancelado pelo usuário
-    // btnEl é o elemento DOM — BtnGuard aceita ID string OU elemento DOM
+    if(descr === null) return;
     BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
       GAS.ativos.manutencao(id, descr, function(resp) {
         done();
@@ -7114,7 +7185,9 @@ var AtivosUI = (function() {
   }
 
   function aoAbrir() {
-    if(!_carregado) carregar();
+    _carregarEspacosParaSelect(function() {
+      if(!_carregado) carregar();
+    });
   }
 
   return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, aoAbrir: aoAbrir };
@@ -7515,7 +7588,7 @@ var SolicitacoesUI = (function() {
     document.getElementById('sol-objeto').value = '';
     document.getElementById('sol-tipo').value = 'prestacao_servico';
     document.getElementById('sol-setor').value = '';
-    document.getElementById('sol-valor').value = '';
+    document.getElementById('sol-valor').value = fmtMoeda(0);
     document.getElementById('sol-contrato').value = '';
     document.getElementById('sol-justificativa').value = '';
     document.getElementById('sol-form-titulo').textContent = 'Nova Solicitação de Contratação';
@@ -7536,7 +7609,7 @@ var SolicitacoesUI = (function() {
       objeto:           objeto,
       tipoServico:      tipo,
       setorSolicitante: setor,
-      valorEstimado:    parseFloat(document.getElementById('sol-valor').value)||0,
+      valorEstimado:    parseMoeda(document.getElementById('sol-valor').value),
       contratoId:       document.getElementById('sol-contrato').value||'',
       justificativa:    document.getElementById('sol-justificativa').value||''
     };

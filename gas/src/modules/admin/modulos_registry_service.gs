@@ -20,7 +20,7 @@ var ModulosRegistryService = (function() {
     { id: 'PESSOAS',      label: 'Pessoas / RH',        descricao: 'Colaboradores, vínculos, PCCS, escalas' },
     { id: 'FINANCEIRO',   label: 'Financeiro',          descricao: 'Contratos, rubricas, orçamentos, aditivos' },
     { id: 'ACOES',        label: 'Ações',               descricao: 'Programação, habilitações, agentes culturais' },
-    { id: 'ESPACOS',      label: 'Espaços',             descricao: 'Reservas, chaves, ativos, almoxarifado' },
+    { id: 'ESPACOS',      label: 'Infraestrutura',      descricao: 'Reservas, chaves, ativos, almoxarifado' },
     { id: 'REUNIOES',     label: 'Reuniões',            descricao: 'Atas, encaminhamentos, decisões' },
     { id: 'COMUNICACAO',  label: 'Comunicação',         descricao: 'Demandas criativas, RECE, entregas' },
     { id: 'RELATORIOS',   label: 'Relatórios',          descricao: 'CODIP, relatórios de prestação de contas' }
