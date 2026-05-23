@@ -2617,8 +2617,16 @@ textarea.input { resize: vertical; }
               <button id="cfg-mapa-btn-importar" onclick="InfraConfigMapaUI._importarTodosDoMapa()" data-bg-skip="1"
                       style="display:flex;align-items:center;gap:5px;padding:6px 12px;
                              background:#eff6ff;border:1.5px solid #3b82f6;color:#1d4ed8;
-                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;"
+                      title="Posicionar espaços sem posição usando a geometria do mapa base">
                 <span class="ms ms-sm">download</span> Importar do mapa base
+              </button>
+              <button onclick="InfraConfigMapaUI._restaurarTodosPadrao()" data-bg-skip="1"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#fff7ed;border:1.5px solid #ea580c;color:#9a3412;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;"
+                      title="Restaurar TODOS os espaços para a geometria padrão do mapa base">
+                <span class="ms ms-sm">restart_alt</span> Restaurar padrão
               </button>
               <button id="cfg-mapa-btn-desfazer" onclick="InfraConfigMapaUI._desfazer()" data-bg-skip="1"
                       disabled title="Nada para desfazer"
@@ -7286,29 +7294,27 @@ var InfraConfigMapaUI = (function() {
       sh.setAttribute('filter', 'url(#cfg-mapa-shadow)');
       g.appendChild(sh);
 
-      var txt = document.createElementNS(_NS, 'text');
-      txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
-      txt.setAttribute('text-anchor', 'middle');
-      txt.setAttribute('dominant-baseline', 'middle');
-      txt.setAttribute('font-size', '10');
-      txt.setAttribute('font-weight', '600');
-      txt.setAttribute('fill', ativo ? '#312e81' : '#64748b');
-      txt.setAttribute('pointer-events', 'none');
-      txt.setAttribute('paint-order', 'stroke');
-      txt.setAttribute('stroke', '#fff8');
-      txt.setAttribute('stroke-width', '2');
-      txt.textContent = (esp.nome || '').substring(0, 12);
-      g.appendChild(txt);
+      // Tooltip nativo SVG — nome completo ao passar o mouse
+      var titleEl = document.createElementNS(_NS, 'title');
+      titleEl.textContent = esp.nome || esp.id;
+      g.appendChild(titleEl);
 
-      if (esp.numeroPlanta) {
-        var np = document.createElementNS(_NS, 'text');
-        np.setAttribute('x', '0'); np.setAttribute('y', '-12');
-        np.setAttribute('text-anchor', 'middle');
-        np.setAttribute('font-size', '8');
-        np.setAttribute('fill', '#6366f1');
-        np.setAttribute('pointer-events', 'none');
-        np.textContent = '#' + esp.numeroPlanta;
-        g.appendChild(np);
+      // Label: apenas número de planta; se não tiver, omitir (nome fica só no tooltip)
+      var labelNum = esp.numeroPlanta ? String(esp.numeroPlanta) : '';
+      if (labelNum) {
+        var txt = document.createElementNS(_NS, 'text');
+        txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'middle');
+        txt.setAttribute('font-size', '11');
+        txt.setAttribute('font-weight', '700');
+        txt.setAttribute('fill', ativo ? '#312e81' : '#64748b');
+        txt.setAttribute('pointer-events', 'none');
+        txt.setAttribute('paint-order', 'stroke');
+        txt.setAttribute('stroke', '#fff8');
+        txt.setAttribute('stroke-width', '2');
+        txt.textContent = labelNum;
+        g.appendChild(txt);
       }
 
       if (!dimmed) {
@@ -7931,6 +7937,60 @@ var InfraConfigMapaUI = (function() {
     _proximo(0);
   }
 
+  // ── Restaurar TODOS os espaços para a geometria do mapa base ──
+  function _restaurarTodosPadrao() {
+    var candidatos = [];
+    _espacos.forEach(function(esp) {
+      var cfg = _extrairCfgDoSvgEstatico(esp.id, esp.nome);
+      if (cfg) candidatos.push({ esp: esp, cfg: cfg });
+    });
+
+    if (candidatos.length === 0) {
+      Toast.aviso('Nenhum espaço tem correspondência no mapa base.');
+      return;
+    }
+
+    // Confirmar com o usuário — ação destrutiva que sobrescreve posições existentes
+    var confirmMsg = 'Restaurar padrão do mapa?\n\n' +
+      candidatos.length + ' espaço(s) serão posicionados conforme o mapa base.\n' +
+      'Posições personalizadas serão sobrescritas.\n\nEsta ação pode ser desfeita com "Desfazer".';
+    if (!confirm(confirmMsg)) return;
+
+    // Salvar histórico ANTES
+    _pushHistorico('Restaurar padrão (' + candidatos.length + ' espaços)',
+      candidatos.map(function(c) {
+        return { id: c.esp.id, cfgAntes: c.esp.mapaConfig || null, cfgDepois: c.cfg };
+      })
+    );
+
+    // Aplicar localmente
+    candidatos.forEach(function(c) {
+      var idx = _espacos.findIndex(function(e) { return e.id === c.esp.id; });
+      if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: c.cfg });
+    });
+    _renderMapa();
+    _renderSidebar();
+    Toast.sucesso(candidatos.length + ' espaços restaurados para o padrão. Salvando…');
+
+    // Persistir sequencialmente
+    var total = candidatos.length, salvo = 0, erros = 0;
+    function _proxR(i) {
+      if (i >= candidatos.length) {
+        var msg = salvo + '/' + total + ' posições salvas.';
+        if (erros) Toast.aviso(msg + ' (' + erros + ' erro(s))');
+        else       Toast.sucesso(msg);
+        return;
+      }
+      var c = candidatos[i];
+      GAS.admin.salvarMapaEspaco(
+        { id: c.esp.id, mapaConfig: c.cfg },
+        function(r) { if (r && r.ok) salvo++; else erros++; _proxR(i + 1); },
+        function()  { erros++; _proxR(i + 1); }
+      );
+    }
+    _proxR(0);
+  }
+
   // ── Carregar dados (terreno + espaços em paralelo) ───────
   function _carregar() {
     var sidebar = document.getElementById('cfg-mapa-sidebar');
@@ -8133,9 +8193,10 @@ var InfraConfigMapaUI = (function() {
     _selecionarFormaInline:_selecionarFormaInline,
     _removerDoMapaInline:  _removerDoMapaInline,
     _onInputInlineChange:  _onInputInlineChange,
-    _importarTodosDoMapa:  _importarTodosDoMapa,
-    _desfazer:             _desfazer,
-    _restaurarPadrao:      _restaurarPadrao
+    _importarTodosDoMapa:   _importarTodosDoMapa,
+    _desfazer:              _desfazer,
+    _restaurarPadrao:       _restaurarPadrao,
+    _restaurarTodosPadrao:  _restaurarTodosPadrao
   };
 })();
 
