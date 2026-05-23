@@ -7106,17 +7106,62 @@ var InfraConfigMapaUI = (function() {
       layer.appendChild(g);
     });
 
+    // Espaços sem mapaConfig: renderizar a partir da geometria do SVG estático
+    var staticBase = document.getElementById('mapa-svg-inner');
+    var staticVisiveis = 0;
+    if (staticBase) {
+      _espacos.forEach(function(esp) {
+        if (esp.mapaConfig) return;
+        var staticG = staticBase.querySelector('.mapa-espaco[data-id="' + esp.id + '"]');
+        if (!staticG) return;
+        staticVisiveis++;
+        var g = staticG.cloneNode(true);
+        g.setAttribute('class', 'cfg-espaco-g cfg-espaco-static');
+        g.setAttribute('data-id', esp.id);
+        g.style.cursor = 'pointer';
+        var shapes = g.querySelectorAll('polygon, circle, rect');
+        shapes.forEach(function(sh) {
+          sh.style.fill         = 'rgba(148,163,184,0.22)';
+          sh.style.stroke       = '#94a3b8';
+          sh.style.strokeWidth  = '1.5';
+          sh.style.strokeDasharray = '5,3';
+          sh.style.filter       = 'none';
+          sh.style.transition   = 'fill .15s';
+        });
+        g.querySelectorAll('text').forEach(function(t) {
+          t.style.fill = '#64748b';
+        });
+        g.addEventListener('mouseenter', function() {
+          shapes.forEach(function(sh) {
+            sh.style.fill        = 'rgba(99,102,241,0.22)';
+            sh.style.stroke      = '#6366f1';
+            sh.style.strokeWidth = '2';
+          });
+        });
+        g.addEventListener('mouseleave', function() {
+          shapes.forEach(function(sh) {
+            sh.style.fill        = 'rgba(148,163,184,0.22)';
+            sh.style.stroke      = '#94a3b8';
+            sh.style.strokeWidth = '1.5';
+          });
+        });
+        g.addEventListener('click', function() { _editarPosicao(esp.id); });
+        layer.appendChild(g);
+      });
+    }
+
     svgEl.appendChild(layer);
 
     // Legenda de contagem
-    var comMapa = _espacos.filter(function(e) { return !!e.mapaConfig; }).length;
-    var semMapa = _espacos.filter(function(e) { return !e.mapaConfig; }).length;
-    var legTxt  = document.createElementNS(_NS, 'text');
+    var comMapa     = _espacos.filter(function(e) { return !!e.mapaConfig; }).length;
+    var semPosicao  = _espacos.filter(function(e) { return !e.mapaConfig; }).length - staticVisiveis;
+    var legTxt      = document.createElementNS(_NS, 'text');
     legTxt.setAttribute('x', '96'); legTxt.setAttribute('y', '46');
     legTxt.setAttribute('font-size', '10');
     legTxt.setAttribute('fill', '#64748b');
     legTxt.textContent = comMapa + ' posicionado(s)' +
-      (semMapa > 0 ? ' · ' + semMapa + ' sem posição' : '');
+      (staticVisiveis > 0 ? ' · ' + staticVisiveis + ' do mapa base' : '') +
+      (semPosicao     > 0 ? ' · ' + semPosicao     + ' sem posição'   : '');
     svgEl.appendChild(legTxt);
 
     canvas.innerHTML = '';
