@@ -209,6 +209,24 @@ var ReservaEngine = (function () {
       }, autor);
     }
 
+    // Verificação de prioridade de setor — mesmo papéis privilegiados
+    // (exceto admin/superadmin) são forçados a solicitar se o setor do solicitante
+    // for diferente do setor prioritário para aquele espaço/dia/turno.
+    if (!_bypassSolicitacao && typeof SolicitacaoReservaEngine !== 'undefined') {
+      var _prio = SolicitacaoReservaEngine.verificarPrioridadeSetor(
+        dados.sala, dados.data, dados.horaInicio, dados.horaTermino,
+        dados.setor || '', autor
+      );
+      if (_prio.exigeSolicitacao) {
+        return SolicitacaoReservaEngine.criar({
+          tipo:          'RESERVA',
+          espacoId:      dados.sala,
+          justificativa: dados.justificativa || '',
+          payload:       dados
+        }, autor);
+      }
+    }
+
     assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino);
 
     var lock = LockService.getScriptLock();

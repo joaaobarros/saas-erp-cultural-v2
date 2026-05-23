@@ -31,7 +31,12 @@ var ConfigAdminService = (function () {
   /**
    * Cria ou atualiza um espaço.
    * @param {object} espaco — { id?, nome, descricao, capacidade, possuiChaves, aceitaReserva,
-   *                            horarioFuncionamento, responsavelTurno, bloqueios }
+   *                            horarioFuncionamento, responsaveis, bloqueios }
+   *
+   * responsaveis — array de entradas de prioridade de setor:
+   *   [{ setorId, emails: string[], turnos: string[], dias: number[] }]
+   *   Qualquer um dos emails listados pode aprovar solicitações no slot configurado.
+   *   Outros setores que tentarem reservar no slot serão forçados a solicitar aprovação.
    */
   function salvarEspaco(espaco) {
     _assertAdmin();
@@ -43,17 +48,34 @@ var ConfigAdminService = (function () {
     var id = espaco.id || gerarId('esp');
     var agora_ = agora();
 
+    // Normalizar responsaveis: garantir que emails seja sempre array, remover entradas vazias
+    var responsaveis = (espaco.responsaveis || espaco.responsaveisPorTurno || [])
+      .map(function(r) {
+        var emails = Array.isArray(r.emails) ? r.emails
+          : (r.email ? [r.email] : []);
+        emails = emails.map(function(e) { return String(e).trim().toLowerCase(); })
+                       .filter(function(e) { return e.indexOf('@') > 0; });
+        return {
+          setorId: r.setorId || '',
+          emails:  emails,
+          turnos:  Array.isArray(r.turnos) ? r.turnos : (r.turno ? [r.turno] : []),
+          dias:    Array.isArray(r.dias)   ? r.dias   : []
+        };
+      })
+      .filter(function(r) { return r.emails.length > 0; });
+
     var registro = {
       id:                     id,
       orgId:                  orgId,
       nome:                   String(espaco.nome).trim(),
       tipoEspaco:             espaco.tipoEspaco || 'multiuso',
+      categoria:              espaco.categoria  || 'uso_publico',
       descricao:              String(espaco.descricao || '').trim(),
       capacidade:             Number(espaco.capacidade) || 0,
       possuiChaves:           espaco.possuiChaves === true,
       aceitaReserva:          espaco.aceitaReserva !== false,
       horarioFuncionamento:   espaco.horarioFuncionamento || { abertura: '08:00', fechamento: '22:00' },
-      responsaveisPorTurno:   espaco.responsaveisPorTurno || [],
+      responsaveis:           responsaveis,
       itensFixos:             espaco.itensFixos || {},
       equipamentosVinculados: espaco.equipamentosVinculados || [],
       tags:                   espaco.tags || [],
@@ -303,14 +325,10 @@ var ConfigAdminService = (function () {
    * @param {number} diaSemana — 0=domingo … 6=sábado
    * @returns {string|null} email do responsável
    */
+  /** @deprecated — usar SistemaConfigService.resolverResponsaveis() */
   function obterResponsavelEspacoPorDia(espacoId, diaSemana) {
-    var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
-    var esp = espacos.find(function(e) { return e.id === espacoId; });
-    if (!esp || !esp.responsaveisPorTurno || !esp.responsaveisPorTurno.length) return null;
-    var r = esp.responsaveisPorTurno.find(function(t) {
-      return !t.dias || t.dias.indexOf(diaSemana) >= 0;
-    });
-    return r ? r.email : null;
+    var resultado = SistemaConfigService.resolverResponsaveis(espacoId, diaSemana, null);
+    return resultado && resultado.emails.length ? resultado.emails[0] : null;
   }
 
   // ─── Categorias de Itens ──────────────────────────────────────────────────

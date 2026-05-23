@@ -5912,10 +5912,123 @@ var AdminCadastrosUI = (function() {
     });
   }
 
+  // ── Responsáveis: estado pending (análogo a _pendingMapaConfig) ─────────
+  var _pendingResponsaveis = undefined; // undefined = não modificado; [] = limpo
+
+  function _respEntradaHtml(entrada, idx) {
+    var DIAS_LABEL = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    var TURNOS_OPTS = [
+      {id:'manha',label:'Manhã'}, {id:'tarde',label:'Tarde'}, {id:'noite',label:'Noite'}
+    ];
+    var setorOpts = (_setores||[]).map(function(s) {
+      var sel = (entrada.setorId === s.id) ? ' selected' : '';
+      return '<option value="' + escaparHtml(s.id) + '"' + sel + '>' + escaparHtml(s.label||s.nome||s.id) + '</option>';
+    }).join('');
+
+    var diasHtml = DIAS_LABEL.map(function(lbl, d) {
+      var chk = (!entrada.dias || !entrada.dias.length || entrada.dias.indexOf(d) >= 0) ? ' checked' : '';
+      return '<label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;">' +
+        '<input type="checkbox" class="resp-dia" data-idx="' + idx + '" data-d="' + d + '"' + chk + '> ' + lbl + '</label>';
+    }).join('');
+
+    var turnosHtml = TURNOS_OPTS.map(function(t) {
+      var chk = (!entrada.turnos || !entrada.turnos.length || entrada.turnos.indexOf(t.id) >= 0) ? ' checked' : '';
+      return '<label style="font-size:11px;display:flex;align-items:center;gap:3px;cursor:pointer;">' +
+        '<input type="checkbox" class="resp-turno" data-idx="' + idx + '" data-t="' + t.id + '"' + chk + '> ' + t.label + '</label>';
+    }).join('');
+
+    var emailsVal = (entrada.emails || []).join(', ');
+
+    return '<div class="esp-resp-entry" data-idx="' + idx + '" style="background:var(--surface2,#f8f9fa);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Entrada ' + (idx+1) + '</span>' +
+        '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="AdminCadastrosUI._respRemover(' + idx + ')" style="color:var(--color-perigo,#e53e3e);padding:2px 6px;font-size:11px;">Remover</button>' +
+      '</div>' +
+      '<div style="margin-bottom:8px;">' +
+        '<label style="font-size:11px;font-weight:600;color:var(--muted);">Setor prioritário</label>' +
+        '<select class="form-input resp-setor" data-idx="' + idx + '" style="margin-top:4px;font-size:13px;">' +
+          '<option value="">— Nenhum —</option>' + setorOpts +
+        '</select>' +
+      '</div>' +
+      '<div style="margin-bottom:8px;">' +
+        '<label style="font-size:11px;font-weight:600;color:var(--muted);">E-mails dos responsáveis <span style="font-weight:400;color:var(--muted);">(separados por vírgula)</span></label>' +
+        '<input class="form-input resp-emails" data-idx="' + idx + '" style="margin-top:4px;font-size:13px;" placeholder="ana@org.br, joao@org.br" value="' + escaparHtml(emailsVal) + '">' +
+      '</div>' +
+      '<div style="margin-bottom:6px;">' +
+        '<label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Dias da semana</label>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + diasHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Turnos</label>' +
+        '<div style="display:flex;gap:12px;">' + turnosHtml + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function _respRenderizar(container, lista) {
+    container.innerHTML = lista.length
+      ? lista.map(function(e,i){ return _respEntradaHtml(e, i); }).join('')
+      : '<p style="font-size:12px;color:var(--muted);margin:0 0 8px;">Nenhum responsável configurado. Qualquer usuário poderá reservar este espaço normalmente.</p>';
+  }
+
+  function _respLerEstado() {
+    // Lê o estado atual das entradas renderizadas no DOM
+    var entries = document.querySelectorAll('.esp-resp-entry');
+    var lista = [];
+    entries.forEach(function(el) {
+      var idx = parseInt(el.getAttribute('data-idx'), 10);
+      var setorEl   = el.querySelector('.resp-setor');
+      var emailsEl  = el.querySelector('.resp-emails');
+      var diasEls   = el.querySelectorAll('.resp-dia');
+      var turnosEls = el.querySelectorAll('.resp-turno');
+
+      var dias   = [], turnos = [];
+      diasEls.forEach(function(cb) { if (cb.checked) dias.push(parseInt(cb.getAttribute('data-d'),10)); });
+      turnosEls.forEach(function(cb) { if (cb.checked) turnos.push(cb.getAttribute('data-t')); });
+
+      var emails = (emailsEl ? emailsEl.value : '').split(',')
+        .map(function(e){ return e.trim().toLowerCase(); })
+        .filter(function(e){ return e.indexOf('@') > 0; });
+
+      lista.push({
+        setorId: setorEl ? setorEl.value : '',
+        emails:  emails,
+        dias:    dias,
+        turnos:  turnos
+      });
+    });
+    return lista;
+  }
+
+  function _respRemover(idx) {
+    _pendingResponsaveis = _respLerEstado();
+    _pendingResponsaveis.splice(idx, 1);
+    var container = document.getElementById('esp-responsaveis-lista');
+    if (container) _respRenderizar(container, _pendingResponsaveis);
+    // Re-indexa data-idx após remoção
+    var entries = document.querySelectorAll('.esp-resp-entry');
+    entries.forEach(function(el, i) {
+      el.setAttribute('data-idx', i);
+      el.querySelectorAll('[data-idx]').forEach(function(child){ child.setAttribute('data-idx', i); });
+      var titulo = el.querySelector('span');
+      if (titulo) titulo.textContent = 'Entrada ' + (i+1);
+    });
+  }
+
+  function _respAdicionar() {
+    _pendingResponsaveis = _respLerEstado();
+    _pendingResponsaveis.push({ setorId: '', emails: [], dias: [], turnos: [] });
+    var container = document.getElementById('esp-responsaveis-lista');
+    if (container) _respRenderizar(container, _pendingResponsaveis);
+  }
+
   function abrirModalEspaco(id) {
-    _pendingMapaConfig = undefined; // reset
-    var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
+    _pendingMapaConfig    = undefined; // reset
+    _pendingResponsaveis  = undefined; // reset
+    var espaco  = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
     var temMapa = !!(espaco.mapaConfig);
+    var respInicial = espaco.responsaveis || espaco.responsaveisPorTurno || [];
+
     var html = '<div style="padding:16px;">' +
       '<h3 style="margin-bottom:12px;">' + (id ? 'Editar Espaço' : 'Novo Espaço') + '</h3>' +
       '<div class="form-grid">' +
@@ -5929,6 +6042,19 @@ var AdminCadastrosUI = (function() {
           '<input id="esp-fechamento" class="form-input" placeholder="22:00" value="' + ((espaco.horarioFuncionamento||{}).fechamento||'22:00') + '" style="width:100px;display:inline-block;">' +
         '</div>' +
       '</div>' +
+
+      // ── Seção Responsáveis ──
+      '<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Responsáveis por Período</label>' +
+          '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="AdminCadastrosUI._respAdicionar()" style="display:flex;align-items:center;gap:4px;">' +
+            '<span class="ms ms-sm">add</span> Adicionar período' +
+          '</button>' +
+        '</div>' +
+        '<div id="esp-responsaveis-lista"></div>' +
+        '<p style="font-size:11px;color:var(--muted);margin:4px 0 0;">Reservas de outros setores nestes períodos exigirão aprovação de pelo menos um dos e-mails listados.</p>' +
+      '</div>' +
+
       // ── Seção Mapa ──
       '<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
@@ -5944,11 +6070,19 @@ var AdminCadastrosUI = (function() {
             : '<span style="display:flex;align-items:center;gap:4px;"><span class="ms ms-sm">map</span> Sem posição definida</span>') +
         '</div>' +
       '</div>' +
+
       '<div style="display:flex;gap:8px;margin-top:16px;">' +
         '<button class="btn btn-primario" id="btn-salvar-espaco" onclick="AdminCadastrosUI.salvarEspaco(' + JSON.stringify(id||null).replace(/"/g,"'") + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>';
+
     _abrirModalSimples(html, 'esp-tipo', espaco.tipoEspaco || 'multiuso');
+
+    // Renderizar lista de responsáveis após o modal estar no DOM
+    requestAnimationFrame(function() {
+      var container = document.getElementById('esp-responsaveis-lista');
+      if (container) _respRenderizar(container, respInicial);
+    });
   }
 
   function _editarMapa(id) {
@@ -5976,6 +6110,11 @@ var AdminCadastrosUI = (function() {
 
   function salvarEspaco(id, btn) {
     var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
+    // Ler responsáveis: prioriza estado pending (se modificado), senão lê do DOM atual
+    var responsaveis = _pendingResponsaveis !== undefined
+      ? _pendingResponsaveis
+      : _respLerEstado();
+
     var dados = {
       id:           id || undefined,
       nome:         document.getElementById('esp-nome').value.trim(),
@@ -5987,7 +6126,8 @@ var AdminCadastrosUI = (function() {
         abertura:   document.getElementById('esp-abertura').value.trim() || '08:00',
         fechamento: document.getElementById('esp-fechamento').value.trim() || '22:00'
       },
-      mapaConfig: _pendingMapaConfig !== undefined ? _pendingMapaConfig : (espaco.mapaConfig || null)
+      responsaveis: responsaveis,
+      mapaConfig:   _pendingMapaConfig !== undefined ? _pendingMapaConfig : (espaco.mapaConfig || null)
     };
     if (!dados.nome) { Toast.aviso('Nome é obrigatório.'); return; }
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
@@ -6094,6 +6234,7 @@ var AdminCadastrosUI = (function() {
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
     abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
     _editarMapa: _editarMapa,
+    _respRemover: _respRemover, _respAdicionar: _respAdicionar,
     abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
     abrirModalTurno: abrirModalTurno, salvarTurno: salvarTurno,
     abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem,

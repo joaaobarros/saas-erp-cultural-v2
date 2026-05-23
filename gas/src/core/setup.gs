@@ -279,7 +279,7 @@ function setup_espacos_iniciais() {
       if (lista.some(function(l) { return l.id === e.id && l.orgId === orgId; })) return;
       lista.push(Object.assign({
         orgId: orgId, descricao: '', horarioFuncionamento: { abertura: '08:00', fechamento: '22:00' },
-        responsaveisPorTurno: [], itensFixos: {}, equipamentosVinculados: [], tags: [],
+        responsaveis: [], itensFixos: {}, equipamentosVinculados: [], tags: [],
         bloqueios: [], ativo: true, criadoEm: agora_, atualizadoEm: agora_, criadoPor: email, versao: 1
       }, e));
       criados++;

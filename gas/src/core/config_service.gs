@@ -93,12 +93,88 @@ var SistemaConfigService = (function () {
     return espaco.horariosFuncionamento[diaSemana] || null;
   }
 
-  function getResponsavelTurno(espacoId, turno, diaSemana) {
+  /**
+   * Resolve os responsáveis de um espaço para um dia e turno específicos.
+   * Retorna a entrada de prioridade que cobre esse slot, ou null se não houver.
+   *
+   * @param {string} espacoId
+   * @param {number} diaNum    — 0=dom … 6=sáb
+   * @param {string} turnoId   — 'manha' | 'tarde' | 'noite' | 'manha_tarde' | 'tarde_noite' | 'integral'
+   * @returns {{ emails: string[], setorId: string } | null}
+   */
+  function resolverResponsaveis(espacoId, diaNum, turnoId) {
     var espaco = getEspaco(espacoId);
-    if (!espaco || !espaco.responsaveisPorTurno) return null;
-    return (espaco.responsaveisPorTurno || []).find(function(r) {
-      return r.turno === turno && (!r.dias || r.dias.indexOf(diaSemana) >= 0);
-    }) || null;
+    if (!espaco) return null;
+
+    // Suporte ao campo novo (responsaveis) e ao legado (responsaveisPorTurno)
+    var lista = espaco.responsaveis || espaco.responsaveisPorTurno || [];
+    if (!lista.length) return null;
+
+    // Turno cobre quais ids? Ex: 'manha_tarde' cobre 'manha' e 'tarde'
+    var turnosCobertosPeloSlot = _expandirTurnos(turnoId);
+
+    var entrada = null;
+    for (var i = 0; i < lista.length; i++) {
+      var r = lista[i];
+
+      // Compatibilidade legado: entry pode ter { email } (string) ou { emails } (array)
+      var emails = Array.isArray(r.emails)
+        ? r.emails
+        : (r.email ? [r.email] : []);
+      if (!emails.length) continue;
+
+      // Verificar cobertura de dia
+      var diasOk = !r.dias || !r.dias.length || r.dias.indexOf(diaNum) >= 0;
+      if (!diasOk) continue;
+
+      // Verificar cobertura de turno: a entrada deve cobrir pelo menos um turno do slot
+      var turnosEntrada = Array.isArray(r.turnos) && r.turnos.length
+        ? r.turnos
+        : (r.turno ? [r.turno] : []);
+
+      var turnoOk = !turnosEntrada.length; // sem restrição de turno → cobre tudo
+      if (!turnoOk) {
+        // Expandir os turnos da entrada e verificar interseção
+        for (var ti = 0; ti < turnosEntrada.length; ti++) {
+          var turnosExpandidos = _expandirTurnos(turnosEntrada[ti]);
+          for (var tj = 0; tj < turnosCobertosPeloSlot.length; tj++) {
+            if (turnosExpandidos.indexOf(turnosCobertosPeloSlot[tj]) >= 0) {
+              turnoOk = true;
+              break;
+            }
+          }
+          if (turnoOk) break;
+        }
+      }
+      if (!turnoOk) continue;
+
+      entrada = { emails: emails, setorId: r.setorId || null };
+      break;
+    }
+    return entrada;
+  }
+
+  /**
+   * Expande um turnoId composto em turnos base.
+   * 'manha_tarde' → ['manha','tarde'] | 'integral' → ['manha','tarde','noite']
+   */
+  function _expandirTurnos(turnoId) {
+    var mapa = {
+      'manha':       ['manha'],
+      'tarde':       ['tarde'],
+      'noite':       ['noite'],
+      'manha_tarde': ['manha','tarde'],
+      'tarde_noite': ['tarde','noite'],
+      'integral':    ['manha','tarde','noite']
+    };
+    return mapa[turnoId] || [turnoId];
+  }
+
+  /** @deprecated — usar resolverResponsaveis() */
+  function getResponsavelTurno(espacoId, turno, diaSemana) {
+    var resultado = resolverResponsaveis(espacoId, diaSemana, turno);
+    if (!resultado) return null;
+    return { email: resultado.emails[0] || null, emails: resultado.emails, setorId: resultado.setorId };
   }
 
   function verificarBloqueioData(espacoId, data) {
@@ -364,7 +440,8 @@ var SistemaConfigService = (function () {
     getEspacos:               getEspacos,
     getEspaco:                getEspaco,
     getHorarioEspaco:         getHorarioEspaco,
-    getResponsavelTurno:      getResponsavelTurno,
+    resolverResponsaveis:     resolverResponsaveis,
+    getResponsavelTurno:      getResponsavelTurno,   // @deprecated
     verificarBloqueioData:    verificarBloqueioData,
     getTurnos:                getTurnos,
     getReservaHorario:        getReservaHorario,
