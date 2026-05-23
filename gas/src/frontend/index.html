@@ -2993,10 +2993,10 @@ textarea.input { resize: vertical; }
                 style="border:1px solid var(--border);border-radius:var(--r-sm);
                        padding:5px 10px;font-size:12px;background:var(--surface);
                        color:var(--text);outline:none;cursor:pointer;">
-                <option value="todos">Todos os tipos</option>
-                <option value="uso_publico">Uso público</option>
-                <option value="equipes">Equipes internas</option>
-                <option value="tecnico">Técnico</option>
+                <option value="todos">Todas as zonas</option>
+                <option value="uso_publico">Uso Público</option>
+                <option value="equipes">Equipes Internas</option>
+                <option value="tecnico">Técnico / Operacional</option>
                 <option value="servicos">Serviços</option>
                 <option value="externo">Externo</option>
               </select>
@@ -5574,6 +5574,21 @@ var AdminCadastrosUI = (function() {
   var _espacos = [], _setores = [], _catItens = [], _modulos = [], _usuarios = [];
   var _pendingMapaConfig; // undefined = não alterado, null = removido, object = novo config
 
+  // Labels de tipoEspaco para exibição em listas e badges
+  var _TIPO_LABEL = {
+    auditorio:'Auditório', sala_espetaculo:'Sala de Espetáculo',
+    galeria:'Galeria', biblioteca:'Biblioteca',
+    sala_danca:'Sala Dança', estudio:'Estúdio', oficina:'Oficina',
+    sala_reuniao:'Sala Reunião', escritorio:'Escritório',
+    multiuso:'Multiuso', praca:'Praça', externo:'Ext.', servicos:'Serviços',
+    tecnico:'Técnico', outro:'Outro'
+  };
+  // Labels de categoria para exibição
+  var _CAT_LABEL = {
+    uso_publico:'Público', equipes:'Equipes', tecnico:'Técnico',
+    servicos:'Serviços', externo:'Externo'
+  };
+
   function abrirTab(tab) {
     _tabAtual = tab;
     document.querySelectorAll('#admin-cadastros-tabs .tab-btn').forEach(function(b) {
@@ -5599,7 +5614,9 @@ var AdminCadastrosUI = (function() {
       _espacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
       el.innerHTML = _espacos.length ? _espacos.map(function(e) {
         return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
-          '<div><strong>' + escaparHtml(e.nome) + '</strong> <span class="badge badge-muted">' + (e.tipoEspaco||'?') + '</span>' +
+          '<div><strong>' + escaparHtml(e.nome) + '</strong>' +
+          ' <span class="badge badge-muted">' + escaparHtml(_TIPO_LABEL[e.tipoEspaco] || e.tipoEspaco || '?') + '</span>' +
+          ' <span class="badge badge-muted" style="opacity:.7;">' + escaparHtml(_CAT_LABEL[e.categoria] || e.categoria || 'Público') + '</span>' +
           (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
           '<br><small class="muted-text">Cap. ' + (e.capacidade||0) + ' · ' +
           (e.aceitaReserva !== false ? 'Reservável' : 'Não reservável') + ' · ' +
@@ -6110,8 +6127,12 @@ var AdminCadastrosUI = (function() {
 
     _abrirModalSimples(html, 'esp-tipo', espaco.tipoEspaco || 'multiuso');
 
-    // Renderizar lista de responsáveis após o modal estar no DOM
+    // Pré-selecionar campos e renderizar responsáveis após o modal estar no DOM
     requestAnimationFrame(function() {
+      // Zona de Uso (categoria)
+      var catSel = document.getElementById('esp-cat');
+      if (catSel) catSel.value = espaco.categoria || 'uso_publico';
+      // Lista de responsáveis
       var container = document.getElementById('esp-responsaveis-lista');
       if (container) _respRenderizar(container, respInicial);
     });
@@ -6589,9 +6610,16 @@ var InfraConfigUI = (function() {
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarEspacos(function(r) {
       _listaEspacos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      var _TL = {auditorio:'Auditório',sala_espetaculo:'Sala Espetáculo',galeria:'Galeria',
+        biblioteca:'Biblioteca',sala_danca:'Sala Dança',estudio:'Estúdio',oficina:'Oficina',
+        sala_reuniao:'Sala Reunião',escritorio:'Escritório',multiuso:'Multiuso',praca:'Praça',
+        externo:'Ext.',servicos:'Serviços',tecnico:'Técnico',outro:'Outro'};
+      var _CL = {uso_publico:'Público',equipes:'Equipes',tecnico:'Técnico',servicos:'Serviços',externo:'Externo'};
       el.innerHTML = _listaEspacos.length ? _listaEspacos.map(function(e) {
         return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
-          '<div><strong>' + escaparHtml(e.nome) + '</strong> <span class="badge badge-muted">' + escaparHtml(e.tipoEspaco||'?') + '</span>' +
+          '<div><strong>' + escaparHtml(e.nome) + '</strong>' +
+          ' <span class="badge badge-muted">' + escaparHtml(_TL[e.tipoEspaco] || e.tipoEspaco || '?') + '</span>' +
+          ' <span class="badge badge-muted" style="opacity:.7;">' + escaparHtml(_CL[e.categoria] || e.categoria || 'Público') + '</span>' +
           (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
           (e.mapaConfig ? ' <span class="badge badge-muted" style="font-size:10px;"><span class="ms ms-sm" style="vertical-align:middle;">map</span></span>' : '') +
           '<br><small class="muted-text">Cap. ' + (e.capacidade||0) + ' · ' +
