@@ -71,6 +71,14 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
   9. ContratosDetailUI: tab bar com `border-bottom:1px solid var(--divider)` e estilo inline hardcoded no 1º botão → migrado para `.tab-bar` + `.tab-btn.cd-tab`
 - ✅ Deploy @38 realizado
 
+**O que foi feito (Varredura de Bugs — 2026-05-22)**:
+- ✅ **Bug crítico corrigido**: `mapa_ui.html` comentário de cabeçalho continha `</script>` literal (linha 4) e `<script>` literal (linha 5) — o HTML parser encerrava o bloco script externo prematuramente → `SyntaxError: Unexpected token '>'` no browser → app travado em "Carregando sistema..." desde deploy @38. Fix: substituir texto literal das tags por texto neutro.
+- ✅ **Bug médio corrigido**: `DataGateway.obterAba` não estava exportado no `return {}` do módulo → `TypeError` em `ativos_repository.gs`, `contratado_repository.gs`, `solicitacao_repository.gs`. Fix: adição de `obterAba: _aba` ao return (commit 718c709, agora deployado).
+- ✅ **Varredura completa do checklist CLAUDE.md**: 6/6 itens OK (prompt/confirm, GAS.* namespace, CSS, DOM IDs, FsmGuardian, BtnGuard.wrap)
+- ✅ **183 ctrl_* backend vs 144 bindings frontend**: 100% alinhados (sem função chamada sem implementação)
+- ✅ **CSS Mapa**: todas as classes `.mapa-pl-*`, `.mapa-reserva-item`, `.stat-card`, `.badge-accent` definidas
+- ✅ Deploy @46 realizado
+
 **Próximo passo imediato**:
 > 1. **[GAS EDITOR]** Executar `setup_espacos_iniciais()` → `{criados: 8}` ou `{jaExistiam: 8}`
 > 2. **[GAS EDITOR]** Executar `setup_pccs_inicial()` → `{ok: true}`
