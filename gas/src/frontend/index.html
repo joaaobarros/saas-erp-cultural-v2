@@ -7575,10 +7575,16 @@ var InfraConfigMapaUI = (function() {
     var nome = _modoEdicao.nome;
 
     var html =
-      // Cabeçalho com nome + botões
+      // Cabeçalho com input de nome editável
       '<div style="background:var(--color-primary);color:#fff;padding:10px 12px;">' +
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:3px;">Editando espaço</div>' +
-        '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(nome) + '</div>' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.75;margin-bottom:5px;">Editando espaço</div>' +
+        '<input id="cfged-nome" type="text" value="' + escaparHtml(_modoEdicao.nomeNovo) + '" ' +
+          'oninput="InfraConfigMapaUI._onNomeChange(this.value)" ' +
+          'style="width:100%;padding:5px 7px;border:1.5px solid rgba(255,255,255,0.4);border-radius:5px;' +
+                 'background:rgba(255,255,255,0.15);color:#fff;font-size:12px;font-weight:600;' +
+                 'box-sizing:border-box;outline:none;' +
+                 '::placeholder:{color:rgba(255,255,255,0.6)}" ' +
+          'placeholder="Nome do espaço">' +
       '</div>' +
       '<div style="display:flex;gap:5px;padding:8px 8px 6px;border-bottom:1px solid var(--border);">' +
         '<button onclick="InfraConfigMapaUI._cancelarEdicao()" data-bg-skip="1" ' +
@@ -7661,6 +7667,11 @@ var InfraConfigMapaUI = (function() {
     setV('cfged-rot', cfg.rotacao || 0);
   }
 
+  function _onNomeChange(val) {
+    if (!_modoEdicao) return;
+    _modoEdicao.nomeNovo = (val || '').trim();
+  }
+
   function _onInputInlineChange() {
     if (!_modoEdicao || !_modoEdicao.cfg) return;
     var cfg = _modoEdicao.cfg;
@@ -7733,30 +7744,56 @@ var InfraConfigMapaUI = (function() {
 
   function _concluirEdicao() {
     if (!_modoEdicao) return;
-    var id       = _modoEdicao.id;
-    var cfg      = _modoEdicao.cfg ? JSON.parse(JSON.stringify(_modoEdicao.cfg)) : null;
-    var espNome  = _modoEdicao.nome;
-    var cfgAntes = _modoEdicao.cfgOrig;  // cfg original antes da edição
+    var id        = _modoEdicao.id;
+    var cfg       = _modoEdicao.cfg ? JSON.parse(JSON.stringify(_modoEdicao.cfg)) : null;
+    var espNome   = _modoEdicao.nome;
+    var nomeNovo  = (_modoEdicao.nomeNovo || '').trim() || espNome;
+    var nomeAlterado = nomeNovo !== espNome;
+    var cfgAntes  = _modoEdicao.cfgOrig;
+
+    if (!nomeNovo) { Toast.aviso('O nome do espaço não pode ficar vazio.'); return; }
+
     // Registrar no histórico ANTES de alterar
-    _pushHistorico('Editar posição de "' + espNome + '"', [
+    _pushHistorico('Editar "' + espNome + '"', [
       { id: id, cfgAntes: cfgAntes, cfgDepois: cfg }
     ]);
+
     // Sair do modo antes do save (UI responde imediatamente)
     _modoEdicao = null;
     var idx = _espacos.findIndex(function(e) { return e.id === id; });
-    if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg });
+    if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg, nome: nomeNovo });
     _renderMapa();
     _renderSidebar();
+
+    // 1) Salvar mapaConfig
     GAS.admin.salvarMapaEspaco(
       { id: id, mapaConfig: cfg },
       function(r) {
-        if (r && r.ok) {
-          Toast.sucesso('Posição de "' + escaparHtml(espNome) + '" salva.');
-        } else {
+        if (!r || !r.ok) {
           Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar posição.');
-          // Reverter cache local
           if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: null });
           _renderMapa(); _renderSidebar();
+          return;
+        }
+        // 2) Se nome mudou, salvar dados completos do espaço
+        if (nomeAlterado && idx >= 0) {
+          var espacoAtual = _espacos[idx];
+          var dadosEspaco = Object.assign({}, espacoAtual, { nome: nomeNovo, mapaConfig: cfg });
+          GAS.admin.salvarEspaco(dadosEspaco,
+            function(r2) {
+              if (r2 && r2.ok) {
+                Toast.sucesso('"' + escaparHtml(nomeNovo) + '" salvo.');
+              } else {
+                Toast.aviso('Posição salva, mas erro ao atualizar nome: ' +
+                  ((r2 && r2.error && r2.error.message) || 'desconhecido'));
+              }
+            },
+            function(err) {
+              Toast.aviso('Posição salva, mas erro ao atualizar nome: ' + ((err && err.message) || String(err)));
+            }
+          );
+        } else {
+          Toast.sucesso('"' + escaparHtml(nomeNovo) + '" salvo.');
         }
       },
       function(err) {
@@ -7881,6 +7918,7 @@ var InfraConfigMapaUI = (function() {
       cfg:         cfgInicial,
       cfgOrig:     temCfg ? JSON.parse(JSON.stringify(espaco.mapaConfig)) : null,
       nome:        espaco.nome || id,
+      nomeNovo:    espaco.nome || id,   // editável pelo usuário no sidebar
       drag:        null,
       importouBase: !temCfg && !!cfgInicial  // flag → mostra aviso na sidebar
     };
@@ -8193,6 +8231,7 @@ var InfraConfigMapaUI = (function() {
     _selecionarFormaInline:_selecionarFormaInline,
     _removerDoMapaInline:  _removerDoMapaInline,
     _onInputInlineChange:  _onInputInlineChange,
+    _onNomeChange:         _onNomeChange,
     _importarTodosDoMapa:   _importarTodosDoMapa,
     _desfazer:              _desfazer,
     _restaurarPadrao:       _restaurarPadrao,
