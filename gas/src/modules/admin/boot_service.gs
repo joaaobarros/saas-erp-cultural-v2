@@ -68,10 +68,19 @@ var BootService = (function () {
       tiposOcorrencia  = SistemaConfigService.getTiposOcorrencia  ? SistemaConfigService.getTiposOcorrencia()  : [];
     } catch(_e) {}
 
+    var usuarioPapel = 'colaborador';
+    try {
+      var acesso = AcessoService.verificar(email);
+      if (acesso && acesso.registro && acesso.registro.papel) {
+        usuarioPapel = acesso.registro.papel;
+      }
+    } catch(_e) {}
+
     var resultado = {
       orgId:           orgId,
       orgConfig:       orgConfig,
       usuarioEmail:    email,
+      usuarioPapel:    usuarioPapel,
       permissoes:      permissoes,
       modulosAtivos:   modulosAtivos,
       setores:         setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),

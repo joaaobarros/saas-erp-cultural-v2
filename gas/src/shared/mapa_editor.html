@@ -1,0 +1,536 @@
+
+// shared/mapa_editor.html — Editor Visual de Mapa CCBJ
+// Incluir via: <?!= include('shared/mapa_editor'); ?>
+// ATENCAO: NAO envolver em tags script.
+
+// ═══════════════════════════════════════════════════════════
+// MAPA EDITOR — Editor visual de posicionamento de espaços
+// ═══════════════════════════════════════════════════════════
+var MapaEditorUI = (function() {
+
+  // ── Estado ───────────────────────────────────────────────
+  var _cb        = null;  // callback(mapaConfig | null) ao salvar
+  var _cfg       = null;  // { forma, cx, cy, w, h, r, rotacao }
+  var _cfgOrig   = null;  // config ao abrir (para cancelar)
+  var _espacos   = [];    // todos os espaços (para contexto)
+  var _espacoId  = null;  // id do espaço sendo editado
+  var _nomEspaco = '';    // nome do espaço sendo editado
+  var _drag      = null;  // { type, startX, startY, origCX, origCY, origW, origH, origR, origRot, startAngle }
+  var _edSvg     = null;  // referência ao SVG do editor
+
+  // ── Figuras predefinidas ────────────────────────────────
+  var _FORMAS = [
+    { id:'rect',    label:'Retângulo', w:120, h:80,  r:0  },
+    { id:'square',  label:'Quadrado',  w:90,  h:90,  r:0  },
+    { id:'circle',  label:'Círculo',   w:80,  h:80,  r:40 },
+    { id:'ellipse', label:'Elipse',    w:130, h:75,  r:0  },
+    { id:'tri',     label:'Triângulo', w:100, h:86,  r:0  },
+    { id:'hex',     label:'Hexágono',  w:100, h:88,  r:0  },
+    { id:'trap',    label:'Trapézio',  w:120, h:70,  r:0  },
+    { id:'diamond', label:'Losango',   w:90,  h:110, r:0  },
+    { id:'pent',    label:'Pentágono', w:100, h:95,  r:0  }
+  ];
+
+  // ── SVG helpers ──────────────────────────────────────────
+  var _NS = 'http://www.w3.org/2000/svg';
+
+  function _polyCircle(n, rx, ry, startDeg) {
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = (startDeg + i * (360 / n)) * Math.PI / 180;
+      pts.push((rx * Math.cos(a)).toFixed(1) + ',' + (ry * Math.sin(a)).toFixed(1));
+    }
+    return pts.join(' ');
+  }
+
+  function _cfgPontos(cfg) {
+    var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
+    switch (cfg.forma) {
+      case 'tri':     return '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh;
+      case 'hex':     return _polyCircle(6, hw, hh, -30);
+      case 'trap':    return (-hw * 0.7) + ',' + (-hh) + ' ' + (hw * 0.7) + ',' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh;
+      case 'diamond': return '0,' + (-hh) + ' ' + hw + ',0 0,' + hh + ' ' + (-hw) + ',0';
+      case 'pent':    return _polyCircle(5, hw, hh, -90);
+      default:        return '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh;
+    }
+  }
+
+  function _criarElementoForma(cfg) {
+    var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
+    var el;
+    switch (cfg.forma) {
+      case 'rect': case 'square':
+        el = document.createElementNS(_NS, 'rect');
+        el.setAttribute('x', -hw); el.setAttribute('y', -hh);
+        el.setAttribute('width', cfg.w || 100); el.setAttribute('height', cfg.h || 80);
+        el.setAttribute('rx', '3');
+        return el;
+      case 'circle':
+        el = document.createElementNS(_NS, 'circle');
+        el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
+        el.setAttribute('r', cfg.r || Math.min(hw, hh));
+        return el;
+      case 'ellipse':
+        el = document.createElementNS(_NS, 'ellipse');
+        el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
+        el.setAttribute('rx', hw); el.setAttribute('ry', hh);
+        return el;
+      default:
+        el = document.createElementNS(_NS, 'polygon');
+        el.setAttribute('points', _cfgPontos(cfg));
+        return el;
+    }
+  }
+
+  function _bboxHW(cfg) {
+    if (cfg.forma === 'circle') { var r = cfg.r || 40; return { hw: r, hh: r }; }
+    return { hw: (cfg.w || 100) / 2, hh: (cfg.h || 80) / 2 };
+  }
+
+  // ── Coordenadas SVG ─────────────────────────────────────
+  function _svgPt(e) {
+    var pt = _edSvg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(_edSvg.getScreenCTM().inverse());
+  }
+
+  function _localPt(e) {
+    var shapeG = document.getElementById('ed-shape-g');
+    if (!shapeG) return _svgPt(e);
+    var pt = _edSvg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(shapeG.getScreenCTM().inverse());
+  }
+
+  // ── Abrir / Fechar ───────────────────────────────────────
+  function abrir(espacoId, espacoNome, mapaConfig, espacos, callback) {
+    _espacoId  = espacoId;
+    _nomEspaco = espacoNome || 'Espaço';
+    _espacos   = espacos || [];
+    _cb        = callback;
+    _cfg       = mapaConfig ? JSON.parse(JSON.stringify(mapaConfig))
+                            : null;
+    _cfgOrig   = _cfg ? JSON.parse(JSON.stringify(_cfg)) : null;
+    _drag      = null;
+
+    _montarOverlay();
+    _renderContexto();
+    if (_cfg) _renderShape();
+    _atualizarInputs();
+    _atualizarPaleteSel();
+  }
+
+  function fechar() {
+    var el = document.getElementById('mapa-editor-overlay');
+    if (el) el.parentNode.removeChild(el);
+    _edSvg = null; _drag = null;
+  }
+
+  function _salvar() {
+    if (_cb) _cb(_cfg ? JSON.parse(JSON.stringify(_cfg)) : null);
+    fechar();
+  }
+
+  function _cancelar() {
+    if (_cb) _cb(_cfgOrig ? JSON.parse(JSON.stringify(_cfgOrig)) : _cfgOrig);
+    fechar();
+  }
+
+  // ── Montar o overlay ─────────────────────────────────────
+  function _montarOverlay() {
+    fechar();
+    var ov = document.createElement('div');
+    ov.id = 'mapa-editor-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;background:var(--bg,#f1f5f9);';
+
+    ov.innerHTML =
+      // ─── Topbar ───
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;">' +
+        '<button onclick="MapaEditorUI._cancelar()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--text2,#64748b);display:flex;align-items:center;gap:4px;font-size:13px;padding:4px 8px;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'">' +
+          '<span class="ms ms-sm">arrow_back</span> Voltar' +
+        '</button>' +
+        '<span class="ms" style="color:var(--color-primary,#4f46e5);font-size:20px;">edit_location</span>' +
+        '<div style="flex:1;font-size:14px;font-weight:600;color:var(--text,#1e293b);">Mapa — <span style="color:var(--color-primary,#4f46e5);">' + escaparHtml(_nomEspaco) + '</span></div>' +
+        '<button id="ed-btn-remover" onclick="MapaEditorUI._removerDoMapa()" data-bg-skip="1" style="' + (_cfg ? 'display:flex;' : 'display:none;') + 'align-items:center;gap:4px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);cursor:pointer;border-radius:6px;padding:5px 12px;font-size:12px;">' +
+          '<span class="ms ms-sm">delete</span> Remover do mapa' +
+        '</button>' +
+        '<button onclick="MapaEditorUI._salvar()" data-bg-skip="1" style="background:var(--color-primary,#4f46e5);color:#fff;border:none;cursor:pointer;border-radius:6px;padding:6px 18px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:4px;">' +
+          '<span class="ms ms-sm">check</span> Concluir' +
+        '</button>' +
+      '</div>' +
+      // ─── Corpo ───
+      '<div style="display:flex;flex:1;overflow:hidden;">' +
+        // ─── Coluna esquerda ───
+        '<div id="ed-sidebar" style="width:210px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);padding:14px;">' +
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Figuras</div>' +
+          '<div id="ed-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;">' +
+            _FORMAS.map(function(f) {
+              return '<button id="ed-pal-'+f.id+'" data-forma="'+f.id+'" onclick="MapaEditorUI._selecionarForma(\''+f.id+'\')" data-bg-skip="1" ' +
+                'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:var(--surface2,#f8fafc);border:1.5px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:11px;color:var(--text2,#64748b);">' +
+                '<svg width="36" height="28" viewBox="-20 -15 40 30">' + _svgIconePalete(f) + '</svg>' +
+                escaparHtml(f.label) +
+              '</button>';
+            }).join('') +
+          '</div>' +
+          '<div id="ed-props" style="display:none;">' +
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Propriedades</div>' +
+            _inputProp('ed-cx', 'Posição X', 'number') +
+            _inputProp('ed-cy', 'Posição Y', 'number') +
+            _inputProp('ed-w',  'Largura',   'number') +
+            _inputProp('ed-h',  'Altura',    'number') +
+            _inputProp('ed-rot','Rotação °', 'number') +
+            '<div style="margin-top:6px;font-size:10px;color:var(--muted,#94a3b8);">Arraste a figura no mapa para posicionar. Use os pontos de alça para redimensionar.</div>' +
+          '</div>' +
+        '</div>' +
+        // ─── Canvas ───
+        '<div style="flex:1;overflow:hidden;position:relative;">' +
+          '<div style="position:absolute;bottom:8px;right:8px;z-index:1;display:flex;flex-direction:column;gap:4px;">' +
+            '<button onclick="MapaEditorUI._edZoom(1)" data-bg-skip="1" style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:18px;line-height:1;">+</button>' +
+            '<button onclick="MapaEditorUI._edZoom(-1)" data-bg-skip="1" style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:18px;line-height:1;">−</button>' +
+            '<button onclick="MapaEditorUI._edResetZoom()" data-bg-skip="1" style="width:30px;height:30px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;" title="Ajustar"><span class="ms" style="font-size:16px;">fit_screen</span></button>' +
+          '</div>' +
+          '<div id="ed-canvas-wrap" style="width:100%;height:100%;overflow:hidden;cursor:grab;">' +
+            '<svg id="ed-svg" viewBox="0 0 900 660" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">' +
+              _svgBackground() +
+              '<g id="ed-contexto"></g>' +
+              '<g id="ed-shape-layer"></g>' +
+              '<g id="ed-handles-layer"></g>' +
+            '</svg>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:7px 16px;background:var(--surface,#fff);border-top:1px solid var(--border,#e2e8f0);font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' +
+        'Clique em uma figura para adicioná-la ao mapa. Arraste para mover · Alças para redimensionar · Alça circular para girar.' +
+      '</div>';
+
+    document.body.appendChild(ov);
+    _edSvg = document.getElementById('ed-svg');
+    _initEditorIO();
+  }
+
+  function _inputProp(id, label, type) {
+    return '<div style="margin-bottom:8px;">' +
+      '<label style="font-size:11px;color:var(--text2,#64748b);display:block;margin-bottom:3px;">' + label + '</label>' +
+      '<input id="' + id + '" type="' + type + '" step="1" ' +
+        'style="width:100%;padding:5px 8px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);" ' +
+        'onchange="MapaEditorUI._onInputChange()">' +
+      '</div>';
+  }
+
+  function _svgIconePalete(f) {
+    var fill = '#c7d2fe';
+    switch (f.id) {
+      case 'rect':    return '<rect x="-18" y="-12" width="36" height="24" rx="2" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'square':  return '<rect x="-13" y="-13" width="26" height="26" rx="2" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'circle':  return '<circle cx="0" cy="0" r="14" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'ellipse': return '<ellipse cx="0" cy="0" rx="19" ry="12" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'tri':     return '<polygon points="0,-13 16,13 -16,13" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'hex':     return '<polygon points="' + _polyCircle(6, 15, 14, -30) + '" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'trap':    return '<polygon points="-11,-11 11,-11 18,11 -18,11" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'diamond': return '<polygon points="0,-14 18,0 0,14 -18,0" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      case 'pent':    return '<polygon points="' + _polyCircle(5, 16, 14, -90) + '" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+      default:        return '<rect x="-14" y="-10" width="28" height="20" fill="'+fill+'" stroke="#818cf8" stroke-width="1.5"/>';
+    }
+  }
+
+  // Background simplificado do CCBJ (só contorno do campus + pátio)
+  function _svgBackground() {
+    return '<defs>' +
+      '<filter id="ed-shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/></filter>' +
+      '</defs>' +
+      '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="#dde3ea"/>' +
+      '<polygon points="90,52 862,52 866,548 848,576 96,600 90,572" fill="none" stroke="#8fa0b4" stroke-width="2"/>' +
+      '<circle cx="490" cy="400" r="80" fill="#c8d3de" opacity=".25"/>' +
+      '<g transform="translate(855,558)" opacity=".5">' +
+        '<circle cx="0" cy="0" r="16" fill="#fff" stroke="#8fa0b4" stroke-width="1"/>' +
+        '<text x="0" y="-4" text-anchor="middle" dominant-baseline="middle" font-size="8" font-weight="700" fill="#4c1d95">N</text>' +
+      '</g>';
+  }
+
+  // ── Zoom/pan do editor ───────────────────────────────────
+  var _edZoom_ = 1, _edPanX = 0, _edPanY = 0, _edDragPan = null;
+
+  function _edZoom(d) { _edZoom_ = Math.max(0.4, Math.min(5, _edZoom_ + d * 0.2)); _edTr(); }
+  function _edResetZoom() { _edZoom_ = 1; _edPanX = 0; _edPanY = 0; _edTr(); }
+  function _edTr() {
+    var inner = document.getElementById('ed-canvas-wrap');
+    if (_edSvg) _edSvg.style.transform = 'scale(' + _edZoom_ + ') translate(' + _edPanX + 'px,' + _edPanY + 'px)';
+  }
+
+  // ── Renderizar contexto (outros espaços) ─────────────────
+  function _renderContexto() {
+    var layer = document.getElementById('ed-contexto');
+    if (!layer || !_edSvg) return;
+    layer.innerHTML = '';
+    _espacos.forEach(function(esp) {
+      if (esp.id === _espacoId || !esp.mapaConfig) return;
+      var cfg = esp.mapaConfig;
+      var g = document.createElementNS(_NS, 'g');
+      g.setAttribute('transform', 'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+      var sh = _criarElementoForma(cfg);
+      sh.setAttribute('fill', '#e2e8f0');
+      sh.setAttribute('stroke', '#cbd5e1');
+      sh.setAttribute('stroke-width', '1');
+      sh.setAttribute('opacity', '0.7');
+      g.appendChild(sh);
+      var txt = document.createElementNS(_NS, 'text');
+      txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
+      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'middle');
+      txt.setAttribute('font-size', '10'); txt.setAttribute('fill', '#94a3b8');
+      txt.setAttribute('pointer-events', 'none');
+      txt.textContent = esp.nome ? esp.nome.substring(0, 8) : '';
+      g.appendChild(txt);
+      layer.appendChild(g);
+    });
+  }
+
+  // ── Renderizar forma ativa ───────────────────────────────
+  function _renderShape() {
+    var layer  = document.getElementById('ed-shape-layer');
+    var hLayer = document.getElementById('ed-handles-layer');
+    if (!layer || !hLayer || !_edSvg) return;
+    layer.innerHTML = ''; hLayer.innerHTML = '';
+    if (!_cfg) { document.getElementById('ed-props') && (document.getElementById('ed-props').style.display = 'none'); return; }
+
+    document.getElementById('ed-props') && (document.getElementById('ed-props').style.display = '');
+
+    var g = document.createElementNS(_NS, 'g');
+    g.id = 'ed-shape-g';
+    g.setAttribute('transform', 'translate(' + _cfg.cx + ',' + _cfg.cy + ') rotate(' + (_cfg.rotacao || 0) + ')');
+    g.style.cursor = 'move';
+
+    var sh = _criarElementoForma(_cfg);
+    sh.setAttribute('fill', 'rgba(99,102,241,0.35)');
+    sh.setAttribute('stroke', '#4f46e5');
+    sh.setAttribute('stroke-width', '2');
+    sh.setAttribute('filter', 'url(#ed-shadow)');
+    g.appendChild(sh);
+
+    var bbox = _bboxHW(_cfg);
+    var hw = bbox.hw, hh = bbox.hh;
+
+    // Label do espaço
+    var lbl = document.createElementNS(_NS, 'text');
+    lbl.setAttribute('x', '0'); lbl.setAttribute('y', '4');
+    lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('dominant-baseline', 'middle');
+    lbl.setAttribute('font-size', Math.max(9, Math.min(14, hw * 0.25)).toFixed(0));
+    lbl.setAttribute('font-weight', '600'); lbl.setAttribute('fill', '#312e81');
+    lbl.setAttribute('pointer-events', 'none');
+    lbl.textContent = _nomEspaco.substring(0, 12);
+    g.appendChild(lbl);
+
+    // Handles de resize (8 pontos)
+    var HANDLES = [
+      { id:'nw', x:-hw, y:-hh }, { id:'n',  x:0,   y:-hh }, { id:'ne', x:hw,  y:-hh },
+      { id:'w',  x:-hw, y:0   },                              { id:'e',  x:hw,  y:0   },
+      { id:'sw', x:-hw, y:hh  }, { id:'s',  x:0,   y:hh  }, { id:'se', x:hw,  y:hh  }
+    ];
+    HANDLES.forEach(function(h) {
+      var c = document.createElementNS(_NS, 'circle');
+      c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
+      c.setAttribute('r', '6'); c.setAttribute('fill', '#fff');
+      c.setAttribute('stroke', '#4f46e5'); c.setAttribute('stroke-width', '2');
+      c.style.cursor = h.id === 'n' || h.id === 's' ? 'ns-resize'
+                     : h.id === 'e' || h.id === 'w' ? 'ew-resize' : 'nwse-resize';
+      c.setAttribute('data-handle', h.id);
+      g.appendChild(c);
+    });
+
+    // Handle de rotação (círculo acima do centro)
+    var rotOffset = hh + 24;
+    var rotLine = document.createElementNS(_NS, 'line');
+    rotLine.setAttribute('x1', '0'); rotLine.setAttribute('y1', -(hh + 2));
+    rotLine.setAttribute('x2', '0'); rotLine.setAttribute('y2', -(hh + 18));
+    rotLine.setAttribute('stroke', '#4f46e5'); rotLine.setAttribute('stroke-width', '1.5');
+    rotLine.setAttribute('stroke-dasharray', '3,2');
+    rotLine.setAttribute('pointer-events', 'none');
+    g.appendChild(rotLine);
+
+    var rotC = document.createElementNS(_NS, 'circle');
+    rotC.setAttribute('cx', '0'); rotC.setAttribute('cy', -rotOffset);
+    rotC.setAttribute('r', '7'); rotC.setAttribute('fill', '#4f46e5');
+    rotC.setAttribute('stroke', '#fff'); rotC.setAttribute('stroke-width', '2');
+    rotC.style.cursor = 'crosshair';
+    rotC.setAttribute('data-handle', 'rot');
+    g.appendChild(rotC);
+
+    layer.appendChild(g);
+    _atualizarInputs();
+  }
+
+  // ── Inputs numéricos ─────────────────────────────────────
+  function _atualizarInputs() {
+    if (!_cfg) return;
+    _setInp('ed-cx',  Math.round(_cfg.cx || 450));
+    _setInp('ed-cy',  Math.round(_cfg.cy || 330));
+    var bbox = _bboxHW(_cfg);
+    _setInp('ed-w',   Math.round(bbox.hw * 2));
+    _setInp('ed-h',   Math.round(bbox.hh * 2));
+    _setInp('ed-rot', Math.round(_cfg.rotacao || 0));
+  }
+
+  function _setInp(id, v) { var el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v; }
+
+  function _onInputChange() {
+    if (!_cfg) return;
+    var cx  = parseFloat((document.getElementById('ed-cx') || {}).value) || _cfg.cx;
+    var cy  = parseFloat((document.getElementById('ed-cy') || {}).value) || _cfg.cy;
+    var w   = Math.max(20, parseFloat((document.getElementById('ed-w') || {}).value) || 80);
+    var h   = Math.max(20, parseFloat((document.getElementById('ed-h') || {}).value) || 60);
+    var rot = parseFloat((document.getElementById('ed-rot') || {}).value) || 0;
+    _cfg.cx = cx; _cfg.cy = cy;
+    if (_cfg.forma === 'circle') { _cfg.r = Math.min(w, h) / 2; _cfg.w = w; _cfg.h = h; }
+    else { _cfg.w = w; _cfg.h = h; }
+    _cfg.rotacao = ((rot % 360) + 360) % 360;
+    _renderShape();
+  }
+
+  // ── Paleta de formas ────────────────────────────────────
+  function _atualizarPaleteSel() {
+    document.querySelectorAll('#ed-palette button').forEach(function(btn) {
+      var sel = _cfg && btn.getAttribute('data-forma') === _cfg.forma;
+      btn.style.borderColor = sel ? 'var(--color-primary,#4f46e5)' : 'var(--border,#e2e8f0)';
+      btn.style.background  = sel ? '#eef2ff' : 'var(--surface2,#f8fafc)';
+      btn.style.color       = sel ? 'var(--color-primary,#4f46e5)' : 'var(--text2,#64748b)';
+    });
+  }
+
+  function _selecionarForma(formaId) {
+    var f = _FORMAS.filter(function(x){ return x.id === formaId; })[0];
+    if (!f) return;
+    if (_cfg) {
+      // Mantém posição e tamanho atuais, só muda a forma
+      _cfg.forma = f.id;
+      if (f.id === 'circle') { _cfg.r = Math.min(_cfg.w || f.w, _cfg.h || f.h) / 2; }
+    } else {
+      _cfg = { forma: f.id, cx: 450, cy: 330, w: f.w, h: f.h, r: f.r, rotacao: 0 };
+      var remBtn = document.getElementById('ed-btn-remover');
+      if (remBtn) remBtn.style.display = '';
+    }
+    _renderShape();
+    _atualizarPaleteSel();
+  }
+
+  function _removerDoMapa() {
+    _cfg = null;
+    _renderShape();
+    _atualizarPaleteSel();
+    var remBtn = document.getElementById('ed-btn-remover');
+    if (remBtn) remBtn.style.display = 'none';
+  }
+
+  // ── Interações (drag/resize/rotate) ──────────────────────
+  function _initEditorIO() {
+    if (!_edSvg) return;
+    var wrap = document.getElementById('ed-canvas-wrap');
+
+    _edSvg.addEventListener('mousedown', function(e) {
+      if (!_cfg) return;
+      var handle = e.target.getAttribute && e.target.getAttribute('data-handle');
+      var svgP = _svgPt(e);
+
+      if (handle === 'rot') {
+        e.stopPropagation(); e.preventDefault();
+        var startAngle = Math.atan2(svgP.y - _cfg.cy, svgP.x - _cfg.cx) * 180 / Math.PI;
+        _drag = { type: 'rotate', startAngle: startAngle, origRot: _cfg.rotacao || 0 };
+      } else if (handle) {
+        e.stopPropagation(); e.preventDefault();
+        var lp = _localPt(e);
+        _drag = { type: 'resize', handle: handle, localPt: lp,
+                  origW: _cfg.w, origH: _cfg.h, origR: _cfg.r };
+      } else if (e.target.closest && e.target.closest('#ed-shape-g')) {
+        e.stopPropagation(); e.preventDefault();
+        _drag = { type: 'body', startX: svgP.x, startY: svgP.y, origCX: _cfg.cx, origCY: _cfg.cy };
+        document.getElementById('ed-canvas-wrap').style.cursor = 'grabbing';
+      }
+    });
+
+    // Pan do canvas (só se não há drag de shape)
+    wrap.addEventListener('mousedown', function(e) {
+      if (_drag) return;
+      _edDragPan = { sx: e.clientX - _edPanX * _edZoom_, sy: e.clientY - _edPanY * _edZoom_ };
+      wrap.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (_drag) {
+        e.preventDefault();
+        if (_drag.type === 'body') {
+          var svgP = _svgPt(e);
+          _cfg.cx = _drag.origCX + (svgP.x - _drag.startX);
+          _cfg.cy = _drag.origCY + (svgP.y - _drag.startY);
+          // Mover o elemento diretamente para evitar re-render completo
+          var g = document.getElementById('ed-shape-g');
+          if (g) g.setAttribute('transform', 'translate(' + _cfg.cx + ',' + _cfg.cy + ') rotate(' + (_cfg.rotacao || 0) + ')');
+          _atualizarInputs();
+        } else if (_drag.type === 'resize') {
+          var lp = _localPt(e);
+          _resize(lp);
+        } else if (_drag.type === 'rotate') {
+          var svgP2 = _svgPt(e);
+          var curAngle = Math.atan2(svgP2.y - _cfg.cy, svgP2.x - _cfg.cx) * 180 / Math.PI;
+          _cfg.rotacao = (((_drag.origRot + curAngle - _drag.startAngle) % 360) + 360) % 360;
+          _renderShape();
+        }
+      } else if (_edDragPan) {
+        _edPanX = (e.clientX - _edDragPan.sx) / _edZoom_;
+        _edPanY = (e.clientY - _edDragPan.sy) / _edZoom_;
+        _edTr();
+      }
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (_drag && (_drag.type === 'resize' || _drag.type === 'rotate')) _renderShape();
+      if (_drag) { document.getElementById('ed-canvas-wrap') && (document.getElementById('ed-canvas-wrap').style.cursor = 'grab'); }
+      _drag = null; _edDragPan = null;
+      var wrap2 = document.getElementById('ed-canvas-wrap');
+      if (wrap2) wrap2.style.cursor = 'grab';
+    });
+
+    _edSvg.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      _edZoom(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+  }
+
+  function _resize(lp) {
+    if (!_drag || !_cfg) return;
+    var h = _drag.handle;
+    var minSz = 20;
+
+    if (_cfg.forma === 'circle') {
+      // Círculo: resize uniforme
+      var dist = Math.sqrt(lp.x * lp.x + lp.y * lp.y);
+      var newR = Math.max(minSz / 2, dist);
+      _cfg.r = newR; _cfg.w = newR * 2; _cfg.h = newR * 2;
+      var g = document.getElementById('ed-shape-g');
+      if (g) {
+        var c = g.querySelector('circle');
+        if (c) c.setAttribute('r', newR);
+      }
+      _atualizarInputs(); return;
+    }
+
+    var newHW = Math.abs(lp.x) < minSz / 2 ? minSz / 2 : Math.abs(lp.x);
+    var newHH = Math.abs(lp.y) < minSz / 2 ? minSz / 2 : Math.abs(lp.y);
+
+    if (h === 'n' || h === 's')  newHW = _drag.origW / 2;
+    if (h === 'e' || h === 'w')  newHH = _drag.origH / 2;
+
+    _cfg.w = newHW * 2; _cfg.h = newHH * 2;
+    _atualizarInputs();
+  }
+
+  // ── API pública ─────────────────────────────────────────
+  return {
+    abrir:          abrir,
+    fechar:         fechar,
+    _cancelar:      _cancelar,
+    _salvar:        _salvar,
+    _selecionarForma: _selecionarForma,
+    _removerDoMapa: _removerDoMapa,
+    _onInputChange: _onInputChange,
+    _edZoom:        _edZoom,
+    _edResetZoom:   _edResetZoom
+  };
+})();

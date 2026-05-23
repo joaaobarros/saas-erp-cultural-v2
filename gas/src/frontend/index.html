@@ -1246,6 +1246,14 @@ textarea.input { resize: vertical; }
 .info-card-small span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .info-card-small strong { font-size: 13.5px; color: var(--text); font-weight: 600; }
 
+/* ── Editor de mapa ── */
+.ed-mapa-preview { border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface2);margin-top:8px;position:relative;height:120px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px; }
+.ed-mapa-preview svg { width:100%;height:100%; }
+
+/* ── InfraConfig: aba Configurações na Infraestrutura ── */
+#esp-tab-config .admin-tab-content { padding: 0; }
+#infra-config-tabs { margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+
   </style>
 </head>
 <body>
@@ -2444,7 +2452,64 @@ textarea.input { resize: vertical; }
           <button class="tab-btn esp-tab" data-tab="ativos" onclick="EspacosUI.abrirTab('ativos')">
             <span class="ms ms-sm">inventory_2</span> Patrimônio
           </button>
+          <!-- Aba Configurações: visível apenas para perfis autorizados -->
+          <button class="tab-btn esp-tab oculto" id="btn-esp-tab-config" data-tab="config" onclick="EspacosUI.abrirTab('config')">
+            <span class="ms ms-sm">settings</span> Configurações
+          </button>
         </div>
+
+        <!-- ═══ TAB CONFIG (Espaços + Itens + Horários) — apenas perfis autorizados ═══ -->
+        <div id="esp-tab-config" class="esp-tab-content" style="display:none;">
+          <div class="tab-bar" id="infra-config-tabs" style="margin-bottom:14px;">
+            <button class="tab-btn ativa" data-tab="espacos" onclick="InfraConfigUI.abrirTab('espacos')">
+              <span class="ms ms-sm">museum</span> Espaços
+            </button>
+            <button class="tab-btn" data-tab="itens" onclick="InfraConfigUI.abrirTab('itens')">
+              <span class="ms ms-sm">inventory</span> Itens
+            </button>
+            <button class="tab-btn" data-tab="horarios" onclick="InfraConfigUI.abrirTab('horarios')">
+              <span class="ms ms-sm">schedule</span> Horários
+            </button>
+          </div>
+
+          <!-- Sub-tab: Espaços -->
+          <div id="infra-conf-tab-espacos" class="infra-conf-tab">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+              <button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(null)">
+                <span class="ms ms-sm">add</span> Novo Espaço
+              </button>
+            </div>
+            <div id="infra-lista-espacos"><p class="muted-text">Carregando…</p></div>
+          </div>
+
+          <!-- Sub-tab: Itens (categorias + lista) -->
+          <div id="infra-conf-tab-itens" class="infra-conf-tab" style="display:none;">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+              <button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(null)">
+                <span class="ms ms-sm">add</span> Nova Categoria de Item
+              </button>
+            </div>
+            <div id="infra-lista-itens"><p class="muted-text">Carregando…</p></div>
+          </div>
+
+          <!-- Sub-tab: Horários -->
+          <div id="infra-conf-tab-horarios" class="infra-conf-tab" style="display:none;">
+            <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Horário global de funcionamento da instituição. Reservas só podem ser criadas dentro deste intervalo.</p>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Abertura do expediente</label>
+                <input type="time" id="infra-exp-inicio" class="form-input" style="width:130px;" value="08:00">
+              </div>
+              <div>
+                <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;">Encerramento do expediente</label>
+                <input type="time" id="infra-exp-fim" class="form-input" style="width:130px;" value="22:00">
+              </div>
+              <button class="btn btn-primario" id="btn-salvar-infra-exp" onclick="InfraConfigUI.salvarHorarios()">
+                <span class="ms ms-sm">save</span> Salvar
+              </button>
+            </div>
+          </div>
+        </div><!-- /esp-tab-config -->
 
         <!-- ═══ TAB RESERVAS ═══ -->
         <div id="esp-tab-reservas" class="esp-tab-content">
@@ -5174,6 +5239,7 @@ var AditivosUI = (function() {
 var AdminCadastrosUI = (function() {
   var _tabAtual = 'espacos';
   var _espacos = [], _setores = [], _catItens = [], _modulos = [], _usuarios = [];
+  var _pendingMapaConfig; // undefined = não alterado, null = removido, object = novo config
 
   function abrirTab(tab) {
     _tabAtual = tab;
@@ -5515,7 +5581,9 @@ var AdminCadastrosUI = (function() {
   }
 
   function abrirModalEspaco(id) {
+    _pendingMapaConfig = undefined; // reset
     var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
+    var temMapa = !!(espaco.mapaConfig);
     var html = '<div style="padding:16px;">' +
       '<h3 style="margin-bottom:12px;">' + (id ? 'Editar Espaço' : 'Novo Espaço') + '</h3>' +
       '<div class="form-grid">' +
@@ -5529,6 +5597,21 @@ var AdminCadastrosUI = (function() {
           '<input id="esp-fechamento" class="form-input" placeholder="22:00" value="' + ((espaco.horarioFuncionamento||{}).fechamento||'22:00') + '" style="width:100px;display:inline-block;">' +
         '</div>' +
       '</div>' +
+      // ── Seção Mapa ──
+      '<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Posição no Mapa</label>' +
+          '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="AdminCadastrosUI._editarMapa(' + JSON.stringify(id||null) + ')" ' +
+            'style="display:flex;align-items:center;gap:4px;">' +
+            '<span class="ms ms-sm">edit_location</span> ' + (temMapa ? 'Editar posição' : 'Definir no mapa') +
+          '</button>' +
+        '</div>' +
+        '<div id="esp-mapa-preview" class="ed-mapa-preview">' +
+          (temMapa
+            ? '<span style="color:var(--color-primary);font-size:12px;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm">check_circle</span> Posição configurada no mapa</span>'
+            : '<span style="display:flex;align-items:center;gap:4px;"><span class="ms ms-sm">map</span> Sem posição definida</span>') +
+        '</div>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;margin-top:16px;">' +
         '<button class="btn btn-primario" id="btn-salvar-espaco" onclick="AdminCadastrosUI.salvarEspaco(' + JSON.stringify(id||null) + ',this)">Salvar</button>' +
         '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
@@ -5536,7 +5619,31 @@ var AdminCadastrosUI = (function() {
     _abrirModalSimples(html, 'esp-tipo', espaco.tipoEspaco || 'multiuso');
   }
 
+  function _editarMapa(id) {
+    var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
+    var nome = (document.getElementById('esp-nome') || {}).value || espaco.nome || 'Novo Espaço';
+    var cfgAtual = _pendingMapaConfig !== undefined ? _pendingMapaConfig : (espaco.mapaConfig || null);
+    MapaEditorUI.abrir(id, nome, cfgAtual, _espacos, function(cfg) {
+      _pendingMapaConfig = cfg;
+      _atualizarPreviewMapa(cfg);
+    });
+  }
+
+  function _atualizarPreviewMapa(cfg) {
+    var prev = document.getElementById('esp-mapa-preview');
+    if (!prev) return;
+    var btnEditar = prev.previousElementSibling && prev.previousElementSibling.querySelector('button');
+    if (cfg) {
+      prev.innerHTML = '<span style="color:var(--color-primary);font-size:12px;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm">check_circle</span> Posição configurada no mapa — ' + escaparHtml(cfg.forma || '') + ' em (' + Math.round(cfg.cx || 0) + ',' + Math.round(cfg.cy || 0) + ')</span>';
+      if (btnEditar) btnEditar.innerHTML = '<span class="ms ms-sm">edit_location</span> Editar posição';
+    } else {
+      prev.innerHTML = '<span style="display:flex;align-items:center;gap:4px;"><span class="ms ms-sm">map</span> Sem posição definida</span>';
+      if (btnEditar) btnEditar.innerHTML = '<span class="ms ms-sm">edit_location</span> Definir no mapa';
+    }
+  }
+
   function salvarEspaco(id, btn) {
+    var espaco = id ? (_espacos.find(function(e){ return e.id === id; }) || {}) : {};
     var dados = {
       id:           id || undefined,
       nome:         document.getElementById('esp-nome').value.trim(),
@@ -5547,7 +5654,8 @@ var AdminCadastrosUI = (function() {
       horarioFuncionamento: {
         abertura:   document.getElementById('esp-abertura').value.trim() || '08:00',
         fechamento: document.getElementById('esp-fechamento').value.trim() || '22:00'
-      }
+      },
+      mapaConfig: _pendingMapaConfig !== undefined ? _pendingMapaConfig : (espaco.mapaConfig || null)
     };
     if (!dados.nome) { Toast.aviso('Nome é obrigatório.'); return; }
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
@@ -5653,9 +5761,11 @@ var AdminCadastrosUI = (function() {
     editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel,
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
     abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
+    _editarMapa: _editarMapa,
     abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
     abrirModalTurno: abrirModalTurno, salvarTurno: salvarTurno,
-    abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem
+    abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem,
+    getEspacos: function() { return _espacos; }
   };
 })();
 
@@ -5867,10 +5977,28 @@ var EspacosUI = (function() {
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
       if (tab === 'ativos')      AtivosUI.carregar();
+      if (tab === 'config')      InfraConfigUI.aoAbrir();
     }
   }
 
+  var _PAPEIS_CONFIG = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
+
+  function _verificarAcessoConfig() {
+    var boot = App.getBoot ? App.getBoot() : null;
+    var papel = (boot && boot.usuarioPapel) || 'colaborador';
+    var btnConfig = document.getElementById('btn-esp-tab-config');
+    if (btnConfig) {
+      if (_PAPEIS_CONFIG.indexOf(papel) !== -1) {
+        btnConfig.classList.remove('oculto');
+      } else {
+        btnConfig.classList.add('oculto');
+      }
+    }
+    return _PAPEIS_CONFIG.indexOf(papel) !== -1;
+  }
+
   function aoAbrir() {
+    _verificarAcessoConfig();
     // Carregar métricas topo e abrir tab padrão (Reservas)
     GAS.reservas.metricas(function(rM) {
       GAS.chaves.metricas(function(cM) {
@@ -5895,6 +6023,107 @@ var EspacosUI = (function() {
   }
 
   return { abrirTab: abrirTab, aoAbrir: aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// INFRA CONFIG UI — Configurações de Espaços/Itens/Horários
+// na aba Infraestrutura (apenas perfis autorizados)
+// ═══════════════════════════════════════════════════════════
+var InfraConfigUI = (function() {
+  var _tabAtual = 'espacos';
+
+  var _PAPEIS = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
+
+  function _podeContinuar() {
+    var boot = App.getBoot ? App.getBoot() : null;
+    var papel = (boot && boot.usuarioPapel) || 'colaborador';
+    return _PAPEIS.indexOf(papel) !== -1;
+  }
+
+  function abrirTab(tab) {
+    if (!_podeContinuar()) { Toast.aviso('Acesso restrito.'); return; }
+    _tabAtual = tab;
+    document.querySelectorAll('#infra-config-tabs .tab-btn').forEach(function(b) {
+      b.classList.toggle('ativa', b.getAttribute('data-tab') === tab);
+    });
+    document.querySelectorAll('.infra-conf-tab').forEach(function(el) { el.style.display = 'none'; });
+    var painel = document.getElementById('infra-conf-tab-' + tab);
+    if (painel) painel.style.display = '';
+    if (tab === 'espacos')  _carregarEspacos();
+    if (tab === 'itens')    _carregarItens();
+    if (tab === 'horarios') _carregarHorarios();
+  }
+
+  function aoAbrir() {
+    if (!_podeContinuar()) return;
+    abrirTab('espacos');
+  }
+
+  // ── Espaços ─────────────────────────────────────────────
+  function _carregarEspacos() {
+    var el = document.getElementById('infra-lista-espacos');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarEspacos(function(r) {
+      var lista = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = lista.length ? lista.map(function(e) {
+        return '<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+          '<div><strong>' + escaparHtml(e.nome) + '</strong> <span class="badge badge-muted">' + escaparHtml(e.tipoEspaco||'?') + '</span>' +
+          (e.ativo === false ? ' <span class="badge badge-error">inativo</span>' : '') +
+          (e.mapaConfig ? ' <span class="badge badge-muted" style="font-size:10px;"><span class="ms ms-sm" style="vertical-align:middle;">map</span></span>' : '') +
+          '<br><small class="muted-text">Cap. ' + (e.capacidade||0) + ' · ' +
+          (e.aceitaReserva !== false ? 'Reservável' : 'Não reservável') + ' · ' +
+          (e.possuiChaves ? 'Com chaves' : 'Sem chaves') + '</small></div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id) + ')" data-bg-skip="1">Editar</button>' +
+          '</div></div>';
+      }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
+    }, function(err) { if (el) el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||String(err)) + '</p>'; });
+  }
+
+  // ── Itens / Categorias ───────────────────────────────────
+  function _carregarItens() {
+    var el = document.getElementById('infra-lista-itens');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarCategoriasItens(function(r) {
+      var lista = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      el.innerHTML = lista.length ? '<table class="data-table" style="width:100%;"><thead><tr><th>Nome</th><th>Ativo</th><th></th></tr></thead><tbody>' +
+        lista.map(function(c) {
+          return '<tr><td><strong>' + escaparHtml(c.nome||c.label||'') + '</strong></td>' +
+            '<td>' + (c.ativo !== false ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-error">Inativo</span>') + '</td>' +
+            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id) + ')" data-bg-skip="1">Editar</button></td></tr>';
+        }).join('') + '</tbody></table>' : '<p class="muted-text">Nenhuma categoria cadastrada.</p>';
+    }, function() { if (el) el.innerHTML = '<p class="muted-text">Categorias de itens não disponíveis.</p>'; });
+  }
+
+  // ── Horários ─────────────────────────────────────────────
+  function _carregarHorarios() {
+    GAS.admin.obterConfigExpediente(function(r) {
+      if (!r || !r.ok) return;
+      var exp = r.data || {};
+      var ini = document.getElementById('infra-exp-inicio');
+      var fim = document.getElementById('infra-exp-fim');
+      if (ini) ini.value = exp.inicio || exp.abertura || '08:00';
+      if (fim) fim.value = exp.fim    || exp.fechamento || '22:00';
+    });
+  }
+
+  function salvarHorarios() {
+    var ini = (document.getElementById('infra-exp-inicio') || {}).value || '08:00';
+    var fim = (document.getElementById('infra-exp-fim') || {}).value || '22:00';
+    var btn = document.getElementById('btn-salvar-infra-exp');
+    if (!btn) return;
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.admin.salvarConfigExpediente({ inicio: ini, fim: fim }, function(r) {
+        liberar();
+        if (r && r.ok) Toast.sucesso('Horários salvos.');
+        else Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar.');
+      }, function() { liberar(); Toast.erro('Erro ao salvar horários.'); });
+    });
+  }
+
+  return { abrirTab: abrirTab, aoAbrir: aoAbrir, salvarHorarios: salvarHorarios };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -7339,6 +7568,7 @@ var AtivosUI = (function() {
 
 
 <?!= include('shared/mapa_ui'); ?>
+<?!= include('shared/mapa_editor'); ?>
 // ═══════════════════════════════════════════════════════════
 // PESSOAS — Controlador de Tabs (Fase 3)
 // ═══════════════════════════════════════════════════════════

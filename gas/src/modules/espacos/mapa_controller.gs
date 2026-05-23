@@ -125,6 +125,7 @@ function ctrl_mapa_statusEspacos(params) {
         capacidade:       esp.capacidade   || 0,
         possuiChaves:     esp.possuiChaves  === true,
         aceitaReserva:    esp.aceitaReserva !== false,
+        mapaConfig:       esp.mapaConfig   || null,
         status:           calc.status,
         reservaAtiva:     calc.reservaAtiva,
         proximaReserva:   proxima,

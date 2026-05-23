@@ -35,6 +35,7 @@ var MapaUI=(function(){
       if(!r||!r.ok){Toast.erro('Erro ao carregar mapa');return;}
       _statusMap={};
       (r.data.espacos||[]).forEach(function(e){_statusMap[e.id]=e;});
+      _renderCustomSpaces(r.data.espacos||[]);
       _cores();
       _dash(r.data.espacos||[]);
       // Re-selecionar espaço se havia um selecionado
@@ -43,6 +44,90 @@ var MapaUI=(function(){
       }
     },function(err){Toast.erro('Mapa: '+(err&&err.message||err));});
     _initIO();
+  }
+
+  // ─── Renderizar espaços com mapaConfig ─────────────────────
+  var _NS_SVG='http://www.w3.org/2000/svg';
+
+  function _polyCirclePts(n,rx,ry,startDeg){
+    var pts=[];
+    for(var i=0;i<n;i++){var a=(startDeg+i*(360/n))*Math.PI/180;pts.push((rx*Math.cos(a)).toFixed(1)+','+(ry*Math.sin(a)).toFixed(1));}
+    return pts.join(' ');
+  }
+
+  function _pontosForma(cfg){
+    var hw=(cfg.w||100)/2,hh=(cfg.h||80)/2;
+    switch(cfg.forma){
+      case 'tri':     return '0,'+(-hh)+' '+hw+','+hh+' '+(-hw)+','+hh;
+      case 'hex':     return _polyCirclePts(6,hw,hh,-30);
+      case 'trap':    return (-hw*0.7)+','+(-hh)+' '+(hw*0.7)+','+(-hh)+' '+hw+','+hh+' '+(-hw)+','+hh;
+      case 'diamond': return '0,'+(-hh)+' '+hw+',0 0,'+hh+' '+(-hw)+',0';
+      case 'pent':    return _polyCirclePts(5,hw,hh,-90);
+      default:        return '0,'+(-hh)+' '+hw+','+hh+' '+(-hw)+','+hh;
+    }
+  }
+
+  function _criarFormaEl(cfg){
+    var hw=(cfg.w||100)/2,hh=(cfg.h||80)/2;
+    var el;
+    switch(cfg.forma){
+      case 'rect': case 'square':
+        el=document.createElementNS(_NS_SVG,'rect');
+        el.setAttribute('x',-hw);el.setAttribute('y',-hh);
+        el.setAttribute('width',cfg.w||100);el.setAttribute('height',cfg.h||80);
+        el.setAttribute('rx','3'); return el;
+      case 'circle':
+        el=document.createElementNS(_NS_SVG,'circle');
+        el.setAttribute('cx','0');el.setAttribute('cy','0');
+        el.setAttribute('r',cfg.r||Math.min(hw,hh)); return el;
+      case 'ellipse':
+        el=document.createElementNS(_NS_SVG,'ellipse');
+        el.setAttribute('cx','0');el.setAttribute('cy','0');
+        el.setAttribute('rx',hw);el.setAttribute('ry',hh); return el;
+      default:
+        el=document.createElementNS(_NS_SVG,'polygon');
+        el.setAttribute('points',_pontosForma(cfg)); return el;
+    }
+  }
+
+  function _renderCustomSpaces(espacos){
+    // Restaurar elementos estáticos previamente ocultados
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco[data-id-orig]').forEach(function(g){
+      g.setAttribute('data-id',g.getAttribute('data-id-orig'));
+      g.removeAttribute('data-id-orig');
+      g.style.display='';
+    });
+    var layer=document.getElementById('mapa-espacos-custom');
+    if(!layer)return;
+    layer.innerHTML='';
+    espacos.forEach(function(esp){
+      if(!esp.mapaConfig)return;
+      var cfg=esp.mapaConfig;
+      // Ocultar elemento estático com mesmo data-id (se existir fora da camada custom)
+      var staticG=document.querySelector('#mapa-svg-inner .mapa-espaco[data-id="'+esp.id+'"]');
+      if(staticG&&!staticG.closest('#mapa-espacos-custom')){
+        staticG.setAttribute('data-id-orig',esp.id);
+        staticG.setAttribute('data-id','__hidden_'+esp.id);
+        staticG.style.display='none';
+      }
+      // Criar grupo dinâmico
+      var g=document.createElementNS(_NS_SVG,'g');
+      g.setAttribute('class','mapa-espaco s-default');
+      g.setAttribute('data-id',esp.id);
+      g.setAttribute('data-nome',esp.nome||'');
+      g.setAttribute('data-tipo',esp.categoria||'uso_publico');
+      g.setAttribute('data-numero',esp.numeroPlanta||'');
+      g.setAttribute('data-aceita',String(esp.aceitaReserva!==false));
+      g.setAttribute('transform','translate('+cfg.cx+','+cfg.cy+') rotate('+(cfg.rotacao||0)+')');
+      var sh=_criarFormaEl(cfg);
+      g.appendChild(sh);
+      var lbl=document.createElementNS(_NS_SVG,'text');
+      lbl.setAttribute('class','mapa-label');
+      lbl.setAttribute('x','0');lbl.setAttribute('y','4');
+      lbl.textContent=esp.numeroPlanta||'';
+      g.appendChild(lbl);
+      layer.appendChild(g);
+    });
   }
 
   function _skeleton(){

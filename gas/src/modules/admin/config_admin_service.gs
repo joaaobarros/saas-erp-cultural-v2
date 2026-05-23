@@ -58,6 +58,7 @@ var ConfigAdminService = (function () {
       equipamentosVinculados: espaco.equipamentosVinculados || [],
       tags:                   espaco.tags || [],
       bloqueios:              espaco.bloqueios || [],
+      mapaConfig:             espaco.mapaConfig || null,
       ativo:                  espaco.ativo !== false,
       criadoEm:               espaco.criadoEm || agora_,
       atualizadoEm:           agora_,
