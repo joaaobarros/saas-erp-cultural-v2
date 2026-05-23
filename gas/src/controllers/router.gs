@@ -169,5 +169,5 @@ function ctrl_sistema_verificarSaude() {
  * @returns {string} Conteúdo HTML do arquivo
  */
 function include(arquivo) {
-  return HtmlService.createHtmlOutputFromFile(arquivo).getContent();
+  return HtmlService.createTemplateFromFile(arquivo).getRawContent();
 }

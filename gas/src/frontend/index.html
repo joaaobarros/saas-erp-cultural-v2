@@ -713,9 +713,9 @@ body {
    ADMIN — IDENTIDADE VISUAL
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 #view-admin .admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px; align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .identidade-preview {
@@ -1059,7 +1059,7 @@ body {
         <div class="admin-grid">
 
           <!-- Card: Acessos Pendentes -->
-          <div class="card">
+          <div class="card" style="grid-column:1/-1;">
             <div class="card-header">
               <div class="card-titulo">
                 <span class="ms">manage_accounts</span> Acessos Pendentes
@@ -4519,6 +4519,12 @@ var AdminCadastrosUI = (function() {
     });
   }
 
+  var _LABEL_PAPEL = {
+    colaborador:'Colaborador', habilitador:'Habilitador', rh:'RH',
+    financeiro:'Financeiro', comunicacao:'Comunicação',
+    admin:'Admin', superadmin:'Super Admin'
+  };
+
   function carregarUsuarios() {
     var el = document.getElementById('lista-admin-usuarios');
     var filtro = (document.getElementById('filtro-usuarios-status')||{}).value || '';
@@ -4526,22 +4532,32 @@ var AdminCadastrosUI = (function() {
     GAS.acesso.listarTodos(function(r) {
       var todos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
       _usuarios = filtro ? todos.filter(function(u){ return u.status === filtro; }) : todos;
-      el.innerHTML = _usuarios.length ? '<table class="data-table"><thead><tr><th>Email</th><th>Papel</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
-        _usuarios.map(function(u) {
-          var acoes = '';
-          if (u.status === 'pendente') {
-            acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email) + ',this)">Aprovar</button> ' +
-                    '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ',this)">Recusar</button>';
-          } else if (u.status === 'ativo') {
-            acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ',this)">Editar</button> ' +
-                    '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ',this)">Revogar</button>';
-          }
-          return '<tr><td>' + escaparHtml(u.email) + '</td><td>' + escaparHtml(u.papel||'-') + '</td><td>' + escaparHtml(u.setor||'-') + '</td>' +
-            '<td><span class="badge ' + {ativo:'badge-success',pendente:'badge-warning',inativo:'badge-muted'}[u.status||'inativo'] + '">' + (u.status||'?') + '</span></td>' +
-            '<td>' + acoes + '</td></tr>';
-        }).join('') + '</tbody></table>'
-        : '<p class="muted-text">Nenhum usuário.</p>';
-    });
+      if (!_usuarios.length) { el.innerHTML = '<p class="muted-text">Nenhum usuário.</p>'; return; }
+      var rows = _usuarios.map(function(u) {
+        var ini = (u.email || '?')[0].toUpperCase();
+        var statusCls = {ativo:'badge-success', pendente:'badge-warning', inativo:'badge-muted'}[u.status||'inativo'] || 'badge-muted';
+        var papelLabel = _LABEL_PAPEL[u.papel] || escaparHtml(u.papel||'-');
+        var acoes = '';
+        if (u.status === 'pendente') {
+          acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email) + ')">Aprovar</button> ' +
+                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Recusar</button>';
+        } else if (u.status === 'ativo') {
+          acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ')">Editar</button> ' +
+                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Revogar</button>';
+        }
+        return '<tr>' +
+          '<td><div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:32px;height:32px;border-radius:50%;background:var(--color-primary-light,#ede9fe);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">' + escaparHtml(ini) + '</div>' +
+            '<span style="font-size:13px;">' + escaparHtml(u.email) + '</span>' +
+          '</div></td>' +
+          '<td><span style="font-size:13px;">' + papelLabel + '</span></td>' +
+          '<td><span style="font-size:13px;color:var(--muted);">' + escaparHtml(u.setor||'—') + '</span></td>' +
+          '<td><span class="badge ' + statusCls + '">' + escaparHtml(u.status||'?') + '</span></td>' +
+          '<td style="white-space:nowrap;">' + acoes + '</td>' +
+          '</tr>';
+      }).join('');
+      el.innerHTML = '<table class="data-table"><thead><tr><th>Usuário</th><th>Papel</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>'; });
   }
 
   function toggleModulo(id, ativar, btn) {
@@ -4554,49 +4570,115 @@ var AdminCadastrosUI = (function() {
     });
   }
 
-  function aprovarUsuario(email, btn) {
-    var _raw = prompt('Papel do usuário (colaborador/admin/superadmin/habilitador/comunicacao/rh):');
-    if (_raw === null) return;
-    var papel = _raw.trim() || 'colaborador';
+  /* ── seletor de papéis reutilizável ── */
+  var _PAPEIS_OPTIONS =
+    '<option value="colaborador">Colaborador</option>' +
+    '<option value="habilitador">Habilitador</option>' +
+    '<option value="rh">RH</option>' +
+    '<option value="financeiro">Financeiro</option>' +
+    '<option value="comunicacao">Comunicação</option>' +
+    '<option value="admin">Admin</option>' +
+    '<option value="superadmin">Super Admin</option>';
+
+  function aprovarUsuario(email) {
+    var html =
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Aprovar acesso</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">' + escaparHtml(email) + '</p>' +
+        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Papel</label>' +
+        '<select id="apr-papel" class="form-input" style="width:100%;margin:6px 0 20px;">' + _PAPEIS_OPTIONS + '</select>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primario" id="btn-confirmar-aprovar" onclick="AdminCadastrosUI._confirmarAprovar(' + JSON.stringify(email) + ',this)">Aprovar</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarAprovar(email, btn) {
+    var papel = (document.getElementById('apr-papel') || {}).value || 'colaborador';
     BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
       GAS.acesso.aprovar({ email: email, papel: papel }, function(r) {
         liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Usuário aprovado.'); carregarUsuarios(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
     });
   }
 
-  function revogarUsuario(email, btn) {
-    if (!confirm('Revogar acesso de ' + email + '?')) return;
+  function revogarUsuario(email) {
+    var html =
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Confirmar revogação</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Revogar o acesso de <strong>' + escaparHtml(email) + '</strong>? Esta ação pode ser desfeita depois.</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="btn-confirmar-revogar" onclick="AdminCadastrosUI._confirmarRevogar(' + JSON.stringify(email) + ',this)">Sim, revogar</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarRevogar(email, btn) {
     BtnGuard.wrap(btn, 'Revogando…', function(liberar) {
       GAS.acesso.revogar({ email: email }, function(r) {
         liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Acesso revogado.'); carregarUsuarios(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
     });
   }
 
-  function editarPapel(email, btn) {
-    var _raw = prompt('Novo papel para ' + email + ' (colaborador/admin/superadmin/habilitador/comunicacao/rh):');
-    if (_raw === null) return;
-    var papel = _raw.trim();
+  function editarPapel(email) {
+    var u = _usuarios.find(function(x){ return x.email === email; }) || {};
+    var html =
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Editar usuário</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">' + escaparHtml(email) + '</p>' +
+        '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Papel</label>' +
+        '<select id="edit-papel" class="form-input" style="width:100%;margin:6px 0 20px;">' + _PAPEIS_OPTIONS + '</select>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primario" id="btn-confirmar-editar-papel" onclick="AdminCadastrosUI._confirmarEditarPapel(' + JSON.stringify(email) + ',this)">Salvar</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html, 'edit-papel', u.papel || 'colaborador');
+  }
+
+  function _confirmarEditarPapel(email, btn) {
+    var papel = (document.getElementById('edit-papel') || {}).value;
     if (!papel) return;
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
       GAS.acesso.editarPapel({ email: email, papel: papel }, function(r) {
         liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Papel atualizado.'); carregarUsuarios(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
     });
   }
 
-  function desativarEspaco(id, btn) {
-    if (!confirm('Desativar espaço ' + id + '?')) return;
+  function desativarEspaco(id) {
+    var espaco = _espacos.find(function(e){ return e.id === id; }) || {};
+    var html =
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Desativar espaço</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Desativar <strong>' + escaparHtml(espaco.nome || id) + '</strong>? O espaço ficará indisponível para reservas.</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="btn-confirmar-desativar" onclick="AdminCadastrosUI._confirmarDesativarEspaco(' + JSON.stringify(id) + ',this)">Sim, desativar</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarDesativarEspaco(id, btn) {
     BtnGuard.wrap(btn, 'Desativando…', function(liberar) {
       GAS.admin.desativarEspaco(id, function(r) {
         liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Espaço desativado.'); carregarEspacos(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
@@ -4726,10 +4808,13 @@ var AdminCadastrosUI = (function() {
     carregarEspacos: carregarEspacos, carregarSetores: carregarSetores,
     carregarCatItens: carregarCatItens, carregarModulos: carregarModulos,
     carregarUsuarios: carregarUsuarios,
-    toggleModulo: toggleModulo, aprovarUsuario: aprovarUsuario,
-    revogarUsuario: revogarUsuario, editarPapel: editarPapel,
-    desativarEspaco: desativarEspaco, abrirModalEspaco: abrirModalEspaco,
-    salvarEspaco: salvarEspaco, abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
+    toggleModulo: toggleModulo,
+    aprovarUsuario: aprovarUsuario,   _confirmarAprovar: _confirmarAprovar,
+    revogarUsuario: revogarUsuario,   _confirmarRevogar: _confirmarRevogar,
+    editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel,
+    desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
+    abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
+    abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
     abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem
   };
 })();
