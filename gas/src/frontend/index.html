@@ -2582,8 +2582,29 @@ textarea.input { resize: vertical; }
               </button>
             </div>
           </div>
-          <!-- Sub-tab: Mapa de Espaços (editor de posições) -->
+          <!-- Sub-tab: Mapa de Espaços (editor de posições + terreno) -->
           <div id="infra-conf-tab-mapa" class="infra-conf-tab" style="display:none;">
+
+            <!-- ── Toolbar do mapa ── -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+              <button onclick="InfraConfigMapaUI._editarTerreno()" data-bg-skip="1"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#f0fdf4;border:1.5px solid #16a34a;color:#16a34a;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;">
+                <span class="ms ms-sm">terrain</span> Editar Terreno
+              </button>
+              <button onclick="InfraConfigMapaUI.recarregar()" data-bg-skip="1"
+                      class="btn btn-ghost btn-sm" title="Recarregar mapa">
+                <span class="ms ms-sm">refresh</span> Recarregar
+              </button>
+              <span id="cfg-mapa-terreno-label"
+                    style="font-size:11px;color:var(--muted);margin-left:4px;display:flex;align-items:center;gap:4px;">
+                <span class="ms ms-sm" style="font-size:13px;">landscape</span>
+                Terreno padrão
+              </span>
+            </div>
+
+            <!-- ── Mapa + sidebar ── -->
             <div style="display:flex;gap:0;height:430px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);">
               <!-- Sidebar: lista de espaços com/sem posição -->
               <div id="cfg-mapa-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;">
@@ -2604,7 +2625,7 @@ textarea.input { resize: vertical; }
             </div>
             <p style="font-size:11px;color:var(--muted);margin:8px 0 0;">
               <span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">info</span>
-              Clique num espaço no mapa ou na lista lateral para editar sua posição. Alterações são vinculadas automaticamente a todas as abas.
+              Clique em <b>Editar Terreno</b> para desenhar o contorno do campus (com curvas). Clique num espaço no mapa ou na lista lateral para posicioná-lo.
             </p>
           </div>
 
@@ -3663,17 +3684,23 @@ var GAS = {
     // Turnos e Setores
     listarTurnos:         function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarTurnos(); },
     salvarTurno:          function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTurno(d); },
+    excluirTurno:         function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirTurno(id); },
     listarSetores:        function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarSetores(); },
     salvarSetor:          function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarSetor(d); },
+    excluirSetor:         function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirSetor(id); },
     // Categorias de Itens
     listarCategoriasItens:function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarCategoriasItens(); },
     salvarCategoriaItem:  function(d,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarCategoriaItem(d); },
+    excluirCategoriaItem: function(id,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirCategoriaItem(id); },
     // Módulos
     listarModulos:        function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarModulos(); },
     toggleModulo:         function(id,ativo,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_toggleModulo(id,ativo); },
     // Expediente
     obterConfigExpediente:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterConfigExpediente(); },
-    salvarConfigExpediente: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarConfigExpediente(d); }
+    salvarConfigExpediente: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarConfigExpediente(d); },
+    // Terreno do Mapa
+    lerTerreno:             function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerTerreno(); },
+    salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); }
   },
   // Gestão de usuários e permissões
   acesso: {
@@ -5638,7 +5665,10 @@ var AdminCadastrosUI = (function() {
         var corDot = s.cor ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + escaparHtml(s.cor) + ';margin-right:6px;vertical-align:middle;"></span>' : '';
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
           '<span>' + corDot + escaparHtml(s.label || s.nome || s.id) + '</span>' +
-          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(' + JSON.stringify(s.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalSetor(' + JSON.stringify(s.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.excluirSetor(' + JSON.stringify(s.id).replace(/"/g,"'") + ')">Excluir</button>' +
+          '</div>' +
           '</div>';
       }).join('') : '<p class="muted-text">Nenhum setor.</p>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>'; });
@@ -5670,7 +5700,10 @@ var AdminCadastrosUI = (function() {
             '<td>' + escaparHtml(t.fim) + '</td>' +
             '<td style="font-size:12px;color:var(--muted);">' + escaparHtml(diasLabel) + '</td>' +
             '<td><span class="badge ' + (t.ativo !== false ? 'badge-success' : 'badge-muted') + '">' + (t.ativo !== false ? 'Ativo' : 'Inativo') + '</span></td>' +
-            '<td><button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalTurno(' + JSON.stringify(t.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button></td>' +
+            '<td style="display:flex;gap:6px;">' +
+              '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalTurno(' + JSON.stringify(t.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+              '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.excluirTurno(' + JSON.stringify(t.id).replace(/"/g,"'") + ')">Excluir</button>' +
+            '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>'; });
@@ -5732,7 +5765,10 @@ var AdminCadastrosUI = (function() {
       el.innerHTML = _catItens.length ? _catItens.map(function(c) {
         return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">' +
           '<span>' + escaparHtml(c.nome) + '</span>' +
-          '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalCategoriaItem(' + JSON.stringify(c.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.excluirCategoriaItem(' + JSON.stringify(c.id).replace(/"/g,"'") + ')">Excluir</button>' +
+          '</div>' +
           '</div>';
       }).join('') : '<p class="muted-text">Nenhuma categoria.</p>';
     });
@@ -5925,6 +5961,78 @@ var AdminCadastrosUI = (function() {
         liberar();
         var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Espaço desativado.'); carregarEspacos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function excluirSetor(id) {
+    var s = _setores.find(function(x){ return x.id === id; }) || {};
+    _abrirModalSimples(
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Excluir setor</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(s.label || s.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="btn-confirmar-excluir-setor" onclick="AdminCadastrosUI._confirmarExcluirSetor(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>');
+  }
+
+  function _confirmarExcluirSetor(id, btn) {
+    BtnGuard.wrap(btn, 'Excluindo…', function(liberar) {
+      GAS.admin.excluirSetor(id, function(r) {
+        liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
+        if (r && r.ok) { Toast.sucesso('Setor excluído.'); carregarSetores(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function excluirTurno(id) {
+    var t = _turnos.find(function(x){ return x.id === id; }) || {};
+    _abrirModalSimples(
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Excluir turno</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(t.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="btn-confirmar-excluir-turno" onclick="AdminCadastrosUI._confirmarExcluirTurno(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>');
+  }
+
+  function _confirmarExcluirTurno(id, btn) {
+    BtnGuard.wrap(btn, 'Excluindo…', function(liberar) {
+      GAS.admin.excluirTurno(id, function(r) {
+        liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
+        if (r && r.ok) { Toast.sucesso('Turno excluído.'); carregarTurnos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function excluirCategoriaItem(id) {
+    var c = _catItens.find(function(x){ return x.id === id; }) || {};
+    _abrirModalSimples(
+      '<div style="padding:20px 24px;">' +
+        '<h3 style="margin:0 0 4px;">Excluir categoria</h3>' +
+        '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Excluir <strong>' + escaparHtml(c.nome || id) + '</strong>? Esta ação é irreversível.</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="btn-confirmar-excluir-catitem" onclick="AdminCadastrosUI._confirmarExcluirCategoriaItem(' + JSON.stringify(id) + ',this)">Sim, excluir</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>');
+  }
+
+  function _confirmarExcluirCategoriaItem(id, btn) {
+    BtnGuard.wrap(btn, 'Excluindo…', function(liberar) {
+      GAS.admin.excluirCategoriaItem(id, function(r) {
+        liberar();
+        var m = document.querySelector('.modal-simples'); if (m) m.remove();
+        if (r && r.ok) { Toast.sucesso('Categoria excluída.'); carregarCatItens(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
     });
@@ -6290,8 +6398,11 @@ var AdminCadastrosUI = (function() {
     _editarMapa: _editarMapa,
     _respRemover: _respRemover, _respAdicionar: _respAdicionar,
     abrirModalSetor: abrirModalSetor, salvarSetor: salvarSetor,
+    excluirSetor: excluirSetor, _confirmarExcluirSetor: _confirmarExcluirSetor,
     abrirModalTurno: abrirModalTurno, salvarTurno: salvarTurno,
+    excluirTurno: excluirTurno, _confirmarExcluirTurno: _confirmarExcluirTurno,
     abrirModalCategoriaItem: abrirModalCategoriaItem, salvarCategoriaItem: salvarCategoriaItem,
+    excluirCategoriaItem: excluirCategoriaItem, _confirmarExcluirCategoriaItem: _confirmarExcluirCategoriaItem,
     getEspacos: function() { return _espacos; },
     // Permite que outros módulos (ex: InfraConfigUI) pre-injetem dados
     // para que o modal de edição abra com os campos preenchidos
@@ -6708,6 +6819,7 @@ var InfraConfigUI = (function() {
 var InfraConfigMapaUI = (function() {
   var _espacos   = [];
   var _carregado = false;
+  var _terreno   = null;   // { pontos: [], svgPath: 'M ...' } salvo no config_org.json
   var _zoom = 1, _panX = 0, _panY = 0;
   var _NS = 'http://www.w3.org/2000/svg';
 

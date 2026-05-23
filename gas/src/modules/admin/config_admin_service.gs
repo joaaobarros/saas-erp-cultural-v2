@@ -255,6 +255,46 @@ var ConfigAdminService = (function () {
     return id;
   }
 
+  /**
+   * Exclui (soft-delete) um turno pelo id.
+   */
+  function excluirTurno(turnoId) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    modifyJSON('turnos_config.json', function(lista) {
+      var t = lista.find(function(x) { return x.id === turnoId && x.orgId === orgId; });
+      if (!t) throw new Error('Turno não encontrado: ' + turnoId);
+      t.ativo = false;
+      t.atualizadoEm = agora();
+      return lista;
+    });
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('TURNO_EXCLUIDO', 'turno',
+      { entidadeId: turnoId, orgId: orgId, usuario: email });
+    return true;
+  }
+
+  /**
+   * Exclui (soft-delete) um setor pelo id.
+   */
+  function excluirSetor(setorId) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    modifyJSON('setores_config.json', function(lista) {
+      var s = lista.find(function(x) { return x.id === setorId && x.orgId === orgId; });
+      if (!s) throw new Error('Setor não encontrado: ' + setorId);
+      s.ativo = false;
+      s.atualizadoEm = agora();
+      return lista;
+    });
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('SETOR_EXCLUIDO', 'setor',
+      { entidadeId: setorId, orgId: orgId, usuario: email });
+    return true;
+  }
+
   // ─── Módulos ──────────────────────────────────────────────────────────────
 
   /**
@@ -371,6 +411,25 @@ var ConfigAdminService = (function () {
     return id;
   }
 
+  /**
+   * Exclui (soft-delete) uma categoria de item pelo id.
+   */
+  function excluirCategoriaItem(catId) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    modifyJSON('categorias_itens_config.json', function(lista) {
+      var c = lista.find(function(x) { return x.id === catId && x.orgId === orgId; });
+      if (!c) throw new Error('Categoria não encontrada: ' + catId);
+      c.ativo = false;
+      c.atualizadoEm = agora();
+      return lista;
+    });
+    AuditoriaService.registrar('CATEGORIA_ITEM_EXCLUIDA', 'admin',
+      { entidadeId: catId, orgId: orgId, usuario: email });
+    return true;
+  }
+
   // ─── Labels organizacionais ───────────────────────────────────────────────
 
   /**
@@ -434,13 +493,57 @@ var ConfigAdminService = (function () {
     obterResponsavelEspacoPorDia: obterResponsavelEspacoPorDia,
     listarCategoriasItens:       listarCategoriasItens,
     salvarCategoriaItem:         salvarCategoriaItem,
+    excluirCategoriaItem:        excluirCategoriaItem,
     listarTurnos:                listarTurnos,
     salvarTurno:                 salvarTurno,
+    excluirTurno:                excluirTurno,
     listarSetores:               listarSetores,
     salvarSetor:                 salvarSetor,
+    excluirSetor:                excluirSetor,
     listarModulos:               listarModulos,
     toggleModulo:                toggleModulo,
-    salvarMapaEspaco:            salvarMapaEspaco
+    salvarMapaEspaco:            salvarMapaEspaco,
+    // Terreno do mapa
+    lerTerreno:                  lerTerreno,
+    salvarTerreno:               salvarTerreno
   };
+
+  // ─── Terreno do Mapa ─────────────────────────────────────────────────────
+
+  /**
+   * Lê a configuração do terreno (contorno do campus) do config_org.json.
+   * @returns {{ pontos: Array, svgPath: string }|null}
+   */
+  function lerTerreno() {
+    var configOrg = readJSON('config_org.json') || {};
+    return configOrg.mapaTerrenoConfig || null;
+  }
+
+  /**
+   * Salva a configuração do terreno (contorno do campus) no config_org.json.
+   * @param {{ pontos: Array, svgPath: string }} params
+   */
+  function salvarTerreno(params) {
+    _assertAdmin();
+    if (!params || !Array.isArray(params.pontos) || params.pontos.length < 3) {
+      throw new Error('Terreno inválido: mínimo 3 pontos.');
+    }
+    modifyJSON('config_org.json', function(cfg) {
+      cfg.mapaTerrenoConfig = {
+        pontos:       params.pontos,
+        svgPath:      params.svgPath || null,
+        atualizadoEm: agora()
+      };
+      return cfg;
+    });
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('MAPA_TERRENO_SALVO', 'config_org', {
+      usuario:   getEmailSessao(),
+      numPontos: params.pontos.length
+    });
+    Logger.info('config_admin_service', 'salvarTerreno',
+      'pontos=' + params.pontos.length);
+    return { numPontos: params.pontos.length };
+  }
 
 })();

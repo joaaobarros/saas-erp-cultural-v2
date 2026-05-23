@@ -58,6 +58,27 @@ function ctrl_admin_salvarMapaEspaco(params) {
   }, 'ctrl_admin_salvarMapaEspaco');
 }
 
+// ── Terreno do Mapa ──────────────────────────────────────────────────────────
+
+/**
+ * Lê a configuração do terreno (contorno do campus).
+ */
+function ctrl_admin_lerTerreno() {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.lerTerreno();
+  }, 'ctrl_admin_lerTerreno');
+}
+
+/**
+ * Salva a configuração do terreno (contorno do campus).
+ * @param {{ pontos: Array, svgPath: string }} params
+ */
+function ctrl_admin_salvarTerreno(params) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.salvarTerreno(params);
+  }, 'ctrl_admin_salvarTerreno');
+}
+
 function ctrl_admin_desativarEspaco(espacoId) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.desativarEspaco(espacoId);
@@ -113,6 +134,12 @@ function ctrl_admin_salvarTurno(dados) {
   }, 'ctrl_admin_salvarTurno');
 }
 
+function ctrl_admin_excluirTurno(id) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.excluirTurno(id);
+  }, 'ctrl_admin_excluirTurno');
+}
+
 // ── Setores ───────────────────────────────────────────────────────────────────
 
 function ctrl_admin_listarSetores() {
@@ -127,6 +154,12 @@ function ctrl_admin_salvarSetor(dados) {
   }, 'ctrl_admin_salvarSetor');
 }
 
+function ctrl_admin_excluirSetor(id) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.excluirSetor(id);
+  }, 'ctrl_admin_excluirSetor');
+}
+
 // ── Categorias de Itens ───────────────────────────────────────────────────────
 
 function ctrl_admin_listarCategoriasItens() {
@@ -139,6 +172,12 @@ function ctrl_admin_salvarCategoriaItem(dados) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.salvarCategoriaItem(dados);
   }, 'ctrl_admin_salvarCategoriaItem');
+}
+
+function ctrl_admin_excluirCategoriaItem(id) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.excluirCategoriaItem(id);
+  }, 'ctrl_admin_excluirCategoriaItem');
 }
 
 // ── Módulos ───────────────────────────────────────────────────────────────────
