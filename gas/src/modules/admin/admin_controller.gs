@@ -297,12 +297,12 @@ function _assertAdmin() {
   var email = getEmailSessao();
   var acesso = AcessoService.verificar(email);
   var papel  = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
-  var ehAdmin = papel === 'admin' || papel === 'superadmin';
-  if (!ehAdmin) {
+  var ehSuperAdmin = papel === 'superadmin';
+  if (!ehSuperAdmin) {
     var superAdmin = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
-    ehAdmin = superAdmin && email.toLowerCase() === superAdmin;
+    ehSuperAdmin = superAdmin && email.toLowerCase() === superAdmin;
   }
-  if (!ehAdmin) throw new Error('Acesso negado: operação restrita a administradores.');
+  if (!ehSuperAdmin) throw new Error('Acesso negado: operação restrita a superadmin.');
 }
 
 // ─── Fase 9: Feature Flags ─────────────────────────────────────────────────

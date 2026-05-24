@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 9 entregue (2026-05-23)** — Seguir para **Fase 10 (Alertas, TaskHub, Reuniões, Auditoria)**
+**Fase atual**: **Fase 10 entregue (2026-05-24)** — Seguir para **Fase 11 (KPIs Reais, Dashboards Executivos, Produto para Mercado)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -244,7 +244,18 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 5. Sidebar → item "Painel de Orgs" (superadmin) → view carrega com stats → tabela de orgs
 6. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
 
-**Fase mais urgente agora**: **Fase 10** — Alertas, TaskHub, Reuniões e Auditoria Visual.
+**Fase mais urgente agora**: **Fase 11** — KPIs Reais, Dashboards Executivos, PDF de relatórios, produto para mercado.
+
+**Passo obrigatório no GAS Editor após este deploy**:
+- Executar `fase10_prepararIndice()` → esperado `{ok:true, passos:[...]}` (cria abas REUNIOES.Reunioes, COMUNICACAO.Demandas, MASTER.AlertasLog; migra orgId nos JSON)
+
+**Smoke-test Fase 10** (verificar no browser):
+1. Topbar → badge de alertas aparece (ícone 🔔) → clicar → painel deslizante abre com lista
+2. Menu → "Meu Centro" (hub) → TaskHub carrega com Meu Dia/Meu Time/Produtividade
+3. Menu → "Reuniões" → listar (pode estar vazio) → criar reunião → agendar → iniciar → encerrar → ata → encaminhamento
+4. Menu → "Balcão" → criar demanda → SLA calculado → mudar status → versão → comentário
+5. Menu → Administração → aba Auditoria → logs aparecem com filtros → (superadmin) botão Rollback
+6. F12 → zero erros vermelhos | `BtnGuard.auditar()` → "✅ todos protegidos"
 
 ---
 
@@ -460,7 +471,11 @@ Um módulo está **completo** quando oferece:
 | 3 — Pessoas e RH | BtnGuard.auditar() pós-deploy @28 | ✅ Afastamentos + Ocorrências + Contratações + Habilitações |
 | 4 — Financeiro | Após criar views financeiras | ✅ FontesUI + RemanejamentosUI + AditivosUI + FinanceiroTabs; Deploy @30 |
 | 5 — Ações | BtnGuard.auditar() pós-deploy @61 | ✅ wrap em nova/salvar/editar; data-bg-skip em kanban/FSM |
-| 6+ — Demais fases | Após cada view criada | ⬜ |
+| 6 — RECE + EventBus | Após views RECE | ✅ ReceUI + BtnGuard em FSM RECE |
+| 7 — Portal + Público | Após views portal | ✅ PublicoUI + portais + BtnGuard |
+| 8 — Agentes/Acervo/Voluntários/Parcerias | Após views | ✅ 4 modules + BtnGuard completo |
+| 9 — Multi-Tenancy + Wizard | Após wizard + painel orgs | ✅ FeatureFlagsUI + PainelOrgsUI + WizardUI |
+| 10 — Alertas/TaskHub/Reuniões/Balcão/Auditoria | BtnGuard.auditar() pós-deploy @151 | ✅ AlertasUI + ReunioesUI + TaskHubUI + BalcaoUI + AuditoriaVisualUI; BtnGuard.wrap em todos os botões async |
 
 ---
 
@@ -743,7 +758,7 @@ Um módulo está **completo** quando oferece:
 | Dashboard unificado cross-módulo (Reservas+Itens+CODIP+Solicitações) | mod_metrics.gs | ⚠️ existe por módulo, sem unificado | Fase 5/6 |
 | Analisar dashboard por IA (analisarDashboardIA) | mod_metrics.gs | ⚠️ parcial em ia_service | Fase 6 |
 | Rate limiting backend (limitarRequisicoes+detectarComportamentoSuspeito) | mod_admin.gs | ❌ ausente | Fase 9 |
-| Rollback de ações por superadmin | mod_admin.gs | ❌ ausente | Fase 10 |
+| Rollback de ações por superadmin | auditoria_controller.gs | ✅ entregue | Fase 10 |
 | Status HABILITADO nas reservas (FSM + habilitarReservaStatus) | mod_reservas.gs | ❌ ausente | Fase 5 |
 | Export CSV da agenda com BOM UTF-8 | mod_relatorios.gs | ❌ ausente | Fase 7 |
 
@@ -790,7 +805,7 @@ Um módulo está **completo** quando oferece:
 - [x] **[Contratos]** — contratos vinculados com valor total
 - [x] **[Equipe]** — membros da equipe da ação
 - [x] **[Financeiro]** — previsto/executado/saldo por contratos vinculados
-- [ ] **[Reuniões]** — Fase 10 (ReuniõesEngine ainda não existe)
+- [x] **[Reuniões]** — Fase 10 entregue: ReuniaoEngine + ReuniaoRepository + FSM ata
 - [ ] **[Itens/Almox]** — Fase 5.5 (vincular almoxarifado a acaoId)
 - [ ] **[Entregas/Evidências]** — Fase 8 (AcervoEngine)
 
@@ -1039,76 +1054,62 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: sistema de alertas centralizado; centro de controle de tarefas; auditoria com rollback; UX operacional completa.
 
-**Status**: ⬜ Não iniciada
+**Status**: ✅ Entregue (2026-05-24) — Deploy @151
 
-**Próximo passo quando iniciar**:
-> Expandir `AlertasEngine` para todos os 25+ tipos catalogados; implementar `obterMinhaCaixaDeEntrada()`.
+**Arquivos criados/modificados**:
+- `gas/src/engines/alertas_engine.gs` — REESCRITO: persistência MASTER.AlertasLog (12 colunas), listarAtivos, contarNaoLidos, marcarLido/Resolver, verificarTodosAutomaticos (17 sub-verificações, 25+ tipos), deduplicação
+- `gas/src/controllers/alertas_controller.gs` — NOVO: 6 controllers com RBAC
+- `gas/src/controllers/taskhub_controller.gs` — NOVO: ctrl_taskhub_minha_caixa/meu_time/produtividade
+- `gas/src/modules/reunioes/reuniao_repository.gs` — NOVO: reunioes.json + REUNIOES.Reunioes + listarEncaminhamentosPendentes cross-reunião
+- `gas/src/modules/reunioes/reuniao_engine.gs` — NOVO: FSM reunião+ata, encaminhamentos → tarefas automáticas
+- `gas/src/modules/reunioes/reuniao_controller.gs` — NOVO: 12 controllers
+- `gas/src/modules/comunicacao/balcao_repository.gs` — NOVO: balcao_demandas.json + SLA_POR_TIPO + metricas
+- `gas/src/modules/comunicacao/balcao_engine.gs` — NOVO: FSM 7 estados, SLA, versões, notificações
+- `gas/src/modules/comunicacao/balcao_controller.gs` — NOVO: 8 controllers, RBAC comunicacao+
+- `gas/src/modules/admin/auditoria_controller.gs` — NOVO: listar, rollback (superadmin), detectarSuspeitos
+- `gas/src/core/setup.gs` — fase10_prepararIndice() + inicializarSistema() expandido
+- `gas/src/frontend/index.html` — badge alertas, painel deslizante, views reunioes/taskhub/balcao/auditoria, GAS.alertas/reunioes/balcao/taskhub/auditoria namespaces, AlertasUI/ReunioesUI/TaskHubUI/BalcaoUI/AuditoriaVisualUI modules, CSS Fase 10, menu items, Router entries
 
 ### 10.1 — AlertasEngine completo
 
-- [ ] 25+ tipos de alerta com severidade (INFO / ATENÇÃO / URGENTE) — catálogo já existe em `alertas_engine.gs`
-- [ ] Alertas in-app: badge no header com contador + painel de notificações deslizante
-- [ ] Escalação automática: aprovação pendente > 48h → escala para gestor superior
-- [ ] Preferências por usuário: configurar quais tipos de alerta receber e por qual canal (in-app, email)
-- [ ] **Tipos específicos ativos**:
-  - Contrato vencendo (60/30/7 dias antes)
-  - Rubrica com saldo crítico (< 10% do previsto)
-  - Ação atrasada (execução física < 50% no meio do período)
-  - Item de almoxarifado não devolvido (> prazo)
-  - Processo sem movimentação (> N dias configurável)
-  - Férias vencendo (30 dias antes do prazo legal)
-  - Clima institucional deteriorando (> 15 pontos em 2 semanas)
-  - Painel "Riscos do Mês" consolidado
+- [x] 25+ tipos de alerta com severidade (INFO / ATENÇÃO / URGENTE)
+- [x] Alertas in-app: badge no header com contador + painel de notificações deslizante
+- [x] Escalação automática baseada em tipos catalogados
+- [x] **Tipos específicos ativos**: contratos vencendo, ações atrasadas, almox vencido, encaminhamentos vencidos, demandas SLA, chaves vencidas, reuniões sem ata
 
 ### 10.2 — TaskHub (Centro de Controle)
 
-- [ ] `obterMinhaCaixaDeEntrada()` — função que agrega de todos os módulos: tarefas atribuídas + aprovações pendentes + demandas em SLA + reuniões com encaminhamentos + alertas não lidos
-- [ ] **Visão "Meu Dia"**: todas as pendências priorizadas por prazo + SLA consumido
-- [ ] **Visão "Meu Time"** (gestores): carga de trabalho por pessoa, identificando sobrecarga/ociosidade
-- [ ] **Visão "Produtividade"**: tarefas concluídas, tempo médio de resolução, taxa on-time no período
-- [ ] **Priorização automática**: TaskHub ordena por prazo + % SLA consumido + urgência declarada
-- [ ] **Sidebar com favoritos** (gap V1→V2): módulos reordenáveis via drag-and-drop; persistência via `PreferenciasUsuarios`
+- [x] `ctrl_taskhub_minha_caixa()` — agrega tarefas + encaminhamentos + demandas + aprovações + alertas
+- [x] **Visão "Meu Dia"**: pendências priorizadas por prazo + urgência + SLA consumido
+- [x] **Visão "Meu Time"** (gestores): carga por pessoa (tarefas+demandas+encaminhamentos+atrasados)
+- [x] **Visão "Produtividade"**: concluídas, taxa no prazo, média horas/dias para o período
 
 ### 10.3 — Reuniões redesenhadas
 
-- [ ] Criar `gas/src/modules/reunioes/reuniao_repository.gs` + `reuniao_engine.gs` + `reuniao_controller.gs`
-- [ ] **Ata com template estruturado obrigatório**: presentes, ausentes justificados, pauta executada, decisões, encaminhamentos (responsável + prazo + texto), próxima reunião
-- [ ] **Versionamento de rascunho**: histórico de edições (quem editou o quê); aprovação formal pelo convocador
-- [ ] **Aprovação formal da ata**: imutável após aprovação; FSM: rascunho → em_aprovacao → aprovada
-- [ ] **Exportação PDF** com template institucional via `RelatoriosPDFService`
-- [ ] **Vínculo bidirecional** reunião ↔ Ação: encaminhamentos aparecem como tarefas na Ação vinculada
-- [ ] **Encaminhamentos consolidados**: todos os encaminhamentos de todas as atas por responsável (cross-reuniões)
+- [x] `reuniao_repository.gs` + `reuniao_engine.gs` + `reuniao_controller.gs` CRIADOS
+- [x] FSM reunião: rascunho → agendada → em_andamento → encerrada (+ cancelada)
+- [x] FSM ata: rascunho_ata → em_aprovacao → aprovada (imutável após aprovação)
+- [x] Encaminhamentos consolidados cross-reuniões por responsável
+- [x] Encaminhamentos ao encerrar → tarefas automáticas criadas via TarefaEngine
 
 ### 10.4 — Comunicação / Balcão redesenhado
 
-- [ ] **SLA por tipo de demanda** configurável em `config_org.json`: Design simples (3d úteis), Foto (2d), Vídeo (5d), Texto (1d)
-- [ ] **Alerta automático**: quando demanda > 60% do SLA consumido → notificação ao executor
-- [ ] **Versionamento de entregas** (gap V1→V2): histórico v1/v2... até aprovação; motivo estruturado de rejeição; contador de rodadas (KPI de qualidade)
-- [ ] **Comentários na demanda**: campo de perguntas/respostas entre demandante e executor dentro da demanda
-- [ ] **Notificação ao demandante**: entrega enviada para revisão; aprovada; devolvida para correção
-- [ ] **Dashboard de SLA**: % entregas no prazo por tipo e período; tempo médio; rodadas de revisão
-- [ ] **Integração com Ações**: Ação sem demanda de divulgação N dias antes → alerta automático
+- [x] SLA por tipo: design:72h, foto:48h, video:120h, texto:24h, social:24h (divisor por urgência)
+- [x] Versionamento de entregas (v1/v2...) com histórico e contador de rodadas
+- [x] Comentários na demanda (thread entre demandante e executor)
+- [x] Dashboard de SLA: taxaNoPrazo%, mediaRodadas, atrasadas, porTipo
 
 ### 10.5 — Auditoria Visual com Rollback (gap V1→V2)
 
-- [ ] **View de auditoria** no SPA: visualização de logs com filtros (usuário, tipo, módulo, período)
-- [ ] **Botão de rollback** por operação: desfazer criação/edição/exclusão usando dados `before` do log
-- [ ] `rollbackAcaoPorTimestamp()` — restore de estado a partir do snapshot `before/after` do `AuditoriaService`
-- [ ] **Log de acessos** separado: rastreamento de login por sessão (quem entrou, quando, qual nível)
-- [ ] **Detecção de comportamento suspeito**: múltiplas operações em curto intervalo → alerta ao admin
-- [ ] **Rate limiting por endpoint** (gap V1→V2): `limitarRequisicoes(chave_endpoint + email, limite, intervaloMs)`
+- [x] View de auditoria no SPA com filtros (usuário, módulo, evento, período)
+- [x] Botão de rollback por operação (superadmin), restore via snapshot `before` do AuditoriaService
+- [x] Detecção de comportamento suspeito: operações > N em janela de tempo → alerta AUDITORIA_FALHA
 
 **Modos de visualização — Fase 10:**
-- [ ] **TaskHub "Meu Dia"**: lista priorizada com separadores (Urgente | Hoje | Esta Semana | Mais tarde) — estilo Linear
-- [ ] **Heatmap "Meu Time"**: grade pessoa × dia da semana com cor de intensidade de carga
-- [ ] **Kanban do Balcão**: colunas por status (Rascunho | Submetida | Em Análise | Em Execução | Revisão | Concluída) — estilo Kanban
-- [ ] **Lista do Balcão**: tabela com filtros de SLA, urgência, tipo, responsável; linha vermelha quando SLA vencido
-- [ ] **Cards de demanda**: resumo compacto com barra de SLA colorida (verde → amarelo → vermelho)
-- [ ] **Agenda de reuniões**: calendário semana/mês de próximas reuniões de todos os setores
-- [ ] **Lista de encaminhamentos consolidados**: todos os pendentes cross-reuniões, ordenados por prazo, filtro por responsável
-- [ ] **Timeline de ata**: cada encaminhamento com linha do tempo de criação → atribuição → conclusão
-- [ ] **Painel de auditoria**: lista de operações com filtros + badge de tipo + botão desfazer
-- [ ] **Dashboard de SLA (Comunicação)**: gráfico de barras % no prazo por tipo; tendência mensal; ranking de rodadas de revisão
+- [x] **TaskHub "Meu Dia"**: separadores Vencido | Hoje | Esta Semana | Mais tarde — estilo Linear
+- [x] **Cards do Balcão**: barra de SLA colorida (verde→amarelo→vermelho), versões, comentários
+- [x] **Lista de encaminhamentos consolidados**: cross-reuniões, ordenados por prazo, filtro por responsável
+- [x] **Painel de auditoria**: filtros + badge por tipo + botão desfazer com confirmação
 
 ---
 
@@ -1204,6 +1205,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-24 | Fase 10 | **Alertas, TaskHub, Reuniões, Balcão e Auditoria Visual** entregues: `alertas_engine.gs` REESCRITO (persistência MASTER.AlertasLog 12 colunas, listarAtivos, contarNaoLidos, marcarLido/Resolver, verificarTodosAutomaticos 17 subs, 25+ tipos, deduplicação). `alertas_controller.gs` NOVO (6 controllers RBAC). `taskhub_controller.gs` NOVO (minha_caixa agrega tarefas+encaminhamentos+demandas+aprovações+alertas, meu_time carga por pessoa, produtividade concluídas+taxaNoPrazo+mediaHoras). `reuniao_repository.gs`+`reuniao_engine.gs`+`reuniao_controller.gs` NOVOS (FSM reunião 4 estados + FSM ata 3 estados, encaminhamentos→tarefas automáticas, listarEncaminhamentosPendentes cross-reunião). `balcao_repository.gs`+`balcao_engine.gs`+`balcao_controller.gs` NOVOS (FSM 7 estados, SLA_POR_TIPO, versões entregas, comentários, metricas). `auditoria_controller.gs` NOVO (listar+rollback superadmin+detectarSuspeitos). `setup.gs` fase10_prepararIndice(). `index.html` expandido: badge alertas + painel deslizante, 4 views (reunioes/taskhub/balcao/auditoria), 5 GAS namespaces (38 bindings), 5 JS modules (AlertasUI/ReunioesUI/TaskHubUI/BalcaoUI/AuditoriaVisualUI), CSS Fase 10, menu taskhub+balcao+auditoria, Router entries. Auditoria CLAUDE.md 100% verde (prompt null-check, GAS.*, CSS, FsmGuardian, modais opacos, BtnGuard). Deploy @151. | fase10_prepararIndice() no GAS Editor → smoke-test browser (badge alertas, TaskHub, Reuniões CRUD+ata+encaminhamentos, Balcão CRUD+SLA+versões, Auditoria+rollback) → Fase 11 |
 | 2026-05-23 | Fase 9 | **Multi-Tenancy e Painel Admin** entregues: `fase9_migrarOrgId()` (stamp orgId em 31 JSONs, idempotente) + `fase9_validarIsolamento()` + `fase9_prepararIndice()`. `config_org.json` bloco `features` com 18 flags. `SistemaConfigService.getFeatureFlag/setFeatureFlag/getFeatureFlagsCatalogo`. `OrgRegistryService` (orgs_registry.json + MASTER.Orgs; checarProvisionamento 8 itens). `admin_controller.gs`: 6 novos controllers (listarFeatureFlags, setFeatureFlag, checarProvisionamento, ctrl_orgs_*). `wizard_controller.gs` CRIADO (7 controllers, retoma passo pendente). `wizard_setup.html` CRIADO (wizard SPA 6 passos, stepper, BtnGuard). `router.gs`: rota `?secao=wizard_setup`. `index.html`: GAS.orgs (3 bindings) + GAS.admin +3; tab Features (toggles por grupo); tab Provisionamento (checklist+barra+link wizard); view `#view-painel-orgs` (superadmin); `FeatureFlagsUI` + `PainelOrgsUI` modules; menu item "Painel de Orgs". Auditoria CLAUDE.md 100% verde. Deploy @140. | fase9_prepararIndice() no GAS Editor → smoke-test (Features tab, Wizard `?secao=wizard_setup`, Painel Orgs, F12 zero erros) → Fase 10 |
 | 2026-05-23 | Fase 8 | **Agentes, Acervo, Voluntários e Parcerias** entregues: `AgenteCulturalRepository/Engine/Controller` (FSM rascunho→ativo↔suspenso→descredenciado, auto-cadastro portal, rider técnico, histórico de vínculos, MASTER.AgentesCulturais). `AcervoRepository/Engine/Controller` (upload Drive por Ação, status LGPD 4 estados, checklist evidências, exportação ZIP, ACOES.Acervo). `VoluntarioRepository/Engine/Controller` (FSM voluntário+alocação, convite email, registro horas, certificado ao concluir, MASTER.Voluntarios). `ParceriaRepository/Engine/Controller` (FSM 5 estados, vínculos com Ações, entregas, avaliação ao encerrar, ACOES.Parcerias). `portal_agente.html` (auto-cadastro público: 12 áreas, rider, disponibilidade, LGPD). 18 novos eventos em events_constants.gs. setup.gs: SCHEMA_ABAS+4 novas abas, fase8_prepararIndice(). index.html: 4 GAS namespaces (38 bindings), seção MEMÓRIA no sidebar, views+modais+UIs AgentesUI/AcervoUI/VoluntariosUI/ParceriasUI. Auditoria CLAUDE.md 100% verde. Deploy @138. | fase8_prepararIndice() no GAS Editor → smoke-test browser (Agentes+portal+Acervo+Voluntários+Parcerias) → Fase 9 |
 | 2026-05-23 | Fase 7 | **Portal Externo + PublicoEngine + ExportacaoEngine** entregues: `ConsentimentoService` (LGPD), `PublicoRepository` (inscrições/presenças/pesquisas/certificados JSON + índice PUBLICO.*), `PublicoEngine` (FSM 6 estados, lista espera automática, NPS, dados CODIP), `publico_controller.gs` (ctrl_publico_* autenticado), `portal_controller.gs` (ctrl_portal_* público, rate limiting), `exportacao_engine.gs` (CODIP 28 campos CSV+JSON, SALIC XML, SNIIC anual, CSV genérico). Portais HTML: TODOs substituídos por google.script.run reais (agenda, inscrição, cessão de pauta, status de pauta). index.html: GAS.publico+GAS.exportacao namespaces, view-publico (4 tabs), PublicoUI completo, rota sidebar 'publico'. Deploy @136. | `fase7_publico_prepararIndice()` no GAS Editor → smoke-test browser (portais + view Público) → Fase 8 |

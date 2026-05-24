@@ -81,3 +81,35 @@ function setupInicialCCBJ() {
 
   console.log('[setup] ✅ Setup inicial concluído. Próximo passo: deployar como Web App.');
 }
+
+/**
+ * Registra joao.barros@idm.org.br como superadmin explicitamente.
+ * Seguro chamar múltiplas vezes (idempotente).
+ * Executar no GAS Editor sempre que precisar garantir acesso do superadmin.
+ */
+function registrarSuperAdminCCBJ() {
+  var email = 'joao.barros@idm.org.br';
+
+  // Garante criação do registro (status ativo, papel admin)
+  AcessoService.registrarSuperAdmin(email);
+
+  // Eleva papel para 'superadmin' e preenche nome canônico
+  modifyJSON('usuarios_acesso.json', function(lista) {
+    if (!Array.isArray(lista)) return lista;
+    var usr = lista.find(function(u) {
+      return String(u.email || '').toLowerCase().trim() === email;
+    });
+    if (usr) {
+      usr.papel = 'superadmin';
+      if (!usr.nome || usr.nome === 'Administrador') usr.nome = 'João Barros';
+    }
+    return lista;
+  });
+
+  // Garante ADMIN_EMAIL no PropertiesService (fallback de auth)
+  PropertiesService.getScriptProperties().setProperty('ADMIN_EMAIL', email);
+
+  Logger.info('setup_inicial', 'registrarSuperAdminCCBJ', 'SuperAdmin registrado: ' + email);
+  console.log('[setup] ✅ SuperAdmin registrado: ' + email + ' | papel: superadmin');
+  return { ok: true, email: email, papel: 'superadmin' };
+}

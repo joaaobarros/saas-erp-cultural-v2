@@ -177,6 +177,24 @@ function inicializarSistema() {
     ParceriaRepository.prepararIndice();
   }
 
+  // Fase 10 — Reuniões: garante cabeçalho em REUNIOES.Reunioes
+  if (typeof ReuniaoRepository !== 'undefined' &&
+      typeof ReuniaoRepository.prepararIndice === 'function') {
+    ReuniaoRepository.prepararIndice();
+  }
+
+  // Fase 10 — Balcão: garante cabeçalho em COMUNICACAO.Demandas
+  if (typeof BalcaoRepository !== 'undefined' &&
+      typeof BalcaoRepository.prepararIndice === 'function') {
+    BalcaoRepository.prepararIndice();
+  }
+
+  // Fase 10 — AlertasEngine: garante aba MASTER.AlertasLog
+  if (typeof AlertasEngine !== 'undefined' &&
+      typeof AlertasEngine.garantirAbaAlertasLog === 'function') {
+    AlertasEngine.garantirAbaAlertasLog();
+  }
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
@@ -521,6 +539,71 @@ function fase9_prepararIndice() {
   Logger.info('setup', 'fase9_prepararIndice',
     'Fase 9 pronta. orgId=' + orgId + '. Migrados=' + (migRes.migrados || 0));
   return { ok: true, orgId: orgId, migrados: migRes.migrados, sem_orgId: migRes.sem_orgId };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 10 — Alertas, TaskHub, Reuniões, Balcão e Auditoria Visual
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fase 10 — Prepara:
+ *   1. REUNIOES.Reunioes — índice de reuniões e encaminhamentos
+ *   2. COMUNICACAO.Demandas — índice do Balcão de Demandas
+ *   3. MASTER.AlertasLog — aba de alertas operacionais
+ * Executar uma vez após deploy da Fase 10.
+ */
+function fase10_prepararIndice() {
+  var org = getOrgConfig();
+  var resultado = { ok: true, passos: [] };
+
+  try {
+    ReuniaoRepository.prepararIndice();
+    resultado.passos.push('ReuniaoRepository: OK');
+  } catch(e) {
+    resultado.passos.push('ReuniaoRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  try {
+    BalcaoRepository.prepararIndice();
+    resultado.passos.push('BalcaoRepository: OK');
+  } catch(e) {
+    resultado.passos.push('BalcaoRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  try {
+    AlertasEngine.garantirAbaAlertasLog();
+    resultado.passos.push('AlertasLog: OK');
+  } catch(e) {
+    resultado.passos.push('AlertasLog: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  // Adicionar balcao_demandas.json à lista de migração de orgId
+  try {
+    var orgId = org.orgId;
+    modifyJSON('balcao_demandas.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      lista.forEach(function(item) { if (item && !item.orgId) item.orgId = orgId; });
+      return lista;
+    });
+    resultado.passos.push('balcao_demandas.json orgId: OK');
+  } catch(e) { /* arquivo pode não existir — normal */ }
+
+  try {
+    modifyJSON('reunioes.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      var orgId = org.orgId;
+      lista.forEach(function(item) { if (item && !item.orgId) item.orgId = orgId; });
+      return lista;
+    });
+    resultado.passos.push('reunioes.json orgId: OK');
+  } catch(e) { /* silencioso */ }
+
+  Logger.info('setup', 'fase10_prepararIndice',
+    'Fase 10 pronta. Passos: ' + resultado.passos.join(' | '));
+  return resultado;
 }
 
 /**
