@@ -38,7 +38,7 @@ if (typeof FsmGuardian !== 'undefined') {
 
 var ReceEngine = (function () {
 
-  var PASTA_IMAGENS = 'CCBJ_RECE_Imagens';
+  var PASTA_IMAGENS = (getOrgConfig().orgId || 'ORG') + '_RECE_Imagens';
 
   // ─── Criação / Edição ─────────────────────────────────────────────────────
 
@@ -202,7 +202,7 @@ var ReceEngine = (function () {
 
   function _enviarEmailPublicacao(registro, orgId) {
     try {
-      var org  = getOrgConfig().nome || 'CCBJ';
+      var org  = getOrgConfig().orgNome || getOrgConfig().nome || 'Organização';
       var convidados = _listarConvidados(registro);
       if (convidados.length === 0) return;
 

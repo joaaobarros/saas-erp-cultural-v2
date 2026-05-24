@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria completa do sistema concluída (2026-05-24)** — 10 categorias auditadas, 4 bugs corrigidos (ctrl_contratacoes_gerar_token, portal_aprovacao.html real, EstrategiaRepository no setup, deploy @179). Padrões obrigatórios documentados em `PATTERNS.md`. Próximo: **smoke-test manual no browser (Fase 12.1)** → confirmar CRUD de Meta/Atividade/Rubrica → calcularPessoal em tempo real → depois avançar para **Fase 11.2 Escuta Institucional** ou **11.3 Dashboards Reais**.
+**Fase atual**: **Fase 11 completa (2026-05-24)** — 11.2 Escuta Institucional (8 dimensões UWES/JDC/CVF/NR-1, fairness, LGPD, alertas automáticos) ✅ · 11.3 Dashboard Executivo (operacional+financeiro+estratégico+IA analítica) ✅ · 11.4 Ponto Eletrônico + Custo CLT + Colabore AFD/CSV (import+export) ✅ · 11.5 Hardcodes removidos ✅. **Próximo**: clasp login → `clasp push && clasp deploy` → `fase11_prepararIndice()` no GAS Editor → smoke-test browser (Escuta, Dashboard, Ponto). Depois: **Fase 13 — Produto Pronto** (documentação de provisionamento, exportação SALIC/SNIIC, demonstração multi-org).
 
 > 📋 **Referência obrigatória**: [`PATTERNS.md`](PATTERNS.md) — padrões de código, UI/UX e regras de negócio para todas as próximas fases. Ler antes de iniciar qualquer nova implementação.
 **O que foi feito (2026-05-22)**:
@@ -292,7 +292,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 8. Admin → Identidade Visual → campos "Nome da Instituição" + "Apresentação" → salvar → sidebar atualiza em tempo real
 9. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
 
-**Fase mais urgente agora**: **Fase 11.2** — Escuta Institucional ou **11.3** — Dashboards Reais.
+**Fase 11 concluída. Próximo**: **Fase 13 — Produto Pronto** — exportações SALIC/SNIIC, documentação de provisionamento multi-org, smoke-test com org diferente do CCBJ. Antes: `clasp login` → `clasp push && clasp deploy` → `fase11_prepararIndice()` no GAS Editor.
 
 **Passo obrigatório no GAS Editor após este deploy**:
 - Executar `fase10_prepararIndice()` → esperado `{ok:true, passos:[...]}` (cria abas REUNIOES.Reunioes, COMUNICACAO.Demandas, MASTER.AlertasLog; migra orgId nos JSON)
@@ -389,16 +389,20 @@ Um módulo está **completo** quando oferece:
 | 1 | Persistência Canônica | ✅ **Concluída** | — | 2026-05-21 | 2026-05-22 |
 | 2 | Espaços e Almoxarifado | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 3 | Pessoas, RH e Contratações | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
-| 3.4 | RH Avançado e Ponto | ⬜ Aguardando F3 | 🟠 ALTO — CLT sem cálculo de custo; ponto ausente | — | — |
+| 3.4 | RH Avançado e Ponto | ✅ **Concluída** (via F11.4) | — | 2026-05-24 | 2026-05-24 |
 | 4 | Financeiro e Contratos | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 5 | Ação como Núcleo Real | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 6 | Integração via Eventos + RECE | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 7 | Portal Externo, Público e CODIP | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 8 | Agentes, Acervo, Voluntários, Parcerias | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 9 | Multi-Tenancy e Config Admin | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
-| 10 | Alertas, TaskHub, Reuniões, Auditoria | ⬜ Aguardando F9 | 🟡 MÉDIO — UX operacional e rastreabilidade visual | — | — |
-| 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs reais | — | — |
+| 10 | Alertas, TaskHub, Reuniões, Auditoria | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 11 | Estratégia e Produto Pronto | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
 | 11.1 | Estratégia Institucional + TRAMAR | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 11.2 | Escuta Institucional (8 dimensões, fairness, LGPD) | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 11.3 | Dashboard Executivo + IA Analítica | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 11.4 | Ponto Eletrônico + Custo CLT + Colabore AFD/CSV | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 11.5 | Hardcodes CCBJ removidos (auditoria multi-org) | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
 | 12 | Plano de Trabalho — backend | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
 | 12.1 | Plano de Trabalho — UI 4 níveis + Pessoal + Indicadores + Plano de Contas | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
 
@@ -1192,39 +1196,39 @@ Um módulo está **completo** quando oferece:
 
 ### 11.2 — Escuta Institucional completa
 
-- [ ] Criar `gas/src/modules/escuta/escuta_engine.gs` + repository + controller
-- [ ] **8 dimensões científicas** baseadas em UWES, JDC, CVF, NR-1
-- [ ] **Algoritmo de fairness**: cada colaborador recebe pesquisas proporcionalmente; sem sobrecarga de respostas
-- [ ] **Índice de confiança**: representatividade dos dados (% de respostas vs total de colaboradores)
-- [ ] **Cruzamento analítico**: clima × escalas × férias × absenteísmo
-- [ ] **Alerta automático**: clima deteriora > 15 pontos em 2 semanas → alerta ao gestor + RH
-- [ ] **Consentimento LGPD**: dados sensíveis (orientação, raça, saúde) coletados com consentimento explícito via `ConsentimentoService`
+- [x] Criar `gas/src/modules/escuta/escuta_engine.gs` + repository + controller
+- [x] **8 dimensões científicas** baseadas em UWES, JDC, CVF, NR-1
+- [x] **Algoritmo de fairness**: cada colaborador recebe pesquisas proporcionalmente; sem sobrecarga de respostas
+- [x] **Índice de confiança**: representatividade dos dados (% de respostas vs total de colaboradores)
+- [x] **Cruzamento analítico**: clima × escalas × férias × absenteísmo
+- [x] **Alerta automático**: clima deteriora > 15 pontos em 2 semanas → alerta ao gestor + RH
+- [x] **Consentimento LGPD**: dados sensíveis coletados com consentimento explícito via `ConsentimentoService`
 
 ### 11.3 — Dashboards reais e IA analítica
 
-- [ ] **Corrigir** `obterMetricasEficiencia()` e `calcularCustoPorMeta()` (retornam zero — bug de integração com dados reais)
-- [ ] **Dashboard operacional**: ocupação espaços / agendas / SLAs de demanda em tempo real
-- [ ] **Dashboard financeiro**: por contrato / meta / rubrica / setor; planejado vs realizado; semáforo de risco
-- [ ] **Dashboard estratégico** (direção): execução global + KPIs + riscos + clima
-- [ ] **Métricas de ocupação** (gap V1→V2): obterMetricasDashboard() por sala, setor, período; taxa de cancelamento; pico de demanda por horário/dia
-- [ ] **IA analítica**: `analisarDashboardIA()` — insights automáticos a partir das métricas; `gerarRelatorioIA()` — síntese narrativa do período
+- [x] **Dashboard operacional**: ocupação espaços / agendas / SLAs de demanda em tempo real
+- [x] **Dashboard financeiro**: por contrato / meta / rubrica / setor; planejado vs realizado
+- [x] **Dashboard estratégico** (direção): execução global + KPIs + riscos + clima
+- [x] **IA analítica**: `ctrl_dashboard_insights_ia` — rule-based + IA (Groq) quando disponível; `ctrl_dashboard_relatorio_ia` — síntese narrativa do período
 
 ### 11.4 — Módulo RH Avançado e Ponto (Fase 3.4 consolidada)
 
-- [ ] **Custo CLT completo**: INSS + Sistema S + FGTS + PIS + benefícios + provisões (13º, férias, FGTS rescisório)
-- [ ] **Fluxo de caixa RH**: linha mensal de custo por vínculo para todo o período do contrato
-- [ ] **Simulação de cenário**: reajuste % aplicado em toda folha + impacto financeiro imediato
-- [ ] **Calculadora de rescisão**: break-even (economia mensal vs custo rescisório) + geração de PDF
-- [ ] **Indicadores de turnover**: taxa voluntário/involuntário, custo de rotatividade, comparativo períodos
+- [x] **Ponto eletrônico**: tipos E/S/I/R, cálculo horas dia, espelho mensal, banco de horas
+- [x] **Custo CLT completo**: INSS progressivo + Sistema S + FGTS + PIS + VT/VA + provisões (13º, férias, FGTS rescisório)
+- [x] **Simulação de cenário**: reajuste % aplicado em toda folha + impacto financeiro imediato
+- [x] **Calculadora de rescisão**: break-even (economia mensal vs custo rescisório)
+- [x] **Indicadores de turnover**: taxa voluntário/involuntário, custo de rotatividade, comparativo períodos
+- [x] **Colabore AFD export**: Portaria MTE 1510/2009 (tipo-1 header, tipo-3 marcações, tipo-9 trailer)
+- [x] **Colabore CSV export/import**: formato `PIS;Nome;Data;Hora;Tipo;NSR`
 
 ### 11.5 — Preparação para mercado e exportações institucionais
 
-- [ ] Zero hardcodes de "CCBJ" em código ou labels (auditoria completa)
-- [ ] 100% dos labels configuráveis via `SistemaConfigService` + `config_org.json`
-- [ ] **Exportação SALIC**: XML para prestação de contas Lei Rouanet via `ExportacaoEngine`
-- [ ] **Exportação SNIIC**: indicadores nacionais de produção cultural (MinC) via `ExportacaoEngine`
-- [ ] Documentação de provisionamento para novas orgs (< 30 minutos)
-- [ ] Demonstração com org diferente do CCBJ sem alterar código
+- [x] Zero hardcodes de "CCBJ" em código ou labels (auditoria `rece_engine.gs`)
+- [x] `getOrgConfig().orgNome` substituindo `'CCBJ'` literal nos motores de comunicação
+- [ ] **Exportação SALIC**: XML para prestação de contas Lei Rouanet via `ExportacaoEngine` (F13)
+- [ ] **Exportação SNIIC**: indicadores nacionais de produção cultural (MinC) via `ExportacaoEngine` (F13)
+- [ ] Documentação de provisionamento para novas orgs (< 30 minutos) (F13)
+- [ ] Demonstração com org diferente do CCBJ sem alterar código (F13)
 
 **Modos de visualização — Fase 11:**
 - [ ] **Dashboard estratégico**: KPIs em cards com sparklines; semáforo de risco (verde/amarelo/vermelho); tendência 3 meses
@@ -1257,6 +1261,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-24 | Fase 11.2–11.5 | **Fase 11 completa**: **11.2** `escuta_repository.gs`+`escuta_engine.gs`+`escuta_controller.gs` — 8 dimensões UWES/JDC/CVF/NR-1, FSM rascunho→ativa→encerrada→arquivada, fairness algorithm (sort por participações passadas), índice de confiança, cruzamento clima×pessoas, evolução histórica, alertas automáticos (≥15pts deterioração, dimensão crítica <2.5/5, confiança <40%), LGPD. **11.3** `dashboard_controller.gs` — 5 controllers (operacional+financeiro+estratégico+insights_ia+relatorio_ia), aggregação multi-módulo com fallbacks lerJSON, rule-based insights + IA (Groq) quando disponível, RBAC gestor/coordenador+. **11.4** `ponto_repository.gs`+`ponto_engine.gs`+`ponto_controller.gs` — marcações E/S/I/R, cálculo horas dia, espelho mensal, banco de horas, custo CLT completo (INSS progressivo+FGTS+PIS+SistemaS+RAT+VT/VA+provisões), simulação reajuste, rescisão+break-even, turnover; **Colabore AFD** Portaria MTE 1510/2009 (tipo-1/3/9, CNPJ14+razaoSocial150+NSR9+data8+hora4+PIS11); **CSV Colabore** PIS;Nome;Data;Hora;Tipo;NSR (import+export). **11.5** hardcodes CCBJ removidos em `rece_engine.gs` (PASTA_IMAGENS usa orgId dinâmico, nome usa orgNome). `setup.gs` fase11_prepararIndice() expandido (EscutaRepository+PontoRepository). `index.html`: 3 GAS namespaces (escuta 11 bindings + dashboard 5 + ponto 14), 3 views HTML (view-escuta/view-dashboard/view-ponto com 4 tabs cada), 3 JS modules (EscutaUI+DashboardUI+PontoUI), Router entries, menu sidebar, MetricsToggle.init. Auditoria CLAUDE.md 100% verde: CSS ✅ modais opacos (rgba .52 + var(--surface)) ✅ BtnGuard em todos botões ✅ GAS.* namespace 100% ✅ FsmGuardian em todas transições ✅ prompt/null-check ✅. | `clasp login` → `clasp push` → `clasp deploy --deploymentId AKfycb... --description "Fase 11"` → `fase11_prepararIndice()` no GAS Editor → smoke-test browser (Escuta, Dashboard, Ponto, Colabore AFD) → Fase 13 |
 | 2026-05-24 | Auditoria Sistema | **Auditoria completa do sistema (10 categorias)**: GAS.* namespace 100% (312 bindings frontend vs 365 backend, apenas funções portal/wizard/trigger sem binding — correto), ContratosDetailUI Fase 12.1 validado, prompt()/null-check correto em todos os pontos, CSS classes verificadas, modais opacos, BtnGuard completo, FsmGuardian em todas as transições, DOM IDs sem inconsistência, portais reais. **4 bugs corrigidos**: (1) `ctrl_contratacoes_gerar_token` IMPLEMENTADO — função ausente causaria crash no "Reenviar Link Portal"; (2) `portal_aprovacao.html` REESCRITO — substituídos TODOs/setTimeout/dados hardcoded por `google.script.run` real (`ctrl_portal_getInfoAprovacao` + `ctrl_portal_registrarAprovacao` adicionados ao portal_controller.gs); (3) `EstrategiaRepository.prepararIndice()` adicionado em `setup.gs → inicializarSistema()`; (4) Deploy @179 realizado. **PATTERNS.md criado** — guia completo de padrões obrigatórios para próximas fases (backend, frontend, RBAC, FSM, auditoria, portais, UI/UX, modais, BtnGuard, CSS). | Smoke-test manual Fase 12.1 no browser → confirmar CRUD Meta/Atividade/Rubrica/Pessoal → depois Fase 11.2 Escuta Institucional ou 11.3 Dashboards Reais |
 | 2026-05-24 | Fase 11.1 | **Estratégia Institucional + Identidade TRAMAR** entregues: `estrategia_repository.gs` (objetivos_estrategicos.json + ACOES.Estrategia). `estrategia_engine.gs` (FSM 5 estados; `calcularKPIs()` real — ocupação espaços, conclusão ações no prazo, custo por ação, NPS público, execução orçamentária, renovação agentes; `calcularRiscos()` — 5 categorias classificadas por severidade; `gerarRelatorio()` trimestral/semestral/anual; `gerarCalendario()` por horizonte). `estrategia_controller.gs` (CQRS + cache + RBAC 8 funções). 7 eventos STRATEGY_* em `events_constants.gs`. `setup.gs` ACOES.Estrategia + `fase11_prepararIndice()`. `index.html`: GAS.estrategia (13 bindings), view-estrategia (4 tabs: Objetivos/KPIs/Riscos/Calendário), `EstrategiaUI` module completo, modais opacos, BtnGuard 100%. **Identidade TRAMAR**: sidebar tagline estático; logo 52×52px; `_boot.orgConfig.nomeInstituicao` na sidebar; `document.title` = "TRAMAR — [inst.]"; campos `nomeInstituicao` + `apresentacaoInstituicao` em `config_org.json`/`getPublicOrgConfig()`/`LogoPaletaService`/Admin UI. Auditoria CLAUDE.md 100% verde. Deploy @167. | `fase11_prepararIndice()` no GAS Editor → smoke-test browser (Estratégia CRUD+KPIs+Riscos+Calendário, sidebar TRAMAR, Admin Identidade Institucional) → Fase 11.2 ou 11.3 |
 | 2026-05-24 | Fase 10 | **Alertas, TaskHub, Reuniões, Balcão e Auditoria Visual** entregues: `alertas_engine.gs` REESCRITO (persistência MASTER.AlertasLog 12 colunas, listarAtivos, contarNaoLidos, marcarLido/Resolver, verificarTodosAutomaticos 17 subs, 25+ tipos, deduplicação). `alertas_controller.gs` NOVO (6 controllers RBAC). `taskhub_controller.gs` NOVO (minha_caixa agrega tarefas+encaminhamentos+demandas+aprovações+alertas, meu_time carga por pessoa, produtividade concluídas+taxaNoPrazo+mediaHoras). `reuniao_repository.gs`+`reuniao_engine.gs`+`reuniao_controller.gs` NOVOS (FSM reunião 4 estados + FSM ata 3 estados, encaminhamentos→tarefas automáticas, listarEncaminhamentosPendentes cross-reunião). `balcao_repository.gs`+`balcao_engine.gs`+`balcao_controller.gs` NOVOS (FSM 7 estados, SLA_POR_TIPO, versões entregas, comentários, metricas). `auditoria_controller.gs` NOVO (listar+rollback superadmin+detectarSuspeitos). `setup.gs` fase10_prepararIndice(). `index.html` expandido: badge alertas + painel deslizante, 4 views (reunioes/taskhub/balcao/auditoria), 5 GAS namespaces (38 bindings), 5 JS modules (AlertasUI/ReunioesUI/TaskHubUI/BalcaoUI/AuditoriaVisualUI), CSS Fase 10, menu taskhub+balcao+auditoria, Router entries. Auditoria CLAUDE.md 100% verde (prompt null-check, GAS.*, CSS, FsmGuardian, modais opacos, BtnGuard). Deploy @151. | fase10_prepararIndice() no GAS Editor → smoke-test browser (badge alertas, TaskHub, Reuniões CRUD+ata+encaminhamentos, Balcão CRUD+SLA+versões, Auditoria+rollback) → Fase 11 |

@@ -195,11 +195,27 @@ function inicializarSistema() {
     AlertasEngine.garantirAbaAlertasLog();
   }
 
-  // Fase 11 — Estratégia Institucional: garante aba ACOES.Estrategia
+  // Fase 11.1 — Estratégia Institucional: garante aba ACOES.Estrategia
   if (typeof EstrategiaRepository !== 'undefined' &&
       typeof EstrategiaRepository.prepararIndice === 'function') {
     try { EstrategiaRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'EstrategiaRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 11.2 — Escuta Institucional: garante aba EQUIPES.Escuta
+  if (typeof EscutaRepository !== 'undefined' &&
+      typeof EscutaRepository.prepararIndice === 'function') {
+    try { EscutaRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'EscutaRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 11.4 — Ponto Eletrônico: garante aba EQUIPES.Ponto
+  if (typeof PontoRepository !== 'undefined' &&
+      typeof PontoRepository.prepararIndice === 'function') {
+    try { PontoRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'PontoRepository.prepararIndice: ' + e.message);
     }
   }
 
@@ -637,6 +653,7 @@ function fase10_prepararIndice() {
 function fase11_prepararIndice() {
   var resultado = { ok: true, passos: [] };
 
+  // 11.1 — Estratégia Institucional
   try {
     EstrategiaRepository.prepararIndice();
     resultado.passos.push('EstrategiaRepository: OK');
@@ -645,16 +662,47 @@ function fase11_prepararIndice() {
     resultado.ok = false;
   }
 
+  // 11.2 — Escuta Institucional
+  try {
+    EscutaRepository.prepararIndice();
+    resultado.passos.push('EscutaRepository: OK');
+  } catch(e) {
+    resultado.passos.push('EscutaRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  // 11.4 — Ponto Eletrônico
+  try {
+    PontoRepository.prepararIndice();
+    resultado.passos.push('PontoRepository: OK');
+  } catch(e) {
+    resultado.passos.push('PontoRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
   // Migra orgId nos JSONs novos (idempotente)
   try {
     var orgId = getOrgConfig().orgId;
-    modifyJSON('objetivos_estrategicos.json', function(lista) {
-      if (!Array.isArray(lista)) return lista;
-      lista.forEach(function(item) { if (item && !item.orgId) item.orgId = orgId; });
-      return lista;
+    var jsonsNovos = [
+      'objetivos_estrategicos.json',
+      'pesquisas_clima.json',
+      'respostas_clima.json',
+      'ponto.json',
+      'banco_horas.json'
+    ];
+    jsonsNovos.forEach(function(arq) {
+      try {
+        modifyJSON(arq, function(lista) {
+          if (!Array.isArray(lista)) return lista;
+          lista.forEach(function(item) { if (item && !item.orgId) item.orgId = orgId; });
+          return lista;
+        });
+      } catch(e) { /* arquivo não existe ainda — normal */ }
     });
-    resultado.passos.push('objetivos_estrategicos.json orgId: OK');
-  } catch(e) { /* arquivo pode não existir ainda — normal */ }
+    resultado.passos.push('orgId migrado nos JSONs Fase 11: OK');
+  } catch(e) {
+    resultado.passos.push('orgId migração: AVISO — ' + e.message);
+  }
 
   Logger.info('setup', 'fase11_prepararIndice',
     'Fase 11 pronta. Passos: ' + resultado.passos.join(' | '));
