@@ -7196,10 +7196,10 @@ var FinanceiroTabs = (function() {
     });
     if (!_carregados[tab]) {
       _carregados[tab] = true;
-      if (tab === 'contratos')      ContratosUI.carregar();
-      if (tab === 'fontes')         FontesUI.carregar();
-      if (tab === 'remanejamentos') RemanejamentosUI.carregar();
-      if (tab === 'aditivos')       AditivosUI.carregar();
+      if (tab === 'contratos')      ContratosUI.aoAbrir();
+      if (tab === 'fontes')         FontesUI.aoAbrir();
+      if (tab === 'remanejamentos') RemanejamentosUI.aoAbrir();
+      if (tab === 'aditivos')       AditivosUI.aoAbrir();
     }
   }
 
@@ -7228,8 +7228,8 @@ var FontesUI = (function() {
 
   function carregar() {
     GAS.fontesRecurso.metricas(function(r) {
-      if (!r || !r.ok) return;
-      var m = r.dados;
+      if (!r || !r.ok || !r.data) return;
+      var m = r.data;
       var el = document.getElementById('fontes-metricas');
       if (el) el.innerHTML =
         '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
@@ -7241,7 +7241,7 @@ var FontesUI = (function() {
       var lista = document.getElementById('fontes-lista');
       if (!lista) return;
       if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar fontes.</p></div>'; return; }
-      var itens = r.dados || [];
+      var itens = r.data || [];
       if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">account_balance</span><p style="font-size:13px;color:var(--muted)">Nenhuma fonte cadastrada.</p></div>'; return; }
       var html = '<table class="tabela"><thead><tr><th>Nome</th><th>Tipo</th><th>Órgão</th><th>Valor Total</th><th>Vigência</th><th>Status</th>';
       if (_podeEditar) html += '<th></th>';
@@ -7318,15 +7318,13 @@ var FontesUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
-      if (r && r.ok && r.dados) {
-        _meuNivel   = r.dados.papel || 'colaborador';
-        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
-        var btn = document.getElementById('btn-fontes-novo');
-        if (btn) btn.style.display = _podeEditar ? '' : 'none';
-      }
+    GAS.pessoas.meuNivel(function(resp) {
+      if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
+      _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+      var btn = document.getElementById('btn-fontes-novo');
+      if (btn) btn.style.display = _podeEditar ? '' : 'none';
       carregar();
-    }) : carregar();
+    });
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, mudarStatus:mudarStatus };
@@ -7353,8 +7351,8 @@ var RemanejamentosUI = (function() {
 
   function carregar() {
     GAS.remanejamentos.metricas(function(r) {
-      if (!r || !r.ok) return;
-      var m = r.dados;
+      if (!r || !r.ok || !r.data) return;
+      var m = r.data;
       var el = document.getElementById('rem-metricas');
       if (el) el.innerHTML =
         '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
@@ -7366,7 +7364,7 @@ var RemanejamentosUI = (function() {
       var lista = document.getElementById('rem-lista');
       if (!lista) return;
       if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar.</p></div>'; return; }
-      var itens = r.dados || [];
+      var itens = r.data || [];
       if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">swap_horiz</span><p style="font-size:13px;color:var(--muted)">Nenhum remanejamento registrado.</p></div>'; return; }
       var html = '<table class="tabela"><thead><tr><th>Número</th><th>Contrato</th><th>Valor</th><th>Status</th><th>Criado em</th>';
       if (_podeEditar) html += '<th>Ações</th>';
@@ -7503,15 +7501,13 @@ var RemanejamentosUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
-      if (r && r.ok && r.dados) {
-        _meuNivel   = r.dados.papel || 'colaborador';
-        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
-        var btn = document.getElementById('btn-rem-novo');
-        if (btn) btn.style.display = _podeEditar ? '' : 'none';
-      }
+    GAS.pessoas.meuNivel(function(resp) {
+      if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
+      _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+      var btn = document.getElementById('btn-rem-novo');
+      if (btn) btn.style.display = _podeEditar ? '' : 'none';
       carregar();
-    }) : carregar();
+    });
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
@@ -7545,8 +7541,8 @@ var AditivosUI = (function() {
 
   function carregar() {
     GAS.aditivos.metricas(function(r) {
-      if (!r || !r.ok) return;
-      var m = r.dados;
+      if (!r || !r.ok || !r.data) return;
+      var m = r.data;
       var el = document.getElementById('adt-metricas');
       if (el) el.innerHTML =
         '<div class="stat-card"><div class="stat-valor">'+m.total+'</div><div class="stat-label">Total</div></div>'+
@@ -7558,7 +7554,7 @@ var AditivosUI = (function() {
       var lista = document.getElementById('adt-lista');
       if (!lista) return;
       if (!r || !r.ok) { lista.innerHTML='<div class="empty-state" style="padding:20px"><p style="color:var(--danger)">Erro ao carregar.</p></div>'; return; }
-      var itens = r.dados || [];
+      var itens = r.data || [];
       if (!itens.length) { lista.innerHTML='<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">add_circle</span><p style="font-size:13px;color:var(--muted)">Nenhum aditivo registrado.</p></div>'; return; }
       var html = '<table class="tabela"><thead><tr><th>Número</th><th>Contrato</th><th>Tipo</th><th>Status</th><th>Criado em</th>';
       if (_podeEditar) html += '<th>Ações</th>';
@@ -7712,16 +7708,14 @@ var AditivosUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.perfil && GAS.perfil.obter ? GAS.perfil.obter(function(r) {
-      if (r && r.ok && r.dados) {
-        _meuNivel   = r.dados.papel || 'colaborador';
-        _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
-        _isAdmin    = ['superadmin','admin'].indexOf(_meuNivel) !== -1;
-        var btn = document.getElementById('btn-adt-novo');
-        if (btn) btn.style.display = _podeEditar ? '' : 'none';
-      }
+    GAS.pessoas.meuNivel(function(resp) {
+      if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
+      _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
+      _isAdmin    = ['superadmin','admin'].indexOf(_meuNivel) !== -1;
+      var btn = document.getElementById('btn-adt-novo');
+      if (btn) btn.style.display = _podeEditar ? '' : 'none';
       carregar();
-    }) : carregar();
+    });
   }
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
@@ -11725,7 +11719,7 @@ var ReservasUI = (function() {
       var params = { sala:esp.id, horaInicio:ht.ini, horaTermino:ht.fim, motivo:motivo, turno:turno };
       GAS.reservas.bloquear(params, datas,
         function(resp) {
-          if (resp&&resp.ok&&resp.dados&&resp.dados.ids) todosIds=todosIds.concat(resp.dados.ids);
+          if (resp&&resp.ok&&resp.data&&resp.data.ids) todosIds=todosIds.concat(resp.data.ids);
           processados+=datas.length;
           _concluir(processados,total,erros,datas,motivo,todosIds,espacos.length);
         },
