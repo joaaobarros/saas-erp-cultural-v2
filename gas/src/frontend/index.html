@@ -2523,6 +2523,9 @@ textarea.input { resize: vertical; }
           <button class="tab-btn fin-tab" data-tab="aditivos" onclick="FinanceiroTabs.abrirTab('aditivos')">
             <span class="ms ms-sm">add_circle</span> Aditivos
           </button>
+          <button class="tab-btn fin-tab" data-tab="exportacoes" onclick="FinanceiroTabs.abrirTab('exportacoes')">
+            <span class="ms ms-sm">download</span> Exportações
+          </button>
         </div>
 
         <!-- ── TAB: Contratos ── -->
@@ -2547,9 +2550,13 @@ textarea.input { resize: vertical; }
                 <label class="form-label">Número / Processo</label>
                 <input id="cf-numero" class="form-input" type="text" placeholder="Ex: OS-CCBJ-001/2025">
               </div>
+              <div class="form-group" id="cf-pronac-group" style="display:none">
+                <label class="form-label">Número PRONAC</label>
+                <input id="cf-pronac" class="form-input" type="text" placeholder="Ex: 23-1234567-8">
+              </div>
               <div class="form-group">
                 <label class="form-label">Modalidade</label>
-                <select id="cf-modalidade" class="form-input">
+                <select id="cf-modalidade" class="form-input" onchange="document.getElementById('cf-pronac-group').style.display=this.value==='lei_rouanet'?'':'none'">
                   <option value="contrato_gestao">Contrato de Gestão</option>
                   <option value="termo_fomento">Termo de Fomento</option>
                   <option value="termo_colaboracao">Termo de Colaboração</option>
@@ -2643,7 +2650,12 @@ textarea.input { resize: vertical; }
           <div id="contrato-detalhe-card" class="card oculto" style="margin-top:12px;">
             <div class="card-header" style="flex-wrap:wrap;gap:8px;">
               <div class="card-titulo"><span class="ms">manage_accounts</span> <span id="cd-titulo">Gerenciar Contrato</span></div>
-              <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fechar()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button id="btn-cd-salic" class="btn btn-ghost btn-sm" style="display:none" onclick="ContratosDetailUI.exportarSALIC()" title="Gerar XML de Prestação de Contas SALIC (Lei Rouanet)">
+                  <span class="ms ms-sm">download</span> SALIC XML
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI.fechar()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+              </div>
             </div>
             <div class="tab-bar" style="margin-bottom:12px;overflow-x:auto;flex-wrap:nowrap;">
               <button class="tab-btn cd-tab" data-tab="pt"          onclick="ContratosDetailUI.abrirTab('pt')"><span class="ms ms-sm">account_tree</span> Plano de Trabalho</button>
@@ -3047,6 +3059,52 @@ textarea.input { resize: vertical; }
             </div>
           </div>
         </div><!-- /tab aditivos -->
+
+        <!-- ── TAB: Exportações Institucionais ── -->
+        <div class="fin-tab-content" data-tab="exportacoes" style="display:none">
+
+          <!-- SALIC -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">article</span> SALIC — Lei Rouanet</div>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;">
+              Gera o XML de Prestação de Contas para o portal SALIC-BR (MinC) a partir do Plano de Trabalho do contrato Lei Rouanet.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+              <div class="form-group" style="margin:0;min-width:260px;">
+                <label class="form-label">Contrato Lei Rouanet</label>
+                <select id="exp-salic-contrato" class="form-input">
+                  <option value="">Selecione um contrato…</option>
+                </select>
+              </div>
+              <button class="btn btn-primario" id="btn-exp-salic" onclick="ExportacoesUI.baixarSALIC()">
+                <span class="ms ms-sm">download</span> Gerar XML SALIC
+              </button>
+            </div>
+          </div>
+
+          <!-- PNAB -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">table_view</span> PNAB — Política Nacional Aldir Blanc</div>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;">
+              Gera os arquivos CSV (Espaços, Agentes Culturais, Ações Realizadas e Execução Financeira) para prestação de contas da Lei Aldir Blanc (Lei nº 14.399/2022).
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Ano de referência</label>
+                <input id="exp-pnab-ano" class="form-input" type="number" style="width:110px;" value="">
+              </div>
+              <div id="exp-pnab-resultado" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+              <button class="btn btn-primario" id="btn-exp-pnab" onclick="ExportacoesUI.gerarPNAB()">
+                <span class="ms ms-sm">table_view</span> Gerar CSVs PNAB
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /tab exportacoes -->
 
       </div><!-- /view-financeiro -->
 
@@ -6238,10 +6296,12 @@ var GAS = {
     gerarCertificado:       function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_gerarCertificado(d); }
   },
   exportacao: {
-    codip:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_codip(p||{}); },
-    salic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_salic(p||{}); },
-    sniic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_sniic(p||{}); },
-    inscricoesCSV:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_inscricoes_csv(p||{}); }
+    codip:           function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_codip(p||{}); },
+    salic:           function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_salic(p||{}); },
+    salicContrato:   function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_salic(p||{}); },
+    sniic:           function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_sniic(p||{}); },
+    pnab:            function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_pnab(p||{}); },
+    inscricoesCSV:   function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_inscricoes_csv(p||{}); }
   },
   // ── Fase 8 ───────────────────────────────────────────────────────────────
   agentes: {
@@ -7197,7 +7257,10 @@ var ContratosUI = (function() {
     document.getElementById('cf-id').value              = dados && dados.id || '';
     document.getElementById('cf-nome').value            = dados && dados.nome || '';
     document.getElementById('cf-numero').value          = dados && dados.numero || '';
-    document.getElementById('cf-modalidade').value      = dados && dados.modalidade || 'contrato_gestao';
+    var modalidade = dados && dados.modalidade || 'contrato_gestao';
+    document.getElementById('cf-modalidade').value      = modalidade;
+    document.getElementById('cf-pronac-group').style.display = modalidade === 'lei_rouanet' ? '' : 'none';
+    document.getElementById('cf-pronac').value          = dados && dados.pronac || '';
     document.getElementById('cf-fonte').value           = dados && dados.fonteRecurso || '';
     document.getElementById('cf-orgao-financiador').value = dados && dados.orgaoFinanciador || '';
     document.getElementById('cf-valor').value           = fmtMoeda(dados && dados.valorTotal || 0);
@@ -7226,6 +7289,7 @@ var ContratosUI = (function() {
       nome:               nome,
       numero:             document.getElementById('cf-numero').value.trim(),
       modalidade:         document.getElementById('cf-modalidade').value || 'contrato_gestao',
+      pronac:             document.getElementById('cf-pronac').value.trim(),
       fonteRecurso:       fonte,
       orgaoFinanciador:   document.getElementById('cf-orgao-financiador').value.trim(),
       valorTotal:         parseMoeda(document.getElementById('cf-valor').value),
@@ -7304,6 +7368,27 @@ var ContratosDetailUI = (function() {
     _cid = null; _obj = null;
   }
 
+  function exportarSALIC() {
+    if (!_cid) return;
+    BtnGuard.wrap('btn-cd-salic', 'Gerando XML SALIC…', function(done) {
+      GAS.exportacao.salicContrato({ contratoId: _cid }, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar SALIC.'); return; }
+        var xml    = resp.data && resp.data.xml;
+        var nome   = resp.data && resp.data.nomeArquivo || ('SALIC_' + _cid + '.xml');
+        if (!xml)  { Toast.erro('XML vazio.'); return; }
+        var blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href = url; a.download = nome;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
+        Toast.sucesso('XML SALIC gerado: ' + nome);
+      }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
+    });
+  }
+
   function abrirTab(tab) {
     _setTab(tab);
     if (tab === 'pt')           _carregarContrato(_renderPT);
@@ -7318,6 +7403,8 @@ var ContratosDetailUI = (function() {
     GAS.contratos.obter(_cid, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao carregar contrato.'); return; }
       _obj = resp.data;
+      var btnSalic = document.getElementById('btn-cd-salic');
+      if (btnSalic) btnSalic.style.display = (_obj && _obj.modalidade === 'lei_rouanet') ? '' : 'none';
       if (cb) cb();
     });
   }
@@ -8131,6 +8218,8 @@ var ContratosDetailUI = (function() {
     _updGestao: _updGestao,
     // Plano de Contas
     carregarPlanoContas: carregarPlanoContas,
+    // Exportação SALIC
+    exportarSALIC: exportarSALIC,
     // Compat legada (BtnGuard ainda chama via HTML antigo se houver cache)
     adicionarLinhaMemoria: addLinhaMemoria,
     _atualizarLinha: _updLinha,
@@ -8162,12 +8251,105 @@ var FinanceiroTabs = (function() {
       if (tab === 'fontes')         FontesUI.aoAbrir();
       if (tab === 'remanejamentos') RemanejamentosUI.aoAbrir();
       if (tab === 'aditivos')       AditivosUI.aoAbrir();
+      if (tab === 'exportacoes')    ExportacoesUI.aoAbrir();
     }
   }
 
   function aoAbrir() { abrirTab(_tabAtual); }
 
   return { abrirTab:abrirTab, aoAbrir:aoAbrir };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// EXPORTAÇÕES INSTITUCIONAIS — Fase 13.1
+// ═══════════════════════════════════════════════════════════
+var ExportacoesUI = (function() {
+
+  function _baixarArquivo(conteudo, nomeArquivo, tipo) {
+    var blob = new Blob([conteudo], { type: tipo + ';charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
+  }
+
+  function aoAbrir() {
+    // Popula o select de contratos Lei Rouanet
+    var sel = document.getElementById('exp-salic-contrato');
+    if (!sel || sel.options.length > 1) return;
+    GAS.contratos.listar({}, function(resp) {
+      if (!resp || !resp.ok) return;
+      var lista = (resp.data || []).filter(function(c) { return c.modalidade === 'lei_rouanet'; });
+      lista.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome + (c.numero ? ' (' + c.numero + ')' : '');
+        sel.appendChild(opt);
+      });
+      if (!lista.length) {
+        var opt = document.createElement('option');
+        opt.disabled = true;
+        opt.textContent = 'Nenhum contrato Lei Rouanet cadastrado';
+        sel.appendChild(opt);
+      }
+    });
+    // Preenche ano atual no PNAB
+    var anoEl = document.getElementById('exp-pnab-ano');
+    if (anoEl && !anoEl.value) anoEl.value = new Date().getFullYear();
+  }
+
+  function baixarSALIC() {
+    var contratoId = (document.getElementById('exp-salic-contrato') || {}).value;
+    if (!contratoId) { Toast.aviso('Selecione um contrato Lei Rouanet.'); return; }
+    BtnGuard.wrap('btn-exp-salic', 'Gerando XML SALIC…', function(done) {
+      GAS.exportacao.salicContrato({ contratoId: contratoId }, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar SALIC.'); return; }
+        var xml  = resp.data && resp.data.xml;
+        var nome = resp.data && resp.data.nomeArquivo || ('SALIC_' + contratoId + '.xml');
+        if (!xml) { Toast.erro('XML vazio.'); return; }
+        _baixarArquivo(xml, nome, 'application/xml');
+        Toast.sucesso('XML SALIC baixado: ' + nome);
+      }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
+    });
+  }
+
+  function gerarPNAB() {
+    var anoEl = document.getElementById('exp-pnab-ano');
+    var ano   = anoEl ? parseInt(anoEl.value) || new Date().getFullYear() : new Date().getFullYear();
+    BtnGuard.wrap('btn-exp-pnab', 'Gerando CSVs PNAB…', function(done) {
+      GAS.exportacao.pnab({ ano: ano }, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar PNAB.'); return; }
+        var d   = resp.data || {};
+        var anoStr = String(ano);
+        var arquivos = [
+          { chave: 'espacos',    label: 'Espaços',         arquivo: 'PNAB_' + anoStr + '_espacos.csv' },
+          { chave: 'agentes',    label: 'Agentes',         arquivo: 'PNAB_' + anoStr + '_agentes.csv' },
+          { chave: 'acoes',      label: 'Ações',           arquivo: 'PNAB_' + anoStr + '_acoes.csv' },
+          { chave: 'financeiro', label: 'Financeiro',      arquivo: 'PNAB_' + anoStr + '_financeiro.csv' }
+        ];
+        var res = document.getElementById('exp-pnab-resultado');
+        if (res) res.innerHTML = '';
+        arquivos.forEach(function(arq) {
+          if (!d[arq.chave]) return;
+          _baixarArquivo(d[arq.chave], arq.arquivo, 'text/csv');
+          if (res) {
+            var chip = document.createElement('span');
+            chip.className = 'badge badge-success';
+            chip.textContent = '✓ ' + arq.label;
+            res.appendChild(chip);
+          }
+        });
+        var meta = d.meta || {};
+        Toast.sucesso('PNAB ' + anoStr + ' gerado: ' + (meta.totalAcoes||0) + ' ações, ' + (meta.totalAgentes||0) + ' agentes, ' + (meta.totalContratos||0) + ' contratos.');
+      }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
+    });
+  }
+
+  return { aoAbrir: aoAbrir, baixarSALIC: baixarSALIC, gerarPNAB: gerarPNAB };
 })();
 
 // ═══════════════════════════════════════════════════════════
