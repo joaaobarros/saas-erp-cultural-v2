@@ -336,6 +336,8 @@ body {
 .view { display: none; animation: fadeIn var(--mid) var(--ease); }
 .view.ativa { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes modalEntrar { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-box-animar { animation: modalEntrar .22s ease forwards; }
 
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
@@ -6483,7 +6485,9 @@ var GAS = {
     recusarFerias:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_recusar_ferias(id,m||''); },
     cancelarFerias:     function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_cancelar_ferias(id,m||''); },
     concluirFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_concluir_ferias(id,d||{}); },
-    reenviarFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_reenviar_ferias(id,d||{}); }
+    reenviarFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_reenviar_ferias(id,d||{}); },
+    // ── GAP-07 corrigido ──
+    solicitarAjuste:    function(id,obs,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_ajuste_ferias(id,obs||''); }
   },
   // Solicitações de Reserva (workflow de aprovação)
   solicitacoes: {
@@ -6501,11 +6505,16 @@ var GAS = {
     metricas:    function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_metricas(); }
   },
   pessoas: {
-    listar:       function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar(f||{}); },
-    salvar:       function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar(d); },
-    metricas:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_metricas(); },
-    meuNivel:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_meu_nivel(); },
-    mudarStatus:  function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_mudar_status(id,s); },
+    listar:               function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar(f||{}); },
+    salvar:               function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar(d); },
+    metricas:             function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_metricas(); },
+    meuNivel:             function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_meu_nivel(); },
+    mudarStatus:          function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_mudar_status(id,s); },
+    // ── GAP-05, GAP-06, GAP-08 corrigidos ──
+    obter:                function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_obter(id); },
+    registrarDesligamento:function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_registrar_desligamento(d); },
+    autocomplete:         function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_autocomplete(); },
+    porFuncao:            function(fn,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_por_funcao(fn); },
     // Afastamentos
     listarAfastamentos:    function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_afastamentos(id||null); },
     salvarAfastamento:     function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_salvar_afastamento(d); },
@@ -6650,9 +6659,13 @@ var GAS = {
     salvar:      function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_salvar(d); },
     metricas:    function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_metricas(); },
     status:      function(id,s,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_status(id,s,m||''); },
-    manutencao:  function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_manutencao(id,d||''); },
-    devolver:    function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_devolver(id,m||''); },
-    baixar:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_baixar(id,m||''); }
+    manutencao:        function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_manutencao(id,d||''); },
+    devolver:          function(id,m,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_devolver(id,m||''); },
+    baixar:            function(id,m,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_baixar(id,m||''); },
+    // ── GAP-02, GAP-03, GAP-04 corrigidos ──
+    concluirManutencao:function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_concluir_manutencao(id); },
+    registrarUso:      function(d,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_registrar_uso(d); },
+    categorias:        function(cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ativos_categorias(); }
   },
   reservas: {
     listar:                  function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_listar(f||{}); },
@@ -6687,7 +6700,9 @@ var GAS = {
     aprovar:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_aprovar(id); },
     retirar:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_retirar(id); },
     devolver:         function(id,obs,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_devolver(id,obs||''); },
-    cancelar:         function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_cancelar(id,m||''); }
+    cancelar:         function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_cancelar(id,m||''); },
+    // ── GAP-01 corrigido ──
+    salvarItem:       function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_salvar_item(d); }
   },
   acoes: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_listar(f||{}); },
@@ -6902,9 +6917,10 @@ function escaparHtml(valor) {
 function _abrirModalSimples(html, selectId, selectVal) {
   var overlay = document.createElement('div');
   overlay.className = 'modal-simples';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   var box = document.createElement('div');
-  box.style.cssText = 'background:var(--surface);border-radius:12px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+  box.className = 'modal-box-animar';
+  box.style.cssText = 'background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);';
   box.innerHTML = html;
   overlay.appendChild(box);
   overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });

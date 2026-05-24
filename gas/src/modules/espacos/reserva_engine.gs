@@ -399,6 +399,11 @@ var ReservaEngine = (function () {
       });
     }
 
+    // Chamar orquestrador para reserva confirmada (cria tarefa de preparação)
+    if (novoStatus === 'confirmada' || novoStatus === STATUS_RESERVA.CONFIRMADO) {
+      try { IntegracaoOrquestrador.onReservaConfirmada(id, orgId, autor); } catch (_) {}
+    }
+
     Logger.info('reserva_engine', 'mudarStatus', id + ': ' + reserva.status + ' → ' + novoStatus);
     return { id: id, de: reserva.status, para: novoStatus };
   }

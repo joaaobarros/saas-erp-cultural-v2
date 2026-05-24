@@ -15,7 +15,7 @@
  *   - Consequências secundárias que podem ser adiadas (ex: notificar RECE após reserva)
  *   - Automações não-críticas disparadas por eventos
  *
- * STATUS: Fase 5 — onAcaoIniciada e onAcaoConcluida com lógica real.
+ * STATUS: Fase 15 — onReservaConfirmada, onAcaoConcluida, onContratoVencendo e onProtocoloChaveAtrasado ativos.
  *
  * @depends event_bus_backend.gs, events_constants.gs
  */
@@ -35,8 +35,18 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'reserva', entidadeId: reservaId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onReservaConfirmada'
       });
-      // Fase 2: TarefaEngine.criarAutomatica('reserva_aprovada', reservaId, orgId, email);
-      // Fase 5: ActionEngine.associarRecurso(acaoId, 'reserva', reservaId, orgId);
+      // Criar tarefa de preparação de espaço (best-effort: falha não cancela reserva)
+      try {
+        if (typeof TarefaEngine !== 'undefined') {
+          TarefaEngine.criarAutomatica('reserva_aprovada', reservaId, orgId, email, {
+            titulo: 'Preparar espaço para reserva',
+            modulo: 'espacos',
+            prioridade: 'alta'
+          });
+        }
+      } catch (eTarefa) {
+        Logger.warn('integracao_orquestrador', 'onReservaConfirmada:tarefa', eTarefa.message);
+      }
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onReservaConfirmada', e.message);
     }
@@ -70,8 +80,20 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'acao', entidadeId: acaoId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onAcaoConcluida'
       });
-      // Fase 6: RelatoriosEngine.solicitarPreenchimentoCODIP(acaoId, orgId);
-      // Fase 7: PublicoEngine.enviarPesquisaSatisfacao(acaoId, orgId);
+      // Gerar alerta de CODIP pendente para gestores financeiros (best-effort)
+      try {
+        if (typeof AlertasEngine !== 'undefined') {
+          AlertasEngine.gerarAlerta({
+            tipo: 'CODIP_PENDENTE',
+            modulo: 'acoes',
+            entidadeId: acaoId,
+            orgId: orgId,
+            mensagem: 'Ação concluída — verifique exportação CODIP no módulo Financeiro'
+          });
+        }
+      } catch (eAlerta) {
+        Logger.warn('integracao_orquestrador', 'onAcaoConcluida:alerta', eAlerta.message);
+      }
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onAcaoConcluida', e.message);
     }
@@ -89,7 +111,16 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'contrato', entidadeId: contratoId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onContratoVencendo'
       });
-      // Fase 4: TarefaEngine.criarAutomatica('contrato_vencendo', contratoId, orgId, email);
+      // Criar tarefa de renovação (best-effort)
+      try {
+        if (typeof TarefaEngine !== 'undefined') {
+          TarefaEngine.criarAutomatica('contrato_vencendo', contratoId, orgId, email, {
+            modulo: 'financeiro', prioridade: 'alta'
+          });
+        }
+      } catch (eTarefa) {
+        Logger.warn('integracao_orquestrador', 'onContratoVencendo:tarefa', eTarefa.message);
+      }
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onContratoVencendo', e.message);
     }
@@ -125,7 +156,16 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'protocolo_chave', entidadeId: protocoloId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onProtocoloChaveAtrasado'
       });
-      // Fase 2: TarefaEngine.criarAutomatica('chave_atrasada', protocoloId, orgId, email);
+      // Criar tarefa de cobrança (best-effort)
+      try {
+        if (typeof TarefaEngine !== 'undefined') {
+          TarefaEngine.criarAutomatica('chave_atrasada', protocoloId, orgId, email, {
+            modulo: 'espacos', prioridade: 'alta'
+          });
+        }
+      } catch (eTarefa) {
+        Logger.warn('integracao_orquestrador', 'onProtocoloChaveAtrasado:tarefa', eTarefa.message);
+      }
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onProtocoloChaveAtrasado', e.message);
     }

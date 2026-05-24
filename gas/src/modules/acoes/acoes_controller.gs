@@ -31,11 +31,11 @@ function ctrl_acoes_listar(filtros) {
     var orgId = getOrgConfig().orgId;
     var cacheKey = _CACHE_KEY_ACOES + '_' + JSON.stringify(filtros);
 
-    var cached = CacheService.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(cacheKey);
+    if (cached) return cached;
 
     var lista = AcaoRepository.listar(orgId, filtros);
-    CacheService.set(cacheKey, JSON.stringify(lista), 120);
+    AppCache.set(cacheKey, lista, 120);
     return lista;
   }, 'ctrl_acoes_listar');
 }
@@ -60,10 +60,10 @@ function ctrl_acoes_obter(id) {
 function ctrl_acoes_metricas() {
   return GasResponse.wrap(function() {
     var orgId   = getOrgConfig().orgId;
-    var cached  = CacheService.get(_CACHE_KEY_METRICAS_ACOES);
-    if (cached) return JSON.parse(cached);
+    var cached  = AppCache.get(_CACHE_KEY_METRICAS_ACOES);
+    if (cached) return cached;
     var metricas = AcaoEngine.obterMetricas(orgId);
-    CacheService.set(_CACHE_KEY_METRICAS_ACOES, JSON.stringify(metricas), 120);
+    AppCache.set(_CACHE_KEY_METRICAS_ACOES, metricas, 120);
     return metricas;
   }, 'ctrl_acoes_metricas');
 }
@@ -90,7 +90,7 @@ function ctrl_acoes_painel(acaoId) {
  */
 function ctrl_acoes_salvar(dados) {
   return GasResponse.wrap(function() {
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeEscrever(email);
 
     var orgId    = getOrgConfig().orgId;
@@ -114,7 +114,7 @@ function ctrl_acoes_mudar_status(params) {
     if (!params.id)        throw new Error('ID obrigatório.');
     if (!params.novoStatus) throw new Error('novoStatus obrigatório.');
 
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeMudarStatus(email, params.novoStatus);
 
     var orgId     = getOrgConfig().orgId;
@@ -135,7 +135,7 @@ function ctrl_acoes_mudar_status(params) {
 function ctrl_acoes_excluir(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('ID obrigatório.');
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeExcluir(email);
 
     var orgId     = getOrgConfig().orgId;
@@ -150,16 +150,17 @@ function ctrl_acoes_excluir(id) {
 // ─── RBAC helpers ─────────────────────────────────────────────────────────
 
 function _assertPodeEscrever(email) {
-  var acesso = AcessoService.obterAcesso(email);
+  var acesso = AcessoService.verificar(email);
+  var papel  = (acesso.registro && acesso.registro.papel ? acesso.registro.papel : '').toLowerCase();
   var papeis = ['admin', 'superadmin', 'gestor', 'coordenador', 'financeiro'];
-  if (papeis.indexOf((acesso.papel || '').toLowerCase()) === -1) {
+  if (papeis.indexOf(papel) === -1) {
     throw new Error('Sem permissão para criar/editar ações. Papel necessário: coordenador ou superior.');
   }
 }
 
 function _assertPodeMudarStatus(email, novoStatus) {
-  var acesso = AcessoService.obterAcesso(email);
-  var papel  = (acesso.papel || '').toLowerCase();
+  var acesso = AcessoService.verificar(email);
+  var papel  = (acesso.registro && acesso.registro.papel ? acesso.registro.papel : '').toLowerCase();
   var papeis = ['admin', 'superadmin', 'gestor', 'coordenador'];
   if (papeis.indexOf(papel) === -1) {
     throw new Error('Sem permissão para alterar status de ações.');
@@ -167,26 +168,14 @@ function _assertPodeMudarStatus(email, novoStatus) {
 }
 
 function _assertPodeExcluir(email) {
-  var acesso = AcessoService.obterAcesso(email);
-  var papel  = (acesso.papel || '').toLowerCase();
+  var acesso = AcessoService.verificar(email);
+  var papel  = (acesso.registro && acesso.registro.papel ? acesso.registro.papel : '').toLowerCase();
   if (['admin', 'superadmin'].indexOf(papel) === -1) {
     throw new Error('Somente administradores podem excluir ações.');
   }
 }
 
 function _invalidarCache() {
-  try {
-    var cache = CacheService2.getScriptCache ? CacheService2.getScriptCache() :
-                (typeof CacheService !== 'undefined' && CacheService.getScriptCache ?
-                  CacheService.getScriptCache() : null);
-    if (!cache) return;
-    // Invalidar chaves conhecidas — CacheService wrapper personalizado pode não ter remove()
-    var keys = [_CACHE_KEY_METRICAS_ACOES];
-    keys.forEach(function(k) {
-      try { cache.remove(k); } catch(_) {}
-    });
-  } catch(_) {}
-  // Invalidar pelo wrapper CacheService (usado no resto do sistema)
-  try { CacheService.invalidate(_CACHE_KEY_ACOES); }      catch(_) {}
-  try { CacheService.invalidate(_CACHE_KEY_METRICAS_ACOES); } catch(_) {}
+  AppCache.remove(_CACHE_KEY_ACOES);
+  AppCache.remove(_CACHE_KEY_METRICAS_ACOES);
 }

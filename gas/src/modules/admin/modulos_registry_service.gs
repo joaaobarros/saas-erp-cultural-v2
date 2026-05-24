@@ -14,16 +14,36 @@
 
 var ModulosRegistryService = (function() {
 
+  // Catálogo completo — 20 módulos reais do sistema (expandido em 2026-05-24)
+  // Removido: RELATORIOS (não existe view correspondente; exportações ficam em Financeiro)
   var CATALOGO = [
-    { id: 'ADMIN',        label: 'Administração',       descricao: 'Configurações e cadastros base do sistema' },
-    { id: 'TAREFAS',      label: 'Tarefas',             descricao: 'Gestão de tarefas e processos internos' },
-    { id: 'PESSOAS',      label: 'Pessoas / RH',        descricao: 'Colaboradores, vínculos, PCCS, escalas' },
-    { id: 'FINANCEIRO',   label: 'Financeiro',          descricao: 'Contratos, rubricas, orçamentos, aditivos' },
-    { id: 'ACOES',        label: 'Ações',               descricao: 'Programação, habilitações, agentes culturais' },
-    { id: 'ESPACOS',      label: 'Infraestrutura',      descricao: 'Reservas, chaves, ativos, almoxarifado' },
-    { id: 'REUNIOES',     label: 'Reuniões',            descricao: 'Atas, encaminhamentos, decisões' },
-    { id: 'COMUNICACAO',  label: 'Comunicação',         descricao: 'Demandas criativas, RECE, entregas' },
-    { id: 'RELATORIOS',   label: 'Relatórios',          descricao: 'CODIP, relatórios de prestação de contas' }
+    // ── Núcleo institucional ──────────────────────────────────────────────
+    { id: 'ADMIN',         label: 'Administração',          descricao: 'Configurações e cadastros base do sistema' },
+    { id: 'DASHBOARD',     label: 'Dashboard Executivo',    descricao: 'KPIs, alertas, visão consolidada da instituição' },
+    { id: 'TAREFAS',       label: 'Tarefas',                descricao: 'Gestão de tarefas e processos internos' },
+    { id: 'ESTRATEGIA',    label: 'Estratégia',             descricao: 'OKRs, objetivos estratégicos, metas institucionais' },
+    // ── Pessoas e RH ─────────────────────────────────────────────────────
+    { id: 'PESSOAS',       label: 'Pessoas / RH',           descricao: 'Colaboradores, vínculos, PCCS, escalas, férias' },
+    { id: 'PONTO',         label: 'Ponto Eletrônico',       descricao: 'Registros de ponto, espelho, AFD, custo CLT' },
+    { id: 'ESCUTA',        label: 'Escuta Institucional',   descricao: 'Clima organizacional, pesquisas NR-1, UWES' },
+    { id: 'VOLUNTARIOS',   label: 'Voluntários',            descricao: 'Cadastro e gestão de voluntários culturais' },
+    // ── Programação cultural ──────────────────────────────────────────────
+    { id: 'ACOES',         label: 'Ações',                  descricao: 'Programação cultural, habilitações, agentes' },
+    { id: 'AGENTES',       label: 'Agentes Culturais',      descricao: 'Cadastro de agentes e produtores culturais' },
+    { id: 'PUBLICO',       label: 'Público / Inscrições',   descricao: 'Inscrições, presenças, certificados, SNIIC' },
+    { id: 'ACERVO',        label: 'Acervo',                 descricao: 'Acervo institucional, patrimônio cultural' },
+    // ── Financeiro e contratos ────────────────────────────────────────────
+    { id: 'FINANCEIRO',    label: 'Financeiro',             descricao: 'Contratos, rubricas, orçamentos, SALIC, CODIP' },
+    { id: 'PARCERIAS',     label: 'Parcerias',              descricao: 'Convênios, parcerias institucionais, cessões' },
+    // ── Infraestrutura ───────────────────────────────────────────────────
+    { id: 'ESPACOS',       label: 'Infraestrutura',         descricao: 'Reservas, chaves, ativos, almoxarifado' },
+    { id: 'REUNIOES',      label: 'Reuniões',               descricao: 'Atas, pautas, encaminhamentos, decisões' },
+    // ── Comunicação ──────────────────────────────────────────────────────
+    { id: 'COMUNICACAO',   label: 'Comunicação',            descricao: 'Demandas criativas, RECE, coberturas' },
+    { id: 'BALCAO',        label: 'Balcão de Comunicação',  descricao: 'Atendimento de demandas de cobertura externa' },
+    { id: 'TASKHUB',       label: 'TaskHub',                descricao: 'Hub centralizado de tarefas cross-módulo' },
+    // ── Governança ───────────────────────────────────────────────────────
+    { id: 'AUDITORIA',     label: 'Auditoria',              descricao: 'Log de auditoria, rastreabilidade, trilha de acesso' }
   ];
 
   function _lerConfig(orgId) {

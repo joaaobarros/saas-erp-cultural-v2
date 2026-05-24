@@ -51,7 +51,7 @@ function ctrl_mapa_acao_obter(id) {
  */
 function ctrl_mapa_acao_salvar(dados) {
   return GasResponse.wrap(function() {
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeEscrever(email);
 
     var orgId     = getOrgConfig().orgId;
@@ -71,7 +71,7 @@ function ctrl_mapa_acao_criar_de_espacos(params) {
     if (!params.acaoId) throw new Error('acaoId obrigatório.');
     if (!params.nome)   throw new Error('nome do local obrigatório.');
 
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeEscrever(email);
 
     var orgId     = getOrgConfig().orgId;
@@ -88,7 +88,7 @@ function ctrl_mapa_acao_criar_de_espacos(params) {
 function ctrl_mapa_acao_excluir(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('ID obrigatório.');
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeExcluir(email);
 
     var orgId     = getOrgConfig().orgId;
@@ -111,7 +111,7 @@ function ctrl_mapa_acao_reservar_espaco(params) {
     if (!params.horaInicio) throw new Error('horaInicio obrigatório.');
     if (!params.horaTermino) throw new Error('horaTermino obrigatório.');
 
-    var email = AcessoService.verificar();
+    var email = getEmailSessao();
     _assertPodeEscrever(email);
 
     var orgId     = getOrgConfig().orgId;
@@ -124,16 +124,17 @@ function ctrl_mapa_acao_reservar_espaco(params) {
 // ─── RBAC helpers ─────────────────────────────────────────────────────────
 
 function _assertPodeEscrever_mapa(email) {
-  var acesso = AcessoService.obterAcesso(email);
+  var acesso = AcessoService.verificar(email);
+  var papel  = (acesso.registro && acesso.registro.papel ? acesso.registro.papel : '').toLowerCase();
   var papeis = ['admin', 'superadmin', 'gestor', 'coordenador', 'financeiro'];
-  if (papeis.indexOf((acesso.papel || '').toLowerCase()) === -1) {
+  if (papeis.indexOf(papel) === -1) {
     throw new Error('Sem permissão para criar/editar mapas de evento.');
   }
 }
 
 function _assertPodeExcluir_mapa(email) {
-  var acesso = AcessoService.obterAcesso(email);
-  var papel  = (acesso.papel || '').toLowerCase();
+  var acesso = AcessoService.verificar(email);
+  var papel  = (acesso.registro && acesso.registro.papel ? acesso.registro.papel : '').toLowerCase();
   if (['admin', 'superadmin', 'gestor'].indexOf(papel) === -1) {
     throw new Error('Somente gestores e administradores podem excluir mapas.');
   }
