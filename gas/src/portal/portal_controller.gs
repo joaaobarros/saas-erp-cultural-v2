@@ -309,6 +309,77 @@ function ctrl_portal_listarEspacos() {
   }, 'ctrl_portal_listarEspacos');
 }
 
+// ─── Aprovação externa via link (portal_aprovacao.html) ──────────────────────
+
+/**
+ * Retorna informações de uma solicitação de reserva para o portal de aprovação.
+ * Usado pelo portal_aprovacao.html ao carregar (?secao=aprovacao&id=SOL-xxx).
+ * Não exige autenticação de usuário GAS — o "token" de acesso é o próprio id
+ * passado via URL (fluxo interno para gestores sem login externo).
+ *
+ * @param {Object} dados — { id, email } — email do gestor validado por query param
+ */
+function ctrl_portal_getInfoAprovacao(dados) {
+  return GasResponse.wrap(function() {
+    dados = dados || {};
+    if (!dados.id) throw new Error('ID da solicitação obrigatório.');
+
+    var orgId = getOrgConfig().orgId;
+    var sol   = SolicitacaoReservaRepository.buscarPorId(dados.id, orgId);
+    if (!sol) throw new Error('Solicitação não encontrada.');
+
+    // Não expor dados sensíveis no portal público — retornar apenas campos necessários
+    return {
+      id:           sol.id,
+      tipo:         sol.tipo || 'cessao_pauta',
+      status:       sol.status,
+      solicitante:  sol.solicitanteNome || sol.solicitanteEmail || '—',
+      espacoId:     sol.espacoId,
+      espacoNome:   sol.espacoNome || sol.espacoId,
+      dataDesejada: sol.dataDesejada,
+      horaInicio:   sol.horaInicio,
+      horaTermino:  sol.horaTermino,
+      justificativa: sol.justificativa || '',
+      criadoEm:     sol.criadoEm
+    };
+  }, 'ctrl_portal_getInfoAprovacao');
+}
+
+/**
+ * Registra a decisão de aprovação/recusa via portal_aprovacao.html.
+ * @param {Object} dados — { id, decisao: 'aprovar'|'recusar', motivo, email }
+ */
+function ctrl_portal_registrarAprovacao(dados) {
+  return GasResponse.wrap(function() {
+    dados = dados || {};
+    if (!dados.id)      throw new Error('ID obrigatório.');
+    if (!dados.decisao) throw new Error('Decisão obrigatória.');
+    if (dados.decisao === 'recusar' && !(dados.motivo || '').trim())
+      throw new Error('Motivo obrigatório para recusa.');
+
+    var orgId = getOrgConfig().orgId;
+    var email = dados.email || 'portal_aprovacao';
+
+    if (dados.decisao === 'aprovar') {
+      SolicitacaoReservaEngine.aprovar(dados.id, email);
+    } else {
+      SolicitacaoReservaEngine.recusar(dados.id, dados.motivo || '', email);
+    }
+
+    AuditoriaService.registrar(
+      dados.decisao === 'aprovar' ? 'SOLICITACAO_APROVADA_PORTAL' : 'SOLICITACAO_RECUSADA_PORTAL',
+      'portal',
+      { id: dados.id, decisao: dados.decisao, motivo: dados.motivo || '', por: email }
+    );
+
+    return {
+      mensagem: dados.decisao === 'aprovar'
+        ? 'Solicitação aprovada com sucesso. O solicitante será notificado.'
+        : 'Solicitação recusada. O solicitante será notificado com o motivo informado.'
+    };
+  }, 'ctrl_portal_registrarAprovacao');
+}
+
 // ─── Pesquisa de satisfação (pública, pós-evento) ─────────────────────────────
 
 /**

@@ -561,6 +561,45 @@ function ctrl_contratacoes_selecionar_cotacao(id, indexCotacao) {
   }, 'ctrl_contratacoes_selecionar_cotacao');
 }
 
+// ── Gerar / reenviar link do portal do contratado ────────────────
+
+/**
+ * Gera (ou regenera) o tokenPortal de uma solicitação e devolve o link
+ * para o contratado acompanhar o processo via portal_processo.html.
+ *
+ * Só é possível para solicitações já em execução (tokenPortal existente)
+ * ou a partir do momento em que o processo é instruído.
+ * Acesso: financeiro, admin, superadmin.
+ */
+function ctrl_contratacoes_gerar_token(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(nivel) === -1)
+      throw new Error('Apenas financeiro e administradores podem reenviar o link do portal.');
+    if (!id) throw new Error('ID da solicitação é obrigatório.');
+
+    var sol = SolicitacaoRepository.buscarPorId(ctx.orgId, id);
+    if (!sol) throw new Error('Solicitação não encontrada: ' + id);
+
+    // Regenerar token (90 dias de validade)
+    sol.tokenPortal    = Utilities.getUuid();
+    var expiracao      = new Date();
+    expiracao.setDate(expiracao.getDate() + 90);
+    sol.tokenExpiracao = expiracao.toISOString();
+    SolicitacaoRepository.salvar(ctx.orgId, sol);
+
+    AuditoriaService.registrar('CONTRATACAO_TOKEN_REGENERADO', 'contratacoes',
+      { id: id, numero: sol.numero, por: ctx.email });
+
+    var appUrl = '';
+    try { appUrl = ScriptApp.getService().getUrl() || ''; } catch (_) {}
+    var link = appUrl ? appUrl + '?secao=processo&token=' + sol.tokenPortal : sol.tokenPortal;
+
+    return { link: link, token: sol.tokenPortal, expiracao: sol.tokenExpiracao };
+  }, 'ctrl_contratacoes_gerar_token');
+}
+
 // ── Portal (sem autenticação de usuário GAS) ─────────────────────
 
 function ctrl_contratacoes_portal_status(token) {

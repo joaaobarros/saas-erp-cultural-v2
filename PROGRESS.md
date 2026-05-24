@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 11.1 entregue (2026-05-24)** — Estratégia Institucional e identidade TRAMAR. Próximo: **Fase 11.2 — Escuta Institucional** ou **11.3 — Dashboards reais**
+**Fase atual**: **Fase 12.1 entregue (2026-05-24)** — UI Plano de Trabalho 4 níveis + Pessoal + Indicadores + Plano de Contas + fusão Fonte→Contrato. Próximo: **smoke-test manual no browser** → confirmar CRUD de Meta/Atividade/Rubrica → calcularPessoal em tempo real.
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -244,6 +244,27 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 5. Sidebar → item "Painel de Orgs" (superadmin) → view carrega com stats → tabela de orgs
 6. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
 
+**O que foi feito (Fase 12.1 — 2026-05-24)**:
+- ✅ **CSS**: ~80 linhas de estilos Fase 12 — acordeão 4 níveis (`.pt-meta-card`, `.pt-atv-card`, `.pt-rub-row`), cards pessoal (`.pes-card`), tabela plano de contas (`.pc-table`), grade de meses indicadores (`.ind-mes-table`, `.ind-meta-row`, `.ind-real-row`)
+- ✅ **GAS namespace**: 32 bindings em `GAS.contratos` (vs 14 anteriores) — `salvarMeta/excluirMeta`, `salvarAtividade/excluirAtividade`, `salvarPessoal/excluirPessoal/calcularPessoal`, `salvarRubrica/excluirRubrica`, `salvarIndicador/atualizarMetaMes`, `salvarIndicadorGestao/excluirIndicadorGestao/atualizarMetaGestao`, `planoContas`, `historico`; novo namespace `GAS.catalogoSeplag` (4 bindings)
+- ✅ **HTML**: tab "Fontes de Recurso" removida do Financeiro (3 tabs restantes: Contratos | Remanejamentos | Aditivos); form de Contrato expandido com seção "Fonte de Recurso" embutida (instrumento, órgão financiador, contrapartida, observação); `#contrato-detalhe-card` refeito com 5 abas: Plano de Trabalho | Pessoal | Indicadores | Plano de Contas | Histórico; modais Meta/Pessoal/IndicadorR/IndicadorG todos opacos (overlay rgba .52 + box `var(--surface)`)
+- ✅ **ContratosUI**: `abrirForm()` popula novos campos; `salvar()` envia `numero`, `modalidade`, `orgaoFinanciador`, `contrapartida`, `obsFinanceiro`, `objeto`
+- ✅ **ContratosDetailUI** (~820 linhas): reescrito como IIFE completo com 40+ funções — acordeão 4 níveis com toggle expand/collapse, catálogo SEPLAG lazy-load, memória de cálculo dinâmica, cálculo pessoal em tempo real (fórmulas CCBJ III→VIII), grade de meses editável inline, períodos GESTÃO semestral/anual, tabela plano de contas com total geral; BtnGuard em todos os 6 botões async
+- ✅ **Auditoria CLAUDE.md**: prompt/null-check ✅ | GAS.* namespace 100% ✅ | CSS todas as classes definidas ✅ | modais opacos ✅ | onclick JSON.stringify .replace ✅ | FsmGuardian (server-side via ctrl_contratos_status) ✅
+- ✅ Deploy @179 em produção
+
+**[BROWSER] Smoke-test Fase 12.1** (verificar manualmente):
+1. Financeiro → apenas 3 tabs visíveis (sem "Fontes de Recurso")
+2. "+ Novo Contrato" → form com seções "Dados" + "Fonte de Recurso" → preencher → salvar → aparece na lista
+3. "Gerenciar" → 5 abas: Plano de Trabalho | Pessoal | Indicadores | Plano de Contas | Histórico
+4. Plano de Trabalho → "+ Nova Meta" → modal abre (fundo opaco) → preencher título → Salvar → meta aparece
+5. Expandir meta → "+ Atividade" → form inline → salvar → atividade listada
+6. Expandir atividade → "+ Item de Despesa" → select SEPLAG popula → selecionar item → código auto-preenchido → adicionar linhas de memória → total calculado → Salvar
+7. Pessoal → "+ Adicionar" → preencher salário → campos III–VIII calculam em tempo real → Salvar
+8. Indicadores → RESULTADOS → grade de meses → editar célula → salva; GESTÃO → criar indicador → inserir meta
+9. Plano de Contas → "Recalcular" → tabela SEPLAG aparece com total geral
+10. F12 → zero erros vermelhos | `BtnGuard.auditar()` → "✅ todos protegidos"
+
 **O que foi feito (Fase 11.1 — 2026-05-24)**:
 - ✅ `EstrategiaRepository` (`objetivos_estrategicos.json` + aba `ACOES.Estrategia`): listar/buscar/salvar/excluir/métricas/prepararIndice
 - ✅ `EstrategiaEngine`: FSM rascunho→ativo→em_revisao→concluido+cancelado; `calcularKPIs()` real (ocupação espaços, conclusão ações no prazo, custo por ação, NPS público, execução orçamentária, renovação agentes); `calcularRiscos()` (ações atrasadas, objetivos sem ações, contratos vencendo, clima baixo, tarefas atrasadas); `gerarRelatorio()` trimestral/semestral/anual; `gerarCalendario()` por horizonte
@@ -375,6 +396,9 @@ Um módulo está **completo** quando oferece:
 | 9 | Multi-Tenancy e Config Admin | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 10 | Alertas, TaskHub, Reuniões, Auditoria | ⬜ Aguardando F9 | 🟡 MÉDIO — UX operacional e rastreabilidade visual | — | — |
 | 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs reais | — | — |
+| 11.1 | Estratégia Institucional + TRAMAR | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 12 | Plano de Trabalho — backend | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
+| 12.1 | Plano de Trabalho — UI 4 níveis + Pessoal + Indicadores + Plano de Contas | ✅ **Concluída** | — | 2026-05-24 | 2026-05-24 |
 
 ### Por que esta ordem de urgência?
 - **F1 antes de tudo**: dual-systems (dados em dois lugares sem sync) causam perda silenciosa de dados em produção.

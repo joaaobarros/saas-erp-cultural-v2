@@ -195,6 +195,14 @@ function inicializarSistema() {
     AlertasEngine.garantirAbaAlertasLog();
   }
 
+  // Fase 11 — Estratégia Institucional: garante aba ACOES.Estrategia
+  if (typeof EstrategiaRepository !== 'undefined' &&
+      typeof EstrategiaRepository.prepararIndice === 'function') {
+    try { EstrategiaRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'EstrategiaRepository.prepararIndice: ' + e.message);
+    }
+  }
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }

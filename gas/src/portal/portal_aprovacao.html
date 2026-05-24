@@ -15,6 +15,8 @@
     .descricao { color: #616161; font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
     .entidade-info { background: #e8eaf6; border-radius: 6px; padding: 14px; margin-bottom: 24px; font-size: 14px; text-align: left; }
     .entidade-info strong { display: block; color: #1a237e; margin-bottom: 4px; }
+    .entidade-info .detalhe { color: #424242; font-size: 13px; margin-top: 4px; }
+    .badge-status { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #fef3c7; color: #92400e; margin-top: 6px; }
     .botoes { display: flex; gap: 12px; justify-content: center; }
     .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; max-width: 200px; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -23,10 +25,12 @@
     .grupo-motivo { text-align: left; margin-bottom: 20px; display: none; }
     .grupo-motivo label { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: block; }
     .grupo-motivo textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; min-height: 80px; resize: vertical; }
+    .loading-info { color: #757575; font-size: 13px; padding: 12px 0; }
     #resultado { display: none; }
     #resultado h2 { color: #1a237e; }
-    #token-invalido { display: none; color: #c62828; }
-    #token-invalido h2 { color: #c62828; }
+    #solicitacao-invalida { display: none; }
+    #solicitacao-invalida h2 { color: #c62828; }
+    .erro-texto { color: #c62828; font-size: 14px; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -34,11 +38,10 @@
   <div class="org-nome"><?= orgConfig.nome ?></div>
   <div class="icone-grande">🔔</div>
   <h2>Solicitação de Aprovação</h2>
-  <p class="descricao">Você recebeu um link de aprovação. Revise as informações e confirme sua decisão.</p>
+  <p class="descricao">Revise as informações abaixo e confirme sua decisão.</p>
 
   <div class="entidade-info" id="entidade-info">
-    <strong id="entidade-tipo">Carregando...</strong>
-    <span id="entidade-descricao"></span>
+    <p class="loading-info">⏳ Carregando informações da solicitação…</p>
   </div>
 
   <div class="grupo-motivo" id="grupo-motivo">
@@ -46,10 +49,11 @@
     <textarea id="campo-motivo" placeholder="Descreva o motivo da recusa..."></textarea>
   </div>
 
-  <div class="botoes">
-    <button id="btn-recusar" class="btn btn-recusar" onclick="processar('recusar')">Recusar</button>
-    <button id="btn-aprovar" class="btn btn-aprovar" onclick="processar('aprovar')">Aprovar</button>
+  <div class="botoes" id="bloco-botoes" style="display:none;">
+    <button id="btn-recusar" class="btn btn-recusar">Recusar</button>
+    <button id="btn-aprovar" class="btn btn-aprovar">Aprovar</button>
   </div>
+  <p id="erro-carga" class="erro-texto" style="display:none;"></p>
 </div>
 
 <div class="card" id="resultado" style="display:none">
@@ -58,40 +62,89 @@
   <p class="descricao" id="resultado-msg">Obrigado. Sua decisão foi registrada.</p>
 </div>
 
-<div class="card" id="token-invalido" style="display:none">
+<div class="card" id="solicitacao-invalida" style="display:none">
   <div class="icone-grande">❌</div>
-  <h2>Link inválido ou expirado</h2>
-  <p class="descricao">Este link de aprovação não é válido ou já foi utilizado. Caso precise agir, acesse o sistema diretamente.</p>
+  <h2>Solicitação não encontrada</h2>
+  <p class="descricao">O link pode estar expirado, inválido ou a solicitação já foi processada. Acesse o sistema diretamente para verificar.</p>
 </div>
 
 <script>
   var params    = <?= JSON.stringify(params) ?>;
   var orgConfig = <?= JSON.stringify(orgConfig) ?>;
-  var token     = params.token || null;
-  var acao_ap   = params.acao  || null; // aprovar|recusar pré-definido pelo link
+  var solId     = params.id || null;
 
-  if (!token) {
+  // ── Carregar info da solicitação via backend real ──────────────
+  if (!solId) {
     document.getElementById('card-aprovacao').style.display = 'none';
-    document.getElementById('token-invalido').style.display = 'block';
+    document.getElementById('solicitacao-invalida').style.display = 'block';
   } else {
-    carregarInfoToken();
+    _carregarInfo();
   }
 
-  function carregarInfoToken() {
-    // TODO Fase 7: google.script.run.ctrl_portal_getInfoAprovacao(token, ...)
-    document.getElementById('entidade-tipo').textContent = 'Reserva de Espaço';
-    document.getElementById('entidade-descricao').textContent =
-      'Teatro Principal — ' + new Date().toLocaleDateString('pt-BR') + ' às 19h';
+  function _carregarInfo() {
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (!resp || !resp.ok || !resp.data) {
+          document.getElementById('card-aprovacao').style.display = 'none';
+          document.getElementById('solicitacao-invalida').style.display = 'block';
+          return;
+        }
+        _renderInfo(resp.data);
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('card-aprovacao').style.display = 'none';
+        document.getElementById('solicitacao-invalida').style.display = 'block';
+      })
+      .ctrl_portal_getInfoAprovacao({ id: solId });
   }
 
-  // Botão Recusar: 1º clique mostra campo de motivo; 2º clique (com motivo) confirma
+  function _renderInfo(sol) {
+    var tipos = {
+      cessao_pauta:   'Cessão de Pauta',
+      reserva_espaco: 'Reserva de Espaço',
+      reserva:        'Reserva de Espaço'
+    };
+    var info = document.getElementById('entidade-info');
+    info.innerHTML =
+      '<strong>' + (tipos[sol.tipo] || sol.tipo || 'Solicitação') + '</strong>' +
+      '<div class="detalhe">Solicitante: <b>' + _esc(sol.solicitante) + '</b></div>' +
+      '<div class="detalhe">Espaço: <b>' + _esc(sol.espacoNome || sol.espacoId || '—') + '</b></div>' +
+      (sol.dataDesejada ? '<div class="detalhe">Data: <b>' + _esc(sol.dataDesejada) + '</b>' +
+        (sol.horaInicio ? ' das <b>' + _esc(sol.horaInicio) + '</b>' : '') +
+        (sol.horaTermino ? ' às <b>' + _esc(sol.horaTermino) + '</b>' : '') + '</div>' : '') +
+      (sol.justificativa ? '<div class="detalhe" style="margin-top:8px;">Justificativa: ' + _esc(sol.justificativa) + '</div>' : '') +
+      '<div class="badge-status">Status: ' + _esc(sol.status || '—') + '</div>';
+
+    // Mostrar botões apenas se ainda pendente
+    if (sol.status === 'submetida' || sol.status === 'em_analise') {
+      document.getElementById('bloco-botoes').style.display = 'flex';
+    } else {
+      info.innerHTML += '<p style="margin-top:12px;font-size:13px;color:#757575;">Esta solicitação já foi processada e não aceita mais ações.</p>';
+    }
+  }
+
+  function _esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Botões ─────────────────────────────────────────────────────
   document.getElementById('btn-recusar').addEventListener('click', function() {
-    document.getElementById('grupo-motivo').style.display = 'block';
+    var grp = document.getElementById('grupo-motivo');
+    if (grp.style.display === 'none' || !grp.style.display) {
+      grp.style.display = 'block';
+      document.getElementById('campo-motivo').focus();
+      return;
+    }
+    _processar('recusar');
   });
 
-  function processar(decisao) {
+  document.getElementById('btn-aprovar').addEventListener('click', function() {
+    _processar('aprovar');
+  });
+
+  function _processar(decisao) {
     if (decisao === 'recusar') {
-      var motivo = document.getElementById('campo-motivo').value.trim();
+      var motivo = (document.getElementById('campo-motivo').value || '').trim();
       if (!motivo) {
         document.getElementById('grupo-motivo').style.display = 'block';
         document.getElementById('campo-motivo').focus();
@@ -103,23 +156,38 @@
     var btnId      = decisao === 'aprovar' ? 'btn-aprovar' : 'btn-recusar';
     var outroBtnId = decisao === 'aprovar' ? 'btn-recusar' : 'btn-aprovar';
     var outroBtn   = document.getElementById(outroBtnId);
+    var motivoVal  = decisao === 'recusar'
+      ? (document.getElementById('campo-motivo').value || '').trim()
+      : '';
 
     BtnGuard.wrap(btnId, decisao === 'aprovar' ? 'Aprovando…' : 'Confirmando recusa…', function(done) {
       if (outroBtn) outroBtn.disabled = true;
 
-      // TODO Fase 7: google.script.run.ctrl_portal_registrarAprovacao(token, decisao, motivo, ...)
-      setTimeout(function() {
-        done();
-        if (outroBtn) outroBtn.disabled = false;
-        var isAprovar = decisao === 'aprovar';
-        document.getElementById('card-aprovacao').style.display = 'none';
-        document.getElementById('resultado-icone').textContent  = isAprovar ? '✅' : '❌';
-        document.getElementById('resultado-titulo').textContent = isAprovar ? 'Aprovado!' : 'Recusado';
-        document.getElementById('resultado-msg').textContent    = isAprovar
-          ? 'A solicitação foi aprovada. O solicitante será notificado.'
-          : 'A solicitação foi recusada. O solicitante será notificado com o motivo informado.';
-        document.getElementById('resultado').style.display = 'block';
-      }, 600);
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          done();
+          if (outroBtn) outroBtn.disabled = false;
+          if (!resp || !resp.ok) {
+            document.getElementById('erro-carga').textContent = (resp && resp.error && resp.error.message) || 'Erro ao registrar decisão.';
+            document.getElementById('erro-carga').style.display = 'block';
+            return;
+          }
+          var isAprovar = decisao === 'aprovar';
+          document.getElementById('card-aprovacao').style.display = 'none';
+          document.getElementById('resultado-icone').textContent  = isAprovar ? '✅' : '❌';
+          document.getElementById('resultado-titulo').textContent = isAprovar ? 'Aprovado!' : 'Recusado';
+          document.getElementById('resultado-msg').textContent    = resp.data && resp.data.mensagem
+            ? resp.data.mensagem
+            : (isAprovar ? 'Solicitação aprovada.' : 'Solicitação recusada.');
+          document.getElementById('resultado').style.display = 'block';
+        })
+        .withFailureHandler(function(e) {
+          done();
+          if (outroBtn) outroBtn.disabled = false;
+          document.getElementById('erro-carga').textContent = e.message || 'Erro inesperado.';
+          document.getElementById('erro-carga').style.display = 'block';
+        })
+        .ctrl_portal_registrarAprovacao({ id: solId, decisao: decisao, motivo: motivoVal });
     });
   }
 </script>
