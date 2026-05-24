@@ -85,12 +85,13 @@ var PCCSRepository = (function() {
     var agora_ = agora();
 
     var registro = {
-      id:       id,
-      orgId:    orgId,
-      nome:     String(dados.nome || '').trim(),
-      vigencia: dados.vigencia || { inicio: null, fim: null },
-      ativo:    dados.ativo !== false,
-      cargos:   Array.isArray(dados.cargos) ? dados.cargos : [],
+      id:         id,
+      orgId:      orgId,
+      nome:       String(dados.nome || '').trim(),
+      vigencia:   dados.vigencia || { inicio: null, fim: null },
+      parametros: dados.parametros || null,
+      ativo:      dados.ativo !== false,
+      cargos:     Array.isArray(dados.cargos) ? dados.cargos : [],
       criadoEm:     dados.criadoEm || agora_,
       atualizadoEm: agora_,
       criadoPor:    dados.criadoPor || email,
@@ -126,7 +127,9 @@ var PCCSRepository = (function() {
       var registro = {
         id:        cargoId,
         nome:      String(cargo.nome || '').trim(),
-        tipo:      cargo.tipo || 'operacional',
+        area:      String(cargo.area  || '').trim(),
+        tipo:      cargo.tipo  || 'operacional',
+        grupo:     cargo.grupo || '',
         descricao: String(cargo.descricao || '').trim(),
         tabela:    Array.isArray(cargo.tabela) ? cargo.tabela : []
       };

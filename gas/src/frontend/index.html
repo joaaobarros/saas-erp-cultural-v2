@@ -20120,6 +20120,42 @@ var RhUI = (function() {
   }
 
   // ─── PCCS ───────────────────────────────────────────────────
+  // ── PCCS — tabela salarial local (lookup de step para preview no form) ──────
+  var _PCCS_SAL = {
+    'FIXA_PISO':[1747.16,1747.16,1747.16,1747.16,1747.16],
+    'FIXA_A':[1796.62,1931.37,2076.22,2231.94,2399.34],'FIXA_B':[2219.82,2386.30,2565.27,2757.67,2964.50],
+    'FIXA_C':[2731.49,2936.35,3156.58,3393.32,3647.82],'FIXA_D':[3350.18,3601.45,3871.55,4161.92,4474.07],
+    'FIXA_E':[4098.24,4405.61,4736.03,5091.24,5473.08],'FIXA_F':[5002.76,5377.96,5781.31,6214.91,6681.03],
+    'FIXA_G':[6096.42,6553.65,7045.17,7573.56,8141.57],'FIXA_H':[7418.78,7975.18,8573.32,9216.32,9907.55],
+    'FIXA_I':[9017.67,9694.00,10421.05,11202.63,12042.82],'FIXA_J':[10950.94,11772.26,12655.18,13604.32,14624.65],
+    'FIXA_K':[13288.50,14285.13,15356.52,16508.26,17746.38],'FIXA_L':[16114.89,17323.50,18622.76,20019.47,21520.93],
+    'FIXA_M':[19532.34,20997.27,22572.06,24264.97,26084.84],'FIXA_N':[23664.46,25439.29,27347.24,29398.28,31603.15],
+    'FIXA_O':[28660.68,30810.24,33121.00,35605.08,38275.46],'FIXA_P':[34701.73,37304.36,40102.19,43109.86,46343.09],
+    'FIXA_Q':[42006.11,45156.57,48543.31,52184.06,56097.86],
+    'ORIENTADOR_F':[5002.76,5377.96,5781.31,6214.91,6681.03],'ORIENTADOR_G':[6096.42,6553.65,7045.17,7573.56,8141.57],
+    'ORIENTADOR_H':[7418.78,7975.18,8573.32,9216.32,9907.55],'ORIENTADOR_I':[9017.67,9694.00,10421.05,11202.63,12042.82],
+    'ORIENTADOR_J':[10950.94,11772.26,12655.18,13604.32,14624.65],'ORIENTADOR_K':[13288.50,14285.13,15356.52,16508.26,17746.38],
+    'ORIENTADOR_L':[16114.89,17323.50,18622.76,20019.47,21520.93],'ORIENTADOR_M':[19532.34,20997.27,22572.06,24264.97,26084.84],
+    'ORIENTADOR_N':[23664.46,25439.29,27347.24,29398.28,31603.15],'ORIENTADOR_O':[28660.68,30810.24,33121.00,35605.08,38275.46],
+    'ORIENTADOR_P':[34701.73,37304.36,40102.19,43109.86,46343.09],'ORIENTADOR_Q':[42006.11,45156.57,48543.31,52184.06,56097.86]
+  };
+  var _PCCS_CLASSES_FIXA      = ['PISO','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q'];
+  var _PCCS_CLASSES_ORIENTADOR= ['F','G','H','I','J','K','L','M','N','O','P','Q'];
+  var _PCCS_GRUPOS = ['Gestão Estratégica','Gestão Tática','Assessoramento','Administrativo','Operacional'];
+
+  var _BADGE_GRUPO = {
+    'Gestão Estratégica':'background:#7c3aed;color:#fff',
+    'Gestão Tática':     'background:#2563eb;color:#fff',
+    'Assessoramento':    'background:#0891b2;color:#fff',
+    'Administrativo':    'background:#059669;color:#fff',
+    'Operacional':       'background:#d97706;color:#fff'
+  };
+
+  function _badgeGrupo(g) {
+    var s = _BADGE_GRUPO[g] || 'background:var(--surface2);color:var(--text)';
+    return '<span style="'+s+';font-size:10px;padding:2px 7px;border-radius:99px;white-space:nowrap;">'+_esc(g||'—')+'</span>';
+  }
+
   function carregarPccs() {
     var el = document.getElementById('rh-pccs-lista');
     if (!el) return;
@@ -20128,21 +20164,59 @@ var RhUI = (function() {
       var lista = (resp&&resp.ok&&resp.data)?resp.data:[];
       if (!lista.length){ el.innerHTML = _empty('Nenhum plano PCCS cadastrado.'); return; }
       el.innerHTML = lista.map(function(p){
-        var cargosHtml = (p.cargos||[]).map(function(c){
-          return '<tr><td style="padding:6px 10px;font-size:13px;">'+_esc(c.titulo||'—')+'</td>'+
-            '<td style="padding:6px 10px;font-size:13px;">'+_esc(c.nivel||'—')+'</td>'+
-            '<td style="padding:6px 10px;font-size:13px;">R$ '+_fmtMoeda(c.salarioBase||0)+'</td>'+
-            '<td style="padding:6px 10px;"><button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">delete</span></button></td></tr>';
-        }).join('');
-        return '<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">'+
+        var cargos = p.cargos || [];
+        // agrupar por area
+        var areas = {};
+        cargos.forEach(function(c){
+          var a = c.area || 'Geral';
+          if (!areas[a]) areas[a] = [];
+          areas[a].push(c);
+        });
+        var vigTxt = (p.vigencia&&p.vigencia.inicio)?
+          (p.vigencia.inicio + (p.vigencia.fim?' → '+p.vigencia.fim:'')) : '—';
+        var totCargos = cargos.length;
+        var headerInfo = '<span style="font-size:12px;color:var(--text2);margin-left:8px;">'+
+          vigTxt+' · '+totCargos+' cargos</span>';
+
+        var tabela = '';
+        Object.keys(areas).forEach(function(area){
+          tabela += '<tr style="background:var(--surface2);">'+
+            '<td colspan="5" style="padding:6px 10px;font-size:11px;font-weight:700;text-transform:uppercase;'+
+            'color:var(--text2);letter-spacing:.05em;">'+_esc(area)+'</td></tr>';
+          areas[area].forEach(function(c){
+            var step1 = (c.tabela&&c.tabela[0]) ? c.tabela[0].salarioBase : 0;
+            var step5 = (c.tabela&&c.tabela[4]) ? c.tabela[4].salarioBase : 0;
+            var faixaTxt = step1 ? 'R$ '+_fmtMoeda(step1)+(step5&&step5!==step1?' – R$ '+_fmtMoeda(step5):'') : '—';
+            var tipoClasse = (c.tabela&&c.tabela[0]) ? c.tabela[0].nivel : '—';
+            var classe     = (c.tabela&&c.tabela[0]) ? c.tabela[0].classe : '—';
+            tabela += '<tr style="border-bottom:1px solid var(--border);">'+
+              '<td style="padding:7px 10px;font-size:13px;">'+_esc(c.nome||'—')+'</td>'+
+              '<td style="padding:7px 10px;">'+_badgeGrupo(c.grupo||'')+'</td>'+
+              '<td style="padding:7px 10px;font-size:12px;color:var(--text2);">'+_esc(tipoClasse)+' '+_esc(classe)+'</td>'+
+              '<td style="padding:7px 10px;font-size:12px;">'+faixaTxt+'</td>'+
+              '<td style="padding:7px 10px;text-align:right;">'+
+                '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')">'+
+                '<span class="ms ms-sm">delete</span></button></td></tr>';
+          });
+        });
+
+        return '<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">'+
           '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">'+
-            '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+
-            '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1"><span class="ms ms-sm">add</span> Cargo</button>'+
+            '<div style="display:flex;align-items:center;gap:4px;">'+
+              '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+headerInfo+
+            '</div>'+
+            '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" '+
+              'onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1">'+
+              '<span class="ms ms-sm">add</span> Cargo</button>'+
           '</div>'+
-          (cargosHtml?
-            '<table style="width:100%;"><thead style="background:var(--surface2);font-size:11px;color:var(--text2);text-transform:uppercase;"><tr>'+
-              '<th style="padding:6px 10px;text-align:left">Cargo</th><th style="padding:6px 10px;text-align:left">Nível</th>'+
-              '<th style="padding:6px 10px;text-align:left">Salário Base</th><th></th></tr></thead><tbody>'+cargosHtml+'</tbody></table>' :
+          (tabela?
+            '<table style="width:100%;">'+
+              '<thead style="font-size:11px;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);">'+
+                '<tr><th style="padding:6px 10px;text-align:left">Cargo</th>'+
+                '<th style="padding:6px 10px;text-align:left">Grupo</th>'+
+                '<th style="padding:6px 10px;text-align:left">Tipo/Classe</th>'+
+                '<th style="padding:6px 10px;text-align:left">Faixa Salarial</th>'+
+                '<th></th></tr></thead><tbody>'+tabela+'</tbody></table>' :
             '<div style="padding:14px;font-size:13px;color:var(--muted);">Nenhum cargo.</div>')+
           '</div>';
       }).join('');
@@ -20150,12 +20224,19 @@ var RhUI = (function() {
   }
 
   function abrirFormPccs() {
-    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+    _abrirModalRh('<div style="padding:20px;min-width:380px;">'+
       '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Plano PCCS</h3>'+
-      '<div class="form-group"><label class="form-label">Nome *</label><input id="rh-pccs-nome-m" class="form-input" placeholder="Ex: Plano de Cargos 2025"></div>'+
-      '<div class="form-group"><label class="form-label">Descrição</label><input id="rh-pccs-desc-m" class="form-input" placeholder="Breve descrição…"></div>'+
+      '<div class="form-group"><label class="form-label">Nome *</label>'+
+        '<input id="rh-pccs-nome-m" class="form-input" placeholder="Ex: PCCS IDM 2026"></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div class="form-group"><label class="form-label">Vigência início</label>'+
+          '<input id="rh-pccs-ini-m" class="form-input" type="date"></div>'+
+        '<div class="form-group"><label class="form-label">Vigência fim</label>'+
+          '<input id="rh-pccs-fim-m" class="form-input" type="date"></div>'+
+      '</div>'+
       '<div style="display:flex;gap:8px;margin-top:12px;">'+
-        '<button id="rh-btn-salvar-pccs-m" class="btn btn-primario" onclick="RhUI._salvarPccs()"><span class="ms ms-sm">save</span> Criar</button>'+
+        '<button id="rh-btn-salvar-pccs-m" class="btn btn-primario" onclick="RhUI._salvarPccs()">'+
+          '<span class="ms ms-sm">save</span> Criar</button>'+
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
       '</div></div>');
   }
@@ -20164,7 +20245,13 @@ var RhUI = (function() {
     var nome=(document.getElementById('rh-pccs-nome-m')||{}).value||'';
     if (!nome.trim()){ Toast.aviso('Nome obrigatório.'); return; }
     BtnGuard.wrap('rh-btn-salvar-pccs-m','Salvando…',function(done){
-      GAS.rh.salvarPccs({nome:nome,descricao:(document.getElementById('rh-pccs-desc-m')||{}).value||''},function(resp){
+      GAS.rh.salvarPccs({
+        nome: nome,
+        vigencia: {
+          inicio: (document.getElementById('rh-pccs-ini-m')||{}).value||null,
+          fim:    (document.getElementById('rh-pccs-fim-m')||{}).value||null
+        }
+      },function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
         _fecharModalRh(); Toast.sucesso('Plano criado!'); carregarPccs();
@@ -20172,31 +20259,77 @@ var RhUI = (function() {
     });
   }
 
+  function _pccsClassesOpts(tipo) {
+    var classes = tipo==='ORIENTADOR' ? _PCCS_CLASSES_ORIENTADOR : _PCCS_CLASSES_FIXA;
+    return classes.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+  }
+
+  function _pccsPreviewSalario() {
+    var tipo   = (document.getElementById('rh-cargo-tipo-m')||{}).value||'FIXA';
+    var classe = (document.getElementById('rh-cargo-classe-m')||{}).value||'';
+    var steps  = _PCCS_SAL[tipo+'_'+classe]||[];
+    var el     = document.getElementById('rh-cargo-preview-sal');
+    if (!el) return;
+    el.textContent = steps.length ?
+      'Step 1: R$ '+_fmtMoeda(steps[0])+'  →  Step 5: R$ '+_fmtMoeda(steps[4]) : '—';
+    // atualiza options de classe ao mudar tipo
+    var selClasse = document.getElementById('rh-cargo-classe-m');
+    if (selClasse && selClasse.dataset.tipoAtual !== tipo) {
+      selClasse.innerHTML = _pccsClassesOpts(tipo);
+      selClasse.dataset.tipoAtual = tipo;
+    }
+  }
+
   function abrirFormCargo(pccsId) {
-    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+    var gruposOpts = _PCCS_GRUPOS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('');
+    _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
       '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Cargo</h3>'+
       '<input type="hidden" id="rh-cargo-pccs-id" value="'+_esc(pccsId)+'">'+
-      '<div class="form-group"><label class="form-label">Título *</label><input id="rh-cargo-titulo-m" class="form-input" placeholder="Ex: Analista Cultural"></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'+
-        '<div class="form-group"><label class="form-label">Nível</label><input id="rh-cargo-nivel-m" class="form-input" placeholder="A"></div>'+
-        '<div class="form-group"><label class="form-label">Classe</label><input id="rh-cargo-classe-m" class="form-input" placeholder="I"></div>'+
-        '<div class="form-group"><label class="form-label">Referência</label><input id="rh-cargo-ref-m" class="form-input" placeholder="01"></div>'+
+      '<div class="form-group"><label class="form-label">Nome do cargo *</label>'+
+        '<input id="rh-cargo-nome-m" class="form-input" placeholder="Ex: Analista de Formação"></div>'+
+      '<div class="form-group"><label class="form-label">Área / Departamento</label>'+
+        '<input id="rh-cargo-area-m" class="form-input" placeholder="Ex: Formação e Ação Educativa"></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div class="form-group"><label class="form-label">Tabela *</label>'+
+          '<select id="rh-cargo-tipo-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()">'+
+            '<option value="FIXA">Faixa Fixa</option>'+
+            '<option value="ORIENTADOR">Por Orientador</option>'+
+          '</select></div>'+
+        '<div class="form-group"><label class="form-label">Classe *</label>'+
+          '<select id="rh-cargo-classe-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()" data-tipo-atual="FIXA">'+
+            _pccsClassesOpts('FIXA')+
+          '</select></div>'+
       '</div>'+
-      '<div class="form-group"><label class="form-label">Salário Base (R$)</label><input id="rh-cargo-salario-m" class="form-input" type="number" step="0.01" placeholder="3500.00"></div>'+
-      '<div style="display:flex;gap:8px;margin-top:12px;">'+
-        '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()"><span class="ms ms-sm">save</span> Adicionar</button>'+
+      '<div class="form-group"><label class="form-label">Grupo</label>'+
+        '<select id="rh-cargo-grupo-m" class="form-input select-sm">'+gruposOpts+'</select></div>'+
+      '<div style="margin:8px 0 14px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:12px;">'+
+        '<span style="color:var(--text2);">Faixa salarial: </span>'+
+        '<span id="rh-cargo-preview-sal" style="font-weight:600;">—</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:4px;">'+
+        '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()">'+
+          '<span class="ms ms-sm">save</span> Adicionar</button>'+
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
       '</div></div>');
+    // inicializa preview
+    setTimeout(function(){ RhUI._pccsPreviewSalario(); }, 50);
   }
 
   function _salvarCargo() {
-    var pccsId=(document.getElementById('rh-cargo-pccs-id')||{}).value||'';
-    var titulo=(document.getElementById('rh-cargo-titulo-m')||{}).value||'';
-    if (!titulo.trim()){ Toast.aviso('Título obrigatório.'); return; }
-    var cargo={ titulo:titulo, nivel:(document.getElementById('rh-cargo-nivel-m')||{}).value||'',
-      classe:(document.getElementById('rh-cargo-classe-m')||{}).value||'',
-      referencia:(document.getElementById('rh-cargo-ref-m')||{}).value||'',
-      salarioBase:parseFloat((document.getElementById('rh-cargo-salario-m')||{}).value||'0')||0 };
+    var pccsId = (document.getElementById('rh-cargo-pccs-id')||{}).value||'';
+    var nome   = (document.getElementById('rh-cargo-nome-m')||{}).value||'';
+    if (!nome.trim()){ Toast.aviso('Nome obrigatório.'); return; }
+    var tipo   = (document.getElementById('rh-cargo-tipo-m')||{}).value||'FIXA';
+    var classe = (document.getElementById('rh-cargo-classe-m')||{}).value||'';
+    var grupo  = (document.getElementById('rh-cargo-grupo-m')||{}).value||'';
+    var area   = (document.getElementById('rh-cargo-area-m')||{}).value||'';
+    var steps  = _PCCS_SAL[tipo+'_'+classe]||[];
+    var tabela = steps.map(function(v,i){ return { nivel:tipo, classe:classe, referencia:i+1, salarioBase:v }; });
+    var tipoV2 = { 'Gestão Estratégica':'estrategico','Gestão Tática':'tatico',
+                   'Assessoramento':'assessoramento','Administrativo':'administrativo',
+                   'Operacional':'operacional' }[grupo] || 'operacional';
+    var cargo = { nome:nome, area:area, tipo:tipoV2, grupo:grupo,
+                  descricao:nome+(area?' — '+area:''), tabela:tabela };
     BtnGuard.wrap('rh-btn-salvar-cargo-m','Salvando…',function(done){
       GAS.rh.salvarCargo(pccsId,cargo,function(resp){
         done();
@@ -20659,7 +20792,7 @@ var RhUI = (function() {
     carregarEquipe:carregarEquipe, abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
     editarColab:editarColab, salvarColab:salvarColab,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
-    abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo,
+    abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
