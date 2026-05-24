@@ -62,16 +62,26 @@ function getPublicOrgConfig() {
   var cfg    = getOrgConfig();
   var paleta = {};
   var logoUrl = cfg.logoUrl || '';
+  var nomeInstituicao = '';
+  var apresentacaoInstituicao = '';
   try {
     paleta  = SistemaConfigService.getPaleta();
     logoUrl = SistemaConfigService.getLogoUrl() || logoUrl;
+    // Lê nomeInstituicao e apresentacao do config_org.json
+    var configOrg = readJSON('config_org.json');
+    if (configOrg && typeof configOrg === 'object') {
+      nomeInstituicao           = configOrg.nomeInstituicao           || '';
+      apresentacaoInstituicao   = configOrg.apresentacaoInstituicao   || '';
+    }
   } catch(_) {}
   return {
-    nome:     cfg.nome,
-    titulo:   cfg.titulo,
-    logoUrl:  logoUrl,
-    timezone: cfg.timezone,
-    paleta:   paleta
+    nome:                   cfg.nome,
+    titulo:                 cfg.titulo,
+    logoUrl:                logoUrl,
+    timezone:               cfg.timezone,
+    paleta:                 paleta,
+    nomeInstituicao:        nomeInstituicao        || cfg.nomeCompleto || cfg.nome,
+    apresentacaoInstituicao: apresentacaoInstituicao
   };
 }
 

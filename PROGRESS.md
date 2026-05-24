@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 10 entregue (2026-05-24)** — Seguir para **Fase 11 (KPIs Reais, Dashboards Executivos, Produto para Mercado)**
+**Fase atual**: **Fase 11.1 entregue (2026-05-24)** — Estratégia Institucional e identidade TRAMAR. Próximo: **Fase 11.2 — Escuta Institucional** ou **11.3 — Dashboards reais**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -244,7 +244,32 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 5. Sidebar → item "Painel de Orgs" (superadmin) → view carrega com stats → tabela de orgs
 6. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
 
-**Fase mais urgente agora**: **Fase 11** — KPIs Reais, Dashboards Executivos, PDF de relatórios, produto para mercado.
+**O que foi feito (Fase 11.1 — 2026-05-24)**:
+- ✅ `EstrategiaRepository` (`objetivos_estrategicos.json` + aba `ACOES.Estrategia`): listar/buscar/salvar/excluir/métricas/prepararIndice
+- ✅ `EstrategiaEngine`: FSM rascunho→ativo→em_revisao→concluido+cancelado; `calcularKPIs()` real (ocupação espaços, conclusão ações no prazo, custo por ação, NPS público, execução orçamentária, renovação agentes); `calcularRiscos()` (ações atrasadas, objetivos sem ações, contratos vencendo, clima baixo, tarefas atrasadas); `gerarRelatorio()` trimestral/semestral/anual; `gerarCalendario()` por horizonte
+- ✅ `estrategia_controller.gs`: CQRS + cache + RBAC (leitura=todos, escrita=coordenador+, excluir=admin+)
+- ✅ `events_constants.gs`: 7 novos eventos STRATEGY_*
+- ✅ `setup.gs`: `ACOES.Estrategia` em `SCHEMA_ABAS`; `fase11_prepararIndice()`
+- ✅ `index.html`: `GAS.estrategia` (13 bindings); view-estrategia com 4 tabs (Objetivos | KPIs Reais | Riscos do Mês | Calendário); `EstrategiaUI` module completo; menu sidebar → item "Estratégia" (ícone flag, seção PRINCIPAL)
+- ✅ **Identidade TRAMAR**: sidebar tagline → "TRAMAR — Sistema de Gestão Cultural"; `document.title` → "TRAMAR — [nome da inst.]"; logo sidebar maior (52×52px); `_aplicarBoot` usa `nomeInstituicao` do boot
+- ✅ **Campos Identidade Institucional**: `nomeInstituicao` + `apresentacaoInstituicao` em `config_org.json`; `getPublicOrgConfig()` expõe no boot; `LogoPaletaService.obter/salvar` lê/persiste; campos no painel Admin → sub-aba Identidade Visual; `IdentidadeAdmin.salvar()` inclui os novos campos e atualiza sidebar em tempo real
+- ✅ Deploy @167 em produção
+
+**Passo obrigatório no GAS Editor após este deploy**:
+- Executar `fase11_prepararIndice()` → esperado `{ok:true, passos:[...]}` (cria aba ACOES.Estrategia)
+
+**Smoke-test Fase 11.1** (verificar no browser):
+1. Sidebar → logo maior (52px); tagline "TRAMAR — Sistema de Gestão Cultural"
+2. Menu → "Estratégia" (ícone flag) → view carrega com 4 tabs
+3. "+ Novo Objetivo" → modal abre → criar objetivo curto prazo → aparece na lista com barra de progresso
+4. Tab "KPIs Reais" → cards carregam com valores reais (não zeros)
+5. Tab "Riscos do Mês" → lista de riscos classificados por severidade
+6. Tab "Calendário" → linha do tempo por horizonte
+7. Ação vinculada: "Editar" objetivo → "+ Ação" → modal → vincular ação existente
+8. Admin → Identidade Visual → campos "Nome da Instituição" + "Apresentação" → salvar → sidebar atualiza em tempo real
+9. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
+
+**Fase mais urgente agora**: **Fase 11.2** — Escuta Institucional ou **11.3** — Dashboards Reais.
 
 **Passo obrigatório no GAS Editor após este deploy**:
 - Executar `fase10_prepararIndice()` → esperado `{ok:true, passos:[...]}` (cria abas REUNIOES.Reunioes, COMUNICACAO.Demandas, MASTER.AlertasLog; migra orgId nos JSON)
@@ -476,6 +501,7 @@ Um módulo está **completo** quando oferece:
 | 8 — Agentes/Acervo/Voluntários/Parcerias | Após views | ✅ 4 modules + BtnGuard completo |
 | 9 — Multi-Tenancy + Wizard | Após wizard + painel orgs | ✅ FeatureFlagsUI + PainelOrgsUI + WizardUI |
 | 10 — Alertas/TaskHub/Reuniões/Balcão/Auditoria | BtnGuard.auditar() pós-deploy @151 | ✅ AlertasUI + ReunioesUI + TaskHubUI + BalcaoUI + AuditoriaVisualUI; BtnGuard.wrap em todos os botões async |
+| 11.1 — Estratégia + TRAMAR | BtnGuard.auditar() pós-deploy @167 | ✅ EstrategiaUI (4 tabs, modais opacos, BtnGuard em novo/salvar/vincular/mudarStatus); data-bg-skip em tabs e nav |
 
 ---
 
@@ -1205,6 +1231,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-24 | Fase 11.1 | **Estratégia Institucional + Identidade TRAMAR** entregues: `estrategia_repository.gs` (objetivos_estrategicos.json + ACOES.Estrategia). `estrategia_engine.gs` (FSM 5 estados; `calcularKPIs()` real — ocupação espaços, conclusão ações no prazo, custo por ação, NPS público, execução orçamentária, renovação agentes; `calcularRiscos()` — 5 categorias classificadas por severidade; `gerarRelatorio()` trimestral/semestral/anual; `gerarCalendario()` por horizonte). `estrategia_controller.gs` (CQRS + cache + RBAC 8 funções). 7 eventos STRATEGY_* em `events_constants.gs`. `setup.gs` ACOES.Estrategia + `fase11_prepararIndice()`. `index.html`: GAS.estrategia (13 bindings), view-estrategia (4 tabs: Objetivos/KPIs/Riscos/Calendário), `EstrategiaUI` module completo, modais opacos, BtnGuard 100%. **Identidade TRAMAR**: sidebar tagline estático; logo 52×52px; `_boot.orgConfig.nomeInstituicao` na sidebar; `document.title` = "TRAMAR — [inst.]"; campos `nomeInstituicao` + `apresentacaoInstituicao` em `config_org.json`/`getPublicOrgConfig()`/`LogoPaletaService`/Admin UI. Auditoria CLAUDE.md 100% verde. Deploy @167. | `fase11_prepararIndice()` no GAS Editor → smoke-test browser (Estratégia CRUD+KPIs+Riscos+Calendário, sidebar TRAMAR, Admin Identidade Institucional) → Fase 11.2 ou 11.3 |
 | 2026-05-24 | Fase 10 | **Alertas, TaskHub, Reuniões, Balcão e Auditoria Visual** entregues: `alertas_engine.gs` REESCRITO (persistência MASTER.AlertasLog 12 colunas, listarAtivos, contarNaoLidos, marcarLido/Resolver, verificarTodosAutomaticos 17 subs, 25+ tipos, deduplicação). `alertas_controller.gs` NOVO (6 controllers RBAC). `taskhub_controller.gs` NOVO (minha_caixa agrega tarefas+encaminhamentos+demandas+aprovações+alertas, meu_time carga por pessoa, produtividade concluídas+taxaNoPrazo+mediaHoras). `reuniao_repository.gs`+`reuniao_engine.gs`+`reuniao_controller.gs` NOVOS (FSM reunião 4 estados + FSM ata 3 estados, encaminhamentos→tarefas automáticas, listarEncaminhamentosPendentes cross-reunião). `balcao_repository.gs`+`balcao_engine.gs`+`balcao_controller.gs` NOVOS (FSM 7 estados, SLA_POR_TIPO, versões entregas, comentários, metricas). `auditoria_controller.gs` NOVO (listar+rollback superadmin+detectarSuspeitos). `setup.gs` fase10_prepararIndice(). `index.html` expandido: badge alertas + painel deslizante, 4 views (reunioes/taskhub/balcao/auditoria), 5 GAS namespaces (38 bindings), 5 JS modules (AlertasUI/ReunioesUI/TaskHubUI/BalcaoUI/AuditoriaVisualUI), CSS Fase 10, menu taskhub+balcao+auditoria, Router entries. Auditoria CLAUDE.md 100% verde (prompt null-check, GAS.*, CSS, FsmGuardian, modais opacos, BtnGuard). Deploy @151. | fase10_prepararIndice() no GAS Editor → smoke-test browser (badge alertas, TaskHub, Reuniões CRUD+ata+encaminhamentos, Balcão CRUD+SLA+versões, Auditoria+rollback) → Fase 11 |
 | 2026-05-23 | Fase 9 | **Multi-Tenancy e Painel Admin** entregues: `fase9_migrarOrgId()` (stamp orgId em 31 JSONs, idempotente) + `fase9_validarIsolamento()` + `fase9_prepararIndice()`. `config_org.json` bloco `features` com 18 flags. `SistemaConfigService.getFeatureFlag/setFeatureFlag/getFeatureFlagsCatalogo`. `OrgRegistryService` (orgs_registry.json + MASTER.Orgs; checarProvisionamento 8 itens). `admin_controller.gs`: 6 novos controllers (listarFeatureFlags, setFeatureFlag, checarProvisionamento, ctrl_orgs_*). `wizard_controller.gs` CRIADO (7 controllers, retoma passo pendente). `wizard_setup.html` CRIADO (wizard SPA 6 passos, stepper, BtnGuard). `router.gs`: rota `?secao=wizard_setup`. `index.html`: GAS.orgs (3 bindings) + GAS.admin +3; tab Features (toggles por grupo); tab Provisionamento (checklist+barra+link wizard); view `#view-painel-orgs` (superadmin); `FeatureFlagsUI` + `PainelOrgsUI` modules; menu item "Painel de Orgs". Auditoria CLAUDE.md 100% verde. Deploy @140. | fase9_prepararIndice() no GAS Editor → smoke-test (Features tab, Wizard `?secao=wizard_setup`, Painel Orgs, F12 zero erros) → Fase 10 |
 | 2026-05-23 | Fase 8 | **Agentes, Acervo, Voluntários e Parcerias** entregues: `AgenteCulturalRepository/Engine/Controller` (FSM rascunho→ativo↔suspenso→descredenciado, auto-cadastro portal, rider técnico, histórico de vínculos, MASTER.AgentesCulturais). `AcervoRepository/Engine/Controller` (upload Drive por Ação, status LGPD 4 estados, checklist evidências, exportação ZIP, ACOES.Acervo). `VoluntarioRepository/Engine/Controller` (FSM voluntário+alocação, convite email, registro horas, certificado ao concluir, MASTER.Voluntarios). `ParceriaRepository/Engine/Controller` (FSM 5 estados, vínculos com Ações, entregas, avaliação ao encerrar, ACOES.Parcerias). `portal_agente.html` (auto-cadastro público: 12 áreas, rider, disponibilidade, LGPD). 18 novos eventos em events_constants.gs. setup.gs: SCHEMA_ABAS+4 novas abas, fase8_prepararIndice(). index.html: 4 GAS namespaces (38 bindings), seção MEMÓRIA no sidebar, views+modais+UIs AgentesUI/AcervoUI/VoluntariosUI/ParceriasUI. Auditoria CLAUDE.md 100% verde. Deploy @138. | fase8_prepararIndice() no GAS Editor → smoke-test browser (Agentes+portal+Acervo+Voluntários+Parcerias) → Fase 9 |

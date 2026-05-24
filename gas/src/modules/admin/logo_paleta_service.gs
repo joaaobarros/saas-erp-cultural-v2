@@ -75,10 +75,13 @@ var LogoPaletaService = (function () {
    * Usado pelo painel admin para popular o editor.
    */
   function obter() {
+    var cfg = _lerConfigOrg();
     return {
-      logoUrl:        SistemaConfigService.getLogoUrl(),
-      paleta:         SistemaConfigService.getPaleta(),
-      coresSemanticas: _CORES_SEMANTICAS   // ASCII-only key: seguro para serialização GAS
+      logoUrl:               SistemaConfigService.getLogoUrl(),
+      paleta:                SistemaConfigService.getPaleta(),
+      coresSemanticas:       _CORES_SEMANTICAS,
+      nomeInstituicao:       cfg.nomeInstituicao       || '',
+      apresentacaoInstituicao: cfg.apresentacaoInstituicao || ''
     };
   }
 
@@ -92,15 +95,15 @@ var LogoPaletaService = (function () {
   function salvar(dados) {
     _assertAdmin();
 
-    if (!dados || (dados.logoUrl === undefined && !dados.paleta)) {
+    if (!dados || (dados.logoUrl === undefined && !dados.paleta && dados.nomeInstituicao === undefined && dados.apresentacaoInstituicao === undefined)) {
       return { ok: false, mensagem: 'Nenhum dado informado para salvar.' };
     }
 
-    // Validar URL do logo
+    // Validar URL do logo (aceita http/https e data: base64)
     if (dados.logoUrl !== undefined) {
       var url = String(dados.logoUrl || '').trim();
-      if (url && !url.startsWith('http')) {
-        return { ok: false, mensagem: 'URL do logo inválida. Deve começar com http(s).' };
+      if (url && !url.startsWith('http') && !url.startsWith('data:image/')) {
+        return { ok: false, mensagem: 'Logo inválido. Envie uma imagem ou uma URL http(s).' };
       }
     }
 
@@ -115,10 +118,12 @@ var LogoPaletaService = (function () {
       // Atualizar logoUrl
       if (dados.logoUrl !== undefined) {
         configAtual.logoUrl = String(dados.logoUrl || '').trim();
-        // Manter sincronizado no PropertiesService (compatibilidade)
-        try {
-          PropertiesService.getScriptProperties().setProperty('ORG_LOGO_URL', configAtual.logoUrl);
-        } catch(_) {}
+        // PropertiesService só suporta ~9KB — nunca gravar base64 lá
+        if (!configAtual.logoUrl.startsWith('data:')) {
+          try {
+            PropertiesService.getScriptProperties().setProperty('ORG_LOGO_URL', configAtual.logoUrl);
+          } catch(_) {}
+        }
       }
 
       // Atualizar paleta (merge com campos individuais)
@@ -133,14 +138,26 @@ var LogoPaletaService = (function () {
         configAtual.paleta = paletaAtual;
       }
 
+      // Atualizar nome e apresentação da instituição
+      if (dados.nomeInstituicao !== undefined) {
+        configAtual.nomeInstituicao = String(dados.nomeInstituicao || '').trim();
+      }
+      if (dados.apresentacaoInstituicao !== undefined) {
+        configAtual.apresentacaoInstituicao = String(dados.apresentacaoInstituicao || '').trim();
+      }
+
       saveJSON(_ARQUIVO_CONFIG, configAtual);
       SistemaConfigService.invalidarCache();
       invalidarCacheOrgConfig();
 
       var email = getEmailSessao();
+      var logoLog = dados.logoUrl === undefined ? 'sem alteração'
+        : !dados.logoUrl ? '(removido)'
+        : dados.logoUrl.startsWith('data:') ? '[base64 ' + Math.round(dados.logoUrl.length * 3 / 4 / 1024) + 'KB]'
+        : dados.logoUrl;
       Logger.info('logo_paleta_service', 'salvar',
         'Identidade visual atualizada por ' + email +
-        ' | logo: ' + (dados.logoUrl !== undefined ? dados.logoUrl || '(removido)' : 'sem alteração') +
+        ' | logo: ' + logoLog +
         ' | paleta: ' + (dados.paleta ? JSON.stringify(dados.paleta) : 'sem alteração'));
 
       if (typeof AuditoriaService !== 'undefined') {

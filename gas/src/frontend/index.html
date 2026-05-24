@@ -151,22 +151,22 @@ body {
 }
 
 #sidebar-logo {
-  width: 38px; height: 38px;
+  width: 52px; height: 52px;
   border-radius: var(--r-sm);
   object-fit: contain;
   background: rgba(255,255,255,.1);
-  padding: 3px;
+  padding: 4px;
   flex-shrink: 0;
   display: none;
 }
 #sidebar-logo.visivel { display: block; }
 
 #sidebar-logo-placeholder {
-  width: 38px; height: 38px;
+  width: 52px; height: 52px;
   border-radius: var(--r-sm);
   background: rgba(255,255,255,.12);
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
+  font-size: 24px; flex-shrink: 0;
 }
 
 #sidebar-org-info { overflow: hidden; flex: 1; }
@@ -873,7 +873,10 @@ body {
     transition: transform var(--slow) var(--ease), width var(--slow) var(--ease);
     box-shadow: 22px 0 50px rgba(15,23,42,.28);
   }
+  #sidebar { z-index: 200; }
   #sidebar.aberto { transform: translateX(0); }
+  #sidebar-backdrop { display:none; position:fixed; inset:0; z-index:199; background:rgba(0,0,0,.35); }
+  #sidebar-backdrop.visivel { display:block; }
   #sidebar.recolhido { width: var(--sidebar-w); }
   #sidebar.recolhido #sidebar-org-info,
   #sidebar.recolhido #sidebar-user-name { display: block; }
@@ -1451,7 +1454,7 @@ textarea.input { resize: vertical; }
       </div>
       <div id="sidebar-org-info">
         <span id="org-nome-sidebar">Carregando…</span>
-        <span id="sidebar-tagline">Sistema de Gestão Cultural</span>
+        <span id="sidebar-tagline">TRAMAR — Sistema de Gestão Cultural</span>
       </div>
     </div>
 
@@ -1472,6 +1475,7 @@ textarea.input { resize: vertical; }
     </div>
 
   </nav><!-- /sidebar -->
+  <div id="sidebar-backdrop" onclick="document.getElementById('sidebar').classList.remove('aberto');this.classList.remove('visivel');"></div>
 
   <!-- MAIN -->
   <div id="main">
@@ -1510,7 +1514,7 @@ textarea.input { resize: vertical; }
         <div id="home-banner">
           <div class="banner-texto">
             <h2 id="home-titulo">Olá! Bem-vindo(a).</h2>
-            <p id="home-subtitulo">Sistema de Gestão Cultural — carregando dados…</p>
+            <p id="home-subtitulo">TRAMAR — Sistema de Gestão Cultural</p>
           </div>
           <div class="banner-icone">🎭</div>
         </div>
@@ -1747,6 +1751,21 @@ textarea.input { resize: vertical; }
                 <span id="iv-mini-sidebar-inner" style="flex:1;padding:4px 8px;border-radius:4px;">
                   Prévia do menu lateral
                 </span>
+              </div>
+
+              <div class="admin-section-titulo" style="margin-top:20px;">Identidade Institucional</div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nome da Instituição</label>
+                <input type="text" id="iv-nome-instituicao"
+                       style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;"
+                       placeholder="Ex: Centro Cultural Bom Jardim">
+                <span style="font-size:11px;color:#64748b;">Exibido na barra lateral. Deixe em branco para usar o nome de configuração padrão.</span>
+              </div>
+              <div style="margin-bottom:18px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Apresentação da Instituição</label>
+                <textarea id="iv-apresentacao-instituicao" rows="4"
+                          style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"
+                          placeholder="Texto de apresentação da organização — utilizado em relatórios e documentos institucionais."></textarea>
               </div>
 
               <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
@@ -5059,6 +5078,147 @@ textarea.input { resize: vertical; }
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════ -->
+      <!-- VIEW: ESTRATÉGIA INSTITUCIONAL (FASE 11.1)     -->
+      <!-- ═══════════════════════════════════════════════ -->
+      <div id="view-estrategia" class="view">
+        <div class="view-header">
+          <h2 class="view-titulo"><span class="material-symbols-outlined">flag</span> Estratégia</h2>
+          <button class="btn btn-primary" id="btn-novo-objetivo"
+                  onclick="BtnGuard.wrap('btn-novo-objetivo','Abrindo…',EstrategiaUI.abrirForm)">+ Novo Objetivo</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn ativa" onclick="EstrategiaUI.setTab('objetivos',this)" data-bg-skip="1">Objetivos</button>
+          <button class="tab-btn" onclick="EstrategiaUI.setTab('kpis',this)" data-bg-skip="1">KPIs Reais</button>
+          <button class="tab-btn" onclick="EstrategiaUI.setTab('riscos',this)" data-bg-skip="1">Riscos do Mês</button>
+          <button class="tab-btn" onclick="EstrategiaUI.setTab('calendario',this)" data-bg-skip="1">Calendário</button>
+        </div>
+
+        <!-- Stats gerais -->
+        <div class="stats-strip" id="est-stats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="stat-card"><span class="stat-valor" id="est-total">–</span><span class="stat-label">Total</span></div>
+          <div class="stat-card" style="border-color:#7c3aed;"><span class="stat-valor" id="est-ativos" style="color:#7c3aed;">–</span><span class="stat-label">Ativos</span></div>
+          <div class="stat-card" style="border-color:#16a34a;"><span class="stat-valor" id="est-concluidos" style="color:#16a34a;">–</span><span class="stat-label">Concluídos</span></div>
+          <div class="stat-card" style="border-color:#2563eb;"><span class="stat-valor" id="est-exec-pct" style="color:#2563eb;">–</span><span class="stat-label">Execução global</span></div>
+        </div>
+
+        <!-- Tab: Objetivos -->
+        <div id="est-tab-objetivos">
+          <!-- Filtros -->
+          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+            <select id="est-fil-horizonte" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="EstrategiaUI.filtrar()">
+              <option value="">Todos os horizontes</option>
+              <option value="curto_prazo">Curto prazo (1 ano)</option>
+              <option value="medio_prazo">Médio prazo (3 anos)</option>
+              <option value="longo_prazo">Longo prazo (5 anos)</option>
+            </select>
+            <select id="est-fil-status" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="EstrategiaUI.filtrar()">
+              <option value="">Todos os status</option>
+              <option value="rascunho">Rascunho</option>
+              <option value="ativo">Ativo</option>
+              <option value="em_revisao">Em revisão</option>
+              <option value="concluido">Concluído</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+            <input type="text" id="est-busca" placeholder="Buscar objetivo…"
+                   style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;"
+                   oninput="EstrategiaUI.filtrar()">
+          </div>
+          <div id="est-lista" class="muted-text" style="padding:24px;text-align:center;">Carregando…</div>
+        </div>
+
+        <!-- Tab: KPIs Reais -->
+        <div id="est-tab-kpis" style="display:none;">
+          <div id="est-kpis-grid" class="muted-text" style="padding:24px;text-align:center;">Carregando KPIs…</div>
+        </div>
+
+        <!-- Tab: Riscos do Mês -->
+        <div id="est-tab-riscos" style="display:none;">
+          <div id="est-riscos-lista" class="muted-text" style="padding:24px;text-align:center;">Calculando riscos…</div>
+        </div>
+
+        <!-- Tab: Calendário Estratégico -->
+        <div id="est-tab-calendario" style="display:none;">
+          <div id="est-calendario-wrap" class="muted-text" style="padding:24px;text-align:center;">Carregando calendário…</div>
+        </div>
+
+        <!-- Modal Objetivo -->
+        <div id="modal-objetivo" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(620px,96vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="font-size:18px;" id="modal-obj-titulo">Objetivo Estratégico</h3>
+              <button onclick="EstrategiaUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;" data-bg-skip="1">✕</button>
+            </div>
+            <form onsubmit="return false;">
+              <input type="hidden" id="obj-id">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Título *</label>
+                <input type="text" id="obj-titulo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: Ampliar acesso à cultura no território">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Horizonte</label>
+                  <select id="obj-horizonte" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <option value="curto_prazo">Curto prazo (1 ano)</option>
+                    <option value="medio_prazo">Médio prazo (3 anos)</option>
+                    <option value="longo_prazo">Longo prazo (5 anos)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Responsável</label>
+                  <input type="email" id="obj-responsavel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="email@org.br">
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Início</label>
+                  <input type="date" id="obj-data-inicio" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Prazo final</label>
+                  <input type="date" id="obj-data-fim" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Descrição</label>
+                <textarea id="obj-descricao" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Contexto e motivação do objetivo…"></textarea>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Meta quantitativa</label>
+                <input type="text" id="obj-meta" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: Atender 5.000 pessoas/ano; Taxa de ocupação ≥ 75%">
+              </div>
+              <div style="margin-bottom:20px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Observações</label>
+                <textarea id="obj-observacoes" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"></textarea>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="EstrategiaUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-objetivo"
+                        onclick="BtnGuard.wrap('btn-salvar-objetivo','Salvando…',EstrategiaUI.salvar)">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Modal Vincular Ação -->
+        <div id="modal-vincular-acao" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(520px,96vw);max-height:80vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="font-size:16px;">Vincular Ação ao Objetivo</h3>
+              <button onclick="EstrategiaUI.fecharModalVincular()" style="background:none;border:none;font-size:22px;cursor:pointer;" data-bg-skip="1">✕</button>
+            </div>
+            <input type="hidden" id="vincular-objetivo-id">
+            <input type="text" id="vincular-busca-acao" placeholder="Buscar ação pelo nome…"
+                   style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:12px;"
+                   oninput="EstrategiaUI.filtrarAcoesVincular()">
+            <div id="vincular-lista-acoes" style="max-height:320px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+      </div><!-- /view-estrategia -->
+
     </div><!-- /conteudo -->
   </div><!-- /main -->
 
@@ -5471,6 +5631,21 @@ var GAS = {
     rollback:         function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_auditoria_rollback(d); },
     detectarSuspeitos:function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_auditoria_detectar_suspeitos(p||{}); }
   },
+  // ── Fase 11 — Estratégia ─────────────────────────────────────────────────
+  estrategia: {
+    listar:          function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_listar(f||{}); },
+    obter:           function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_obter(id); },
+    metricas:        function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_metricas(); },
+    kpis:            function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_kpis(); },
+    riscos:          function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_riscos(); },
+    relatorio:       function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_relatorio(p||{}); },
+    calendario:      function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_calendario(); },
+    salvar:          function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_salvar(d); },
+    mudarStatus:     function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_mudar_status(d); },
+    vincularAcao:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_vincular_acao(d); },
+    desvincularAcao: function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_desvincular_acao(d); },
+    excluir:         function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_excluir(id); }
+  },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
 
@@ -5676,13 +5851,32 @@ var IdentidadeAdmin = (function() {
   function uploadLogo(input) {
     if(!input.files||!input.files[0]) return;
     var file = input.files[0];
-    if(file.size > 512*1024) { Toast.aviso('Imagem muito grande. Use até 512 KB.'); input.value=''; return; }
     var reader = new FileReader();
     reader.onload = function(e) {
-      var dataUrl = e.target.result;
-      _el('iv-logo-url').value = dataUrl;
-      _el('iv-logo-nome').textContent = file.name;
-      previewLogo();
+      var img = new Image();
+      img.onload = function() {
+        // Redimensiona para caber em 300x300 e comprime como JPEG
+        var MAX = 300, QUALIDADE = 0.80;
+        var w = img.width, h = img.height;
+        if(w > MAX || h > MAX) {
+          if(w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else      { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var dataUrl = canvas.toDataURL('image/jpeg', QUALIDADE);
+        // google.script.run suporta ~100KB — rejeitar se ainda assim for grande
+        if(dataUrl.length > 90000) {
+          Toast.aviso('Imagem muito grande mesmo após compressão. Use uma imagem menor ou com menos detalhes.');
+          input.value=''; return;
+        }
+        _el('iv-logo-url').value = dataUrl;
+        _el('iv-logo-nome').textContent = file.name;
+        previewLogo();
+      };
+      img.onerror = function() { Toast.erro('Não foi possível ler a imagem.'); input.value=''; };
+      img.src = e.target.result;
     };
     reader.readAsDataURL(file);
   }
@@ -5738,6 +5932,9 @@ var IdentidadeAdmin = (function() {
       _el('ct-destaque').value=d; _el('cp-destaque').value=d;
       _el('ct-sidebar').value=s;  _el('cp-sidebar').value=s;
       _atualizarDerivadas();
+      // Identidade institucional
+      var nomInst = _el('iv-nome-instituicao'); if(nomInst) nomInst.value = iv.nomeInstituicao || '';
+      var apres   = _el('iv-apresentacao-instituicao'); if(apres) apres.value = iv.apresentacaoInstituicao || '';
       _carregarPendentes();
     });
   }
@@ -5787,12 +5984,23 @@ var IdentidadeAdmin = (function() {
   }
 
   function salvar() {
-    var url=(_el('iv-logo-url')||{}).value||'';
+    var url        = (_el('iv-logo-url')||{}).value||'';
+    var nomeInst   = ((_el('iv-nome-instituicao')||{}).value||'').trim();
+    var apresent   = ((_el('iv-apresentacao-instituicao')||{}).value||'').trim();
     BtnGuard.wrap('btn-salvar-identidade','Salvando…',function(done){
-      GAS.admin.salvarIdentidade({logoUrl:url,paleta:_paletaAtual},function(resp){
+      GAS.admin.salvarIdentidade({
+        logoUrl:                url,
+        paleta:                 _paletaAtual,
+        nomeInstituicao:        nomeInst,
+        apresentacaoInstituicao: apresent
+      },function(resp){
         done();
-        if(resp&&resp.ok){Toast.sucesso('Identidade visual salva!');Identidade.aplicarLogo(url,false);}
-        else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar.');
+        if(resp&&resp.ok){
+          Toast.sucesso('Identidade salva!');
+          Identidade.aplicarLogo(url,false);
+          // Atualiza sidebar em tempo real com novo nome da instituição
+          if(nomeInst){ var el=document.getElementById('org-nome-sidebar'); if(el) el.textContent=nomeInst; }
+        } else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar.');
       },function(err){done();Toast.erro('Erro: '+(err.message||err));});
     });
   }
@@ -13268,6 +13476,7 @@ var App = (function() {
     // secao, id, label, icone, modulo (null = sempre visível)
     { secao:'PRINCIPAL' },
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
+    { id:'estrategia',  label:'Estratégia',     icone:'flag',                   modulo:'ACOES' },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
     { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
@@ -13311,7 +13520,7 @@ var App = (function() {
     Identidade.aplicar(_boot.orgConfig);
 
     // Textos
-    var nome = _boot.orgConfig.nome || 'Sistema';
+    var nome = _boot.orgConfig.nomeInstituicao || _boot.orgConfig.nome || 'Sistema';
     var email = _boot.usuarioEmail || '';
     var iniciais = email.replace(/@.*$/,'').slice(0,2).toUpperCase() || '?';
 
@@ -13320,7 +13529,7 @@ var App = (function() {
     document.getElementById('sidebar-user-name').textContent = email.split('@')[0];
     document.getElementById('topbar-avatar').textContent    = iniciais;
     document.getElementById('sidebar-avatar').textContent   = iniciais;
-    document.title = _boot.orgConfig.titulo || nome;
+    document.title = 'TRAMAR — ' + nome;
 
     _construirMenu();
     _renderizarHome();
@@ -13438,8 +13647,9 @@ var App = (function() {
     var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
 
     document.getElementById('home-titulo').textContent = saudacao + ', ' + nome + '!';
+    var nomeExib = _boot.orgConfig.nomeInstituicao || _boot.orgConfig.nome;
     document.getElementById('home-subtitulo').textContent =
-      _boot.orgConfig.nome + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+      nomeExib + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
     // Stat cards
     var stats = [
@@ -13489,13 +13699,36 @@ var App = (function() {
 
   // Toggle sidebar
   document.addEventListener('DOMContentLoaded', function() {
+    var sidebar  = document.getElementById('sidebar');
+    var backdrop = document.getElementById('sidebar-backdrop');
+
+    function fecharSidebarMobile() {
+      sidebar.classList.remove('aberto');
+      if(backdrop) backdrop.classList.remove('visivel');
+    }
+
     document.getElementById('btn-toggle-sidebar').addEventListener('click', function() {
-      var sidebar = document.getElementById('sidebar');
-      if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
+      if (window.matchMedia('(max-width: 980px)').matches) {
+        var abrindo = !sidebar.classList.contains('aberto');
         sidebar.classList.toggle('aberto');
+        if(backdrop) backdrop.classList.toggle('visivel', abrindo);
       } else {
         sidebar.classList.toggle('recolhido');
       }
+    });
+
+    // Fechar no desktop ao clicar fora
+    document.addEventListener('click', function(e) {
+      if (window.matchMedia('(max-width: 980px)').matches) return;
+      if (sidebar.classList.contains('recolhido')) return;
+      if (!sidebar.contains(e.target) && !document.getElementById('btn-toggle-sidebar').contains(e.target)) return;
+    });
+
+    // Fechar no mobile ao navegar (já existe no menu, reforça o backdrop)
+    document.querySelectorAll('#nav-lista a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        if (window.matchMedia('(max-width: 980px)').matches) fecharSidebarMobile();
+      });
     });
   });
 
@@ -14965,6 +15198,351 @@ var ParceriasUI = (function() {
            avancar:avancar, ativar:ativar, encerrar:encerrar };
 })();
 Router.registrar('parcerias','Parcerias',ParceriasUI.aoAbrir);
+
+// ─── Fase 11.1: EstrategiaUI ─────────────────────────────────────────────────
+var EstrategiaUI = (function() {
+  var _lista = [], _carregado = false, _tabAtual = 'objetivos';
+  var _acoesCache = [], _objVincularId = null;
+
+  var _HZ_LABEL = { curto_prazo:'Curto prazo (1a)', medio_prazo:'Médio prazo (3a)', longo_prazo:'Longo prazo (5a)' };
+  var _HZ_COR   = { curto_prazo:'#7c3aed', medio_prazo:'#2563eb', longo_prazo:'#0d9488' };
+  var _ST_BADGE = { rascunho:'secondary', ativo:'success', em_revisao:'info', concluido:'warning', cancelado:'danger' };
+  var _ST_LABEL = { rascunho:'Rascunho', ativo:'Ativo', em_revisao:'Em revisão', concluido:'Concluído', cancelado:'Cancelado' };
+  var _SEV_COR  = { alto:'#dc2626', medio:'#d97706', baixo:'#16a34a' };
+  var _SEV_ICONE= { alto:'⛔', medio:'⚠️', baixo:'ℹ️' };
+
+  function aoAbrir() { if (!_carregado) carregar(); }
+
+  function carregar() {
+    _carregarMetricas();
+    GAS.estrategia.listar({}, function(r) {
+      _lista = (r && r.ok ? r.data : []) || [];
+      _carregado = true;
+      _renderLista(_lista);
+    }, function(e) {
+      document.getElementById('est-lista').innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>';
+    });
+  }
+
+  function _carregarMetricas() {
+    GAS.estrategia.metricas(function(r) {
+      var m = r && r.ok ? r.data : {};
+      _setV('est-total', m.total || 0);
+      _setV('est-ativos', m.ativo || 0);
+      _setV('est-concluidos', m.concluido || 0);
+      _setV('est-exec-pct', (m.percentualExecucaoGlobal || 0) + '%');
+    });
+  }
+
+  function setTab(tab, btn) {
+    _tabAtual = tab;
+    document.querySelectorAll('#view-estrategia .tab-bar .tab-btn').forEach(function(b){ b.classList.remove('ativa'); });
+    if (btn) btn.classList.add('ativa');
+    ['objetivos','kpis','riscos','calendario'].forEach(function(t) {
+      var el = document.getElementById('est-tab-' + t);
+      if (el) el.style.display = t === tab ? '' : 'none';
+    });
+    if (tab === 'kpis')       _carregarKpis();
+    if (tab === 'riscos')     _carregarRiscos();
+    if (tab === 'calendario') _carregarCalendario();
+  }
+
+  function filtrar() {
+    var hz = document.getElementById('est-fil-horizonte').value;
+    var st = document.getElementById('est-fil-status').value;
+    var q  = (document.getElementById('est-busca').value||'').toLowerCase();
+    var f  = _lista.filter(function(o) {
+      if (hz && o.horizonte !== hz) return false;
+      if (st && o.status    !== st) return false;
+      if (q && (o.titulo||'').toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    _renderLista(f);
+  }
+
+  function _renderLista(lista) {
+    var el = document.getElementById('est-lista');
+    if (!lista.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;text-align:center;">Nenhum objetivo estratégico cadastrado ainda.</p>'; return; }
+    el.innerHTML = '<div style="display:grid;gap:12px;">' + lista.map(function(o) {
+      var pct = _calcPct(o);
+      var acoesN = (o.acoesVinculadas||[]).length;
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ' + (_HZ_COR[o.horizonte]||'#7c3aed') + ';border-radius:8px;padding:16px;">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
+          '<div style="flex:1;">' +
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+              '<span style="font-weight:600;font-size:15px;">' + escaparHtml(o.titulo) + '</span>' +
+              '<span class="badge badge-' + (_ST_BADGE[o.status]||'secondary') + '">' + (_ST_LABEL[o.status]||o.status) + '</span>' +
+              '<span style="font-size:11px;background:' + (_HZ_COR[o.horizonte]||'#7c3aed') + '22;color:' + (_HZ_COR[o.horizonte]||'#7c3aed') + ';padding:2px 8px;border-radius:4px;font-weight:600;">' + (_HZ_LABEL[o.horizonte]||o.horizonte) + '</span>' +
+            '</div>' +
+            (o.descricao ? '<p style="font-size:13px;color:var(--muted,#64748b);margin:6px 0 8px;">' + escaparHtml(o.descricao.slice(0,120)) + (o.descricao.length>120?'…':'') + '</p>' : '') +
+            '<div style="display:flex;gap:16px;font-size:12px;color:#64748b;flex-wrap:wrap;">' +
+              (o.responsavel ? '<span>👤 ' + escaparHtml(o.responsavel.split('@')[0]) + '</span>' : '') +
+              (o.dataFim ? '<span>📅 até ' + fmtDataPtBR(o.dataFim) + '</span>' : '') +
+              '<span>🔗 ' + acoesN + ' ação(ões)</span>' +
+            '</div>' +
+            (acoesN > 0 ? '<div style="margin-top:10px;"><div style="background:#e2e8f0;border-radius:4px;height:6px;overflow:hidden;"><div style="background:' + (_HZ_COR[o.horizonte]||'#7c3aed') + ';height:100%;width:' + pct + '%;transition:width .3s;"></div></div><span style="font-size:11px;color:#64748b;">' + pct + '% concluídas</span></div>' : '') +
+          '</div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px;min-width:120px;align-items:flex-end;">' +
+            '<button class="btn btn-secondary btn-sm" onclick="EstrategiaUI.abrirForm(\'' + o.id + '\')" data-bg-skip="1">Editar</button>' +
+            '<button class="btn btn-secondary btn-sm" onclick="EstrategiaUI.abrirModalVincular(\'' + o.id + '\')" data-bg-skip="1">+ Ação</button>' +
+            (o.status === 'rascunho' ? '<button class="btn btn-sm" style="background:#16a34a;color:#fff;padding:4px 8px;border-radius:4px;border:none;font-size:12px;cursor:pointer;" id="btn-ativar-' + o.id + '" onclick="BtnGuard.wrap(\'btn-ativar-' + o.id + '\',\'Ativando…\',function(){EstrategiaUI.mudarStatus(\'' + o.id + '\',\'ativo\')})">Ativar</button>' : '') +
+            (o.status === 'ativo' ? '<button class="btn btn-sm" style="background:#16a34a;color:#fff;padding:4px 8px;border-radius:4px;border:none;font-size:12px;cursor:pointer;" id="btn-concluir-' + o.id + '" onclick="BtnGuard.wrap(\'btn-concluir-' + o.id + '\',\'Concluindo…\',function(){EstrategiaUI.mudarStatus(\'' + o.id + '\',\'concluido\')})">Concluir</button>' : '') +
+          '</div>' +
+        '</div>' +
+        (acoesN > 0 ? _renderAcoesVinculadas(o) : '') +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  function _renderAcoesVinculadas(obj) {
+    var acoes = (obj.acoesVinculadas||[]).slice(0,5);
+    return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">' +
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Ações vinculadas</div>' +
+      acoes.map(function(a) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;font-size:13px;">' +
+          '<span>' + escaparHtml(a.nome||a.id) + '</span>' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<span class="badge badge-' + ({concluida:'success',cancelada:'danger',em_execucao:'info',planejada:'secondary'}[a.status]||'secondary') + '" style="font-size:10px;">' + (a.status||'') + '</span>' +
+            '<button style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:0 4px;" onclick="EstrategiaUI.desvincularAcao(\'' + obj.id + '\',\'' + a.id + '\')" data-bg-skip="1" title="Desvincular">✕</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      (obj.acoesVinculadas.length > 5 ? '<p style="font-size:11px;color:#64748b;">+' + (obj.acoesVinculadas.length-5) + ' mais…</p>' : '') +
+    '</div>';
+  }
+
+  function _carregarKpis() {
+    var el = document.getElementById('est-kpis-grid');
+    el.innerHTML = '<p class="muted-text">Calculando KPIs em tempo real…</p>';
+    GAS.estrategia.kpis(function(r) {
+      var k = r && r.ok ? r.data : {};
+      el.innerHTML = _renderKpis(k);
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  function _renderKpis(k) {
+    var cards = [
+      { titulo:'Ocupação de espaços', valor: (k.taxaOcupacaoEspacos||{}).percentual+'%', detalhe: (k.taxaOcupacaoEspacos||{}).confirmadas + ' confirmadas / ' + (k.taxaOcupacaoEspacos||{}).total + ' total', cor:'#7c3aed' },
+      { titulo:'Conclusão no prazo', valor: (k.taxaConclusaoNoPrazo||{}).percentual+'%', detalhe: (k.taxaConclusaoNoPrazo||{}).noPrazo + ' de ' + (k.taxaConclusaoNoPrazo||{}).concluidas + ' concluídas', cor:'#16a34a' },
+      { titulo:'Custo por ação', valor: 'R$ ' + ((k.custoPorAcao||{}).custoPorAcao||0).toLocaleString('pt-BR'), detalhe: (k.custoPorAcao||{}).acoesExecutadas + ' ações executadas', cor:'#2563eb' },
+      { titulo:'Satisfação do público', valor: (k.indiceSatisfacaoPublico||{}).media !== null ? (k.indiceSatisfacaoPublico||{}).media + '/10' : '—', detalhe: (k.indiceSatisfacaoPublico||{}).respondidas + ' pesquisas respondidas', cor:'#f59e0b' },
+      { titulo:'Execução orçamentária', valor: (k.execucaoOrcamentaria||{}).percentual+'%', detalhe: 'R$ ' + ((k.execucaoOrcamentaria||{}).totalExecutado||0).toLocaleString('pt-BR') + ' de R$ ' + ((k.execucaoOrcamentaria||{}).totalPrevisto||0).toLocaleString('pt-BR'), cor:'#0d9488' },
+      { titulo:'Novos agentes (12m)', valor: (k.renovacaoAgentes||{}).novosUltimoAno, detalhe: (k.renovacaoAgentes||{}).ativos + ' agentes ativos no total', cor:'#db2777' }
+    ];
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">' +
+      cards.map(function(c) {
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid ' + c.cor + ';border-radius:8px;padding:18px;">' +
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:6px;">' + c.titulo + '</div>' +
+          '<div style="font-size:28px;font-weight:800;color:' + c.cor + ';margin-bottom:4px;">' + (c.valor !== undefined && c.valor !== null ? c.valor : '—') + '</div>' +
+          '<div style="font-size:11px;color:#94a3b8;">' + (c.detalhe||'') + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<p style="font-size:11px;color:#94a3b8;margin-top:12px;">Calculado em ' + fmtDataPtBR((k.calculadoEm||'').slice(0,10)) + '.</p>';
+  }
+
+  function _carregarRiscos() {
+    var el = document.getElementById('est-riscos-lista');
+    el.innerHTML = '<p class="muted-text">Calculando riscos…</p>';
+    GAS.estrategia.riscos(function(r) {
+      var d = r && r.ok ? r.data : {};
+      var riscos = d.riscos || [];
+      if (!riscos.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:#16a34a;font-size:16px;">✅ Nenhum risco identificado este mês.</div>'; return; }
+      el.innerHTML = '<div style="margin-bottom:10px;font-size:13px;color:#64748b;">' + riscos.length + ' risco(s) identificado(s) — ' + (d.altos||0) + ' alto(s)</div>' +
+        '<div style="display:grid;gap:10px;">' + riscos.map(function(r) {
+          return '<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ' + (_SEV_COR[r.severidade]||'#94a3b8') + ';border-radius:8px;padding:14px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+              '<span style="font-size:16px;">' + (_SEV_ICONE[r.severidade]||'') + '</span>' +
+              '<span style="font-weight:700;font-size:14px;">' + escaparHtml(r.titulo) + '</span>' +
+              '<span style="font-size:11px;font-weight:700;background:' + (_SEV_COR[r.severidade]||'#94a3b8') + '22;color:' + (_SEV_COR[r.severidade]||'#94a3b8') + ';padding:2px 8px;border-radius:4px;">' + (r.severidade||'') + '</span>' +
+            '</div>' +
+            '<p style="font-size:13px;color:#64748b;margin:0;">' + escaparHtml(r.descricao||'') + '</p>' +
+            (r.itens&&r.itens.length ? '<ul style="font-size:12px;color:#475569;margin:6px 0 0;padding-left:18px;">' + r.itens.slice(0,3).map(function(i){ return '<li>' + escaparHtml(i.nome||i.titulo||i.id||'') + '</li>'; }).join('') + (r.itens.length>3?'<li>+' + (r.itens.length-3) + ' mais…</li>':'') + '</ul>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  function _carregarCalendario() {
+    var el = document.getElementById('est-calendario-wrap');
+    el.innerHTML = '<p class="muted-text">Gerando calendário…</p>';
+    GAS.estrategia.calendario(function(r) {
+      var d = r && r.ok ? r.data : {};
+      var linhas = d.calendario || [];
+      if (!linhas.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;text-align:center;">Nenhum objetivo com datas definidas.</p>'; return; }
+      el.innerHTML = '<div style="display:grid;gap:14px;">' + linhas.map(function(obj) {
+        var corH = _HZ_COR[obj.horizonte] || '#7c3aed';
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+            '<span style="width:12px;height:12px;border-radius:50%;background:' + corH + ';flex-shrink:0;"></span>' +
+            '<strong style="font-size:14px;">' + escaparHtml(obj.titulo) + '</strong>' +
+            '<span style="font-size:11px;color:#64748b;">' + (_HZ_LABEL[obj.horizonte]||obj.horizonte) + '</span>' +
+            (obj.dataInicio||obj.dataFim ? '<span style="font-size:12px;color:#64748b;margin-left:auto;">' + (obj.dataInicio?fmtDataPtBR(obj.dataInicio):'') + (obj.dataFim?' → '+fmtDataPtBR(obj.dataFim):'') + '</span>' : '') +
+          '</div>' +
+          (obj.acoes.length > 0 ?
+            '<div style="padding-left:20px;border-left:2px solid ' + corH + '22;">' +
+            obj.acoes.map(function(a) {
+              return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;">' +
+                '<span style="width:6px;height:6px;border-radius:50%;background:' + ({concluida:'#16a34a',cancelada:'#ef4444',em_execucao:'#2563eb',planejada:'#94a3b8'}[a.status]||'#94a3b8') + ';flex-shrink:0;"></span>' +
+                '<span>' + escaparHtml(a.nome||a.id) + '</span>' +
+                (a.dataFim ? '<span style="font-size:11px;color:#94a3b8;margin-left:auto;">' + fmtDataPtBR(a.dataFim) + '</span>' : '') +
+              '</div>';
+            }).join('') + '</div>'
+          : '<p style="font-size:12px;color:#94a3b8;margin:0 0 0 20px;">Sem ações vinculadas.</p>') +
+        '</div>';
+      }).join('') + '</div>';
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  // ─── CRUD ─────────────────────────────────────────────────────────────────
+
+  function abrirForm(id) {
+    document.getElementById('modal-objetivo').style.display = 'flex';
+    document.getElementById('obj-id').value = id || '';
+    document.getElementById('modal-obj-titulo').textContent = id ? 'Editar Objetivo' : 'Novo Objetivo Estratégico';
+    if (id) {
+      var obj = _lista.find(function(x){ return x.id === id; });
+      if (obj) {
+        document.getElementById('obj-titulo').value      = obj.titulo || '';
+        document.getElementById('obj-horizonte').value   = obj.horizonte || 'curto_prazo';
+        document.getElementById('obj-responsavel').value = obj.responsavel || '';
+        document.getElementById('obj-data-inicio').value = obj.dataInicio || '';
+        document.getElementById('obj-data-fim').value    = obj.dataFim || '';
+        document.getElementById('obj-descricao').value   = obj.descricao || '';
+        document.getElementById('obj-meta').value        = obj.metaQuantitativa || '';
+        document.getElementById('obj-observacoes').value = obj.observacoes || '';
+      }
+    } else {
+      ['obj-titulo','obj-responsavel','obj-data-inicio','obj-data-fim','obj-descricao','obj-meta','obj-observacoes']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('obj-horizonte').value = 'curto_prazo';
+    }
+  }
+
+  function fecharForm() { document.getElementById('modal-objetivo').style.display = 'none'; }
+
+  function salvar() {
+    var dados = {
+      id:                document.getElementById('obj-id').value || undefined,
+      titulo:            document.getElementById('obj-titulo').value.trim(),
+      horizonte:         document.getElementById('obj-horizonte').value,
+      responsavel:       document.getElementById('obj-responsavel').value.trim(),
+      dataInicio:        document.getElementById('obj-data-inicio').value,
+      dataFim:           document.getElementById('obj-data-fim').value,
+      descricao:         document.getElementById('obj-descricao').value.trim(),
+      metaQuantitativa:  document.getElementById('obj-meta').value.trim(),
+      observacoes:       document.getElementById('obj-observacoes').value.trim()
+    };
+    if (!dados.titulo) { Toast.aviso('Título é obrigatório.'); BtnGuard.liberar('btn-salvar-objetivo'); return; }
+    GAS.estrategia.salvar(dados, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao salvar.'); BtnGuard.liberar('btn-salvar-objetivo'); return; }
+      fecharForm(); _carregado = false; carregar(); Toast.sucesso('Objetivo salvo!');
+    });
+  }
+
+  function mudarStatus(id, novoStatus) {
+    var motivo = '';
+    if (novoStatus === 'cancelado') {
+      var _raw = prompt('Motivo do cancelamento:');
+      if (_raw === null) { BtnGuard.liberar('btn-ativar-' + id); BtnGuard.liberar('btn-concluir-' + id); return; }
+      motivo = _raw || '';
+    }
+    GAS.estrategia.mudarStatus({ id:id, novoStatus:novoStatus, motivo:motivo }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
+    });
+  }
+
+  // ─── Vincular Ação ────────────────────────────────────────────────────────
+
+  function abrirModalVincular(objetivoId) {
+    _objVincularId = objetivoId;
+    document.getElementById('modal-vincular-acao').style.display = 'flex';
+    document.getElementById('vincular-busca-acao').value = '';
+    var el = document.getElementById('vincular-lista-acoes');
+    el.innerHTML = '<p class="muted-text">Carregando ações…</p>';
+    GAS.estrategia.listar({}, function() {}); // garante lista local
+    GAS.acoes.listar({}, function(r) {
+      _acoesCache = (r && r.ok ? r.data : []) || [];
+      _renderAcoesVincular(_acoesCache, objetivoId);
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  function fecharModalVincular() {
+    document.getElementById('modal-vincular-acao').style.display = 'none';
+    _objVincularId = null;
+  }
+
+  function filtrarAcoesVincular() {
+    var q = (document.getElementById('vincular-busca-acao').value||'').toLowerCase();
+    var f = _acoesCache.filter(function(a){ return (a.nome||'').toLowerCase().indexOf(q) !== -1; });
+    _renderAcoesVincular(f, _objVincularId);
+  }
+
+  function _renderAcoesVincular(lista, objId) {
+    var el = document.getElementById('vincular-lista-acoes');
+    var obj = _lista.find(function(o){ return o.id === objId; });
+    var jaVinc = obj ? (obj.acoesVinculadas||[]).map(function(a){ return a.id; }) : [];
+    if (!lista.length) { el.innerHTML = '<p class="muted-text" style="padding:12px;">Nenhuma ação encontrada.</p>'; return; }
+    el.innerHTML = lista.map(function(a) {
+      var vinc = jaVinc.indexOf(a.id) !== -1;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border);font-size:13px;">' +
+        '<div>' +
+          '<div style="font-weight:600;">' + escaparHtml(a.nome||a.id) + '</div>' +
+          '<div style="font-size:11px;color:#64748b;">' + (a.status||'') + (a.dataFim?' · até '+fmtDataPtBR(a.dataFim):'') + '</div>' +
+        '</div>' +
+        (vinc
+          ? '<span style="font-size:12px;color:#16a34a;font-weight:600;">✓ Vinculada</span>'
+          : '<button class="btn btn-sm" style="background:var(--primary,#7c3aed);color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;" onclick="EstrategiaUI._vincular(\'' + a.id + '\')" data-bg-skip="1">Vincular</button>') +
+      '</div>';
+    }).join('');
+  }
+
+  function _vincular(acaoId) {
+    if (!_objVincularId) return;
+    GAS.estrategia.vincularAcao({ objetivoId: _objVincularId, acaoId: acaoId }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Ação vinculada!');
+      _carregado = false; carregar();
+      abrirModalVincular(_objVincularId); // recarrega modal
+    });
+  }
+
+  function desvincularAcao(objId, acaoId) {
+    GAS.estrategia.desvincularAcao({ objetivoId: objId, acaoId: acaoId }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Ação desvinculada.'); _carregado = false; carregar();
+    });
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  function _setV(id, v) { var el = document.getElementById(id); if(el) el.textContent = v; }
+
+  function _calcPct(obj) {
+    var acoes = obj.acoesVinculadas || [];
+    if (!acoes.length) return 0;
+    var concl = acoes.filter(function(a){ return a.status === 'concluida'; }).length;
+    return Math.round((concl / acoes.length) * 100);
+  }
+
+  return {
+    aoAbrir:             aoAbrir,
+    carregar:            carregar,
+    setTab:              setTab,
+    filtrar:             filtrar,
+    abrirForm:           abrirForm,
+    fecharForm:          fecharForm,
+    salvar:              salvar,
+    mudarStatus:         mudarStatus,
+    abrirModalVincular:  abrirModalVincular,
+    fecharModalVincular: fecharModalVincular,
+    filtrarAcoesVincular:filtrarAcoesVincular,
+    desvincularAcao:     desvincularAcao,
+    _vincular:           _vincular
+  };
+})();
+Router.registrar('estrategia','Estratégia',EstrategiaUI.aoAbrir);
 
 // ─── Fase 9: FeatureFlagsUI ─────────────────────────────────────────────────
 var FeatureFlagsUI = (function() {

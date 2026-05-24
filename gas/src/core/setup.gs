@@ -35,7 +35,7 @@ var SCHEMA_ABAS = {
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
-    'Acervo', 'Parcerias'
+    'Acervo', 'Parcerias', 'Estrategia'
   ],
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
@@ -603,6 +603,38 @@ function fase10_prepararIndice() {
 
   Logger.info('setup', 'fase10_prepararIndice',
     'Fase 10 pronta. Passos: ' + resultado.passos.join(' | '));
+  return resultado;
+}
+
+/**
+ * Fase 11 — Estratégia Institucional.
+ * Prepara aba ACOES.Estrategia e inicializa repositório.
+ * Executar uma vez no GAS Editor após deploy.
+ */
+function fase11_prepararIndice() {
+  var resultado = { ok: true, passos: [] };
+
+  try {
+    EstrategiaRepository.prepararIndice();
+    resultado.passos.push('EstrategiaRepository: OK');
+  } catch(e) {
+    resultado.passos.push('EstrategiaRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  // Migra orgId nos JSONs novos (idempotente)
+  try {
+    var orgId = getOrgConfig().orgId;
+    modifyJSON('objetivos_estrategicos.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      lista.forEach(function(item) { if (item && !item.orgId) item.orgId = orgId; });
+      return lista;
+    });
+    resultado.passos.push('objetivos_estrategicos.json orgId: OK');
+  } catch(e) { /* arquivo pode não existir ainda — normal */ }
+
+  Logger.info('setup', 'fase11_prepararIndice',
+    'Fase 11 pronta. Passos: ' + resultado.passos.join(' | '));
   return resultado;
 }
 
