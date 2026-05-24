@@ -2562,6 +2562,7 @@ textarea.input { resize: vertical; }
                   <option value="termo_colaboracao">Termo de Colaboração</option>
                   <option value="convenio">Convênio</option>
                   <option value="lei_rouanet">Lei Rouanet</option>
+                  <option value="lei_aldir_blanc">Lei Aldir Blanc (PNAB)</option>
                   <option value="proacultura">ProAcultura</option>
                   <option value="edital_municipal">Edital Municipal</option>
                   <option value="edital_federal">Edital Federal</option>
@@ -3090,13 +3091,21 @@ textarea.input { resize: vertical; }
               <div class="card-titulo"><span class="ms">table_view</span> PNAB — Política Nacional Aldir Blanc</div>
             </div>
             <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;">
-              Gera os arquivos CSV (Espaços, Agentes Culturais, Ações Realizadas e Execução Financeira) para prestação de contas da Lei Aldir Blanc (Lei nº 14.399/2022).
+              Gera os arquivos CSV (Espaços, Agentes Culturais, Ações Realizadas e Execução Financeira) para prestação de contas da Lei Aldir Blanc (Lei nº 14.399/2022). Selecione o projeto para filtrar pelo período do contrato, ou informe apenas o ano.
             </p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+              <div class="form-group" style="margin:0;min-width:260px;">
+                <label class="form-label">Contrato Lei Aldir Blanc</label>
+                <select id="exp-pnab-contrato" class="form-input">
+                  <option value="">Selecione um projeto…</option>
+                </select>
+              </div>
               <div class="form-group" style="margin:0;">
-                <label class="form-label">Ano de referência</label>
+                <label class="form-label">Ano (sem projeto selecionado)</label>
                 <input id="exp-pnab-ano" class="form-input" type="number" style="width:110px;" value="">
               </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;">
               <div id="exp-pnab-resultado" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
               <button class="btn btn-primario" id="btn-exp-pnab" onclick="ExportacoesUI.gerarPNAB()">
                 <span class="ms ms-sm">table_view</span> Gerar CSVs PNAB
@@ -8276,26 +8285,48 @@ var ExportacoesUI = (function() {
   }
 
   function aoAbrir() {
-    // Popula o select de contratos Lei Rouanet
-    var sel = document.getElementById('exp-salic-contrato');
-    if (!sel || sel.options.length > 1) return;
-    GAS.contratos.listar({}, function(resp) {
-      if (!resp || !resp.ok) return;
-      var lista = (resp.data || []).filter(function(c) { return c.modalidade === 'lei_rouanet'; });
-      lista.forEach(function(c) {
-        var opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.nome + (c.numero ? ' (' + c.numero + ')' : '');
-        sel.appendChild(opt);
+    var selSalic = document.getElementById('exp-salic-contrato');
+    var selPnab  = document.getElementById('exp-pnab-contrato');
+    var needSalic = selSalic && selSalic.options.length <= 1;
+    var needPnab  = selPnab  && selPnab.options.length  <= 1;
+
+    if (needSalic || needPnab) {
+      GAS.contratos.listar({}, function(resp) {
+        if (!resp || !resp.ok) return;
+        var todos = resp.data || [];
+
+        if (needSalic) {
+          var rouanet = todos.filter(function(c) { return c.modalidade === 'lei_rouanet'; });
+          rouanet.forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nome + (c.numero ? ' (' + c.numero + ')' : '');
+            selSalic.appendChild(opt);
+          });
+          if (!rouanet.length) {
+            var o = document.createElement('option'); o.disabled = true;
+            o.textContent = 'Nenhum contrato Lei Rouanet cadastrado';
+            selSalic.appendChild(o);
+          }
+        }
+
+        if (needPnab) {
+          var aldir = todos.filter(function(c) { return c.modalidade === 'lei_aldir_blanc'; });
+          aldir.forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nome + (c.numero ? ' (' + c.numero + ')' : '');
+            selPnab.appendChild(opt);
+          });
+          if (!aldir.length) {
+            var o = document.createElement('option'); o.disabled = true;
+            o.textContent = 'Nenhum contrato Lei Aldir Blanc cadastrado';
+            selPnab.appendChild(o);
+          }
+        }
       });
-      if (!lista.length) {
-        var opt = document.createElement('option');
-        opt.disabled = true;
-        opt.textContent = 'Nenhum contrato Lei Rouanet cadastrado';
-        sel.appendChild(opt);
-      }
-    });
-    // Preenche ano atual no PNAB
+    }
+
     var anoEl = document.getElementById('exp-pnab-ano');
     if (anoEl && !anoEl.value) anoEl.value = new Date().getFullYear();
   }
@@ -8317,19 +8348,27 @@ var ExportacoesUI = (function() {
   }
 
   function gerarPNAB() {
-    var anoEl = document.getElementById('exp-pnab-ano');
-    var ano   = anoEl ? parseInt(anoEl.value) || new Date().getFullYear() : new Date().getFullYear();
+    var selPnab    = document.getElementById('exp-pnab-contrato');
+    var contratoId = selPnab ? selPnab.value : '';
+    var anoEl      = document.getElementById('exp-pnab-ano');
+    var ano        = anoEl ? parseInt(anoEl.value) || new Date().getFullYear() : new Date().getFullYear();
+    var params     = contratoId ? { contratoId: contratoId } : { ano: ano };
+    var nomeRef    = contratoId
+      ? ((selPnab.options[selPnab.selectedIndex] || {}).text || contratoId).replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g,'_').replace(/^_|_$/g,'')
+      : String(ano);
+
     BtnGuard.wrap('btn-exp-pnab', 'Gerando CSVs PNAB…', function(done) {
-      GAS.exportacao.pnab({ ano: ano }, function(resp) {
+      GAS.exportacao.pnab(params, function(resp) {
         done();
         if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar PNAB.'); return; }
-        var d   = resp.data || {};
-        var anoStr = String(ano);
+        var d      = resp.data || {};
+        var meta   = d.meta   || {};
+        var prefix = 'PNAB_' + nomeRef;
         var arquivos = [
-          { chave: 'espacos',    label: 'Espaços',         arquivo: 'PNAB_' + anoStr + '_espacos.csv' },
-          { chave: 'agentes',    label: 'Agentes',         arquivo: 'PNAB_' + anoStr + '_agentes.csv' },
-          { chave: 'acoes',      label: 'Ações',           arquivo: 'PNAB_' + anoStr + '_acoes.csv' },
-          { chave: 'financeiro', label: 'Financeiro',      arquivo: 'PNAB_' + anoStr + '_financeiro.csv' }
+          { chave: 'espacos',    label: 'Espaços',    arquivo: prefix + '_espacos.csv' },
+          { chave: 'agentes',    label: 'Agentes',    arquivo: prefix + '_agentes.csv' },
+          { chave: 'acoes',      label: 'Ações',      arquivo: prefix + '_acoes.csv' },
+          { chave: 'financeiro', label: 'Financeiro', arquivo: prefix + '_financeiro.csv' }
         ];
         var res = document.getElementById('exp-pnab-resultado');
         if (res) res.innerHTML = '';
@@ -8343,8 +8382,7 @@ var ExportacoesUI = (function() {
             res.appendChild(chip);
           }
         });
-        var meta = d.meta || {};
-        Toast.sucesso('PNAB ' + anoStr + ' gerado: ' + (meta.totalAcoes||0) + ' ações, ' + (meta.totalAgentes||0) + ' agentes, ' + (meta.totalContratos||0) + ' contratos.');
+        Toast.sucesso('PNAB gerado: ' + (meta.totalAcoes||0) + ' ações, ' + (meta.totalAgentes||0) + ' agentes, ' + (meta.totalContratos||0) + ' contratos.');
       }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
     });
   }
@@ -8361,6 +8399,7 @@ var FontesUI = (function() {
 
   var _TIPO_LABEL = {
     contrato_gestao:'Contrato de Gestão', lei_rouanet:'Lei Rouanet',
+    lei_aldir_blanc:'Lei Aldir Blanc (PNAB)',
     procultura:'ProCultura', edital_municipal:'Edital Municipal',
     edital_federal:'Edital Federal', fundo_setorial:'Fundo Setorial',
     receita_propria:'Receita Própria', outro:'Outro'

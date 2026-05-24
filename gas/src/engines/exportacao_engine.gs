@@ -328,15 +328,34 @@ var ExportacaoEngine = (function () {
    * @param {number} ano — ex: 2025
    * @returns {{ espacos:string, agentes:string, acoes:string, financeiro:string, meta:Object }}
    */
-  function gerarPNAB(orgId, ano) {
+  function gerarPNAB(orgId, ano, contratoId) {
     var org = getOrgConfig();
     orgId   = orgId || org.orgId;
-    ano     = ano   || new Date().getFullYear();
+
+    // Se contratoId fornecido, usar o período do contrato como filtro
+    var contrato      = null;
+    var periodoInicio = null;
+    var periodoFim    = null;
+    if (contratoId) {
+      try { contrato = ContratoRepository.buscarPorId(orgId, contratoId); } catch(_) {}
+      if (contrato) {
+        if (contrato.vigenciaInicio) periodoInicio = new Date(contrato.vigenciaInicio);
+        if (contrato.vigenciaFim)    periodoFim    = new Date(contrato.vigenciaFim);
+        if (!ano && periodoInicio)   ano            = periodoInicio.getFullYear();
+      }
+    }
+
+    ano  = ano   || new Date().getFullYear();
     var anoN = Number(ano);
 
     function _dentroDoPeriodo(iso) {
       if (!iso) return false;
-      try { return new Date(iso).getFullYear() === anoN; } catch(_) { return false; }
+      try {
+        var d = new Date(iso);
+        if (periodoInicio && periodoFim) return d >= periodoInicio && d <= periodoFim;
+        if (periodoInicio)               return d >= periodoInicio;
+        return d.getFullYear() === anoN;
+      } catch(_) { return false; }
     }
 
     // ── 1. Espaços Artístico-Culturais ─────────────────────────────────────
@@ -416,11 +435,14 @@ var ExportacaoEngine = (function () {
     // ── 4. Execução Financeira ───────────────────────────────────────────────
     var listaFinanceiro = [];
     try {
-      ContratoRepository.listar(orgId, {}).filter(function(c) {
-        var ini = c.vigenciaInicio || ''; var fim = c.vigenciaFim || '';
-        return (!ini || new Date(ini).getFullYear() <= anoN) &&
-               (!fim || new Date(fim).getFullYear() >= anoN);
-      }).forEach(function(c) {
+      var _contratosFin = (contratoId && contrato)
+        ? [contrato]
+        : ContratoRepository.listar(orgId, {}).filter(function(c) {
+            var ini = c.vigenciaInicio || ''; var fim = c.vigenciaFim || '';
+            return (!ini || new Date(ini).getFullYear() <= anoN) &&
+                   (!fim || new Date(fim).getFullYear() >= anoN);
+          });
+      _contratosFin.forEach(function(c) {
         listaFinanceiro.push({
           contrato:           c.nome || '',
           numero:             c.numero || '',
@@ -571,10 +593,11 @@ function ctrl_exportacao_sniic(params) {
 function ctrl_exportacao_pnab(params) {
   return GasResponse.wrap(function() {
     params = params || {};
-    var orgId = getOrgConfig().orgId;
+    var orgId      = getOrgConfig().orgId;
     AcessoService.verificar(['admin', 'gestor', 'financeiro', 'superadmin']);
-    var ano = params.ano ? parseInt(params.ano) : new Date().getFullYear();
-    return ExportacaoEngine.gerarPNAB(orgId, ano);
+    var ano        = params.ano        ? parseInt(params.ano) : null;
+    var contratoId = params.contratoId || null;
+    return ExportacaoEngine.gerarPNAB(orgId, ano, contratoId);
   }, 'ctrl_exportacao_pnab');
 }
 
