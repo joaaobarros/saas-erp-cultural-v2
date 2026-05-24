@@ -1962,6 +1962,25 @@ select.form-control { cursor: pointer; }
 
           </div><!-- /card configurações do sistema -->
 
+          <!-- Card: Banco de Dados -->
+          <div class="card" style="grid-column:1/-1;">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">folder_open</span> Banco de Dados</div>
+            </div>
+            <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
+              Os dados do sistema são armazenados em arquivos JSON numa pasta do Google Drive.
+              Acesse para inspecionar arquivos, fazer backup manual ou auditar registros brutos.
+            </p>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+              <button class="btn btn-primario btn-sm" id="btn-abrir-pasta-dados"
+                      onclick="AdminDadosUI.abrirPasta()">
+                <span class="ms ms-sm">folder_open</span> Abrir pasta no Drive
+              </button>
+              <span id="admin-pasta-nome"
+                    style="font-size:12px;color:var(--muted);font-family:monospace;"></span>
+            </div>
+          </div><!-- /card banco de dados -->
+
         </div><!-- /admin-grid -->
       </div><!-- /view-admin -->
 
@@ -6108,7 +6127,9 @@ var GAS = {
     salvarConfigExpediente: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarConfigExpediente(d); },
     // Terreno do Mapa
     lerTerreno:             function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerTerreno(); },
-    salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); }
+    salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); },
+    // Banco de Dados
+    obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); }
   },
   // Painel de Orgs — Fase 9 (superadmin)
   orgs: {
@@ -9998,6 +10019,39 @@ var ExpedienteUI = (function() {
   }
 
   return { carregar: carregar, salvar: salvar };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// BANCO DE DADOS UI
+// ═══════════════════════════════════════════════════════════
+var AdminDadosUI = (function() {
+  var _url = null;
+
+  /**
+   * Abre a pasta de dados no Google Drive.
+   * Na primeira chamada busca a URL no backend; nas seguintes usa cache.
+   */
+  function abrirPasta() {
+    if (_url) { window.open(_url, '_blank'); return; }
+    BtnGuard.wrap('btn-abrir-pasta-dados', 'Buscando…', function(liberar) {
+      GAS.admin.obterUrlPastaDados(function(r) {
+        liberar();
+        if (!r || !r.ok) {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao obter URL da pasta.');
+          return;
+        }
+        _url = r.data.url;
+        var label = document.getElementById('admin-pasta-nome');
+        if (label) label.textContent = r.data.nome || '';
+        window.open(_url, '_blank');
+      }, function(err) {
+        liberar();
+        Toast.erro('Erro: ' + ((err || {}).message || err));
+      });
+    });
+  }
+
+  return { abrirPasta: abrirPasta };
 })();
 
 // ═══════════════════════════════════════════════════════════

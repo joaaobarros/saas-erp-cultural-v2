@@ -268,7 +268,14 @@ var MetricsEngine = (function () {
   // ── Implementações internas ───────────────────────────────────
 
   function _calcularMetricasUsuarios(filtros) {
-    var aba = _getSheet('LogAcessos');
+    // _getSheet exige (chaveProps, nomeAba) — LogAcessos é o nome da aba, não uma chave
+    var aba;
+    try {
+      aba = _getSheet('SHEET_ID_MASTER', 'LogAcessos');
+    } catch(e) {
+      // Aba ausente ou planilha não configurada → retorno vazio sem explodir o dashboard
+      return { _tipo: METRICA_TIPO.USUARIOS, totalAcessos: 0, usuariosUnicos: 0 };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.USUARIOS, total: 0, novos: 0 };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 5).getValues();
@@ -299,7 +306,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularMetricasAuditoria(filtros) {
-    var aba = _getSheet('EventLog');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_MASTER', 'EventLog'); } catch(e) {
+      return { _tipo: METRICA_TIPO.AUDITORIA, totalEventos: 0 };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.AUDITORIA, totalEventos: 0 };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 8).getValues();
@@ -332,7 +342,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularMetricasPerformance(filtros) {
-    var aba = _getSheet('Reservas');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_ESPACOS', 'Reservas'); } catch(e) {
+      return { _tipo: METRICA_TIPO.PERFORMANCE };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.PERFORMANCE };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 16).getValues();
@@ -366,7 +379,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularMetricasFsm(filtros) {
-    var aba = _getSheet('EventLog');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_MASTER', 'EventLog'); } catch(e) {
+      return { _tipo: METRICA_TIPO.FSM, totalViolacoes: 0 };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.FSM, totalViolacoes: 0 };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 8).getValues();
@@ -401,7 +417,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularMetricasSeguranca(filtros) {
-    var aba = _getSheet('EventLog');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_MASTER', 'EventLog'); } catch(e) {
+      return { _tipo: METRICA_TIPO.SEGURANCA, totalFalhas: 0 };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.SEGURANCA, totalFalhas: 0 };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 8).getValues();
@@ -436,7 +455,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularMetricasGovernanca(filtros) {
-    var aba = _getSheet('EventLog');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_MASTER', 'EventLog'); } catch(e) {
+      return { _tipo: METRICA_TIPO.GOVERNANCA, totalViolacoes: 0 };
+    }
     if (!aba || aba.getLastRow() < 2) return { _tipo: METRICA_TIPO.GOVERNANCA, totalViolacoes: 0 };
 
     var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 8).getValues();
@@ -482,9 +504,14 @@ var MetricsEngine = (function () {
   // ── Dashboard operacional (absorvido de mod_metrics.gs) ──────────
 
   function _calcularDashboard(dataInicio, dataFim, filtroSala, filtroSetor) {
-    const abaReservas = _getSheet('Reservas');
-    const abaItens    = _getSheet('Itens');
-    const abaLogs     = _getSheet('LogAcessos');
+    // Reservas fica em ESPACOS; Itens fica em MASTER
+    var abaReservas = null;
+    try { abaReservas = _getSheet('SHEET_ID_ESPACOS', 'Reservas'); } catch(_e_) {}
+    var abaItens = null;
+    try { abaItens = _getSheet('SHEET_ID_MASTER', 'Itens'); } catch(_e_) {}
+    // _getSheet exige (chaveProps, nomeAba); LogAcessos pode não existir ainda → try-catch
+    var abaLogs = null;
+    try { abaLogs = _getSheet('SHEET_ID_MASTER', 'LogAcessos'); } catch(_e_) {}
     const porDiaSemana = { 0:'Domingo',1:'Segunda',2:'Terça',3:'Quarta',4:'Quinta',5:'Sexta',6:'Sábado' };
     const contagemDias = {}, contagemMeses = {}, contagemHoras = {};
     const temposPorSala = {}, temposPorItem = {};
@@ -612,7 +639,7 @@ var MetricsEngine = (function () {
 
     let solPendentes=0, solAprovadas=0, solRecusadas=0;
     try {
-      const abaSol = _getSheet('Solicitacoes');
+      const abaSol = _getSheet('SHEET_ID_ESPACOS', 'Solicitacoes');
       if (abaSol && abaSol.getLastRow()>1) {
         abaSol.getRange(2,1,abaSol.getLastRow()-1,9).getValues().forEach((r) => {
           const st = String(r[8]||'').toUpperCase();
@@ -642,7 +669,8 @@ var MetricsEngine = (function () {
 
     let codip = { totalEstimado:0, totalReal:0, totalRegistros:0, taxaPresenca:0 };
     try {
-      const abaCodip = _getSheet('RelatoriosCODIP');
+      // Tab na planilha RELATORIOS chama-se 'CODIP' (SCHEMA_ABAS.RELATORIOS)
+      const abaCodip = _getSheet('SHEET_ID_RELATORIOS', 'CODIP');
       const dIObj = dataInicio ? new Date(dataInicio) : null;
       const dFObj = dataFim    ? new Date(dataFim)    : null;
       if (abaCodip && abaCodip.getLastRow()>1) {

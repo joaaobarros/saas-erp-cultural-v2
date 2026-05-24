@@ -292,6 +292,25 @@ function ctrl_admin_salvarConfigExpediente(dados) {
   }, 'ctrl_admin_salvarConfigExpediente');
 }
 
+// ─── Banco de Dados — URL da pasta no Drive ──────────────────────────────────
+
+/**
+ * Retorna a URL e metadados da pasta de dados da organização no Google Drive.
+ * Acesso: superadmin apenas.
+ * @returns {{ url: string, nome: string, orgId: string }}
+ */
+function ctrl_admin_obterUrlPastaDados() {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    var pasta = getDataFolder();
+    return {
+      url:   'https://drive.google.com/drive/folders/' + pasta.getId(),
+      nome:  pasta.getName(),
+      orgId: getOrgConfig().orgId
+    };
+  }, 'ctrl_admin_obterUrlPastaDados');
+}
+
 // ─── helper de RBAC local ────────────────────────────────────────────────────
 function _assertAdmin() {
   var email = getEmailSessao();
