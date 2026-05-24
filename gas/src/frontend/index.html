@@ -7537,6 +7537,7 @@ var InfraConfigMapaUI = (function() {
           txt.setAttribute('paint-order', 'stroke');
           txt.setAttribute('stroke', '#fff8');
           txt.setAttribute('stroke-width', '2');
+          txt.setAttribute('transform', 'rotate(' + (-(cfg.rotacao || 0)) + ')');
           txt.textContent = labelNum;
           g.appendChild(txt);
         }
@@ -8052,28 +8053,62 @@ var InfraConfigMapaUI = (function() {
   }
 
   // ── Resize inline ────────────────────────────────────────
-  function _resizeInline(lp) {
+  // simetrico=true (Ctrl pressionado): expande ambos os lados a partir do centro (comportamento clássico)
+  // simetrico=false (padrão):          move apenas a borda arrastada; o lado oposto fica fixo
+  function _resizeInline(lp, simetrico) {
     if (!_modoEdicao || !_modoEdicao.drag || !_modoEdicao.cfg) return;
     var drag = _modoEdicao.drag;
     var cfg  = _modoEdicao.cfg;
     var h    = drag.handle;
-    var minSz = 20;
+    var minSz = 20, minH = minSz / 2;
 
     if (cfg.forma === 'circle') {
       var dist = Math.sqrt(lp.x * lp.x + lp.y * lp.y);
-      var newR = Math.max(minSz / 2, dist);
-      cfg.r = newR; cfg.w = newR * 2; cfg.h = newR * 2;
-      var g2 = document.getElementById('cfg-ed-shape-g');
-      if (g2) { var c2 = g2.querySelector('circle'); if (c2 && c2.getAttribute('r')) c2.setAttribute('r', newR); }
-      _atualizarInputsInline(); return;
+      cfg.r = Math.max(minH, dist); cfg.w = cfg.r * 2; cfg.h = cfg.r * 2;
+      _atualizarHandles(); return;
     }
 
-    var newHW = Math.max(minSz / 2, Math.abs(lp.x));
-    var newHH = Math.max(minSz / 2, Math.abs(lp.y));
-    if (h === 'n' || h === 's') newHW = drag.origW / 2;
-    if (h === 'e' || h === 'w') newHH = drag.origH / 2;
-    cfg.w = newHW * 2; cfg.h = newHH * 2;
-    _atualizarInputsInline();
+    // ── Modo SIMÉTRICO (Ctrl) ─────────────────────────────
+    if (simetrico) {
+      var newHW = Math.max(minH, Math.abs(lp.x));
+      var newHH = Math.max(minH, Math.abs(lp.y));
+      if (h === 'n' || h === 's') newHW = drag.origW / 2;
+      if (h === 'e' || h === 'w') newHH = drag.origH / 2;
+      cfg.w = newHW * 2; cfg.h = newHH * 2;
+      cfg.cx = drag.origCX; cfg.cy = drag.origCY;
+      _atualizarHandles(); return;
+    }
+
+    // ── Modo ASSIMÉTRICO (padrão) ─────────────────────────
+    // lp é relativo ao centro ATUAL do grupo (atualizado pelo _atualizarHandles anterior)
+    var curHW = cfg.w / 2, curHH = cfg.h / 2;
+    var angle = cfg.rotacao || 0;
+    var rad   = angle * Math.PI / 180;
+    var cos   = Math.cos(rad), sin = Math.sin(rad);
+
+    var aX, aY, eX, eY;
+    var newHW2 = curHW, newHH2 = curHH, dxL = 0, dyL = 0;
+
+    if      (h === 'se') { aX=-curHW; aY=-curHH; eX=Math.max(aX+minSz,lp.x); eY=Math.max(aY+minSz,lp.y); }
+    else if (h === 'nw') { aX= curHW; aY= curHH; eX=Math.min(aX-minSz,lp.x); eY=Math.min(aY-minSz,lp.y); }
+    else if (h === 'ne') { aX=-curHW; aY= curHH; eX=Math.max(aX+minSz,lp.x); eY=Math.min(aY-minSz,lp.y); }
+    else if (h === 'sw') { aX= curHW; aY=-curHH; eX=Math.min(aX-minSz,lp.x); eY=Math.max(aY+minSz,lp.y); }
+    else if (h === 'e')  { aX=-curHW; aY=0;      eX=Math.max(aX+minSz,lp.x); eY=0; }
+    else if (h === 'w')  { aX= curHW; aY=0;      eX=Math.min(aX-minSz,lp.x); eY=0; }
+    else if (h === 's')  { aX=0;      aY=-curHH; eX=0; eY=Math.max(aY+minSz,lp.y); }
+    else if (h === 'n')  { aX=0;      aY= curHH; eX=0; eY=Math.min(aY-minSz,lp.y); }
+
+    if      (h === 'n' || h === 's')  { newHH2 = Math.abs(eY - aY) / 2; dxL = 0;             dyL = (aY + eY) / 2; }
+    else if (h === 'e' || h === 'w')  { newHW2 = Math.abs(eX - aX) / 2; dxL = (aX + eX) / 2; dyL = 0; }
+    else { newHW2 = Math.abs(eX - aX) / 2; newHH2 = Math.abs(eY - aY) / 2;
+           dxL = (aX + eX) / 2; dyL = (aY + eY) / 2; }
+
+    cfg.w = newHW2 * 2; cfg.h = newHH2 * 2;
+    // Deslocar o centro no espaço mundo: rotacionar o offset local pelo ângulo da forma
+    cfg.cx += dxL * cos - dyL * sin;
+    cfg.cy += dxL * sin + dyL * cos;
+
+    _atualizarHandles(); // feedback visual imediato (igual ao modo rotação)
   }
 
   // ── Extrair cfg do espaço estático via getBBox ──────────
@@ -8403,7 +8438,8 @@ var InfraConfigMapaUI = (function() {
           } else {
             var lp = _localEdPt(e);
             _modoEdicao.drag = { type: 'resize', handle: handle, localPt: lp,
-              origW: _modoEdicao.cfg.w, origH: _modoEdicao.cfg.h, origR: _modoEdicao.cfg.r };
+              origW: _modoEdicao.cfg.w, origH: _modoEdicao.cfg.h, origR: _modoEdicao.cfg.r,
+              origCX: _modoEdicao.cfg.cx, origCY: _modoEdicao.cfg.cy };
           }
           return;
         }
@@ -8442,7 +8478,7 @@ var InfraConfigMapaUI = (function() {
             'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
           _atualizarInputsInline();
         } else if (drag.type === 'resize') {
-          _resizeInline(_localEdPt(e));
+          _resizeInline(_localEdPt(e), e.ctrlKey);
         } else if (drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
           var curAngle = Math.atan2(svgP2.y - cfg.cy, svgP2.x - cfg.cx) * 180 / Math.PI;
@@ -9393,9 +9429,9 @@ var ReservasUI = (function() {
     setModo:setModo, _aplicarFiltroLista:_aplicarFiltroLista,
     _renderDiagrama:_renderDiagrama, _renderAgenda:_renderAgenda,
     _abrirDetalheReserva:_abrirDetalheReserva,
-    _rdgNavSemana: function(d) { _semanaOffset += d; _diagramaDia = _getSemana(_semanaOffset)[0]; carregar(); },
+    _rdgNavSemana: function(d) { _semanaOffset += d; _diagramaDia = _getSemana(_semanaOffset)[0]; _renderDiagrama(); carregar(); },
     _rdgSetDia:    function(d) { _diagramaDia = d; _renderDiagrama(); },
-    _rdgHoje:      function()  { _semanaOffset=0; _diagramaDia=new Date().toISOString().slice(0,10); carregar(); },
+    _rdgHoje:      function()  { _semanaOffset=0; _diagramaDia=new Date().toISOString().slice(0,10); _renderDiagrama(); carregar(); },
     _rdgJumpDate:  function(d) {
       if (!d) return;
       // Calcular offset de semana relativo à semana atual
@@ -9405,10 +9441,10 @@ var ReservasUI = (function() {
       base.setDate(base.getDate() + diffToMon); // segunda da semana atual
       var diffMs = alvo.getTime() - base.getTime();
       _semanaOffset = Math.floor(diffMs / (7*24*3600*1000));
-      _diagramaDia = d; carregar();
+      _diagramaDia = d; _renderDiagrama(); carregar();
     },
-    _ragNavSemana: function(d) { _semanaOffset += d; carregar(); },
-    _ragHoje:      function()  { _semanaOffset=0; carregar(); },
+    _ragNavSemana: function(d) { _semanaOffset += d; _renderAgenda(); carregar(); },
+    _ragHoje:      function()  { _semanaOffset=0; _renderAgenda(); carregar(); },
     _ragJumpDate:  function(d) {
       if (!d) return;
       var alvo = new Date(d + 'T00:00:00');
@@ -9417,7 +9453,7 @@ var ReservasUI = (function() {
       base.setDate(base.getDate() + diffToMon);
       var diffMs = alvo.getTime() - base.getTime();
       _semanaOffset = Math.floor(diffMs / (7*24*3600*1000));
-      carregar();
+      _renderAgenda(); carregar();
     },
     _garantirEspacosPorId:_garantirEspacosPorId,
     // CCBJ Fechado — delega para _BloqueioUI (inicializado logo abaixo)

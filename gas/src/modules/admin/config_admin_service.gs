@@ -25,7 +25,36 @@ var ConfigAdminService = (function () {
    */
   function listarEspacos() {
     _assertAdmin();
-    return SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : _lerEspacosSheet();
+    var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : _lerEspacosSheet();
+    // Reparar numeroPlanta ausente (espaços criados antes do auto-assign)
+    var semNumero = espacos.filter(function(e) { return !e.numeroPlanta; });
+    if (semNumero.length > 0) {
+      var maxN = 0;
+      espacos.forEach(function(e) {
+        var n = parseInt(e.numeroPlanta, 10);
+        if (!isNaN(n) && n > maxN) maxN = n;
+      });
+      var modificados = [];
+      semNumero.forEach(function(e) {
+        e.numeroPlanta = String(++maxN);
+        modificados.push(e.id);
+      });
+      try {
+        modifyJSON('espacos_config.json', function(lista) {
+          modificados.forEach(function(id) {
+            var esp = espacos.filter(function(x) { return x.id === id; })[0];
+            var idx = -1;
+            for (var i = 0; i < lista.length; i++) { if (lista[i].id === id) { idx = i; break; } }
+            if (idx >= 0 && esp) lista[idx].numeroPlanta = esp.numeroPlanta;
+          });
+          return lista;
+        });
+        Logger.log('[config_admin_service] listarEspacos: numeroPlanta atribuído a ' + modificados.length + ' espaço(s)');
+      } catch (e) {
+        Logger.log('[config_admin_service] listarEspacos: erro ao reparar numeroPlanta — ' + e.message);
+      }
+    }
+    return espacos;
   }
 
   /**

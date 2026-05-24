@@ -175,10 +175,20 @@ var MapaUI=(function(){
         lbl.setAttribute('class','mapa-label');
         lbl.setAttribute('x','0');lbl.setAttribute('y','4');
         lbl.setAttribute('pointer-events','none');
+        lbl.setAttribute('transform','rotate('+(-(cfg.rotacao||0))+')');
         lbl.textContent=numLabel;
         g.appendChild(lbl);
       }
       layer.appendChild(g);
+    });
+    // Ocultar formas estáticas sem espaço ativo correspondente (evita "fantasmas")
+    var _activeIds = {};
+    espacos.forEach(function(e){ _activeIds[e.id] = true; });
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco').forEach(function(g){
+      if (g.closest('#mapa-espacos-custom')) return;
+      var gid = g.getAttribute('data-id') || '';
+      if (gid.startsWith('__hidden_')) return;
+      if (!_activeIds[gid]) g.style.display = 'none';
     });
   }
 
