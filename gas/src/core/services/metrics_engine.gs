@@ -700,7 +700,10 @@ var MetricsEngine = (function () {
   }
 
   function _calcularGraficoReservas() {
-    const aba = _getSheet('Reservas');
+    var aba;
+    try { aba = _getSheet('SHEET_ID_ESPACOS', 'Reservas'); } catch(e) {
+      return { labels:[], valores:[], tipo:'bar', titulo:'Reservas' };
+    }
     if (!aba || aba.getLastRow()<2) return { labels:[], valores:[], tipo:'bar', titulo:'Reservas' };
     const dados = aba.getRange(2,1,aba.getLastRow()-1,16).getValues();
     const contagem = {};

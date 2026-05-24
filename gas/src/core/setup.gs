@@ -30,8 +30,8 @@ var PROP_SHEETS = {
 var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
-    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'Contratados',
-    'AgentesCulturais', 'Voluntarios'
+    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
+    'Contratados', 'AgentesCulturais', 'Voluntarios'
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
