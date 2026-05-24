@@ -1594,6 +1594,25 @@ select.form-control { cursor: pointer; }
   --muted-color:     var(--muted);
 }
 
+/* ── RH / Depto. Pessoal — badges FSM e timeline ── */
+.rh-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+.rh-badge-pendente  { background:#fef9c3; color:#854d0e; }
+.rh-badge-aprovado  { background:#dcfce7; color:#166534; }
+.rh-badge-recusado  { background:#fee2e2; color:#991b1b; }
+.rh-badge-cancelado { background:#f1f5f9; color:#475569; }
+.rh-badge-concluido { background:#dbeafe; color:#1e40af; }
+.rh-badge-ajuste    { background:#ede9fe; color:#5b21b6; }
+.rh-badge-rascunho  { background:#f8fafc; color:#64748b; border:1px solid var(--border); }
+.rh-badge-ativo     { background:#dcfce7; color:#166534; }
+.rh-badge-encerrado { background:#f1f5f9; color:#475569; }
+.rh-tab-pane        { display:none; }
+.rh-tab-pane.ativa  { display:block; }
+.rh-timeline { list-style:none; padding:0; margin:0; position:relative; }
+.rh-timeline::before { content:''; position:absolute; left:16px; top:8px; bottom:8px; width:2px; background:var(--border); }
+.rh-timeline li { display:flex; gap:14px; padding:0 0 20px; position:relative; }
+.rh-timeline li .tl-dot { width:10px; height:10px; border-radius:50%; background:var(--color-primary); flex-shrink:0; margin-top:4px; z-index:1; position:relative; left:11px; }
+.rh-timeline .tl-body { flex:1; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; font-size:13px; }
+
   </style>
 </head>
 <body>
@@ -6036,6 +6055,279 @@ select.form-control { cursor: pointer; }
         </div>
       </div><!-- /view-ponto -->
 
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <!-- VIEW: RH / Depto. Pessoal — View Unificada (Fase 14)     -->
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div id="view-rh" class="view">
+        <div class="page-header">
+          <div class="page-title">RH / Depto. Pessoal</div>
+          <div class="page-subtitle">Equipe · PCCS · Férias · Folha · Indicadores — módulo unificado de gestão de pessoas</div>
+        </div>
+        <div class="stats-grid" id="rh-stats"></div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar" style="margin-bottom:16px;flex-wrap:wrap;">
+          <button class="tab-btn rh-tab-btn tab-ativa" data-rh-tab="equipe" onclick="RhUI.setTab('equipe',this)" data-bg-skip="1"><span class="ms ms-sm">group</span> Equipe</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="pccs" onclick="RhUI.setTab('pccs',this)" data-bg-skip="1"><span class="ms ms-sm">schema</span> PCCS</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="historico" onclick="RhUI.setTab('historico',this)" data-bg-skip="1"><span class="ms ms-sm">history</span> Histórico</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="avaliacoes" onclick="RhUI.setTab('avaliacoes',this)" data-bg-skip="1"><span class="ms ms-sm">star</span> Avaliações</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="escalas" onclick="RhUI.setTab('escalas',this)" data-bg-skip="1"><span class="ms ms-sm">calendar_month</span> Escalas</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="documentos" onclick="RhUI.setTab('documentos',this)" data-bg-skip="1"><span class="ms ms-sm">folder</span> Documentos</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="ferias" onclick="RhUI.setTab('ferias',this)" data-bg-skip="1"><span class="ms ms-sm">beach_access</span> Férias</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="folha" onclick="RhUI.setTab('folha',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> Folha</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="rescisao" onclick="RhUI.setTab('rescisao',this)" data-bg-skip="1"><span class="ms ms-sm">receipt_long</span> Rescisão</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="indicadores" onclick="RhUI.setTab('indicadores',this)" data-bg-skip="1"><span class="ms ms-sm">bar_chart</span> Indicadores</button>
+        </div>
+
+        <!-- Tab: EQUIPE -->
+        <div id="rh-tab-equipe" class="rh-tab-pane ativa">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">group</span> Colaboradores</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="rh-eq-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarEquipe()">
+                  <option value="ativo" selected>Ativos</option>
+                  <option value="">Todos</option>
+                  <option value="afastado">Afastados</option>
+                  <option value="ferias">Em férias</option>
+                  <option value="desligado">Desligados</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarEquipe()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="rh-btn-novo-colab" onclick="RhUI.abrirFormColab()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
+              </div>
+            </div>
+            <div id="rh-colab-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Nome completo *</label><input id="rh-pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
+                <div class="form-group"><label class="form-label">E-mail institucional</label><input id="rh-pf-email" class="form-input" type="email" placeholder="nome@org.br"></div>
+                <div class="form-group"><label class="form-label">Setor</label><input id="rh-pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
+                <div class="form-group"><label class="form-label">Cargo</label><select id="rh-pf-cargo" class="form-input"><option value="">Selecione…</option></select></div>
+                <div class="form-group"><label class="form-label">Vínculo</label>
+                  <select id="rh-pf-vinculo" class="form-input">
+                    <option value="clt">CLT</option><option value="pj">PJ</option>
+                    <option value="estagio">Estágio</option><option value="voluntario">Voluntário</option>
+                    <option value="bolsista">Bolsista</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Data Admissão</label><input id="rh-pf-admissao" class="form-input" type="date"></div>
+              </div>
+              <input type="hidden" id="rh-pf-id">
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primario" id="rh-btn-salvar-colab" onclick="RhUI.salvarColab()"><span class="ms ms-sm">save</span> Salvar</button>
+                <button class="btn btn-ghost" onclick="RhUI.fecharFormColab()" data-bg-skip="1">Cancelar</button>
+              </div>
+            </div>
+            <div id="rh-eq-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: PCCS -->
+        <div id="rh-tab-pccs" class="rh-tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">schema</span> Plano de Cargos, Carreiras e Salários</div>
+              <button class="btn btn-primario btn-sm" id="rh-btn-novo-pccs" onclick="RhUI.abrirFormPccs()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo Plano</button>
+            </div>
+            <div id="rh-pccs-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: HISTÓRICO -->
+        <div id="rh-tab-historico" class="rh-tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">history</span> Histórico de Eventos</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="rh-hist-colab" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarHistorico()">
+                  <option value="">Todos os colaboradores</option>
+                </select>
+                <button class="btn btn-primario btn-sm" id="rh-btn-novo-evento" onclick="RhUI.abrirFormEvento()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo Evento</button>
+              </div>
+            </div>
+            <div id="rh-evento-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-ev-colab" class="form-input"><option value="">Selecione…</option></select></div>
+                <div class="form-group"><label class="form-label">Tipo *</label>
+                  <select id="rh-ev-tipo" class="form-input">
+                    <option value="admissao">Admissão</option>
+                    <option value="promocao">Promoção</option>
+                    <option value="reajuste">Reajuste Salarial</option>
+                    <option value="mudanca_cargo">Mudança de Cargo</option>
+                    <option value="advertencia">Advertência</option>
+                    <option value="elogio">Elogio</option>
+                    <option value="outro" selected>Outro</option>
+                  </select>
+                </div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição *</label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primario" id="rh-btn-salvar-evento" onclick="RhUI.salvarEvento()"><span class="ms ms-sm">save</span> Registrar</button>
+                <button class="btn btn-ghost" onclick="RhUI.fecharFormEvento()" data-bg-skip="1">Cancelar</button>
+              </div>
+            </div>
+            <div id="rh-hist-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: AVALIAÇÕES -->
+        <div id="rh-tab-avaliacoes" class="rh-tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">star</span> Avaliações de Desempenho</div>
+              <button class="btn btn-primario btn-sm" id="rh-btn-nova-aval" onclick="RhUI.abrirFormAvaliacao()" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Avaliação</button>
+            </div>
+            <div id="rh-aval-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-aval-colab" class="form-input"><option value="">Selecione…</option></select></div>
+                <div class="form-group"><label class="form-label">Período *</label><input id="rh-aval-periodo" class="form-input" type="month"></div>
+                <div class="form-group"><label class="form-label">Nota (0-10)</label><input id="rh-aval-nota" class="form-input" type="number" min="0" max="10" step="0.5"></div>
+                <div class="form-group"><label class="form-label">Avaliador</label><input id="rh-aval-avaliador" class="form-input" type="text" placeholder="Nome ou email"></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Observações</label><textarea id="rh-aval-obs" class="form-input" rows="3" style="resize:vertical"></textarea></div>
+              </div>
+              <input type="hidden" id="rh-aval-id">
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primario" id="rh-btn-salvar-aval" onclick="RhUI.salvarAvaliacao()"><span class="ms ms-sm">save</span> Salvar</button>
+                <button class="btn btn-ghost" onclick="RhUI.fecharFormAvaliacao()" data-bg-skip="1">Cancelar</button>
+              </div>
+            </div>
+            <div id="rh-aval-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: ESCALAS -->
+        <div id="rh-tab-escalas" class="rh-tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">calendar_month</span> Escalas de Trabalho</div>
+              <button class="btn btn-primario btn-sm" id="rh-btn-nova-escala" onclick="RhUI.abrirFormEscala()" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Escala</button>
+            </div>
+            <div id="rh-escala-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-esc-colab" class="form-input"><option value="">Selecione…</option></select></div>
+                <div class="form-group"><label class="form-label">Tipo *</label>
+                  <select id="rh-esc-tipo" class="form-input">
+                    <option value="5x2">5x2 (Seg-Sex)</option>
+                    <option value="6x1">6x1</option>
+                    <option value="plantao_12x36">Plantão 12x36</option>
+                    <option value="home_office">Home Office</option>
+                    <option value="hibrido">Híbrido</option>
+                    <option value="personalizado">Personalizado</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Início *</label><input id="rh-esc-inicio" class="form-input" type="date"></div>
+                <div class="form-group"><label class="form-label">Fim (opcional)</label><input id="rh-esc-fim" class="form-input" type="date"></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Horário / Observações</label><input id="rh-esc-obs" class="form-input" type="text" placeholder="Ex: 08h-17h, intervalo 1h"></div>
+              </div>
+              <input type="hidden" id="rh-esc-id">
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primario" id="rh-btn-salvar-escala" onclick="RhUI.salvarEscala()"><span class="ms ms-sm">save</span> Salvar</button>
+                <button class="btn btn-ghost" onclick="RhUI.fecharFormEscala()" data-bg-skip="1">Cancelar</button>
+              </div>
+            </div>
+            <div id="rh-esc-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: DOCUMENTOS -->
+        <div id="rh-tab-documentos" class="rh-tab-pane">
+          <div class="card">
+            <div style="padding:60px 20px;text-align:center;">
+              <span class="ms" style="font-size:56px;color:var(--muted)">folder_open</span>
+              <h3 style="margin:16px 0 8px;font-size:18px;font-weight:600;">Documentos</h3>
+              <p style="font-size:14px;color:var(--text2);max-width:400px;margin:0 auto;">Repositório de documentos dos colaboradores (contratos, atestados, certificados). Em desenvolvimento.</p>
+              <span class="badge badge-muted" style="margin-top:12px;display:inline-block;">Em breve</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: FÉRIAS -->
+        <div id="rh-tab-ferias" class="rh-tab-pane">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">beach_access</span> Férias</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="rh-fer-filtro" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarFerias()">
+                  <option value="">Todas</option>
+                  <option value="pendente">Pendentes</option>
+                  <option value="aprovado">Aprovadas</option>
+                  <option value="recusado">Recusadas</option>
+                  <option value="concluido">Concluídas</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarFerias()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="rh-btn-solicitar-ferias" onclick="RhUI.abrirFormFerias()" data-bg-skip="1"><span class="ms ms-sm">add</span> Solicitar</button>
+              </div>
+            </div>
+            <div id="rh-fer-lista"></div>
+          </div>
+        </div>
+
+        <!-- Tab: FOLHA -->
+        <div id="rh-tab-folha" class="rh-tab-pane">
+          <div class="card">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;"><span class="ms">payments</span> Calculadora de Custo CLT</div>
+            <div style="padding:20px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">
+                <div class="form-group"><label class="form-label">Salário Bruto (R$)</label><input type="number" id="rh-clt-salario" class="form-control" placeholder="3500.00" step="0.01" oninput="RhUI.calcularCLT()"></div>
+                <div class="form-group"><label class="form-label">Horas Semanais</label><input type="number" id="rh-clt-horas" class="form-control" value="40" oninput="RhUI.calcularCLT()"></div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rh-clt-vt" checked onchange="RhUI.calcularCLT()"><label style="font-size:13px;">Vale Transporte</label></div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="rh-clt-va" checked onchange="RhUI.calcularCLT()"><label style="font-size:13px;">Vale Alimentação</label></div>
+              </div>
+              <div id="rh-clt-resultado" style="margin-top:20px;"></div>
+              <hr style="margin:24px 0;border:none;border-top:1px solid var(--border);">
+              <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">trending_up</span> Simulador de Reajuste</div>
+              <div style="display:flex;gap:12px;align-items:flex-end;max-width:400px;">
+                <div class="form-group" style="flex:1;"><label class="form-label">Percentual de Reajuste (%)</label><input type="number" id="rh-reajuste-pct" class="form-control" placeholder="10" step="0.5"></div>
+                <button id="rh-btn-simular" class="btn btn-secondary" style="margin-bottom:1px;" onclick="BtnGuard.wrap('rh-btn-simular','Simulando…',RhUI.simularReajuste)">Simular</button>
+              </div>
+              <div id="rh-reajuste-resultado" style="margin-top:16px;font-size:13px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: RESCISÃO -->
+        <div id="rh-tab-rescisao" class="rh-tab-pane">
+          <div class="card">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;"><span class="ms">receipt_long</span> Calculadora de Rescisão</div>
+            <div style="padding:20px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">
+                <div class="form-group"><label class="form-label">Salário Bruto (R$)</label><input type="number" id="rh-resc-salario" class="form-control" placeholder="3500.00" step="0.01"></div>
+                <div class="form-group"><label class="form-label">Meses Trabalhados</label><input type="number" id="rh-resc-meses" class="form-control" placeholder="24"></div>
+                <div class="form-group"><label class="form-label">Tipo de Rescisão</label>
+                  <select id="rh-resc-tipo" class="form-control">
+                    <option value="sem_justa_causa">Demissão sem Justa Causa</option>
+                    <option value="pedido_demissao">Pedido de Demissão</option>
+                    <option value="culpa_reciproca">Culpa Recíproca</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Economia esperada/mês (R$)</label><input type="number" id="rh-resc-economia" class="form-control" placeholder="Ex: salário do substituto"></div>
+              </div>
+              <div style="margin-top:12px;"><button id="rh-btn-calc-rescisao" class="btn btn-primary" onclick="BtnGuard.wrap('rh-btn-calc-rescisao','Calculando…',RhUI.calcularRescisao)">Calcular Rescisão</button></div>
+              <div id="rh-resc-resultado" style="margin-top:20px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: INDICADORES -->
+        <div id="rh-tab-indicadores" class="rh-tab-pane">
+          <div class="card">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;">
+              <span class="ms">bar_chart</span> Indicadores de RH
+              <div style="margin-left:auto;display:flex;gap:8px;">
+                <select id="rh-ind-ano" class="form-input" style="width:auto;padding:4px 8px;font-size:13px;" onchange="RhUI.carregarIndicadores()"></select>
+                <select id="rh-ind-mes" class="form-input" style="width:auto;padding:4px 8px;font-size:13px;" onchange="RhUI.carregarIndicadores()">
+                  <option value="1">Jan</option><option value="2">Fev</option><option value="3">Mar</option>
+                  <option value="4">Abr</option><option value="5">Mai</option><option value="6">Jun</option>
+                  <option value="7">Jul</option><option value="8">Ago</option><option value="9">Set</option>
+                  <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+                </select>
+              </div>
+            </div>
+            <div id="rh-ind-conteudo" style="padding:20px;"></div>
+          </div>
+        </div>
+
+      </div><!-- /view-rh -->
+
     </div><!-- /conteudo -->
   </div><!-- /main -->
 
@@ -6152,7 +6444,28 @@ var GAS = {
     salvarPccs:      function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvar(d); },
     salvarCargo:     function(pid,c,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvarCargo(pid,c); },
     excluirCargo:    function(pid,cid,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_excluirCargo(pid,cid); },
-    obterSalario:    function(cid,n,cl,r,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_obterSalario(cid,n,cl,r); }
+    obterSalario:    function(cid,n,cl,r,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_obterSalario(cid,n,cl,r); },
+    // Histórico RH
+    historico:          function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
+    registrarEvento:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
+    excluirEvento:      function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_evento(id); },
+    // Avaliações
+    listarAvaliacoes:   function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar_avaliacoes(id||null); },
+    salvarAvaliacao:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar_avaliacao(d); },
+    excluirAvaliacao:   function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_excluir_avaliacao(id); },
+    // Escalas
+    listarEscalas:      function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar_escalas(f||{}); },
+    salvarEscala:       function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar_escala(d); },
+    excluirEscala:      function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_excluir_escala(id); },
+    // Férias
+    listarFerias:       function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_ferias(id||null); },
+    saldoFerias:        function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_saldo_ferias(id); },
+    solicitarFerias:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_ferias(d); },
+    aprovarFerias:      function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_aprovar_ferias(id,d||{}); },
+    recusarFerias:      function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_recusar_ferias(id,m||''); },
+    cancelarFerias:     function(id,m,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_cancelar_ferias(id,m||''); },
+    concluirFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_concluir_ferias(id,d||{}); },
+    reenviarFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_reenviar_ferias(id,d||{}); }
   },
   // Solicitações de Reserva (workflow de aprovação)
   solicitacoes: {
@@ -6565,6 +6878,44 @@ function escaparHtml(valor) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// ── Helpers de modal globais (acessíveis por todos os módulos) ──────────────
+function _abrirModalSimples(html, selectId, selectVal) {
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-simples';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border-radius:12px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+  box.innerHTML = html;
+  overlay.appendChild(box);
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  if (selectId && selectVal) {
+    var sel = document.getElementById(selectId);
+    if (sel) sel.value = selectVal;
+  }
+}
+
+function _abrirModalConfirmar(opts) {
+  var html =
+    '<div style="border-radius:12px;overflow:hidden;">' +
+      '<div style="background:var(--surface2,#f8fafc);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
+        '<span class="ms" style="color:'+(opts.corIcone||'#ef4444')+';font-size:22px;">'+(opts.icone||'warning')+'</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);">'+escaparHtml(opts.titulo||'Confirmar')+'</h3>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);"><span class="ms" style="font-size:20px;">close</span></button>' +
+      '</div>' +
+      '<div style="padding:16px 20px;">' +
+        '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">'+(opts.mensagem||'')+'</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-perigo" id="'+escaparHtml(opts.idBtn||'btn-confirmar-acao')+'" onclick="'+(opts.onConfirm||'')+'">' +
+            escaparHtml(opts.labelConfirmar||'Confirmar') +
+          '</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  _abrirModalSimples(html);
 }
 
 // ── Utilitário de data (YYYY-MM-DD → DD/MM/YYYY) ────────────
@@ -13786,10 +14137,21 @@ var AfastamentosUI = (function() {
   }
 
   function ativar(id) {
-    if (!confirm('Ativar este afastamento? O colaborador será marcado como Afastado.')) return;
-    BtnGuard.wrap('btn-afa-ativar-'+id, 'Ativando…', function(done){
+    _abrirModalConfirmar({
+      titulo: 'Ativar Afastamento',
+      mensagem: 'O colaborador será marcado como Afastado.',
+      icone: 'play_circle',
+      corIcone: '#f59e0b',
+      idBtn: 'btn-afa-conf-ativar',
+      labelConfirmar: 'Ativar',
+      onConfirm: "AfastamentosUI._executarAtivar('"+id+"',this)"
+    });
+  }
+  function _executarAtivar(id, btn) {
+    BtnGuard.wrap(btn, 'Ativando…', function(done){
       GAS.pessoas.ativarAfastamento(id, function(resp){
         done();
+        var m = btn.closest ? btn.closest('.modal-simples') : null; if (m) m.remove();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Afastamento ativado.'); carregar();
       }, function(e){ done(); Toast.erro(e.message||e); });
@@ -13797,12 +14159,27 @@ var AfastamentosUI = (function() {
   }
 
   function encerrar(id) {
-    var _raw = prompt('Data de encerramento (AAAA-MM-DD):');
-    if (_raw === null) return;
-    var dataFim = _raw || '';
-    BtnGuard.wrap('btn-afa-encerrar-'+id, 'Encerrando…', function(done){
+    var html =
+      '<div style="border-radius:12px;overflow:hidden;">' +
+      '<div style="background:var(--surface2,#f8fafc);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
+      '<span class="ms" style="color:#6366f1;font-size:22px;">event_available</span>' +
+      '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);">Encerrar Afastamento</h3>' +
+      '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);"><span class="ms" style="font-size:20px;">close</span></button>' +
+      '</div><div style="padding:16px 20px;">' +
+      '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Data de encerramento</label>' +
+      '<input type="date" id="afa-encerrar-data" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin-bottom:16px;">' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="btn btn-primario" id="btn-afa-conf-encerrar" onclick="AfastamentosUI._executarEncerrar(\''+id+'\',this)">Encerrar</button>' +
+      '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div></div>';
+    _abrirModalSimples(html);
+  }
+  function _executarEncerrar(id, btn) {
+    var dataFim = (document.getElementById('afa-encerrar-data')||{}).value || '';
+    BtnGuard.wrap(btn, 'Encerrando…', function(done){
       GAS.pessoas.encerrarAfastamento(id, { dataFim: dataFim }, function(resp){
         done();
+        var m = btn.closest ? btn.closest('.modal-simples') : null; if (m) m.remove();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Afastamento encerrado. Colaborador reativado.'); carregar();
       }, function(e){ done(); Toast.erro(e.message||e); });
@@ -13810,19 +14187,34 @@ var AfastamentosUI = (function() {
   }
 
   function cancelar(id) {
-    var _raw = prompt('Motivo do cancelamento:');
-    if (_raw === null) return;
-    var motivo = _raw || '';
-    BtnGuard.wrap('btn-afa-cancelar-'+id, 'Cancelando…', function(done){
+    var html =
+      '<div style="border-radius:12px;overflow:hidden;">' +
+      '<div style="background:var(--surface2,#f8fafc);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
+      '<span class="ms" style="color:#ef4444;font-size:22px;">cancel</span>' +
+      '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);">Cancelar Afastamento</h3>' +
+      '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);"><span class="ms" style="font-size:20px;">close</span></button>' +
+      '</div><div style="padding:16px 20px;">' +
+      '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Motivo do cancelamento</label>' +
+      '<textarea id="afa-cancelar-motivo" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;resize:vertical;margin-bottom:16px;" placeholder="Informe o motivo..."></textarea>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="btn btn-perigo" id="btn-afa-conf-cancelar" onclick="AfastamentosUI._executarCancelar(\''+id+'\',this)">Cancelar Afastamento</button>' +
+      '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Voltar</button>' +
+      '</div></div></div>';
+    _abrirModalSimples(html);
+  }
+  function _executarCancelar(id, btn) {
+    var motivo = (document.getElementById('afa-cancelar-motivo')||{}).value || '';
+    BtnGuard.wrap(btn, 'Cancelando…', function(done){
       GAS.pessoas.cancelarAfastamento(id, motivo, function(resp){
         done();
+        var m = btn.closest ? btn.closest('.modal-simples') : null; if (m) m.remove();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Afastamento cancelado.'); carregar();
       }, function(e){ done(); Toast.erro(e.message||e); });
     });
   }
 
-  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, ativar: ativar, encerrar: encerrar, cancelar: cancelar, _selecionarColaborador: _selecionarColaborador };
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, ativar: ativar, encerrar: encerrar, cancelar: cancelar, _selecionarColaborador: _selecionarColaborador, _executarAtivar: _executarAtivar, _executarEncerrar: _executarEncerrar, _executarCancelar: _executarCancelar };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -13900,17 +14292,26 @@ var OcorrenciasUI = (function() {
   }
 
   function excluir(id) {
-    if (!confirm('Excluir esta ocorrência? Esta ação não pode ser desfeita.')) return;
-    BtnGuard.wrap('btn-oco-del-'+id, 'Excluindo…', function(done){
+    _abrirModalConfirmar({
+      titulo: 'Excluir Ocorrência',
+      mensagem: 'Esta ação não pode ser desfeita.',
+      idBtn: 'btn-oco-conf-excluir',
+      labelConfirmar: 'Excluir',
+      onConfirm: "OcorrenciasUI._executarExcluir('"+id+"',this)"
+    });
+  }
+  function _executarExcluir(id, btn) {
+    BtnGuard.wrap(btn, 'Excluindo…', function(done){
       GAS.pessoas.excluirOcorrencia(id, function(resp){
         done();
+        var m = btn.closest ? btn.closest('.modal-simples') : null; if (m) m.remove();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Ocorrência excluída.'); carregar();
       }, function(e){ done(); Toast.erro(e.message||e); });
     });
   }
 
-  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir, _selecionar: _selecionar };
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir, _selecionar: _selecionar, _executarExcluir: _executarExcluir };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -15736,6 +16137,7 @@ var App = (function() {
     { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
     { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
+    { id:'rh',            label:'RH / Depto. Pessoal', icone:'badge',              modulo:'PESSOAS' },
     { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
     { id:'ponto',         label:'Ponto & RH',     icone:'timer',                   modulo:'PESSOAS' },
     { id:'escuta',        label:'Escuta',          icone:'hearing',                 modulo:'PESSOAS' },
@@ -19539,6 +19941,742 @@ var PontoUI = (function() {
   return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, calcularCLT, calcularRescisao, exportar, importar };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════
+// RhUI — Módulo unificado RH / Depto. Pessoal (Fase 14)
+// ═══════════════════════════════════════════════════════════
+var RhUI = (function() {
+  var _carregado     = false;
+  var _abaAtiva      = 'equipe';
+  var _colaboradores = [];
+
+  function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function _esc(s) { return escaparHtml(s); }
+  function _fmtData(d) { return (d||'').slice(0,10).split('-').reverse().join('/'); }
+
+  function _badge(status) {
+    var MAP = {
+      pendente:'rh-badge-pendente', aprovado:'rh-badge-aprovado', recusado:'rh-badge-recusado',
+      cancelado:'rh-badge-cancelado', concluido:'rh-badge-concluido', pendente_ajuste:'rh-badge-ajuste',
+      rascunho:'rh-badge-rascunho', ativo:'rh-badge-ativo', encerrado:'rh-badge-encerrado'
+    };
+    var LABEL = {
+      pendente:'Pendente', aprovado:'Aprovado', recusado:'Recusado', cancelado:'Cancelado',
+      concluido:'Concluído', pendente_ajuste:'Ajuste', rascunho:'Rascunho', ativo:'Ativo', encerrado:'Encerrado',
+      clt:'CLT', pj:'PJ', estagio:'Estágio', voluntario:'Voluntário', bolsista:'Bolsista', temporario:'Temporário'
+    };
+    var cls = MAP[status];
+    var lbl = LABEL[status] || status;
+    if (cls) return '<span class="rh-badge '+cls+'">'+_esc(lbl)+'</span>';
+    return '<span class="badge badge-muted">'+_esc(lbl)+'</span>';
+  }
+
+  function _empty(msg) {
+    return '<div class="empty-state" style="padding:30px;text-align:center;"><span class="ms" style="font-size:32px;color:var(--muted)">inbox</span><p style="color:var(--muted);font-size:13px;margin-top:8px;">'+_esc(msg||'Nenhum registro.')+'</p></div>';
+  }
+
+  function _popularSelectColaboradores(selectId) {
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    var opts = '<option value="">Selecione…</option>' + _colaboradores.map(function(c){
+      return '<option value="'+_esc(c.id)+'">'+_esc(c.nome)+'</option>';
+    }).join('');
+    if (_colaboradores.length) { sel.innerHTML = opts; return; }
+    GAS.pessoas.listar({status:'ativo'}, function(resp){
+      _colaboradores = (resp&&resp.ok)?resp.data:[];
+      sel.innerHTML = '<option value="">Selecione…</option>' + _colaboradores.map(function(c){
+        return '<option value="'+_esc(c.id)+'">'+_esc(c.nome)+'</option>';
+      }).join('');
+    }, function(){});
+  }
+
+  // ── Inicialização ────────────────────────────────────────────
+  function aoAbrir() {
+    if (!_carregado) {
+      _carregarMetricas();
+      _popularAnoSelect();
+      carregarEquipe();
+      _carregado = true;
+    }
+    setTab(_abaAtiva);
+  }
+
+  function _carregarMetricas() {
+    GAS.pessoas.metricas(function(resp) {
+      if (!resp||!resp.ok) return;
+      var d = resp.data;
+      var el = document.getElementById('rh-stats');
+      if (!el) return;
+      el.innerHTML =
+        '<div class="stat-card"><div class="stat-label">Colaboradores</div><div class="stat-value">'+(d.total||0)+'</div></div>'+
+        '<div class="stat-card"><div class="stat-label">Ativos</div><div class="stat-value stat-success">'+(d.ativos||0)+'</div></div>'+
+        '<div class="stat-card"><div class="stat-label">Em Férias</div><div class="stat-value stat-info">'+(d.ferias||0)+'</div></div>'+
+        '<div class="stat-card"><div class="stat-label">Afastados</div><div class="stat-value stat-warning">'+(d.afastados||0)+'</div></div>';
+    }, function(){});
+  }
+
+  function _popularAnoSelect() {
+    var sel = document.getElementById('rh-ind-ano');
+    if (!sel) return;
+    var ano = new Date().getFullYear();
+    var opts = '';
+    for (var y = ano; y >= ano-3; y--) opts += '<option value="'+y+'"'+(y===ano?' selected':'')+'>'+y+'</option>';
+    sel.innerHTML = opts;
+    var mes = new Date().getMonth()+1;
+    var mSel = document.getElementById('rh-ind-mes');
+    if (mSel) mSel.value = String(mes);
+  }
+
+  function setTab(tab, btn) {
+    _abaAtiva = tab;
+    document.querySelectorAll('.rh-tab-pane').forEach(function(p){ p.style.display='none'; p.classList.remove('ativa'); });
+    document.querySelectorAll('.rh-tab-btn').forEach(function(b){ b.classList.remove('tab-ativa'); });
+    var pane = document.getElementById('rh-tab-'+tab);
+    if (pane) { pane.style.display=''; pane.classList.add('ativa'); }
+    if (btn) btn.classList.add('tab-ativa');
+    else document.querySelectorAll('[data-rh-tab="'+tab+'"]').forEach(function(b){ b.classList.add('tab-ativa'); });
+    if (tab==='pccs')        carregarPccs();
+    if (tab==='historico')   carregarHistorico();
+    if (tab==='avaliacoes')  carregarAvaliacoes();
+    if (tab==='escalas')     carregarEscalas();
+    if (tab==='ferias')      carregarFerias();
+    if (tab==='indicadores') carregarIndicadores();
+  }
+
+  // ─── EQUIPE ─────────────────────────────────────────────────
+  function carregarEquipe() {
+    var el = document.getElementById('rh-eq-lista');
+    if (!el) return;
+    el.innerHTML = _empty('Carregando…');
+    var status = (document.getElementById('rh-eq-filtro-status')||{}).value||'';
+    var filtros = status ? {status:status} : {};
+    GAS.pessoas.listar(filtros, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      _colaboradores = lista;
+      if (!lista.length) { el.innerHTML = _empty('Nenhum colaborador encontrado.'); return; }
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Nome</th><th>Setor</th><th>Cargo</th><th>Vínculo</th><th>Admissão</th><th>Status</th><th></th></tr></thead><tbody>'+
+        lista.map(function(c){
+          return '<tr>'+
+            '<td><strong>'+_esc(c.nome||'—')+'</strong><br><span style="font-size:11px;color:var(--text2)">'+_esc(c.emailInstitucional||c.email||'')+'</span></td>'+
+            '<td>'+_esc(c.setor||'—')+'</td>'+
+            '<td>'+_esc(c.cargo||'—')+'</td>'+
+            '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
+            '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
+            '<td>'+_badge(c.status||'')+'</td>'+
+            '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.editarColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button></td>'+
+            '</tr>';
+        }).join('')+'</tbody></table>';
+      _popularSelectColaboradores('rh-hist-colab');
+    }, function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormColab(colab) {
+    document.getElementById('rh-pf-nome').value     = colab?(colab.nome||''):'';
+    document.getElementById('rh-pf-email').value    = colab?(colab.emailInstitucional||colab.email||''):'';
+    document.getElementById('rh-pf-setor').value    = colab?(colab.setor||''):'';
+    document.getElementById('rh-pf-admissao').value = colab?((colab.dataAdmissao||'').slice(0,10)):'';
+    document.getElementById('rh-pf-id').value       = colab?(colab.id||''):'';
+    if (colab&&colab.vinculo) document.getElementById('rh-pf-vinculo').value = colab.vinculo;
+    GAS.rh.listarCargos(function(resp){
+      var sel = document.getElementById('rh-pf-cargo');
+      if (!sel) return;
+      var cargos = (resp&&resp.ok)?resp.data:[];
+      sel.innerHTML = '<option value="">Selecione…</option>'+
+        cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
+      if (colab&&colab.cargo) sel.value = colab.cargo;
+    }, function(){});
+    document.getElementById('rh-colab-form').style.display='';
+    document.getElementById('rh-btn-novo-colab').style.display='none';
+  }
+
+  function fecharFormColab() {
+    document.getElementById('rh-colab-form').style.display='none';
+    document.getElementById('rh-btn-novo-colab').style.display='';
+  }
+
+  function editarColab(id) {
+    var c = _colaboradores.find(function(x){ return x.id===id; });
+    if (c) abrirFormColab(c);
+  }
+
+  function salvarColab() {
+    var nome    = document.getElementById('rh-pf-nome').value.trim();
+    var email   = document.getElementById('rh-pf-email').value.trim();
+    var setor   = document.getElementById('rh-pf-setor').value.trim();
+    var cargo   = document.getElementById('rh-pf-cargo').value;
+    var vinculo = document.getElementById('rh-pf-vinculo').value;
+    var admissao= document.getElementById('rh-pf-admissao').value;
+    var id      = document.getElementById('rh-pf-id').value;
+    if (!nome) { Toast.aviso('Nome é obrigatório.'); return; }
+    var dados = { nome:nome, emailInstitucional:email, setor:setor, cargo:cargo, vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao };
+    if (id) dados.id = id;
+    BtnGuard.wrap('rh-btn-salvar-colab','Salvando…',function(done){
+      GAS.pessoas.salvar(dados,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Colaborador salvo!'); fecharFormColab(); carregarEquipe(); _carregarMetricas();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── PCCS ───────────────────────────────────────────────────
+  function carregarPccs() {
+    var el = document.getElementById('rh-pccs-lista');
+    if (!el) return;
+    el.innerHTML = _empty('Carregando…');
+    GAS.rh.listarPccs(function(resp){
+      var lista = (resp&&resp.ok&&resp.data)?resp.data:[];
+      if (!lista.length){ el.innerHTML = _empty('Nenhum plano PCCS cadastrado.'); return; }
+      el.innerHTML = lista.map(function(p){
+        var cargosHtml = (p.cargos||[]).map(function(c){
+          return '<tr><td style="padding:6px 10px;font-size:13px;">'+_esc(c.titulo||'—')+'</td>'+
+            '<td style="padding:6px 10px;font-size:13px;">'+_esc(c.nivel||'—')+'</td>'+
+            '<td style="padding:6px 10px;font-size:13px;">R$ '+_fmtMoeda(c.salarioBase||0)+'</td>'+
+            '<td style="padding:6px 10px;"><button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">delete</span></button></td></tr>';
+        }).join('');
+        return '<div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">'+
+          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">'+
+            '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+
+            '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1"><span class="ms ms-sm">add</span> Cargo</button>'+
+          '</div>'+
+          (cargosHtml?
+            '<table style="width:100%;"><thead style="background:var(--surface2);font-size:11px;color:var(--text2);text-transform:uppercase;"><tr>'+
+              '<th style="padding:6px 10px;text-align:left">Cargo</th><th style="padding:6px 10px;text-align:left">Nível</th>'+
+              '<th style="padding:6px 10px;text-align:left">Salário Base</th><th></th></tr></thead><tbody>'+cargosHtml+'</tbody></table>' :
+            '<div style="padding:14px;font-size:13px;color:var(--muted);">Nenhum cargo.</div>')+
+          '</div>';
+      }).join('');
+    },function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormPccs() {
+    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Plano PCCS</h3>'+
+      '<div class="form-group"><label class="form-label">Nome *</label><input id="rh-pccs-nome-m" class="form-input" placeholder="Ex: Plano de Cargos 2025"></div>'+
+      '<div class="form-group"><label class="form-label">Descrição</label><input id="rh-pccs-desc-m" class="form-input" placeholder="Breve descrição…"></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-salvar-pccs-m" class="btn btn-primario" onclick="RhUI._salvarPccs()"><span class="ms ms-sm">save</span> Criar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+  }
+
+  function _salvarPccs() {
+    var nome=(document.getElementById('rh-pccs-nome-m')||{}).value||'';
+    if (!nome.trim()){ Toast.aviso('Nome obrigatório.'); return; }
+    BtnGuard.wrap('rh-btn-salvar-pccs-m','Salvando…',function(done){
+      GAS.rh.salvarPccs({nome:nome,descricao:(document.getElementById('rh-pccs-desc-m')||{}).value||''},function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        _fecharModalRh(); Toast.sucesso('Plano criado!'); carregarPccs();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function abrirFormCargo(pccsId) {
+    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Cargo</h3>'+
+      '<input type="hidden" id="rh-cargo-pccs-id" value="'+_esc(pccsId)+'">'+
+      '<div class="form-group"><label class="form-label">Título *</label><input id="rh-cargo-titulo-m" class="form-input" placeholder="Ex: Analista Cultural"></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">'+
+        '<div class="form-group"><label class="form-label">Nível</label><input id="rh-cargo-nivel-m" class="form-input" placeholder="A"></div>'+
+        '<div class="form-group"><label class="form-label">Classe</label><input id="rh-cargo-classe-m" class="form-input" placeholder="I"></div>'+
+        '<div class="form-group"><label class="form-label">Referência</label><input id="rh-cargo-ref-m" class="form-input" placeholder="01"></div>'+
+      '</div>'+
+      '<div class="form-group"><label class="form-label">Salário Base (R$)</label><input id="rh-cargo-salario-m" class="form-input" type="number" step="0.01" placeholder="3500.00"></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()"><span class="ms ms-sm">save</span> Adicionar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+  }
+
+  function _salvarCargo() {
+    var pccsId=(document.getElementById('rh-cargo-pccs-id')||{}).value||'';
+    var titulo=(document.getElementById('rh-cargo-titulo-m')||{}).value||'';
+    if (!titulo.trim()){ Toast.aviso('Título obrigatório.'); return; }
+    var cargo={ titulo:titulo, nivel:(document.getElementById('rh-cargo-nivel-m')||{}).value||'',
+      classe:(document.getElementById('rh-cargo-classe-m')||{}).value||'',
+      referencia:(document.getElementById('rh-cargo-ref-m')||{}).value||'',
+      salarioBase:parseFloat((document.getElementById('rh-cargo-salario-m')||{}).value||'0')||0 };
+    BtnGuard.wrap('rh-btn-salvar-cargo-m','Salvando…',function(done){
+      GAS.rh.salvarCargo(pccsId,cargo,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        _fecharModalRh(); Toast.sucesso('Cargo adicionado!'); carregarPccs();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluirCargo(pccsId,cargoId) {
+    _abrirModalConfirmarRh({titulo:'Excluir Cargo',mensagem:'Esta ação não pode ser desfeita.',labelConfirmar:'Excluir',
+      idBtn:'rh-btn-conf-del-cargo',onConfirm:'RhUI._confirmarExcluirCargo(\''+pccsId+'\',\''+cargoId+'\')'});
+  }
+  function _confirmarExcluirCargo(pccsId,cargoId) {
+    BtnGuard.wrap('rh-btn-conf-del-cargo','Excluindo…',function(done){
+      GAS.rh.excluirCargo(pccsId,cargoId,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Cargo excluído.'); carregarPccs();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── HISTÓRICO ──────────────────────────────────────────────
+  function carregarHistorico() {
+    var el = document.getElementById('rh-hist-lista');
+    if (!el) return;
+    el.innerHTML = _empty('Carregando…');
+    var idColab=(document.getElementById('rh-hist-colab')||{}).value||null;
+    GAS.rh.historico(idColab,function(resp){
+      var lista=(resp&&resp.ok)?resp.data:[];
+      if (!lista||!lista.length){ el.innerHTML=_empty('Nenhum evento registrado.'); return; }
+      el.innerHTML='<ul class="rh-timeline">'+lista.map(function(ev){
+        return '<li><div class="tl-dot"></div><div class="tl-body">'+
+          '<strong style="font-size:13px;">'+_esc(ev.tipoEvento||ev.tipo||'Evento')+'</strong>'+
+          '<span style="font-size:11px;color:var(--text2);margin-left:8px;">'+_esc(_fmtData(ev.data||ev.criadoEm))+'</span>'+
+          (ev.colaboradorNome?'<br><span style="font-size:12px;color:var(--text2)">'+_esc(ev.colaboradorNome)+'</span>':'')+
+          (ev.descricao?'<p style="margin:4px 0 0;font-size:13px;">'+_esc(ev.descricao)+'</p>':'')+
+          '<button class="btn btn-error btn-sm" style="margin-top:6px;" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+          '</div></li>';
+      }).join('')+'</ul>';
+    },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormEvento() {
+    _popularSelectColaboradores('rh-ev-colab');
+    document.getElementById('rh-ev-tipo').value='outro';
+    document.getElementById('rh-ev-descricao').value='';
+    document.getElementById('rh-evento-form').style.display='';
+  }
+  function fecharFormEvento(){ document.getElementById('rh-evento-form').style.display='none'; }
+
+  function salvarEvento() {
+    var idColab=document.getElementById('rh-ev-colab').value;
+    var tipo=document.getElementById('rh-ev-tipo').value;
+    var desc=document.getElementById('rh-ev-descricao').value.trim();
+    if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
+    if (!desc){ Toast.aviso('Informe a descrição.'); return; }
+    BtnGuard.wrap('rh-btn-salvar-evento','Registrando…',function(done){
+      GAS.rh.registrarEvento({idColaborador:idColab,tipoEvento:tipo,descricao:desc},function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Evento registrado!'); fecharFormEvento(); carregarHistorico();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluirEvento(id) {
+    _abrirModalConfirmarRh({titulo:'Excluir Evento',mensagem:'Remover este registro do histórico?',labelConfirmar:'Excluir',
+      idBtn:'rh-btn-conf-del-ev',onConfirm:'RhUI._confirmarExcluirEvento(\''+id+'\')'});
+  }
+  function _confirmarExcluirEvento(id) {
+    BtnGuard.wrap('rh-btn-conf-del-ev','Excluindo…',function(done){
+      GAS.rh.excluirEvento(id,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Evento excluído.'); carregarHistorico();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── AVALIAÇÕES ─────────────────────────────────────────────
+  function carregarAvaliacoes() {
+    var el=document.getElementById('rh-aval-lista');
+    if (!el) return;
+    el.innerHTML=_empty('Carregando…');
+    GAS.rh.listarAvaliacoes(null,function(resp){
+      var lista=(resp&&resp.ok)?resp.data:[];
+      if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma avaliação.'); return; }
+      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Período</th><th>Nota</th><th>Avaliador</th><th></th></tr></thead><tbody>'+
+        lista.map(function(a){
+          var nota=(a.nota!=null)?Number(a.nota).toFixed(1):'—';
+          var cor=a.nota>=8?'var(--color-success)':a.nota>=5?'var(--color-warning)':'var(--color-error)';
+          return '<tr><td>'+_esc(a.nomeColaborador||a.idColaborador||'—')+'</td>'+
+            '<td>'+_esc(a.periodo||'—')+'</td>'+
+            '<td><strong style="color:'+cor+'">'+nota+'</strong></td>'+
+            '<td>'+_esc(a.avaliador||'—')+'</td>'+
+            '<td><button class="btn btn-error btn-sm" id="rh-btn-del-aval-'+_esc(a.id)+'" onclick="RhUI.excluirAvaliacao(\''+_esc(a.id)+'\')"><span class="ms ms-sm">delete</span></button></td>'+
+            '</tr>';
+        }).join('')+'</tbody></table>';
+    },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormAvaliacao() {
+    _popularSelectColaboradores('rh-aval-colab');
+    document.getElementById('rh-aval-periodo').value=new Date().toISOString().slice(0,7);
+    document.getElementById('rh-aval-nota').value='';
+    document.getElementById('rh-aval-avaliador').value='';
+    document.getElementById('rh-aval-obs').value='';
+    document.getElementById('rh-aval-id').value='';
+    document.getElementById('rh-aval-form').style.display='';
+  }
+  function fecharFormAvaliacao(){ document.getElementById('rh-aval-form').style.display='none'; }
+
+  function salvarAvaliacao() {
+    var idColab=document.getElementById('rh-aval-colab').value;
+    var periodo=document.getElementById('rh-aval-periodo').value;
+    var notaStr=document.getElementById('rh-aval-nota').value;
+    if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
+    if (!periodo){ Toast.aviso('Informe o período.'); return; }
+    var dados={idColaborador:idColab,periodo:periodo,nota:notaStr?Number(notaStr):null,
+      avaliador:document.getElementById('rh-aval-avaliador').value.trim(),
+      observacoes:document.getElementById('rh-aval-obs').value.trim()};
+    var id=document.getElementById('rh-aval-id').value;
+    if (id) dados.id=id;
+    BtnGuard.wrap('rh-btn-salvar-aval','Salvando…',function(done){
+      GAS.rh.salvarAvaliacao(dados,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Avaliação salva!'); fecharFormAvaliacao(); carregarAvaliacoes();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluirAvaliacao(id) {
+    _abrirModalConfirmarRh({titulo:'Excluir Avaliação',mensagem:'Esta ação não pode ser desfeita.',labelConfirmar:'Excluir',
+      idBtn:'rh-btn-conf-del-aval',onConfirm:'RhUI._confirmarExcluirAvaliacao(\''+id+'\')'});
+  }
+  function _confirmarExcluirAvaliacao(id) {
+    BtnGuard.wrap('rh-btn-conf-del-aval','Excluindo…',function(done){
+      GAS.rh.excluirAvaliacao(id,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Avaliação excluída.'); carregarAvaliacoes();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── ESCALAS ────────────────────────────────────────────────
+  function carregarEscalas() {
+    var el=document.getElementById('rh-esc-lista');
+    if (!el) return;
+    el.innerHTML=_empty('Carregando…');
+    GAS.rh.listarEscalas({},function(resp){
+      var lista=(resp&&resp.ok)?resp.data:[];
+      if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma escala cadastrada.'); return; }
+      var TIPO={'5x2':'5x2','6x1':'6x1','plantao_12x36':'12x36','home_office':'Home','hibrido':'Híbrido','personalizado':'Custom'};
+      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Tipo</th><th>Horário</th><th>Início</th><th>Fim</th><th></th></tr></thead><tbody>'+
+        lista.map(function(e2){
+          return '<tr><td>'+_esc(e2.nomeColaborador||e2.idColaborador||'—')+'</td>'+
+            '<td>'+_esc(TIPO[e2.tipo]||e2.tipo||'—')+'</td>'+
+            '<td style="font-size:12px;">'+_esc(e2.horario||'—')+'</td>'+
+            '<td>'+_fmtData(e2.dataInicio)+'</td>'+
+            '<td>'+_fmtData(e2.dataFim)+'</td>'+
+            '<td><button class="btn btn-error btn-sm" id="rh-btn-del-esc-'+_esc(e2.id)+'" onclick="RhUI.excluirEscala(\''+_esc(e2.id)+'\')"><span class="ms ms-sm">delete</span></button></td>'+
+            '</tr>';
+        }).join('')+'</tbody></table>';
+    },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormEscala() {
+    _popularSelectColaboradores('rh-esc-colab');
+    document.getElementById('rh-esc-tipo').value='5x2';
+    document.getElementById('rh-esc-inicio').value='';
+    document.getElementById('rh-esc-fim').value='';
+    document.getElementById('rh-esc-obs').value='';
+    document.getElementById('rh-esc-id').value='';
+    document.getElementById('rh-escala-form').style.display='';
+  }
+  function fecharFormEscala(){ document.getElementById('rh-escala-form').style.display='none'; }
+
+  function salvarEscala() {
+    var idColab=document.getElementById('rh-esc-colab').value;
+    var inicio=document.getElementById('rh-esc-inicio').value;
+    if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
+    if (!inicio){ Toast.aviso('Informe a data de início.'); return; }
+    var dados={idColaborador:idColab,tipo:document.getElementById('rh-esc-tipo').value,
+      dataInicio:inicio,dataFim:document.getElementById('rh-esc-fim').value||null,
+      horario:document.getElementById('rh-esc-obs').value.trim()};
+    var id=document.getElementById('rh-esc-id').value;
+    if (id) dados.id=id;
+    BtnGuard.wrap('rh-btn-salvar-escala','Salvando…',function(done){
+      GAS.rh.salvarEscala(dados,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Escala salva!'); fecharFormEscala(); carregarEscalas();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluirEscala(id) {
+    _abrirModalConfirmarRh({titulo:'Excluir Escala',mensagem:'Remover esta escala?',labelConfirmar:'Excluir',
+      idBtn:'rh-btn-conf-del-esc',onConfirm:'RhUI._confirmarExcluirEscala(\''+id+'\')'});
+  }
+  function _confirmarExcluirEscala(id) {
+    BtnGuard.wrap('rh-btn-conf-del-esc','Excluindo…',function(done){
+      GAS.rh.excluirEscala(id,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Escala excluída.'); carregarEscalas();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── FÉRIAS ─────────────────────────────────────────────────
+  function carregarFerias() {
+    var el=document.getElementById('rh-fer-lista');
+    if (!el) return;
+    el.innerHTML=_empty('Carregando…');
+    var status=(document.getElementById('rh-fer-filtro')||{}).value||null;
+    GAS.rh.listarFerias(null,function(resp){
+      var lista=(resp&&resp.ok)?resp.data:[];
+      if (status) lista=lista.filter(function(f){ return f.status===status; });
+      if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma solicitação de férias.'); return; }
+      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
+        lista.map(function(f){
+          var acoes='';
+          if (f.status==='pendente'){
+            acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-apr-fer-'+_esc(f.id)+'" onclick="RhUI.aprovarFerias(\''+_esc(f.id)+'\')">Aprovar</button>';
+            acoes+='<button class="btn btn-error btn-sm" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
+          }
+          if (f.status==='aprovado') acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
+          return '<tr><td>'+_esc(f.nomeColaborador||f.idColaborador||'—')+'</td>'+
+            '<td>'+_fmtData(f.dataInicio)+'</td><td>'+_fmtData(f.dataFim)+'</td>'+
+            '<td>'+(f.totalDias||'—')+'</td><td>'+_badge(f.status||'')+'</td>'+
+            '<td>'+acoes+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormFerias() {
+    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Solicitar Férias</h3>'+
+      '<div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div class="form-group"><label class="form-label">Início *</label><input id="rh-fer-inicio-m" class="form-input" type="date"></div>'+
+        '<div class="form-group"><label class="form-label">Fim *</label><input id="rh-fer-fim-m" class="form-input" type="date"></div>'+
+      '</div>'+
+      '<div class="form-group"><label class="form-label">Observações</label><textarea id="rh-fer-obs-m" class="form-input" rows="2"></textarea></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-enviar-ferias-m" class="btn btn-primario" onclick="RhUI._enviarFerias()"><span class="ms ms-sm">send</span> Solicitar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+    _popularSelectColaboradores('rh-fer-colab-m');
+  }
+
+  function _enviarFerias() {
+    var idColab=(document.getElementById('rh-fer-colab-m')||{}).value||'';
+    var inicio=(document.getElementById('rh-fer-inicio-m')||{}).value||'';
+    var fim=(document.getElementById('rh-fer-fim-m')||{}).value||'';
+    var obs=(document.getElementById('rh-fer-obs-m')||{}).value||'';
+    if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
+    if (!inicio||!fim){ Toast.aviso('Informe o período.'); return; }
+    BtnGuard.wrap('rh-btn-enviar-ferias-m','Solicitando…',function(done){
+      GAS.rh.solicitarFerias({idColaborador:idColab,dataInicio:inicio,dataFim:fim,observacoes:obs},function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        _fecharModalRh(); Toast.sucesso('Férias solicitadas!'); carregarFerias();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function aprovarFerias(id) {
+    _abrirModalConfirmarRh({titulo:'Aprovar Férias',mensagem:'Confirmar aprovação das férias?',
+      icone:'check_circle',corIcone:'#10b981',labelConfirmar:'Aprovar',
+      idBtn:'rh-btn-conf-apr-fer',onConfirm:'RhUI._confirmarAprovarFerias(\''+id+'\')'});
+  }
+  function _confirmarAprovarFerias(id) {
+    BtnGuard.wrap('rh-btn-conf-apr-fer','Aprovando…',function(done){
+      GAS.rh.aprovarFerias(id,{},function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Férias aprovadas!'); carregarFerias();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function recusarFerias(id) {
+    _abrirModalRh('<div style="padding:20px;min-width:340px;">'+
+      '<h3 style="margin:0 0 12px;font-size:15px;font-weight:700;">Recusar Férias</h3>'+
+      '<div class="form-group"><label class="form-label">Motivo *</label><textarea id="rh-fer-rec-motivo" class="form-input" rows="3" placeholder="Informe o motivo…"></textarea></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-conf-rec-fer" class="btn btn-error" onclick="RhUI._confirmarRecusarFerias(\''+id+'\')"><span class="ms ms-sm">cancel</span> Recusar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+  }
+  function _confirmarRecusarFerias(id) {
+    var motivo=(document.getElementById('rh-fer-rec-motivo')||{}).value||'';
+    if (!motivo.trim()){ Toast.aviso('Informe o motivo.'); return; }
+    BtnGuard.wrap('rh-btn-conf-rec-fer','Recusando…',function(done){
+      GAS.rh.recusarFerias(id,motivo,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Férias recusadas.'); carregarFerias();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function cancelarFerias(id) {
+    _abrirModalRh('<div style="padding:20px;min-width:340px;">'+
+      '<h3 style="margin:0 0 12px;font-size:15px;font-weight:700;">Cancelar Férias</h3>'+
+      '<div class="form-group"><label class="form-label">Motivo *</label><textarea id="rh-fer-can-motivo" class="form-input" rows="3"></textarea></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-conf-can-fer" class="btn btn-warning" onclick="RhUI._confirmarCancelarFerias(\''+id+'\')">Confirmar Cancelamento</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Fechar</button>'+
+      '</div></div>');
+  }
+  function _confirmarCancelarFerias(id) {
+    var motivo=(document.getElementById('rh-fer-can-motivo')||{}).value||'';
+    if (!motivo.trim()){ Toast.aviso('Informe o motivo.'); return; }
+    BtnGuard.wrap('rh-btn-conf-can-fer','Cancelando…',function(done){
+      GAS.rh.cancelarFerias(id,motivo,function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        Toast.sucesso('Férias canceladas.'); carregarFerias();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── FOLHA ──────────────────────────────────────────────────
+  function calcularCLT() {
+    var salario=parseFloat(document.getElementById('rh-clt-salario').value||'0')||0;
+    var horas=parseInt(document.getElementById('rh-clt-horas').value||'40')||40;
+    var vt=document.getElementById('rh-clt-vt').checked;
+    var va=document.getElementById('rh-clt-va').checked;
+    var el=document.getElementById('rh-clt-resultado');
+    if (!salario){ if(el) el.innerHTML=''; return; }
+    if(el) el.innerHTML='<p style="color:var(--muted);font-size:13px;">Calculando…</p>';
+    GAS.ponto.custoCLT({salarioBruto:salario,horasSemanais:horas,valeTransporte:vt,valeAlimentacao:va},function(r){
+      if (!r||!r.ok){ if(el) el.innerHTML='<p style="color:var(--color-error);font-size:13px;">Erro.</p>'; return; }
+      var c=r.data;
+      if(!el) return;
+      el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        _lRh('Salário Bruto',c.salarioBruto)+_lRh('INSS',c.inss)+_lRh('FGTS (8%)',c.fgts)+
+        _lRh('PIS',c.pis)+_lRh('Sistema S',c.sistemaS)+_lRh('Vale Transporte',c.valeTransporte)+
+        _lRh('Vale Alimentação',c.valeAlimentacao)+_lRh('13º (provisão)',c.decimo3)+_lRh('Férias (provisão)',c.ferias)+
+      '</div>'+
+      '<div style="background:var(--color-primary);color:#fff;border-radius:8px;padding:14px 20px;display:flex;justify-content:space-between;margin-top:10px;">'+
+        '<span style="font-weight:600;">CUSTO TOTAL MENSAL</span>'+
+        '<span style="font-size:20px;font-weight:700;">R$ '+_fmtMoeda(c.custoTotal)+'</span>'+
+      '</div>';
+    },function(e){ if(el) el.innerHTML='<p style="color:var(--color-error);font-size:13px;">'+(e.message||'Erro')+'</p>'; });
+  }
+
+  function simularReajuste(done) {
+    var pct=parseFloat((document.getElementById('rh-reajuste-pct')||{}).value||'0')||0;
+    var el=document.getElementById('rh-reajuste-resultado');
+    if (!pct){ Toast.aviso('Informe o percentual.'); if(done) done(); return; }
+    GAS.ponto.simularReajuste({percentual:pct,colaboradores:[]},function(r){
+      if(done) done();
+      if (!r||!r.ok){ if(el) el.innerHTML='Erro.'; return; }
+      var d=r.data;
+      if(!el) return;
+      el.innerHTML='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;">'+
+        '<p style="margin:0;font-size:13px;">Reajuste de <strong>'+pct+'%</strong> para <strong>'+(d.totalColaboradores||0)+'</strong> colaboradores.</p>'+
+        '<p style="margin:6px 0 0;font-size:14px;">Aumento mensal: <strong>R$ '+_fmtMoeda(d.incrementoMensal||0)+'</strong></p>'+
+        (d.novoTotalMensal?'<p style="margin:4px 0 0;font-size:12px;color:var(--text2);">Nova folha: R$ '+_fmtMoeda(d.novoTotalMensal)+'/mês</p>':'')+
+      '</div>';
+    },function(e){ if(done) done(); if(el) el.innerHTML='Erro: '+(e.message||''); });
+  }
+
+  function _lRh(label, valor) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;">'+
+      '<div style="font-size:11px;color:var(--text2);">'+label+'</div>'+
+      '<div style="font-size:15px;font-weight:600;">R$ '+_fmtMoeda(valor)+'</div></div>';
+  }
+
+  // ─── RESCISÃO ───────────────────────────────────────────────
+  function calcularRescisao(done) {
+    var salario=parseFloat((document.getElementById('rh-resc-salario')||{}).value||'0')||0;
+    var meses=parseInt((document.getElementById('rh-resc-meses')||{}).value||'0')||0;
+    var tipo=(document.getElementById('rh-resc-tipo')||{}).value||'sem_justa_causa';
+    var economia=parseFloat((document.getElementById('rh-resc-economia')||{}).value||'0')||0;
+    var el=document.getElementById('rh-resc-resultado');
+    if (!salario||!meses){ Toast.aviso('Preencha salário e meses.'); if(done) done(); return; }
+    GAS.ponto.calcularRescisao({salarioBruto:salario,mesesTrabalhados:meses,tipoRescisao:tipo,economiaMensal:economia},function(r){
+      if(done) done();
+      if (!r||!r.ok){ if(el) el.innerHTML='Erro.'; return; }
+      var c=r.data;
+      if(!el) return;
+      el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        _lRh('Aviso Prévio',c.avisoPrevio)+_lRh('Férias Vencidas',c.feriasVencidas)+
+        _lRh('Férias Proporcionais',c.feriasProporcionais)+_lRh('13º Proporcional',c.decimo3Proporcional)+
+        _lRh('FGTS Saldo (est.)',c.fgtsSaldoEstimado)+_lRh('Multa FGTS',c.multaFGTS)+
+      '</div>'+
+      '<div style="background:var(--color-error,#c62828);color:#fff;border-radius:8px;padding:14px 20px;display:flex;justify-content:space-between;margin-top:10px;">'+
+        '<span style="font-weight:600;">CUSTO TOTAL DA RESCISÃO</span>'+
+        '<span style="font-size:20px;font-weight:700;">R$ '+_fmtMoeda(c.totalRescisao)+'</span>'+
+      '</div>'+
+      (c.mesesBreakEven?'<p style="font-size:13px;margin-top:10px;">⏱ Break-even: <strong>'+c.mesesBreakEven+' meses</strong></p>':'');
+    },function(e){ if(done) done(); if(el) el.innerHTML='Erro: '+(e.message||''); });
+  }
+
+  // ─── INDICADORES ────────────────────────────────────────────
+  function carregarIndicadores() {
+    var el=document.getElementById('rh-ind-conteudo');
+    if (!el) return;
+    el.innerHTML='<p style="color:var(--muted);font-size:13px;">Calculando…</p>';
+    var ano=parseInt((document.getElementById('rh-ind-ano')||{}).value||new Date().getFullYear());
+    var mes=parseInt((document.getElementById('rh-ind-mes')||{}).value||(new Date().getMonth()+1));
+    GAS.ponto.turnover({ano:ano,mes:mes},function(resp){
+      if (!resp||!resp.ok||!resp.data){ el.innerHTML='<p style="color:var(--muted);font-size:13px;">Sem dados para o período.</p>'; return; }
+      var d=resp.data;
+      el.innerHTML=
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:16px;">'+
+          '<div class="stat-card"><div class="stat-label">Headcount</div><div class="stat-value">'+(d.total||0)+'</div></div>'+
+          '<div class="stat-card"><div class="stat-label">Admissões</div><div class="stat-value stat-success">'+(d.entradas||0)+'</div></div>'+
+          '<div class="stat-card"><div class="stat-label">Desligamentos</div><div class="stat-value stat-error">'+(d.saidas||0)+'</div></div>'+
+          '<div class="stat-card"><div class="stat-label">Taxa Turnover</div><div class="stat-value '+(d.taxaTurnover>15?'stat-error':'stat-success')+'">'+(d.taxaTurnover||0)+'%</div></div>'+
+        '</div>'+
+        '<p style="font-size:12px;color:var(--muted);">Período: '+String(mes).padStart(2,'0')+'/'+ano+' · Fórmula: ((Entradas + Saídas) / 2) / Total × 100</p>';
+    },function(e){ el.innerHTML='<p style="color:var(--color-error);font-size:13px;">Erro: '+(e.message||e)+'</p>'; });
+  }
+
+  // ─── Helpers de modal locais ─────────────────────────────────
+  function _abrirModalRh(html) {
+    var overlay=document.createElement('div');
+    overlay.className='rh-modal-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    var box=document.createElement('div');
+    box.style.cssText='background:var(--surface);border-radius:12px;max-width:560px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+    box.innerHTML=html;
+    overlay.appendChild(box);
+    overlay.addEventListener('click',function(e){ if(e.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+  function _fecharModalRh(){ document.querySelectorAll('.rh-modal-overlay').forEach(function(m){ m.remove(); }); }
+
+  function _abrirModalConfirmarRh(opts) {
+    _abrirModalRh('<div>'+
+      '<div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">'+
+        '<span class="ms" style="color:'+(opts.corIcone||'#ef4444')+';font-size:22px;">'+(opts.icone||'warning')+'</span>'+
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">'+escaparHtml(opts.titulo||'Confirmar')+'</h3>'+
+        '<button onclick="RhUI._fecharModalRh()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);"><span class="ms">close</span></button>'+
+      '</div>'+
+      '<div style="padding:16px 20px;">'+
+        '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">'+(opts.mensagem||'')+'</p>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<button class="btn btn-perigo" id="'+escaparHtml(opts.idBtn||'rh-btn-confirmar')+'" onclick="'+( opts.onConfirm||'')+'">' +
+            escaparHtml(opts.labelConfirmar||'Confirmar')+
+          '</button>'+
+          '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>');
+  }
+
+  return {
+    aoAbrir:aoAbrir, setTab:setTab,
+    carregarEquipe:carregarEquipe, abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
+    editarColab:editarColab, salvarColab:salvarColab,
+    carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
+    abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo,
+    excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
+    carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
+    salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
+    carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,
+    fecharFormAvaliacao:fecharFormAvaliacao, salvarAvaliacao:salvarAvaliacao,
+    excluirAvaliacao:excluirAvaliacao, _confirmarExcluirAvaliacao:_confirmarExcluirAvaliacao,
+    carregarEscalas:carregarEscalas, abrirFormEscala:abrirFormEscala, fecharFormEscala:fecharFormEscala,
+    salvarEscala:salvarEscala, excluirEscala:excluirEscala, _confirmarExcluirEscala:_confirmarExcluirEscala,
+    carregarFerias:carregarFerias, abrirFormFerias:abrirFormFerias, _enviarFerias:_enviarFerias,
+    aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
+    recusarFerias:recusarFerias, _confirmarRecusarFerias:_confirmarRecusarFerias,
+    cancelarFerias:cancelarFerias, _confirmarCancelarFerias:_confirmarCancelarFerias,
+    calcularCLT:calcularCLT, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
+    carregarIndicadores:carregarIndicadores, _fecharModalRh:_fecharModalRh
+  };
+})();
+Router.registrar('rh', 'RH / Depto. Pessoal', RhUI.aoAbrir);
 
 // Boot
 document.addEventListener('DOMContentLoaded', function() {
