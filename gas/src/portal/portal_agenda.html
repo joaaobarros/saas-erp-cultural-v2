@@ -91,32 +91,39 @@
   });
 
   function carregarEventos() {
-    // TODO Fase 7: google.script.run.ctrl_portal_getAgenda({ dataInicio, tipo }, ...)
-    // Simulação Fase 0:
-    setTimeout(function() {
-      _eventos = [
-        {
-          id: 'acao1', titulo: 'Mostra de Teatro Independente', tipo: 'teatro',
-          data: '2026-06-15', horario: '19:30', local: 'Teatro Principal',
-          descricao: 'Uma semana de teatro independente com 12 companhias do estado.',
-          vagas: 80, inscricoes: 45, aceitaInscricao: true
-        },
-        {
-          id: 'acao2', titulo: 'Oficina de Percussão', tipo: 'oficina',
-          data: '2026-06-20', horario: '14:00', local: 'Sala Multiuso',
-          descricao: 'Aprenda os fundamentos da percussão popular brasileira com mestre Raimundo.',
-          vagas: 20, inscricoes: 18, aceitaInscricao: true
-        },
-        {
-          id: 'acao3', titulo: 'Exposição Fotográfica "Território"', tipo: 'exposicao',
-          data: '2026-06-01', horario: '10:00', local: 'Galeria de Arte',
-          descricao: 'Fotografias que documentam a ocupação cultural dos espaços públicos.',
-          vagas: null, inscricoes: 0, aceitaInscricao: false
+    var tipo    = document.getElementById('filtro-tipo').value;
+    var dataMin = document.getElementById('filtro-data').value;
+    var filtros = {};
+    if (tipo)    filtros.tipo       = tipo;
+    if (dataMin) filtros.dataInicio = dataMin;
+
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        document.getElementById('loading').style.display = 'none';
+        if (!resp || !resp.ok) {
+          document.getElementById('sem-eventos').style.display = 'block';
+          return;
         }
-      ];
-      document.getElementById('loading').style.display = 'none';
-      filtrar();
-    }, 400);
+        _eventos = (resp.data || []).map(function(a) {
+          return {
+            id:            a.id,
+            titulo:        a.nome,
+            tipo:          a.tipo,
+            data:          a.dataInicio ? a.dataInicio.slice(0, 10) : '',
+            horario:       a.horarioInicio || '',
+            local:         a.espacoNome   || a.setor || '',
+            descricao:     a.descricao    || '',
+            vagas:         a.vagas,
+            aceitaInscricao: !!a.vagas || a.disponivel
+          };
+        });
+        filtrar();
+      })
+      .withFailureHandler(function() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('sem-eventos').style.display = 'block';
+      })
+      .ctrl_portal_getAgenda(filtros);
   }
 
   function filtrar() {

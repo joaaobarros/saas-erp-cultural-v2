@@ -44,8 +44,12 @@
   <div class="card">
     <div class="grupo">
       <label>Número do protocolo</label>
-      <input type="text" id="campo-protocolo" placeholder="Ex: PAU-2024-1234" maxlength="30"
+      <input type="text" id="campo-protocolo" placeholder="Ex: SOL-ABC123" maxlength="40"
         value="<?= params.protocolo || '' ?>">
+    </div>
+    <div class="grupo">
+      <label>E-mail cadastrado na solicitação</label>
+      <input type="email" id="campo-email" placeholder="seu@email.com" autocomplete="email">
     </div>
     <div id="erro"></div>
     <button class="btn btn-primario" id="btn-buscar" onclick="buscarProtocolo()">Consultar</button>
@@ -75,35 +79,52 @@
       return;
     }
 
+    var emailVal = document.getElementById('campo-email')
+      ? document.getElementById('campo-email').value.trim() : '';
+
     BtnGuard.wrap('btn-buscar', 'Consultando…', function(done) {
-      // TODO Fase 7: google.script.run.ctrl_portal_consultarProtocolo(protocolo, ...)
-      // Simulação Fase 0:
-      setTimeout(function() {
-        done();
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          done();
+          erroEl.style.display = 'none';
 
-        var statusMap = {
-          'pendente':   { label: 'Aguardando análise', cls: 'status-pendente' },
-          'em_analise': { label: 'Em análise',         cls: 'status-analise' },
-          'aprovado':   { label: 'Aprovado',           cls: 'status-aprovado' },
-          'recusado':   { label: 'Recusado',           cls: 'status-recusado' }
-        };
-        var status = 'pendente';
-        var sm     = statusMap[status];
+          if (!resp || !resp.ok) {
+            erroEl.textContent = (resp && resp.error && resp.error.message) || 'Protocolo não encontrado.';
+            erroEl.style.display = 'block';
+            return;
+          }
 
-        var container = document.getElementById('detalhe-container');
-        container.innerHTML = [
-          { chave: 'Protocolo',     valor: protocolo },
-          { chave: 'Status',        valor: '<span class="status-badge ' + sm.cls + '">' + sm.label + '</span>' },
-          { chave: 'Data de envio', valor: new Date().toLocaleDateString('pt-BR') },
-          { chave: 'Previsão',      valor: 'Até 5 dias úteis' },
-          { chave: 'Observação',    valor: 'Aguardando análise da equipe.' }
-        ].map(function(l) {
-          return '<div class="detalhe-linha"><span class="detalhe-chave">' + l.chave
-            + '</span><span>' + l.valor + '</span></div>';
-        }).join('');
+          var r = resp.data;
+          var statusMap = {
+            'submetida':             { label: 'Aguardando análise', cls: 'status-pendente' },
+            'em_analise':            { label: 'Em análise',         cls: 'status-analise' },
+            'aprovada':              { label: 'Aprovado',           cls: 'status-aprovado' },
+            'recusada':              { label: 'Recusado',           cls: 'status-recusado' },
+            'cancelada':             { label: 'Cancelado',          cls: 'status-cancelado' },
+            'aguardando_pagamento':  { label: 'Ag. Pagamento',      cls: 'status-analise' }
+          };
+          var sm = statusMap[r.status] || { label: r.status, cls: 'status-pendente' };
+          var dtEnvio = r.criadoEm
+            ? new Date(r.criadoEm).toLocaleDateString('pt-BR') : '—';
 
-        document.getElementById('resultado').style.display = 'block';
-      }, 600);
+          document.getElementById('detalhe-container').innerHTML = [
+            { chave: 'Protocolo',    valor: r.protocolo },
+            { chave: 'Status',       valor: '<span class="status-badge ' + sm.cls + '">' + sm.label + '</span>' },
+            { chave: 'Data envio',   valor: dtEnvio },
+            { chave: 'Observação',   valor: r.mensagem }
+          ].map(function(l) {
+            return '<div class="detalhe-linha"><span class="detalhe-chave">' + l.chave
+              + '</span><span>' + l.valor + '</span></div>';
+          }).join('');
+
+          document.getElementById('resultado').style.display = 'block';
+        })
+        .withFailureHandler(function(e) {
+          done();
+          erroEl.textContent = 'Erro de comunicação: ' + (e.message || e);
+          erroEl.style.display = 'block';
+        })
+        .ctrl_portal_getStatusPauta({ protocolo: protocolo, email: emailVal || protocolo });
     });
   }
 </script>

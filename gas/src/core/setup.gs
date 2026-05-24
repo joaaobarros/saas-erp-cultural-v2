@@ -141,6 +141,16 @@ function inicializarSistema() {
   // Fase 6 — EventBus: migração do EventLog para schema de 11 colunas
   SystemEvents.garantirAbaEventLog();
 
+  // Fase 7 — Público: índice de inscrições, presenças, pesquisas, certificados e consentimentos
+  if (typeof PublicoRepository !== 'undefined' &&
+      typeof PublicoRepository.prepararIndice === 'function') {
+    PublicoRepository.prepararIndice(org.orgId);
+  }
+  if (typeof ConsentimentoService !== 'undefined' &&
+      typeof ConsentimentoService.prepararIndice === 'function') {
+    ConsentimentoService.prepararIndice();
+  }
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
@@ -413,5 +423,18 @@ function fase6_rece_prepararIndice() {
   TokenService.garantirAbaTokens();
   SystemEvents.garantirAbaEventLog();
   Logger.info('setup', 'fase6_rece_prepararIndice', 'RECE, Tokens e EventLog prontos.');
+  return { ok: true, orgId: org.orgId };
+}
+
+/**
+ * Fase 7 — Público: prepara índice de Inscrições, Presenças, Pesquisas,
+ * Certificados (PUBLICO.*) e Consentimentos (MASTER.Consentimentos).
+ * Executar uma vez após deploy da Fase 7.
+ */
+function fase7_publico_prepararIndice() {
+  var org = getOrgConfig();
+  PublicoRepository.prepararIndice(org.orgId);
+  ConsentimentoService.prepararIndice();
+  Logger.info('setup', 'fase7_publico_prepararIndice', 'Índices PUBLICO e Consentimentos prontos.');
   return { ok: true, orgId: org.orgId };
 }

@@ -125,14 +125,40 @@
   var orgConfig = <?= JSON.stringify(orgConfig) ?>;
   var acaoId    = params.acao || null;
 
-  // TODO Fase 7: google.script.run.ctrl_portal_getInfoAcao(acaoId, ...)
   (function carregarInfoAcao() {
     if (!acaoId) {
       document.getElementById('acao-nome').textContent = 'Ação não especificada.';
+      document.getElementById('btn-inscrever').disabled = true;
       return;
     }
-    document.getElementById('acao-titulo').textContent = 'Inscrição';
-    document.getElementById('acao-nome').textContent = 'Ação ID: ' + acaoId + ' (aguardando Fase 7)';
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (!resp || !resp.ok || !resp.data) {
+          document.getElementById('acao-nome').textContent = 'Ação não encontrada.';
+          document.getElementById('btn-inscrever').disabled = true;
+          return;
+        }
+        var a = resp.data;
+        document.getElementById('acao-titulo').textContent = 'Inscrição em ' + a.nome;
+        document.getElementById('acao-nome').textContent   = a.nome;
+        document.getElementById('acao-data').textContent   = a.dataInicio
+          ? new Date(a.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+        document.getElementById('acao-local').textContent  = a.espacoNome || '';
+        if (!a.disponivel) {
+          document.getElementById('lista-espera-aviso').style.display = 'block';
+          document.getElementById('vagas-info').textContent = 'Lista de espera';
+          document.getElementById('vagas-info').style.background = '#fff8e1';
+          document.getElementById('vagas-info').style.color = '#f57f17';
+        } else {
+          document.getElementById('vagas-info').textContent =
+            a.vagas != null ? a.vagas + ' vaga(s)' : 'Vagas disponíveis';
+        }
+      })
+      .withFailureHandler(function() {
+        document.getElementById('acao-nome').textContent = 'Erro ao carregar informações.';
+        document.getElementById('btn-inscrever').disabled = true;
+      })
+      .ctrl_portal_getInfoAcao(acaoId);
   })();
 
   function inscrever() {
@@ -156,15 +182,39 @@
       return;
     }
 
+    var dados = {
+      acaoId:       acaoId,
+      nome:         nome,
+      email:        email,
+      telefone:     document.getElementById('campo-telefone').value.trim(),
+      cep:          document.getElementById('campo-cidade').value.trim(),
+      consentimento: lgpd
+    };
+
     BtnGuard.wrap('btn-inscrever', 'Registrando inscrição…', function(done) {
-      // TODO Fase 7: google.script.run.ctrl_portal_inscrever(...)
-      setTimeout(function() {
-        done();
-        var id = 'INS-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*90000)+10000);
-        document.getElementById('form-inscricao').style.display = 'none';
-        document.getElementById('inscricao-id').textContent = id;
-        document.getElementById('resultado').style.display = 'block';
-      }, 700);
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          done();
+          if (!resp || !resp.ok) {
+            erroEl.textContent = (resp && resp.error && resp.error.message) || 'Erro ao registrar inscrição.';
+            erroEl.style.display = 'block';
+            return;
+          }
+          var r = resp.data;
+          document.getElementById('form-inscricao').style.display = 'none';
+          document.getElementById('inscricao-id').textContent     = r.protocolo;
+          if (r.status === 'lista_espera') {
+            document.querySelector('#resultado h2').textContent = 'Você está na lista de espera!';
+            document.querySelector('#resultado p').textContent  = r.mensagem;
+          }
+          document.getElementById('resultado').style.display = 'block';
+        })
+        .withFailureHandler(function(e) {
+          done();
+          erroEl.textContent = 'Erro de comunicação: ' + (e.message || e);
+          erroEl.style.display = 'block';
+        })
+        .ctrl_portal_inscrever(dados);
     });
   }
 </script>

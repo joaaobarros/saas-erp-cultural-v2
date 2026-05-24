@@ -3705,6 +3705,127 @@ textarea.input { resize: vertical; }
       <!-- Views de módulos — injetadas dinamicamente por cada módulo -->
 
       <!-- ═══════════════════════════════════════════════════════════ -->
+      <!-- PÚBLICO — inscrições, presença, pesquisas, certificados    -->
+      <!-- ═══════════════════════════════════════════════════════════ -->
+      <div id="view-publico" class="view">
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="ms" style="font-size:28px;color:var(--primary);">groups</span>
+            <div><h1 class="page-title">Público</h1><p class="page-subtitle muted-text">Inscrições, presenças, pesquisas e certificados</p></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="PublicoUI.exportarCSV()" data-bg-skip="1">Exportar CSV</button>
+          </div>
+        </div>
+
+        <!-- Métricas -->
+        <div id="publico-stats" class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+          <div class="stat-card"><span class="stat-label">Inscrições</span><span class="stat-value" id="pub-stat-total">—</span></div>
+          <div class="stat-card"><span class="stat-label">Confirmados</span><span class="stat-value" id="pub-stat-confirmados">—</span></div>
+          <div class="stat-card"><span class="stat-label">Lista Espera</span><span class="stat-value" id="pub-stat-espera">—</span></div>
+          <div class="stat-card"><span class="stat-label">Certificados</span><span class="stat-value" id="pub-stat-certs">—</span></div>
+          <div class="stat-card"><span class="stat-label">NPS</span><span class="stat-value" id="pub-stat-nps">—</span></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn active" id="pub-tab-inscricoes" onclick="PublicoUI.abrirTab('inscricoes')">Inscrições</button>
+          <button class="tab-btn"        id="pub-tab-presencas"  onclick="PublicoUI.abrirTab('presencas')">Presenças</button>
+          <button class="tab-btn"        id="pub-tab-certificados" onclick="PublicoUI.abrirTab('certificados')">Certificados</button>
+          <button class="tab-btn"        id="pub-tab-exportacao" onclick="PublicoUI.abrirTab('exportacao')">Exportações</button>
+        </div>
+
+        <!-- Filtros inscrições -->
+        <div id="pub-filtros-inscricoes" class="filtros-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <input type="text" id="pub-filtro-acao" class="input" placeholder="Filtrar por Ação..." style="max-width:220px;"
+            oninput="PublicoUI.filtrarInscricoes()">
+          <select id="pub-filtro-status" class="input" style="max-width:180px;" onchange="PublicoUI.filtrarInscricoes()">
+            <option value="">Todos os status</option>
+            <option value="inscrito">Inscrito</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="lista_espera">Lista de espera</option>
+            <option value="presente">Presente</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="certificado">Certificado</option>
+          </select>
+        </div>
+
+        <!-- Tab: Inscrições -->
+        <div id="pub-painel-inscricoes">
+          <div id="pub-lista-inscricoes" class="table-container">
+            <table class="table" id="pub-tabela-inscricoes">
+              <thead><tr>
+                <th>Protocolo</th><th>Nome</th><th>E-mail</th><th>Ação</th>
+                <th>Status</th><th>Inscrito em</th><th>Ações</th>
+              </tr></thead>
+              <tbody id="pub-tbody-inscricoes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Presenças -->
+        <div id="pub-painel-presencas" style="display:none;">
+          <div id="pub-tabela-presencas-wrap" class="table-container">
+            <table class="table">
+              <thead><tr><th>Inscrição</th><th>Ação</th><th>Sessão</th><th>Presente</th><th>Check-in</th><th>Registrado por</th></tr></thead>
+              <tbody id="pub-tbody-presencas"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Certificados -->
+        <div id="pub-painel-certificados" style="display:none;">
+          <div class="table-container">
+            <table class="table">
+              <thead><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Ação</th><th>Frequência</th><th>Gerado em</th></tr></thead>
+              <tbody id="pub-tbody-certificados"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Exportações -->
+        <div id="pub-painel-exportacao" style="display:none;">
+          <div class="card" style="padding:24px;max-width:600px;">
+            <h3 style="margin-bottom:16px;">Exportações Institucionais</h3>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label">CODIP — Secult/CE (mensal)</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="pub-exp-mes" class="input" style="width:120px;">
+                  <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+                  <option value="3">Março</option><option value="4">Abril</option>
+                  <option value="5">Maio</option><option value="6">Junho</option>
+                  <option value="7">Julho</option><option value="8">Agosto</option>
+                  <option value="9">Setembro</option><option value="10">Outubro</option>
+                  <option value="11">Novembro</option><option value="12">Dezembro</option>
+                </select>
+                <input type="number" id="pub-exp-ano" class="input" style="width:90px;"
+                  value="2026" min="2020" max="2099">
+                <button class="btn btn-primary" id="btn-exp-codip"
+                  onclick="BtnGuard.wrap('btn-exp-codip','Gerando CODIP…',function(done){PublicoUI.exportarCODIP(done);})">
+                  Gerar CODIP
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label">SNIIC — Indicadores anuais (MinC)</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="number" id="pub-exp-ano-sniic" class="input" style="width:90px;"
+                  value="2026" min="2020" max="2099">
+                <button class="btn btn-secondary" id="btn-exp-sniic"
+                  onclick="BtnGuard.wrap('btn-exp-sniic','Gerando SNIIC…',function(done){PublicoUI.exportarSNIIC(done);})">
+                  Gerar SNIIC
+                </button>
+              </div>
+            </div>
+
+            <div id="pub-exp-resultado" style="display:none;margin-top:16px;"></div>
+          </div>
+        </div>
+      </div><!-- /view-publico -->
+
+      <!-- ═══════════════════════════════════════════════════════════ -->
       <!-- OBSERVABILIDADE DO SISTEMA — superadmin only               -->
       <!-- ═══════════════════════════════════════════════════════════ -->
       <div id="view-sistema-metricas" class="view">
@@ -4293,6 +4414,24 @@ var GAS = {
   },
   eventbus: {
     status: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_eventbus_status({}); }
+  },
+  publico: {
+    listarInscricoes:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_listarInscricoes(p||{}); },
+    metricas:               function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_metricas(); },
+    capacidade:             function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_capacidade(id); },
+    confirmarInscricao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_confirmarInscricao(id); },
+    cancelarInscricao:      function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_cancelarInscricao(d); },
+    listarPresencas:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_listarPresencas(p||{}); },
+    registrarPresencaBatch: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_registrarPresencaBatch(d); },
+    listarPesquisas:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_listarPesquisas(p||{}); },
+    listarCertificados:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_listarCertificados(p||{}); },
+    gerarCertificado:       function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_publico_gerarCertificado(d); }
+  },
+  exportacao: {
+    codip:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_codip(p||{}); },
+    salic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_salic(p||{}); },
+    sniic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_sniic(p||{}); },
+    inscricoesCSV:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_inscricoes_csv(p||{}); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -12022,6 +12161,7 @@ var App = (function() {
     { secao:'PRINCIPAL' },
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
+    { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
     { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
     { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
@@ -12152,6 +12292,7 @@ var App = (function() {
             : id === 'financeiro' ? function(){ FinanceiroTabs.aoAbrir(); }
             : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
             : id === 'acoes'           ? function(){ AcoesUI.aoAbrir(); }
+            : id === 'publico'         ? function(){ PublicoUI.aoAbrir(); }
             : id === 'comunicacao'     ? function(){ ReceUI.aoAbrir(); }
             : id === 'sistema-metricas'? function(){ SistemaMetricasUI.aoAbrir(); }
             : null
@@ -12639,6 +12780,268 @@ var ReceUI = (function() {
 // ═══════════════════════════════════════════════════════════
 // SistemaMetricasUI — Observabilidade (superadmin only)
 // ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// PÚBLICO UI
+// ════════════════════════════════════════════════════════════════════════
+var PublicoUI = (function() {
+  var _carregado   = false;
+  var _inscricoes  = [];
+  var _presencas   = [];
+  var _certificados = [];
+  var _tabAtiva    = 'inscricoes';
+
+  function aoAbrir() {
+    if (!_carregado) carregar();
+    _abrirTab(_tabAtiva);
+  }
+
+  function carregar() {
+    _carregarMetricas();
+    _carregarInscricoes();
+  }
+
+  function abrirTab(tab) {
+    _tabAtiva = tab;
+    _abrirTab(tab);
+  }
+
+  function _abrirTab(tab) {
+    ['inscricoes','presencas','certificados','exportacao'].forEach(function(t) {
+      var painel = document.getElementById('pub-painel-' + t);
+      var btn    = document.getElementById('pub-tab-' + t);
+      if (painel) painel.style.display = t === tab ? '' : 'none';
+      if (btn)    btn.classList.toggle('active', t === tab);
+    });
+    var filtros = document.getElementById('pub-filtros-inscricoes');
+    if (filtros) filtros.style.display = tab === 'inscricoes' ? '' : 'none';
+
+    if (tab === 'presencas'   && !_presencas.length)   _carregarPresencas();
+    if (tab === 'certificados'&& !_certificados.length) _carregarCertificados();
+    if (tab === 'exportacao') _prepararSelectAno();
+  }
+
+  function _carregarMetricas() {
+    GAS.publico.metricas(function(resp) {
+      if (!resp || !resp.ok) return;
+      var m = resp.data;
+      document.getElementById('pub-stat-total').textContent       = m.totalInscricoes || 0;
+      document.getElementById('pub-stat-confirmados').textContent = (m.inscritos||0) + (m.confirmados||0);
+      document.getElementById('pub-stat-espera').textContent      = m.listaEspera || 0;
+      document.getElementById('pub-stat-certs').textContent       = m.certificados || 0;
+      document.getElementById('pub-stat-nps').textContent         = m.nps != null ? m.nps : '—';
+    });
+  }
+
+  function _carregarInscricoes() {
+    GAS.publico.listarInscricoes({}, function(resp) {
+      if (!resp || !resp.ok) return;
+      _inscricoes = resp.data || [];
+      _carregado = true;
+      filtrarInscricoes();
+    });
+  }
+
+  function _carregarPresencas() {
+    GAS.publico.listarPresencas({}, function(resp) {
+      if (!resp || !resp.ok) return;
+      _presencas = resp.data || [];
+      _renderPresencas(_presencas);
+    });
+  }
+
+  function _carregarCertificados() {
+    GAS.publico.listarCertificados({}, function(resp) {
+      if (!resp || !resp.ok) return;
+      _certificados = resp.data || [];
+      _renderCertificados(_certificados);
+    });
+  }
+
+  function filtrarInscricoes() {
+    var termAcao   = (document.getElementById('pub-filtro-acao').value  || '').toLowerCase();
+    var termStatus = document.getElementById('pub-filtro-status').value || '';
+    var filtrados  = _inscricoes.filter(function(i) {
+      if (termAcao   && (i.acaoNome||'').toLowerCase().indexOf(termAcao) < 0)   return false;
+      if (termStatus && i.status !== termStatus) return false;
+      return true;
+    });
+    _renderInscricoes(filtrados);
+  }
+
+  var _STATUS_LABEL = {
+    inscrito:    'Inscrito',
+    confirmado:  'Confirmado',
+    lista_espera:'Lista Espera',
+    presente:    'Presente',
+    cancelado:   'Cancelado',
+    certificado: 'Certificado'
+  };
+  var _STATUS_CLS = {
+    inscrito:    'badge-info',
+    confirmado:  'badge-success',
+    lista_espera:'badge-warning',
+    presente:    'badge-primary',
+    cancelado:   'badge-danger',
+    certificado: 'badge-accent'
+  };
+
+  function _renderInscricoes(lista) {
+    var tbody = document.getElementById('pub-tbody-inscricoes');
+    if (!tbody) return;
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9e9e9e;padding:24px;">Nenhuma inscrição encontrada.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(function(i) {
+      var dt = i.criadoEm ? new Date(i.criadoEm).toLocaleDateString('pt-BR') : '—';
+      var stCls = _STATUS_CLS[i.status] || 'badge-info';
+      var stLbl = _STATUS_LABEL[i.status] || i.status;
+      var acoes = '';
+      if (i.status === 'inscrito') {
+        acoes += '<button class="btn btn-xs btn-success" onclick="PublicoUI.confirmar(\''+escaparHtml(i.id)+'\')">Confirmar</button> ';
+      }
+      if (i.status !== 'cancelado') {
+        acoes += '<button class="btn btn-xs btn-danger" onclick="PublicoUI.cancelar(\''+escaparHtml(i.id)+'\')">Cancelar</button>';
+      }
+      return '<tr>'
+        + '<td><code>'+escaparHtml(i.protocolo||i.id)+'</code></td>'
+        + '<td>'+escaparHtml(i.nome)+'</td>'
+        + '<td>'+escaparHtml(i.email)+'</td>'
+        + '<td>'+escaparHtml(i.acaoNome||i.acaoId||'')+'</td>'
+        + '<td><span class="badge '+stCls+'">'+stLbl+'</span></td>'
+        + '<td>'+dt+'</td>'
+        + '<td>'+acoes+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function _renderPresencas(lista) {
+    var tbody = document.getElementById('pub-tbody-presencas');
+    if (!tbody) return;
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9e9e9e;padding:24px;">Sem registros de presença.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(function(p) {
+      var dt = p.checkInEm ? new Date(p.checkInEm).toLocaleString('pt-BR') : '—';
+      return '<tr>'
+        + '<td><code>'+escaparHtml(p.inscricaoId)+'</code></td>'
+        + '<td>'+escaparHtml(p.acaoId)+'</td>'
+        + '<td>'+escaparHtml(p.sessaoNome||p.sessaoId||'')+'</td>'
+        + '<td>'+(p.presente ? '✅ Sim' : '❌ Não')+'</td>'
+        + '<td>'+dt+'</td>'
+        + '<td>'+escaparHtml(p.registradoPor||'')+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function _renderCertificados(lista) {
+    var tbody = document.getElementById('pub-tbody-certificados');
+    if (!tbody) return;
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9e9e9e;padding:24px;">Nenhum certificado emitido.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(function(c) {
+      var dt = c.geradoEm ? new Date(c.geradoEm).toLocaleDateString('pt-BR') : '—';
+      return '<tr>'
+        + '<td><code>'+escaparHtml(c.id)+'</code></td>'
+        + '<td>'+escaparHtml(c.nome)+'</td>'
+        + '<td>'+escaparHtml(c.email)+'</td>'
+        + '<td>'+escaparHtml(c.acaoNome||c.acaoId||'')+'</td>'
+        + '<td>'+escaparHtml(String(c.frequencia||0))+'%</td>'
+        + '<td>'+dt+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function confirmar(id) {
+    if (!confirm('Confirmar esta inscrição?')) return;
+    GAS.publico.confirmarInscricao(id, function(resp) {
+      if (resp && resp.ok) { Toast.sucesso('Inscrição confirmada.'); _carregado = false; carregar(); }
+      else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao confirmar.');
+    });
+  }
+
+  function cancelar(id) {
+    var _raw = prompt('Motivo do cancelamento:');
+    if (_raw === null) return;
+    GAS.publico.cancelarInscricao({ id: id, motivo: _raw }, function(resp) {
+      if (resp && resp.ok) { Toast.sucesso('Inscrição cancelada.'); _carregado = false; carregar(); }
+      else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao cancelar.');
+    });
+  }
+
+  function exportarCSV() {
+    var mes = document.getElementById('pub-exp-mes');
+    var ano = document.getElementById('pub-exp-ano');
+    GAS.exportacao.inscricoesCSV({}, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro('Erro ao gerar CSV.'); return; }
+      _downloadCSV(resp.data.csv, 'inscricoes.csv');
+      Toast.sucesso('CSV gerado (' + (resp.data.total||0) + ' registros).');
+    });
+  }
+
+  function exportarCODIP(done) {
+    var mes = parseInt(document.getElementById('pub-exp-mes').value);
+    var ano = parseInt(document.getElementById('pub-exp-ano').value);
+    GAS.exportacao.codip({ mes: mes, ano: ano }, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao gerar CODIP.'); return; }
+      var d = resp.data;
+      _downloadCSV(d.csv, 'codip_' + ano + '_' + String(mes).padStart(2,'0') + '.csv');
+      var res = document.getElementById('pub-exp-resultado');
+      res.innerHTML = '<div class="alert alert-success">CODIP gerado: <strong>'+d.total+'</strong> eventos referentes a '+String(mes).padStart(2,'0')+'/'+ano+'.</div>';
+      res.style.display = '';
+    });
+  }
+
+  function exportarSNIIC(done) {
+    var ano = parseInt(document.getElementById('pub-exp-ano-sniic').value);
+    GAS.exportacao.sniic({ ano: ano }, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao gerar SNIIC.'); return; }
+      var d = resp.data;
+      var res = document.getElementById('pub-exp-resultado');
+      res.innerHTML = '<div class="alert alert-success"><strong>SNIIC '+d.ano+':</strong> '
+        + d.total_acoes + ' ações, ' + d.total_publico + ' público, NPS médio: '
+        + (d.nps_medio != null ? d.nps_medio : '—') + '.</div>';
+      res.style.display = '';
+    });
+  }
+
+  function _downloadCSV(csv, nome) {
+    try {
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href = url; a.download = nome;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch(e) { Toast.aviso('Não foi possível fazer download automático.'); }
+  }
+
+  function _prepararSelectAno() {
+    var anoAtual = new Date().getFullYear();
+    var selMes   = document.getElementById('pub-exp-mes');
+    var selAno   = document.getElementById('pub-exp-ano');
+    if (selMes) selMes.value = String(new Date().getMonth() + 1);
+    if (selAno) selAno.value = String(anoAtual);
+  }
+
+  return {
+    aoAbrir:       aoAbrir,
+    abrirTab:      abrirTab,
+    filtrarInscricoes: filtrarInscricoes,
+    confirmar:     confirmar,
+    cancelar:      cancelar,
+    exportarCSV:   exportarCSV,
+    exportarCODIP: exportarCODIP,
+    exportarSNIIC: exportarSNIIC
+  };
+})();
+
 var SistemaMetricasUI = (function() {
   var _carregado = false;
   var _dados     = null;

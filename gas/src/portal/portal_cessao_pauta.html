@@ -143,16 +143,23 @@
   var orgConfig = <?= JSON.stringify(orgConfig) ?>;
   var params    = <?= JSON.stringify(params) ?>;
 
-  // Espaços de exemplo — Fase 7: carregar via ctrl_portal_getEspacosPublicos()
   (function carregarEspacos() {
     var select = document.getElementById('campo-espaco');
-    select.innerHTML = '<option value="">Selecione o espaço...</option>';
-    // TODO Fase 7: google.script.run para buscar espaços com aceitaReserva=true
-    ['Teatro Principal', 'Galeria de Arte', 'Sala Multiuso', 'Pátio Externo'].forEach(function(e) {
-      var o = document.createElement('option');
-      o.value = e; o.textContent = e;
-      select.appendChild(o);
-    });
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        select.innerHTML = '<option value="">Selecione o espaço...</option>';
+        if (resp && resp.ok && resp.data) {
+          resp.data.forEach(function(e) {
+            var o = document.createElement('option');
+            o.value = e.id; o.textContent = e.nome + (e.capacidade ? ' (cap. ' + e.capacidade + ')' : '');
+            select.appendChild(o);
+          });
+        }
+      })
+      .withFailureHandler(function() {
+        select.innerHTML = '<option value="">Erro ao carregar espaços</option>';
+      })
+      .ctrl_portal_listarEspacos();
   })();
 
   function enviarFormulario() {
@@ -181,16 +188,38 @@
       return;
     }
 
+    var dados = {
+      nome:            nome,
+      email:           email,
+      telefone:        document.getElementById('campo-telefone').value.trim(),
+      descricao:       descricao,
+      tipoAtividade:   tipoAcao,
+      espacoId:        espaco,
+      dataDesejada:    data,
+      horarioInicio:   horario,
+      publicoEsperado: parseInt(document.getElementById('campo-publico').value) || 0,
+      consentimento:   lgpd
+    };
+
     BtnGuard.wrap('btn-enviar', 'Enviando solicitação…', function(done) {
-      // TODO Fase 7: google.script.run.ctrl_portal_solicitarPauta(dados, ...)
-      // Simulação para Fase 0:
-      setTimeout(function() {
-        done();
-        var protocolo = 'PAU-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
-        document.getElementById('card-formulario').style.display = 'none';
-        document.getElementById('numero-protocolo').textContent = protocolo;
-        document.getElementById('resultado').style.display = 'block';
-      }, 800);
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          done();
+          if (!resp || !resp.ok) {
+            erroEl.textContent = (resp && resp.error && resp.error.message) || 'Erro ao enviar solicitação.';
+            erroEl.style.display = 'block';
+            return;
+          }
+          document.getElementById('card-formulario').style.display = 'none';
+          document.getElementById('numero-protocolo').textContent = resp.data.protocolo;
+          document.getElementById('resultado').style.display = 'block';
+        })
+        .withFailureHandler(function(e) {
+          done();
+          erroEl.textContent = 'Erro de comunicação: ' + (e.message || e);
+          erroEl.style.display = 'block';
+        })
+        .ctrl_portal_solicitarPauta(dados);
     });
   }
 </script>
