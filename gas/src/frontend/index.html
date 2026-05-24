@@ -5815,7 +5815,7 @@ var IdentidadeAdmin = (function() {
     });
   }
 
-  return { carregar, salvar, removerLogo, restaurarPadrao, extrairCores, previewLogo, sincronizarCor, sincronizarHex, aprovar };
+  return { carregar, salvar, removerLogo, restaurarPadrao, extrairCores, previewLogo, uploadLogo, sincronizarCor, sincronizarHex, aprovar };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -13279,7 +13279,7 @@ var App = (function() {
     { id:'taskhub',     label:'Meu Centro',      icone:'hub',                     modulo:null },
     { id:'tarefas',     label:'Tarefas',         icone:'task_alt',                modulo:'TAREFAS' },
     { id:'reunioes',    label:'Reuniões',         icone:'groups',                  modulo:'REUNIOES' },
-    { secao:'SISTEMA' },
+    { secao:'OPERACIONAL' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
     { id:'balcao',      label:'Balcão',           icone:'support_agent',           modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
@@ -13288,7 +13288,7 @@ var App = (function() {
     { id:'acervo',      label:'Acervo',          icone:'photo_library',           modulo:'ACOES' },
     { id:'voluntarios', label:'Voluntários',     icone:'volunteer_activism',      modulo:'MASTER' },
     { id:'parcerias',   label:'Parcerias',       icone:'handshake',               modulo:'ACOES' },
-    { secao:'SISTEMA' },
+    { secao:'SISTEMA', superadmin:true },
     { id:'admin',            label:'Administração',   icone:'admin_panel_settings', modulo:'ADMIN', superadmin:true },
     { id:'auditoria',        label:'Auditoria',       icone:'manage_search',         modulo:'ADMIN', superadmin:true },
     { id:'sistema-metricas', label:'Observabilidade', icone:'monitoring',    modulo:null, superadmin:true },
@@ -13363,8 +13363,9 @@ var App = (function() {
     ul.innerHTML = '';
 
     _MODULOS_MENU.forEach(function(item) {
-      // Seção (header)
+      // Seção (header) — respeita superadmin:true
       if(item.secao) {
+        if(item.superadmin && !ehSuperadmin) return;
         var li = document.createElement('li');
         li.innerHTML = '<div class="nav-secao">'+escaparHtml(item.secao)+'</div>';
         ul.appendChild(li); return;
