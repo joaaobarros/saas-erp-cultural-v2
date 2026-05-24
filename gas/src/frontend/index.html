@@ -4420,12 +4420,13 @@ select.form-control { cursor: pointer; }
               <div class="stat-card"><div class="stat-value" style="color:var(--color-info)" id="painel-fin-saldo">—</div><div class="stat-label">Saldo (R$)</div></div>
             </div>
             <p class="muted-text" id="painel-fin-loading" style="font-size:13px;">Carregando dados financeiros…</p>
+            <div id="painel-fin-barra"></div>
           </div>
           <!-- Aba Contratações da Ação -->
           <div id="painel-tab-contratacoes_acao" class="oculto">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <p class="muted-text" style="font-size:12px;">Solicitações vinculadas a esta ação</p>
-              <button class="btn btn-primario btn-sm" onclick="SolicitacoesUI.novaParaAcao(AcoesUI.getPainelAcao()&&AcoesUI.getPainelAcao().id)" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Contratação</button>
+              <button class="btn btn-primary btn-sm" onclick="SolicitacoesUI.novaParaAcao(AcoesUI.getPainelAcao()&&AcoesUI.getPainelAcao().id)" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Contratação</button>
             </div>
             <div id="painel-contratacoes-acao-lista"><p class="muted-text" style="font-size:13px;">Carregando…</p></div>
           </div>
@@ -16046,6 +16047,12 @@ var AcoesUI = (function() {
         var elFin = document.getElementById('painel-fin-'+k);
         if (elFin) elFin.textContent = fmt(fin[k]||0);
       });
+      // Barra de progresso execução
+      var finBar = document.getElementById('painel-fin-barra');
+      if (finBar) {
+        var pct = (fin.previsto && fin.previsto > 0) ? Math.min(100, Math.round((fin.executado / fin.previsto) * 100)) : 0;
+        finBar.innerHTML = '<div style="margin-top:16px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2,#64748b);margin-bottom:4px;"><span>Execução orçamentária</span><strong>'+pct+'%</strong></div><div style="height:8px;background:var(--surface2,#f1f5f9);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:'+(pct>=80?'var(--color-error,#ef4444)':pct>=50?'var(--color-warning,#f59e0b)':'var(--color-success,#10b981)')+';border-radius:4px;transition:width .3s;"></div></div></div>';
+      }
 
     }, function(e) {
       // silencioso — painel pode ser aberto mesmo sem dados vinculados
@@ -16067,29 +16074,57 @@ var AcoesUI = (function() {
       concluida:'Concluída', arquivada:'Arquivada', cancelada:'Cancelada',
       planejada:'Planejada'
     };
-    var confirmar = window.confirm('Confirmar transição para "'+( labels[novoStatus]||novoStatus)+'"?');
-    if (!confirmar) return;
+    var _executarMudarStatus = function(motivo) {
+      GAS.acoes.mudarStatus({ id: acaoId, novoStatus: novoStatus, motivo: motivo || '' }, function(r) {
+        if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao mudar status.'); return; }
+        Toast.sucesso('Status atualizado: ' + (labels[novoStatus] || novoStatus));
+        fecharPainel();
+        _carregado = false;
+        carregar();
+      }, function(e) { Toast.erro(e.message || e); });
+    };
 
-    var motivo = '';
     if (novoStatus === 'cancelada') {
-      var _raw = window.prompt('Motivo do cancelamento (obrigatório):');
-      if (_raw === null) return;
-      motivo = _raw.trim();
-      if (!motivo) { Toast.aviso('Motivo obrigatório para cancelamento.'); return; }
+      // Cancelamento exige motivo — usar modal inline
+      var html = '<div style="padding:20px;min-width:340px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">' +
+          '<h3 style="font-size:1rem;font-weight:700;margin:0;color:var(--color-error,#ef4444);">Cancelar Ação</h3>' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2,#64748b);">✕</button>' +
+        '</div>' +
+        '<p style="font-size:13px;color:var(--text2,#64748b);margin-bottom:14px;">Informe o motivo do cancelamento. Esta ação não pode ser desfeita diretamente.</p>' +
+        '<textarea id="fsm-motivo-input" rows="3" placeholder="Motivo obrigatório…" style="width:100%;padding:8px 10px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;resize:vertical;"></textarea>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 16px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>' +
+          '<button id="btn-fsm-confirmar-cancel" data-bg-skip="1" onclick="(function(){var m=(document.getElementById(\'fsm-motivo-input\')||{}).value||\'\';if(!m.trim()){Toast.aviso(\'Motivo obrigatório.\');return;}document.querySelectorAll(\'.modal-simples\').forEach(function(e){e.remove();});AcoesUI._executarMudarStatus(\''+acaoId+'\',\''+novoStatus+'\',m.trim());})();" style="padding:8px 16px;background:var(--color-error,#ef4444);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Confirmar Cancelamento</button>' +
+        '</div>' +
+      '</div>';
+      _abrirModalSimples(html);
+      return;
     }
 
-    GAS.acoes.mudarStatus({ id: acaoId, novoStatus: novoStatus, motivo: motivo }, function(r) {
-      if (!r || !r.ok) {
-        Toast.erro((r && r.error && r.error.message) || 'Erro ao mudar status.');
-        return;
-      }
-      Toast.sucesso('Status atualizado: ' + (labels[novoStatus]||novoStatus));
+    // Para demais transições: modal de confirmação simples
+    var icones = { em_producao:'build', em_execucao:'play_arrow', concluida:'check_circle', arquivada:'archive', planejada:'pending' };
+    _abrirModalConfirmar({
+      titulo:         'Mover para "' + (labels[novoStatus] || novoStatus) + '"?',
+      mensagem:       'A ação será movida para o status <strong>' + (labels[novoStatus] || novoStatus) + '</strong>. Confirma?',
+      icone:          icones[novoStatus] || 'swap_horiz',
+      corIcone:       novoStatus === 'concluida' ? 'var(--color-success,#10b981)' : 'var(--color-primary,#4f46e5)',
+      labelConfirmar: 'Confirmar',
+      idBtn:          'btn-fsm-mudar-status',
+      onConfirm:      'document.querySelectorAll(\'.modal-simples\').forEach(function(e){e.remove();});AcoesUI._executarMudarStatus(\''+acaoId+'\',\''+novoStatus+'\',\'\');'
+    });
+  }
+
+  function _executarMudarStatus(acaoId, novoStatus, motivo) {
+    var labels = { em_producao:'Em Produção', em_execucao:'Em Execução',
+      concluida:'Concluída', arquivada:'Arquivada', cancelada:'Cancelada', planejada:'Planejada' };
+    GAS.acoes.mudarStatus({ id: acaoId, novoStatus: novoStatus, motivo: motivo || '' }, function(r) {
+      if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao mudar status.'); return; }
+      Toast.sucesso('Status atualizado: ' + (labels[novoStatus] || novoStatus));
       fecharPainel();
       _carregado = false;
       carregar();
-    }, function(e) {
-      Toast.erro(e.message || e);
-    });
+    }, function(e) { Toast.erro(e.message || e); });
   }
 
   // ────────────────────────────────────────────────────────
@@ -16124,6 +16159,7 @@ var AcoesUI = (function() {
     _filtrar:              _filtrar,
     _abrirTab:             _abrirTab,
     _confirmarMudarStatus: _confirmarMudarStatus,
+    _executarMudarStatus:  _executarMudarStatus,
     getPainelAcao:         function() { return _painelAcao; }
   };
 
