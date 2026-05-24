@@ -304,3 +304,89 @@ function _assertAdmin() {
   }
   if (!ehAdmin) throw new Error('Acesso negado: operação restrita a administradores.');
 }
+
+// ─── Fase 9: Feature Flags ─────────────────────────────────────────────────
+
+/**
+ * Lista todas as feature flags com status atual.
+ * Acesso: admin/superadmin.
+ */
+function ctrl_admin_listarFeatureFlags() {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    return SistemaConfigService.getFeatureFlagsCatalogo();
+  }, 'ctrl_admin_listarFeatureFlags');
+}
+
+/**
+ * Ativa ou desativa uma feature flag.
+ * @param {string} flagId
+ * @param {boolean} ativo
+ */
+function ctrl_admin_setFeatureFlag(flagId, ativo) {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    var email = getEmailSessao();
+    var orgId = getOrgConfig().orgId;
+    var res = SistemaConfigService.setFeatureFlag(flagId, ativo === true || ativo === 'true', email);
+    AuditoriaService.registrar('FEATURE_FLAG_ALTERADA', 'admin',
+      { orgId: orgId, usuario: email, flagId: flagId, ativo: ativo });
+    return res;
+  }, 'ctrl_admin_setFeatureFlag');
+}
+
+// ─── Fase 9: Checklist de Provisionamento ─────────────────────────────────
+
+/**
+ * Retorna o checklist de provisionamento desta organização.
+ * Acesso: admin/superadmin.
+ */
+function ctrl_admin_checarProvisionamento() {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    return OrgRegistryService.checarProvisionamento(orgId);
+  }, 'ctrl_admin_checarProvisionamento');
+}
+
+// ─── Fase 9: Painel de Orgs (superadmin) ──────────────────────────────────
+
+/**
+ * Lista todas as orgs registradas.
+ * Acesso: superadmin apenas.
+ */
+function ctrl_orgs_listar() {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    var papel  = acesso && acesso.registro ? acesso.registro.papel : '';
+    if (papel !== 'superadmin') throw new Error('Acesso negado: restrito a superadmin.');
+    return OrgRegistryService.listarTodas();
+  }, 'ctrl_orgs_listar');
+}
+
+/**
+ * Atualiza status de uma org (superadmin).
+ */
+function ctrl_orgs_atualizarStatus(orgId, status) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    var papel  = acesso && acesso.registro ? acesso.registro.papel : '';
+    if (papel !== 'superadmin') throw new Error('Acesso negado: restrito a superadmin.');
+    return OrgRegistryService.atualizarStatus(orgId, status);
+  }, 'ctrl_orgs_atualizarStatus');
+}
+
+/**
+ * Atualiza plano de uma org (superadmin).
+ */
+function ctrl_orgs_atualizarPlano(orgId, plano) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    var papel  = acesso && acesso.registro ? acesso.registro.papel : '';
+    if (papel !== 'superadmin') throw new Error('Acesso negado: restrito a superadmin.');
+    return OrgRegistryService.atualizarPlano(orgId, plano);
+  }, 'ctrl_orgs_atualizarPlano');
+}

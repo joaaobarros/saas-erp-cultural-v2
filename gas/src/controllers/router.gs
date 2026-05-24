@@ -45,6 +45,9 @@ function doGet(e) {
       case 'agente':
         return _renderPortalPublico('agente', e);
 
+      case 'wizard_setup':
+        return _renderWizardSetup(e);
+
       case 'health':
         return _renderHealth();
 
@@ -123,6 +126,24 @@ function _renderPortalPublico(secao, e) {
   template.params    = e ? e.parameter || {} : {};
   return template.evaluate()
     .setTitle(getOrgConfig().titulo + ' — Portal')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ─── Wizard de Setup (admin/superadmin apenas) ───────────────────────────────
+
+/**
+ * Renderiza o wizard de configuração inicial.
+ * Acesso: qualquer usuário autenticado pode acessar o wizard durante o setup.
+ * A verificação de permissão ocorre nos controllers chamados pelo wizard.
+ */
+function _renderWizardSetup(e) {
+  var org      = getOrgConfig();
+  var template = HtmlService.createTemplateFromFile('portal/wizard_setup');
+  template.orgId  = org.orgId;
+  template.titulo = org.titulo || 'ERP Cultural';
+  return template.evaluate()
+    .setTitle('Setup — ' + (org.titulo || 'ERP Cultural'))
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

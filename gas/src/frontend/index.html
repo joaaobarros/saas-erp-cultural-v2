@@ -1489,6 +1489,8 @@ textarea.input { resize: vertical; }
               <button class="tab-btn" data-tab="turnos"   onclick="AdminCadastrosUI.abrirTab('turnos')">Turnos</button>
               <button class="tab-btn" data-tab="catitens" onclick="AdminCadastrosUI.abrirTab('catitens')">Categ. Itens</button>
               <button class="tab-btn" data-tab="modulos"  onclick="AdminCadastrosUI.abrirTab('modulos')">Módulos</button>
+              <button class="tab-btn" data-tab="features" onclick="AdminCadastrosUI.abrirTab('features')">Features</button>
+              <button class="tab-btn" data-tab="provisao" onclick="AdminCadastrosUI.abrirTab('provisao')">Provisionamento</button>
               <button class="tab-btn" data-tab="usuarios" onclick="AdminCadastrosUI.abrirTab('usuarios')">Usuários</button>
             </div>
             <!-- Tab: Espaços -->
@@ -1531,6 +1533,37 @@ textarea.input { resize: vertical; }
             <div id="admin-tab-modulos" class="admin-tab-content oculto">
               <div id="lista-admin-modulos"><p class="muted-text">Carregando…</p></div>
             </div>
+
+            <!-- Tab: Feature Flags (Fase 9) -->
+            <div id="admin-tab-features" class="admin-tab-content oculto">
+              <p style="font-size:13px;color:var(--color-muted,#64748b);margin-bottom:16px;">
+                Ative ou desative funcionalidades sem necessidade de novo deploy. As alterações tomam efeito imediatamente.
+              </p>
+              <div id="lista-admin-features"><p class="muted-text">Carregando…</p></div>
+            </div>
+
+            <!-- Tab: Provisionamento (Fase 9) -->
+            <div id="admin-tab-provisao" class="admin-tab-content oculto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <div style="font-size:15px;font-weight:600;margin-bottom:2px;">Checklist de Provisionamento</div>
+                  <div style="font-size:13px;color:var(--color-muted,#64748b);">Verifica se todos os passos de setup foram concluídos.</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <a id="btn-abrir-wizard" href="?secao=wizard_setup" target="_blank"
+                     class="btn btn-primario btn-sm" style="text-decoration:none;">
+                    🪄 Abrir Wizard de Setup
+                  </a>
+                  <button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.recarregarProvisionamento()">↺ Recarregar</button>
+                </div>
+              </div>
+              <div id="prov-progress-label" style="font-size:13px;color:var(--color-muted,#64748b);margin-bottom:4px;"></div>
+              <div style="background:#e2e8f0;border-radius:6px;height:8px;margin-bottom:16px;overflow:hidden;">
+                <div id="prov-progress-fill" style="background:linear-gradient(90deg,var(--primary,#7c3aed),#16a34a);height:100%;width:0%;transition:width .5s;"></div>
+              </div>
+              <div id="lista-admin-provisao"><p class="muted-text">Carregando…</p></div>
+            </div>
+
             <!-- Tab: Usuários -->
             <div id="admin-tab-usuarios" class="admin-tab-content oculto">
               <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
@@ -3966,6 +3999,35 @@ textarea.input { resize: vertical; }
 
       </div><!-- /view-sistema-metricas -->
 
+      <!-- ═══ VIEW PAINEL DE ORGS (Fase 9 — superadmin) ════════════════════ -->
+      <div id="view-painel-orgs" class="view">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Painel de Organizações</h1>
+            <p class="view-subtitle">Organizações provisionadas neste deployment SaaS</p>
+          </div>
+          <button class="btn btn-primary" onclick="BtnGuard.wrap(this,'Atualizando…',function(){PainelOrgsUI.carregar();})">
+            <span class="material-symbols-outlined">refresh</span> Atualizar
+          </button>
+        </div>
+
+        <!-- Stats de orgs -->
+        <div class="stats-grid" id="orgs-stats" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-value" id="orgs-stat-total">—</div><div class="stat-label">Orgs registradas</div></div>
+          <div class="stat-card"><div class="stat-value" id="orgs-stat-ativas">—</div><div class="stat-label">Provisionadas</div></div>
+          <div class="stat-card"><div class="stat-value" id="orgs-stat-demo">—</div><div class="stat-label">Em demo</div></div>
+          <div class="stat-card"><div class="stat-value" id="orgs-stat-suspenso">—</div><div class="stat-label">Suspensas</div></div>
+        </div>
+
+        <!-- Tabela de orgs -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo"><span class="ms">corporate_fare</span> Organizações</div>
+          </div>
+          <div id="orgs-lista"><p class="muted-text">Carregando…</p></div>
+        </div>
+      </div><!-- /view-painel-orgs -->
+
       <!-- ═══ VIEW COMUNICAÇÃO (RECE) ═══════════════════════════════════════ -->
       <div id="view-comunicacao" class="view">
         <div class="view-header">
@@ -4614,12 +4676,22 @@ var GAS = {
     // Módulos
     listarModulos:        function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarModulos(); },
     toggleModulo:         function(id,ativo,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_toggleModulo(id,ativo); },
+    // Feature Flags (Fase 9)
+    listarFeatureFlags:   function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarFeatureFlags(); },
+    setFeatureFlag:       function(id,ativo,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_setFeatureFlag(id,ativo); },
+    checarProvisionamento:function(cb,err)          { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_checarProvisionamento(); },
     // Expediente
     obterConfigExpediente:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterConfigExpediente(); },
     salvarConfigExpediente: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarConfigExpediente(d); },
     // Terreno do Mapa
     lerTerreno:             function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerTerreno(); },
     salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); }
+  },
+  // Painel de Orgs — Fase 9 (superadmin)
+  orgs: {
+    listar:          function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_orgs_listar(); },
+    atualizarStatus: function(id,s,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_orgs_atualizarStatus(id,s); },
+    atualizarPlano:  function(id,p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_orgs_atualizarPlano(id,p); }
   },
   // Gestão de usuários e permissões
   acesso: {
@@ -6638,8 +6710,37 @@ var AdminCadastrosUI = (function() {
     if (tab === 'turnos')    carregarTurnos();
     if (tab === 'catitens')  carregarCatItens();
     if (tab === 'modulos')   carregarModulos();
+    if (tab === 'features')  FeatureFlagsUI.carregar();
+    if (tab === 'provisao')  _carregarProvisionamento();
     if (tab === 'usuarios')  carregarUsuarios();
   }
+
+  function _carregarProvisionamento() {
+    var el    = document.getElementById('lista-admin-provisao');
+    var fill  = document.getElementById('prov-progress-fill');
+    var label = document.getElementById('prov-progress-label');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Verificando…</p>';
+    GAS.admin.checarProvisionamento(function(r) {
+      var data = r && r.ok ? r.data : r;
+      if (!data || !data.checks) { el.innerHTML = '<p style="color:#ef4444;">Erro ao verificar provisionamento.</p>'; return; }
+      var pct = data.percentual || 0;
+      if (fill) fill.style.width = pct + '%';
+      if (label) label.textContent = data.passou + ' de ' + data.total + ' verificações (' + pct + '%)';
+      el.innerHTML = data.checks.map(function(c) {
+        return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid ' + (c.ok ? '#bbf7d0' : '#fde68a') + ';background:' + (c.ok ? '#f0fdf4' : '#fffbeb') + ';margin-bottom:8px;">' +
+          '<div style="font-size:18px;flex-shrink:0;">' + (c.ok ? '✅' : '⚠️') + '</div>' +
+          '<div>' +
+            '<div style="font-size:14px;font-weight:500;">' + c.label + '</div>' +
+            '<div style="font-size:12px;color:#64748b;">' + (c.detalhe || '') + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      (!data.completo ? '<div style="margin-top:12px;padding:12px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1e40af;">💡 Abra o <a href="?secao=wizard_setup" target="_blank" style="color:#1e40af;font-weight:600;">Wizard de Setup</a> para concluir os passos pendentes.</div>' : '');
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  function recarregarProvisionamento() { _carregarProvisionamento(); }
 
   function carregarEspacos() {
     var el = document.getElementById('lista-admin-espacos');
@@ -7526,7 +7627,8 @@ var AdminCadastrosUI = (function() {
         var idx = _catItens.findIndex(function(x){ return x.id === c.id; });
         if (idx >= 0) _catItens[idx] = c; else _catItens.push(c);
       });
-    }
+    },
+    recarregarProvisionamento: recarregarProvisionamento
   };
 })();
 
@@ -12638,7 +12740,8 @@ var App = (function() {
     { id:'parcerias',   label:'Parcerias',       icone:'handshake',               modulo:'ACOES' },
     { secao:'SISTEMA' },
     { id:'admin',       label:'Administração',   icone:'admin_panel_settings',    modulo:'ADMIN' },
-    { id:'sistema-metricas', label:'Observabilidade', icone:'monitoring', modulo:null, superadmin:true }
+    { id:'sistema-metricas', label:'Observabilidade', icone:'monitoring',    modulo:null, superadmin:true },
+    { id:'painel-orgs',      label:'Painel de Orgs',  icone:'corporate_fare', modulo:null, superadmin:true }
   ];
 
   function iniciar() {
@@ -12759,6 +12862,7 @@ var App = (function() {
             : id === 'publico'         ? function(){ PublicoUI.aoAbrir(); }
             : id === 'comunicacao'     ? function(){ ReceUI.aoAbrir(); }
             : id === 'sistema-metricas'? function(){ SistemaMetricasUI.aoAbrir(); }
+            : id === 'painel-orgs'     ? function(){ PainelOrgsUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);
@@ -14305,6 +14409,176 @@ var ParceriasUI = (function() {
            avancar:avancar, ativar:ativar, encerrar:encerrar };
 })();
 Router.registrar('parcerias','Parcerias',ParceriasUI.aoAbrir);
+
+// ─── Fase 9: FeatureFlagsUI ─────────────────────────────────────────────────
+var FeatureFlagsUI = (function() {
+  var _carregado = false;
+  var _GRUPOS = { core:'Core', portal:'Portal Público', comunicacao:'Comunicação', memoria:'Memória Cultural', exportacao:'Exportação', notificacoes:'Notificações', espacos:'Espaços', admin:'Administração' };
+
+  function _renderGrupos(flags) {
+    var porGrupo = {};
+    flags.forEach(function(f) { (porGrupo[f.grupo] = porGrupo[f.grupo] || []).push(f); });
+    return Object.keys(porGrupo).map(function(g) {
+      var label = _GRUPOS[g] || g;
+      var items = porGrupo[g].map(function(f) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;">' +
+          '<div>' +
+            '<div style="font-size:14px;font-weight:600;">' + f.label + '</div>' +
+            '<div style="font-size:12px;color:#64748b;">' + f.descricao + '</div>' +
+          '</div>' +
+          '<label class="ff-toggle" style="cursor:pointer;position:relative;display:inline-block;width:44px;height:24px;">' +
+            '<input type="checkbox" ' + (f.ativo ? 'checked' : '') + ' data-flag="' + f.id + '" onchange="FeatureFlagsUI.toggle(' + JSON.stringify(f.id).replace(/"/g,"'") + ',this.checked,this)" style="opacity:0;width:0;height:0;">' +
+            '<span style="position:absolute;inset:0;border-radius:24px;background:' + (f.ativo ? 'var(--primary,#7c3aed)' : '#e2e8f0') + ';transition:.2s;">' +
+              '<span style="position:absolute;left:' + (f.ativo ? '22px' : '2px') + ';top:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s;"></span>' +
+            '</span>' +
+          '</label>' +
+        '</div>';
+      }).join('');
+      return '<div style="margin-bottom:24px;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:8px;">' + label + '</div>' +
+        items + '</div>';
+    }).join('');
+  }
+
+  function carregar() {
+    var el = document.getElementById('lista-admin-features');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando feature flags…</p>';
+    GAS.admin.listarFeatureFlags(function(r) {
+      var flags = r && r.ok ? r.data : (Array.isArray(r) ? r : []);
+      el.innerHTML = _renderGrupos(flags);
+      _carregado = true;
+    }, function(e) { el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>'; });
+  }
+
+  function toggle(flagId, ativo, cb) {
+    GAS.admin.setFeatureFlag(flagId, ativo, function(r) {
+      var ok = r && r.ok;
+      Toast.mostrar(ok ? '✅ Feature "' + flagId + '" ' + (ativo ? 'ativada' : 'desativada') : '❌ Erro ao alterar flag', ok ? 'sucesso' : 'erro');
+      if (!ok) { setTimeout(function() { carregar(); }, 500); } // revert UI
+    }, function(e) {
+      Toast.mostrar('❌ Erro: ' + e.message, 'erro');
+      setTimeout(function() { carregar(); }, 500);
+    });
+  }
+
+  return {
+    carregar:     carregar,
+    toggle:       toggle,
+    jaCarregado:  function() { return _carregado; }
+  };
+})();
+
+// ─── Fase 9: PainelOrgsUI ───────────────────────────────────────────────────
+var PainelOrgsUI = (function() {
+  var _carregado = false;
+
+  var STATUS_BADGE = {
+    provisionado: 'badge-success',
+    em_setup:     'badge-warning',
+    suspenso:     'badge-danger',
+    demo:         'badge-secondary'
+  };
+  var STATUS_LABEL = {
+    provisionado: 'Provisionado',
+    em_setup:     'Em Setup',
+    suspenso:     'Suspenso',
+    demo:         'Demo'
+  };
+
+  function aoAbrir() {
+    if (!_carregado) carregar();
+  }
+
+  function carregar() {
+    var el = document.getElementById('orgs-lista');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando orgs…</p>';
+    GAS.orgs.listar(function(r) {
+      var lista = r && r.ok ? r.data : (Array.isArray(r) ? r : []);
+      _renderStats(lista);
+      _renderLista(lista, el);
+      _carregado = true;
+    }, function(e) {
+      el.innerHTML = '<p style="color:#ef4444;">Erro: ' + e.message + '</p>';
+    });
+  }
+
+  function _renderStats(lista) {
+    var total    = lista.length;
+    var ativas   = lista.filter(function(o){ return o.status === 'provisionado'; }).length;
+    var demo     = lista.filter(function(o){ return o.status === 'demo'; }).length;
+    var susp     = lista.filter(function(o){ return o.status === 'suspenso'; }).length;
+    var setV = function(id, v) { var el = document.getElementById(id); if(el) el.textContent = v; };
+    setV('orgs-stat-total', total);
+    setV('orgs-stat-ativas', ativas);
+    setV('orgs-stat-demo', demo);
+    setV('orgs-stat-suspenso', susp);
+  }
+
+  function _renderLista(lista, el) {
+    if (!lista.length) { el.innerHTML = '<p class="muted-text">Nenhuma organização registrada ainda.</p>'; return; }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">' +
+      '<thead><tr style="background:#f8fafc;font-size:11px;text-transform:uppercase;color:#64748b;">' +
+        '<th style="padding:10px 14px;text-align:left;">Organização</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Domínio</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Status</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Plano</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Provisionado em</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Última atividade</th>' +
+        '<th style="padding:10px 14px;text-align:left;">Ações</th>' +
+      '</tr></thead><tbody>';
+
+    lista.forEach(function(o) {
+      var stClass = STATUS_BADGE[o.status] || 'badge-secondary';
+      var stLabel = STATUS_LABEL[o.status] || o.status;
+      html += '<tr style="border-bottom:1px solid #f1f5f9;">' +
+        '<td style="padding:12px 14px;">' +
+          '<div style="font-weight:600;">' + (o.nome || o.orgId) + '</div>' +
+          '<div style="font-size:12px;color:#64748b;">' + (o.nomeCompleto || '') + '</div>' +
+          '<div style="font-family:monospace;font-size:11px;color:#94a3b8;">' + (o.orgId || '') + '</div>' +
+        '</td>' +
+        '<td style="padding:12px 14px;">' + (o.dominio || '—') + '</td>' +
+        '<td style="padding:12px 14px;"><span class="badge ' + stClass + '">' + stLabel + '</span></td>' +
+        '<td style="padding:12px 14px;text-transform:capitalize;">' + (o.plano || '—') + '</td>' +
+        '<td style="padding:12px 14px;font-size:12px;color:#64748b;">' + _fmtData(o.provisionadoEm) + '</td>' +
+        '<td style="padding:12px 14px;font-size:12px;color:#64748b;">' + _fmtData(o.ultimaAtividadeEm) + '</td>' +
+        '<td style="padding:12px 14px;">' +
+          '<select class="form-input" style="font-size:12px;padding:4px 8px;max-width:130px;" onchange="PainelOrgsUI.mudarStatus(' + JSON.stringify(o.orgId).replace(/"/g,"'") + ',this.value)">' +
+            '<option value="">Mudar status…</option>' +
+            ['provisionado','em_setup','suspenso','demo'].map(function(s) {
+              return '<option value="' + s + '"' + (o.status===s?' selected':'') + '>' + (STATUS_LABEL[s]||s) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</td>' +
+      '</tr>';
+    });
+
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function mudarStatus(orgId, status) {
+    if (!status) return;
+    GAS.orgs.atualizarStatus(orgId, status, function(r) {
+      Toast.mostrar(r && r.ok ? '✅ Status atualizado' : '❌ Erro ao atualizar', r && r.ok ? 'sucesso' : 'erro');
+      if (r && r.ok) carregar();
+    }, function(e) { Toast.mostrar('❌ ' + e.message, 'erro'); });
+  }
+
+  function _fmtData(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' }); }
+    catch(_) { return d; }
+  }
+
+  return {
+    aoAbrir:     aoAbrir,
+    carregar:    carregar,
+    mudarStatus: mudarStatus
+  };
+})();
+Router.registrar('painel-orgs', 'Painel de Orgs', PainelOrgsUI.aoAbrir);
 
 // Boot
 document.addEventListener('DOMContentLoaded', function() {

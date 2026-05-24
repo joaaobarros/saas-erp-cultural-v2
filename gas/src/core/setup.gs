@@ -480,3 +480,174 @@ function fase8_prepararIndice() {
     'Índices F8 prontos: AgentesCulturais, Acervo, Voluntarios, Parcerias.');
   return { ok: true };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FASE 9 — Multi-Tenancy e Painel Admin
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fase 9 — Prepara:
+ *   1. Executa migração de orgId em todos os JSONs de dados existentes
+ *   2. Registra esta org no OrgRegistry (painel SaaS)
+ *   3. Garante que a aba MASTER.Orgs existe
+ * Executar uma vez após deploy da Fase 9.
+ */
+function fase9_prepararIndice() {
+  var org    = getOrgConfig();
+  var orgId  = org.orgId;
+
+  // 1. Migrar orgId em todos os registros existentes
+  var migRes = fase9_migrarOrgId();
+
+  // 2. Registrar esta org no registry
+  try { OrgRegistryService.registrarOuAtualizar(orgId, org); } catch(e) {
+    Logger.warn('setup', 'fase9_prepararIndice', 'OrgRegistry: ' + e.message);
+  }
+
+  // 3. Garantir aba MASTER.Orgs
+  try {
+    var ss = _getSheet('SHEET_ID_MASTER', null);
+    if (!ss.getSheetByName('Orgs')) {
+      var aba = ss.insertSheet('Orgs');
+      aba.getRange(1, 1, 1, 6).setValues([[
+        'OrgId', 'Nome', 'NomeCompleto', 'Dominio', 'Status', 'ProvisionadoEm'
+      ]]);
+      aba.setFrozenRows(1);
+    }
+  } catch(e) {
+    Logger.warn('setup', 'fase9_prepararIndice', 'Aba Orgs: ' + e.message);
+  }
+
+  Logger.info('setup', 'fase9_prepararIndice',
+    'Fase 9 pronta. orgId=' + orgId + '. Migrados=' + (migRes.migrados || 0));
+  return { ok: true, orgId: orgId, migrados: migRes.migrados, sem_orgId: migRes.sem_orgId };
+}
+
+/**
+ * Migração idempotente: garante que todo registro em todos os JSONs
+ * de dados tenha o campo orgId preenchido com o orgId desta organização.
+ *
+ * SEGURO: só escreve em registros que não têm orgId. Não altera registros
+ * que já possuem orgId (preserva dados multi-tenant futuros).
+ */
+function fase9_migrarOrgId() {
+  var orgId = getOrgConfig().orgId;
+  var ARQUIVOS = [
+    'tarefas.json',
+    'colaboradores.json',
+    'ferias.json',
+    'afastamentos.json',
+    'ocorrencias.json',
+    'contratos.json',
+    'contratos_versoes.json',
+    'fontes_recurso.json',
+    'remanejamentos_orcamentarios.json',
+    'aditivos_contratos.json',
+    'acoes.json',
+    'reservas.json',
+    'reservas_itens.json',
+    'chaves.json',
+    'movimentacoes_chaves.json',
+    'solicitacoes_reserva.json',
+    'contratados.json',
+    'habilitacoes.json',
+    'solicitacoes_contratacao.json',
+    'agentes_culturais.json',
+    'acervo.json',
+    'voluntarios.json',
+    'alocacoes_voluntarios.json',
+    'parcerias.json',
+    'inscricoes.json',
+    'presencas.json',
+    'pesquisas_satisfacao.json',
+    'certificados.json',
+    'consentimentos.json',
+    'rece_agenda.json',
+    'modulos_config.json'
+  ];
+
+  var totalMigrados  = 0;
+  var totalSemOrgId  = 0;
+  var erros          = [];
+
+  ARQUIVOS.forEach(function(arquivo) {
+    try {
+      var contadorArquivo = 0;
+      modifyJSON(arquivo, function(lista) {
+        if (!Array.isArray(lista)) return lista;
+        lista.forEach(function(item) {
+          if (item && !item.orgId) {
+            item.orgId = orgId;
+            contadorArquivo++;
+          } else if (item && item.orgId) {
+            totalSemOrgId++; // já tem orgId — conta como "já ok"
+          }
+        });
+        return lista;
+      });
+      totalMigrados += contadorArquivo;
+      if (contadorArquivo > 0) {
+        Logger.info('setup', 'fase9_migrarOrgId', arquivo + ': ' + contadorArquivo + ' registros migrados.');
+      }
+    } catch(e) {
+      // Arquivo pode não existir ainda — normal
+      if (e.message && e.message.indexOf('não encontrado') === -1 &&
+          e.message && e.message.indexOf('not found') === -1) {
+        Logger.warn('setup', 'fase9_migrarOrgId', arquivo + ': ' + e.message);
+        erros.push(arquivo + ': ' + e.message);
+      }
+    }
+  });
+
+  Logger.info('setup', 'fase9_migrarOrgId',
+    'Migração concluída. ' + totalMigrados + ' registros receberam orgId=' + orgId);
+  return {
+    ok:        true,
+    orgId:     orgId,
+    migrados:  totalMigrados,
+    sem_orgId: totalSemOrgId,
+    erros:     erros
+  };
+}
+
+/**
+ * Valida isolamento: verifica que TODOS os registros em todos os JSONs
+ * possuem orgId. Retorna relatório com arquivos/contagens suspeitas.
+ * Executar no GAS Editor para auditoria de integridade.
+ */
+function fase9_validarIsolamento() {
+  var orgId   = getOrgConfig().orgId;
+  var ARQUIVOS = [
+    'tarefas.json','colaboradores.json','contratos.json','acoes.json',
+    'reservas.json','chaves.json','contratados.json','agentes_culturais.json',
+    'acervo.json','voluntarios.json','parcerias.json','inscricoes.json',
+    'rece_agenda.json'
+  ];
+
+  var problemas = [];
+  var ok        = 0;
+
+  ARQUIVOS.forEach(function(arquivo) {
+    try {
+      var lista = readJSON(arquivo);
+      if (!Array.isArray(lista)) return;
+      var semOrgId    = lista.filter(function(r) { return !r.orgId; }).length;
+      var outroOrgId  = lista.filter(function(r) { return r.orgId && r.orgId !== orgId; }).length;
+      var correto     = lista.length - semOrgId - outroOrgId;
+      if (semOrgId > 0 || outroOrgId > 0) {
+        problemas.push({ arquivo: arquivo, total: lista.length, semOrgId: semOrgId, outroOrgId: outroOrgId, correto: correto });
+      } else {
+        ok++;
+      }
+    } catch(e) { /* arquivo não existe */ }
+  });
+
+  var resultado = {
+    ok:        problemas.length === 0,
+    orgId:     orgId,
+    arquivosOk: ok,
+    problemas: problemas
+  };
+  Logger.info('setup', 'fase9_validarIsolamento', JSON.stringify(resultado));
+  return resultado;
+}

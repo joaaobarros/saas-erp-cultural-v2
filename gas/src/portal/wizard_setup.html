@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wizard de Setup — ERP Cultural</title>
+  <?!= include('shared/btnguard'); ?>
+  <style>
+    :root {
+      --primary:   #7c3aed;
+      --primary-d: #4c1d95;
+      --primary-l: #ede9fe;
+      --success:   #16a34a;
+      --warning:   #f59e0b;
+      --danger:    #ef4444;
+      --surface:   #ffffff;
+      --bg:        #f8fafc;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --border:    #e2e8f0;
+      --radius:    12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .wz-header {
+      background: linear-gradient(135deg, var(--primary-d), var(--primary));
+      color: #fff;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .wz-header-logo { font-size: 28px; }
+    .wz-header h1 { font-size: 22px; font-weight: 700; }
+    .wz-header p { font-size: 13px; opacity: .8; margin-top: 2px; }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .wz-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: calc(100vh - 92px);
+    }
+
+    /* ── Sidebar Stepper ────────────────────────────────────────── */
+    .wz-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 32px 24px;
+    }
+    .wz-sidebar h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 20px; }
+    .wz-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background .15s;
+      position: relative;
+    }
+    .wz-step-item:hover { background: var(--primary-l); }
+    .wz-step-item.ativo  { background: var(--primary-l); }
+    .wz-step-item.concluido .wz-step-num { background: var(--success); color: #fff; }
+    .wz-step-item.ativo .wz-step-num { background: var(--primary); color: #fff; }
+    .wz-step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #e2e8f0; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .wz-step-info { flex: 1; }
+    .wz-step-label { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .wz-step-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .wz-connector  { width: 2px; height: 12px; background: var(--border); margin: 2px 0 2px 22px; }
+
+    /* ── Conteúdo ───────────────────────────────────────────────── */
+    .wz-content {
+      padding: 40px 48px;
+      max-width: 760px;
+    }
+    .wz-passo { display: none; }
+    .wz-passo.ativo { display: block; }
+
+    .wz-passo-header { margin-bottom: 32px; }
+    .wz-passo-header h2 { font-size: 24px; font-weight: 700; color: var(--text); }
+    .wz-passo-header p  { font-size: 15px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Form ───────────────────────────────────────────────────── */
+    .wz-group { margin-bottom: 20px; }
+    .wz-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .wz-label span { color: var(--danger); margin-left: 2px; }
+    .wz-input, .wz-select {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      background: var(--surface);
+      transition: border-color .15s;
+    }
+    .wz-input:focus, .wz-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+    .wz-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .wz-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ── Chip Tags ──────────────────────────────────────────────── */
+    .wz-tags-wrap { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; min-height: 48px; background: var(--surface); }
+    .wz-tag {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--primary-l); color: var(--primary-d);
+      padding: 4px 10px 4px 12px; border-radius: 20px;
+      font-size: 13px; font-weight: 500;
+    }
+    .wz-tag button { background: none; border: none; cursor: pointer; color: var(--primary); font-size: 16px; line-height: 1; padding: 0; }
+    .wz-tag-add { display: flex; gap: 8px; margin-top: 8px; }
+    .wz-tag-add input { flex: 1; }
+    .wz-tag-add button { white-space: nowrap; }
+
+    /* ── Card de item ───────────────────────────────────────────── */
+    .wz-card-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .wz-card-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+    }
+    .wz-card-item .wz-card-icon { font-size: 20px; }
+    .wz-card-item .wz-card-info { flex: 1; }
+    .wz-card-item .wz-card-title { font-size: 14px; font-weight: 600; }
+    .wz-card-item .wz-card-sub   { font-size: 12px; color: var(--muted); }
+    .wz-card-item button.excluir { background: none; border: none; cursor: pointer; color: var(--danger); font-size: 18px; padding: 4px; }
+
+    /* ── Toggle de módulo ──────────────────────────────────────── */
+    .wz-modulo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .wz-modulo-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .wz-modulo-card.selecionado { border-color: var(--primary); background: var(--primary-l); }
+    .wz-modulo-card.bloqueado   { opacity: .5; cursor: not-allowed; }
+    .wz-modulo-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .wz-modulo-card.selecionado .wz-modulo-check { border-color: var(--primary); background: var(--primary); color: #fff; font-size: 12px; }
+    .wz-modulo-info h4 { font-size: 14px; font-weight: 600; }
+    .wz-modulo-info p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Checklist ──────────────────────────────────────────────── */
+    .wz-checklist { display: flex; flex-direction: column; gap: 8px; }
+    .wz-check-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+    }
+    .wz-check-item.ok     { border-left: 4px solid var(--success); }
+    .wz-check-item.fail   { border-left: 4px solid var(--warning); }
+    .wz-check-icon        { font-size: 18px; }
+    .wz-check-label       { font-size: 14px; font-weight: 500; }
+    .wz-check-detalhe     { font-size: 12px; color: var(--muted); }
+    .wz-progress-bar      { background: #e2e8f0; border-radius: 6px; height: 10px; margin: 16px 0; overflow: hidden; }
+    .wz-progress-fill     { background: linear-gradient(90deg, var(--primary), var(--success)); height: 100%; transition: width .5s ease; }
+    .wz-progress-label    { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+    /* ── Botões de navegação ────────────────────────────────────── */
+    .wz-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+    }
+    .btn-wz {
+      padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-wz-primary { background: var(--primary); color: #fff; }
+    .btn-wz-primary:hover { background: var(--primary-d); }
+    .btn-wz-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-wz-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-wz-ghost:hover { background: #f1f5f9; }
+    .btn-wz-success { background: var(--success); color: #fff; }
+    .btn-wz-success:hover { background: #15803d; }
+
+    /* ── Alerta / info ──────────────────────────────────────────── */
+    .wz-alert {
+      border-radius: 8px; padding: 12px 16px; font-size: 14px;
+      display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;
+    }
+    .wz-alert.info    { background: #eff6ff; color: #1e40af; }
+    .wz-alert.success { background: #f0fdf4; color: #166534; }
+    .wz-alert.warning { background: #fffbeb; color: #92400e; }
+    .wz-alert .wz-alert-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* ── Toast ──────────────────────────────────────────────────── */
+    #wz-toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1e293b; color: #fff; padding: 12px 20px;
+      border-radius: 10px; font-size: 14px; display: none; z-index: 9999;
+      max-width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    }
+    #wz-toast.erro { background: #991b1b; }
+
+    /* ── Responsivo ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .wz-layout { grid-template-columns: 1fr; }
+      .wz-sidebar { border-right: none; border-bottom: 1px solid var(--border); padding: 16px; }
+      .wz-content { padding: 24px 20px; }
+      .wz-grid2, .wz-modulo-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="wz-header">
+  <div class="wz-header-logo">🏛️</div>
+  <div>
+    <h1>Wizard de Setup — ERP Cultural</h1>
+    <p>Configure sua organização em minutos e comece a usar o sistema.</p>
+  </div>
+</div>
+
+<!-- Layout principal -->
+<div class="wz-layout">
+
+  <!-- Sidebar Stepper -->
+  <nav class="wz-sidebar">
+    <h3>Progresso</h3>
+    <div id="wz-stepper">
+      <!-- Gerado por JS -->
+    </div>
+  </nav>
+
+  <!-- Conteúdo dos passos -->
+  <main class="wz-content">
+
+    <!-- Loading inicial -->
+    <div id="wz-loading" style="text-align:center;padding:60px 0;">
+      <div style="font-size:40px;margin-bottom:16px;">⏳</div>
+      <p style="color:var(--muted);font-size:15px;">Carregando configurações…</p>
+    </div>
+
+    <!-- Passo 1: Organização -->
+    <div id="passo-1" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>🏢 Informações da Organização</h2>
+        <p>Dados básicos que identificam sua organização no sistema e nos documentos.</p>
+      </div>
+
+      <div class="wz-grid2">
+        <div class="wz-group">
+          <label class="wz-label">Nome curto <span>*</span></label>
+          <input class="wz-input" id="org-nome" type="text" placeholder="ex: CCBJ" maxlength="30">
+          <p class="wz-hint">Abreviatura ou sigla da organização.</p>
+        </div>
+        <div class="wz-group">
+          <label class="wz-label">Email do Administrador <span>*</span></label>
+          <input class="wz-input" id="org-admin-email" type="email" placeholder="admin@org.br">
+        </div>
+      </div>
+
+      <div class="wz-group">
+        <label class="wz-label">Nome completo <span>*</span></label>
+        <input class="wz-input" id="org-nome-completo" type="text" placeholder="ex: Centro Cultural Bom Jardim">
+      </div>
+
+      <div class="wz-grid2">
+        <div class="wz-group">
+          <label class="wz-label">Domínio de email <span>*</span></label>
+          <input class="wz-input" id="org-dominio" type="text" placeholder="ex: org.br">
+          <p class="wz-hint">Usuários com email @domínio podem solicitar acesso.</p>
+        </div>
+        <div class="wz-group">
+          <label class="wz-label">Título do sistema</label>
+          <input class="wz-input" id="org-titulo" type="text" placeholder="ex: Sistema CCBJ">
+        </div>
+      </div>
+
+      <div class="wz-group">
+        <label class="wz-label">Fuso horário</label>
+        <select class="wz-select" id="org-timezone">
+          <option value="America/Fortaleza">America/Fortaleza (UTC-3)</option>
+          <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-3)</option>
+          <option value="America/Recife">America/Recife (UTC-3)</option>
+          <option value="America/Manaus">America/Manaus (UTC-4)</option>
+          <option value="America/Belem">America/Belem (UTC-3)</option>
+          <option value="America/Cuiaba">America/Cuiaba (UTC-4)</option>
+        </select>
+      </div>
+
+      <div class="wz-nav">
+        <div></div>
+        <button class="btn-wz btn-wz-primary" id="btn-avancar-1" onclick="Wizard.salvarPasso1()">
+          Continuar →
+        </button>
+      </div>
+    </div><!-- /passo-1 -->
+
+    <!-- Passo 2: Setores -->
+    <div id="passo-2" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>🏗️ Setores da Organização</h2>
+        <p>Defina as áreas internas. Os colaboradores serão vinculados a um setor.</p>
+      </div>
+
+      <div class="wz-alert info">
+        <span class="wz-alert-icon">💡</span>
+        <span>Exemplos: Direção, Administrativo/Financeiro, Comunicação, Formativo. Você pode ajustar os nomes depois.</span>
+      </div>
+
+      <div id="lista-setores" class="wz-card-list"></div>
+
+      <div style="display:flex;gap:10px;margin-bottom:24px;">
+        <input class="wz-input" id="novo-setor-nome" type="text" placeholder="Nome do setor" style="flex:1;">
+        <input class="wz-input" id="novo-setor-cor" type="color" value="#7c3aed" style="width:48px;padding:4px;">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.adicionarSetor()">+ Adicionar</button>
+      </div>
+
+      <div class="wz-nav">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.irPara(1)">← Voltar</button>
+        <button class="btn-wz btn-wz-primary" id="btn-avancar-2" onclick="Wizard.salvarPasso2()">
+          Continuar →
+        </button>
+      </div>
+    </div><!-- /passo-2 -->
+
+    <!-- Passo 3: Turnos -->
+    <div id="passo-3" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>⏰ Turnos de Funcionamento</h2>
+        <p>Configure os turnos para reservas de espaços e escalas de colaboradores.</p>
+      </div>
+
+      <div id="lista-turnos" class="wz-card-list"></div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div class="wz-grid2">
+          <div class="wz-group">
+            <label class="wz-label">Nome do turno</label>
+            <input class="wz-input" id="novo-turno-nome" type="text" placeholder="ex: Manhã">
+          </div>
+          <div></div>
+          <div class="wz-group">
+            <label class="wz-label">Início</label>
+            <input class="wz-input" id="novo-turno-inicio" type="time" value="08:00">
+          </div>
+          <div class="wz-group">
+            <label class="wz-label">Fim</label>
+            <input class="wz-input" id="novo-turno-fim" type="time" value="12:00">
+          </div>
+        </div>
+        <div class="wz-group">
+          <label class="wz-label">Dias</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;" id="turnos-dias-check">
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="seg" checked> Seg</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="ter" checked> Ter</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="qua" checked> Qua</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="qui" checked> Qui</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="sex" checked> Sex</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="sab"> Sáb</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" value="dom"> Dom</label>
+          </div>
+        </div>
+        <button class="btn-wz btn-wz-ghost" style="margin-top:4px;" data-bg-skip="1" onclick="Wizard.adicionarTurno()">+ Adicionar Turno</button>
+      </div>
+
+      <div class="wz-nav">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.irPara(2)">← Voltar</button>
+        <button class="btn-wz btn-wz-primary" id="btn-avancar-3" onclick="Wizard.salvarPasso3()">
+          Continuar →
+        </button>
+      </div>
+    </div><!-- /passo-3 -->
+
+    <!-- Passo 4: Espaços -->
+    <div id="passo-4" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>🏠 Espaços Físicos</h2>
+        <p>Cadastre as salas, auditórios e áreas que poderão ser reservados.</p>
+      </div>
+
+      <div class="wz-alert info">
+        <span class="wz-alert-icon">💡</span>
+        <span>Você pode usar os 8 espaços padrão (SAL-001 a SAL-008) ou criar os seus. Espaços podem ser editados depois.</span>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.usarEspacosPadrao()" style="font-size:13px;">
+          📋 Usar 8 espaços padrão
+        </button>
+      </div>
+
+      <div id="lista-espacos" class="wz-card-list"></div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div class="wz-grid2">
+          <div class="wz-group">
+            <label class="wz-label">Nome do espaço</label>
+            <input class="wz-input" id="novo-espaco-nome" type="text" placeholder="ex: Sala de Ensaio A">
+          </div>
+          <div class="wz-group">
+            <label class="wz-label">Tipo</label>
+            <select class="wz-select" id="novo-espaco-tipo">
+              <option value="multiuso">Multiuso</option>
+              <option value="auditorio">Auditório</option>
+              <option value="sala_ensaio">Sala de Ensaio</option>
+              <option value="sala_reuniao">Sala de Reunião</option>
+              <option value="oficina">Oficina</option>
+              <option value="externo">Área Externa</option>
+            </select>
+          </div>
+          <div class="wz-group">
+            <label class="wz-label">Capacidade</label>
+            <input class="wz-input" id="novo-espaco-capacidade" type="number" placeholder="0" min="0">
+          </div>
+          <div class="wz-group" style="display:flex;align-items:center;gap:8px;padding-top:24px;">
+            <input type="checkbox" id="novo-espaco-chaves" style="width:16px;height:16px;">
+            <label for="novo-espaco-chaves" style="font-size:14px;">Possui chaves</label>
+          </div>
+        </div>
+        <button class="btn-wz btn-wz-ghost" style="margin-top:4px;" data-bg-skip="1" onclick="Wizard.adicionarEspaco()">+ Adicionar Espaço</button>
+      </div>
+
+      <div class="wz-nav">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.irPara(3)">← Voltar</button>
+        <button class="btn-wz btn-wz-primary" id="btn-avancar-4" onclick="Wizard.salvarPasso4()">
+          Continuar →
+        </button>
+      </div>
+    </div><!-- /passo-4 -->
+
+    <!-- Passo 5: Módulos -->
+    <div id="passo-5" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>🧩 Módulos do Sistema</h2>
+        <p>Escolha quais módulos estarão disponíveis para sua organização. Pode alterar depois.</p>
+      </div>
+
+      <div class="wz-alert warning">
+        <span class="wz-alert-icon">⚠️</span>
+        <span><strong>Administração</strong> sempre ativo. Módulos desativados ficam ocultos no menu.</span>
+      </div>
+
+      <div id="wz-modulos-grid" class="wz-modulo-grid" style="margin-bottom:24px;"></div>
+
+      <div class="wz-nav">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.irPara(4)">← Voltar</button>
+        <button class="btn-wz btn-wz-primary" id="btn-avancar-5" onclick="Wizard.salvarPasso5()">
+          Continuar →
+        </button>
+      </div>
+    </div><!-- /passo-5 -->
+
+    <!-- Passo 6: Finalizar -->
+    <div id="passo-6" class="wz-passo">
+      <div class="wz-passo-header">
+        <h2>✅ Configuração Concluída</h2>
+        <p>Revise o checklist abaixo e finalize o setup da sua organização.</p>
+      </div>
+
+      <div class="wz-progress-label" id="wz-prog-label">Calculando…</div>
+      <div class="wz-progress-bar">
+        <div class="wz-progress-fill" id="wz-prog-fill" style="width:0%"></div>
+      </div>
+
+      <div id="wz-checklist-final" class="wz-checklist" style="margin-bottom:24px;"></div>
+
+      <div class="wz-group">
+        <label class="wz-label">Plano da organização</label>
+        <select class="wz-select" id="wz-plano" style="max-width:280px;">
+          <option value="gratuito">Gratuito — até 10 usuários, 3 módulos</option>
+          <option value="essencial">Essencial — até 30 usuários, 6 módulos</option>
+          <option value="completo">Completo — ilimitado</option>
+          <option value="demo">Demonstração</option>
+        </select>
+      </div>
+
+      <div class="wz-nav">
+        <button class="btn-wz btn-wz-ghost" data-bg-skip="1" onclick="Wizard.irPara(5)">← Voltar</button>
+        <button class="btn-wz btn-wz-success" id="btn-finalizar" onclick="Wizard.finalizar()">
+          🚀 Finalizar Setup
+        </button>
+      </div>
+    </div><!-- /passo-6 -->
+
+    <!-- Passo 7: Sucesso -->
+    <div id="passo-7" class="wz-passo" style="text-align:center;padding-top:40px;">
+      <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+      <h2 style="font-size:28px;font-weight:700;margin-bottom:12px;">Sistema configurado com sucesso!</h2>
+      <p style="font-size:16px;color:var(--muted);max-width:480px;margin:0 auto 32px;">
+        Sua organização está pronta para usar o ERP Cultural. Clique abaixo para acessar a plataforma.
+      </p>
+      <div id="wz-sucesso-info" style="background:var(--primary-l);border-radius:12px;padding:20px 32px;display:inline-block;margin-bottom:32px;text-align:left;">
+        <!-- Preenchido por JS -->
+      </div>
+      <div>
+        <a id="btn-ir-sistema" href="#" class="btn-wz btn-wz-primary" style="text-decoration:none;display:inline-block;font-size:16px;padding:14px 32px;">
+          🏛️ Entrar no Sistema
+        </a>
+      </div>
+    </div><!-- /passo-7 -->
+
+  </main><!-- /wz-content -->
+</div><!-- /wz-layout -->
+
+<!-- Toast -->
+<div id="wz-toast"></div>
+
+<script>
+var Wizard = (function() {
+
+  var _estado = {
+    passoAtual:   1,
+    setores:      [],
+    turnos:       [],
+    espacos:      [],
+    modulosSel:   ['ADMIN','TAREFAS','ACOES','ESPACOS','COMUNICACAO','FINANCEIRO'],
+    modulosCatalogo: [],
+    checklist:    null
+  };
+
+  var PASSOS = [
+    { num: 1, label: 'Organização',  sub: 'Nome, domínio e admin' },
+    { num: 2, label: 'Setores',      sub: 'Áreas internas' },
+    { num: 3, label: 'Turnos',       sub: 'Horários de funcionamento' },
+    { num: 4, label: 'Espaços',      sub: 'Salas e áreas físicas' },
+    { num: 5, label: 'Módulos',      sub: 'Funcionalidades ativas' },
+    { num: 6, label: 'Finalizar',    sub: 'Checklist e confirmação' }
+  ];
+
+  // ── Stepper ────────────────────────────────────────────────────────────────
+
+  function _renderStepper() {
+    var html = '';
+    PASSOS.forEach(function(p, i) {
+      var concluido = p.num < _estado.passoAtual;
+      var ativo     = p.num === _estado.passoAtual;
+      html += '<div class="wz-step-item' + (ativo ? ' ativo' : '') + (concluido ? ' concluido' : '') + '" onclick="Wizard.irPara(' + p.num + ')" data-bg-skip="1">' +
+        '<div class="wz-step-num">' + (concluido ? '✓' : p.num) + '</div>' +
+        '<div class="wz-step-info">' +
+          '<div class="wz-step-label">' + p.label + '</div>' +
+          '<div class="wz-step-sub">'   + p.sub   + '</div>' +
+        '</div></div>';
+      if (i < PASSOS.length - 1) html += '<div class="wz-connector"></div>';
+    });
+    document.getElementById('wz-stepper').innerHTML = html;
+  }
+
+  // ── Navegação ──────────────────────────────────────────────────────────────
+
+  function irPara(num) {
+    _estado.passoAtual = num;
+    document.querySelectorAll('.wz-passo').forEach(function(el) { el.classList.remove('ativo'); });
+    var el = document.getElementById('passo-' + num);
+    if (el) el.classList.add('ativo');
+    _renderStepper();
+    if (num === 2) _renderSetores();
+    if (num === 3) _renderTurnos();
+    if (num === 4) _renderEspacos();
+    if (num === 5) _renderModulos();
+    if (num === 6) _carregarChecklist();
+    window.scrollTo(0, 0);
+  }
+
+  function _toast(msg, erro) {
+    var el = document.getElementById('wz-toast');
+    el.textContent = msg;
+    el.className   = erro ? 'erro' : '';
+    el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 4000);
+  }
+
+  function _setLoading(btnId, loading) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) btn.setAttribute('data-orig', btn.textContent);
+    btn.textContent = loading ? '⏳ Aguarde…' : (btn.getAttribute('data-orig') || btn.textContent);
+  }
+
+  // ── Passo 1 ────────────────────────────────────────────────────────────────
+
+  function salvarPasso1() {
+    var nome        = document.getElementById('org-nome').value.trim();
+    var nomeC       = document.getElementById('org-nome-completo').value.trim();
+    var dominio     = document.getElementById('org-dominio').value.trim();
+    var titulo      = document.getElementById('org-titulo').value.trim();
+    var tz          = document.getElementById('org-timezone').value;
+    var adminEmail  = document.getElementById('org-admin-email').value.trim();
+
+    if (!nome || !nomeC || !dominio || !adminEmail) {
+      return _toast('Preencha todos os campos obrigatórios.', true);
+    }
+
+    BtnGuard.wrap('btn-avancar-1', 'Salvando organização…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) { _toast('Organização salva!'); irPara(2); }
+          else _toast('Erro: ' + (r && r.erro ? r.erro : 'Desconhecido'), true);
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_salvarOrg({ nome: nome, nomeCompleto: nomeC, dominio: dominio,
+          titulo: titulo || ('Sistema ' + nome), timezone: tz, adminEmail: adminEmail });
+    });
+  }
+
+  // ── Passo 2: Setores ───────────────────────────────────────────────────────
+
+  function _renderSetores() {
+    var html = _estado.setores.map(function(s, i) {
+      return '<div class="wz-card-item">' +
+        '<div class="wz-card-icon">🏗️</div>' +
+        '<div class="wz-card-info">' +
+          '<div class="wz-card-title">' + s.label + '</div>' +
+          '<div class="wz-card-sub" style="display:flex;align-items:center;gap:6px;">' +
+            '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (s.cor || '#64748b') + '"></span>' +
+            (s.cor || '#64748b') +
+          '</div>' +
+        '</div>' +
+        '<button class="excluir" data-bg-skip="1" onclick="Wizard.removerSetor(' + i + ')">✕</button>' +
+      '</div>';
+    }).join('');
+    document.getElementById('lista-setores').innerHTML = html || '<p style="color:var(--muted);font-size:14px;">Nenhum setor adicionado.</p>';
+  }
+
+  function adicionarSetor() {
+    var nome = document.getElementById('novo-setor-nome').value.trim();
+    var cor  = document.getElementById('novo-setor-cor').value;
+    if (!nome) return _toast('Informe o nome do setor.', true);
+    _estado.setores.push({ id: nome.toLowerCase().replace(/\s+/g,'_'), label: nome, cor: cor });
+    document.getElementById('novo-setor-nome').value = '';
+    _renderSetores();
+  }
+
+  function removerSetor(i) { _estado.setores.splice(i, 1); _renderSetores(); }
+
+  function salvarPasso2() {
+    if (_estado.setores.length === 0) return _toast('Adicione ao menos um setor.', true);
+    BtnGuard.wrap('btn-avancar-2', 'Salvando setores…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) { _toast('Setores salvos!'); irPara(3); }
+          else _toast('Erro ao salvar setores.', true);
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_salvarSetores(_estado.setores);
+    });
+  }
+
+  // ── Passo 3: Turnos ───────────────────────────────────────────────────────
+
+  function _renderTurnos() {
+    var html = _estado.turnos.map(function(t, i) {
+      return '<div class="wz-card-item">' +
+        '<div class="wz-card-icon">⏰</div>' +
+        '<div class="wz-card-info">' +
+          '<div class="wz-card-title">' + t.nome + '</div>' +
+          '<div class="wz-card-sub">' + t.inicio + ' – ' + t.fim + ' | ' + (t.dias||[]).join(', ') + '</div>' +
+        '</div>' +
+        '<button class="excluir" data-bg-skip="1" onclick="Wizard.removerTurno(' + i + ')">✕</button>' +
+      '</div>';
+    }).join('');
+    document.getElementById('lista-turnos').innerHTML = html || '<p style="color:var(--muted);font-size:14px;">Nenhum turno adicionado.</p>';
+  }
+
+  function adicionarTurno() {
+    var nome   = document.getElementById('novo-turno-nome').value.trim();
+    var inicio = document.getElementById('novo-turno-inicio').value;
+    var fim    = document.getElementById('novo-turno-fim').value;
+    if (!nome) return _toast('Informe o nome do turno.', true);
+    var dias = [];
+    document.querySelectorAll('#turnos-dias-check input:checked').forEach(function(cb) { dias.push(cb.value); });
+    _estado.turnos.push({ id: nome.toLowerCase().replace(/\s+/g,'_'), nome: nome, inicio: inicio, fim: fim, dias: dias });
+    document.getElementById('novo-turno-nome').value = '';
+    _renderTurnos();
+  }
+
+  function removerTurno(i) { _estado.turnos.splice(i, 1); _renderTurnos(); }
+
+  function salvarPasso3() {
+    if (_estado.turnos.length === 0) return _toast('Adicione ao menos um turno.', true);
+    BtnGuard.wrap('btn-avancar-3', 'Salvando turnos…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) { _toast('Turnos salvos!'); irPara(4); }
+          else _toast('Erro ao salvar turnos.', true);
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_salvarTurnos(_estado.turnos);
+    });
+  }
+
+  // ── Passo 4: Espaços ──────────────────────────────────────────────────────
+
+  var _ESPACOS_PADRAO = [
+    { id:'SAL-001', nome:'Sala de Ensaio A',       tipoEspaco:'sala_ensaio',  capacidade:20, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-002', nome:'Sala de Ensaio B',       tipoEspaco:'sala_ensaio',  capacidade:20, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-003', nome:'Sala de Ensaio C',       tipoEspaco:'sala_ensaio',  capacidade:15, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-004', nome:'Auditório Principal',    tipoEspaco:'auditorio',    capacidade:200,possuiChaves:false, aceitaReserva:true },
+    { id:'SAL-005', nome:'Sala Multiuso 1',        tipoEspaco:'multiuso',     capacidade:40, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-006', nome:'Sala Multiuso 2',        tipoEspaco:'multiuso',     capacidade:30, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-007', nome:'Sala de Reunião',        tipoEspaco:'sala_reuniao', capacidade:12, possuiChaves:true,  aceitaReserva:true },
+    { id:'SAL-008', nome:'Área Externa',           tipoEspaco:'externo',      capacidade:500,possuiChaves:false, aceitaReserva:true }
+  ];
+
+  function usarEspacosPadrao() {
+    _estado.espacos = JSON.parse(JSON.stringify(_ESPACOS_PADRAO));
+    _renderEspacos();
+    _toast('8 espaços padrão carregados!');
+  }
+
+  function _renderEspacos() {
+    var tipoLabel = { multiuso:'Multiuso', auditorio:'Auditório', sala_ensaio:'Ensaio', sala_reuniao:'Reunião', oficina:'Oficina', externo:'Externo' };
+    var html = _estado.espacos.map(function(e, i) {
+      return '<div class="wz-card-item">' +
+        '<div class="wz-card-icon">🏠</div>' +
+        '<div class="wz-card-info">' +
+          '<div class="wz-card-title">' + e.nome + '</div>' +
+          '<div class="wz-card-sub">' + (tipoLabel[e.tipoEspaco] || e.tipoEspaco) +
+            (e.capacidade ? ' · ' + e.capacidade + ' pessoas' : '') +
+            (e.possuiChaves ? ' · 🔑 chaves' : '') +
+          '</div>' +
+        '</div>' +
+        '<button class="excluir" data-bg-skip="1" onclick="Wizard.removerEspaco(' + i + ')">✕</button>' +
+      '</div>';
+    }).join('');
+    document.getElementById('lista-espacos').innerHTML = html || '<p style="color:var(--muted);font-size:14px;">Nenhum espaço adicionado.</p>';
+  }
+
+  function adicionarEspaco() {
+    var nome = document.getElementById('novo-espaco-nome').value.trim();
+    if (!nome) return _toast('Informe o nome do espaço.', true);
+    _estado.espacos.push({
+      nome:          nome,
+      tipoEspaco:    document.getElementById('novo-espaco-tipo').value,
+      capacidade:    parseInt(document.getElementById('novo-espaco-capacidade').value) || 0,
+      possuiChaves:  document.getElementById('novo-espaco-chaves').checked,
+      aceitaReserva: true
+    });
+    document.getElementById('novo-espaco-nome').value = '';
+    document.getElementById('novo-espaco-capacidade').value = '';
+    document.getElementById('novo-espaco-chaves').checked = false;
+    _renderEspacos();
+  }
+
+  function removerEspaco(i) { _estado.espacos.splice(i, 1); _renderEspacos(); }
+
+  function salvarPasso4() {
+    BtnGuard.wrap('btn-avancar-4', 'Salvando espaços…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) { _toast('Espaços salvos! Criados: ' + r.criados); irPara(5); }
+          else _toast('Erro ao salvar espaços.', true);
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_salvarEspacos(_estado.espacos);
+    });
+  }
+
+  // ── Passo 5: Módulos ──────────────────────────────────────────────────────
+
+  var _MODULOS_CATALOGO = [
+    { id:'ADMIN',       label:'Administração',    descricao:'Configurações e cadastros base', obrigatorio:true  },
+    { id:'TAREFAS',     label:'Tarefas',          descricao:'Gestão de tarefas e processos', obrigatorio:false },
+    { id:'PESSOAS',     label:'Pessoas / RH',     descricao:'Colaboradores, vínculos, PCCS', obrigatorio:false },
+    { id:'FINANCEIRO',  label:'Financeiro',       descricao:'Contratos, rubricas, orçamentos',obrigatorio:false },
+    { id:'ACOES',       label:'Ações',            descricao:'Programação e habilitações',    obrigatorio:false },
+    { id:'ESPACOS',     label:'Infraestrutura',   descricao:'Reservas, chaves, ativos',      obrigatorio:false },
+    { id:'REUNIOES',    label:'Reuniões',         descricao:'Atas e encaminhamentos',        obrigatorio:false },
+    { id:'COMUNICACAO', label:'Comunicação',      descricao:'Demandas criativas e RECE',     obrigatorio:false },
+    { id:'RELATORIOS',  label:'Relatórios',       descricao:'CODIP, SALIC, SNIIC',          obrigatorio:false }
+  ];
+
+  function _renderModulos() {
+    var html = _MODULOS_CATALOGO.map(function(m) {
+      var sel      = _estado.modulosSel.indexOf(m.id) !== -1;
+      var bloq     = m.obrigatorio;
+      var classes  = 'wz-modulo-card' + (sel ? ' selecionado' : '') + (bloq ? ' bloqueado' : '');
+      var onclick  = bloq ? '' : 'onclick="Wizard.toggleModulo(\'' + m.id + '\')"';
+      return '<div class="' + classes + '" ' + onclick + '>' +
+        '<div class="wz-modulo-check">' + (sel ? '✓' : '') + '</div>' +
+        '<div class="wz-modulo-info">' +
+          '<h4>' + m.label + (bloq ? ' 🔒' : '') + '</h4>' +
+          '<p>' + m.descricao + '</p>' +
+        '</div></div>';
+    }).join('');
+    document.getElementById('wz-modulos-grid').innerHTML = html;
+  }
+
+  function toggleModulo(id) {
+    var idx = _estado.modulosSel.indexOf(id);
+    if (idx !== -1) _estado.modulosSel.splice(idx, 1);
+    else _estado.modulosSel.push(id);
+    _renderModulos();
+  }
+
+  function salvarPasso5() {
+    BtnGuard.wrap('btn-avancar-5', 'Salvando módulos…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) { _toast('Módulos configurados!'); irPara(6); }
+          else _toast('Erro ao salvar módulos.', true);
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_salvarModulos(_estado.modulosSel);
+    });
+  }
+
+  // ── Passo 6: Checklist ────────────────────────────────────────────────────
+
+  function _carregarChecklist() {
+    document.getElementById('wz-checklist-final').innerHTML = '<p style="color:var(--muted)">Verificando…</p>';
+    google.script.run
+      .withSuccessHandler(function(r) {
+        if (!r || !r.checks) return;
+        _estado.checklist = r;
+        var pct  = r.percentual || 0;
+        document.getElementById('wz-prog-label').textContent =
+          r.passou + ' de ' + r.total + ' verificações concluídas (' + pct + '%)';
+        document.getElementById('wz-prog-fill').style.width = pct + '%';
+
+        var html = r.checks.map(function(c) {
+          return '<div class="wz-check-item ' + (c.ok ? 'ok' : 'fail') + '">' +
+            '<div class="wz-check-icon">' + (c.ok ? '✅' : '⚠️') + '</div>' +
+            '<div>' +
+              '<div class="wz-check-label">' + c.label + '</div>' +
+              '<div class="wz-check-detalhe">' + (c.detalhe || '') + '</div>' +
+            '</div></div>';
+        }).join('');
+        document.getElementById('wz-checklist-final').innerHTML = html;
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('wz-checklist-final').innerHTML =
+          '<p style="color:var(--danger)">Erro ao verificar: ' + e.message + '</p>';
+      })
+      .ctrl_admin_checarProvisionamento();
+  }
+
+  function finalizar() {
+    var plano = document.getElementById('wz-plano').value;
+    BtnGuard.wrap('btn-finalizar', 'Finalizando setup…', function() {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.ok) {
+            _mostrarSucesso(r);
+            irPara(7);
+          } else {
+            _toast('Erro ao finalizar: ' + (r && r.erro ? r.erro : 'Desconhecido'), true);
+          }
+        })
+        .withFailureHandler(function(e) { _toast('Erro: ' + e.message, true); })
+        .ctrl_wizard_finalizar({ plano: plano });
+    });
+  }
+
+  function _mostrarSucesso(r) {
+    var info = '<table style="border-collapse:collapse;font-size:14px;">' +
+      '<tr><td style="padding:4px 16px 4px 0;color:var(--muted);">Organização</td><td style="font-weight:600;">' + (r.nome || '') + '</td></tr>' +
+      '<tr><td style="padding:4px 16px 4px 0;color:var(--muted);">orgId</td><td style="font-family:monospace;font-size:12px;">' + (r.orgId || '') + '</td></tr>' +
+      '<tr><td style="padding:4px 16px 4px 0;color:var(--muted);">Provisionamento</td><td>' + (r.checklist ? r.checklist.percentual + '% completo' : '') + '</td></tr>' +
+      '<tr><td style="padding:4px 16px 4px 0;color:var(--muted);">Registros migrados</td><td>' + (r.migrados || 0) + '</td></tr>' +
+      '</table>';
+    document.getElementById('wz-sucesso-info').innerHTML = info;
+    var url = window.location.href.replace(/[?&]secao=[^&]*/g, '');
+    document.getElementById('btn-ir-sistema').href = url;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+
+  function _init() {
+    google.script.run
+      .withSuccessHandler(function(r) {
+        document.getElementById('wz-loading').style.display = 'none';
+        if (!r) { irPara(1); return; }
+
+        // Pré-popular campos do passo 1
+        if (r.nome)         document.getElementById('org-nome').value         = r.nome;
+        if (r.nomeCompleto) document.getElementById('org-nome-completo').value = r.nomeCompleto;
+        if (r.dominio)      document.getElementById('org-dominio').value       = r.dominio;
+        if (r.titulo)       document.getElementById('org-titulo').value        = r.titulo;
+
+        // Pré-popular setores/turnos existentes
+        if (r.setores && r.setores.length)  _estado.setores  = r.setores.map(function(s) { return { id: s.id, label: s.label || s.nome || s.id, cor: s.cor || '#64748b' }; });
+        if (r.turnos  && r.turnos.length)   _estado.turnos   = r.turnos;
+        if (r.modulos && r.modulos.length)  _estado.modulosSel = r.modulos.filter(function(m) { return m.ativo; }).map(function(m) { return m.id; });
+
+        // Ir direto para o passo pendente
+        var passo = r.passoAtual || 1;
+        irPara(Math.min(passo, 6));
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('wz-loading').innerHTML =
+          '<p style="color:var(--danger)">Erro ao carregar: ' + e.message + '</p>' +
+          '<button class="btn-wz btn-wz-primary" onclick="Wizard.irPara(1)" style="margin-top:16px;">Começar mesmo assim</button>';
+      })
+      .ctrl_wizard_obterEstado();
+  }
+
+  // Expor API
+  return {
+    irPara:            irPara,
+    salvarPasso1:      salvarPasso1,
+    adicionarSetor:    adicionarSetor,
+    removerSetor:      removerSetor,
+    salvarPasso2:      salvarPasso2,
+    adicionarTurno:    adicionarTurno,
+    removerTurno:      removerTurno,
+    salvarPasso3:      salvarPasso3,
+    usarEspacosPadrao: usarEspacosPadrao,
+    adicionarEspaco:   adicionarEspaco,
+    removerEspaco:     removerEspaco,
+    salvarPasso4:      salvarPasso4,
+    toggleModulo:      toggleModulo,
+    salvarPasso5:      salvarPasso5,
+    finalizar:         finalizar
+  };
+
+})();
+
+// Inicializar
+_renderStepper && Wizard.irPara; // garante que Wizard está carregado
+(function() {
+  // Stepper inicial antes do init
+  var stepper = document.getElementById('wz-stepper');
+  if (stepper) {
+    var steps = ['Organização','Setores','Turnos','Espaços','Módulos','Finalizar'];
+    stepper.innerHTML = steps.map(function(s, i) {
+      return '<div class="wz-step-item' + (i===0?' ativo':'') + '">' +
+        '<div class="wz-step-num">' + (i+1) + '</div>' +
+        '<div class="wz-step-info"><div class="wz-step-label">' + s + '</div></div></div>' +
+        (i < steps.length-1 ? '<div class="wz-connector"></div>' : '');
+    }).join('');
+  }
+  // Chamar init via google.script.run após DOM pronto
+  if (typeof google !== 'undefined' && google.script) {
+    // Pequeno delay para garantir que BtnGuard está carregado
+    setTimeout(function() {
+      // Render stepper real e init
+      document.querySelectorAll('.wz-passo').forEach(function(el) { el.classList.remove('ativo'); });
+      document.getElementById('wz-loading').style.display = 'block';
+      // ctrl_wizard_obterEstado via Wizard (já instanciado)
+      google.script.run
+        .withSuccessHandler(function(r) {
+          document.getElementById('wz-loading').style.display = 'none';
+          if (!r) { Wizard.irPara(1); return; }
+          if (r.nome)         document.getElementById('org-nome').value          = r.nome || '';
+          if (r.nomeCompleto) document.getElementById('org-nome-completo').value  = r.nomeCompleto || '';
+          if (r.dominio)      document.getElementById('org-dominio').value        = r.dominio || '';
+          if (r.titulo)       document.getElementById('org-titulo').value         = r.titulo || '';
+          Wizard.irPara(r.passoAtual || 1);
+        })
+        .withFailureHandler(function(e) {
+          document.getElementById('wz-loading').innerHTML =
+            '<p style="color:#ef4444">Erro: ' + e.message + '</p>' +
+            '<button onclick="Wizard.irPara(1)" style="margin-top:16px;padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;">Iniciar Setup</button>';
+        })
+        .ctrl_wizard_obterEstado();
+    }, 200);
+  }
+})();
+</script>
+</body>
+</html>

@@ -254,6 +254,100 @@ var SistemaConfigService = (function () {
     return ativos.indexOf(String(id).toUpperCase()) !== -1;
   }
 
+  // ── Feature Flags ─────────────────────────────────────────────────────────
+
+  /**
+   * Catálogo de feature flags disponíveis com descrição e default.
+   * Cada flag pode ser ativada/desativada por organização em config_org.json.features.
+   */
+  var FEATURE_FLAGS_CATALOGO = [
+    { id: 'ia_assistente',       label: 'Assistente IA',           descricao: 'Respostas e sugestões da IA embutida (Bêjotinha)',       default: true,  grupo: 'core' },
+    { id: 'portal_publico',      label: 'Portal Público',          descricao: 'Inscrições, cesão de pauta e agenda pública',             default: true,  grupo: 'portal' },
+    { id: 'rece',                label: 'RECE',                    descricao: 'Agenda da Rede de Espaços Culturais',                      default: true,  grupo: 'comunicacao' },
+    { id: 'agentes_culturais',   label: 'Agentes Culturais',       descricao: 'Cadastro, credenciamento e rider técnico de agentes',     default: true,  grupo: 'memoria' },
+    { id: 'acervo',              label: 'Acervo Digital',          descricao: 'Gestão de fotos, vídeos e registros de ações',            default: true,  grupo: 'memoria' },
+    { id: 'voluntarios',         label: 'Voluntários',             descricao: 'Cadastro, alocação e certificação de voluntários',        default: true,  grupo: 'memoria' },
+    { id: 'parcerias',           label: 'Parcerias',               descricao: 'Gestão de parcerias e vínculos com ações',                default: true,  grupo: 'memoria' },
+    { id: 'exportacao_codip',    label: 'Exportação CODIP',        descricao: 'Geração do arquivo de prestação de contas CODIP (28 campos)', default: true, grupo: 'exportacao' },
+    { id: 'exportacao_salic',    label: 'Exportação SALIC',        descricao: 'Geração do XML SALIC para Lei Rouanet',                   default: true,  grupo: 'exportacao' },
+    { id: 'exportacao_sniic',    label: 'Exportação SNIIC',        descricao: 'Indicadores anuais para o Sistema Nacional de Informações Culturais', default: true, grupo: 'exportacao' },
+    { id: 'wizard_setup',        label: 'Wizard de Setup',         descricao: 'Fluxo guiado de configuração inicial para novas organizações', default: true, grupo: 'admin' },
+    { id: 'painel_orgs',         label: 'Painel de Orgs (SaaS)',   descricao: 'Visualização de todas as organizações provisionadas (superadmin)', default: false, grupo: 'admin' },
+    { id: 'alertas_email',       label: 'Alertas por Email',       descricao: 'Envio de notificações e alertas via email institucional', default: true,  grupo: 'notificacoes' },
+    { id: 'alertas_inapp',       label: 'Alertas In-App',          descricao: 'Badge e painel de alertas dentro da plataforma',          default: true,  grupo: 'notificacoes' },
+    { id: 'aprovacao_por_token', label: 'Aprovação por Token',     descricao: 'Links de aprovação/recusa por email com TTL 72h',         default: true,  grupo: 'notificacoes' },
+    { id: 'mapa_interativo',     label: 'Mapa Interativo',         descricao: 'Mapa visual do campus com reservas em tempo real',        default: true,  grupo: 'espacos' },
+    { id: 'diagrama_gantt',      label: 'Diagrama Gantt',          descricao: 'Visualização de reservas em linha do tempo Gantt',        default: true,  grupo: 'espacos' },
+    { id: 'modo_sandbox',        label: 'Modo Sandbox',            descricao: 'Dados de demonstração — não afeta dados reais',           default: false, grupo: 'admin' }
+  ];
+
+  /**
+   * Retorna catálogo completo de feature flags com o valor atual de cada uma.
+   * @returns {Array<{id, label, descricao, default, grupo, ativo}>}
+   */
+  function getFeatureFlagsCatalogo() {
+    var cfg = _getConfigOrg();
+    var features = (cfg && cfg.features) ? cfg.features : {};
+    return FEATURE_FLAGS_CATALOGO.map(function(flag) {
+      var ativo = features.hasOwnProperty(flag.id) ? features[flag.id] !== false : flag['default'];
+      return {
+        id:       flag.id,
+        label:    flag.label,
+        descricao: flag.descricao,
+        grupo:    flag.grupo,
+        ativo:    ativo
+      };
+    });
+  }
+
+  /**
+   * Verifica se uma feature flag está ativa.
+   * Default: true (não bloqueia nada em ambiente sem config).
+   * @param {string} flagId — ex: 'ia_assistente', 'portal_publico'
+   * @returns {boolean}
+   */
+  function getFeatureFlag(flagId) {
+    try {
+      var cfg      = _getConfigOrg();
+      var features = (cfg && cfg.features) ? cfg.features : {};
+      if (features.hasOwnProperty(flagId)) return features[flagId] !== false;
+      // fallback: buscar default no catálogo
+      var entrada = FEATURE_FLAGS_CATALOGO.find(function(f) { return f.id === flagId; });
+      return entrada ? entrada['default'] : true;
+    } catch(e) {
+      return true; // fail-open
+    }
+  }
+
+  /**
+   * Ativa ou desativa uma feature flag em config_org.json.
+   * @param {string} flagId
+   * @param {boolean} ativo
+   * @param {string} emailSessao — para auditoria
+   */
+  function setFeatureFlag(flagId, ativo, emailSessao) {
+    var entrada = FEATURE_FLAGS_CATALOGO.find(function(f) { return f.id === flagId; });
+    if (!entrada) throw new Error('Feature flag desconhecida: ' + flagId);
+
+    // config_org.json é um objeto único (não array) — lê, altera e regrava
+    try {
+      var arquivo  = getFile('config_org.json');
+      var conteudo = arquivo.getBlob().getDataAsString();
+      var obj      = JSON.parse(conteudo);
+      if (!obj.features) obj.features = {};
+      obj.features[flagId] = ativo === true;
+      arquivo.setContent(JSON.stringify(obj));
+      invalidarCache(); // limpa _cache para próxima leitura pegar o novo valor
+    } catch(e) {
+      Logger.error('config_service', 'setFeatureFlag', e.message);
+      throw e;
+    }
+
+    Logger.info('config_service', 'setFeatureFlag',
+      flagId + ' → ' + ativo + ' | por: ' + (emailSessao || '?'));
+    return { ok: true, flagId: flagId, ativo: ativo };
+  }
+
   // ── Permissões ────────────────────────────────────────────────────────────
 
   /**
@@ -469,6 +563,9 @@ var SistemaConfigService = (function () {
     getReservaHorario:        getReservaHorario,
     getModulosAtivos:         getModulosAtivos,
     moduloAtivo:              moduloAtivo,
+    getFeatureFlag:           getFeatureFlag,
+    setFeatureFlag:           setFeatureFlag,
+    getFeatureFlagsCatalogo:  getFeatureFlagsCatalogo,
     getPermissao:             getPermissao,
     getTiposProcesso:         getTiposProcesso,
     getTiposRubrica:          getTiposRubrica,

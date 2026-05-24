@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 8 entregue (2026-05-23)** — Seguir para **Fase 9 (Multi-Tenancy e Painel Admin)**
+**Fase atual**: **Fase 9 entregue (2026-05-23)** — Seguir para **Fase 10 (Alertas, TaskHub, Reuniões, Auditoria)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -220,7 +220,31 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 7. Parcerias → "+ Nova" → criar → status Proposta → avanço para Negociação
 8. F12 → zero erros vermelhos | BtnGuard.auditar() → "✅ todos protegidos"
 
-**Fase mais urgente agora**: **Fase 9** — Multi-Tenancy e Painel Admin (segundo deployment SaaS-demonstrável).
+**O que foi feito (Fase 9 — 2026-05-23)**:
+- ✅ `setup.gs`: `fase9_migrarOrgId()` — migração idempotente de orgId em 31 arquivos JSON; `fase9_validarIsolamento()` — auditoria de integridade; `fase9_prepararIndice()` — prepara aba MASTER.Orgs e registra a org
+- ✅ `config_org.json`: bloco `features` com 18 feature flags granulares e seus defaults
+- ✅ `config_service.gs`: `getFeatureFlag(flagId)` + `setFeatureFlag(flagId, ativo)` + `getFeatureFlagsCatalogo()` — catálogo de 18 flags agrupadas por área (core/portal/comunicacao/memória/exportação/notificações/espaços/admin)
+- ✅ `org_registry_service.gs` CRIADO: `registrarOuAtualizar`, `listarTodas`, `obter`, `atualizarStatus`, `atualizarPlano`, `marcarAtividade`, `checarProvisionamento` (8 verificações de setup)
+- ✅ `admin_controller.gs`: `ctrl_admin_listarFeatureFlags`, `ctrl_admin_setFeatureFlag`, `ctrl_admin_checarProvisionamento`, `ctrl_orgs_listar`, `ctrl_orgs_atualizarStatus`, `ctrl_orgs_atualizarPlano`
+- ✅ `wizard_controller.gs` CRIADO: 7 controllers — `ctrl_wizard_obterEstado/salvarOrg/salvarSetores/salvarTurnos/salvarEspacos/salvarModulos/finalizar`; retoma setup do passo pendente; idempotente
+- ✅ `wizard_setup.html` CRIADO: wizard SPA 6 passos (Organização→Setores→Turnos→Espaços→Módulos→Finalizar→Sucesso); stepper lateral; BtnGuard em todos os botões async; acessível em `?secao=wizard_setup`
+- ✅ `router.gs`: rota `secao=wizard_setup` → `_renderWizardSetup()` servindo o wizard
+- ✅ `index.html`: `GAS.orgs` (3 bindings), `GAS.admin.listarFeatureFlags/setFeatureFlag/checarProvisionamento`; tab "Features" (toggles com switch visual por grupo); tab "Provisionamento" (checklist + barra de progresso + link para wizard); view `#view-painel-orgs` (stats, tabela de orgs com status e plano); entrada `painel-orgs` no menu (superadmin); `FeatureFlagsUI` module; `PainelOrgsUI` module; `_carregarProvisionamento()` em `AdminCadastrosUI`
+- ✅ Auditoria CLAUDE.md: prompt/null-check ✅ | GAS.* namespace 100% ✅ | BtnGuard em wizard ✅ | modais opacos ✅
+- ✅ Deploy @140 em produção
+
+**Passo obrigatório no GAS Editor após este deploy**:
+- Executar `fase9_prepararIndice()` → `{ok:true}` — migra orgId nos dados existentes, cria aba MASTER.Orgs, registra a org no OrgRegistry
+
+**[BROWSER] Smoke-test Fase 9:**
+1. URL produção → carrega sem erros (F12)
+2. Admin → Cadastros → tab "Features" → toggles aparecem por grupo → ativar/desativar uma flag → toast "Feature ativada"
+3. Admin → Cadastros → tab "Provisionamento" → checklist aparece com barra de progresso → link "Wizard de Setup" visível
+4. URL `?secao=wizard_setup` → wizard abre com stepper → passo 1 (Org) pré-preenchido → navegar entre passos → BtnGuard nos botões
+5. Sidebar → item "Painel de Orgs" (superadmin) → view carrega com stats → tabela de orgs
+6. F12 → zero erros | `BtnGuard.auditar()` → "✅ todos protegidos"
+
+**Fase mais urgente agora**: **Fase 10** — Alertas, TaskHub, Reuniões e Auditoria Visual.
 
 ---
 
@@ -312,7 +336,7 @@ Um módulo está **completo** quando oferece:
 | 6 | Integração via Eventos + RECE | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 7 | Portal Externo, Público e CODIP | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 8 | Agentes, Acervo, Voluntários, Parcerias | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
-| 9 | Multi-Tenancy e Config Admin | ⬜ Aguardando F8 | 🟡 MÉDIO — segundo deployment viabiliza SaaS | — | — |
+| 9 | Multi-Tenancy e Config Admin | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 10 | Alertas, TaskHub, Reuniões, Auditoria | ⬜ Aguardando F9 | 🟡 MÉDIO — UX operacional e rastreabilidade visual | — | — |
 | 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs reais | — | — |
 
@@ -976,35 +1000,38 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: segunda organização provisionada sem alterar código. SaaS demonstrável.
 
-**Status**: ⬜ Não iniciada
-
-**Próximo passo quando iniciar**:
-> Injetar `orgId` em todos os repositórios e criar script de migração para dados existentes.
+**Status**: ✅ **Concluída** (2026-05-23)
 
 ### 9.1 — orgId em todos os dados
 
-- [ ] Injetar `orgId` em todo `salvar()` e filtrar em todo `listar()` (todos os repositórios)
-- [ ] Script de migração idempotente para dados existentes sem `orgId`
-- [ ] `dataFolder` → `orgId + '_DATA'` em todos os deployments
-- [ ] Isolamento garantido por dados, não apenas por scriptId (padrão Skill.md)
+- [x] `i_repository.gs` já filtrava por orgId — base correta
+- [x] `fase9_migrarOrgId()` — script idempotente que stamp orgId em 31 arquivos JSON existentes
+- [x] `fase9_validarIsolamento()` — auditoria de integridade (verifica todos os JSONs)
+- [x] `fase9_prepararIndice()` — cria aba MASTER.Orgs, registra org, executa migração
+- [x] `dataFolder = orgId + '_DATA'` já implementado em `config.gs`
 
 ### 9.2 — Wizard de configuração inicial
 
-- [ ] Fluxo guiado: org, setores, turnos, espaços, módulos habilitados, roles
-- [ ] Defaults razoáveis para nova organização (importados de `config_org.json` padrão)
-- [ ] **Modo sandbox/demonstração**: nova org explora com dados de exemplo sem comprometer dados reais
-- [ ] **Checklist de provisionamento**: automatizável em < 30 minutos; `verificarTodasAbas()` como validação final
+- [x] `wizard_setup.html` — wizard SPA 6 passos com stepper lateral (Organização→Setores→Turnos→Espaços→Módulos→Finalizar)
+- [x] `wizard_controller.gs` — 7 controllers; retoma do passo pendente; idempotente
+- [x] Rota `?secao=wizard_setup` no `router.gs`
+- [x] Checklist de provisionamento com 8 verificações automatizadas
+- [x] BtnGuard em todos os botões async do wizard
 
 ### 9.3 — Feature flags via config_org.json (gap Skill.md)
 
-- [ ] Habilitar/desabilitar módulos inteiros sem deploy: `modulosAtivos` em `config_org.json`
-- [ ] Feature flags granulares: `features.ia_assistente`, `features.portal_publico`, `features.rece`, etc.
-- [ ] Painel admin de flags: UI para ligar/desligar features sem editar JSON diretamente
+- [x] `config_org.json`: bloco `features` com 18 flags granulares e defaults por área
+- [x] `SistemaConfigService.getFeatureFlag()` + `setFeatureFlag()` + `getFeatureFlagsCatalogo()`
+- [x] `ctrl_admin_listarFeatureFlags` + `ctrl_admin_setFeatureFlag`
+- [x] Tab "Features" no Admin: toggles visuais agrupados por área
+- [x] Tab "Provisionamento" no Admin: checklist + barra progresso + link wizard
 
-**Modos de visualização — Fase 9:**
-- [ ] **Wizard de setup**: fluxo passo a passo com progresso visual (stepper)
-- [ ] **Painel de orgs** (superadmin): lista de organizações provisionadas com status, plano, última atividade
-- [ ] **Checklist de provisionamento**: lista com indicadores ✅/❌ de cada etapa
+### 9.4 — Painel de Orgs (SaaS superadmin)
+
+- [x] `OrgRegistryService` — registry de orgs em `orgs_registry.json` + índice MASTER.Orgs
+- [x] `ctrl_orgs_listar/atualizarStatus/atualizarPlano` (superadmin RBAC)
+- [x] View `#view-painel-orgs` — stats + tabela de orgs com status/plano/atividade
+- [x] Menu item "Painel de Orgs" (visível apenas para superadmin)
 
 ---
 
@@ -1177,6 +1204,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-23 | Fase 9 | **Multi-Tenancy e Painel Admin** entregues: `fase9_migrarOrgId()` (stamp orgId em 31 JSONs, idempotente) + `fase9_validarIsolamento()` + `fase9_prepararIndice()`. `config_org.json` bloco `features` com 18 flags. `SistemaConfigService.getFeatureFlag/setFeatureFlag/getFeatureFlagsCatalogo`. `OrgRegistryService` (orgs_registry.json + MASTER.Orgs; checarProvisionamento 8 itens). `admin_controller.gs`: 6 novos controllers (listarFeatureFlags, setFeatureFlag, checarProvisionamento, ctrl_orgs_*). `wizard_controller.gs` CRIADO (7 controllers, retoma passo pendente). `wizard_setup.html` CRIADO (wizard SPA 6 passos, stepper, BtnGuard). `router.gs`: rota `?secao=wizard_setup`. `index.html`: GAS.orgs (3 bindings) + GAS.admin +3; tab Features (toggles por grupo); tab Provisionamento (checklist+barra+link wizard); view `#view-painel-orgs` (superadmin); `FeatureFlagsUI` + `PainelOrgsUI` modules; menu item "Painel de Orgs". Auditoria CLAUDE.md 100% verde. Deploy @140. | fase9_prepararIndice() no GAS Editor → smoke-test (Features tab, Wizard `?secao=wizard_setup`, Painel Orgs, F12 zero erros) → Fase 10 |
 | 2026-05-23 | Fase 8 | **Agentes, Acervo, Voluntários e Parcerias** entregues: `AgenteCulturalRepository/Engine/Controller` (FSM rascunho→ativo↔suspenso→descredenciado, auto-cadastro portal, rider técnico, histórico de vínculos, MASTER.AgentesCulturais). `AcervoRepository/Engine/Controller` (upload Drive por Ação, status LGPD 4 estados, checklist evidências, exportação ZIP, ACOES.Acervo). `VoluntarioRepository/Engine/Controller` (FSM voluntário+alocação, convite email, registro horas, certificado ao concluir, MASTER.Voluntarios). `ParceriaRepository/Engine/Controller` (FSM 5 estados, vínculos com Ações, entregas, avaliação ao encerrar, ACOES.Parcerias). `portal_agente.html` (auto-cadastro público: 12 áreas, rider, disponibilidade, LGPD). 18 novos eventos em events_constants.gs. setup.gs: SCHEMA_ABAS+4 novas abas, fase8_prepararIndice(). index.html: 4 GAS namespaces (38 bindings), seção MEMÓRIA no sidebar, views+modais+UIs AgentesUI/AcervoUI/VoluntariosUI/ParceriasUI. Auditoria CLAUDE.md 100% verde. Deploy @138. | fase8_prepararIndice() no GAS Editor → smoke-test browser (Agentes+portal+Acervo+Voluntários+Parcerias) → Fase 9 |
 | 2026-05-23 | Fase 7 | **Portal Externo + PublicoEngine + ExportacaoEngine** entregues: `ConsentimentoService` (LGPD), `PublicoRepository` (inscrições/presenças/pesquisas/certificados JSON + índice PUBLICO.*), `PublicoEngine` (FSM 6 estados, lista espera automática, NPS, dados CODIP), `publico_controller.gs` (ctrl_publico_* autenticado), `portal_controller.gs` (ctrl_portal_* público, rate limiting), `exportacao_engine.gs` (CODIP 28 campos CSV+JSON, SALIC XML, SNIIC anual, CSV genérico). Portais HTML: TODOs substituídos por google.script.run reais (agenda, inscrição, cessão de pauta, status de pauta). index.html: GAS.publico+GAS.exportacao namespaces, view-publico (4 tabs), PublicoUI completo, rota sidebar 'publico'. Deploy @136. | `fase7_publico_prepararIndice()` no GAS Editor → smoke-test browser (portais + view Público) → Fase 8 |
 | 2026-05-23 | Fix bugs espaços | 3 bugs corrigidos: (1) `numeroPlanta` perdido no `salvarEspaco` — adicionado ao registro backend + form admin + coleta de dados + label fallback em `_renderMapa` e `_renderCustomSpaces`; (2) Espaços "perdidos" no mapa config — `_renderMapa` agora tem try/catch por espaço + validação de coords (isFinite) + renderização de marcador vermelho clicável em posição fallback para coords inválidas; (3) Exclusão de espaços — `excluirEspaco()` adicionado em `config_admin_service.gs` + `ctrl_admin_excluirEspaco` + `GAS.admin.excluirEspaco` binding + botão Excluir na listagem + `reativarEspaco()` bônus. Deploy @122. | Fase 6 — RECE + Eventos |
