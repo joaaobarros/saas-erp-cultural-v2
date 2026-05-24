@@ -5698,6 +5698,9 @@ var GAS = {
   portal: {
     statusProcesso: function(tok,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratacoes_portal_status(tok); }
   },
+  financeiro: {
+    meuNivel: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_financeiro_meu_nivel(); }
+  },
   contratos: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_listar(f||{}); },
     obter:       function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_obter(id); },
@@ -6801,7 +6804,7 @@ var ContratosUI = (function() {
 
   function aoAbrir() {
     // Detectar nível — sempre (garante botão "Novo" correto ao re-entrar na view)
-    GAS.pessoas.meuNivel(function(resp){
+    GAS.financeiro.meuNivel(function(resp){
       if(resp&&resp.ok&&resp.data) _meuNivel = resp.data.nivel || 'colaborador';
       _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
       var btnNovo = document.getElementById('btn-contratos-novo');
@@ -7318,7 +7321,7 @@ var FontesUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.pessoas.meuNivel(function(resp) {
+    GAS.financeiro.meuNivel(function(resp) {
       if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
       _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
       var btn = document.getElementById('btn-fontes-novo');
@@ -7501,7 +7504,7 @@ var RemanejamentosUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.pessoas.meuNivel(function(resp) {
+    GAS.financeiro.meuNivel(function(resp) {
       if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
       _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
       var btn = document.getElementById('btn-rem-novo');
@@ -7708,7 +7711,7 @@ var AditivosUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.pessoas.meuNivel(function(resp) {
+    GAS.financeiro.meuNivel(function(resp) {
       if (resp && resp.ok && resp.data) _meuNivel = resp.data.nivel || 'colaborador';
       _podeEditar = ['superadmin','admin','financeiro'].indexOf(_meuNivel) !== -1;
       _isAdmin    = ['superadmin','admin'].indexOf(_meuNivel) !== -1;

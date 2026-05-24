@@ -337,6 +337,22 @@ function ctrl_contrato_versao(idContrato, versaoNum) {
   }, 'ctrl_contrato_versao');
 }
 
+// ── Nível do usuário no módulo financeiro ────────────────────────────────────
+
+/**
+ * Retorna o nível financeiro do usuário atual para controle de permissões no frontend.
+ * Difere de ctrl_pessoas_meu_nivel pois conhece o papel 'financeiro'.
+ */
+function ctrl_financeiro_meu_nivel() {
+  return GasResponse.wrap(function () {
+    var email = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
+    var nivel = _nivelFinanceiro(email);
+    return { nivel: nivel, email: email };
+  }, 'ctrl_financeiro_meu_nivel');
+}
+
 // ── Indicadores ───────────────────────────────────────────────────────────────
 
 function ctrl_contrato_salvar_indicador(idContrato, idMeta, dados) {
