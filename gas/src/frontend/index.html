@@ -8053,62 +8053,125 @@ var InfraConfigMapaUI = (function() {
   }
 
   // ── Resize inline ────────────────────────────────────────
-  // simetrico=true (Ctrl pressionado): expande ambos os lados a partir do centro (comportamento clássico)
-  // simetrico=false (padrão):          move apenas a borda arrastada; o lado oposto fica fixo
-  function _resizeInline(lp, simetrico) {
+  // Recebe o MouseEvent (não o lp pré-calculado) para garantir que o ponto
+  // seja sempre convertido em relação ao centro ORIGINAL do drag (origCX/CY).
+  // Isso evita o problema de getScreenCTM() variar à medida que o grupo move.
+  //
+  // simetrico=true (Ctrl): expande ambos os lados a partir do centro original
+  // simetrico=false (padrão): move apenas a borda arrastada; o oposto fica fixo
+  function _resizeInline(e, simetrico) {
     if (!_modoEdicao || !_modoEdicao.drag || !_modoEdicao.cfg) return;
-    var drag = _modoEdicao.drag;
-    var cfg  = _modoEdicao.cfg;
-    var h    = drag.handle;
+    var drag = _modoEdicao.drag, cfg = _modoEdicao.cfg, h = drag.handle;
     var minSz = 20, minH = minSz / 2;
 
-    if (cfg.forma === 'circle') {
-      var dist = Math.sqrt(lp.x * lp.x + lp.y * lp.y);
-      cfg.r = Math.max(minH, dist); cfg.w = cfg.r * 2; cfg.h = cfg.r * 2;
-      _atualizarHandles(); return;
-    }
-
-    // ── Modo SIMÉTRICO (Ctrl) ─────────────────────────────
-    if (simetrico) {
-      var newHW = Math.max(minH, Math.abs(lp.x));
-      var newHH = Math.max(minH, Math.abs(lp.y));
-      if (h === 'n' || h === 's') newHW = drag.origW / 2;
-      if (h === 'e' || h === 'w') newHH = drag.origH / 2;
-      cfg.w = newHW * 2; cfg.h = newHH * 2;
-      cfg.cx = drag.origCX; cfg.cy = drag.origCY;
-      _atualizarHandles(); return;
-    }
-
-    // ── Modo ASSIMÉTRICO (padrão) ─────────────────────────
-    // lp é relativo ao centro ATUAL do grupo (atualizado pelo _atualizarHandles anterior)
-    var curHW = cfg.w / 2, curHH = cfg.h / 2;
+    // Converter mouse → SVG space → local space relativo ao centro ORIGINAL
+    var svgP  = _svgPt(e);
     var angle = cfg.rotacao || 0;
     var rad   = angle * Math.PI / 180;
     var cos   = Math.cos(rad), sin = Math.sin(rad);
+    var dx = svgP.x - drag.origCX, dy = svgP.y - drag.origCY;
+    var lpx = dx * cos + dy * sin;   // rotação inversa
+    var lpy = -dx * sin + dy * cos;
 
-    var aX, aY, eX, eY;
-    var newHW2 = curHW, newHH2 = curHH, dxL = 0, dyL = 0;
+    var origHW = drag.origW / 2, origHH = drag.origH / 2;
+    var newHW = origHW, newHH = origHH, dxL = 0, dyL = 0;
 
-    if      (h === 'se') { aX=-curHW; aY=-curHH; eX=Math.max(aX+minSz,lp.x); eY=Math.max(aY+minSz,lp.y); }
-    else if (h === 'nw') { aX= curHW; aY= curHH; eX=Math.min(aX-minSz,lp.x); eY=Math.min(aY-minSz,lp.y); }
-    else if (h === 'ne') { aX=-curHW; aY= curHH; eX=Math.max(aX+minSz,lp.x); eY=Math.min(aY-minSz,lp.y); }
-    else if (h === 'sw') { aX= curHW; aY=-curHH; eX=Math.min(aX-minSz,lp.x); eY=Math.max(aY+minSz,lp.y); }
-    else if (h === 'e')  { aX=-curHW; aY=0;      eX=Math.max(aX+minSz,lp.x); eY=0; }
-    else if (h === 'w')  { aX= curHW; aY=0;      eX=Math.min(aX-minSz,lp.x); eY=0; }
-    else if (h === 's')  { aX=0;      aY=-curHH; eX=0; eY=Math.max(aY+minSz,lp.y); }
-    else if (h === 'n')  { aX=0;      aY= curHH; eX=0; eY=Math.min(aY-minSz,lp.y); }
+    if (cfg.forma === 'circle') {
+      var dist = Math.sqrt(lpx * lpx + lpy * lpy);
+      cfg.r = Math.max(minH, dist); cfg.w = cfg.r * 2; cfg.h = cfg.r * 2;
+      cfg.cx = drag.origCX; cfg.cy = drag.origCY;
+      _updateShapeInline(); return;
+    }
 
-    if      (h === 'n' || h === 's')  { newHH2 = Math.abs(eY - aY) / 2; dxL = 0;             dyL = (aY + eY) / 2; }
-    else if (h === 'e' || h === 'w')  { newHW2 = Math.abs(eX - aX) / 2; dxL = (aX + eX) / 2; dyL = 0; }
-    else { newHW2 = Math.abs(eX - aX) / 2; newHH2 = Math.abs(eY - aY) / 2;
-           dxL = (aX + eX) / 2; dyL = (aY + eY) / 2; }
+    if (simetrico) {
+      // ── Modo SIMÉTRICO (Ctrl) ─────────────────────────────
+      newHW = Math.max(minH, Math.abs(lpx));
+      newHH = Math.max(minH, Math.abs(lpy));
+      if (h === 'n' || h === 's') newHW = origHW;
+      if (h === 'e' || h === 'w') newHH = origHH;
+      cfg.cx = drag.origCX; cfg.cy = drag.origCY;
+    } else {
+      // ── Modo ASSIMÉTRICO (padrão) ─────────────────────────
+      // lpx/lpy são sempre relativos ao origCX/CY → referência fixa durante todo o drag
+      var aX, aY, eX, eY;
+      if      (h === 'se') { aX=-origHW; aY=-origHH; eX=Math.max(aX+minSz,lpx); eY=Math.max(aY+minSz,lpy); }
+      else if (h === 'nw') { aX= origHW; aY= origHH; eX=Math.min(aX-minSz,lpx); eY=Math.min(aY-minSz,lpy); }
+      else if (h === 'ne') { aX=-origHW; aY= origHH; eX=Math.max(aX+minSz,lpx); eY=Math.min(aY-minSz,lpy); }
+      else if (h === 'sw') { aX= origHW; aY=-origHH; eX=Math.min(aX-minSz,lpx); eY=Math.max(aY+minSz,lpy); }
+      else if (h === 'e')  { aX=-origHW; aY=0;       eX=Math.max(aX+minSz,lpx); eY=0; }
+      else if (h === 'w')  { aX= origHW; aY=0;       eX=Math.min(aX-minSz,lpx); eY=0; }
+      else if (h === 's')  { aX=0;       aY=-origHH; eX=0; eY=Math.max(aY+minSz,lpy); }
+      else if (h === 'n')  { aX=0;       aY= origHH; eX=0; eY=Math.min(aY-minSz,lpy); }
 
-    cfg.w = newHW2 * 2; cfg.h = newHH2 * 2;
-    // Deslocar o centro no espaço mundo: rotacionar o offset local pelo ângulo da forma
-    cfg.cx += dxL * cos - dyL * sin;
-    cfg.cy += dxL * sin + dyL * cos;
+      if      (h === 'n' || h === 's')  { newHH=Math.abs(eY-aY)/2; dxL=0;            dyL=(aY+eY)/2; }
+      else if (h === 'e' || h === 'w')  { newHW=Math.abs(eX-aX)/2; dxL=(aX+eX)/2;   dyL=0; }
+      else { newHW=Math.abs(eX-aX)/2; newHH=Math.abs(eY-aY)/2; dxL=(aX+eX)/2; dyL=(aY+eY)/2; }
 
-    _atualizarHandles(); // feedback visual imediato (igual ao modo rotação)
+      // Centro calculado do origCX/CY (SET, nunca incremento)
+      cfg.cx = drag.origCX + dxL * cos - dyL * sin;
+      cfg.cy = drag.origCY + dxL * sin + dyL * cos;
+    }
+
+    cfg.w = newHW * 2; cfg.h = newHH * 2;
+    _updateShapeInline();
+  }
+
+  // Atualiza grupo de edição inline sem recriar o elemento (preserva identidade do DOM)
+  function _updateShapeInline() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg = _modoEdicao.cfg;
+    var g = document.getElementById('cfg-ed-shape-g');
+    if (!g) { _atualizarHandles(); return; }
+    var hw = cfg.w / 2, hh = cfg.h / 2;
+
+    // 1. Reposicionar grupo
+    g.setAttribute('transform',
+      'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
+
+    // 2. Atualizar a forma (1.º filho do grupo)
+    var sh = g.children[0];
+    if (sh) {
+      var tag = sh.tagName.toLowerCase();
+      if (tag === 'rect') {
+        sh.setAttribute('x', -hw); sh.setAttribute('y', -hh);
+        sh.setAttribute('width', cfg.w); sh.setAttribute('height', cfg.h);
+      } else if (tag === 'circle') {
+        sh.setAttribute('r', cfg.r || Math.min(hw, hh));
+      } else if (tag === 'ellipse') {
+        sh.setAttribute('rx', hw); sh.setAttribute('ry', hh);
+      } else if (tag === 'polygon') {
+        var pm = {
+          tri:     '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh,
+          hex:     _polyCirclePts(6, hw, hh, -30),
+          trap:    (-hw*0.7)+','+(-hh)+' '+(hw*0.7)+','+(-hh)+' '+hw+','+hh+' '+(-hw)+','+hh,
+          diamond: '0,'+(-hh)+' '+hw+',0 0,'+hh+' '+(-hw)+',0',
+          pent:    _polyCirclePts(5, hw, hh, -90)
+        };
+        sh.setAttribute('points', pm[cfg.forma] || '');
+      }
+    }
+
+    // 3. Atualizar posição dos handles de resize
+    var hposMap = {
+      nw:[-hw,-hh], n:[0,-hh], ne:[hw,-hh],
+      w: [-hw,0],              e: [hw,0],
+      sw:[-hw, hh], s:[0, hh], se:[hw, hh]
+    };
+    g.querySelectorAll('[data-ed-handle]').forEach(function(c) {
+      var hid = c.getAttribute('data-ed-handle');
+      if (hid === 'rot') { c.setAttribute('cy', -(hh + 24)); return; }
+      var pos = hposMap[hid];
+      if (pos) { c.setAttribute('cx', pos[0]); c.setAttribute('cy', pos[1]); }
+    });
+
+    // 4. Atualizar linha do handle de rotação
+    var rotLine = g.querySelector('line');
+    if (rotLine) {
+      rotLine.setAttribute('y1', -(hh + 2));
+      rotLine.setAttribute('y2', -(hh + 18));
+    }
+
+    _atualizarInputsInline();
   }
 
   // ── Extrair cfg do espaço estático via getBBox ──────────
@@ -8478,7 +8541,7 @@ var InfraConfigMapaUI = (function() {
             'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
           _atualizarInputsInline();
         } else if (drag.type === 'resize') {
-          _resizeInline(_localEdPt(e), e.ctrlKey);
+          _resizeInline(e, e.ctrlKey);
         } else if (drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
           var curAngle = Math.atan2(svgP2.y - cfg.cy, svgP2.x - cfg.cx) * 180 / Math.PI;
