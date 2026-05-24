@@ -199,6 +199,21 @@ function inicializarSistema() {
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
 
+  // Catálogo SEPLAG — pré-carregar os ~60 itens padrão (idempotente)
+  try {
+    if (typeof ItensDespesaService !== 'undefined') {
+      var rCatalogo = ItensDespesaService.seed();
+      Logger.info('setup', 'inicializarSistema', 'Catálogo SEPLAG: ' + rCatalogo.adicionados + ' itens adicionados, total=' + rCatalogo.total);
+    }
+  } catch(e) { Logger.warn('setup', 'inicializarSistema', 'catalogo_seplag_seed: ' + e.message); }
+
+  // Índice de Contratos
+  try {
+    if (typeof ContratoRepository !== 'undefined') {
+      ContratoRepository.garantirCabecalhoIndice();
+    }
+  } catch(e) { Logger.warn('setup', 'inicializarSistema', 'contratos_indice: ' + e.message); }
+
   // Registra o superadmin inicial (email de quem executa este script pela primeira vez)
   // Se ADMIN_EMAIL estiver configurado em PropertiesService, usa ele; caso contrário, usa a sessão ativa.
   var adminProp  = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '';
