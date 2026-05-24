@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= orgConfig.nome ?> — Cadastro de Agente Cultural</title>
+  <?!= include('shared/btnguard'); ?>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #212121; min-height: 100vh; }
+    .container { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-size: 22px; color: #4c1d95; margin-bottom: 4px; }
+    .header .subtitulo { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .header p { color: #757575; font-size: 14px; }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.1); padding: 32px; }
+    .secao-titulo { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #6d28d9; letter-spacing: .04em; border-bottom: 1px solid #ede9fe; margin: 24px 0 16px; padding-bottom: 8px; }
+    .secao-titulo:first-child { margin-top: 0; }
+    .grupo { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    label .req { color: #c62828; }
+    input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #6d28d9; box-shadow: 0 0 0 3px rgba(109,40,217,.1); }
+    textarea { resize: vertical; min-height: 80px; }
+    .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .linha-tripla { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    /* Checkboxes de áreas/disponibilidade */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip-label { display: flex; align-items: center; gap: 6px; background: #f3e8ff; border: 1px solid #ddd6fe; border-radius: 20px; padding: 5px 12px; cursor: pointer; font-size: 13px; transition: background .15s; }
+    .chip-label:hover { background: #ede9fe; }
+    .chip-label input[type=checkbox] { width: auto; accent-color: #7c3aed; }
+    /* Rider técnico */
+    .rider-campo { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px; }
+    /* Links de portfolio */
+    .portfolio-lista { list-style: none; }
+    .portfolio-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .portfolio-item input { flex: 1; }
+    .btn-icon { background: none; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 16px; }
+    .btn-icon:hover { background: #f5f5f5; }
+    /* Consentimento */
+    .consentimento { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 16px; margin-top: 8px; }
+    .consentimento p { font-size: 13px; color: #616161; margin-bottom: 10px; line-height: 1.5; }
+    .consentimento label { font-weight: 400; display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; }
+    .consentimento input[type=checkbox] { width: auto; flex-shrink: 0; margin-top: 2px; accent-color: #7c3aed; }
+    /* Botão */
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; transition: opacity .15s; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primario { background: #7c3aed; color: #fff; }
+    .btn-primario:hover:not(:disabled) { background: #6d28d9; }
+    /* Estados */
+    #resultado { display: none; text-align: center; padding: 32px 16px; }
+    #resultado .icone { font-size: 56px; margin-bottom: 12px; }
+    #resultado h2 { color: #4c1d95; margin-bottom: 8px; font-size: 22px; }
+    #resultado .protocolo { font-size: 26px; font-weight: 700; color: #7c3aed; margin: 16px 0; background: #f3e8ff; padding: 12px; border-radius: 8px; display: inline-block; }
+    #resultado p { color: #616161; font-size: 14px; max-width: 400px; margin: 0 auto; }
+    #erro { display: none; background: #ffebee; border: 1px solid #ef9a9a; border-radius: 6px; padding: 14px; margin-top: 16px; color: #c62828; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1><?= orgConfig.nome ?></h1>
+    <div class="subtitulo">Cadastro de Agente Cultural</div>
+    <p>Preencha o formulário para integrar nossa base de agentes culturais.<br>Seu cadastro será analisado pela equipe.</p>
+  </div>
+
+  <div class="card">
+
+    <!-- ─── RESULTADO ─────────────────────────────────────────────────── -->
+    <div id="resultado">
+      <div class="icone">🎭</div>
+      <h2>Pré-cadastro enviado!</h2>
+      <p>Protocolo:</p>
+      <div class="protocolo" id="res-protocolo"></div>
+      <p>Sua solicitação foi recebida e será analisada pela equipe.<br>Você receberá um e-mail assim que o cadastro for aprovado.</p>
+    </div>
+
+    <!-- ─── FORMULÁRIO ────────────────────────────────────────────────── -->
+    <form id="form-agente" onsubmit="return false;">
+
+      <!-- 1. Identificação -->
+      <div class="secao-titulo">Identificação</div>
+
+      <div class="grupo linha-dupla">
+        <div>
+          <label>Tipo <span class="req">*</span></label>
+          <select id="tipo">
+            <option value="pf">Pessoa Física (CPF)</option>
+            <option value="pj">Pessoa Jurídica (CNPJ)</option>
+          </select>
+        </div>
+        <div>
+          <label><span id="label-doc">CPF</span> <span class="req">*</span></label>
+          <input type="text" id="cpf-cnpj" placeholder="000.000.000-00">
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label>Nome completo / Razão social <span class="req">*</span></label>
+        <input type="text" id="nome" placeholder="Seu nome completo">
+      </div>
+
+      <div class="grupo">
+        <label>Nome artístico / Nome de apresentação</label>
+        <input type="text" id="nome-artistico" placeholder="Como prefere ser chamado(a)">
+      </div>
+
+      <div class="grupo linha-dupla">
+        <div>
+          <label>E-mail <span class="req">*</span></label>
+          <input type="email" id="email" placeholder="seu@email.com">
+        </div>
+        <div>
+          <label>Telefone</label>
+          <input type="tel" id="telefone" placeholder="(85) 9 0000-0000">
+        </div>
+      </div>
+
+      <!-- 2. Perfil Artístico -->
+      <div class="secao-titulo">Perfil Artístico</div>
+
+      <div class="grupo">
+        <label>Áreas de atuação <span class="req">*</span></label>
+        <div class="chips" id="areas-chips">
+          <label class="chip-label"><input type="checkbox" value="artes_visuais"> Artes Visuais</label>
+          <label class="chip-label"><input type="checkbox" value="danca"> Dança</label>
+          <label class="chip-label"><input type="checkbox" value="teatro"> Teatro</label>
+          <label class="chip-label"><input type="checkbox" value="musica"> Música</label>
+          <label class="chip-label"><input type="checkbox" value="circo"> Circo</label>
+          <label class="chip-label"><input type="checkbox" value="literatura"> Literatura</label>
+          <label class="chip-label"><input type="checkbox" value="audiovisual"> Audiovisual</label>
+          <label class="chip-label"><input type="checkbox" value="patrimonio"> Patrimônio Cultural</label>
+          <label class="chip-label"><input type="checkbox" value="artesanato"> Artesanato</label>
+          <label class="chip-label"><input type="checkbox" value="moda"> Moda</label>
+          <label class="chip-label"><input type="checkbox" value="gastronomia"> Gastronomia Cultural</label>
+          <label class="chip-label"><input type="checkbox" value="outros"> Outros</label>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label>Linguagens / Especialidades</label>
+        <input type="text" id="linguagens" placeholder="Ex: Forró, Hip-hop, Xilogravura, Teatro de Rua (separar por vírgula)">
+      </div>
+
+      <div class="grupo">
+        <label>Mini-bio / Apresentação</label>
+        <textarea id="bio" placeholder="Conte um pouco sobre sua trajetória artística e trabalho..."></textarea>
+      </div>
+
+      <!-- 3. Portfolio -->
+      <div class="secao-titulo">Portfolio</div>
+      <div class="grupo">
+        <label>Links de trabalho (site, redes sociais, vídeos)</label>
+        <ul class="portfolio-lista" id="portfolio-lista">
+          <li class="portfolio-item">
+            <input type="url" placeholder="https://..." class="portfolio-link">
+            <button type="button" class="btn-icon" onclick="adicionarLinkPortfolio()">＋</button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 4. Rider Técnico -->
+      <div class="secao-titulo">Rider Técnico <span style="font-size:11px;color:#9ca3af;font-weight:400">(opcional)</span></div>
+      <p style="font-size:13px;color:#616161;margin-bottom:12px">Descreva as necessidades técnicas para realização do seu trabalho.</p>
+      <div class="rider-campo">
+        <div class="grupo linha-dupla">
+          <div>
+            <label>Equipamentos de som</label>
+            <input type="text" id="rider-som" placeholder="Ex: Mesa 16 canais, microfones...">
+          </div>
+          <div>
+            <label>Iluminação</label>
+            <input type="text" id="rider-luz" placeholder="Ex: Refletores PAR, dimmer...">
+          </div>
+        </div>
+        <div class="grupo linha-dupla">
+          <div>
+            <label>Palco / Espaço</label>
+            <input type="text" id="rider-palco" placeholder="Ex: 6m x 4m, piso liso...">
+          </div>
+          <div>
+            <label>Camarim / Apoio</label>
+            <input type="text" id="rider-camarim" placeholder="Ex: Espelho, tomadas, água...">
+          </div>
+        </div>
+        <div class="grupo">
+          <label>Outros equipamentos / Observações</label>
+          <textarea id="rider-outros" placeholder="Outros itens necessários..." style="min-height:60px;"></textarea>
+        </div>
+      </div>
+
+      <!-- 5. Disponibilidade -->
+      <div class="secao-titulo">Disponibilidade</div>
+      <div class="grupo">
+        <label>Dias disponíveis</label>
+        <div class="chips">
+          <label class="chip-label"><input type="checkbox" name="dias" value="seg"> Seg</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="ter"> Ter</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="qua"> Qua</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="qui"> Qui</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="sex"> Sex</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="sab"> Sáb</label>
+          <label class="chip-label"><input type="checkbox" name="dias" value="dom"> Dom</label>
+        </div>
+      </div>
+      <div class="grupo">
+        <label>Turnos</label>
+        <div class="chips">
+          <label class="chip-label"><input type="checkbox" name="turnos" value="manha"> Manhã</label>
+          <label class="chip-label"><input type="checkbox" name="turnos" value="tarde"> Tarde</label>
+          <label class="chip-label"><input type="checkbox" name="turnos" value="noite"> Noite</label>
+        </div>
+      </div>
+
+      <!-- 6. LGPD -->
+      <div class="secao-titulo">Consentimento LGPD</div>
+      <div class="consentimento">
+        <p>Seus dados serão utilizados exclusivamente para fins de gestão cultural, contratação e comunicação institucional, conforme a Lei Geral de Proteção de Dados (LGPD — Lei 13.709/2018).</p>
+        <label>
+          <input type="checkbox" id="lgpd-check" onchange="document.getElementById('btn-enviar').disabled = !this.checked;">
+          Concordo com o tratamento dos meus dados pessoais para as finalidades descritas acima.
+        </label>
+      </div>
+
+      <div id="erro"></div>
+
+      <button type="button" id="btn-enviar" class="btn btn-primario" disabled
+              onclick="BtnGuard.wrap('btn-enviar','Enviando cadastro…', enviarCadastro)">
+        Enviar Pré-Cadastro
+      </button>
+
+    </form>
+  </div><!-- /card -->
+</div><!-- /container -->
+
+<script>
+// ─── Tipo PF/PJ ────────────────────────────────────────────────────────────
+document.getElementById('tipo').addEventListener('change', function() {
+  var label = document.getElementById('label-doc');
+  var input = document.getElementById('cpf-cnpj');
+  if (this.value === 'pj') {
+    label.textContent = 'CNPJ';
+    input.placeholder = '00.000.000/0001-00';
+  } else {
+    label.textContent = 'CPF';
+    input.placeholder = '000.000.000-00';
+  }
+});
+
+// ─── Portfolio dinâmico ────────────────────────────────────────────────────
+function adicionarLinkPortfolio() {
+  var lista = document.getElementById('portfolio-lista');
+  var li = document.createElement('li');
+  li.className = 'portfolio-item';
+  li.innerHTML = '<input type="url" placeholder="https://…" class="portfolio-link">' +
+    '<button type="button" class="btn-icon" onclick="this.parentElement.remove()">✕</button>';
+  lista.appendChild(li);
+}
+
+// ─── Coletar dados do formulário ───────────────────────────────────────────
+function _coletarDados() {
+  var areas = [];
+  document.querySelectorAll('#areas-chips input:checked').forEach(function(cb) {
+    areas.push(cb.value);
+  });
+  var dias   = [];
+  document.querySelectorAll('[name=dias]:checked').forEach(function(cb) { dias.push(cb.value); });
+  var turnos = [];
+  document.querySelectorAll('[name=turnos]:checked').forEach(function(cb) { turnos.push(cb.value); });
+
+  var links = [];
+  document.querySelectorAll('.portfolio-link').forEach(function(inp) {
+    var v = (inp.value || '').trim();
+    if (v) links.push({ url: v });
+  });
+
+  return {
+    tipo:           document.getElementById('tipo').value,
+    cpfCnpj:        document.getElementById('cpf-cnpj').value.trim(),
+    nome:           document.getElementById('nome').value.trim(),
+    nomeArtistico:  document.getElementById('nome-artistico').value.trim(),
+    email:          document.getElementById('email').value.trim(),
+    telefone:       document.getElementById('telefone').value.trim(),
+    areasArtisticas:areas,
+    linguagens:     document.getElementById('linguagens').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
+    observacoes:    document.getElementById('bio').value.trim(),
+    portfolio:      links,
+    riderTecnico: {
+      som:     document.getElementById('rider-som').value.trim(),
+      iluminacao: document.getElementById('rider-luz').value.trim(),
+      palco:   document.getElementById('rider-palco').value.trim(),
+      camarim: document.getElementById('rider-camarim').value.trim(),
+      outros:  document.getElementById('rider-outros').value.trim()
+    },
+    disponibilidade: { dias: dias, turnos: turnos }
+  };
+}
+
+function _mostrarErro(msg) {
+  var el = document.getElementById('erro');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function _limparErro() {
+  document.getElementById('erro').style.display = 'none';
+}
+
+// ─── Envio ─────────────────────────────────────────────────────────────────
+function enviarCadastro() {
+  _limparErro();
+  var dados = _coletarDados();
+
+  // Validações básicas
+  if (!dados.nome)   { _mostrarErro('Nome é obrigatório.'); return; }
+  if (!dados.email)  { _mostrarErro('E-mail é obrigatório.'); return; }
+  if (!dados.cpfCnpj){ _mostrarErro('CPF/CNPJ é obrigatório.'); return; }
+  if (!dados.areasArtisticas.length) { _mostrarErro('Selecione ao menos uma área de atuação.'); return; }
+
+  google.script.run
+    .withSuccessHandler(function(resp) {
+      if (!resp || !resp.ok) {
+        _mostrarErro((resp && resp.error && resp.error.message) || 'Erro ao enviar cadastro.');
+        BtnGuard.liberar('btn-enviar');
+        return;
+      }
+      document.getElementById('form-agente').style.display = 'none';
+      document.getElementById('res-protocolo').textContent = resp.data.protocolo || resp.data.id;
+      document.getElementById('resultado').style.display = 'block';
+    })
+    .withFailureHandler(function(err) {
+      _mostrarErro(err.message || String(err));
+      BtnGuard.liberar('btn-enviar');
+    })
+    .ctrl_portal_cadastrarAgente(dados);
+}
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 7 entregue (2026-05-23)** — Seguir para **Fase 8 (Agentes Culturais, Acervo, Voluntários)**
+**Fase atual**: **Fase 8 entregue (2026-05-23)** — Seguir para **Fase 9 (Multi-Tenancy e Painel Admin)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -186,23 +186,41 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ **index.html** — GAS.rece (7 bindings) + GAS.eventbus; view-comunicacao com lista RECE, filtros, métricas e modal de 25 campos; ReceUI module completo (aoAbrir, carregar, filtrar, renderLista, abrirForm, salvar, mudarStatus, cancelar sem prompt); Observabilidade: painel EventBus com contadores e lista de pendentes; CSS: badge-danger/secondary/info, btn-danger, form-section-title adicionados
 - ✅ Deploy @132
 
-**Próximo passo imediato**:
-> **[GAS Editor] Executar após primeiro deploy:**
-> 1. `fase6_rece_prepararIndice()` → `{ok: true}` — cria aba COMUNICACAO.AgendaRECE + MASTER.Tokens
-> 2. `criarTriggerEventosPendentes()` → configura trigger de 30min
->
-> **[BROWSER] Smoke-test Fase 6:**
-> 1. Menu "Comunicação" aparece no sidebar → clicar → view RECE carrega
-> 2. Botão "Novo Registro RECE" → modal com 25 campos abre
-> 3. Criar registro → aparece na lista com badge "Rascunho"
-> 4. Submeter → badge "Submetida"; Publicar → badge "Publicada" → email enviado
-> 5. Observabilidade (superadmin) → painel EventBus aparece com contadores
-> 6. F12 → zero erros vermelhos
-> 7. BtnGuard.auditar() → "✅ todos protegidos"
+**O que foi feito (Fase 8 — 2026-05-23)**:
+- ✅ `AgenteCulturalRepository` — `agentes_culturais.json` + índice `MASTER.AgentesCulturais`; listar/buscar/metricas/salvar/excluir
+- ✅ `AgenteCulturalEngine` — FSM rascunho→ativo↔suspenso→descredenciado; auto-cadastro portal; rider técnico; histórico de vínculos; email boas-vindas ao ativar
+- ✅ `agentes_controller.gs` — ctrl_agentes_listar/obter/metricas/salvar/mudarStatus/salvarRider/excluir + ctrl_portal_cadastrarAgente (sem auth)
+- ✅ `AcervoRepository` — `acervo.json` + índice `ACOES.Acervo`; checklist de evidências por Ação (foto/video/release/poster/folder/ata)
+- ✅ `AcervoEngine` — upload ao Drive (pasta por Ação), status LGPD (nao_verificado/autorizado/restrito/sem_pessoas), exportação ZIP (lista de URLs)
+- ✅ `acervo_controller.gs` — ctrl_acervo_listar/listarPorAcao/checklist/metricas/registrar/atualizar/statusLGPD/excluir/exportarZip
+- ✅ `VoluntarioRepository` — `voluntarios.json` + `alocacoes_voluntarios.json` + índice `MASTER.Voluntarios`
+- ✅ `VoluntarioEngine` — FSM voluntário (cadastrado→ativo↔inativo) + FSM alocação (alocado→confirmado→presente→concluido/cancelado); email convite; registro de horas; email certificado ao concluir
+- ✅ `voluntario_controller.gs` — ctrl_voluntarios_listar/obter/metricas/salvar/mudarStatus/excluir/listarAlocacoes/alocar/confirmarAlocacao/registrarPresenca/concluirAlocacao/cancelarAlocacao
+- ✅ `ParceriaRepository` — `parcerias.json` + índice `ACOES.Parcerias`
+- ✅ `ParceriaEngine` — FSM proposta→negociacao→ativa→encerrada/cancelada; vínculos com Ações; entregas; avaliação ao encerrar
+- ✅ `parceria_controller.gs` — ctrl_parcerias_listar/obter/metricas/listarPorAcao/salvar/mudarStatus/vincularAcao/desvincularAcao/salvarEntrega/avaliar/excluir
+- ✅ `portal_agente.html` — auto-cadastro público: tipos PF/PJ, áreas artísticas (12 chips), linguagens, bio, portfolio dinâmico, rider técnico, disponibilidade, consentimento LGPD; envia para `ctrl_portal_cadastrarAgente` sem autenticação
+- ✅ `events_constants.gs` — 18 novos eventos: AGENT_*, ACERVO_*, VOLUNTEER_*, PARTNERSHIP_*
+- ✅ `setup.gs` — SCHEMA_ABAS: MASTER+AgentesCulturais+Voluntarios / ACOES+Acervo+Parcerias; inicializarSistema() chama prepararIndice() de todos os 4 repos; `fase8_prepararIndice()` global
+- ✅ `router.gs` — rota `secao=agente` → portal_agente.html
+- ✅ `index.html` — 4 novos GAS namespaces (GAS.agentes 7 bindings, GAS.acervo 9, GAS.voluntarios 11, GAS.parcerias 11); seção "MEMÓRIA" no sidebar; views view-agentes/acervo/voluntarios/parcerias; AgentesUI/AcervoUI/VoluntariosUI/ParceriasUI; modais opacos; BtnGuard em todos os botões; prompt() com null-check; Router.registrar() para todos
+- ✅ **Auditoria CLAUDE.md**: prompt()/null-check ✅ | GAS.* namespace 100% ✅ | modais opacos ✅ | FsmGuardian em todas as transições ✅
+- ✅ Deploy @138 em produção
 
-> Depois: iniciar **Fase 7 — Portal Externo + PublicoEngine + CODIP**
+**Passo obrigatório no GAS Editor após este deploy**:
+- Executar `fase8_prepararIndice()` → `{ok:true}` — cria abas AgentesCulturais, Acervo, Voluntarios, Parcerias
 
-**Fase mais urgente agora**: **Fase 7** — Portal Externo (backends funcionais) + Gestão de Público.
+**[BROWSER] Smoke-test Fase 8:**
+1. Sidebar → seção "MEMÓRIA" com 4 itens (Agentes, Acervo, Voluntários, Parcerias)
+2. Agentes → stats carregam → botão "+ Novo Agente" → modal abre → criar agente → aparece na lista com badge "Rascunho"
+3. Ativar agente → badge muda para "Ativo"
+4. Portal Público Agentes: URL `?secao=agente` → formulário com áreas/rider → enviar → protocolo exibido
+5. Acervo → "+ Adicionar" → modal com tipo/ação/URL → salvar → card aparece na galeria
+6. Voluntários → "+ Novo" → criar → tab Alocações → verificar lista
+7. Parcerias → "+ Nova" → criar → status Proposta → avanço para Negociação
+8. F12 → zero erros vermelhos | BtnGuard.auditar() → "✅ todos protegidos"
+
+**Fase mais urgente agora**: **Fase 9** — Multi-Tenancy e Painel Admin (segundo deployment SaaS-demonstrável).
 
 ---
 
@@ -291,9 +309,9 @@ Um módulo está **completo** quando oferece:
 | 3.4 | RH Avançado e Ponto | ⬜ Aguardando F3 | 🟠 ALTO — CLT sem cálculo de custo; ponto ausente | — | — |
 | 4 | Financeiro e Contratos | ✅ **Concluída** | — | 2026-05-22 | 2026-05-22 |
 | 5 | Ação como Núcleo Real | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
-| 6 | Integração via Eventos + RECE | ⬜ Aguardando F5 | 🟠 ALTO — EventBus emite mas ninguém consome; RECE ausente | — | — |
-| 7 | Portal Externo, Público e CODIP | ✅ Concluída (2026-05-23) | 🟠 ALTO — prestação de contas Secult/CE sem canal | — | — |
-| 8 | Agentes, Acervo, Voluntários, Parcerias | ⬜ Aguardando F7 | 🟡 MÉDIO — memória institucional digital | — | — |
+| 6 | Integração via Eventos + RECE | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
+| 7 | Portal Externo, Público e CODIP | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
+| 8 | Agentes, Acervo, Voluntários, Parcerias | ✅ **Concluída** | — | 2026-05-23 | 2026-05-23 |
 | 9 | Multi-Tenancy e Config Admin | ⬜ Aguardando F8 | 🟡 MÉDIO — segundo deployment viabiliza SaaS | — | — |
 | 10 | Alertas, TaskHub, Reuniões, Auditoria | ⬜ Aguardando F9 | 🟡 MÉDIO — UX operacional e rastreabilidade visual | — | — |
 | 11 | Estratégia e Produto Pronto | ⬜ Aguardando F10 | 🟢 BAIXO — cockpit executivo e KPIs reais | — | — |
@@ -1159,6 +1177,7 @@ Um módulo está **completo** quando oferece:
 | 2026-05-22 | Análise V1→V2 | Análise comparativa completa do sistema legado (GitHub + backup local) vs V2. Identificados: 7 grupos de funcionalidades do legado não migradas (RECE, rollback de auditoria, IA, lote de reservas, aprovação por email, dashboard real, preferências); 3 módulos completamente novos (RECE, Ponto, ExportacaoEngine); gaps funcionais em todas as Fases 5–11. PROGRESS.md atualizado com: Fase 3.4 (RH Avançado), nova Fase 6 com módulo RECE, Fase 7 com CODIP+ExportacaoEngine, modos de visualização por módulo, tabela Estado Geral corrigida (Fase 4 = ✅). | Pendências antes de Fase 5: git commit dos arquivos não commitados de F4 → executar 3 prepararIndice() de F4 no GAS Editor → smoke-test browser F4 |
 | 2026-05-23 | Fase 5 | Ação como Núcleo Real: `AcaoRepository` (acoes.json+ACOES.Acoes), `AcaoEngine` (FSM 6 estados+snapshot+painel integrado), `acoes_controller.gs` (7 controllers CQRS RBAC), `setup.gs` (prepararIndice), `index.html` (view-acoes: Kanban 4 colunas+Lista+modal+painel 6 tabs+GAS.acoes+AcoesUI+CSS aliases). BtnGuard: wrap em nova/salvar/editar; data-bg-skip em kanban/FSM. Deploy @61. | fase5_acoes_prepararIndice() no GAS Editor → smoke-test browser (criar ação, painel, FSM) → Fase 6 |
 | 2026-05-23 | UX/Infraestrutura | Rename Espaços→Infraestrutura (menu/nav/page-title/registry). Patrimônio: campo Tipo (Fixo/Volante) + Quantidade + Localização Atual como select linkado à lista de espaços cadastrados. Métricas fixo/volante no dashboard. Filtro por tipo na lista. Funções globais `mascaraMoeda`/`parseMoeda`/`fmtMoeda`; máscara R$ 0,00 em todos os campos monetários (sol-valor, cf-valor, cd-meta-valor, cd-rubrica-valor, ff-valor, rem-valor, adt-valor-adicional, at-valor). Backend: colunas Tipo+Quantidade em ativos_repository.gs. Deploy @74. | fase1_ativos_prepararIndice() no GAS Editor para adicionar colunas Tipo/Quantidade na Sheet → smoke-test Patrimônio (novo ativo fixo+volante, localização select, valor formatado) → Fase 6 |
+| 2026-05-23 | Fase 8 | **Agentes, Acervo, Voluntários e Parcerias** entregues: `AgenteCulturalRepository/Engine/Controller` (FSM rascunho→ativo↔suspenso→descredenciado, auto-cadastro portal, rider técnico, histórico de vínculos, MASTER.AgentesCulturais). `AcervoRepository/Engine/Controller` (upload Drive por Ação, status LGPD 4 estados, checklist evidências, exportação ZIP, ACOES.Acervo). `VoluntarioRepository/Engine/Controller` (FSM voluntário+alocação, convite email, registro horas, certificado ao concluir, MASTER.Voluntarios). `ParceriaRepository/Engine/Controller` (FSM 5 estados, vínculos com Ações, entregas, avaliação ao encerrar, ACOES.Parcerias). `portal_agente.html` (auto-cadastro público: 12 áreas, rider, disponibilidade, LGPD). 18 novos eventos em events_constants.gs. setup.gs: SCHEMA_ABAS+4 novas abas, fase8_prepararIndice(). index.html: 4 GAS namespaces (38 bindings), seção MEMÓRIA no sidebar, views+modais+UIs AgentesUI/AcervoUI/VoluntariosUI/ParceriasUI. Auditoria CLAUDE.md 100% verde. Deploy @138. | fase8_prepararIndice() no GAS Editor → smoke-test browser (Agentes+portal+Acervo+Voluntários+Parcerias) → Fase 9 |
 | 2026-05-23 | Fase 7 | **Portal Externo + PublicoEngine + ExportacaoEngine** entregues: `ConsentimentoService` (LGPD), `PublicoRepository` (inscrições/presenças/pesquisas/certificados JSON + índice PUBLICO.*), `PublicoEngine` (FSM 6 estados, lista espera automática, NPS, dados CODIP), `publico_controller.gs` (ctrl_publico_* autenticado), `portal_controller.gs` (ctrl_portal_* público, rate limiting), `exportacao_engine.gs` (CODIP 28 campos CSV+JSON, SALIC XML, SNIIC anual, CSV genérico). Portais HTML: TODOs substituídos por google.script.run reais (agenda, inscrição, cessão de pauta, status de pauta). index.html: GAS.publico+GAS.exportacao namespaces, view-publico (4 tabs), PublicoUI completo, rota sidebar 'publico'. Deploy @136. | `fase7_publico_prepararIndice()` no GAS Editor → smoke-test browser (portais + view Público) → Fase 8 |
 | 2026-05-23 | Fix bugs espaços | 3 bugs corrigidos: (1) `numeroPlanta` perdido no `salvarEspaco` — adicionado ao registro backend + form admin + coleta de dados + label fallback em `_renderMapa` e `_renderCustomSpaces`; (2) Espaços "perdidos" no mapa config — `_renderMapa` agora tem try/catch por espaço + validação de coords (isFinite) + renderização de marcador vermelho clicável em posição fallback para coords inválidas; (3) Exclusão de espaços — `excluirEspaco()` adicionado em `config_admin_service.gs` + `ctrl_admin_excluirEspaco` + `GAS.admin.excluirEspaco` binding + botão Excluir na listagem + `reativarEspaco()` bônus. Deploy @122. | Fase 6 — RECE + Eventos |
 | 2026-05-23 | Mapa de Evento | Ferramenta de desenho de mapa de evento dentro do painel da Ação. Múltiplos mapas por ação (um por local de execução). Cada mapa tem camadas (layers) nomeadas, coloridas e configuráveis. **Backend**: `mapa_acao_repository.gs` (mapaAcoes.json), `mapa_acao_engine.gs` (salvar, criarDeEspacos — importa espaços posicionados do mapa CCBJ, excluir, reservarEspacoOriginal — cria Reserva vinculada ao acaoId), `mapa_acao_controller.gs` (ctrl_mapa_acao_listar/obter/salvar/excluir/criar_de_espacos/reservar_espaco + RBAC). **Frontend**: `shared/mapa_acao_editor.html` (MapaAcaoEditorUI: canvas SVG zoom/pan, palette de espaços + 12 categorias de objetos com ícones SVG inline, sidebar de layers toggle/criar/editar/excluir, legenda visual no canvas, painel de propriedades do elemento selecionado, drag-and-drop para mover e resize, modal de reserva do espaço original). `index.html`: aba "Mapa do Evento" no painel da ação (lazy-load ao clicar), MapaAcaoUI (lista de locais/cards, modal novo local, abre editor), GAS.acoes.mapaAcao namespace, include shared/mapa_acao_editor. Deploy @102. `fase1_mapaAcao_prepararIndice()` disponível. | fase1_mapaAcao_prepararIndice() no GAS Editor → smoke-test browser (criar local, adicionar camada, arrastar objeto, salvar, recarregar) → Fase 6 |

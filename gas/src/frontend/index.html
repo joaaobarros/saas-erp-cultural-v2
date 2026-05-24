@@ -4153,6 +4153,417 @@ textarea.input { resize: vertical; }
         </div>
       </div>
 
+      <!-- ═══════════════════════════════════════════════════ -->
+      <!-- VIEW AGENTES CULTURAIS                            -->
+      <!-- ═══════════════════════════════════════════════════ -->
+      <div id="view-agentes" class="view">
+        <div class="view-header">
+          <h2 class="view-titulo"><span class="material-symbols-outlined">record_voice_over</span> Agentes Culturais</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <a href="?secao=agente" target="_blank" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;text-decoration:none;">🔗 Portal Público</a>
+            <button class="btn btn-primary" onclick="BtnGuard.wrap('btn-novo-agente','Abrindo…',AgentesUI.abrirForm)"
+                    id="btn-novo-agente">+ Novo Agente</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="agentes-stats" class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="stat-card"><span class="stat-valor" id="agt-total">–</span><span class="stat-label">Total</span></div>
+          <div class="stat-card" style="border-color:#16a34a;"><span class="stat-valor" id="agt-ativos" style="color:#16a34a;">–</span><span class="stat-label">Ativos</span></div>
+          <div class="stat-card" style="border-color:#f59e0b;"><span class="stat-valor" id="agt-rascunho" style="color:#f59e0b;">–</span><span class="stat-label">Rascunho</span></div>
+          <div class="stat-card" style="border-color:#dc2626;"><span class="stat-valor" id="agt-suspensos" style="color:#dc2626;">–</span><span class="stat-label">Suspensos</span></div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="agt-q" placeholder="Buscar nome ou e-mail…" style="flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;" oninput="AgentesUI.filtrar()">
+          <select id="agt-status" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="AgentesUI.filtrar()">
+            <option value="">Todos os status</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="ativo">Ativo</option>
+            <option value="suspenso">Suspenso</option>
+            <option value="descredenciado">Descredenciado</option>
+          </select>
+          <select id="agt-area" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="AgentesUI.filtrar()">
+            <option value="">Todas as áreas</option>
+            <option value="artes_visuais">Artes Visuais</option>
+            <option value="danca">Dança</option>
+            <option value="teatro">Teatro</option>
+            <option value="musica">Música</option>
+            <option value="circo">Circo</option>
+            <option value="literatura">Literatura</option>
+            <option value="audiovisual">Audiovisual</option>
+            <option value="patrimonio">Patrimônio</option>
+            <option value="artesanato">Artesanato</option>
+          </select>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-wrap">
+          <table class="tabela" id="agt-tabela">
+            <thead><tr>
+              <th>Nome</th><th>Áreas</th><th>E-mail</th><th>Tipo</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="agt-tbody"><tr><td colspan="6" class="muted-text" style="text-align:center;padding:24px;">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Modal Agente -->
+        <div id="modal-agente" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(600px,95vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="font-size:18px;" id="modal-agente-titulo">Agente Cultural</h3>
+              <button onclick="AgentesUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">✕</button>
+            </div>
+            <form id="form-agente" onsubmit="return false;">
+              <input type="hidden" id="agt-id">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tipo</label>
+                  <select id="agt-tipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <option value="pf">Pessoa Física</option>
+                    <option value="pj">Pessoa Jurídica</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">CPF / CNPJ</label>
+                  <input type="text" id="agt-cpf" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="000.000.000-00">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nome *</label>
+                <input type="text" id="agt-nome" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Nome completo">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nome Artístico</label>
+                <input type="text" id="agt-nome-art" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Nome de apresentação">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">E-mail *</label>
+                  <input type="email" id="agt-email" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="email@exemplo.com">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Telefone</label>
+                  <input type="tel" id="agt-tel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="(85) 9 0000-0000">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Áreas Artísticas</label>
+                <input type="text" id="agt-areas" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: danca, teatro, musica (separar por vírgula)">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Linguagens / Especialidades</label>
+                <input type="text" id="agt-ling" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Forró, Hip-hop, Xilogravura…">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Observações</label>
+                <textarea id="agt-obs" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"></textarea>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="AgentesUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-agente"
+                        onclick="BtnGuard.wrap('btn-salvar-agente','Salvando…',AgentesUI.salvar)">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <!-- VIEW ACERVO DIGITAL                               -->
+      <!-- ═══════════════════════════════════════════════════ -->
+      <div id="view-acervo" class="view">
+        <div class="view-header">
+          <h2 class="view-titulo"><span class="material-symbols-outlined">photo_library</span> Acervo Digital</h2>
+          <button class="btn btn-primary" id="btn-novo-arquivo"
+                  onclick="BtnGuard.wrap('btn-novo-arquivo','Abrindo…',AcervoUI.abrirForm)">+ Adicionar Arquivo</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="stat-card"><span class="stat-valor" id="acv-total">–</span><span class="stat-label">Arquivos</span></div>
+          <div class="stat-card" style="border-color:#dc2626;"><span class="stat-valor" id="acv-lgpd-pend" style="color:#dc2626;">–</span><span class="stat-label">Pendentes LGPD</span></div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <select id="acv-tipo" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="AcervoUI.filtrar()">
+            <option value="">Todos os tipos</option>
+            <option value="foto">📷 Foto</option>
+            <option value="video">🎬 Vídeo</option>
+            <option value="release">📝 Release</option>
+            <option value="poster">🖼️ Poster</option>
+            <option value="folder">📄 Folder</option>
+            <option value="ata">📋 Ata</option>
+            <option value="outro">📦 Outro</option>
+          </select>
+          <select id="acv-lgpd" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="AcervoUI.filtrar()">
+            <option value="">Status LGPD</option>
+            <option value="nao_verificado">⚠️ Não verificado</option>
+            <option value="autorizado">✅ Autorizado</option>
+            <option value="restrito">🚫 Restrito</option>
+            <option value="sem_pessoas">👤 Sem pessoas</option>
+          </select>
+          <input type="text" id="acv-q" placeholder="Buscar…" style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;" oninput="AcervoUI.filtrar()">
+        </div>
+
+        <!-- Galeria / Lista -->
+        <div id="acv-galeria" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+          <p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Carregando…</p>
+        </div>
+
+        <!-- Modal Upload -->
+        <div id="modal-acervo" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="font-size:18px;">Adicionar ao Acervo</h3>
+              <button onclick="AcervoUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);">✕</button>
+            </div>
+            <form id="form-acervo" onsubmit="return false;">
+              <input type="hidden" id="acv-id">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tipo *</label>
+                <select id="acv-form-tipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                  <option value="foto">📷 Foto</option>
+                  <option value="video">🎬 Vídeo</option>
+                  <option value="release">📝 Release</option>
+                  <option value="poster">🖼️ Poster</option>
+                  <option value="folder">📄 Folder</option>
+                  <option value="ata">📋 Ata</option>
+                  <option value="outro">📦 Outro</option>
+                </select>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Ação vinculada *</label>
+                <select id="acv-form-acao" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                  <option value="">Selecione uma ação…</option>
+                </select>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">URL do arquivo (Drive)</label>
+                <input type="url" id="acv-form-url" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="https://drive.google.com/…">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Descrição</label>
+                <textarea id="acv-form-desc" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"></textarea>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tags (separar por vírgula)</label>
+                <input type="text" id="acv-form-tags" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="apresentação, 2025, estreia…">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Status LGPD</label>
+                <select id="acv-form-lgpd" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                  <option value="nao_verificado">⚠️ Não verificado</option>
+                  <option value="sem_pessoas">👤 Sem pessoas identificáveis</option>
+                  <option value="autorizado">✅ Uso autorizado</option>
+                  <option value="restrito">🚫 Uso restrito</option>
+                </select>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="AcervoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-acervo"
+                        onclick="BtnGuard.wrap('btn-salvar-acervo','Salvando…',AcervoUI.salvar)">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <!-- VIEW VOLUNTÁRIOS                                   -->
+      <!-- ═══════════════════════════════════════════════════ -->
+      <div id="view-voluntarios" class="view">
+        <div class="view-header">
+          <h2 class="view-titulo"><span class="material-symbols-outlined">volunteer_activism</span> Voluntários</h2>
+          <button class="btn btn-primary" id="btn-novo-vol"
+                  onclick="BtnGuard.wrap('btn-novo-vol','Abrindo…',VoluntariosUI.abrirForm)">+ Novo Voluntário</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="stat-card"><span class="stat-valor" id="vol-total">–</span><span class="stat-label">Cadastrados</span></div>
+          <div class="stat-card" style="border-color:#16a34a;"><span class="stat-valor" id="vol-ativos" style="color:#16a34a;">–</span><span class="stat-label">Ativos</span></div>
+          <div class="stat-card" style="border-color:#7c3aed;"><span class="stat-valor" id="vol-horas" style="color:#7c3aed;">–</span><span class="stat-label">Horas realizadas</span></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn ativa" id="vol-tab-cadastro" onclick="VoluntariosUI.abrirTab('cadastro')" data-bg-skip="1">Cadastro</button>
+          <button class="tab-btn" id="vol-tab-alocacoes" onclick="VoluntariosUI.abrirTab('alocacoes')" data-bg-skip="1">Alocações</button>
+        </div>
+
+        <!-- Tab: Cadastro -->
+        <div id="vol-tab-content-cadastro">
+          <div class="table-wrap">
+            <table class="tabela">
+              <thead><tr><th>Nome</th><th>E-mail</th><th>Competências</th><th>Horas</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="vol-tbody-cadastro"><tr><td colspan="6" class="muted-text" style="text-align:center;padding:24px;">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Alocações -->
+        <div id="vol-tab-content-alocacoes" style="display:none;">
+          <div style="margin-bottom:10px;display:flex;gap:8px;">
+            <select id="vol-aloc-status" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="VoluntariosUI.carregarAlocacoes()">
+              <option value="">Todos</option>
+              <option value="alocado">Alocado</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="presente">Presente</option>
+              <option value="concluido">Concluído</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="tabela">
+              <thead><tr><th>Voluntário</th><th>Ação</th><th>Função</th><th>Horário</th><th>Horas</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="vol-tbody-alocacoes"><tr><td colspan="7" class="muted-text" style="text-align:center;padding:24px;">Carregando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Modal Voluntário -->
+        <div id="modal-voluntario" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="font-size:18px;" id="modal-vol-titulo">Voluntário</h3>
+              <button onclick="VoluntariosUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <form onsubmit="return false;">
+              <input type="hidden" id="vol-id">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nome *</label>
+                <input type="text" id="vol-nome" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">E-mail *</label>
+                  <input type="email" id="vol-email" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Telefone</label>
+                  <input type="tel" id="vol-tel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Competências (separar por vírgula)</label>
+                <input type="text" id="vol-comp" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: marcenaria, audiovisual, produção…">
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="VoluntariosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-vol"
+                        onclick="BtnGuard.wrap('btn-salvar-vol','Salvando…',VoluntariosUI.salvar)">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════ -->
+      <!-- VIEW PARCERIAS                                     -->
+      <!-- ═══════════════════════════════════════════════════ -->
+      <div id="view-parcerias" class="view">
+        <div class="view-header">
+          <h2 class="view-titulo"><span class="material-symbols-outlined">handshake</span> Parcerias</h2>
+          <button class="btn btn-primary" id="btn-nova-parceria"
+                  onclick="BtnGuard.wrap('btn-nova-parceria','Abrindo…',ParceriasUI.abrirForm)">+ Nova Parceria</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="stat-card"><span class="stat-valor" id="par-total">–</span><span class="stat-label">Total</span></div>
+          <div class="stat-card" style="border-color:#16a34a;"><span class="stat-valor" id="par-ativas" style="color:#16a34a;">–</span><span class="stat-label">Ativas</span></div>
+          <div class="stat-card" style="border-color:#2563eb;"><span class="stat-valor" id="par-valor" style="color:#2563eb;">–</span><span class="stat-label">Valor total</span></div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <select id="par-status" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="ParceriasUI.filtrar()">
+            <option value="">Todos</option>
+            <option value="proposta">Proposta</option>
+            <option value="negociacao">Em negociação</option>
+            <option value="ativa">Ativa</option>
+            <option value="encerrada">Encerrada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <select id="par-tipo" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="ParceriasUI.filtrar()">
+            <option value="">Todos os tipos</option>
+            <option value="coproducao">Co-produção</option>
+            <option value="patrocinio">Patrocínio</option>
+            <option value="cessao">Cessão</option>
+            <option value="intercambio">Intercâmbio</option>
+            <option value="apoio">Apoio</option>
+          </select>
+          <input type="text" id="par-q" placeholder="Buscar…" style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;" oninput="ParceriasUI.filtrar()">
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-wrap">
+          <table class="tabela">
+            <thead><tr><th>Parceiro</th><th>Tipo</th><th>Responsável</th><th>Ações vinculadas</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+            <tbody id="par-tbody"><tr><td colspan="7" class="muted-text" style="text-align:center;padding:24px;">Carregando…</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- Modal Parceria -->
+        <div id="modal-parceria" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(560px,95vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <h3 style="font-size:18px;" id="modal-par-titulo">Parceria</h3>
+              <button onclick="ParceriasUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <form onsubmit="return false;">
+              <input type="hidden" id="par-id">
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Nome do Parceiro *</label>
+                <input type="text" id="par-nome" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Organização / Coletivo / Empresa">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tipo</label>
+                  <select id="par-tipo-form" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <option value="apoio">Apoio</option>
+                    <option value="coproducao">Co-produção</option>
+                    <option value="patrocinio">Patrocínio</option>
+                    <option value="cessao">Cessão</option>
+                    <option value="intercambio">Intercâmbio</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">CNPJ / CPF</label>
+                  <input type="text" id="par-cnpj" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="00.000.000/0001-00">
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Responsável</label>
+                  <input type="text" id="par-resp" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Nome do contato">
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">E-mail</label>
+                  <input type="email" id="par-email" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                </div>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Valor total (R$)</label>
+                <input type="number" id="par-valor-form" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Descrição</label>
+                <textarea id="par-desc" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"></textarea>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                <button type="button" class="btn btn-secondary" onclick="ParceriasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-par"
+                        onclick="BtnGuard.wrap('btn-salvar-par','Salvando…',ParceriasUI.salvar)">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /conteudo -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -4432,6 +4843,53 @@ var GAS = {
     salic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_salic(p||{}); },
     sniic:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_sniic(p||{}); },
     inscricoesCSV:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_exportacao_inscricoes_csv(p||{}); }
+  },
+  // ── Fase 8 ───────────────────────────────────────────────────────────────
+  agentes: {
+    listar:      function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_listar(f||{}); },
+    obter:       function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_obter(id); },
+    metricas:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_metricas(); },
+    salvar:      function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_salvar(d); },
+    mudarStatus: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_mudarStatus(d); },
+    salvarRider: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_salvarRider(d); },
+    excluir:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_agentes_excluir(id); }
+  },
+  acervo: {
+    listar:      function(f,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_listar(f||{}); },
+    listarPorAcao:function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_listarPorAcao(id); },
+    checklist:   function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_checklist(id); },
+    metricas:    function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_metricas(); },
+    registrar:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_registrar(d); },
+    atualizar:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_atualizar(d); },
+    statusLGPD:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_statusLGPD(d); },
+    excluir:     function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_excluir(id); },
+    exportarZip: function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acervo_exportarZip(id); }
+  },
+  voluntarios: {
+    listar:           function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_listar(f||{}); },
+    obter:            function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_obter(id); },
+    metricas:         function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_metricas(); },
+    salvar:           function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_salvar(d); },
+    mudarStatus:      function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_mudarStatus(d); },
+    excluir:          function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_excluir(id); },
+    listarAlocacoes:  function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_listarAlocacoes(f||{}); },
+    alocar:           function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_alocar(d); },
+    registrarPresenca:function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_registrarPresenca(d); },
+    concluir:         function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_concluirAlocacao(id); },
+    cancelarAlocacao: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_voluntarios_cancelarAlocacao(d); }
+  },
+  parcerias: {
+    listar:          function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_listar(f||{}); },
+    obter:           function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_obter(id); },
+    metricas:        function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_metricas(); },
+    listarPorAcao:   function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_listarPorAcao(id); },
+    salvar:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_salvar(d); },
+    mudarStatus:     function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_mudarStatus(d); },
+    vincularAcao:    function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_vincularAcao(d); },
+    desvincularAcao: function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_desvincularAcao(d); },
+    salvarEntrega:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_salvarEntrega(d); },
+    avaliar:         function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_avaliar(d); },
+    excluir:         function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_parcerias_excluir(id); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -12173,6 +12631,12 @@ var App = (function() {
     { secao:'SISTEMA' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
+    { secao:'MEMÓRIA' },
+    { id:'agentes',     label:'Agentes',         icone:'record_voice_over',       modulo:'MASTER' },
+    { id:'acervo',      label:'Acervo',          icone:'photo_library',           modulo:'ACOES' },
+    { id:'voluntarios', label:'Voluntários',     icone:'volunteer_activism',      modulo:'MASTER' },
+    { id:'parcerias',   label:'Parcerias',       icone:'handshake',               modulo:'ACOES' },
+    { secao:'SISTEMA' },
     { id:'admin',       label:'Administração',   icone:'admin_panel_settings',    modulo:'ADMIN' },
     { id:'sistema-metricas', label:'Observabilidade', icone:'monitoring', modulo:null, superadmin:true }
   ];
@@ -13336,6 +13800,511 @@ var SistemaMetricasUI = (function() {
     carregarEventBus: carregarEventBus
   };
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AGENTES UI
+// ═══════════════════════════════════════════════════════════════════════════
+var AgentesUI = (function() {
+  var _lista = [], _carregado = false;
+  var _BADGE = { rascunho:'warning', ativo:'success', suspenso:'danger', descredenciado:'secondary' };
+  var _LABEL = { rascunho:'Rascunho', ativo:'Ativo', suspenso:'Suspenso', descredenciado:'Descredenciado' };
+
+  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('agentes','Agentes',aoAbrir); }
+
+  function carregar() {
+    GAS.agentes.metricas(function(r) {
+      if (!r || !r.ok) return;
+      var m = r.data;
+      document.getElementById('agt-total').textContent     = m.total || 0;
+      document.getElementById('agt-ativos').textContent    = (m.porStatus||{}).ativo   || 0;
+      document.getElementById('agt-rascunho').textContent  = (m.porStatus||{}).rascunho || 0;
+      document.getElementById('agt-suspensos').textContent = (m.porStatus||{}).suspenso || 0;
+    });
+    GAS.agentes.listar({}, function(r) {
+      if (!r || !r.ok) return;
+      _lista = r.data || [];
+      _carregado = true;
+      _render(_lista);
+    });
+  }
+
+  function filtrar() {
+    var q  = (document.getElementById('agt-q').value||'').toLowerCase();
+    var st = document.getElementById('agt-status').value;
+    var ar = document.getElementById('agt-area').value;
+    var f = _lista.filter(function(a) {
+      if (st && a.status !== st) return false;
+      if (ar && (a.areasArtisticas||[]).indexOf(ar) === -1) return false;
+      if (q && (a.nome||'').toLowerCase().indexOf(q) === -1 &&
+               (a.email||'').toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    _render(f);
+  }
+
+  function _render(lista) {
+    var tbody = document.getElementById('agt-tbody');
+    if (!lista.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted-text" style="text-align:center;padding:24px;">Nenhum agente encontrado.</td></tr>'; return; }
+    tbody.innerHTML = lista.map(function(a) {
+      var b = _BADGE[a.status] || 'secondary';
+      var areas = (a.areasArtisticas||[]).slice(0,3).join(', ');
+      return '<tr>' +
+        '<td><strong>' + escaparHtml(a.nome) + '</strong>' + (a.nomeArtistico ? '<br><span class="muted-text">' + escaparHtml(a.nomeArtistico) + '</span>' : '') + '</td>' +
+        '<td style="font-size:12px;">' + escaparHtml(areas) + '</td>' +
+        '<td>' + escaparHtml(a.email||'') + '</td>' +
+        '<td>' + (a.tipo === 'pj' ? 'PJ' : 'PF') + '</td>' +
+        '<td><span class="badge badge-' + b + '">' + (_LABEL[a.status]||a.status) + '</span></td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="AgentesUI.abrirForm(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">✏️</button> ' +
+          (a.status === 'rascunho' ? '<button class="btn btn-primary" style="padding:4px 8px;font-size:12px;background:#16a34a;" onclick="AgentesUI.ativar(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">✅ Ativar</button>' : '') +
+          (a.status === 'ativo' ? '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="AgentesUI.suspender(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">⏸</button>' : '') +
+          (a.status === 'suspenso' ? '<button class="btn btn-primary" style="padding:4px 8px;font-size:12px;background:#16a34a;" onclick="AgentesUI.reativar(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">▶ Reativar</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function abrirForm(id) {
+    document.getElementById('modal-agente').style.display = 'flex';
+    document.getElementById('agt-id').value = id || '';
+    document.getElementById('modal-agente-titulo').textContent = id ? 'Editar Agente' : 'Novo Agente';
+    if (id) {
+      GAS.agentes.obter(id, function(r) {
+        if (!r || !r.ok) return;
+        var a = r.data;
+        document.getElementById('agt-tipo').value    = a.tipo || 'pf';
+        document.getElementById('agt-cpf').value     = a.cpfCnpj || '';
+        document.getElementById('agt-nome').value    = a.nome || '';
+        document.getElementById('agt-nome-art').value = a.nomeArtistico || '';
+        document.getElementById('agt-email').value   = a.email || '';
+        document.getElementById('agt-tel').value     = a.telefone || '';
+        document.getElementById('agt-areas').value   = (a.areasArtisticas||[]).join(', ');
+        document.getElementById('agt-ling').value    = (a.linguagens||[]).join(', ');
+        document.getElementById('agt-obs').value     = a.observacoes || '';
+      });
+    } else {
+      ['agt-cpf','agt-nome','agt-nome-art','agt-email','agt-tel','agt-areas','agt-ling','agt-obs']
+        .forEach(function(id){ document.getElementById(id).value = ''; });
+      document.getElementById('agt-tipo').value = 'pf';
+    }
+  }
+
+  function fecharForm() { document.getElementById('modal-agente').style.display = 'none'; }
+
+  function salvar() {
+    var id = document.getElementById('agt-id').value;
+    var dados = {
+      id:             id || undefined,
+      tipo:           document.getElementById('agt-tipo').value,
+      cpfCnpj:        document.getElementById('agt-cpf').value.trim(),
+      nome:           document.getElementById('agt-nome').value.trim(),
+      nomeArtistico:  document.getElementById('agt-nome-art').value.trim(),
+      email:          document.getElementById('agt-email').value.trim(),
+      telefone:       document.getElementById('agt-tel').value.trim(),
+      areasArtisticas:(document.getElementById('agt-areas').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean),
+      linguagens:     (document.getElementById('agt-ling').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean),
+      observacoes:    document.getElementById('agt-obs').value.trim()
+    };
+    if (!dados.nome || !dados.email) { Toast.aviso('Nome e e-mail são obrigatórios.'); BtnGuard.liberar('btn-salvar-agente'); return; }
+    GAS.agentes.salvar(dados, function(r) {
+      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao salvar.'); BtnGuard.liberar('btn-salvar-agente'); return; }
+      fecharForm(); _carregado = false; carregar(); Toast.sucesso('Agente salvo!');
+    });
+  }
+
+  function ativar(id) {
+    GAS.agentes.mudarStatus({ id:id, status:'ativo' }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      _carregado = false; carregar(); Toast.sucesso('Agente ativado!');
+    });
+  }
+
+  function suspender(id) {
+    var _raw = prompt('Motivo da suspensão:');
+    if (_raw === null) return;
+    var motivo = _raw || 'Não informado';
+    GAS.agentes.mudarStatus({ id:id, status:'suspenso', motivo:motivo }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      _carregado = false; carregar(); Toast.sucesso('Agente suspenso.');
+    });
+  }
+
+  function reativar(id) {
+    GAS.agentes.mudarStatus({ id:id, status:'ativo' }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      _carregado = false; carregar(); Toast.sucesso('Agente reativado!');
+    });
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, filtrar:filtrar,
+           abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+           ativar:ativar, suspender:suspender, reativar:reativar };
+})();
+Router.registrar('agentes','Agentes',AgentesUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACERVO UI
+// ═══════════════════════════════════════════════════════════════════════════
+var AcervoUI = (function() {
+  var _lista = [], _carregado = false;
+  var _TIPO_ICONE = { foto:'📷', video:'🎬', release:'📝', poster:'🖼️', folder:'📄', ata:'📋', outro:'📦' };
+  var _LGPD_LABEL = { nao_verificado:'⚠️ Não verificado', autorizado:'✅ Autorizado', restrito:'🚫 Restrito', sem_pessoas:'👤 Sem pessoas' };
+  var _LGPD_COR   = { nao_verificado:'#f59e0b', autorizado:'#16a34a', restrito:'#dc2626', sem_pessoas:'#6b7280' };
+
+  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('acervo','Acervo',aoAbrir); }
+
+  function carregar() {
+    GAS.acervo.listar({}, function(r) {
+      if (!r||!r.ok) return;
+      _lista = r.data || [];
+      _carregado = true;
+      _renderStats();
+      _renderGaleria(_lista);
+    });
+    // Popular select de ações
+    GAS.acoes.listar({}, function(r) {
+      if (!r||!r.ok) return;
+      var sel = document.getElementById('acv-form-acao');
+      sel.innerHTML = '<option value="">Selecione…</option>' +
+        (r.data||[]).map(function(a) { return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome) + '</option>'; }).join('');
+    });
+  }
+
+  function _renderStats() {
+    var total = _lista.length;
+    var lgpdPend = _lista.filter(function(a){ return a.statusLGPD === 'nao_verificado'; }).length;
+    document.getElementById('acv-total').textContent    = total;
+    document.getElementById('acv-lgpd-pend').textContent = lgpdPend;
+  }
+
+  function filtrar() {
+    var tipo = document.getElementById('acv-tipo').value;
+    var lgpd = document.getElementById('acv-lgpd').value;
+    var q    = (document.getElementById('acv-q').value||'').toLowerCase();
+    var f = _lista.filter(function(a) {
+      if (tipo && a.tipo !== tipo) return false;
+      if (lgpd && a.statusLGPD !== lgpd) return false;
+      if (q && (a.descricao||'').toLowerCase().indexOf(q) === -1 && (a.tags||[]).join(' ').toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    _renderGaleria(f);
+  }
+
+  function _renderGaleria(lista) {
+    var el = document.getElementById('acv-galeria');
+    if (!lista.length) { el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Nenhum arquivo no acervo.</p>'; return; }
+    el.innerHTML = lista.map(function(a) {
+      var icone = _TIPO_ICONE[a.tipo] || '📦';
+      var lgpdCor = _LGPD_COR[a.statusLGPD] || '#aaa';
+      var lgpdLabel = _LGPD_LABEL[a.statusLGPD] || a.statusLGPD;
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;">' +
+        '<div style="font-size:28px;text-align:center;">' + icone + '</div>' +
+        '<div style="font-size:13px;font-weight:600;text-align:center;">' + escaparHtml(a.tipo) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-muted);flex:1;">' + escaparHtml((a.descricao||'').slice(0,60)) + '</div>' +
+        '<div style="font-size:11px;font-weight:600;color:' + lgpdCor + ';">' + lgpdLabel + '</div>' +
+        (a.urlDrive ? '<a href="' + escaparHtml(a.urlDrive) + '" target="_blank" style="font-size:11px;color:#2563eb;">🔗 Abrir</a>' : '') +
+        '<div style="display:flex;gap:4px;margin-top:4px;">' +
+          '<button class="btn btn-secondary" style="flex:1;padding:4px;font-size:11px;" onclick="AcervoUI.abrirForm(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">✏️</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function abrirForm(id) {
+    document.getElementById('modal-acervo').style.display = 'flex';
+    document.getElementById('acv-id').value = id || '';
+    if (!id) {
+      document.getElementById('acv-form-tipo').value = 'foto';
+      document.getElementById('acv-form-acao').value = '';
+      document.getElementById('acv-form-url').value  = '';
+      document.getElementById('acv-form-desc').value = '';
+      document.getElementById('acv-form-tags').value = '';
+      document.getElementById('acv-form-lgpd').value = 'nao_verificado';
+    } else {
+      var item = _lista.find(function(a){ return a.id === id; });
+      if (item) {
+        document.getElementById('acv-form-tipo').value = item.tipo || 'outro';
+        document.getElementById('acv-form-acao').value = item.acaoId || '';
+        document.getElementById('acv-form-url').value  = item.urlDrive || '';
+        document.getElementById('acv-form-desc').value = item.descricao || '';
+        document.getElementById('acv-form-tags').value = (item.tags||[]).join(', ');
+        document.getElementById('acv-form-lgpd').value = item.statusLGPD || 'nao_verificado';
+      }
+    }
+  }
+
+  function fecharForm() { document.getElementById('modal-acervo').style.display = 'none'; }
+
+  function salvar() {
+    var id  = document.getElementById('acv-id').value;
+    var acaoSel = document.getElementById('acv-form-acao');
+    var dados = {
+      tipo:      document.getElementById('acv-form-tipo').value,
+      acaoId:    acaoSel.value,
+      acaoNome:  acaoSel.options[acaoSel.selectedIndex] ? acaoSel.options[acaoSel.selectedIndex].text : '',
+      urlDrive:  document.getElementById('acv-form-url').value.trim(),
+      descricao: document.getElementById('acv-form-desc').value.trim(),
+      tags:      (document.getElementById('acv-form-tags').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean),
+      statusLGPD:document.getElementById('acv-form-lgpd').value
+    };
+    if (!dados.acaoId) { Toast.aviso('Selecione uma ação.'); BtnGuard.liberar('btn-salvar-acervo'); return; }
+    var fn = id ? function(cb, err) { GAS.acervo.atualizar(Object.assign({id:id},dados), cb, err); }
+                : function(cb, err) { GAS.acervo.registrar(dados, cb, err); };
+    fn(function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); BtnGuard.liberar('btn-salvar-acervo'); return; }
+      fecharForm(); _carregado = false; carregar(); Toast.sucesso('Arquivo salvo!');
+    });
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, filtrar:filtrar,
+           abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+})();
+Router.registrar('acervo','Acervo',AcervoUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VOLUNTÁRIOS UI
+// ═══════════════════════════════════════════════════════════════════════════
+var VoluntariosUI = (function() {
+  var _lista = [], _alocacoes = [], _carregado = false, _tabAtiva = 'cadastro';
+  var _BADGE_VOL  = { cadastrado:'secondary', ativo:'success', inativo:'warning' };
+  var _BADGE_ALOC = { alocado:'secondary', confirmado:'info', presente:'warning', concluido:'success', cancelado:'danger' };
+
+  function aoAbrir() { if (!_carregado) { carregar(); carregarAlocacoes(); } Router.registrar('voluntarios','Voluntários',aoAbrir); }
+
+  function carregar() {
+    GAS.voluntarios.metricas(function(r) {
+      if (!r||!r.ok) return;
+      document.getElementById('vol-total').textContent  = r.data.total || 0;
+      document.getElementById('vol-ativos').textContent = (r.data.porStatus||{}).ativo || 0;
+      document.getElementById('vol-horas').textContent  = r.data.totalHoras || 0;
+    });
+    GAS.voluntarios.listar({}, function(r) {
+      if (!r||!r.ok) return;
+      _lista = r.data || []; _carregado = true;
+      var tbody = document.getElementById('vol-tbody-cadastro');
+      tbody.innerHTML = !_lista.length
+        ? '<tr><td colspan="6" class="muted-text" style="text-align:center;padding:24px;">Nenhum voluntário.</td></tr>'
+        : _lista.map(function(v) {
+            var b = _BADGE_VOL[v.status] || 'secondary';
+            return '<tr><td><strong>' + escaparHtml(v.nome) + '</strong></td>' +
+              '<td>' + escaparHtml(v.email||'') + '</td>' +
+              '<td style="font-size:12px;">' + (v.competencias||[]).slice(0,3).join(', ') + '</td>' +
+              '<td>' + (v.totalHoras||0) + 'h</td>' +
+              '<td><span class="badge badge-' + b + '">' + v.status + '</span></td>' +
+              '<td><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="VoluntariosUI.abrirForm(' + JSON.stringify(v.id).replace(/"/g,"'") + ')" data-bg-skip="1">✏️</button></td></tr>';
+          }).join('');
+    });
+  }
+
+  function carregarAlocacoes() {
+    var st = document.getElementById('vol-aloc-status') ? document.getElementById('vol-aloc-status').value : '';
+    GAS.voluntarios.listarAlocacoes(st ? { status: st } : {}, function(r) {
+      if (!r||!r.ok) return;
+      _alocacoes = r.data || [];
+      var tbody = document.getElementById('vol-tbody-alocacoes');
+      tbody.innerHTML = !_alocacoes.length
+        ? '<tr><td colspan="7" class="muted-text" style="text-align:center;padding:24px;">Nenhuma alocação.</td></tr>'
+        : _alocacoes.map(function(a) {
+            var b = _BADGE_ALOC[a.status] || 'secondary';
+            return '<tr><td>' + escaparHtml(a.voluntarioNome||'') + '</td>' +
+              '<td>' + escaparHtml(a.acaoNome||'') + '</td>' +
+              '<td>' + escaparHtml(a.funcao||'') + '</td>' +
+              '<td>' + escaparHtml(a.horario||'') + '</td>' +
+              '<td>' + (a.horasRealizadas||0) + 'h</td>' +
+              '<td><span class="badge badge-' + b + '">' + a.status + '</span></td>' +
+              '<td>' +
+                (a.status==='alocado' ? '<button class="btn btn-primary" style="padding:3px 8px;font-size:11px;background:#16a34a;" onclick="VoluntariosUI.registrarPresenca(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">✓ Presença</button> ' : '') +
+                (a.status==='presente' ? '<button class="btn btn-primary" style="padding:3px 8px;font-size:11px;" onclick="VoluntariosUI.concluir(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">⭐ Concluir</button> ' : '') +
+              '</td></tr>';
+          }).join('');
+    });
+  }
+
+  function abrirTab(aba) {
+    _tabAtiva = aba;
+    ['cadastro','alocacoes'].forEach(function(t) {
+      document.getElementById('vol-tab-' + t).classList.toggle('ativa', t === aba);
+      document.getElementById('vol-tab-content-' + t).style.display = t === aba ? '' : 'none';
+    });
+    if (aba === 'alocacoes') carregarAlocacoes();
+  }
+
+  function abrirForm(id) {
+    document.getElementById('modal-voluntario').style.display = 'flex';
+    document.getElementById('vol-id').value = id || '';
+    document.getElementById('modal-vol-titulo').textContent = id ? 'Editar Voluntário' : 'Novo Voluntário';
+    if (id) {
+      var v = _lista.find(function(x){ return x.id === id; });
+      if (v) {
+        document.getElementById('vol-nome').value  = v.nome || '';
+        document.getElementById('vol-email').value = v.email || '';
+        document.getElementById('vol-tel').value   = v.telefone || '';
+        document.getElementById('vol-comp').value  = (v.competencias||[]).join(', ');
+      }
+    } else {
+      ['vol-nome','vol-email','vol-tel','vol-comp'].forEach(function(id){ document.getElementById(id).value=''; });
+    }
+  }
+  function fecharForm() { document.getElementById('modal-voluntario').style.display = 'none'; }
+
+  function salvar() {
+    var dados = {
+      id:          document.getElementById('vol-id').value || undefined,
+      nome:        document.getElementById('vol-nome').value.trim(),
+      email:       document.getElementById('vol-email').value.trim(),
+      telefone:    document.getElementById('vol-tel').value.trim(),
+      competencias:(document.getElementById('vol-comp').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean)
+    };
+    if (!dados.nome || !dados.email) { Toast.aviso('Nome e e-mail obrigatórios.'); BtnGuard.liberar('btn-salvar-vol'); return; }
+    GAS.voluntarios.salvar(dados, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); BtnGuard.liberar('btn-salvar-vol'); return; }
+      fecharForm(); _carregado = false; carregar(); Toast.sucesso('Voluntário salvo!');
+    });
+  }
+
+  function registrarPresenca(alocacaoId) {
+    var _raw = prompt('Horas realizadas:');
+    if (_raw === null) return;
+    var horas = parseFloat(_raw) || 0;
+    GAS.voluntarios.registrarPresenca({ alocacaoId: alocacaoId, horas: horas }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      carregarAlocacoes(); Toast.sucesso('Presença registrada!');
+    });
+  }
+
+  function concluir(alocacaoId) {
+    GAS.voluntarios.concluir(alocacaoId, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      carregarAlocacoes(); carregar(); Toast.sucesso('Alocação concluída! Certificado enviado.');
+    });
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, carregarAlocacoes:carregarAlocacoes,
+           abrirTab:abrirTab, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+           registrarPresenca:registrarPresenca, concluir:concluir };
+})();
+Router.registrar('voluntarios','Voluntários',VoluntariosUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARCERIAS UI
+// ═══════════════════════════════════════════════════════════════════════════
+var ParceriasUI = (function() {
+  var _lista = [], _carregado = false;
+  var _BADGE = { proposta:'secondary', negociacao:'info', ativa:'success', encerrada:'warning', cancelada:'danger' };
+  var _LABEL = { proposta:'Proposta', negociacao:'Em negociação', ativa:'Ativa', encerrada:'Encerrada', cancelada:'Cancelada' };
+  var _TIPO_LABEL = { coproducao:'Co-produção', patrocinio:'Patrocínio', cessao:'Cessão', intercambio:'Intercâmbio', apoio:'Apoio' };
+
+  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('parcerias','Parcerias',aoAbrir); }
+
+  function carregar() {
+    GAS.parcerias.metricas(function(r) {
+      if (!r||!r.ok) return;
+      var m = r.data;
+      document.getElementById('par-total').textContent  = m.total || 0;
+      document.getElementById('par-ativas').textContent = (m.porStatus||{}).ativa || 0;
+      document.getElementById('par-valor').textContent  = 'R$ ' + (m.totalValor||0).toLocaleString('pt-BR',{minimumFractionDigits:2});
+    });
+    GAS.parcerias.listar({}, function(r) {
+      if (!r||!r.ok) return;
+      _lista = r.data || []; _carregado = true; _render(_lista);
+    });
+  }
+
+  function filtrar() {
+    var st = document.getElementById('par-status').value;
+    var tp = document.getElementById('par-tipo').value;
+    var q  = (document.getElementById('par-q').value||'').toLowerCase();
+    var f  = _lista.filter(function(p) {
+      if (st && p.status !== st) return false;
+      if (tp && p.tipo !== tp) return false;
+      if (q && (p.nome||'').toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    _render(f);
+  }
+
+  function _render(lista) {
+    var tbody = document.getElementById('par-tbody');
+    if (!lista.length) { tbody.innerHTML = '<tr><td colspan="7" class="muted-text" style="text-align:center;padding:24px;">Nenhuma parceria.</td></tr>'; return; }
+    tbody.innerHTML = lista.map(function(p) {
+      var b = _BADGE[p.status] || 'secondary';
+      var acoes = (p.acoesVinculadas||[]).length;
+      var valor = p.valorTotal ? 'R$ ' + p.valorTotal.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '–';
+      return '<tr>' +
+        '<td><strong>' + escaparHtml(p.nome) + '</strong></td>' +
+        '<td>' + (_TIPO_LABEL[p.tipo]||p.tipo||'–') + '</td>' +
+        '<td>' + escaparHtml(p.responsavel||'') + '</td>' +
+        '<td style="text-align:center;">' + acoes + '</td>' +
+        '<td>' + valor + '</td>' +
+        '<td><span class="badge badge-' + b + '">' + (_LABEL[p.status]||p.status) + '</span></td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="ParceriasUI.abrirForm(' + JSON.stringify(p.id).replace(/"/g,"'") + ')" data-bg-skip="1">✏️</button> ' +
+          (p.status === 'proposta' ? '<button class="btn btn-primary" style="padding:4px 8px;font-size:12px;" onclick="ParceriasUI.avancar(' + JSON.stringify(p.id).replace(/"/g,"'") + ')" data-bg-skip="1">▶ Negociação</button> ' : '') +
+          (p.status === 'negociacao' ? '<button class="btn btn-primary" style="padding:4px 8px;font-size:12px;background:#16a34a;" onclick="ParceriasUI.ativar(' + JSON.stringify(p.id).replace(/"/g,"'") + ')" data-bg-skip="1">✅ Ativar</button> ' : '') +
+          (p.status === 'ativa' ? '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="ParceriasUI.encerrar(' + JSON.stringify(p.id).replace(/"/g,"'") + ')" data-bg-skip="1">⬛ Encerrar</button> ' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function abrirForm(id) {
+    document.getElementById('modal-parceria').style.display = 'flex';
+    document.getElementById('par-id').value = id || '';
+    document.getElementById('modal-par-titulo').textContent = id ? 'Editar Parceria' : 'Nova Parceria';
+    if (id) {
+      var p = _lista.find(function(x){ return x.id === id; });
+      if (p) {
+        document.getElementById('par-nome').value      = p.nome || '';
+        document.getElementById('par-tipo-form').value = p.tipo || 'apoio';
+        document.getElementById('par-cnpj').value      = p.cnpj || '';
+        document.getElementById('par-resp').value      = p.responsavel || '';
+        document.getElementById('par-email').value     = p.email || '';
+        document.getElementById('par-valor-form').value = p.valorTotal || '';
+        document.getElementById('par-desc').value      = p.descricao || '';
+      }
+    } else {
+      ['par-nome','par-cnpj','par-resp','par-email','par-valor-form','par-desc']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('par-tipo-form').value = 'apoio';
+    }
+  }
+  function fecharForm() { document.getElementById('modal-parceria').style.display = 'none'; }
+
+  function salvar() {
+    var dados = {
+      id:          document.getElementById('par-id').value || undefined,
+      nome:        document.getElementById('par-nome').value.trim(),
+      tipo:        document.getElementById('par-tipo-form').value,
+      cnpj:        document.getElementById('par-cnpj').value.trim(),
+      responsavel: document.getElementById('par-resp').value.trim(),
+      email:       document.getElementById('par-email').value.trim(),
+      valorTotal:  parseFloat(document.getElementById('par-valor-form').value) || 0,
+      descricao:   document.getElementById('par-desc').value.trim()
+    };
+    if (!dados.nome) { Toast.aviso('Nome do parceiro é obrigatório.'); BtnGuard.liberar('btn-salvar-par'); return; }
+    GAS.parcerias.salvar(dados, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); BtnGuard.liberar('btn-salvar-par'); return; }
+      fecharForm(); _carregado = false; carregar(); Toast.sucesso('Parceria salva!');
+    });
+  }
+
+  function _mudar(id, status, msg) {
+    var _raw = prompt(msg || 'Confirmar ' + status + '?');
+    if (_raw === null) return;
+    GAS.parcerias.mudarStatus({ id:id, status:status, motivo:_raw||'' }, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
+    });
+  }
+  function avancar(id)  { _mudar(id, 'negociacao', 'Motivo / observação (opcional):'); }
+  function ativar(id)   { _mudar(id, 'ativa', 'Confirmar ativação da parceria:'); }
+  function encerrar(id) { _mudar(id, 'encerrada', 'Motivo do encerramento:'); }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, filtrar:filtrar,
+           abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+           avancar:avancar, ativar:ativar, encerrar:encerrar };
+})();
+Router.registrar('parcerias','Parcerias',ParceriasUI.aoAbrir);
 
 // Boot
 document.addEventListener('DOMContentLoaded', function() {

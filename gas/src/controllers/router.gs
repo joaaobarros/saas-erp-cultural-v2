@@ -42,6 +42,9 @@ function doGet(e) {
       case 'agenda':
         return _renderPortalPublico('agenda', e);
 
+      case 'agente':
+        return _renderPortalPublico('agente', e);
+
       case 'health':
         return _renderHealth();
 

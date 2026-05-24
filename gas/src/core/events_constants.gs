@@ -214,6 +214,43 @@ var SystemEventTypes = Object.freeze({
   // ────────────────────────────────────────────
   CATALOGO_ITEM_CRIADO:        'CATALOGO_ITEM_CRIADO',
   CATALOGO_ITEM_ATUALIZADO:    'CATALOGO_ITEM_ATUALIZADO',
-  CATALOGO_ITEM_DESATIVADO:    'CATALOGO_ITEM_DESATIVADO'
+  CATALOGO_ITEM_DESATIVADO:    'CATALOGO_ITEM_DESATIVADO',
+
+  // ────────────────────────────────────────────
+  // AGENTES CULTURAIS (FASE 8)
+  // ────────────────────────────────────────────
+  AGENT_CREATED:               'AGENT_CREATED',
+  AGENT_UPDATED:               'AGENT_UPDATED',
+  AGENT_STATUS_CHANGED:        'AGENT_STATUS_CHANGED',
+  AGENT_ACTIVATED:             'AGENT_ACTIVATED',
+  AGENT_SUSPENDED:             'AGENT_SUSPENDED',
+  AGENT_DECREDENTIALED:        'AGENT_DECREDENTIALED',
+
+  // ────────────────────────────────────────────
+  // ACERVO DIGITAL (FASE 8)
+  // ────────────────────────────────────────────
+  ACERVO_ARQUIVO_ADICIONADO:   'ACERVO_ARQUIVO_ADICIONADO',
+  ACERVO_ARQUIVO_ATUALIZADO:   'ACERVO_ARQUIVO_ATUALIZADO',
+  ACERVO_ARQUIVO_EXCLUIDO:     'ACERVO_ARQUIVO_EXCLUIDO',
+  ACERVO_LGPD_VERIFICADO:      'ACERVO_LGPD_VERIFICADO',
+
+  // ────────────────────────────────────────────
+  // VOLUNTÁRIOS (FASE 8)
+  // ────────────────────────────────────────────
+  VOLUNTEER_CREATED:           'VOLUNTEER_CREATED',
+  VOLUNTEER_STATUS_CHANGED:    'VOLUNTEER_STATUS_CHANGED',
+  VOLUNTEER_ALLOCATED:         'VOLUNTEER_ALLOCATED',
+  VOLUNTEER_CONFIRMED:         'VOLUNTEER_CONFIRMED',
+  VOLUNTEER_COMPLETED:         'VOLUNTEER_COMPLETED',
+  VOLUNTEER_CANCELLED:         'VOLUNTEER_CANCELLED',
+
+  // ────────────────────────────────────────────
+  // PARCERIAS (FASE 8)
+  // ────────────────────────────────────────────
+  PARTNERSHIP_CREATED:         'PARTNERSHIP_CREATED',
+  PARTNERSHIP_UPDATED:         'PARTNERSHIP_UPDATED',
+  PARTNERSHIP_STATUS_CHANGED:  'PARTNERSHIP_STATUS_CHANGED',
+  PARTNERSHIP_ACTION_LINKED:   'PARTNERSHIP_ACTION_LINKED',
+  PARTNERSHIP_CLOSED:          'PARTNERSHIP_CLOSED'
 
 });

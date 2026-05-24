@@ -30,10 +30,12 @@ var PROP_SHEETS = {
 var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
-    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'Contratados'
+    'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'Contratados',
+    'AgentesCulturais', 'Voluntarios'
   ],
   ACOES: [
-    'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas'
+    'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
+    'Acervo', 'Parcerias'
   ],
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
@@ -149,6 +151,30 @@ function inicializarSistema() {
   if (typeof ConsentimentoService !== 'undefined' &&
       typeof ConsentimentoService.prepararIndice === 'function') {
     ConsentimentoService.prepararIndice();
+  }
+
+  // Fase 8 — Agentes Culturais
+  if (typeof AgenteCulturalRepository !== 'undefined' &&
+      typeof AgenteCulturalRepository.prepararIndice === 'function') {
+    AgenteCulturalRepository.prepararIndice();
+  }
+
+  // Fase 8 — Acervo Digital
+  if (typeof AcervoRepository !== 'undefined' &&
+      typeof AcervoRepository.prepararIndice === 'function') {
+    AcervoRepository.prepararIndice();
+  }
+
+  // Fase 8 — Voluntários
+  if (typeof VoluntarioRepository !== 'undefined' &&
+      typeof VoluntarioRepository.prepararIndice === 'function') {
+    VoluntarioRepository.prepararIndice();
+  }
+
+  // Fase 8 — Parcerias
+  if (typeof ParceriaRepository !== 'undefined' &&
+      typeof ParceriaRepository.prepararIndice === 'function') {
+    ParceriaRepository.prepararIndice();
   }
 
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
@@ -437,4 +463,20 @@ function fase7_publico_prepararIndice() {
   ConsentimentoService.prepararIndice();
   Logger.info('setup', 'fase7_publico_prepararIndice', 'Índices PUBLICO e Consentimentos prontos.');
   return { ok: true, orgId: org.orgId };
+}
+
+/**
+ * Fase 8 — Agentes, Acervo, Voluntários, Parcerias:
+ *   MASTER.AgentesCulturais, MASTER.Voluntarios,
+ *   ACOES.Acervo, ACOES.Parcerias
+ * Executar uma vez após deploy da Fase 8.
+ */
+function fase8_prepararIndice() {
+  AgenteCulturalRepository.prepararIndice();
+  AcervoRepository.prepararIndice();
+  VoluntarioRepository.prepararIndice();
+  ParceriaRepository.prepararIndice();
+  Logger.info('setup', 'fase8_prepararIndice',
+    'Índices F8 prontos: AgentesCulturais, Acervo, Voluntarios, Parcerias.');
+  return { ok: true };
 }
