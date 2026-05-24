@@ -1516,6 +1516,84 @@ textarea.input { resize: vertical; }
 .ind-mes-input { width:48px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--surface); }
 .ind-mes-input:focus { outline:2px solid var(--color-primary);border-color:var(--color-primary); }
 
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ALIASES DE COMPATIBILIDADE — Unidade Visual F9+
+   Classes usadas por módulos mais recentes que devem
+   mapear para o Design System sem quebrar nada.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* .mod-header — cabeçalho padrão de view (Fase 11+) */
+.mod-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+}
+.mod-header h2 {
+  font-size: 1.25rem; font-weight: 700; color: var(--text);
+  margin: 0 0 4px; line-height: 1.2;
+}
+.mod-header p { font-size: 13px; color: var(--text2); margin: 0; }
+
+/* .form-control — alias de .form-input (Fase 10+) */
+.form-control {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  font-size: 14px; font-family: inherit; color: var(--text);
+  background: var(--surface); outline: none;
+  transition: border-color var(--fast), box-shadow var(--fast);
+}
+.form-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb),.12);
+}
+.form-control::placeholder { color: var(--muted); }
+textarea.form-control { resize: vertical; }
+select.form-control { cursor: pointer; }
+
+/* .tab-btn.tab-ativa — alias de .tab-btn.ativa (Fase 11+) */
+.tab-btn.tab-ativa {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* .toolbar — barra de filtros flex horizontal */
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin-bottom: 16px;
+}
+
+/* .lista-container — wrapper de cards em lista */
+.lista-container { display: flex; flex-direction: column; gap: 8px; }
+
+/* .item-card — card de lista genérico (Fase 11+) */
+.item-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 8px;
+  transition: box-shadow var(--fast);
+}
+.item-card:hover { box-shadow: var(--sh-md); }
+
+/* .view-title / .view-subtitle — aliases inglês de page-header */
+.view-title   { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
+.view-subtitle { font-size: 14px; color: var(--text2); margin-top: 4px; }
+
+/* .stat-value — alias inglês de .stat-valor (Fase 9+) */
+.stat-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+
+/* Tokens semânticos curtos — usados em JS dinâmico via var(--X-color) */
+:root {
+  --success-color:   var(--color-success);
+  --danger-color:    var(--color-error);
+  --error-color:     var(--color-error);
+  --primary-color:   var(--color-primary);
+  --warning-color:   var(--color-warning);
+  --info-color:      var(--color-info);
+  --secondary-color: var(--muted);
+  --muted-color:     var(--muted);
+}
+
   </style>
 </head>
 <body>
@@ -4540,11 +4618,11 @@ textarea.input { resize: vertical; }
         <div style="margin-top:24px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <h3 style="margin:0;font-size:16px;font-weight:600;">
-              <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:4px;">hub</span>
+              <span class="ms" style="font-size:18px;vertical-align:middle;margin-right:4px;">hub</span>
               Fila de Eventos (EventBus)
             </h3>
             <button class="btn-sm sm-periodo-btn" onclick="SistemaMetricasUI.carregarEventBus()" data-bg-skip="1">
-              <span class="material-symbols-outlined" style="font-size:14px">refresh</span> Atualizar fila
+              <span class="ms" style="font-size:14px">refresh</span> Atualizar fila
             </button>
           </div>
 
@@ -4581,7 +4659,7 @@ textarea.input { resize: vertical; }
             <p class="view-subtitle">Organizações provisionadas neste deployment SaaS</p>
           </div>
           <button class="btn btn-primary" onclick="BtnGuard.wrap(this,'Atualizando…',function(){PainelOrgsUI.carregar();})">
-            <span class="material-symbols-outlined">refresh</span> Atualizar
+            <span class="ms">refresh</span> Atualizar
           </button>
         </div>
 
@@ -4611,7 +4689,7 @@ textarea.input { resize: vertical; }
           </div>
           <button id="rece-novo-btn" class="btn btn-primary"
             onclick="BtnGuard.wrap('rece-novo-btn','Criando…',function(){ ReceUI.abrirForm(null); })">
-            <span class="material-symbols-outlined">add</span> Novo Registro RECE
+            <span class="ms">add</span> Novo Registro RECE
           </button>
         </div>
 
@@ -4637,7 +4715,7 @@ textarea.input { resize: vertical; }
           </select>
           <input type="month" id="rece-filtro-mes" class="select-sm" onchange="ReceUI._filtrar()" title="Filtrar por mês">
           <button class="btn btn-secondary btn-sm" onclick="ReceUI.carregar()" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:16px">refresh</span>
+            <span class="ms" style="font-size:16px">refresh</span>
           </button>
         </div>
 
@@ -4800,7 +4878,7 @@ textarea.input { resize: vertical; }
           </div>
           <button id="btn-nova-reuniao" class="btn btn-primary"
             onclick="BtnGuard.wrap('btn-nova-reuniao','Abrindo…',function(){ ReunioesUI.abrirForm(null); })">
-            <span class="material-symbols-outlined">add</span> Nova Reunião
+            <span class="ms">add</span> Nova Reunião
           </button>
         </div>
         <div id="reunioes-stats" class="stats-strip">
@@ -4828,7 +4906,7 @@ textarea.input { resize: vertical; }
               <option value="cancelada">Cancelada</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="ReunioesUI.carregar()" data-bg-skip="1">
-              <span class="material-symbols-outlined" style="font-size:16px">refresh</span>
+              <span class="ms" style="font-size:16px">refresh</span>
             </button>
           </div>
           <div id="run-lista" class="lista-container"><p class="muted-text">Carregando reuniões…</p></div>
@@ -4947,19 +5025,19 @@ textarea.input { resize: vertical; }
             <p class="view-subtitle">Todas as suas pendências em um só lugar, priorizadas por urgência</p>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="TaskHubUI.carregar()" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:16px">refresh</span> Atualizar
+            <span class="ms" style="font-size:16px">refresh</span> Atualizar
           </button>
         </div>
         <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:16px;">
           <button class="tab-btn ativa" onclick="TaskHubUI.setTab('meuDia',this)" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">today</span> Meu Dia
+            <span class="ms" style="font-size:15px;vertical-align:-3px">today</span> Meu Dia
           </button>
           <button class="tab-btn" onclick="TaskHubUI.setTab('meuTime',this)" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">group</span> Meu Time
+            <span class="ms" style="font-size:15px;vertical-align:-3px">group</span> Meu Time
           </button>
           <button class="tab-btn" onclick="TaskHubUI.setTab('produtividade',this)" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">insights</span> Produtividade
+            <span class="ms" style="font-size:15px;vertical-align:-3px">insights</span> Produtividade
           </button>
         </div>
         <div id="th-tab-meuDia">
@@ -4992,7 +5070,7 @@ textarea.input { resize: vertical; }
           </div>
           <button id="btn-nova-demanda" class="btn btn-primary"
             onclick="BtnGuard.wrap('btn-nova-demanda','Abrindo…',function(){ BalcaoUI.abrirForm(null); })">
-            <span class="material-symbols-outlined">add</span> Nova Demanda
+            <span class="ms">add</span> Nova Demanda
           </button>
         </div>
         <div id="balcao-stats" class="stats-strip">
@@ -5027,7 +5105,7 @@ textarea.input { resize: vertical; }
             <option value="outro">Outro</option>
           </select>
           <button class="btn btn-secondary btn-sm" onclick="BalcaoUI.carregar()" data-bg-skip="1">
-            <span class="material-symbols-outlined" style="font-size:16px">refresh</span>
+            <span class="ms" style="font-size:16px">refresh</span>
           </button>
         </div>
         <div id="balcao-lista" class="lista-container"><p class="muted-text">Carregando demandas…</p></div>
@@ -5126,10 +5204,10 @@ textarea.input { resize: vertical; }
               id="btn-audit-suspeitos"
               onclick="BtnGuard.wrap('btn-audit-suspeitos','Analisando…',AuditoriaVisualUI.detectarSuspeitos)"
               title="Detectar comportamento suspeito">
-              <span class="material-symbols-outlined" style="font-size:16px">security</span> Analisar
+              <span class="ms" style="font-size:16px">security</span> Analisar
             </button>
             <button class="btn btn-secondary btn-sm" onclick="AuditoriaVisualUI.carregar()" data-bg-skip="1">
-              <span class="material-symbols-outlined" style="font-size:16px">refresh</span>
+              <span class="ms" style="font-size:16px">refresh</span>
             </button>
           </div>
         </div>
@@ -5151,7 +5229,7 @@ textarea.input { resize: vertical; }
       <!-- ═══════════════════════════════════════════════════ -->
       <div id="view-agentes" class="view">
         <div class="view-header">
-          <h2 class="view-titulo"><span class="material-symbols-outlined">record_voice_over</span> Agentes Culturais</h2>
+          <h2 class="view-titulo"><span class="ms">record_voice_over</span> Agentes Culturais</h2>
           <div style="display:flex;gap:8px;align-items:center;">
             <a href="?secao=agente" target="_blank" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;text-decoration:none;">🔗 Portal Público</a>
             <button class="btn btn-primary" onclick="BtnGuard.wrap('btn-novo-agente','Abrindo…',AgentesUI.abrirForm)"
@@ -5268,7 +5346,7 @@ textarea.input { resize: vertical; }
       <!-- ═══════════════════════════════════════════════════ -->
       <div id="view-acervo" class="view">
         <div class="view-header">
-          <h2 class="view-titulo"><span class="material-symbols-outlined">photo_library</span> Acervo Digital</h2>
+          <h2 class="view-titulo"><span class="ms">photo_library</span> Acervo Digital</h2>
           <button class="btn btn-primary" id="btn-novo-arquivo"
                   onclick="BtnGuard.wrap('btn-novo-arquivo','Abrindo…',AcervoUI.abrirForm)">+ Adicionar Arquivo</button>
         </div>
@@ -5369,7 +5447,7 @@ textarea.input { resize: vertical; }
       <!-- ═══════════════════════════════════════════════════ -->
       <div id="view-voluntarios" class="view">
         <div class="view-header">
-          <h2 class="view-titulo"><span class="material-symbols-outlined">volunteer_activism</span> Voluntários</h2>
+          <h2 class="view-titulo"><span class="ms">volunteer_activism</span> Voluntários</h2>
           <button class="btn btn-primary" id="btn-novo-vol"
                   onclick="BtnGuard.wrap('btn-novo-vol','Abrindo…',VoluntariosUI.abrirForm)">+ Novo Voluntário</button>
         </div>
@@ -5459,7 +5537,7 @@ textarea.input { resize: vertical; }
       <!-- ═══════════════════════════════════════════════════ -->
       <div id="view-parcerias" class="view">
         <div class="view-header">
-          <h2 class="view-titulo"><span class="material-symbols-outlined">handshake</span> Parcerias</h2>
+          <h2 class="view-titulo"><span class="ms">handshake</span> Parcerias</h2>
           <button class="btn btn-primary" id="btn-nova-parceria"
                   onclick="BtnGuard.wrap('btn-nova-parceria','Abrindo…',ParceriasUI.abrirForm)">+ Nova Parceria</button>
         </div>
@@ -5562,9 +5640,9 @@ textarea.input { resize: vertical; }
       <!-- ═══════════════════════════════════════════════ -->
       <div id="view-estrategia" class="view">
         <div class="view-header">
-          <h2 class="view-titulo"><span class="material-symbols-outlined">flag</span> Estratégia</h2>
-          <button class="btn btn-primary" id="btn-novo-objetivo"
-                  onclick="BtnGuard.wrap('btn-novo-objetivo','Abrindo…',EstrategiaUI.abrirForm)">+ Novo Objetivo</button>
+          <h2 class="view-titulo"><span class="ms">flag</span> Estratégia</h2>
+          <button class="btn btn-primario" id="btn-novo-objetivo"
+                  onclick="BtnGuard.wrap('btn-novo-objetivo','Abrindo…',EstrategiaUI.abrirForm)"><span class="ms ms-sm">add</span> Novo Objetivo</button>
         </div>
 
         <!-- Tabs -->
@@ -5586,14 +5664,14 @@ textarea.input { resize: vertical; }
         <!-- Tab: Objetivos -->
         <div id="est-tab-objetivos">
           <!-- Filtros -->
-          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-            <select id="est-fil-horizonte" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="EstrategiaUI.filtrar()">
+          <div class="filter-bar" style="margin-bottom:14px;">
+            <select id="est-fil-horizonte" class="select-sm" onchange="EstrategiaUI.filtrar()">
               <option value="">Todos os horizontes</option>
               <option value="curto_prazo">Curto prazo (1 ano)</option>
               <option value="medio_prazo">Médio prazo (3 anos)</option>
               <option value="longo_prazo">Longo prazo (5 anos)</option>
             </select>
-            <select id="est-fil-status" style="padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="EstrategiaUI.filtrar()">
+            <select id="est-fil-status" class="select-sm" onchange="EstrategiaUI.filtrar()">
               <option value="">Todos os status</option>
               <option value="rascunho">Rascunho</option>
               <option value="ativo">Ativo</option>
@@ -5602,7 +5680,7 @@ textarea.input { resize: vertical; }
               <option value="cancelado">Cancelado</option>
             </select>
             <input type="text" id="est-busca" placeholder="Buscar objetivo…"
-                   style="flex:1;min-width:140px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;"
+                   class="input-busca" style="flex:1;"
                    oninput="EstrategiaUI.filtrar()">
           </div>
           <div id="est-lista" class="muted-text" style="padding:24px;text-align:center;">Carregando…</div>
@@ -5624,75 +5702,76 @@ textarea.input { resize: vertical; }
         </div>
 
         <!-- Modal Objetivo -->
-        <div id="modal-objetivo" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-          <div style="background:var(--surface);border-radius:12px;width:min(620px,96vw);max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-              <h3 style="font-size:18px;" id="modal-obj-titulo">Objetivo Estratégico</h3>
-              <button onclick="EstrategiaUI.fecharForm()" style="background:none;border:none;font-size:22px;cursor:pointer;" data-bg-skip="1">✕</button>
+        <div id="modal-objetivo" class="modal-overlay" style="display:none;">
+          <div class="modal-box" style="max-width:620px;">
+            <div class="modal-header">
+              <h3 id="modal-obj-titulo">Objetivo Estratégico</h3>
+              <button class="modal-close" onclick="EstrategiaUI.fecharForm()" data-bg-skip="1">✕</button>
             </div>
-            <form onsubmit="return false;">
-              <input type="hidden" id="obj-id">
-              <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Título *</label>
-                <input type="text" id="obj-titulo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: Ampliar acesso à cultura no território">
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                <div>
-                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Horizonte</label>
-                  <select id="obj-horizonte" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-                    <option value="curto_prazo">Curto prazo (1 ano)</option>
-                    <option value="medio_prazo">Médio prazo (3 anos)</option>
-                    <option value="longo_prazo">Longo prazo (5 anos)</option>
-                  </select>
+            <div class="modal-body">
+              <form onsubmit="return false;">
+                <input type="hidden" id="obj-id">
+                <div class="form-group">
+                  <label class="form-label">Título *</label>
+                  <input type="text" id="obj-titulo" class="form-control" placeholder="Ex: Ampliar acesso à cultura no território">
                 </div>
-                <div>
-                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Responsável</label>
-                  <input type="email" id="obj-responsavel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="email@org.br">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Horizonte</label>
+                    <select id="obj-horizonte" class="form-control">
+                      <option value="curto_prazo">Curto prazo (1 ano)</option>
+                      <option value="medio_prazo">Médio prazo (3 anos)</option>
+                      <option value="longo_prazo">Longo prazo (5 anos)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Responsável</label>
+                    <input type="email" id="obj-responsavel" class="form-control" placeholder="email@org.br">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Início</label>
+                    <input type="date" id="obj-data-inicio" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Prazo final</label>
+                    <input type="date" id="obj-data-fim" class="form-control">
+                  </div>
                 </div>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                <div>
-                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Início</label>
-                  <input type="date" id="obj-data-inicio" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                <div class="form-group">
+                  <label class="form-label">Descrição</label>
+                  <textarea id="obj-descricao" rows="3" class="form-control" placeholder="Contexto e motivação do objetivo…"></textarea>
                 </div>
-                <div>
-                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Prazo final</label>
-                  <input type="date" id="obj-data-fim" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                <div class="form-group">
+                  <label class="form-label">Meta quantitativa</label>
+                  <input type="text" id="obj-meta" class="form-control" placeholder="Ex: Atender 5.000 pessoas/ano; Taxa de ocupação ≥ 75%">
                 </div>
-              </div>
-              <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Descrição</label>
-                <textarea id="obj-descricao" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Contexto e motivação do objetivo…"></textarea>
-              </div>
-              <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Meta quantitativa</label>
-                <input type="text" id="obj-meta" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: Atender 5.000 pessoas/ano; Taxa de ocupação ≥ 75%">
-              </div>
-              <div style="margin-bottom:20px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Observações</label>
-                <textarea id="obj-observacoes" rows="2" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;"></textarea>
-              </div>
-              <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" class="btn btn-secondary" onclick="EstrategiaUI.fecharForm()" data-bg-skip="1">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btn-salvar-objetivo"
-                        onclick="BtnGuard.wrap('btn-salvar-objetivo','Salvando…',EstrategiaUI.salvar)">Salvar</button>
-              </div>
-            </form>
+                <div class="form-group">
+                  <label class="form-label">Observações</label>
+                  <textarea id="obj-observacoes" rows="2" class="form-control"></textarea>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-ghost" onclick="EstrategiaUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button type="button" class="btn btn-primario" id="btn-salvar-objetivo"
+                      onclick="BtnGuard.wrap('btn-salvar-objetivo','Salvando…',EstrategiaUI.salvar)">Salvar</button>
+            </div>
           </div>
         </div>
 
         <!-- Modal Vincular Ação -->
-        <div id="modal-vincular-acao" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-          <div style="background:var(--surface);border-radius:12px;width:min(520px,96vw);max-height:80vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-              <h3 style="font-size:16px;">Vincular Ação ao Objetivo</h3>
-              <button onclick="EstrategiaUI.fecharModalVincular()" style="background:none;border:none;font-size:22px;cursor:pointer;" data-bg-skip="1">✕</button>
+        <div id="modal-vincular-acao" class="modal-overlay" style="display:none;">
+          <div class="modal-box" style="max-width:520px;">
+            <div class="modal-header">
+              <h3>Vincular Ação ao Objetivo</h3>
+              <button class="modal-close" onclick="EstrategiaUI.fecharModalVincular()" data-bg-skip="1">✕</button>
             </div>
-            <input type="hidden" id="vincular-objetivo-id">
-            <input type="text" id="vincular-busca-acao" placeholder="Buscar ação pelo nome…"
-                   style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:12px;"
-                   oninput="EstrategiaUI.filtrarAcoesVincular()">
-            <div id="vincular-lista-acoes" style="max-height:320px;overflow-y:auto;"></div>
+            <div class="modal-body">
+              <input type="hidden" id="vincular-objetivo-id">
+              <input type="text" id="vincular-busca-acao" class="form-control" placeholder="Buscar ação pelo nome…"
+                     style="margin-bottom:12px;" oninput="EstrategiaUI.filtrarAcoesVincular()">
+              <div id="vincular-lista-acoes" style="max-height:320px;overflow-y:auto;"></div>
+            </div>
           </div>
         </div>
 
@@ -5707,9 +5786,9 @@ textarea.input { resize: vertical; }
             <h2 style="margin:0;font-size:20px;font-weight:700;">Escuta Institucional</h2>
             <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Clima organizacional · 8 dimensões científicas</p>
           </div>
-          <button id="btn-nova-pesquisa" class="btn btn-primary"
+          <button id="btn-nova-pesquisa" class="btn btn-primario"
                   onclick="BtnGuard.wrap('btn-nova-pesquisa','Abrindo…',EscutaUI.abrirForm)">
-            + Nova Pesquisa
+            <span class="ms ms-sm">add</span> Nova Pesquisa
           </button>
         </div>
 
@@ -5731,12 +5810,12 @@ textarea.input { resize: vertical; }
 
         <!-- Tab: Resultados -->
         <div id="escuta-tab-resultados" class="oculto">
-          <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
-            <label style="font-size:13px;color:var(--text2);">Pesquisa:</label>
-            <select id="escuta-sel-resultado" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="EscutaUI.carregarResultado()">
+          <div class="filter-bar" style="margin-bottom:12px;">
+            <label class="form-label" style="text-transform:none;margin:0;">Pesquisa:</label>
+            <select id="escuta-sel-resultado" class="select-sm" onchange="EscutaUI.carregarResultado()">
               <option value="">— selecionar —</option>
             </select>
-            <button class="btn btn-secondary btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">Cruzamento</button>
+            <button class="btn btn-secundario btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">Cruzamento</button>
           </div>
           <div id="escuta-resultado-conteudo"><p class="muted-text">Selecione uma pesquisa para ver os resultados.</p></div>
         </div>
@@ -5761,14 +5840,14 @@ textarea.input { resize: vertical; }
             <h2 style="margin:0;font-size:20px;font-weight:700;">Dashboard Executivo</h2>
             <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Visão unificada — operacional · financeiro · estratégico</p>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1">↺ Atualizar</button>
+          <button class="btn btn-secundario btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
         </div>
 
         <div class="tab-bar" style="margin-bottom:16px;">
-          <button class="tab-btn tab-ativa" onclick="DashboardUI.setTab('operacional',this)" data-bg-skip="1">⚡ Operacional</button>
-          <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1">💰 Financeiro</button>
-          <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1">🎯 Estratégico</button>
-          <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1">🤖 Insights IA</button>
+          <button class="tab-btn tab-ativa" onclick="DashboardUI.setTab('operacional',this)" data-bg-skip="1"><span class="ms ms-sm">bolt</span> Operacional</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> Financeiro</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> Estratégico</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1"><span class="ms ms-sm">smart_toy</span> Insights IA</button>
         </div>
 
         <div id="dash-tab-operacional">
@@ -5781,16 +5860,16 @@ textarea.input { resize: vertical; }
           <div id="dash-est-content"><p class="muted-text">⏳ Carregando…</p></div>
         </div>
         <div id="dash-tab-insights" class="oculto">
-          <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-            <label style="font-size:13px;">Tipo:</label>
-            <select id="dash-insights-tipo" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+          <div class="filter-bar" style="margin-bottom:12px;">
+            <label class="form-label" style="text-transform:none;margin:0;">Tipo:</label>
+            <select id="dash-insights-tipo" class="select-sm">
               <option value="estrategico">Estratégico</option>
               <option value="operacional">Operacional</option>
               <option value="financeiro">Financeiro</option>
             </select>
-            <button id="btn-gerar-insights" class="btn btn-primary btn-sm"
+            <button id="btn-gerar-insights" class="btn btn-primario btn-sm"
                     onclick="BtnGuard.wrap('btn-gerar-insights','Analisando…',DashboardUI.gerarInsights)">
-              Gerar Insights IA
+              <span class="ms ms-sm">smart_toy</span> Gerar Insights IA
             </button>
           </div>
           <div id="dash-insights-conteudo"><p class="muted-text">Clique em "Gerar Insights IA" para analisar as métricas.</p></div>
@@ -5806,9 +5885,9 @@ textarea.input { resize: vertical; }
             <h2 style="margin:0;font-size:20px;font-weight:700;">Ponto Eletrônico & RH</h2>
             <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Ponto · Banco de horas · Custo CLT · Colabore AFD</p>
           </div>
-          <button id="btn-registrar-ponto" class="btn btn-primary"
+          <button id="btn-registrar-ponto" class="btn btn-primario"
                   onclick="BtnGuard.wrap('btn-registrar-ponto','Registrando…',PontoUI.registrarAgora)">
-            ⏱ Registrar Ponto
+            <span class="ms ms-sm">schedule</span> Registrar Ponto
           </button>
         </div>
 
@@ -5821,12 +5900,11 @@ textarea.input { resize: vertical; }
 
         <!-- Tab: Espelho de Ponto -->
         <div id="ponto-tab-espelho">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
-            <input type="month" id="ponto-filtro-mes"
-                   style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;"
+          <div class="filter-bar">
+            <input type="month" id="ponto-filtro-mes" class="select-sm"
                    onchange="PontoUI.carregarEspelho()">
-            <input type="text" id="ponto-filtro-colab" placeholder="Email do colaborador (opcional)"
-                   style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;flex:1;min-width:200px;"
+            <input type="text" id="ponto-filtro-colab" class="input-busca"
+                   placeholder="Email do colaborador (opcional)" style="flex:1;min-width:200px;"
                    oninput="PontoUI.carregarEspelho()">
           </div>
           <div id="ponto-espelho-conteudo"><p class="muted-text">⏳ Carregando espelho…</p></div>
@@ -5893,7 +5971,7 @@ textarea.input { resize: vertical; }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
             <!-- Exportar -->
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">
-              <h4 style="margin:0 0 12px;font-size:15px;">📤 Exportar</h4>
+              <h4 style="margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">upload</span> Exportar</h4>
               <div class="form-group">
                 <label class="form-label">Período</label>
                 <div style="display:flex;gap:8px;">
@@ -5915,7 +5993,7 @@ textarea.input { resize: vertical; }
 
             <!-- Importar -->
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">
-              <h4 style="margin:0 0 12px;font-size:15px;">📥 Importar</h4>
+              <h4 style="margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">download</span> Importar</h4>
               <div class="form-group">
                 <label class="form-label">Formato</label>
                 <select id="imp-formato" class="form-control" style="margin-bottom:8px;">
@@ -5948,7 +6026,7 @@ textarea.input { resize: vertical; }
   <div id="alertas-overlay" class="oculto" onclick="AlertasUI.fecharPainel()" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1800;"></div>
   <div id="alertas-painel" class="alertas-painel oculto">
     <div class="alertas-painel-header">
-      <span style="font-weight:700;font-size:15px;">🔔 Alertas Operacionais</span>
+      <span style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;"><span class="ms">notifications</span> Alertas Operacionais</span>
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="btn btn-secondary btn-sm" id="alertas-verificar-btn"
           onclick="BtnGuard.wrap('alertas-verificar-btn','Verificando…',AlertasUI.verificarAutomaticos)" style="font-size:11px;padding:3px 8px;">
