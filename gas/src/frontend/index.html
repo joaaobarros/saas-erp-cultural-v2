@@ -1984,19 +1984,35 @@ select.form-control { cursor: pointer; }
           <!-- Card: Banco de Dados -->
           <div class="card" style="grid-column:1/-1;">
             <div class="card-header">
-              <div class="card-titulo"><span class="ms">folder_open</span> Banco de Dados</div>
+              <div class="card-titulo"><span class="ms">storage</span> Banco de Dados</div>
+              <button class="btn btn-ghost btn-sm" id="btn-refresh-banco-dados"
+                      onclick="AdminDadosUI.carregar(true)" data-bg-skip="1"
+                      title="Recarregar">
+                <span class="ms ms-sm">refresh</span>
+              </button>
             </div>
             <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
-              Os dados do sistema são armazenados em arquivos JSON numa pasta do Google Drive.
-              Acesse para inspecionar arquivos, fazer backup manual ou auditar registros brutos.
+              Os dados do sistema residem em arquivos <strong>JSON</strong> (fonte canônica)
+              e <strong>Planilhas Google</strong> (índices de busca rápida), todos organizados
+              em pastas dedicadas no Google Drive.
             </p>
-            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-              <button class="btn btn-primario btn-sm" id="btn-abrir-pasta-dados"
-                      onclick="AdminDadosUI.abrirPasta()">
-                <span class="ms ms-sm">folder_open</span> Abrir pasta no Drive
+
+            <!-- Ações rápidas: pastas no Drive -->
+            <div id="banco-dados-pastas" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+              <button class="btn btn-ghost btn-sm" style="opacity:.5;cursor:default;" disabled>
+                <span class="ms ms-sm">folder_open</span> Carregando…
               </button>
-              <span id="admin-pasta-nome"
-                    style="font-size:12px;color:var(--muted);font-family:monospace;"></span>
+            </div>
+
+            <!-- Separador -->
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">
+              Planilhas do Sistema
+            </div>
+
+            <!-- Grid de planilhas -->
+            <div id="banco-dados-planilhas"
+                 style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;">
+              <p class="muted-text" style="grid-column:1/-1;">Carregando…</p>
             </div>
           </div><!-- /card banco de dados -->
 
@@ -6421,7 +6437,8 @@ var GAS = {
     lerTerreno:             function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerTerreno(); },
     salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); },
     // Banco de Dados
-    obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); }
+    obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); },
+    obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); }
   },
   // Painel de Orgs — Fase 9 (superadmin)
   orgs: {
@@ -10376,33 +10393,102 @@ var ExpedienteUI = (function() {
 // BANCO DE DADOS UI
 // ═══════════════════════════════════════════════════════════
 var AdminDadosUI = (function() {
-  var _url = null;
+  var _info      = null;   // cache da resposta do backend
+  var _carregado = false;
 
-  /**
-   * Abre a pasta de dados no Google Drive.
-   * Na primeira chamada busca a URL no backend; nas seguintes usa cache.
-   */
-  function abrirPasta() {
-    if (_url) { window.open(_url, '_blank'); return; }
-    BtnGuard.wrap('btn-abrir-pasta-dados', 'Buscando…', function(liberar) {
-      GAS.admin.obterUrlPastaDados(function(r) {
-        liberar();
-        if (!r || !r.ok) {
-          Toast.erro((r && r.error && r.error.message) || 'Erro ao obter URL da pasta.');
-          return;
-        }
-        _url = r.data.url;
-        var label = document.getElementById('admin-pasta-nome');
-        if (label) label.textContent = r.data.nome || '';
-        window.open(_url, '_blank');
-      }, function(err) {
-        liberar();
-        Toast.erro('Erro: ' + ((err || {}).message || err));
-      });
+  /* ── Carrega info do banco de dados e renderiza o card ── */
+  function carregar(forcar) {
+    if (_carregado && !forcar) return;
+    var elPastas    = document.getElementById('banco-dados-pastas');
+    var elPlanilhas = document.getElementById('banco-dados-planilhas');
+    if (!elPastas || !elPlanilhas) return;
+
+    elPastas.innerHTML    = '<button class="btn btn-ghost btn-sm" style="opacity:.5;cursor:default;" disabled><span class="ms ms-sm">hourglass_top</span> Organizando Drive…</button>';
+    elPlanilhas.innerHTML = '<p class="muted-text" style="grid-column:1/-1;">Aguarde — primeira vez pode levar alguns segundos…</p>';
+
+    GAS.admin.obterInfoBancoDados(function(r) {
+      if (!r || !r.ok) {
+        var msg = (r && r.error && r.error.message) || 'Erro ao carregar informações do Drive.';
+        elPastas.innerHTML    = '<span style="color:var(--error);font-size:13px;">' + msg + '</span>';
+        elPlanilhas.innerHTML = '';
+        Toast.erro(msg);
+        return;
+      }
+      _info      = r.data;
+      _carregado = true;
+      _renderPastas(elPastas, _info);
+      _renderPlanilhas(elPlanilhas, _info.planilhas || []);
+    }, function(err) {
+      var msg = (err && err.message) || String(err);
+      elPastas.innerHTML    = '<span style="color:var(--error);font-size:13px;">Erro: ' + msg + '</span>';
+      elPlanilhas.innerHTML = '';
+      Toast.erro('Erro ao carregar Banco de Dados: ' + msg);
     });
   }
 
-  return { abrirPasta: abrirPasta };
+  /* ── Renderiza os botões de pastas no Drive ── */
+  function _renderPastas(el, info) {
+    var botoes = [
+      {
+        url:   info.pastaErp   && info.pastaErp.url,
+        label: 'Pasta ERP (' + (info.orgNome || '') + ')',
+        icone: 'folder_special',
+        title: 'Pasta-mãe com JSON e Planilhas organizados',
+        primario: true
+      },
+      {
+        url:   info.pastaJson  && info.pastaJson.url,
+        label: 'Dados JSON',
+        icone: 'data_object',
+        title: 'Arquivos JSON — fonte canônica dos dados'
+      },
+      {
+        url:   info.pastaPlanilhas && info.pastaPlanilhas.url,
+        label: 'Planilhas',
+        icone: 'grid_on',
+        title: 'Pasta com todas as planilhas do sistema'
+      }
+    ];
+
+    el.innerHTML = botoes.filter(function(b) { return !!b.url; }).map(function(b) {
+      var cls = b.primario ? 'btn btn-primario btn-sm' : 'btn btn-secundario btn-sm';
+      return '<a href="' + b.url + '" target="_blank" class="' + cls + '" title="' + b.title + '" style="text-decoration:none;">' +
+        '<span class="ms ms-sm">' + b.icone + '</span> ' + b.label + '</a>';
+    }).join('');
+  }
+
+  /* ── Renderiza os cards de planilhas ── */
+  function _renderPlanilhas(el, planilhas) {
+    if (!planilhas.length) {
+      el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;">Nenhuma planilha registrada.</p>';
+      return;
+    }
+    el.innerHTML = planilhas.map(function(p) {
+      var linkHtml = p.url
+        ? '<a href="' + p.url + '" target="_blank" class="btn btn-ghost btn-sm" style="margin-left:auto;white-space:nowrap;text-decoration:none;" title="Abrir planilha no Google Sheets"><span class="ms ms-sm">open_in_new</span> Abrir</a>'
+        : '<span style="font-size:11px;color:var(--muted);">Não criada</span>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;' +
+        'border:1px solid var(--border);border-radius:8px;background:var(--surface);">' +
+        '<span class="ms" style="color:var(--primary);font-size:20px;">' + (p.icone || 'table_chart') + '</span>' +
+        '<div style="min-width:0;flex:1;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--text);">' + p.label + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + p.descricao + '">' + p.descricao + '</div>' +
+        '</div>' +
+        linkHtml +
+        '</div>';
+    }).join('');
+  }
+
+  /* ── Abre pasta ERP (compat com eventuais chamadas antigas) ── */
+  function abrirPasta() {
+    if (_info && _info.pastaErp && _info.pastaErp.url) {
+      window.open(_info.pastaErp.url, '_blank');
+      return;
+    }
+    carregar();
+  }
+
+  return { carregar: carregar, abrirPasta: abrirPasta };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -15484,6 +15570,7 @@ var AcoesUI = (function() {
   // ────────────────────────────────────────────────────────
 
   function aoAbrir() {
+    if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('acao-metricas-strip');
     if (!_carregado) carregar();
     else _renderizarMetricas();
   }
@@ -15589,13 +15676,23 @@ var AcoesUI = (function() {
         return;
       }
       cont.innerHTML = cols[s].map(function(a) {
-        return '<div class="kanban-card" data-bg-skip="1" onclick="AcoesUI.abrirPainel(\''+a.id+'\')">' +
-          '<div class="kanban-card-nome">'+escaparHtml(a.nome||'')+'</div>' +
-          '<div class="kanban-card-meta">' +
-            '<span class="badge badge-muted" style="font-size:10.5px;">'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</span>' +
-            (a.responsavel ? '<span>'+escaparHtml(a.responsavel.split('@')[0])+'</span>' : '') +
-            (a.dataInicio  ? '<span>'+escaparHtml(fmtDataPtBR(a.dataInicio))+'</span>' : '') +
+        var _tipoIcn = { curso:'school', oficina:'construction', espetaculo:'theater_comedy',
+          evento:'event', campanha:'campaign', laboratorio:'science',
+          projeto_formativo:'book', difusao:'rss_feed', atividade_territorial:'place', outro:'category' };
+        var periodo = '';
+        if (a.dataInicio && a.dataFim) periodo = fmtDataPtBR(a.dataInicio) + ' → ' + fmtDataPtBR(a.dataFim);
+        else if (a.dataInicio) periodo = 'Início ' + fmtDataPtBR(a.dataInicio);
+        return '<div class="kanban-card" data-bg-skip="1" onclick="AcoesUI.abrirPainel(\''+a.id+'\')" style="border-left:3px solid var(--color-primary,#4f46e5);">' +
+          '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">' +
+            '<span class="ms" style="font-size:18px;color:var(--color-primary,#4f46e5);flex-shrink:0;margin-top:1px;">'+(_tipoIcn[a.tipo]||'category')+'</span>' +
+            '<div style="flex:1;min-width:0;"><div class="kanban-card-nome" style="white-space:normal;font-size:13px;font-weight:600;">'+escaparHtml(a.nome||'')+'</div></div>' +
           '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' +
+            '<span style="font-size:10.5px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:4px;padding:1px 6px;color:var(--text2,#64748b);">'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</span>' +
+            (a.responsavel ? '<span style="font-size:10.5px;color:var(--text2,#64748b);">'+escaparHtml(a.responsavel.split('@')[0])+'</span>' : '') +
+          '</div>' +
+          (periodo ? '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-top:5px;display:flex;align-items:center;gap:3px;"><span class="ms" style="font-size:13px;">calendar_today</span>'+escaparHtml(periodo)+'</div>' : '') +
+          (a.publicoPrevisto ? '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-top:3px;display:flex;align-items:center;gap:3px;"><span class="ms" style="font-size:13px;">groups</span>'+a.publicoPrevisto+' pessoas</div>' : '') +
         '</div>';
       }).join('');
     });
@@ -15749,8 +15846,15 @@ var AcoesUI = (function() {
     // Preencher cabeçalho
     var el = function(id) { return document.getElementById(id); };
     if (el('painel-acao-nome'))  el('painel-acao-nome').textContent  = acao.nome || '—';
-    if (el('painel-acao-badge')) el('painel-acao-badge').outerHTML =
-      _badgeStatus(acao.status).replace('id=','_id='); // evitar ID duplicado
+    var _badgeMapa = { planejada:'badge-primary', em_producao:'badge-warning', em_execucao:'badge-info',
+                       concluida:'badge-success', arquivada:'badge-muted', cancelada:'badge-error' };
+    var _badgeLabel = { planejada:'Planejada', em_producao:'Em Produção', em_execucao:'Em Execução',
+                        concluida:'Concluída', arquivada:'Arquivada', cancelada:'Cancelada' };
+    var _badgeEl = el('painel-acao-badge');
+    if (_badgeEl) {
+      _badgeEl.className = 'badge ' + (_badgeMapa[acao.status] || 'badge-muted');
+      _badgeEl.textContent = _badgeLabel[acao.status] || acao.status;
+    }
     if (el('painel-acao-tipo'))  el('painel-acao-tipo').textContent  = _TIPO_LABEL[acao.tipo] || acao.tipo || '—';
 
     // Aba Geral
@@ -15833,13 +15937,26 @@ var AcoesUI = (function() {
       if (tLoad) tLoad.classList.add('oculto');
       if (tList) {
         var tarefas = d.tarefas || [];
+        var _tBadge = { pendente:'badge-muted', em_andamento:'badge-info', concluida:'badge-success',
+                        cancelada:'badge-error', atrasada:'badge-error' };
+        var _tLabel = { pendente:'Pendente', em_andamento:'Em Andamento', concluida:'Concluída',
+                        cancelada:'Cancelada', atrasada:'Atrasada' };
         tList.innerHTML = tarefas.length === 0
-          ? '<p class="muted-text">Nenhuma tarefa vinculada.</p>'
+          ? '<div style="text-align:center;padding:32px 0;"><span class="ms" style="font-size:36px;color:var(--muted,#94a3b8);">task_alt</span><p class="muted-text" style="margin-top:8px;">Nenhuma tarefa vinculada.</p></div>'
           : tarefas.map(function(t) {
-              return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
-                '<strong>'+escaparHtml(t.titulo||'')+'</strong> ' +
-                '<span class="badge badge-muted" style="font-size:11px;">'+escaparHtml(t.status||'')+'</span>' +
-                (t.prazo ? ' <span class="muted-text">⏰ '+escaparHtml(t.prazo)+'</span>' : '') +
+              var st = t.status || 'pendente';
+              var atrasada = t.prazo && new Date(t.prazo) < new Date() && st !== 'concluida' && st !== 'cancelada';
+              if (atrasada) st = 'atrasada';
+              return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;margin-bottom:8px;background:var(--surface,#fff);">' +
+                '<span class="ms" style="font-size:20px;color:'+(st==='concluida'?'var(--color-success,#10b981)':st==='atrasada'?'var(--color-error,#ef4444)':'var(--text2,#64748b)')+';margin-top:1px;">'+(st==='concluida'?'check_circle':st==='atrasada'?'warning':'radio_button_unchecked')+'</span>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:13px;font-weight:600;color:var(--text,#1e293b);margin-bottom:3px;">'+escaparHtml(t.titulo||t.nome||'')+'</div>' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+                    '<span class="badge '+(_tBadge[st]||'badge-muted')+'" style="font-size:11px;">'+(_tLabel[st]||st)+'</span>' +
+                    (t.responsavel ? '<span style="font-size:12px;color:var(--text2,#64748b);">'+escaparHtml((t.responsavel||'').split('@')[0])+'</span>' : '') +
+                    (t.prazo ? '<span style="font-size:11px;color:'+(atrasada?'var(--color-error,#ef4444)':'var(--muted,#94a3b8)')+';">'+escaparHtml(fmtDataPtBR(t.prazo))+'</span>' : '') +
+                  '</div>' +
+                '</div>' +
               '</div>';
             }).join('');
       }
@@ -15850,14 +15967,23 @@ var AcoesUI = (function() {
       if (rLoad) rLoad.classList.add('oculto');
       if (rList) {
         var reservas = d.reservas || [];
+        var _rvBadge = { confirmada:'badge-success', pendente:'badge-warning', cancelada:'badge-error', aprovada:'badge-success' };
         rList.innerHTML = reservas.length === 0
-          ? '<p class="muted-text">Nenhuma reserva vinculada.</p>'
+          ? '<div style="text-align:center;padding:32px 0;"><span class="ms" style="font-size:36px;color:var(--muted,#94a3b8);">event_available</span><p class="muted-text" style="margin-top:8px;">Nenhuma reserva vinculada.</p></div>'
           : reservas.map(function(rv) {
-              return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
-                '<strong>'+escaparHtml(rv.sala||rv.espaco||'')+'</strong> ' +
-                (rv.data ? escaparHtml(fmtDataPtBR(rv.data))+' ' : '') +
-                (rv.inicio&&rv.fim ? escaparHtml(rv.inicio)+' – '+escaparHtml(rv.fim) : '') +
-                ' <span class="badge badge-muted" style="font-size:11px;">'+escaparHtml(rv.status||'')+'</span>' +
+              var st = rv.status || '';
+              var salaNome = rv.salaNome || rv.sala || rv.espaco || '—';
+              var horario = rv.horaInicio && rv.horaTermino ? rv.horaInicio + ' – ' + rv.horaTermino : (rv.inicio && rv.fim ? rv.inicio + ' – ' + rv.fim : '');
+              return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;margin-bottom:8px;background:var(--surface,#fff);">' +
+                '<span class="ms" style="font-size:20px;color:var(--color-primary,#4f46e5);margin-top:1px;">meeting_room</span>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:13px;font-weight:600;color:var(--text,#1e293b);margin-bottom:3px;">'+escaparHtml(salaNome)+'</div>' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+                    (st ? '<span class="badge '+(_rvBadge[st]||'badge-muted')+'" style="font-size:11px;">'+escaparHtml(st.charAt(0).toUpperCase()+st.slice(1))+'</span>' : '') +
+                    (rv.data ? '<span style="font-size:12px;color:var(--text2,#64748b);">'+escaparHtml(fmtDataPtBR(rv.data))+'</span>' : '') +
+                    (horario ? '<span style="font-size:12px;color:var(--muted,#94a3b8);">'+escaparHtml(horario)+'</span>' : '') +
+                  '</div>' +
+                '</div>' +
               '</div>';
             }).join('');
       }
@@ -15868,12 +15994,23 @@ var AcoesUI = (function() {
       if (cLoad) cLoad.classList.add('oculto');
       if (cList) {
         var contratos = d.contratos || [];
+        var _ctBadge = { ativo:'badge-success', rascunho:'badge-muted', encerrado:'badge-muted', rescindido:'badge-error', vigente:'badge-success' };
+        var _ctFmt = function(v) { return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2}); };
         cList.innerHTML = contratos.length === 0
-          ? '<p class="muted-text">Nenhum contrato vinculado.</p>'
+          ? '<div style="text-align:center;padding:32px 0;"><span class="ms" style="font-size:36px;color:var(--muted,#94a3b8);">description</span><p class="muted-text" style="margin-top:8px;">Nenhum contrato vinculado.</p></div>'
           : contratos.map(function(ct) {
-              return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
-                '<strong>'+escaparHtml(ct.nome||ct.titulo||'')+'</strong> ' +
-                '<span class="muted-text">R$ '+((ct.valorTotal||0).toLocaleString('pt-BR'))+'</span>' +
+              var st = ct.status || '';
+              var titulo = ct.nome || ct.titulo || ct.objeto || '—';
+              return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;margin-bottom:8px;background:var(--surface,#fff);">' +
+                '<span class="ms" style="font-size:20px;color:var(--color-primary,#4f46e5);margin-top:1px;">description</span>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div style="font-size:13px;font-weight:600;color:var(--text,#1e293b);margin-bottom:3px;">'+escaparHtml(titulo)+'</div>' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+                    (st ? '<span class="badge '+(_ctBadge[st]||'badge-muted')+'" style="font-size:11px;">'+escaparHtml(st.charAt(0).toUpperCase()+st.slice(1))+'</span>' : '') +
+                    '<span style="font-size:12px;font-weight:600;color:var(--color-success,#10b981);">'+_ctFmt(ct.valorTotal)+'</span>' +
+                    (ct.tipo ? '<span style="font-size:11px;color:var(--muted,#94a3b8);">'+escaparHtml(ct.tipo)+'</span>' : '') +
+                  '</div>' +
+                '</div>' +
               '</div>';
             }).join('');
       }
@@ -15884,13 +16021,20 @@ var AcoesUI = (function() {
       var equipe = (d.acao && d.acao.equipe) || [];
       if (eInfo) eInfo.classList.toggle('oculto', equipe.length > 0);
       if (eList) {
-        eList.innerHTML = equipe.map(function(m) {
-          var nome = typeof m === 'string' ? m : (m.email || m.nome || '');
-          var papel= typeof m === 'object' ? (m.papel||'') : '';
-          return '<div style="background:var(--surface2);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;">' +
-            escaparHtml(nome) + (papel ? '<br><span class="muted-text">'+escaparHtml(papel)+'</span>' : '') +
-          '</div>';
-        }).join('');
+        eList.innerHTML = equipe.length === 0
+          ? ''
+          : equipe.map(function(m) {
+            var nome  = typeof m === 'string' ? m : (m.email || m.nome || '');
+            var papel = typeof m === 'object' ? (m.papel || '') : '';
+            var ini   = (nome.split('@')[0] || nome).charAt(0).toUpperCase();
+            return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:8px;">' +
+              '<div style="width:32px;height:32px;border-radius:50%;background:var(--color-primary,#4f46e5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">'+escaparHtml(ini)+'</div>' +
+              '<div style="min-width:0;">' +
+                '<div style="font-size:12px;font-weight:600;color:var(--text,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escaparHtml(nome.split('@')[0])+'</div>' +
+                (papel ? '<div style="font-size:11px;color:var(--text2,#64748b);">'+escaparHtml(papel)+'</div>' : '') +
+              '</div>' +
+            '</div>';
+          }).join('');
       }
 
       // Financeiro
@@ -16270,7 +16414,7 @@ var App = (function() {
       if(primeiraVez && item.id !== 'home') {
         (function(id, label) {
           Router.registrar(id, label,
-            id === 'admin'        ? function(){ AdminCadastrosUI.aoAbrir(); ExpedienteUI.carregar(); AdminConfigTabsUI.abrirTab('expediente'); }
+            id === 'admin'        ? function(){ AdminCadastrosUI.aoAbrir(); ExpedienteUI.carregar(); AdminConfigTabsUI.abrirTab('expediente'); AdminDadosUI.carregar(); }
             : id === 'aprovacoes' ? function(){ AprovacaoReservaUI.aoAbrir(); }
             : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }

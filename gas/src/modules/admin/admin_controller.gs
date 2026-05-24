@@ -292,16 +292,183 @@ function ctrl_admin_salvarConfigExpediente(dados) {
   }, 'ctrl_admin_salvarConfigExpediente');
 }
 
-// ─── Banco de Dados — URL da pasta no Drive ──────────────────────────────────
+// ─── Banco de Dados — Estrutura Drive ────────────────────────────────────────
 
 /**
- * Retorna a URL e metadados da pasta de dados da organização no Google Drive.
+ * Metadados descritivos de cada planilha do sistema (para exibição no UI).
+ * Chave = nome da planilha em PROP_SHEETS / SCHEMA_ABAS.
+ */
+var _PLANILHA_META = {
+  MASTER:      { label: 'MASTER',      icone: 'table_chart', descricao: 'Configurações, Itens, Auditoria, LogAcessos, Funcionários, Acesso' },
+  ACOES:       { label: 'AÇÕES',       icone: 'event',       descricao: 'Ações, Habilitações, Acervo, Parcerias, Indicadores, Metas, Estratégia' },
+  ESPACOS:     { label: 'ESPAÇOS',     icone: 'meeting_room',descricao: 'Reservas, Chaves, Ativos, Manutenções, Patrimônio, Alertas' },
+  PESSOAL:     { label: 'PESSOAL',     icone: 'task',        descricao: 'Tarefas, Demandas, Processos' },
+  EQUIPES:     { label: 'EQUIPES / RH',icone: 'group',       descricao: 'Funcionários, Vínculos, Escalas, Férias, Ocorrências, Avaliações, Ponto' },
+  FINANCEIRO:  { label: 'FINANCEIRO',  icone: 'payments',    descricao: 'Contratos, Pagamentos, Rubricas, Orçamentos, Fontes de Recurso' },
+  RELATORIOS:  { label: 'RELATÓRIOS',  icone: 'bar_chart',   descricao: 'CODIP, Relatório Gerencial, Exportações' },
+  REUNIOES:    { label: 'REUNIÕES',    icone: 'groups',      descricao: 'Reuniões, Encaminhamentos, Atas' },
+  COMUNICACAO: { label: 'COMUNICAÇÃO', icone: 'campaign',    descricao: 'Demandas Balcão, Entregas RECE, Agenda RECE' },
+  PUBLICO:     { label: 'PÚBLICO',     icone: 'people',      descricao: 'Inscrições, Presenças, Pesquisas de Satisfação, Certificados' },
+  ESCUTA:      { label: 'ESCUTA',      icone: 'hearing',     descricao: 'Pesquisas de Clima, Respostas, Indicadores' }
+};
+
+/**
+ * Garante a hierarquia de pastas ERP no Google Drive.
+ * Cria (ou localiza) pasta-mãe ERP, sub-pasta JSON e sub-pasta Planilhas.
+ * Move JSON e planilhas para seus destinos se ainda não estiverem lá.
+ * Idempotente — seguro chamar múltiplas vezes.
+ *
+ * @returns {{ pastaErp, pastaJson, pastaPlanilhas }}
+ */
+function _garantirEstruturaDrive() {
+  var props = PropertiesService.getScriptProperties();
+  var org   = getOrgConfig();
+
+  // ── 1. Pasta-mãe ERP ──────────────────────────────────────────────────────
+  var erpId  = props.getProperty('FOLDER_ID_ERP');
+  var pastaErp;
+  if (erpId) {
+    try { pastaErp = DriveApp.getFolderById(erpId); } catch(e) { pastaErp = null; }
+  }
+  if (!pastaErp) {
+    var nomeErp  = org.nome + ' — ERP';
+    var iterErp  = DriveApp.getFoldersByName(nomeErp);
+    pastaErp     = iterErp.hasNext() ? iterErp.next() : DriveApp.createFolder(nomeErp);
+    props.setProperty('FOLDER_ID_ERP', pastaErp.getId());
+    Logger.info('admin', '_garantirEstruturaDrive', 'Pasta ERP: ' + pastaErp.getId());
+  }
+
+  // ── 2. Sub-pasta JSON — mover para dentro da pasta ERP se necessário ──────
+  var pastaJson = getDataFolder();
+  _moverParaPasta(pastaJson.getId(), pastaErp, true /*isFolder*/);
+
+  // ── 3. Sub-pasta Planilhas ─────────────────────────────────────────────────
+  var planId = props.getProperty('FOLDER_ID_PLANILHAS');
+  var pastaPlanilhas;
+  if (planId) {
+    try { pastaPlanilhas = DriveApp.getFolderById(planId); } catch(e) { pastaPlanilhas = null; }
+  }
+  if (!pastaPlanilhas) {
+    var iterPlan = pastaErp.getFoldersByName('Planilhas');
+    pastaPlanilhas = iterPlan.hasNext()
+      ? iterPlan.next()
+      : pastaErp.createFolder('Planilhas');
+    props.setProperty('FOLDER_ID_PLANILHAS', pastaPlanilhas.getId());
+    Logger.info('admin', '_garantirEstruturaDrive', 'Pasta Planilhas: ' + pastaPlanilhas.getId());
+  }
+
+  // ── 4. Mover cada planilha para sub-pasta Planilhas ───────────────────────
+  Object.keys(PROP_SHEETS).forEach(function(nome) {
+    var sheetId = props.getProperty(PROP_SHEETS[nome]);
+    if (!sheetId) return;
+    try {
+      _moverParaPasta(sheetId, pastaPlanilhas, false /*isFile*/);
+    } catch(e) {
+      Logger.warn('admin', '_garantirEstruturaDrive', nome + ': ' + e.message);
+    }
+  });
+
+  return { pastaErp: pastaErp, pastaJson: pastaJson, pastaPlanilhas: pastaPlanilhas };
+}
+
+/**
+ * Move um arquivo ou pasta para dentroEm de uma pasta-destino, se ainda não estiver lá.
+ * @param {string}  itemId      — ID do arquivo ou pasta
+ * @param {Folder}  destino     — pasta-destino
+ * @param {boolean} isPasta     — true se for pasta, false se for arquivo
+ */
+function _moverParaPasta(itemId, destino, isPasta) {
+  try {
+    var item = isPasta ? DriveApp.getFolderById(itemId) : DriveApp.getFileById(itemId);
+    // Verificar se já está no destino
+    var parents = item.getParents();
+    while (parents.hasNext()) {
+      if (parents.next().getId() === destino.getId()) return; // já está lá
+    }
+    item.moveTo(destino);
+    if (isPasta) _dataFolderCache = null; // invalida cache da pasta de dados
+    Logger.info('admin', '_moverParaPasta', (isPasta ? 'Pasta' : 'Arquivo') + ' movido: ' + itemId);
+  } catch(e) {
+    Logger.warn('admin', '_moverParaPasta', 'Erro ao mover ' + itemId + ': ' + e.message);
+  }
+}
+
+/**
+ * Retorna informação completa do banco de dados: pasta ERP, pasta JSON e
+ * todas as planilhas do sistema com URLs e descrições.
+ * Garante a estrutura de pastas no Drive na primeira chamada.
  * Acesso: superadmin apenas.
+ */
+function ctrl_admin_obterInfoBancoDados() {
+  return GasResponse.wrap(function() {
+    _assertAdmin();
+    var props  = PropertiesService.getScriptProperties();
+    var org    = getOrgConfig();
+
+    // Garante estrutura de pastas
+    var estrutura = _garantirEstruturaDrive();
+
+    // URLs base
+    function _folderUrl(id) { return 'https://drive.google.com/drive/folders/' + id; }
+    function _sheetUrl(id)  { return 'https://docs.google.com/spreadsheets/d/' + id; }
+
+    // Monta lista de planilhas
+    var planilhas = Object.keys(PROP_SHEETS).map(function(chave) {
+      var sheetId = props.getProperty(PROP_SHEETS[chave]);
+      var meta    = _PLANILHA_META[chave] || { label: chave, icone: 'table_chart', descricao: '' };
+      return {
+        chave:    chave,
+        label:    meta.label,
+        icone:    meta.icone,
+        descricao:meta.descricao,
+        url:      sheetId ? _sheetUrl(sheetId) : null,
+        ok:       !!sheetId
+      };
+    });
+
+    return {
+      orgId:     org.orgId,
+      orgNome:   org.nome,
+      pastaErp: {
+        url:  _folderUrl(estrutura.pastaErp.getId()),
+        nome: estrutura.pastaErp.getName(),
+        id:   estrutura.pastaErp.getId()
+      },
+      pastaJson: {
+        url:  _folderUrl(estrutura.pastaJson.getId()),
+        nome: estrutura.pastaJson.getName(),
+        id:   estrutura.pastaJson.getId()
+      },
+      pastaPlanilhas: {
+        url:  _folderUrl(estrutura.pastaPlanilhas.getId()),
+        nome: estrutura.pastaPlanilhas.getName(),
+        id:   estrutura.pastaPlanilhas.getId()
+      },
+      planilhas: planilhas
+    };
+  }, 'ctrl_admin_obterInfoBancoDados');
+}
+
+/**
+ * Compatibilidade retroativa — redireciona para a pasta ERP raiz.
  * @returns {{ url: string, nome: string, orgId: string }}
  */
 function ctrl_admin_obterUrlPastaDados() {
   return GasResponse.wrap(function() {
     _assertAdmin();
+    var props  = PropertiesService.getScriptProperties();
+    var erpId  = props.getProperty('FOLDER_ID_ERP');
+    if (erpId) {
+      try {
+        var pasta = DriveApp.getFolderById(erpId);
+        return {
+          url:   'https://drive.google.com/drive/folders/' + pasta.getId(),
+          nome:  pasta.getName(),
+          orgId: getOrgConfig().orgId
+        };
+      } catch(e) {}
+    }
+    // Fallback: pasta JSON pura (comportamento anterior)
     var pasta = getDataFolder();
     return {
       url:   'https://drive.google.com/drive/folders/' + pasta.getId(),
