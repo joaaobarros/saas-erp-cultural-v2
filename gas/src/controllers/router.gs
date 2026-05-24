@@ -36,6 +36,9 @@ function doGet(e) {
       case 'aprovacao':
         return _renderPortalPublico('aprovacao', e);
 
+      case 'token_acao':
+        return _renderTokenAcao(e);
+
       case 'agenda':
         return _renderPortalPublico('agenda', e);
 
@@ -139,6 +142,118 @@ function _render404() {
 function _renderErro(mensagem) {
   return HtmlService.createHtmlOutput('<h1>Erro interno</h1><p>' + mensagem + '</p>')
     .setTitle('Erro — ' + getOrgConfig().titulo);
+}
+
+// ─── Aprovação por token de email ─────────────────────────────────────────────
+
+function _renderTokenAcao(e) {
+  var params = e ? e.parameter || {} : {};
+  var token  = params.token || '';
+  var acao   = params.acao  || 'aprovar';
+  var org    = getOrgConfig();
+
+  var resultado = TokenService.validar(token);
+
+  if (!resultado.valido) {
+    var msg = resultado.expirado  ? 'Este link expirou (válido por 72h). Solicite um novo link ao gestor.' :
+              resultado.jaUsado   ? 'Esta ação já foi processada anteriormente.' :
+                                    'Link inválido ou não encontrado.';
+    return HtmlService.createHtmlOutput(
+      '<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;padding:40px;max-width:480px;margin:auto">' +
+      '<h2>⚠️ Link não processado</h2><p>' + msg + '</p>' +
+      '<p style="color:#888;font-size:14px">— ' + org.titulo + '</p></body></html>'
+    ).setTitle(org.titulo);
+  }
+
+  var dados = resultado.dados;
+  var sucesso = false;
+  var mensagemResultado = '';
+
+  try {
+    switch (dados.tipo) {
+      case 'aprovacao_ferias':
+        if (acao === 'aprovar') {
+          PessoasEngine.aprovarAfastamento(dados.entidadeId, dados.orgId, 'sistema_token');
+          mensagemResultado = 'Férias aprovadas com sucesso.';
+        } else {
+          PessoasEngine.recusarAfastamento(dados.entidadeId, dados.orgId, 'sistema_token', dados.extras.motivo || '');
+          mensagemResultado = 'Férias recusadas.';
+        }
+        sucesso = true;
+        break;
+
+      case 'aprovacao_remanejamento':
+        if (acao === 'aprovar') {
+          RemanejamentoEngine.aprovar(dados.entidadeId, dados.orgId, 'sistema_token');
+          mensagemResultado = 'Remanejamento aprovado com sucesso.';
+        } else {
+          RemanejamentoEngine.recusar(dados.entidadeId, dados.orgId, 'sistema_token', '');
+          mensagemResultado = 'Remanejamento recusado.';
+        }
+        sucesso = true;
+        break;
+
+      case 'aprovacao_aditivo':
+        if (acao === 'aprovar') {
+          AditivoEngine.aprovarInterno(dados.entidadeId, dados.orgId, 'sistema_token');
+          mensagemResultado = 'Aditivo aprovado com sucesso.';
+        } else {
+          AditivoEngine.recusar(dados.entidadeId, dados.orgId, 'sistema_token', '');
+          mensagemResultado = 'Aditivo recusado.';
+        }
+        sucesso = true;
+        break;
+
+      case 'aprovacao_solicitacao':
+        if (acao === 'aprovar') {
+          SolicitacaoEngine.aprovar(dados.entidadeId, dados.orgId, 'sistema_token');
+          mensagemResultado = 'Solicitação aprovada com sucesso.';
+        } else {
+          SolicitacaoEngine.recusar(dados.entidadeId, dados.orgId, 'sistema_token', '');
+          mensagemResultado = 'Solicitação recusada.';
+        }
+        sucesso = true;
+        break;
+
+      case 'aprovacao_cessao_pauta':
+        if (acao === 'aprovar') {
+          SolicitacaoReservaEngine.aprovar(dados.entidadeId, dados.orgId, 'sistema_token');
+          mensagemResultado = 'Cessão de pauta aprovada com sucesso.';
+        } else {
+          SolicitacaoReservaEngine.recusar(dados.entidadeId, dados.orgId, 'sistema_token', '');
+          mensagemResultado = 'Cessão de pauta recusada.';
+        }
+        sucesso = true;
+        break;
+
+      default:
+        mensagemResultado = 'Tipo de ação não reconhecido: ' + dados.tipo;
+    }
+
+    if (sucesso) {
+      TokenService.marcarUsado(token);
+      AuditoriaService.registrar('APROVACAO_TOKEN_' + acao.toUpperCase(),
+        dados.tipo, { token: token, entidadeId: dados.entidadeId });
+    }
+
+  } catch (err) {
+    Logger.error('router', '_renderTokenAcao', err.message);
+    mensagemResultado = 'Erro ao processar: ' + err.message;
+    sucesso = false;
+  }
+
+  var icone  = sucesso ? (acao === 'aprovar' ? '✅' : '✖️') : '❌';
+  var cor    = sucesso ? (acao === 'aprovar' ? '#16a34a' : '#dc2626') : '#b91c1c';
+
+  return HtmlService.createHtmlOutput(
+    '<html><head><meta charset="utf-8"></head>' +
+    '<body style="font-family:sans-serif;padding:40px;max-width:480px;margin:auto">' +
+    '<h2 style="color:' + cor + '">' + icone + ' ' + (sucesso ? 'Concluído' : 'Falha') + '</h2>' +
+    '<p>' + mensagemResultado + '</p>' +
+    (sucesso ? '<p style="color:#555;font-size:14px">Você já pode fechar esta aba.</p>' : '') +
+    '<p style="color:#888;font-size:14px;margin-top:32px">— ' + org.titulo + '</p>' +
+    '</body></html>'
+  ).setTitle(org.titulo);
 }
 
 // ─── Bridge GAS (chamados pelo frontend via google.script.run) ────────────────

@@ -397,6 +397,131 @@ var NotificationEngine = (function() {
 })();
 
 // ── Trigger global (configurar como Time-based Trigger, diário) ───────────────
+
+// ─── Aprovação por token de email ─────────────────────────────────────────────
+// Funções auxiliares para gerar e enviar links de aprovação com TokenService.
+
+var NotificationEngineTokens = (function() {
+
+  function _getAppUrl() {
+    try { return ScriptApp.getService().getUrl() || ''; } catch(_) { return ''; }
+  }
+
+  function _getNomeOrg() {
+    try { return getOrgConfig().nome || 'Sistema'; } catch(e) { return 'Sistema'; }
+  }
+
+  function _linkAprovar(token) {
+    return _getAppUrl() + '?secao=token_acao&token=' + token + '&acao=aprovar';
+  }
+
+  function _linkRecusar(token) {
+    return _getAppUrl() + '?secao=token_acao&token=' + token + '&acao=recusar';
+  }
+
+  /**
+   * Envia email de aprovação de férias/afastamento com links de aprovar/recusar.
+   * @param {Object} dados — { emailGestor, colaboradorNome, periodo, afastamentoId, orgId }
+   */
+  function enviarSolicitacaoFerias(dados) {
+    dados = dados || {};
+    var token = TokenService.gerar({
+      tipo: 'aprovacao_ferias',
+      entidadeId: dados.afastamentoId,
+      acao: 'aprovar',
+      emailDestinatario: dados.emailGestor,
+      orgId: dados.orgId
+    });
+
+    var org  = _getNomeOrg();
+    var subj = '[' + org + '] Aprovação de férias — ' + (dados.colaboradorNome || '');
+    var body = 'Solicitação de férias/afastamento pendente de aprovação.\n\n' +
+               'Colaborador: ' + (dados.colaboradorNome || '') + '\n' +
+               'Período: '     + (dados.periodo || '') + '\n\n' +
+               '✅ APROVAR:\n' + _linkAprovar(token) + '\n\n' +
+               '✖️ RECUSAR:\n' + _linkRecusar(token) + '\n\n' +
+               'Este link expira em 72 horas.\n\n— ' + org;
+
+    try {
+      GmailApp.sendEmail(dados.emailGestor, subj, body);
+      Logger.info('notification_engine_tokens', 'enviarSolicitacaoFerias',
+        'Email enviado para ' + dados.emailGestor);
+    } catch(e) {
+      Logger.warn('notification_engine_tokens', 'enviarSolicitacaoFerias', e.message);
+    }
+    return token;
+  }
+
+  /**
+   * Envia email de aprovação de remanejamento orçamentário.
+   * @param {Object} dados — { emailAprovador, remanejamentoId, descricao, valor, orgId }
+   */
+  function enviarSolicitacaoRemanejamento(dados) {
+    dados = dados || {};
+    var token = TokenService.gerar({
+      tipo: 'aprovacao_remanejamento',
+      entidadeId: dados.remanejamentoId,
+      acao: 'aprovar',
+      emailDestinatario: dados.emailAprovador,
+      orgId: dados.orgId
+    });
+
+    var org  = _getNomeOrg();
+    var subj = '[' + org + '] Aprovação de remanejamento — ' + (dados.remanejamentoId || '');
+    var body = 'Remanejamento orçamentário pendente de aprovação.\n\n' +
+               'ID: '        + (dados.remanejamentoId || '') + '\n' +
+               'Descrição: ' + (dados.descricao || '') + '\n' +
+               'Valor: R$ '  + (dados.valor || '') + '\n\n' +
+               '✅ APROVAR:\n' + _linkAprovar(token) + '\n\n' +
+               '✖️ RECUSAR:\n' + _linkRecusar(token) + '\n\n' +
+               'Este link expira em 72 horas.\n\n— ' + org;
+
+    try {
+      GmailApp.sendEmail(dados.emailAprovador, subj, body);
+    } catch(e) {
+      Logger.warn('notification_engine_tokens', 'enviarSolicitacaoRemanejamento', e.message);
+    }
+    return token;
+  }
+
+  /**
+   * Envia email de aprovação de aditivo contratual.
+   * @param {Object} dados — { emailAprovador, aditivoId, descricao, orgId }
+   */
+  function enviarSolicitacaoAditivo(dados) {
+    dados = dados || {};
+    var token = TokenService.gerar({
+      tipo: 'aprovacao_aditivo',
+      entidadeId: dados.aditivoId,
+      acao: 'aprovar',
+      emailDestinatario: dados.emailAprovador,
+      orgId: dados.orgId
+    });
+
+    var org  = _getNomeOrg();
+    var subj = '[' + org + '] Aprovação de aditivo — ' + (dados.aditivoId || '');
+    var body = 'Aditivo contratual pendente de aprovação.\n\n' +
+               'ID: '        + (dados.aditivoId || '') + '\n' +
+               'Descrição: ' + (dados.descricao || '') + '\n\n' +
+               '✅ APROVAR:\n' + _linkAprovar(token) + '\n\n' +
+               '✖️ RECUSAR:\n' + _linkRecusar(token) + '\n\n' +
+               'Este link expira em 72 horas.\n\n— ' + org;
+
+    try {
+      GmailApp.sendEmail(dados.emailAprovador, subj, body);
+    } catch(e) {
+      Logger.warn('notification_engine_tokens', 'enviarSolicitacaoAditivo', e.message);
+    }
+    return token;
+  }
+
+  return {
+    enviarSolicitacaoFerias:        enviarSolicitacaoFerias,
+    enviarSolicitacaoRemanejamento: enviarSolicitacaoRemanejamento,
+    enviarSolicitacaoAditivo:       enviarSolicitacaoAditivo
+  };
+
+})();
 function notificacoes_verificarDiario() {
   try {
     return NotificationEngine.verificarTodosAlertasDiario();

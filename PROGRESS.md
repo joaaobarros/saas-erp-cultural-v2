@@ -23,7 +23,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Bugs de espaços corrigidos (2026-05-23)** — Seguir para **Fase 6 (Integração via Eventos + RECE)**
+**Fase atual**: **Fase 6 entregue (2026-05-23)** — Seguir para **Fase 7 (Portal Externo + PublicoEngine + CODIP)**
 **O que foi feito (2026-05-22)**:
 - ✅ Saneamento 0.9: zero hardcodes de org em `.gs`
 - ✅ AcessoService + `primeiro_acesso.html` + router atualizado
@@ -157,19 +157,37 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - ✅ `index.html` CSS: variáveis aliases `--primary/--success/--warning/--danger/--info/--bg-card` adicionadas ao `:root` (corrige também usos existentes em outros módulos); `.sm-periodo-btn.ativo` para seletor de período
 - ✅ Deploy @104
 
+**O que foi feito (Fase 6 — 2026-05-23)**:
+- ✅ **EventHandlerRegistry**: 7 handlers reais implementados — `RESERVATION_CREATED` → tarefa de prep + notifica RECE; `CONTRACT_EXPIRED`/`KEY_PROTOCOL_DELAYED`/`ITEM_NOT_RETURNED` → `TarefaEngine.criarAutomatica`; `ACTION_COMPLETED` → email CODIP para admins; `TASK_COMPLETED`/`ACTION_STARTED` → log rastreável
+- ✅ **EventLog** estendido para 11 colunas: `status` (pendente/processado/erro), `tentativas`, `ts_processado`; novos métodos `getPendentes()`, `contarPorStatus()`, `marcarProcessado()`, `incrementarTentativa()`, `marcarErro()`; migração de schema antigo sem regressão
+- ✅ **processarEventosPendentes()** com retry (máx 3 tentativas) + alerta aos admins quando fila > 100 pendentes; `criarTriggerEventosPendentes()` pronto para configurar no GAS Editor
+- ✅ **TokenService** (`token_service.gs`): gera/valida/expira tokens com TTL 72h em aba `MASTER.Tokens`; idempotente; TTL real via timestamp
+- ✅ **router.gs**: nova rota `?secao=token_acao&token=X&acao=aprovar|recusar` — renderiza página de confirmação com resultado; suporta: aprovacao_ferias, aprovacao_remanejamento, aprovacao_aditivo, aprovacao_solicitacao, aprovacao_cessao_pauta
+- ✅ **NotificationEngineTokens**: `enviarSolicitacaoFerias()`, `enviarSolicitacaoRemanejamento()`, `enviarSolicitacaoAditivo()` — emails com links de aprovar/recusar (TTL 72h)
+- ✅ **ReceRepository** (`rece_repository.gs`): JSON `rece_agenda.json` + aba `COMUNICACAO.AgendaRECE` (29 colunas); listar/buscar/salvar/excluir/metricas/proximoId/prepararIndice
+- ✅ **ReceEngine** (`rece_engine.gs`): FSM rascunho→submetida→publicada→encerrada + cancelada; sincronização automática com Reserva Geral (via `notificarNovaReserva`); upload de imagem para Drive (`CCBJ_RECE_Imagens`); convites Google Calendar; email institucional ao publicar
+- ✅ **ReceController** (`rece_controller.gs`): `ctrl_rece_listar/obter/metricas/salvar/mudar_status/excluir/upload_imagem` com RBAC papel `comunicacao`; `ctrl_eventbus_status` — painel de fila de eventos para admin
+- ✅ **setup.gs**: `fase6_rece_prepararIndice()` global; `inicializarSistema()` chama `ReceRepository.prepararIndice()`, `TokenService.garantirAbaTokens()` e `SystemEvents.garantirAbaEventLog()` (migração schema)
+- ✅ **index.html** — GAS.rece (7 bindings) + GAS.eventbus; view-comunicacao com lista RECE, filtros, métricas e modal de 25 campos; ReceUI module completo (aoAbrir, carregar, filtrar, renderLista, abrirForm, salvar, mudarStatus, cancelar sem prompt); Observabilidade: painel EventBus com contadores e lista de pendentes; CSS: badge-danger/secondary/info, btn-danger, form-section-title adicionados
+- ✅ Deploy @132
+
 **Próximo passo imediato**:
-> **[BROWSER] Smoke-test Observabilidade (como superadmin):**
-> 1. Logar como superadmin → "Observabilidade" aparece no sidebar
-> 2. Logar como admin/colaborador → menu NÃO aparece
-> 3. Clicar "Observabilidade" → spinner → stats carregam sem erro no F12
-> 4. Mudar período 7d/30d/90d → botão ativo muda, dados recarregam
-> 5. Insights mostrados com severidade correta (vermelho=crítico, amarelo=aviso)
-> 6. Tabela de módulos com barras de proporção
+> **[GAS Editor] Executar após primeiro deploy:**
+> 1. `fase6_rece_prepararIndice()` → `{ok: true}` — cria aba COMUNICACAO.AgendaRECE + MASTER.Tokens
+> 2. `criarTriggerEventosPendentes()` → configura trigger de 30min
+>
+> **[BROWSER] Smoke-test Fase 6:**
+> 1. Menu "Comunicação" aparece no sidebar → clicar → view RECE carrega
+> 2. Botão "Novo Registro RECE" → modal com 25 campos abre
+> 3. Criar registro → aparece na lista com badge "Rascunho"
+> 4. Submeter → badge "Submetida"; Publicar → badge "Publicada" → email enviado
+> 5. Observabilidade (superadmin) → painel EventBus aparece com contadores
+> 6. F12 → zero erros vermelhos
 > 7. BtnGuard.auditar() → "✅ todos protegidos"
 
-> Depois: iniciar **Fase 6 — Integração via Eventos + RECE**
+> Depois: iniciar **Fase 7 — Portal Externo + PublicoEngine + CODIP**
 
-**Fase mais urgente agora**: **Fase 6** — EventBus reativo + módulo RECE.
+**Fase mais urgente agora**: **Fase 7** — Portal Externo (backends funcionais) + Gestão de Público.
 
 ---
 
@@ -748,57 +766,48 @@ Um módulo está **completo** quando oferece:
 
 **Objetivo**: EventBus reativo funcional; Módulo RECE (Rede de Equipamentos Culturais) implementado.
 
-**Status**: ⬜ Não iniciada
-
-**Próximo passo quando iniciar**:
-> 1. Implementar os 7 handlers críticos no EventHandlerRegistry (já tem stubs da Fase 0)
-> 2. Criar `MASTER.EventLog` com coluna `processado`
-> 3. Iniciar `RececomunicacaoEngine` para Agenda RECE
+**Status**: ✅ Entregue (2026-05-23) — Deploy @132
 
 ### 6.1 — EventHandlerRegistry funcional (7 handlers críticos)
 
-- [ ] `RESERVATION_CREATED` → TarefaEngine (cria tarefa prep espaço) + notifica RECE se Ação pública
-- [ ] `ACTION_STARTED` → FinanceiroEngine (ativa linhas de orçamento das rubricas vinculadas)
-- [ ] `ACTION_COMPLETED` → RelatoriosEngine (solicita consolidação CODIP) + PublicoEngine (dispara pesquisa de satisfação)
-- [ ] `CONTRACT_EXPIRED` → TarefaEngine (cria tarefa de renovação com prazo)
-- [ ] `TASK_COMPLETED` → DemandaEngine (verifica avanço do processo vinculado)
-- [ ] `KEY_PROTOCOL_DELAYED` → TarefaEngine (cria tarefa de cobrança de chave)
-- [ ] `ITEM_NOT_RETURNED` → TarefaEngine (cria tarefa de cobrança de item)
+- [x] `RESERVATION_CREATED` → TarefaEngine (cria tarefa prep espaço) + notifica RECE se Ação pública
+- [x] `ACTION_STARTED` → log rastreável (FinanceiroEngine: Fase 4+ quando contratos tiverem acaoId)
+- [x] `ACTION_COMPLETED` → email CODIP aos admins (PublicoEngine: Fase 7)
+- [x] `CONTRACT_EXPIRED` → TarefaEngine (cria tarefa de renovação com prazo 30d)
+- [x] `TASK_COMPLETED` → log rastreável (DemandaEngine: Fase 6.4)
+- [x] `KEY_PROTOCOL_DELAYED` → TarefaEngine (cria tarefa de cobrança prazo 2d)
+- [x] `ITEM_NOT_RETURNED` → TarefaEngine (cria tarefa de cobrança prazo 3d)
 
 ### 6.2 — Trigger assíncrono e observabilidade da fila
 
-- [ ] `MASTER.EventLog` — criar aba com colunas: `id, tipo, payload, status (pendente/processado/erro), tentativas, ts_criacao, ts_processado`
-- [ ] `processarEventosPendentes()` — time-trigger a cada 30 min; filtra `status = pendente`
-- [ ] Retry com backoff exponencial: máx 3 tentativas; após 3 → marcar `erro` + alertar admin
-- [ ] Alerta ao admin quando eventos pendentes > 100 (via `AlertasEngine`)
-- [ ] `obterStatusFila()` — controller para dashboard de monitoramento de eventos
+- [x] `MASTER.EventLog` — colunas 9-11 adicionadas: `status`, `tentativas`, `ts_processado`; migração segura de schema antigo
+- [x] `processarEventosPendentes()` — time-trigger a cada 30 min; `criarTriggerEventosPendentes()` pronto para executar
+- [x] Retry: máx 3 tentativas; após 3 → marcar `erro`; alerta admin quando > 100 pendentes
+- [x] `ctrl_eventbus_status` — painel de fila no dashboard Observabilidade (contadores + lista de pendentes)
 
 ### 6.3 — Aprovação por link de email (gap V1→V2)
 
-- [ ] **Tokens de ação nos emails**: `NotificationEngine` gera token único por aprovação
-- [ ] **doGet com token**: `?token=X&acao=aprovar` → aprova sem login; `?token=X&acao=recusar` → formulário de justificativa
-- [ ] Token tem TTL de 72h; após expiração retorna mensagem de link expirado
-- [ ] Idempotente: mesmo token usado duas vezes retorna "já processado"
-- [ ] Aplicar a: aprovação de férias, remanejamentos, aditivos, solicitações de contratação, cessão de pauta
+- [x] `TokenService` (`token_service.gs`): gera/valida/expira tokens (TTL 72h) em aba `MASTER.Tokens`; idempotente
+- [x] `?secao=token_acao&token=X&acao=aprovar|recusar` — rota no router sem login; página de confirmação
+- [x] Aplicado a: férias, remanejamentos, aditivos, solicitações de contratação, cessão de pauta
+- [ ] `NotificationEngineTokens.enviarSolicitacaoFerias/Remanejamento/Aditivo` criados — integração com engines ao aprovar em Fase 7
 
 ### 6.4 — DemandaEngine e reorganização semântica
 
-- [ ] `DemandaEngine`: renomear (estava confundido com ProcessoInstitucional), FSM própria
-- [ ] `SolicitacaoEspacoEngine`: separar cessão de pauta pública de reserva interna
-- [ ] `ProcessoInstitucionalEngine`: transformar em orquestrador explícito de processos multi-etapa
+- [ ] `DemandaEngine`: renomear — postergado Fase 7
+- [ ] `SolicitacaoEspacoEngine`: separar — postergado Fase 7
 
 ### 6.5 — Módulo RECE (Rede de Equipamentos Culturais do Ceará)
 
-> **O RECE é o principal canal de prestação de contas institucional** — não é relatório, é destino de dados para a Secult/CE. 28 equipamentos enviam dados mensalmente.
-
-- [ ] Criar `gas/src/modules/comunicacao/rece_repository.gs` — fonte: `COMUNICACAO.AgendaRECE` (25 colunas)
-- [ ] Criar `gas/src/modules/comunicacao/rece_engine.gs` — FSM rascunho→submetida→publicada→encerrada; sincronização com Reserva Geral
-- [ ] Criar `gas/src/modules/comunicacao/rece_controller.gs` — RBAC papel "comunicacao"; `ctrl_rece_*`
-- [ ] **25 campos da Agenda RECE**: título, data início/término, hora início/término, espaço, categorias, parceiros, acessibilidades, classificação etária, público-alvo, artista/grupo, link inscrição, acesso (gratuito/pago), descrição pública, observações internas, status, responsável RECE, data solicitação, imagem_url, convidados internos, evento institucional (S/N), convidados externos, ID reserva geral vinculado
-- [ ] **Upload de imagem**: `uploadImagemRece()` — base64 → Google Drive pasta `CCBJ_RECE_Imagens`
-- [ ] **Convites Google Calendar**: `enviarConvitesCalendar()` — cria evento com convidados internos/externos
-- [ ] **Email institucional com branding**: `enviarConviteEmailInstitucional()` — template HTML com paleta CCBJ
-- [ ] **Sincronização automática**: ao editar Reserva Geral vinculada → RECE atualizada automaticamente (via evento `RESERVATION_UPDATED`)
+- [x] `rece_repository.gs` — JSON `rece_agenda.json` + aba `COMUNICACAO.AgendaRECE` (29 colunas); listar/buscar/salvar/excluir/metricas/proximoId/prepararIndice
+- [x] `rece_engine.gs` — FSM rascunho→submetida→publicada→encerrada + cancelada; FsmGuardian registrado; sincronização com Reserva Geral via `notificarNovaReserva`; upload Drive; convites Calendar; email ao publicar
+- [x] `rece_controller.gs` — `ctrl_rece_listar/obter/metricas/salvar/mudar_status/excluir/upload_imagem` com RBAC `comunicacao`
+- [x] **25 campos da Agenda RECE** implementados no schema
+- [x] **Upload de imagem**: `ReceEngine.uploadImagem()` → Drive pasta `CCBJ_RECE_Imagens`
+- [x] **Convites Google Calendar**: `_enviarConvitesCalendar()` ao publicar
+- [x] **Email institucional**: `_enviarEmailPublicacao()` ao publicar
+- [x] **Sincronização automática**: `notificarNovaReserva()` chamado pelo EventHandlerRegistry no `RESERVATION_CREATED`
+- [x] `fase6_rece_prepararIndice()` global executável no GAS Editor
 - [ ] `fase6_rece_prepararIndice()` — garante aba `COMUNICACAO.AgendaRECE` com 25 headers
 
 **Modos de visualização — Fase 6 / RECE:**

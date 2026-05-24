@@ -125,6 +125,22 @@ function inicializarSistema() {
       typeof AcaoRepository.prepararIndice === 'function') {
     AcaoRepository.prepararIndice();
   }
+
+  // Fase 6 — RECE: garante aba COMUNICACAO.AgendaRECE + JSON índice
+  if (typeof ReceRepository !== 'undefined' &&
+      typeof ReceRepository.prepararIndice === 'function') {
+    ReceRepository.prepararIndice(org.orgId);
+  }
+
+  // Fase 6 — TokenService: garante aba MASTER.Tokens
+  if (typeof TokenService !== 'undefined' &&
+      typeof TokenService.garantirAbaTokens === 'function') {
+    TokenService.garantirAbaTokens();
+  }
+
+  // Fase 6 — EventBus: migração do EventLog para schema de 11 colunas
+  SystemEvents.garantirAbaEventLog();
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
@@ -383,4 +399,19 @@ function _criarOuRegistrarPlanilhas() {
     props.setProperty(propKey, ss.getId());
     Logger.info('setup', '_criarOuRegistrarPlanilhas', 'Planilha criada: ' + titulo + ' → ' + ss.getId());
   });
+}
+
+// ─── Funções globais de fase (executar no GAS Editor) ─────────────────────────
+
+/**
+ * Fase 6 — RECE: prepara aba AgendaRECE + JSON índice.
+ * Executar uma vez após deploy da Fase 6.
+ */
+function fase6_rece_prepararIndice() {
+  var org = getOrgConfig();
+  ReceRepository.prepararIndice(org.orgId);
+  TokenService.garantirAbaTokens();
+  SystemEvents.garantirAbaEventLog();
+  Logger.info('setup', 'fase6_rece_prepararIndice', 'RECE, Tokens e EventLog prontos.');
+  return { ok: true, orgId: org.orgId };
 }

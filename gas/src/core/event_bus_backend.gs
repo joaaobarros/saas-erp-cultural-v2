@@ -155,9 +155,11 @@ var SystemEvents = (function () {
     try {
       var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
       if (!sheet) return;
+      // Colunas 1-8: canônicas. 9: status, 10: tentativas, 11: ts_processado
       sheet.appendRow([
         evt.id, evt.tipo, evt.origem, evt.entidade,
-        evt.entidadeId, evt.usuario, evt.timestamp, evt.contexto
+        evt.entidadeId, evt.usuario, evt.timestamp, evt.contexto,
+        'pendente', 0, ''
       ]);
     } catch (e) {
       console.warn('[SystemEvents] emit falhou para ' + tipo + ':', e.message);
@@ -180,11 +182,104 @@ var SystemEvents = (function () {
       if (!sheet || sheet.getLastRow() < 2) return [];
       var ultima = sheet.getLastRow();
       var inicio = Math.max(2, ultima - n + 1);
-      var linhas = sheet.getRange(inicio, 1, ultima - inicio + 1, 8).getValues();
+      var ncols  = sheet.getLastColumn();
+      var cols   = Math.max(8, Math.min(ncols, 11));
+      var linhas = sheet.getRange(inicio, 1, ultima - inicio + 1, cols).getValues();
       return linhas.reverse().map(_mapearEvento);
     } catch (e) {
       console.warn('[SystemEvents] getRecentes falhou:', e.message);
       return [];
+    }
+  }
+
+  /**
+   * Retorna eventos com status 'pendente' (ainda não processados pelo trigger).
+   * Linhas antigas sem coluna 9 são ignoradas (tratadas como já processadas).
+   */
+  function getPendentes(max) {
+    max = max || 200;
+    try {
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
+      if (!sheet || sheet.getLastRow() < 2) return [];
+      var ncols = sheet.getLastColumn();
+      if (ncols < 9) return []; // schema antigo sem coluna status
+      var dados = sheet.getRange(2, 1, sheet.getLastRow() - 1, ncols).getValues();
+      var result = [];
+      for (var i = dados.length - 1; i >= 0 && result.length < max; i--) {
+        var status = String(dados[i][8] || '');
+        if (status === 'pendente') result.push(_mapearEvento(dados[i]));
+      }
+      return result;
+    } catch (e) {
+      console.warn('[SystemEvents] getPendentes falhou:', e.message);
+      return [];
+    }
+  }
+
+  /**
+   * Conta eventos por status para o dashboard de observabilidade.
+   */
+  function contarPorStatus() {
+    try {
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
+      if (!sheet || sheet.getLastRow() < 2) return { pendente: 0, processado: 0, erro: 0, total: 0 };
+      var ncols = sheet.getLastColumn();
+      var dados = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(ncols, 11)).getValues();
+      var acc = { pendente: 0, processado: 0, erro: 0, total: dados.length };
+      dados.forEach(function(r) {
+        var s = String(r[8] || 'pendente');
+        if (acc[s] !== undefined) acc[s]++;
+        else acc.pendente++;
+      });
+      return acc;
+    } catch (e) {
+      return { pendente: 0, processado: 0, erro: 0, total: 0 };
+    }
+  }
+
+  /**
+   * Marca um evento como processado (coluna 9 = 'processado', coluna 11 = timestamp).
+   */
+  function marcarProcessado(id) {
+    _atualizarStatusEvento(id, 'processado', null);
+  }
+
+  /**
+   * Incrementa tentativas e marca como erro se >= MAX.
+   */
+  function incrementarTentativa(id, novasTentativas) {
+    _atualizarStatusEvento(id, novasTentativas >= 3 ? 'erro' : 'pendente', novasTentativas);
+  }
+
+  /**
+   * Marca diretamente como erro.
+   */
+  function marcarErro(id, tentativas) {
+    _atualizarStatusEvento(id, 'erro', tentativas);
+  }
+
+  function _atualizarStatusEvento(id, novoStatus, tentativas) {
+    try {
+      var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
+      if (!sheet || sheet.getLastRow() < 2) return;
+      var ncols = sheet.getLastColumn();
+      if (ncols < 9) return;
+      var ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]) === String(id)) {
+          var lin = i + 2;
+          sheet.getRange(lin, 9).setValue(novoStatus);
+          if (tentativas !== null && tentativas !== undefined) {
+            sheet.getRange(lin, 10).setValue(tentativas);
+          }
+          if (novoStatus === 'processado') {
+            sheet.getRange(lin, 11).setValue(new Date().toISOString());
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[SystemEvents] _atualizarStatusEvento falhou para ' + id + ':', e.message);
     }
   }
 
@@ -312,10 +407,18 @@ var SystemEvents = (function () {
   function garantirAbaEventLog() {
     try {
       var sheet = _getSheet('SHEET_ID_MASTER', ABA_EVENTO_LOG);
-      if (sheet && sheet.getLastRow() >= 1) return;
       if (!sheet) return;
-      sheet.appendRow(['id', 'tipo', 'origem', 'entidade', 'entidade_id', 'usuario', 'timestamp', 'contexto']);
-      sheet.getRange(1, 1, 1, 8).setFontWeight('bold');
+      if (sheet.getLastRow() >= 1) {
+        // Migração: adicionar colunas de status se schema antigo (8 colunas)
+        if (sheet.getLastColumn() < 9) {
+          sheet.getRange(1, 9, 1, 3).setValues([['status', 'tentativas', 'ts_processado']]);
+          sheet.getRange(1, 1, 1, 11).setFontWeight('bold');
+        }
+        return;
+      }
+      sheet.appendRow(['id', 'tipo', 'origem', 'entidade', 'entidade_id', 'usuario', 'timestamp', 'contexto',
+                       'status', 'tentativas', 'ts_processado']);
+      sheet.getRange(1, 1, 1, 11).setFontWeight('bold');
     } catch (e) {
       console.warn('[SystemEvents] garantirAbaEventLog:', e.message);
     }
@@ -356,14 +459,17 @@ var SystemEvents = (function () {
 
   function _mapearEvento(r) {
     return {
-      id:         r[0],
-      tipo:       r[1],
-      origem:     r[2],
-      entidade:   r[3],
-      entidadeId: r[4],
-      usuario:    r[5],
-      timestamp:  r[6],
-      contexto:   _parseContexto(r[7])
+      id:           r[0],
+      tipo:         r[1],
+      origem:       r[2],
+      entidade:     r[3],
+      entidadeId:   r[4],
+      usuario:      r[5],
+      timestamp:    r[6],
+      contexto:     _parseContexto(r[7]),
+      status:       String(r[8] || 'pendente'),
+      tentativas:   Number(r[9] || 0),
+      tsProcessado: r[10] ? String(r[10]) : ''
     };
   }
 
@@ -371,6 +477,11 @@ var SystemEvents = (function () {
     emit:                  emit,
     validarSchema:         validarSchema,
     getRecentes:           getRecentes,
+    getPendentes:          getPendentes,
+    contarPorStatus:       contarPorStatus,
+    marcarProcessado:      marcarProcessado,
+    incrementarTentativa:  incrementarTentativa,
+    marcarErro:            marcarErro,
     getEventosPorEntidade: getEventosPorEntidade,
     validarIntegridade:    validarIntegridade,
     garantirAbaEventLog:   garantirAbaEventLog

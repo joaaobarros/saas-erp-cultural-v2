@@ -495,6 +495,7 @@ body {
 @media (max-width: 680px) { .form-grid { grid-template-columns: 1fr; } }
 
 .form-group { margin-bottom: 14px; }
+.form-section-title { font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border); }
 .form-label {
   display: block;
   font-size: 11.5px; font-weight: 600;
@@ -527,12 +528,15 @@ body {
   border-radius: 99px;
   font-size: 11.5px; font-weight: 600;
 }
-.badge-primary { background: var(--color-primary-lt); color: var(--color-primary); }
-.badge-success { background: #d1fae5; color: #065f46; }
-.badge-warning { background: #fef3c7; color: #92400e; }
-.badge-error   { background: #fee2e2; color: #991b1b; }
-.badge-muted   { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
-.badge-accent  { background: #fef3c7; color: #b45309; }
+.badge-primary   { background: var(--color-primary-lt); color: var(--color-primary); }
+.badge-success   { background: #d1fae5; color: #065f46; }
+.badge-warning   { background: #fef3c7; color: #92400e; }
+.badge-error     { background: #fee2e2; color: #991b1b; }
+.badge-danger    { background: #fee2e2; color: #991b1b; }
+.badge-info      { background: #e0f2fe; color: #0369a1; }
+.badge-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.badge-muted     { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.badge-accent    { background: #fef3c7; color: #b45309; }
 .nav-badge { display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:#ef4444;color:#fff;border-radius:9px;font-size:11px;font-weight:700;margin-left:auto; }
 .nav-badge.oculto { display:none; }
 
@@ -598,6 +602,8 @@ body {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .btn-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
 .btn-success:hover { background: #a7f3d0; }
+.btn-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fca5a5; }
 .btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 .btn-warning:hover { background: #fde68a; }
 .btn-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -3801,7 +3807,230 @@ textarea.input { resize: vertical; }
           </div>
 
         </div><!-- /sm-conteudo -->
+
+        <!-- ── Painel EventBus ─────────────────────────────────────────────── -->
+        <div style="margin-top:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <h3 style="margin:0;font-size:16px;font-weight:600;">
+              <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:4px;">hub</span>
+              Fila de Eventos (EventBus)
+            </h3>
+            <button class="btn-sm sm-periodo-btn" onclick="SistemaMetricasUI.carregarEventBus()" data-bg-skip="1">
+              <span class="material-symbols-outlined" style="font-size:14px">refresh</span> Atualizar fila
+            </button>
+          </div>
+
+          <!-- Contadores -->
+          <div id="sm-eventbus-stats" class="stats-strip" style="margin-bottom:12px;">
+            <div class="stat-card"><div class="stat-value" id="sm-eb-total" style="color:var(--color-primary)">—</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-value" id="sm-eb-pendente" style="color:var(--warning)">—</div><div class="stat-label">Pendentes</div></div>
+            <div class="stat-card"><div class="stat-value" id="sm-eb-processado" style="color:var(--success)">—</div><div class="stat-label">Processados</div></div>
+            <div class="stat-card"><div class="stat-value" id="sm-eb-erro" style="color:var(--danger)">—</div><div class="stat-label">Com Erro</div></div>
+          </div>
+
+          <!-- Handlers registrados -->
+          <div id="sm-eb-handlers" style="margin-bottom:12px;padding:10px 14px;background:var(--bg-card);border-radius:8px;font-size:13px;">
+            <strong>Handlers registrados:</strong>
+            <span id="sm-eb-handlers-lista" class="muted-text">carregando…</span>
+          </div>
+
+          <!-- Eventos pendentes recentes -->
+          <div>
+            <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Últimos eventos pendentes:</p>
+            <div id="sm-eb-pendentes">
+              <p class="muted-text" style="font-size:13px;">Carregando…</p>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /view-sistema-metricas -->
+
+      <!-- ═══ VIEW COMUNICAÇÃO (RECE) ═══════════════════════════════════════ -->
+      <div id="view-comunicacao" class="view">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Agenda RECE</h1>
+            <p class="view-subtitle">Rede de Equipamentos Culturais do Ceará — Secult/CE</p>
+          </div>
+          <button id="rece-novo-btn" class="btn btn-primary"
+            onclick="BtnGuard.wrap('rece-novo-btn','Criando…',function(){ ReceUI.abrirForm(null); })">
+            <span class="material-symbols-outlined">add</span> Novo Registro RECE
+          </button>
+        </div>
+
+        <!-- Métricas -->
+        <div id="rece-stats" class="stats-strip">
+          <div class="stat-card"><div class="stat-value" id="rece-total">—</div><div class="stat-label">Total</div></div>
+          <div class="stat-card"><div class="stat-value" id="rece-rascunho" style="color:var(--muted)">—</div><div class="stat-label">Rascunho</div></div>
+          <div class="stat-card"><div class="stat-value" id="rece-submetida" style="color:var(--warning)">—</div><div class="stat-label">Submetida</div></div>
+          <div class="stat-card"><div class="stat-value" id="rece-publicada" style="color:var(--success)">—</div><div class="stat-label">Publicada</div></div>
+          <div class="stat-card"><div class="stat-value" id="rece-encerrada" style="color:var(--info)">—</div><div class="stat-label">Encerrada</div></div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="toolbar" style="margin-bottom:12px;gap:8px;">
+          <input type="text" id="rece-busca" placeholder="Buscar por título ou artista…" class="input-busca" oninput="ReceUI._filtrar()">
+          <select id="rece-filtro-status" class="select-sm" onchange="ReceUI._filtrar()">
+            <option value="">Todos os status</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="submetida">Submetida</option>
+            <option value="publicada">Publicada</option>
+            <option value="encerrada">Encerrada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <input type="month" id="rece-filtro-mes" class="select-sm" onchange="ReceUI._filtrar()" title="Filtrar por mês">
+          <button class="btn btn-secondary btn-sm" onclick="ReceUI.carregar()" data-bg-skip="1">
+            <span class="material-symbols-outlined" style="font-size:16px">refresh</span>
+          </button>
+        </div>
+
+        <!-- Lista -->
+        <div id="rece-lista" class="lista-container">
+          <p class="muted-text">Carregando registros RECE…</p>
+        </div>
+      </div><!-- /view-comunicacao -->
+
+      <!-- Modal RECE -->
+      <div id="rece-modal" class="modal-overlay oculto" onclick="if(event.target===this)ReceUI.fecharForm()">
+        <div class="modal-box" style="max-width:700px;max-height:90vh;overflow-y:auto;">
+          <div class="modal-header">
+            <h2 id="rece-modal-titulo">Novo Registro RECE</h2>
+            <button class="modal-close" onclick="ReceUI.fecharForm()" data-bg-skip="1">✕</button>
+          </div>
+          <form id="rece-form" onsubmit="return false">
+            <input type="hidden" id="rece-id">
+
+            <!-- Aba 1 — Dados Básicos -->
+            <div class="form-section-title">Identificação</div>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Título *</label>
+                <input type="text" id="rece-titulo" class="form-control" placeholder="Nome do evento/atividade" required>
+              </div>
+              <div class="form-group">
+                <label>Artista / Grupo</label>
+                <input type="text" id="rece-artista" class="form-control" placeholder="Nome do artista ou grupo">
+              </div>
+              <div class="form-group">
+                <label>Acesso</label>
+                <select id="rece-acesso" class="form-control">
+                  <option value="gratuito">Gratuito</option>
+                  <option value="pago">Pago</option>
+                  <option value="inscricao">Com Inscrição</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Datas e Horários -->
+            <div class="form-section-title">Datas e Local</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Data Início *</label>
+                <input type="date" id="rece-data-inicio" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label>Data Término</label>
+                <input type="date" id="rece-data-termino" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Hora Início</label>
+                <input type="time" id="rece-hora-inicio" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Hora Término</label>
+                <input type="time" id="rece-hora-termino" class="form-control">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Espaço</label>
+                <select id="rece-espaco" class="form-control" onchange="ReceUI._onEspacoChange()">
+                  <option value="">— Selecionar espaço —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ID Reserva Vinculada</label>
+                <input type="text" id="rece-reserva-id" class="form-control" placeholder="RES-XXXX (opcional)">
+              </div>
+              <div class="form-group">
+                <label>Evento Institucional?</label>
+                <select id="rece-institucional" class="form-control">
+                  <option value="N">Não</option>
+                  <option value="S">Sim</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Classificação -->
+            <div class="form-section-title">Classificação e Público</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Classificação Etária</label>
+                <select id="rece-classificacao" class="form-control">
+                  <option value="livre">Livre</option>
+                  <option value="10">10 anos</option>
+                  <option value="12">12 anos</option>
+                  <option value="14">14 anos</option>
+                  <option value="16">16 anos</option>
+                  <option value="18">18 anos</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Público-Alvo</label>
+                <input type="text" id="rece-publico" class="form-control" placeholder="Ex: jovens, idosos, geral…">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Categorias (separadas por vírgula)</label>
+                <input type="text" id="rece-categorias" class="form-control" placeholder="Ex: música, dança, teatro">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Acessibilidades (separadas por vírgula)</label>
+                <input type="text" id="rece-acessibilidades" class="form-control" placeholder="Ex: Libras, audiodescrição, rampa">
+              </div>
+            </div>
+
+            <!-- Descrição -->
+            <div class="form-section-title">Descrição e Links</div>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Descrição Pública</label>
+                <textarea id="rece-descricao" class="form-control" rows="3" placeholder="Texto que será exibido publicamente…"></textarea>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Observações Internas</label>
+                <textarea id="rece-obs" class="form-control" rows="2" placeholder="Notas internas (não exibidas ao público)…"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Link de Inscrição</label>
+                <input type="url" id="rece-link" class="form-control" placeholder="https://…">
+              </div>
+              <div class="form-group">
+                <label>Parceiros</label>
+                <input type="text" id="rece-parceiros" class="form-control" placeholder="Organizações parceiras">
+              </div>
+            </div>
+
+            <!-- Convidados -->
+            <div class="form-section-title">Convidados</div>
+            <div class="form-grid">
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Convidados Internos (emails separados por vírgula)</label>
+                <input type="text" id="rece-convidados-int" class="form-control" placeholder="fulano@idm.org.br, beltrano@idm.org.br">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Convidados Externos (emails separados por vírgula)</label>
+                <input type="text" id="rece-convidados-ext" class="form-control" placeholder="parceiro@exemplo.com">
+              </div>
+            </div>
+
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+              <button class="btn btn-secondary" onclick="ReceUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button id="rece-salvar-btn" class="btn btn-primary"
+                onclick="BtnGuard.wrap('rece-salvar-btn','Salvando…',ReceUI.salvar)">
+                Salvar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
     </div><!-- /conteudo -->
   </div><!-- /main -->
@@ -4052,6 +4281,18 @@ var GAS = {
   },
   sistemaMetricas: {
     obter: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sistema_metricas_obter(p||{}); }
+  },
+  rece: {
+    listar:       function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_listar(p||{}); },
+    obter:        function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_obter(p); },
+    metricas:     function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_metricas({}); },
+    salvar:       function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_salvar(d); },
+    mudarStatus:  function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_mudar_status(d); },
+    excluir:      function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_excluir(p); },
+    uploadImagem: function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rece_upload_imagem(d); }
+  },
+  eventbus: {
+    status: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_eventbus_status({}); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -11911,6 +12152,7 @@ var App = (function() {
             : id === 'financeiro' ? function(){ FinanceiroTabs.aoAbrir(); }
             : id === 'espacos'    ? function(){ EspacosUI.aoAbrir(); }
             : id === 'acoes'           ? function(){ AcoesUI.aoAbrir(); }
+            : id === 'comunicacao'     ? function(){ ReceUI.aoAbrir(); }
             : id === 'sistema-metricas'? function(){ SistemaMetricasUI.aoAbrir(); }
             : null
           );
@@ -12085,6 +12327,316 @@ var MetricsToggle = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// ReceUI — Agenda RECE (Comunicação)
+// ═══════════════════════════════════════════════════════════
+var ReceUI = (function() {
+  var _carregado    = false;
+  var _lista        = [];
+  var _listaFiltrada= [];
+  var _editandoId   = null;
+  var _espacos      = [];
+
+  // ── Ciclo de vida ──────────────────────────────────────────────────────────
+
+  function aoAbrir() {
+    if (!_carregado) carregar();
+  }
+
+  function carregar() {
+    _carregarMetricas();
+    var el = document.getElementById('rece-lista');
+    if (el) el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.rece.listar({}, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro(resp && resp.error && resp.error.message || 'Erro ao carregar RECE'); return; }
+      _lista = resp.data || [];
+      _carregado = true;
+      _filtrar();
+    });
+    // Carrega espaços para o select
+    if (_espacos.length === 0) {
+      try {
+        _espacos = (App.getBoot().espacos || []);
+        _popularSelectEspaco();
+      } catch(e) {}
+    }
+  }
+
+  function _carregarMetricas() {
+    GAS.rece.metricas(function(resp) {
+      if (!resp || !resp.ok) return;
+      var m = resp.data || {};
+      var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v !== undefined ? v : '0'; };
+      set('rece-total',     m.total     || 0);
+      set('rece-rascunho',  m.rascunho  || 0);
+      set('rece-submetida', m.submetida || 0);
+      set('rece-publicada', m.publicada || 0);
+      set('rece-encerrada', m.encerrada || 0);
+    });
+  }
+
+  // ── Filtro e Renderização ──────────────────────────────────────────────────
+
+  function _filtrar() {
+    var busca  = (document.getElementById('rece-busca')       || {value:''}).value.toLowerCase();
+    var status = (document.getElementById('rece-filtro-status')|| {value:''}).value;
+    var mes    = (document.getElementById('rece-filtro-mes')   || {value:''}).value; // YYYY-MM
+
+    _listaFiltrada = _lista.filter(function(r) {
+      if (status && r.status !== status) return false;
+      if (mes && r.dataInicio && !r.dataInicio.startsWith(mes)) return false;
+      if (busca) {
+        var txt = (r.titulo + ' ' + (r.artistaGrupo || '') + ' ' + (r.responsavelRece || '')).toLowerCase();
+        if (txt.indexOf(busca) < 0) return false;
+      }
+      return true;
+    });
+    _renderLista();
+  }
+
+  var _BADGE_RECE = {
+    rascunho:  ['badge-secondary', 'Rascunho'],
+    submetida: ['badge-warning',   'Submetida'],
+    publicada: ['badge-success',   'Publicada'],
+    encerrada: ['badge-info',      'Encerrada'],
+    cancelada: ['badge-danger',    'Cancelada']
+  };
+
+  function _renderLista() {
+    var el = document.getElementById('rece-lista');
+    if (!el) return;
+    if (_listaFiltrada.length === 0) {
+      el.innerHTML = '<p class="muted-text">Nenhum registro encontrado.</p>';
+      return;
+    }
+    var html = '<table class="tabela-dados"><thead><tr>' +
+      '<th>ID</th><th>Título</th><th>Artista/Grupo</th><th>Data</th><th>Espaço</th><th>Status</th><th>Ações</th>' +
+      '</tr></thead><tbody>';
+    _listaFiltrada.forEach(function(r) {
+      var badge = _BADGE_RECE[r.status] || ['badge-secondary', r.status];
+      var podeMudar = r.status !== 'encerrada' && r.status !== 'cancelada';
+      html += '<tr>' +
+        '<td><code>' + escaparHtml(r.id) + '</code></td>' +
+        '<td>' + escaparHtml(r.titulo) + '</td>' +
+        '<td>' + escaparHtml(r.artistaGrupo || '—') + '</td>' +
+        '<td>' + escaparHtml(r.dataInicio || '—') + (r.dataTermino && r.dataTermino !== r.dataInicio ? ' → ' + r.dataTermino : '') + '</td>' +
+        '<td>' + escaparHtml(r.espacoNome || '—') + '</td>' +
+        '<td><span class="badge ' + badge[0] + '">' + badge[1] + '</span></td>' +
+        '<td style="white-space:nowrap;">' +
+          (podeMudar ? '<button class="btn btn-secondary btn-sm" style="margin-right:4px;" ' +
+            'onclick=\'BtnGuard.wrap("rece-edit-' + escaparHtml(r.id) + '","Abrindo…",function(){ReceUI.abrirForm(' + JSON.stringify(r.id).replace(/"/g,"'") + ')})\'>' +
+            'Editar</button>' : '') +
+          _botoesStatus(r) +
+        '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function _botoesStatus(r) {
+    var id = JSON.stringify(r.id).replace(/"/g,"'");
+    var html = '';
+    if (r.status === 'rascunho') {
+      html += '<button class="btn btn-primary btn-sm" style="margin-right:4px;" ' +
+        'onclick=\'BtnGuard.wrap("rece-sub-' + r.id + '","Submetendo…",function(){ReceUI._mudarStatus(' + id + ',"submetida")})\'>' +
+        'Submeter</button>';
+    }
+    if (r.status === 'submetida') {
+      html += '<button class="btn btn-success btn-sm" style="margin-right:4px;" ' +
+        'onclick=\'BtnGuard.wrap("rece-pub-' + r.id + '","Publicando…",function(){ReceUI._mudarStatus(' + id + ',"publicada")})\'>' +
+        'Publicar</button>';
+    }
+    if (r.status === 'publicada') {
+      html += '<button class="btn btn-secondary btn-sm" style="margin-right:4px;" ' +
+        'onclick=\'BtnGuard.wrap("rece-enc-' + r.id + '","Encerrando…",function(){ReceUI._mudarStatus(' + id + ',"encerrada")})\'>' +
+        'Encerrar</button>';
+    }
+    if (r.status !== 'cancelada' && r.status !== 'encerrada') {
+      html += '<button class="btn btn-danger btn-sm" ' +
+        'onclick=\'BtnGuard.wrap("rece-can-' + r.id + '","Cancelando…",function(){ReceUI._confirmarCancelar(' + id + ')})\'>' +
+        'Cancelar</button>';
+    }
+    return html;
+  }
+
+  // ── Formulário ─────────────────────────────────────────────────────────────
+
+  function abrirForm(id) {
+    _editandoId = id || null;
+    var modal = document.getElementById('rece-modal');
+    document.getElementById('rece-modal-titulo').textContent = id ? 'Editar Registro RECE' : 'Novo Registro RECE';
+    document.getElementById('rece-id').value          = '';
+    document.getElementById('rece-titulo').value      = '';
+    document.getElementById('rece-artista').value     = '';
+    document.getElementById('rece-data-inicio').value = '';
+    document.getElementById('rece-data-termino').value= '';
+    document.getElementById('rece-hora-inicio').value = '';
+    document.getElementById('rece-hora-termino').value= '';
+    document.getElementById('rece-espaco').value      = '';
+    document.getElementById('rece-reserva-id').value  = '';
+    document.getElementById('rece-institucional').value='N';
+    document.getElementById('rece-acesso').value      = 'gratuito';
+    document.getElementById('rece-classificacao').value='livre';
+    document.getElementById('rece-publico').value     = '';
+    document.getElementById('rece-categorias').value  = '';
+    document.getElementById('rece-acessibilidades').value='';
+    document.getElementById('rece-descricao').value   = '';
+    document.getElementById('rece-obs').value         = '';
+    document.getElementById('rece-link').value        = '';
+    document.getElementById('rece-parceiros').value   = '';
+    document.getElementById('rece-convidados-int').value='';
+    document.getElementById('rece-convidados-ext').value='';
+
+    if (id) {
+      GAS.rece.obter({ id: id }, function(resp) {
+        if (!resp || !resp.ok) { Toast.erro('Erro ao carregar registro'); return; }
+        var r = resp.data;
+        document.getElementById('rece-id').value           = r.id;
+        document.getElementById('rece-titulo').value       = r.titulo || '';
+        document.getElementById('rece-artista').value      = r.artistaGrupo || '';
+        document.getElementById('rece-data-inicio').value  = r.dataInicio || '';
+        document.getElementById('rece-data-termino').value = r.dataTermino || '';
+        document.getElementById('rece-hora-inicio').value  = r.horaInicio || '';
+        document.getElementById('rece-hora-termino').value = r.horaTermino || '';
+        document.getElementById('rece-espaco').value       = r.espacoId || '';
+        document.getElementById('rece-reserva-id').value   = r.reservaGeralId || '';
+        document.getElementById('rece-institucional').value= r.eventoInstitucional || 'N';
+        document.getElementById('rece-acesso').value       = r.acesso || 'gratuito';
+        document.getElementById('rece-classificacao').value= r.classificacaoEtaria || 'livre';
+        document.getElementById('rece-publico').value      = r.publicoAlvo || '';
+        document.getElementById('rece-categorias').value   = (r.categorias || []).join(', ');
+        document.getElementById('rece-acessibilidades').value = (r.acessibilidades || []).join(', ');
+        document.getElementById('rece-descricao').value    = r.descricaoPublica || '';
+        document.getElementById('rece-obs').value          = r.observacoesInternas || '';
+        document.getElementById('rece-link').value         = r.linkInscricao || '';
+        document.getElementById('rece-parceiros').value    = r.parceiros || '';
+        document.getElementById('rece-convidados-int').value = (r.convidadosInternos || []).join(', ');
+        document.getElementById('rece-convidados-ext').value = (r.convidadosExternos || []).join(', ');
+      });
+    }
+
+    _popularSelectEspaco();
+    modal.classList.remove('oculto');
+  }
+
+  function fecharForm() {
+    document.getElementById('rece-modal').classList.add('oculto');
+  }
+
+  function salvar() {
+    var id = document.getElementById('rece-id').value;
+    var dados = {
+      id:                  id || undefined,
+      titulo:              document.getElementById('rece-titulo').value.trim(),
+      artistaGrupo:        document.getElementById('rece-artista').value.trim(),
+      dataInicio:          document.getElementById('rece-data-inicio').value,
+      dataTermino:         document.getElementById('rece-data-termino').value,
+      horaInicio:          document.getElementById('rece-hora-inicio').value,
+      horaTermino:         document.getElementById('rece-hora-termino').value,
+      espacoId:            document.getElementById('rece-espaco').value,
+      espacoNome:          (document.getElementById('rece-espaco').selectedOptions[0] || {}).text || '',
+      reservaGeralId:      document.getElementById('rece-reserva-id').value,
+      eventoInstitucional: document.getElementById('rece-institucional').value,
+      acesso:              document.getElementById('rece-acesso').value,
+      classificacaoEtaria: document.getElementById('rece-classificacao').value,
+      publicoAlvo:         document.getElementById('rece-publico').value,
+      categorias:          document.getElementById('rece-categorias').value,
+      acessibilidades:     document.getElementById('rece-acessibilidades').value,
+      descricaoPublica:    document.getElementById('rece-descricao').value,
+      observacoesInternas: document.getElementById('rece-obs').value,
+      linkInscricao:       document.getElementById('rece-link').value,
+      parceiros:           document.getElementById('rece-parceiros').value,
+      convidadosInternos:  document.getElementById('rece-convidados-int').value,
+      convidadosExternos:  document.getElementById('rece-convidados-ext').value
+    };
+    if (!dados.titulo) { Toast.erro('Título é obrigatório'); return; }
+    if (!dados.dataInicio) { Toast.erro('Data de início é obrigatória'); return; }
+
+    GAS.rece.salvar(dados, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro(resp && resp.error && resp.error.message || 'Erro ao salvar'); return; }
+      Toast.sucesso(id ? 'Registro RECE atualizado!' : 'Registro RECE criado!');
+      fecharForm();
+      _carregado = false;
+      carregar();
+    });
+  }
+
+  function _mudarStatus(id, novoStatus) {
+    GAS.rece.mudarStatus({ id: id, status: novoStatus }, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro(resp && resp.error && resp.error.message || 'Erro'); return; }
+      var label = { submetida:'submetido', publicada:'publicado', encerrada:'encerrado' };
+      Toast.sucesso('Registro RECE ' + (label[novoStatus] || novoStatus) + '!');
+      _carregado = false;
+      carregar();
+    });
+  }
+
+  function _confirmarCancelar(id) {
+    // Modal inline de confirmação de cancelamento (sem prompt())
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+    box.innerHTML = '<h3 style="margin:0 0 12px;color:var(--danger)">Cancelar Registro RECE</h3>' +
+      '<p style="margin:0 0 12px;color:var(--text-secondary);font-size:14px">Informe o motivo do cancelamento:</p>' +
+      '<textarea id="_rece-cancelar-motivo" class="form-control" rows="3" placeholder="Motivo do cancelamento…" style="width:100%;margin-bottom:12px;"></textarea>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+      '<button class="btn btn-secondary" id="_rece-cancelar-nao">Não cancelar</button>' +
+      '<button class="btn btn-danger" id="_rece-cancelar-sim">Confirmar cancelamento</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById('_rece-cancelar-nao').onclick = function() { document.body.removeChild(overlay); };
+    document.getElementById('_rece-cancelar-sim').onclick = function() {
+      var motivo = document.getElementById('_rece-cancelar-motivo').value.trim();
+      document.body.removeChild(overlay);
+      GAS.rece.mudarStatus({ id: id, status: 'cancelada', motivo: motivo }, function(resp) {
+        if (!resp || !resp.ok) { Toast.erro(resp && resp.error && resp.error.message || 'Erro'); return; }
+        Toast.sucesso('Registro RECE cancelado.');
+        _carregado = false;
+        carregar();
+      });
+    };
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function _popularSelectEspaco() {
+    var sel = document.getElementById('rece-espaco');
+    if (!sel) return;
+    if (_espacos.length === 0) {
+      try { _espacos = App.getBoot().espacos || []; } catch(e) { return; }
+    }
+    var valAtual = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    _espacos.forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e.id || e.espacoId || '';
+      opt.textContent = e.nome || e.id || '';
+      sel.appendChild(opt);
+    });
+    if (valAtual) sel.value = valAtual;
+  }
+
+  function _onEspacoChange() {
+    // sem lógica adicional por enquanto
+  }
+
+  return {
+    aoAbrir:  aoAbrir,
+    carregar: carregar,
+    abrirForm: abrirForm,
+    fecharForm: fecharForm,
+    salvar:   salvar,
+    _filtrar: _filtrar,
+    _mudarStatus: _mudarStatus,
+    _confirmarCancelar: _confirmarCancelar,
+    _onEspacoChange: _onEspacoChange
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // SistemaMetricasUI — Observabilidade (superadmin only)
 // ═══════════════════════════════════════════════════════════
 var SistemaMetricasUI = (function() {
@@ -12102,11 +12654,13 @@ var SistemaMetricasUI = (function() {
       return;
     }
     if (!_carregado) _carregar();
+    carregarEventBus();
   }
 
   function atualizar() {
     _carregado = false;
     _carregar();
+    carregarEventBus();
   }
 
   function setPeriodo(p) {
@@ -12315,10 +12869,68 @@ var SistemaMetricasUI = (function() {
     }).join('');
   }
 
+  function carregarEventBus() {
+    var set = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    set('sm-eb-total',      '…');
+    set('sm-eb-pendente',   '…');
+    set('sm-eb-processado', '…');
+    set('sm-eb-erro',       '…');
+    set('sm-eb-handlers-lista', 'carregando…');
+
+    GAS.eventbus.status(function(resp) {
+      if (!resp || !resp.ok) {
+        set('sm-eb-pendentes-html', '<p class="error-text">Erro ao carregar status do EventBus.</p>');
+        return;
+      }
+      var d = resp.data || {};
+      var c = d.contagem || {};
+
+      set('sm-eb-total',      c.total      || 0);
+      set('sm-eb-pendente',   c.pendente   || 0);
+      set('sm-eb-processado', c.processado || 0);
+      set('sm-eb-erro',       c.erro       || 0);
+
+      // Handlers
+      var hEl = document.getElementById('sm-eb-handlers-lista');
+      if (hEl) {
+        var handlers = d.tiposComHandlers || [];
+        hEl.innerHTML = handlers.length === 0
+          ? '<span class="muted-text">nenhum</span>'
+          : handlers.map(function(h) {
+              return '<span style="display:inline-block;background:var(--color-primary-soft,#ede9fe);color:var(--color-primary);border-radius:4px;padding:1px 6px;font-size:12px;margin:2px;">' + escaparHtml(h) + '</span>';
+            }).join(' ');
+      }
+
+      // Pendentes
+      var pEl = document.getElementById('sm-eb-pendentes');
+      if (pEl) {
+        var pendentes = d.pendentesRecentes || [];
+        if (pendentes.length === 0) {
+          pEl.innerHTML = '<p class="muted-text" style="font-size:13px;">Nenhum evento pendente. ✅</p>';
+        } else {
+          pEl.innerHTML = '<table class="tabela-dados" style="font-size:12px;"><thead><tr>' +
+            '<th>ID</th><th>Tipo</th><th>Entidade</th><th>Timestamp</th><th>Tentativas</th>' +
+            '</tr></thead><tbody>' +
+            pendentes.slice(0, 10).map(function(e) {
+              return '<tr>' +
+                '<td><code style="font-size:11px;">' + escaparHtml(String(e.id || '').slice(-8)) + '</code></td>' +
+                '<td><span style="color:var(--warning);font-weight:600;font-size:11px;">' + escaparHtml(e.tipo || '') + '</span></td>' +
+                '<td>' + escaparHtml(e.entidade || '') + ':' + escaparHtml(String(e.entidadeId || '').slice(0,12)) + '</td>' +
+                '<td style="color:var(--muted);">' + escaparHtml(String(e.timestamp || '').replace('T', ' ').slice(0,16)) + '</td>' +
+                '<td style="text-align:center;">' + (e.tentativas || 0) + '/' + (d.maxTentativas || 3) + '</td>' +
+                '</tr>';
+            }).join('') +
+            '</tbody></table>';
+        }
+      }
+    });
+  }
+
   return {
-    aoAbrir:   aoAbrir,
-    atualizar: atualizar,
-    setPeriodo: setPeriodo
+    aoAbrir:          aoAbrir,
+    atualizar:        atualizar,
+    setPeriodo:       setPeriodo,
+    carregarEventBus: carregarEventBus
   };
 })();
 
