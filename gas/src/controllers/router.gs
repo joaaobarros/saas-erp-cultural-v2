@@ -10,6 +10,7 @@
  *   - ?secao=inscricao         → Portal público: inscrição em ação
  *   - ?secao=aprovacao         → Aprovação via link de email (token)
  *   - ?secao=agenda            → Agenda pública de eventos
+ *   - ?secao=processo          → Portal do contratado: acompanhamento LGPD por token
  *
  * Contextos públicos NÃO usam Session.getActiveUser().
  * Contextos públicos NÃO expõem dados internos.
@@ -44,6 +45,9 @@ function doGet(e) {
 
       case 'agente':
         return _renderPortalPublico('agente', e);
+
+      case 'processo':
+        return _renderPortalPublico('processo', e);
 
       case 'wizard_setup':
         return _renderWizardSetup(e);

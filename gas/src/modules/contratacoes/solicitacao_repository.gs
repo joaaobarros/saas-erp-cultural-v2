@@ -25,9 +25,13 @@ var SolicitacaoRepository = (function () {
   var _ABA       = 'SolicitacoesContratacao';
 
   var _HEADERS = [
-    'ID', 'OrgId', 'Numero', 'Objeto', 'TipoServico', 'Solicitante',
-    'Status', 'SetorSolicitante', 'ValorEstimado', 'ContratoId', 'CriadoEm', 'AtualizadoEm'
-  ];
+    'ID', 'OrgId', 'Numero', 'NEsboco', 'TipoProcesso', 'Natureza',
+    'Objeto', 'Solicitante', 'SetorSolicitante', 'AcaoId', 'Status',
+    'ContratoId', 'MetaId', 'RubricaId',
+    'ValorEstimado', 'QtdParcelas', 'TotalPago',
+    'Programa', 'CredorNome', 'QtdDocumentos',
+    'CriadoEm', 'AtualizadoEm'
+  ]; // 22 colunas — retrocompat: garantirIndice() expande se tiver < 22
 
   function _orgIdPadrao(orgId) { return orgId || getOrgConfig().orgId; }
   function _agora() { return new Date().toISOString(); }
@@ -36,11 +40,13 @@ var SolicitacaoRepository = (function () {
     try {
       var aba = DataGateway.obterAba(_SHEET_KEY, _ABA);
       if (!aba) return;
-      var atual = aba.getLastRow() > 0
-        ? aba.getRange(1, 1, 1, Math.max(aba.getLastColumn(), _HEADERS.length)).getValues()[0]
+      var maxCols = Math.max(aba.getLastColumn(), _HEADERS.length);
+      var atual   = aba.getLastRow() > 0
+        ? aba.getRange(1, 1, 1, maxCols).getValues()[0]
         : [];
       var vazio = atual.every(function (v) { return !v; });
-      if (vazio || String(atual[0] || '').trim() !== 'ID') {
+      // Expande cabeçalho se tiver menos colunas que o novo _HEADERS
+      if (vazio || String(atual[0] || '').trim() !== 'ID' || aba.getLastColumn() < _HEADERS.length) {
         aba.getRange(1, 1, 1, _HEADERS.length).setValues([_HEADERS]);
         aba.setFrozenRows(1);
       }
@@ -53,18 +59,28 @@ var SolicitacaoRepository = (function () {
     try {
       _garantirCabecalhoIndice();
       var linha = [
-        s.id               || '',
-        s.orgId            || '',
-        s.numero           || '',
-        s.objeto           || '',
-        s.tipoServico      || '',
-        s.solicitante      || '',
-        s.status           || '',
-        s.setorSolicitante || '',
-        s.valorEstimado    || 0,
-        s.contratoId       || '',
-        s.criadoEm         || '',
-        s.atualizadoEm     || ''
+        s.id                           || '',
+        s.orgId                        || '',
+        s.numero                       || '',
+        s.nEsboco                      || '',
+        s.tipoProcesso                 || 'servico',
+        s.natureza || s.tipoServico    || '',
+        s.objeto                       || '',
+        s.solicitante                  || '',
+        s.setorSolicitante             || '',
+        s.acaoId                       || '',
+        s.status                       || '',
+        s.contratoId                   || '',
+        s.metaId                       || '',
+        s.rubricaId                    || '',
+        s.valorEstimado                || 0,
+        (s.parcelas || []).length,
+        s.totalPago                    || 0,
+        s.programa                     || '',
+        (s.credor && s.credor.nome)    || '',
+        (s.documentos || []).length,
+        s.criadoEm                     || '',
+        s.atualizadoEm                 || ''
       ];
       var atualizado = DataGateway.atualizarLinhaPorColuna(_SHEET_KEY, _ABA, 0, s.id, linha);
       if (!atualizado) DataGateway.salvarLinha(_SHEET_KEY, _ABA, linha);
@@ -92,7 +108,10 @@ var SolicitacaoRepository = (function () {
       if (filtros.status           && s.status           !== filtros.status)           return false;
       if (filtros.solicitante      && s.solicitante      !== filtros.solicitante)      return false;
       if (filtros.setorSolicitante && s.setorSolicitante !== filtros.setorSolicitante) return false;
-      if (filtros.tipoServico      && s.tipoServico      !== filtros.tipoServico)      return false;
+      if (filtros.tipoProcesso     && s.tipoProcesso     !== filtros.tipoProcesso)     return false;
+      if (filtros.natureza         && s.natureza         !== filtros.natureza)         return false;
+      if (filtros.tipoServico      && (s.tipoServico || s.natureza) !== filtros.tipoServico) return false;
+      if (filtros.acaoId           && s.acaoId           !== filtros.acaoId)           return false;
       if (filtros.contratoId       && s.contratoId       !== filtros.contratoId)       return false;
       return true;
     }).sort(function (a, b) {

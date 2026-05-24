@@ -422,3 +422,228 @@ function fase3_contratacoes_prepararIndice() {
     return SolicitacaoRepository.garantirIndice();
   }, 'fase3_contratacoes_prepararIndice');
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 11 — NOVOS ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Anonimização por papel ────────────────────────────────────────
+
+function _sanitizarParaPapel(dados, papel) {
+  if (!dados) return dados;
+  var s = JSON.parse(JSON.stringify(dados));
+  var plenos = ['superadmin', 'admin', 'financeiro'];
+  if (plenos.indexOf(papel) !== -1) return s;
+  // Mascarar CPF/CNPJ do credor
+  if (s.credor) {
+    if (papel === 'gestor') { s.credor.cpfCnpj = null; s.credor.email = null; s.credor.telefone = null; }
+    else { s.credor = null; }
+  }
+  // Ocultar dados do contratado
+  s.idContratado = s.idContratado || null;
+  return s;
+}
+
+// ── Instrução ────────────────────────────────────────────────────
+
+var _PODE_INSTRUIR = ['superadmin', 'admin', 'financeiro'];
+
+function ctrl_contratacoes_instruir(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_INSTRUIR.indexOf(nivel) === -1) throw new Error('Apenas admin/financeiro pode instruir processos.');
+    if (!id) throw new Error('ID é obrigatório.');
+    var r = SolicitacaoEngine.instruir(id, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_instruir');
+}
+
+// ── Parcelas ─────────────────────────────────────────────────────
+
+function ctrl_contratacoes_gerar_cronograma(id, qtd) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    if (!id || !qtd) throw new Error('ID e qtd são obrigatórios.');
+    var r = SolicitacaoEngine.gerarCronograma(id, Number(qtd), ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_gerar_cronograma');
+}
+
+function ctrl_contratacoes_salvar_parcela(id, parcela) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    if (!id || !parcela) throw new Error('ID e parcela são obrigatórios.');
+    var r = SolicitacaoEngine.salvarParcela(id, parcela, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_salvar_parcela');
+}
+
+function ctrl_contratacoes_marcar_pago(id, numeroParcela, dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(nivel) === -1)
+      throw new Error('Apenas financeiro e administradores podem registrar pagamentos.');
+    if (!id || !numeroParcela) throw new Error('ID e numeroParcela são obrigatórios.');
+    var r = SolicitacaoEngine.marcarPago(id, Number(numeroParcela), dados || {}, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_marcar_pago');
+}
+
+// ── Saldo orçamentário ───────────────────────────────────────────
+
+function ctrl_contratacoes_saldo_rubrica(contratoId, rubricaId) {
+  return GasResponse.wrap(function () {
+    _ctxContratacoes();
+    if (!contratoId || !rubricaId) throw new Error('contratoId e rubricaId são obrigatórios.');
+    return SolicitacaoEngine.obterSaldoRubrica(contratoId, rubricaId);
+  }, 'ctrl_contratacoes_saldo_rubrica');
+}
+
+// ── Documentos do processo ───────────────────────────────────────
+
+function ctrl_contratacoes_adicionar_documento(id, doc) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (!id || !doc) throw new Error('ID e doc são obrigatórios.');
+    // Solicitante pode anexar em rascunho; admin/financeiro em qualquer etapa
+    if (nivel === 'colaborador') {
+      var s = SolicitacaoEngine.buscarPorId(id, ctx.orgId);
+      if (!s || s.solicitante !== ctx.email) throw new Error('Acesso negado.');
+    }
+    var r = SolicitacaoEngine.adicionarDocumento(id, doc, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_adicionar_documento');
+}
+
+function ctrl_contratacoes_remover_documento(id, docId) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (!id || !docId) throw new Error('ID e docId são obrigatórios.');
+    if (nivel === 'colaborador') throw new Error('Acesso negado.');
+    var r = SolicitacaoEngine.removerDocumento(id, docId, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_remover_documento');
+}
+
+// ── Cotações — COMPRA ────────────────────────────────────────────
+
+function ctrl_contratacoes_registrar_cotacao(id, cotacao) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_INSTRUIR.indexOf(nivel) === -1) throw new Error('Apenas admin/financeiro pode registrar cotações.');
+    if (!id || !cotacao) throw new Error('ID e cotacao são obrigatórios.');
+    var r = SolicitacaoEngine.registrarCotacao(id, cotacao, ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_registrar_cotacao');
+}
+
+function ctrl_contratacoes_selecionar_cotacao(id, indexCotacao) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_INSTRUIR.indexOf(nivel) === -1) throw new Error('Apenas admin/financeiro pode selecionar cotações.');
+    if (!id || indexCotacao === undefined) throw new Error('ID e indexCotacao são obrigatórios.');
+    var r = SolicitacaoEngine.selecionarCotacao(id, Number(indexCotacao), ctx.email, ctx.orgId);
+    _cacheInvalidar('sol', ctx.orgId);
+    return r;
+  }, 'ctrl_contratacoes_selecionar_cotacao');
+}
+
+// ── Portal (sem autenticação de usuário GAS) ─────────────────────
+
+function ctrl_contratacoes_portal_status(token) {
+  return GasResponse.wrap(function () {
+    if (!token) throw new Error('Token é obrigatório.');
+    // Auditar acesso externo pelo hash do token (não o token em si)
+    var tokenHash = Utilities.computeDigest(
+      Utilities.DigestAlgorithm.SHA_256,
+      token
+    ).reduce(function(acc, b) {
+      return acc + ('0' + (b & 0xff).toString(16)).slice(-2);
+    }, '');
+    if (typeof AuditoriaService !== 'undefined')
+      AuditoriaService.registrar('PORTAL_ACESSO_EXTERNO', 'contratacoes', { tokenHash: tokenHash });
+    var dados = SolicitacaoEngine.obterPorToken(token);
+    if (!dados) throw new Error('Processo não encontrado ou link expirado.');
+    return dados;
+  }, 'ctrl_contratacoes_portal_status');
+}
+
+// ── Varredura e agenda ───────────────────────────────────────────
+
+function ctrl_contratacoes_varredura() {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_INSTRUIR.indexOf(nivel) === -1) throw new Error('Apenas admin pode executar varredura manualmente.');
+    return SolicitacaoEngine.varreduraPendencias(ctx.orgId);
+  }, 'ctrl_contratacoes_varredura');
+}
+
+function ctrl_contratacoes_agenda_desembolsos(mes, ano) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (['colaborador'].indexOf(nivel) !== -1) throw new Error('Acesso negado.');
+    return SolicitacaoEngine.obterAgendaDesembolsos(Number(mes), Number(ano), ctx.orgId);
+  }, 'ctrl_contratacoes_agenda_desembolsos');
+}
+
+// ── Produtividade ────────────────────────────────────────────────
+
+var _PODE_VER_PRODUTIVIDADE = ['superadmin', 'admin', 'financeiro', 'gestor'];
+
+function ctrl_contratacoes_produtividade(periodo) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_VER_PRODUTIVIDADE.indexOf(nivel) === -1)
+      throw new Error('Acesso negado: métricas de produtividade requerem papel de gestor ou superior.');
+    return SolicitacaoEngine.obterProdutividade(periodo || 'mes', ctx.orgId);
+  }, 'ctrl_contratacoes_produtividade');
+}
+
+// ── Dados bancários do contratado ────────────────────────────────
+
+function ctrl_contratado_salvar_dados_bancarios(id, dadosBancarios) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(nivel) === -1)
+      throw new Error('Apenas financeiro e administradores podem gerenciar dados bancários.');
+    if (!id || !dadosBancarios) throw new Error('ID e dadosBancarios são obrigatórios.');
+    var r = ContratadoEngine.salvarDadosBancarios(id, dadosBancarios, ctx.email, ctx.orgId);
+    _cacheInvalidar('ctr', ctx.orgId);
+    return r;
+  }, 'ctrl_contratado_salvar_dados_bancarios');
+}
+
+function ctrl_contratado_verificar_habilitacao(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    if (!id) throw new Error('ID é obrigatório.');
+    return ContratadoEngine.verificarHabilitacao(id, ctx.orgId);
+  }, 'ctrl_contratado_verificar_habilitacao');
+}
+
+// ── Trigger diário (registrar no GAS Editor) ─────────────────────
+function varreduraPendenciasContratacoes() {
+  try {
+    var config = getOrgConfig();
+    SolicitacaoEngine.varreduraPendencias(config.orgId);
+  } catch (e) {
+    Logger.error('contratacoes_controller', 'varreduraPendenciasContratacoes', e.message);
+  }
+}

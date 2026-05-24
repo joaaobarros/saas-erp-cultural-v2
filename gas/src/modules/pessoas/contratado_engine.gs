@@ -315,6 +315,77 @@ var ContratadoEngine = (function () {
     return { ok: true, id: id };
   }
 
+  // ──────────────────────────────────────────────────────────────────
+  // DADOS BANCÁRIOS E DOCUMENTOS DE HABILITAÇÃO (Fase 11)
+  // ──────────────────────────────────────────────────────────────────
+
+  function salvarDadosBancarios(id, dadosBancarios, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    if (!id) throw new Error('id é obrigatório.');
+    var c = ContratadoRepository.buscarPorId(orgId, id);
+    if (!c) throw new Error('Contratado não encontrado: ' + id);
+    c.dadosBancarios = dadosBancarios || {};
+    ContratadoRepository.salvar(orgId, c);
+    _audit('CONTRATADO_DADOS_BANCARIOS_ATUALIZADOS', {
+      id: id, operador: emailOperador || ''
+    });
+    return { ok: true };
+  }
+
+  function adicionarDocumentoContratado(id, doc, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    if (!id || !doc || !doc.tipo || !doc.url) throw new Error('id, doc.tipo e doc.url são obrigatórios.');
+    var c = ContratadoRepository.buscarPorId(orgId, id);
+    if (!c) throw new Error('Contratado não encontrado: ' + id);
+    if (!c.documentos) c.documentos = [];
+    doc.id           = gerarId('dct');
+    doc.uploadadoPor = emailOperador || '';
+    doc.uploadadoEm  = new Date().toISOString();
+    doc.ativo        = true;
+    c.documentos.push(doc);
+    ContratadoRepository.salvar(orgId, c);
+    _audit('CONTRATADO_DOCUMENTO_ADICIONADO', {
+      id: id, docTipo: doc.tipo, operador: emailOperador || ''
+    });
+    return { ok: true, docId: doc.id };
+  }
+
+  function removerDocumentoContratado(id, docId, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    var c = ContratadoRepository.buscarPorId(orgId, id);
+    if (!c) throw new Error('Contratado não encontrado: ' + id);
+    c.documentos = (c.documentos || []).filter(function (d) { return d.id !== docId; });
+    ContratadoRepository.salvar(orgId, c);
+    _audit('CONTRATADO_DOCUMENTO_REMOVIDO', { id: id, docId: docId, operador: emailOperador || '' });
+    return { ok: true };
+  }
+
+  function verificarHabilitacao(id, orgId) {
+    orgId = orgId || _orgId();
+    var c = ContratadoRepository.buscarPorId(orgId, id);
+    if (!c) return { habilitado: false, motivo: 'Contratado não encontrado.' };
+
+    var habilitado = c.status === 'habilitado';
+    var hoje = new Date();
+    var docsVencidos = [];
+    var docsPendentes = [];
+
+    (c.documentos || []).forEach(function (d) {
+      if (!d.ativo) return;
+      if (d.validade) {
+        var venc = new Date(d.validade);
+        if (venc < hoje) docsVencidos.push({ tipo: d.tipo, nome: d.nome, validade: d.validade });
+      }
+    });
+
+    return {
+      habilitado:       habilitado,
+      status:           c.status,
+      documentosVencidos: docsVencidos,
+      temDocumentosVencidos: docsVencidos.length > 0
+    };
+  }
+
   // ── API pública ───────────────────────────────────────────────────
 
   return {
@@ -339,7 +410,13 @@ var ContratadoEngine = (function () {
     devolverHabilitacao:    devolverHabilitacao,
     cancelarHabilitacao:    cancelarHabilitacao,
     suspenderHabilitacao:   suspenderHabilitacao,
-    reinstaurarHabilitacao: reinstaurarHabilitacao
+    reinstaurarHabilitacao: reinstaurarHabilitacao,
+
+    // Dados bancários e documentos (Fase 11)
+    salvarDadosBancarios:          salvarDadosBancarios,
+    adicionarDocumentoContratado:  adicionarDocumentoContratado,
+    removerDocumentoContratado:    removerDocumentoContratado,
+    verificarHabilitacao:          verificarHabilitacao
   };
 
 })();
