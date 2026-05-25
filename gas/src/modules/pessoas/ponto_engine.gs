@@ -159,7 +159,7 @@ var PontoEngine = (function() {
    *   vtValorPasse        {number}  Valor unitário de cada passagem VT (R$)
    *   vtQtdPassagens      {number}  Passagens por dia — padrão 2
    *   vaValorDia          {number}  Vale Alimentação por dia (R$)
-   *   vaDescontoPct       {number}  % desconto VA do colaborador — padrão 0 (empresa paga tudo)
+   *   vaDescontoVal       {number}  Desconto VA do colaborador em R$/mês — padrão 0 (empresa paga tudo)
    *   vrValorDia          {number}  Vale Refeição por dia (R$)
    *   vrDescontoPct       {number}  % desconto VR do colaborador — padrão 0
    *   psValorInd          {number}  Plano de saúde individual (R$/mês)
@@ -195,11 +195,10 @@ var PontoEngine = (function() {
     var vtDesconto     = vtBruto > 0 ? Math.min(vtBruto, salarioTotal * 0.06) : 0;
     var vtLiquido      = Math.max(0, vtBruto - vtDesconto);
 
-    // Vale Alimentação
+    // Vale Alimentação — desconto do colaborador em R$/mês (valor fixo, não percentual)
     var vaValorDia     = Number(params.vaValorDia || 0);
     var vaBruto        = vaValorDia > 0 ? vaValorDia * diasUteis : 0;
-    var vaDescontoPct  = Number(params.vaDescontoPct || 0);
-    var vaDesconto     = vaBruto > 0 ? vaBruto * (vaDescontoPct / 100) : 0;
+    var vaDesconto     = vaBruto > 0 ? Math.min(vaBruto, Number(params.vaDescontoVal || 0)) : 0;
     var vaLiquido      = Math.max(0, vaBruto - vaDesconto);
 
     // Vale Refeição

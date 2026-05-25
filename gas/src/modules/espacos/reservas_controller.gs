@@ -287,3 +287,22 @@ function ctrl_reservas_cancelar_bloqueios(ids) {
     return { cancelados: cancelados, total: ids.length };
   }, 'ctrl_reservas_cancelar_bloqueios');
 }
+
+/**
+ * Retorna disponibilidade em tempo real de todos os itens do catálogo
+ * para um espaço/data/horário específico.
+ *
+ * @param {Object} params { sala, data, horaInicio, horaTermino, excluirReservaId? }
+ * @returns {{ itens: [{id,nome,categoria,total,disponivel,...}] }}
+ */
+function ctrl_reservas_disponibilidadeItens(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxReservas();
+    var p = params || {};
+    if (!p.data) throw new Error('data é obrigatória.');
+    if (!p.horaInicio || !p.horaTermino) throw new Error('horaInicio e horaTermino são obrigatórios.');
+
+    var itens = AlmoxarifadoEngine.calcularDisponibilidadeItens(p, ctx.orgId);
+    return { itens: itens };
+  }, 'ctrl_reservas_disponibilidadeItens');
+}

@@ -85,6 +85,47 @@ function ctrl_admin_desativarEspaco(espacoId) {
   }, 'ctrl_admin_desativarEspaco');
 }
 
+/**
+ * Alterna o campo emManutencao de um espaço.
+ * Papéis permitidos: admin, gestor, infraestrutura, superadmin.
+ */
+function ctrl_admin_alternarManutencaoEspaco(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    var papel  = acesso && acesso.registro ? acesso.registro.papel : 'colaborador';
+    var papeis = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
+    if (papeis.indexOf(papel) === -1) throw new Error('Acesso negado.');
+
+    var id = params && params.espacoId;
+    if (!id) throw new Error('espacoId é obrigatório.');
+
+    var orgId  = getOrgConfig().orgId;
+    var novoStatus = false;
+
+    modifyJSON('espacos_config.json', function(lista) {
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === id && lista[i].orgId === orgId) {
+          novoStatus = !lista[i].emManutencao;
+          lista[i].emManutencao  = novoStatus;
+          lista[i].atualizadoEm  = agora();
+          lista[i].versao        = (lista[i].versao || 0) + 1;
+          break;
+        }
+      }
+      return lista;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+
+    AuditoriaService.registrar('ESPACO_MANUTENCAO_ALTERADO', 'espaco', {
+      entidadeId: id, orgId: orgId, usuario: email, emManutencao: novoStatus
+    });
+
+    return { espacoId: id, emManutencao: novoStatus };
+  }, 'ctrl_admin_alternarManutencaoEspaco');
+}
+
 function ctrl_admin_excluirEspaco(espacoId) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.excluirEspaco(espacoId);

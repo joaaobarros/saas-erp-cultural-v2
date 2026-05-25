@@ -48,9 +48,34 @@ if (typeof FsmGuardian !== 'undefined') {
 
 // ── Engine ────────────────────────────────────────────────────────────
 
+/**
+ * Parseia string de itens volantes no formato "3x Projetor | 1x Microfone".
+ * @param {string} str
+ * @returns {{qtd:number, nome:string}[]}
+ */
+function _parseItensVolantesStr(str) {
+  if (!str) return [];
+  return String(str).split('|').map(function(s) {
+    var m = s.trim().match(/^(\d+)[xX]\s*(.+)$/);
+    return m ? { qtd: Number(m[1]), nome: m[2].trim() } : null;
+  }).filter(Boolean);
+}
+
 var AlmoxarifadoEngine = (function () {
 
   function _orgId() { return getOrgConfig().orgId; }
+
+  // ──────────────────────────────────────────────────────────────────
+  // HELPERS INTERNOS
+  // ──────────────────────────────────────────────────────────────────
+
+  /** Verifica se dois intervalos de horário HH:MM se sobrepõem (exclusive) */
+  function _horariosSobrepoem(ini1, fim1, ini2, fim2) {
+    try {
+      function toMin(s) { var p = s.split(':'); return Number(p[0]) * 60 + Number(p[1]); }
+      return toMin(ini1) < toMin(fim2) && toMin(ini2) < toMin(fim1);
+    } catch(e) { return false; }
+  }
 
   // ──────────────────────────────────────────────────────────────────
   // CATÁLOGO DE ITENS
@@ -80,6 +105,89 @@ var AlmoxarifadoEngine = (function () {
       itemId: item.id, nome: item.nome, autor: autor, orgId: orgId
     });
     return item;
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // DISPONIBILIDADE EM TEMPO REAL
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Calcula disponibilidade de todos os itens do catálogo para um período.
+   * Desconta: empréstimos aprovados/retirados no período + itensVolantes de
+   * reservas sobrepostas + itensFixos em outras salas.
+   *
+   * @param {Object} params { sala, data, horaInicio, horaTermino, excluirReservaId? }
+   * @param {string} orgId
+   * @returns {{id,nome,categoria,total,fixadoOutrasSalas,emUsoPeriodo,reservadoPeriodo,disponivel}[]}
+   */
+  function calcularDisponibilidadeItens(params, orgId) {
+    var p = params || {};
+    var oid = orgId || _orgId();
+
+    var itens    = ReservasItensRepository.listarItens(oid);
+    var espacos  = (SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : []);
+    var salaId   = p.sala || '';
+    var data     = p.data || '';
+    var horaIni  = p.horaInicio  || '00:00';
+    var horaFim  = p.horaTermino || '23:59';
+    var excluir  = p.excluirReservaId || null;
+
+    // Carregar reservas do dia para descontar itensVolantes
+    var reservasDia = [];
+    try {
+      reservasDia = ReservaRepository.listar({ data: data }, oid).filter(function(r) {
+        return r.status !== 'cancelado' && r.status !== 'concluido' && r.id !== excluir;
+      });
+    } catch(_) {}
+
+    return itens.map(function(item) {
+      var total = item.quantidadeTotal || 0;
+
+      // 1. itensFixos em outras salas
+      var fixadoOutrasSalas = 0;
+      espacos.forEach(function(e) {
+        if (e.id === salaId) return;
+        if (e.itensFixos && e.itensFixos[item.id]) {
+          fixadoOutrasSalas += Number(e.itensFixos[item.id]) || 0;
+        }
+      });
+
+      // 2. empréstimos aprovados/retirados no período
+      var emUsoPeriodo = 0;
+      try {
+        emUsoPeriodo = ReservasItensRepository.quantidadeEmUsoPeriodo(
+          item.id, data, data, oid
+        );
+      } catch(_) {}
+
+      // 3. itensVolantes solicitados em reservas sobrepostas no mesmo dia
+      var reservadoPeriodo = 0;
+      reservasDia.forEach(function(r) {
+        if (!r.itensVolantes) return;
+        // Só contar se os horários se sobrepõem
+        if (r.horaInicio && r.horaTermino) {
+          if (!_horariosSobrepoem(horaIni, horaFim, r.horaInicio, r.horaTermino)) return;
+        }
+        var parsed = _parseItensVolantesStr(r.itensVolantes);
+        parsed.forEach(function(pv) {
+          if (pv.nome.toLowerCase() === item.nome.toLowerCase()) {
+            reservadoPeriodo += pv.qtd;
+          }
+        });
+      });
+
+      var disponivel = Math.max(0, total - fixadoOutrasSalas - emUsoPeriodo - reservadoPeriodo);
+      return {
+        id:                item.id,
+        nome:              item.nome,
+        categoria:         item.categoria || '',
+        total:             total,
+        fixadoOutrasSalas: fixadoOutrasSalas,
+        emUsoPeriodo:      emUsoPeriodo,
+        reservadoPeriodo:  reservadoPeriodo,
+        disponivel:        disponivel
+      };
+    });
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -355,8 +463,9 @@ var AlmoxarifadoEngine = (function () {
   return {
     // Catálogo
     listarItens:          listarItens,
-    salvarItem:           salvarItem,
-    assertItemDisponivel: assertItemDisponivel,
+    salvarItem:                    salvarItem,
+    assertItemDisponivel:          assertItemDisponivel,
+    calcularDisponibilidadeItens:  calcularDisponibilidadeItens,
 
     // Fluxo de empréstimo
     listarEmprestimos:    listarEmprestimos,

@@ -3496,15 +3496,15 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Data *</label>
-                <input type="date" id="res-data" class="form-input">
+                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora início *</label>
-                <input type="time" id="res-hora-ini" class="form-input">
+                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora término *</label>
-                <input type="time" id="res-hora-fim" class="form-input">
+                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Nome da Ação / Evento *</label>
@@ -3521,6 +3521,28 @@ select.form-control { cursor: pointer; }
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Observações</label>
                 <textarea id="res-obs" class="form-input" rows="2" placeholder="Equipamentos necessários, configuração…"></textarea>
+              </div>
+              <!-- Bloco: Itens fixos do espaço (informativo) -->
+              <div class="form-group" id="res-itens-fixos-bloco" style="grid-column:1/-1;display:none;">
+                <label class="form-label" style="color:var(--muted);">Equipamentos já disponíveis nesta sala</label>
+                <div id="res-itens-fixos-lista" style="font-size:13px;color:var(--muted);padding:4px 0;"></div>
+              </div>
+              <!-- Bloco: Solicitar itens volantes -->
+              <div class="form-group" id="res-itens-volantes-bloco" style="grid-column:1/-1;display:none;">
+                <label class="form-label">Itens solicitados (almoxarifado)</label>
+                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+                  <div style="flex:1;min-width:160px;">
+                    <select id="res-item-select" class="form-input" style="width:100%;"></select>
+                  </div>
+                  <div style="width:80px;">
+                    <input type="number" id="res-item-qtd" class="form-input" min="1" value="1">
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._adicionarItem()" data-bg-skip="1">
+                    <span class="ms ms-sm">add</span> Adicionar
+                  </button>
+                </div>
+                <div id="res-itens-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
+                <small id="res-itens-hint" style="display:none;color:var(--color-error);margin-top:4px;font-size:11px;">Itens indisponíveis no horário — remova-os antes de salvar.</small>
               </div>
             </div>
             <input type="hidden" id="res-id">
@@ -12685,9 +12707,8 @@ var ReservasUI = (function() {
       _nivelCarregado = true;
       GAS.pessoas.meuNivel(function(r){
         if (r&&r.ok&&r.data) _meuNivel = r.data.nivel||'colaborador';
-        // Exibe botão CCBJ Fechado apenas para gestão
-        var btnCCBJ = document.getElementById('btn-ccbj-fechado');
-        if (btnCCBJ) btnCCBJ.style.display = ['superadmin','admin','gestor'].indexOf(_meuNivel)!==-1?'':'none';
+        var toolbar = document.getElementById('res-admin-toolbar');
+        if (toolbar) toolbar.style.display = _NIVEL_GESTAO_RES.indexOf(_meuNivel)!==-1?'flex':'none';
       }, function(){});
     }
     var filtroStatus = (document.getElementById('res-filtro-status')||{}).value || '';
@@ -12737,9 +12758,26 @@ var ReservasUI = (function() {
 
   function aoSelecionarEspaco(sel) {
     var id = sel.value;
-    var esp = _espacosCatalogo.find(function(e){ return e.id === id; });
+    var esp = _espacosCatalogo.filter(function(e){ return e.id === id; })[0];
     var hint = document.getElementById('res-sala-hint');
     if (hint) hint.textContent = esp ? 'Capacidade: ' + esp.capacidade + ' pessoas' : '';
+    // Mostrar itens fixos do espaço
+    var blocoFixos = document.getElementById('res-itens-fixos-bloco');
+    var listaFixos = document.getElementById('res-itens-fixos-lista');
+    if (blocoFixos && listaFixos) {
+      var fixos = esp && esp.itensFixos ? esp.itensFixos : {};
+      var keys = Object.keys(fixos);
+      if (keys.length > 0) {
+        blocoFixos.style.display = '';
+        listaFixos.innerHTML = keys.map(function(k) {
+          return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;background:var(--surface2);font-size:12px;margin-right:4px;">'
+            + escaparHtml(k) + ' (' + escaparHtml(String(fixos[k])) + ')' + '</span>';
+        }).join('');
+      } else {
+        blocoFixos.style.display = 'none';
+      }
+    }
+    _carregarDisponibilidadeItens();
   }
 
   function abrirForm(dados) {
@@ -12765,12 +12803,40 @@ var ReservasUI = (function() {
     document.getElementById('res-obs').value       = dados && dados.observacoes || '';
     document.getElementById('reservas-form-titulo').textContent = dados && dados.id ? 'Editar Reserva' : 'Nova Reserva';
     document.getElementById('res-disp-resultado').style.display = 'none';
+    // Inicializar chips de itens volantes
+    _itensChips = [];
+    _itensDisponibilidade = [];
+    var blocoFixos = document.getElementById('res-itens-fixos-bloco');
+    if (blocoFixos) blocoFixos.style.display = 'none';
+    var blocoV = document.getElementById('res-itens-volantes-bloco');
+    if (blocoV) blocoV.style.display = 'none';
+    var chipsCont = document.getElementById('res-itens-chips');
+    if (chipsCont) chipsCont.innerHTML = '';
+    var hint = document.getElementById('res-itens-hint');
+    if (hint) hint.style.display = 'none';
+    // Restaurar chips de reserva existente
+    if (dados && dados.itensVolantes) {
+      var parsed = _parseItensVolantesUI(dados.itensVolantes);
+      parsed.forEach(function(p) {
+        _itensChips.push({ id: p.nome, nome: p.nome, qtd: p.qtd, disponivel: 999 });
+      });
+      if (_itensChips.length > 0) {
+        if (blocoV) blocoV.style.display = '';
+        _renderChips();
+      }
+    }
     card.style.display = '';
     card.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
   function fecharForm() {
     document.getElementById('reservas-form-card').style.display = 'none';
+    _itensChips = [];
+    _itensDisponibilidade = [];
+    var b = document.getElementById('res-itens-volantes-bloco');
+    if (b) b.style.display = 'none';
+    var f = document.getElementById('res-itens-fixos-bloco');
+    if (f) f.style.display = 'none';
   }
 
   function verificarDisponibilidade() {
@@ -12808,12 +12874,17 @@ var ReservasUI = (function() {
     if (!data) { Toast.aviso('Data é obrigatória.'); return; }
     if (!ini||!fim) { Toast.aviso('Horário de início e término são obrigatórios.'); return; }
     if (!nome) { Toast.aviso('Nome da ação/evento é obrigatório.'); return; }
+    if (_temChipsIndisponiveis()) {
+      Toast.erro('Há itens indisponíveis no horário selecionado. Remova-os antes de salvar.');
+      return;
+    }
     var dados = {
       sala: sala, data: data, horaInicio: ini, horaTermino: fim,
       nomeAcao: nome,
-      tipoAcao:     (document.getElementById('res-tipo-acao').value||'').trim(),
-      setor:        (document.getElementById('res-setor').value||'').trim(),
-      observacoes:  (document.getElementById('res-obs').value||'').trim()
+      tipoAcao:      (document.getElementById('res-tipo-acao').value||'').trim(),
+      setor:         (document.getElementById('res-setor').value||'').trim(),
+      observacoes:   (document.getElementById('res-obs').value||'').trim(),
+      itensVolantes: _serializarItensVolantes()
     };
     var id = (document.getElementById('res-id').value||'').trim();
     BtnGuard.wrap('btn-res-salvar', 'Salvando…', function(done) {
@@ -20515,91 +20586,194 @@ var RhUI = (function() {
   }
 
   function carregarPccs() {
-    var el = document.getElementById('rh-pccs-lista');
+    var el = document.getElementById('rh-pccs-corpo');
     if (!el) return;
     el.innerHTML = _empty('Carregando…');
     GAS.rh.listarPccs(function(resp){
       var lista = (resp&&resp.ok&&resp.data)?resp.data:[];
       _pccsList = lista;
       if (!lista.length){ el.innerHTML = _empty('Nenhum plano PCCS cadastrado.'); return; }
-      el.innerHTML = lista.map(function(p){
+      el.innerHTML = lista.map(function(p, idx){
         var cargos = p.cargos || [];
-        // agrupar por area
         var areas = {};
-        cargos.forEach(function(c){
-          var a = c.area || 'Geral';
-          if (!areas[a]) areas[a] = [];
-          areas[a].push(c);
-        });
-        var vigTxt = (p.vigencia&&p.vigencia.inicio)?
-          (p.vigencia.inicio + (p.vigencia.fim?' → '+p.vigencia.fim:'')) : '—';
+        cargos.forEach(function(c){ var a=c.area||'Geral'; if(!areas[a])areas[a]=[]; areas[a].push(c); });
+        var vigTxt = (p.vigencia&&p.vigencia.inicio)?(p.vigencia.inicio+(p.vigencia.fim?' → '+p.vigencia.fim:'')):'—';
         var totCargos = cargos.length;
-        var headerInfo = '<span style="font-size:12px;color:var(--text2);margin-left:8px;">'+
-          vigTxt+' · '+totCargos+' cargos</span>';
 
-        var tabela = '';
+        // ── Linhas da tabela de cargos ──
+        var cargosRows = '';
         Object.keys(areas).forEach(function(area){
-          tabela += '<tr style="background:var(--surface2);">'+
-            '<td colspan="5" style="padding:6px 10px;font-size:11px;font-weight:700;text-transform:uppercase;'+
-            'color:var(--text2);letter-spacing:.05em;">'+_esc(area)+'</td></tr>';
+          cargosRows += '<tr style="background:var(--surface2);"><td colspan="5" style="padding:5px 14px;font-size:10px;'+
+            'font-weight:700;text-transform:uppercase;color:var(--text2);letter-spacing:.06em;">'+_esc(area)+'</td></tr>';
           areas[area].forEach(function(c){
-            var tab = c.tabela || [];
-            var step1 = tab[0] ? tab[0].salarioBase : 0;
-            var stepN = tab.length > 1 ? tab[tab.length-1].salarioBase : 0;
-            var faixaTxt = step1 ? 'R$ '+_fmtMoeda(step1)+(stepN&&stepN!==step1?' – R$ '+_fmtMoeda(stepN):'') : '—';
-            var tipoClasse = tab[0] ? (tab[0].nivel||'—') : '—';
-            var classe     = tab[0] ? (tab[0].classe||'—') : '—';
-            var nSteps = tab.length;
-            var stepsDetail = nSteps > 0 ? tab.map(function(s,i){
-              return '<span style="font-size:10px;color:var(--text2);">Ref.'+String(i+1)+': R$ '+_fmtMoeda(s.salarioBase)+'</span>';
-            }).join(' · ') : '';
-            tabela += '<tr style="border-bottom:1px solid var(--border);">'+
-              '<td style="padding:7px 10px;font-size:13px;"><div>'+_esc(c.nome||'—')+'</div>'+
+            var tab=c.tabela||[]; var step1=tab[0]?tab[0].salarioBase:0; var stepN=tab.length>1?tab[tab.length-1].salarioBase:0;
+            var faixaTxt=step1?'R$ '+_fmtMoeda(step1)+(stepN&&stepN!==step1?' – R$ '+_fmtMoeda(stepN):''):'—';
+            var tipoClasse=tab[0]?(tab[0].nivel||'—'):'—'; var classe=tab[0]?(tab[0].classe||'—'):'—'; var nSteps=tab.length;
+            var stepsDetail=nSteps>0?tab.map(function(s,i){return '<span style="font-size:10px;color:var(--muted);">R'+(i+1)+':R$'+_fmtMoeda(s.salarioBase)+'</span>';}).join(' · '):'';
+            cargosRows += '<tr style="border-bottom:1px solid var(--border);">'+
+              '<td style="padding:7px 14px;font-size:13px;"><div style="font-weight:600;">'+_esc(c.nome||'—')+'</div>'+
                 (stepsDetail?'<div style="margin-top:2px;">'+stepsDetail+'</div>':'')+'</td>'+
               '<td style="padding:7px 10px;">'+_badgeGrupo(c.grupo||'')+'</td>'+
-              '<td style="padding:7px 10px;font-size:12px;color:var(--text2);">'+_esc(tipoClasse)+' '+_esc(classe)+
-                (nSteps?' <span style="color:var(--muted);">'+nSteps+' ref.</span>':'')+'</td>'+
+              '<td style="padding:7px 10px;font-size:12px;color:var(--text2);">'+_esc(tipoClasse)+' '+_esc(classe)+(nSteps?' <span style="color:var(--muted);">'+nSteps+' ref.</span>':'')+'</td>'+
               '<td style="padding:7px 10px;font-size:12px;font-weight:600;">'+faixaTxt+'</td>'+
               '<td style="padding:7px 10px;text-align:right;white-space:nowrap;">'+
-                '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')">'+
-                '<span class="ms ms-sm">edit</span></button>'+
-                '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')">'+
-                '<span class="ms ms-sm">delete</span></button></td></tr>';
+                '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+                '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+              '</td></tr>';
           });
         });
+        var cargosContent = cargosRows
+          ? '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'+
+              '<thead style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);border-bottom:2px solid var(--border);background:var(--surface);">'+
+                '<tr><th style="padding:7px 14px;text-align:left;">Cargo</th><th style="padding:7px 10px;text-align:left;">Grupo</th>'+
+                '<th style="padding:7px 10px;text-align:left;">Tipo/Classe</th><th style="padding:7px 10px;text-align:left;">Faixa Salarial</th><th></th></tr></thead>'+
+              '<tbody>'+cargosRows+'</tbody></table></div>'
+          : '<div style="padding:20px 14px;color:var(--muted);font-size:13px;text-align:center;">Nenhum cargo cadastrado neste plano.</div>';
 
-        return '<div style="margin-bottom:20px;border:1px solid var(--border);border-radius:10px;overflow:hidden;">'+
-          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">'+
-            '<div style="display:flex;align-items:center;gap:4px;">'+
-              '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+headerInfo+
+        // ── Helper aba de sub-navegação ──
+        var _navTab = function(aba,icon,label,active){
+          var aS=active?'color:var(--color-primary);border-bottom:3px solid var(--color-primary);font-weight:800;'
+            :'color:var(--text2);border-bottom:3px solid transparent;font-weight:700;';
+          return '<button id="pccs-nav-'+p.id+'-'+aba+'" data-bg-skip="1" onclick="RhUI._pccsSetSubAba(\''+_esc(p.id)+'\',\''+aba+'\')" '+
+            'style="padding:10px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;border:none;border-radius:0;background:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .15s,border-color .15s;'+aS+'">'+
+            '<span class="ms ms-sm">'+icon+'</span>'+label+'</button>';
+        };
+        var activoTag = p.ativo
+          ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#dcfce7;color:#166534;font-weight:700;">ATIVO</span>' : '';
+
+        return '<div style="margin-bottom:'+(idx<lista.length-1?'20px':'0')+';border:1px solid var(--border);border-radius:12px;overflow:hidden;">'+
+          // ── Cabeçalho do plano
+          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+              '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+activoTag+
+              '<span style="font-size:12px;color:var(--text2);">'+_esc(vigTxt)+' · '+totCargos+' cargo'+(totCargos!==1?'s':'')+'</span>'+
             '</div>'+
-            '<div style="display:flex;gap:6px;align-items:center;">'+
-              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
-                'onclick="RhUI.abrirModalTabelaSalarial(\''+_esc(p.id)+'\')">'+
-                '<span class="ms ms-sm">table_chart</span> Tabela Salarial</button>'+
-              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
-                'onclick="RhUI.abrirModalReajuste(\''+_esc(p.id)+'\',\''+_esc(p.nome||'Plano')+'\')">'+
-                '<span class="ms ms-sm">trending_up</span> Reajuste</button>'+
-              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
-                'onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')">'+
-                '<span class="ms ms-sm">edit</span></button>'+
-              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" '+
-                'onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1">'+
-                '<span class="ms ms-sm">add</span> Cargo</button>'+
+            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+          '</div>'+
+          // ── Sub-nav (abas V1-style)
+          '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
+            _navTab('cargos','group','Cargos ('+totCargos+')',true)+
+            _navTab('tabela','table_chart','Tabela Salarial',false)+
+            _navTab('params','tune','Parâmetros & Reajuste',false)+
+          '</div>'+
+          // ── Painel Cargos (visível por padrão)
+          '<div id="pccs-panel-'+p.id+'-cargos">'+
+            cargosContent+
+            '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
+              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
+                '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
             '</div>'+
           '</div>'+
-          (tabela?
-            '<table style="width:100%;">'+
-              '<thead style="font-size:11px;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);">'+
-                '<tr><th style="padding:6px 10px;text-align:left">Cargo</th>'+
-                '<th style="padding:6px 10px;text-align:left">Grupo</th>'+
-                '<th style="padding:6px 10px;text-align:left">Tipo/Classe</th>'+
-                '<th style="padding:6px 10px;text-align:left">Faixa Salarial</th>'+
-                '<th></th></tr></thead><tbody>'+tabela+'</tbody></table>' :
-            '<div style="padding:14px;font-size:13px;color:var(--muted);">Nenhum cargo.</div>')+
-          '</div>';
+          // ── Painel Tabela Salarial (lazy, escondido)
+          '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
+          // ── Painel Parâmetros & Reajuste (lazy, escondido)
+          '<div id="pccs-panel-'+p.id+'-params" style="display:none;"></div>'+
+        '</div>';
       }).join('');
     },function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
+  }
+
+  function _pccsSetSubAba(pccsId, aba) {
+    ['cargos','tabela','params'].forEach(function(a){
+      var btn = document.getElementById('pccs-nav-'+pccsId+'-'+a);
+      var panel = document.getElementById('pccs-panel-'+pccsId+'-'+a);
+      var active = a===aba;
+      if(btn){ btn.style.color=active?'var(--color-primary)':'var(--text2)'; btn.style.borderBottomColor=active?'var(--color-primary)':'transparent'; btn.style.fontWeight=active?'800':'700'; }
+      if(panel) panel.style.display=active?'':'none';
+    });
+    if(aba==='tabela'){ var pt=document.getElementById('pccs-panel-'+pccsId+'-tabela'); if(pt&&!pt.dataset.rendered){_renderTabelaEmPanel(pccsId,pt);pt.dataset.rendered='1';} }
+    if(aba==='params'){ var pp=document.getElementById('pccs-panel-'+pccsId+'-params'); if(pp&&!pp.dataset.rendered){_renderParamsEmPanel(pccsId,pp);pp.dataset.rendered='1';} }
+  }
+
+  function _renderTabelaEmPanel(pccsId, panel) {
+    var plano=(_pccsList||[]).find(function(p){return p.id===pccsId;});
+    if(!plano){panel.innerHTML=_empty('Plano não encontrado.');return;}
+    var ts=plano.tabelaSalarial||{}, params=plano.parametros||{};
+    var crescStepPct=(((params.crescimentoStep||0.075)*100)).toFixed(1);
+    function getSteps(tipo,cls){var key=tipo+'_'+cls;var from=ts[key];return(Array.isArray(from)&&from.length===5)?from:(_PCCS_SAL_DEFAULT[key]||[0,0,0,0,0]);}
+    function buildRow(tipo,cls){
+      var key=tipo+'_'+cls; var steps=getSteps(tipo,cls);
+      var amp=(steps[0]&&steps[4])?(((steps[4]/steps[0])-1)*100).toFixed(1)+'%':'—';
+      var cells=steps.map(function(v,i){return '<td style="padding:3px 2px;"><input type="number" step="0.01" min="0" id="pccs-ts-'+key+'-'+(i+1)+'" class="form-input" style="width:96px;text-align:right;padding:4px 6px;font-size:12px;" value="'+(v||0).toFixed(2)+'"></td>';}).join('');
+      return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 12px;font-weight:700;font-size:12px;white-space:nowrap;color:var(--text2);">'+_esc(cls)+'</td>'+
+        cells+'<td style="padding:4px 8px;font-size:11px;color:var(--muted);" id="pccs-ts-'+key+'-amp">'+amp+'</td>'+
+        '<td style="padding:4px;"><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;" data-bg-skip="1" title="Recalcular" onclick="RhUI._pccsRecalcRow(\''+key+'\')">↺</button></td></tr>';
+    }
+    var hdr='<thead style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);background:var(--surface2);border-bottom:2px solid var(--border);">'+
+      '<tr><th style="padding:6px 12px;text-align:left;">Classe</th>'+
+      '<th style="padding:6px 8px;text-align:center;">Ref. 1</th><th style="padding:6px 8px;text-align:center;">Ref. 2</th>'+
+      '<th style="padding:6px 8px;text-align:center;">Ref. 3</th><th style="padding:6px 8px;text-align:center;">Ref. 4</th>'+
+      '<th style="padding:6px 8px;text-align:center;">Ref. 5</th><th style="padding:6px 8px;">Amp.</th><th></th></tr></thead>';
+    var rowsF=_PCCS_CLASSES_FIXA.map(function(c){return buildRow('FIXA',c);}).join('');
+    var rowsO=_PCCS_CLASSES_ORIENTADOR.map(function(c){return buildRow('ORIENTADOR',c);}).join('');
+    panel.innerHTML=
+      '<div style="padding:16px;">'+
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;">'+
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:8px;">Parâmetros do Plano</div>'+
+          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">'+
+            '<div class="form-group" style="margin:0;"><label class="form-label" style="font-size:11px;">Ano referência</label>'+
+              '<input type="number" id="pccs-param-ano" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.anoReferencia||2025)+'"></div>'+
+            '<div class="form-group" style="margin:0;"><label class="form-label" style="font-size:11px;">Piso Fixa (R$)</label>'+
+              '<input type="number" step="0.01" id="pccs-param-piso-fixa" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.pisoFaixaFixa||1747.16)+'"></div>'+
+            '<div class="form-group" style="margin:0;"><label class="form-label" style="font-size:11px;">Piso Orientador (R$)</label>'+
+              '<input type="number" step="0.01" id="pccs-param-piso-orient" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.pisoOrientador||1584.74)+'"></div>'+
+            '<div class="form-group" style="margin:0;"><label class="form-label" style="font-size:11px;">Crescimento/Step (%)</label>'+
+              '<input type="number" step="0.1" min="0.1" id="pccs-param-step-pct" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+crescStepPct+'"></div>'+
+          '</div>'+
+          '<div style="margin-top:8px;text-align:right;"><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI._pccsRecalcTodos()" style="font-size:11px;">Recalcular todos os steps</button></div>'+
+        '</div>'+
+        '<input type="hidden" id="pccs-tabela-pccs-id" value="'+_esc(pccsId)+'">'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;"><span class="ms ms-sm">work</span> Faixa Fixa (CLT) — '+_PCCS_CLASSES_FIXA.length+' classes</div>'+
+        '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;"><table style="width:100%;border-collapse:collapse;">'+hdr+'<tbody>'+rowsF+'</tbody></table></div>'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;"><span class="ms ms-sm">school</span> Por Orientador (PJ) — '+_PCCS_CLASSES_ORIENTADOR.length+' classes</div>'+
+        '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;"><table style="width:100%;border-collapse:collapse;">'+hdr+'<tbody>'+rowsO+'</tbody></table></div>'+
+        '<div style="display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:12px;">'+
+          '<button id="rh-btn-salvar-tabela" class="btn btn-primario" onclick="RhUI._salvarTabelaSalarial()"><span class="ms ms-sm">save</span> Salvar Tabela Salarial</button>'+
+        '</div>'+
+      '</div>';
+  }
+
+  function _renderParamsEmPanel(pccsId, panel) {
+    var plano=(_pccsList||[]).find(function(p){return p.id===pccsId;});
+    if(!plano){panel.innerHTML=_empty('Plano não encontrado.');return;}
+    var params=plano.parametros||{};
+    panel.innerHTML=
+      '<div style="padding:16px;max-width:580px;">'+
+        '<div style="background:#fffbeb;border:1.5px solid #fbbf24;border-radius:10px;padding:14px;margin-bottom:16px;">'+
+          '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#b45309;margin-bottom:6px;"><span class="ms ms-sm">trending_up</span> Reajuste Geral de Salários</div>'+
+          '<p style="font-size:12px;color:#92400e;margin:0 0 10px;">Aplica um percentual a todos os steps de todos os cargos. Operação irreversível.</p>'+
+          '<div style="display:flex;gap:10px;align-items:flex-end;">'+
+            '<div class="form-group" style="margin:0;"><label class="form-label" style="font-size:11px;">Percentual (%)</label>'+
+              '<input id="rh-reaj-pct-p" type="number" step="0.5" min="0.1" placeholder="Ex: 5.0" class="form-input" style="width:130px;font-size:13px;"></div>'+
+            '<button id="rh-btn-aplicar-reaj-p" class="btn btn-primario" style="background:#d97706;" onclick="RhUI._aplicarReajustePccsInline(\''+_esc(pccsId)+'\')">'+
+              '<span class="ms ms-sm">bolt</span> Aplicar</button>'+
+          '</div>'+
+        '</div>'+
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;">'+
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">Dados do Plano</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">'+
+            '<div><span style="color:var(--text2);">Nome:</span> <strong>'+_esc(plano.nome||'—')+'</strong></div>'+
+            '<div><span style="color:var(--text2);">Status:</span> '+(plano.ativo?'<span style="color:#166534;font-weight:700;">Ativo</span>':'<span style="color:var(--muted);">Inativo</span>')+'</div>'+
+            '<div><span style="color:var(--text2);">Vigência início:</span> <strong>'+_esc((plano.vigencia&&plano.vigencia.inicio)||'—')+'</strong></div>'+
+            '<div><span style="color:var(--text2);">Vigência fim:</span> <strong>'+_esc((plano.vigencia&&plano.vigencia.fim)||'—')+'</strong></div>'+
+            '<div><span style="color:var(--text2);">Total de cargos:</span> <strong>'+(plano.cargos||[]).length+'</strong></div>'+
+            (params.anoReferencia?'<div><span style="color:var(--text2);">Ano referência:</span> <strong>'+params.anoReferencia+'</strong></div>':'')+
+            (params.crescimentoStep?'<div><span style="color:var(--text2);">Crescimento/Step:</span> <strong>'+((params.crescimentoStep||0)*100).toFixed(1)+'%</strong></div>':'')+
+          '</div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  function _aplicarReajustePccsInline(pccsId) {
+    var pct=parseFloat((document.getElementById('rh-reaj-pct-p')||{}).value)||0;
+    if(!pct||pct<=0){Toast.aviso('Informe um percentual válido.');return;}
+    BtnGuard.wrap('rh-btn-aplicar-reaj-p','Aplicando…',function(done){
+      GAS.rh.aplicarReajuste(pccsId,pct,function(resp){
+        done();
+        if(!resp||!resp.ok){Toast.erro((resp&&resp.error)?resp.error.message:'Erro.');return;}
+        Toast.sucesso('Reajuste de '+pct+'% aplicado!'); carregarPccs();
+      },function(e){done();Toast.erro(e.message||e);});
+    });
   }
 
   function abrirFormPccs(pccsId) {
@@ -20768,19 +20942,8 @@ var RhUI = (function() {
     });
   }
 
-  function abrirModalReajuste(pccsId, planoNome) {
-    _abrirModalRh('<div style="padding:20px;min-width:350px;">'+
-      '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">Aplicar Reajuste Salarial</h3>'+
-      '<p style="font-size:12px;color:var(--text2);margin:0 0 16px;">'+_esc(planoNome)+'</p>'+
-      '<input type="hidden" id="rh-reaj-pccs-id" value="'+_esc(pccsId)+'">'+
-      '<div class="form-group"><label class="form-label">Percentual (%)</label>'+
-        '<input id="rh-reaj-pct" class="form-input" type="number" step="0.5" min="0.1" placeholder="Ex: 5.0"></div>'+
-      '<p style="font-size:12px;color:var(--text2);margin:2px 0 14px;">Recalcula todos os steps salariais dos cargos deste plano pelo percentual informado.</p>'+
-      '<div style="display:flex;gap:8px;">'+
-        '<button id="rh-btn-aplicar-reaj" class="btn btn-primario" onclick="RhUI._aplicarReajustePccs()">'+
-          '<span class="ms ms-sm">trending_up</span> Aplicar</button>'+
-        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
-      '</div></div>');
+  function abrirModalReajuste(pccsId) {
+    _pccsSetSubAba(pccsId,'params');
   }
 
   function _aplicarReajustePccs() {
@@ -20797,7 +20960,11 @@ var RhUI = (function() {
   }
 
   // ─── TABELA SALARIAL ─────────────────────────────────────────
+  // Mantido por compatibilidade — navega para a aba inline
   function abrirModalTabelaSalarial(pccsId) {
+    _pccsSetSubAba(pccsId,'tabela');
+  }
+  function _abrirModalTabelaSalarialLegacy(pccsId) {
     var plano = (_pccsList||[]).find(function(p){ return p.id===pccsId; });
     if (!plano) { Toast.erro('Plano não encontrado.'); return; }
 
@@ -21372,26 +21539,26 @@ var RhUI = (function() {
       };
       el.innerHTML =
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:860px;">' +
-          _sec('III — Remuneração','var(--primary,#1a237e)',[
+          _sec('Remuneração','var(--primary,#1a237e)',[
             ['Salário Bruto',c.salarioBruto],
             ['Reajuste Acordo Coletivo',c.reajuste],
             ['Total Remuneração',c.salarioTotal,true]
           ]) +
-          _sec('IV — Encargos Patronais (35,6%)','var(--warning,#e65100)',[
+          _sec('Encargos Patronais (35,6%)','var(--warning,#e65100)',[
             ['INSS Patronal (20%)',c.inssPatronal],
             ['Sistema S + SAT (6,6%)',c.sistemaSsat],
             ['FGTS (8%)',c.fgts],
             ['PIS (1%)',c.pis],
             ['Total Encargos',c.encargosTotal,true]
           ]) +
-          _sec('V — Benefícios (custo empresa)','var(--info,#0277bd)',[
+          _sec('Benefícios (custo empresa)','var(--info,#0277bd)',[
             ['Vale Transporte (líq.)',c.vtLiquido],
             ['Vale Alimentação (líq.)',c.vaLiquido],
             ['Vale Refeição (líq.)',c.vrLiquido],
             ['Plano de Saúde (líq.)',c.psLiquido],
             ['Total Benefícios',c.beneficiosTotal,true]
           ]) +
-          _sec('VI — Provisões Mensais','var(--success,#2e7d32)',[
+          _sec('Provisões Mensais','var(--success,#2e7d32)',[
             ['Férias + 1/3 + encargos',c.provisaoFerias],
             ['13º + encargos',c.provisao13],
             ['FGTS rescisório (40%)',c.provisaoFGTSResc],
@@ -21399,13 +21566,13 @@ var RhUI = (function() {
           ]) +
         '</div>' +
         '<div style="background:var(--primary,#1a237e);color:#fff;border-radius:8px;padding:14px 20px;margin-top:12px;max-width:860px;display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-size:14px;font-weight:600;">VII — CUSTO MENSAL (III+IV+V+VI)</span>' +
+          '<span style="font-size:14px;font-weight:600;">CUSTO MENSAL</span>' +
           '<span style="font-size:22px;font-weight:700;">'+_R(c.custoMensal)+'</span>' +
         '</div>' +
         (c.multiplicador?'<p style="font-size:12px;color:var(--text2);margin-top:6px;max-width:860px;text-align:right;">Multiplicador: '+c.multiplicador+'× o salário bruto · INSS empregado: '+_R(c.inssEmpregado)+' · Salário líquido est.: '+_R(c.salarioLiquido)+'</p>':'') +
         (params.nMeses>0&&c.custoContrato?
           '<div style="background:var(--success,#2e7d32);color:#fff;border-radius:8px;padding:14px 20px;margin-top:6px;max-width:860px;display:flex;justify-content:space-between;align-items:center;">' +
-            '<span style="font-size:13px;font-weight:600;">VIII — CUSTO TOTAL CONTRATO ('+params.nMeses+' meses)</span>' +
+            '<span style="font-size:13px;font-weight:600;">CUSTO TOTAL CONTRATO ('+params.nMeses+' meses)</span>' +
             '<span style="font-size:20px;font-weight:700;">'+_R(c.custoContrato)+'</span>' +
           '</div>' : '');
     }, function(e) { if (el) el.innerHTML='<p style="color:var(--danger,#c62828);font-size:13px;">Erro: '+((e&&e.message)||'Falha')+'</p>'; });
@@ -21540,7 +21707,9 @@ var RhUI = (function() {
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
     abrirModalReajuste:abrirModalReajuste, _aplicarReajustePccs:_aplicarReajustePccs,
-    abrirModalTabelaSalarial:abrirModalTabelaSalarial, _pccsRecalcRow:_pccsRecalcRow, _pccsRecalcTodos:_pccsRecalcTodos, _salvarTabelaSalarial:_salvarTabelaSalarial,
+    abrirModalTabelaSalarial:abrirModalTabelaSalarial, _pccsSetSubAba:_pccsSetSubAba,
+    _pccsRecalcRow:_pccsRecalcRow, _pccsRecalcTodos:_pccsRecalcTodos, _salvarTabelaSalarial:_salvarTabelaSalarial,
+    _aplicarReajustePccsInline:_aplicarReajustePccsInline,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,

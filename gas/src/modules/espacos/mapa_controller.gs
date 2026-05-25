@@ -39,6 +39,7 @@ function _horaAtualEntre(ini, fim) {
 
 /** Dado array de reservas de um espaço, determina status e reserva ativa */
 function _calcularStatusEspaco(espaco, reservasDia, horaReferencia) {
+  if (espaco.emManutencao) return { status: 'manutencao', reservaAtiva: null };
   if (!espaco.ativo) return { status: 'bloqueado', reservaAtiva: null };
 
   var ativas  = reservasDia.filter(function(r) {
@@ -126,6 +127,8 @@ function ctrl_mapa_statusEspacos(params) {
         possuiChaves:     esp.possuiChaves  === true,
         aceitaReserva:    esp.aceitaReserva !== false,
         mapaConfig:       esp.mapaConfig   || null,
+        emManutencao:     !!esp.emManutencao,
+        itensFixos:       esp.itensFixos   || {},
         status:           calc.status,
         reservaAtiva:     calc.reservaAtiva,
         proximaReserva:   proxima,
