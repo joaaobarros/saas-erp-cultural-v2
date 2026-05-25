@@ -3443,6 +3443,20 @@ select.form-control { cursor: pointer; }
         <div id="esp-tab-reservas" class="esp-tab-content">
           <div class="stats-grid" id="reservas-metricas"></div>
 
+          <!-- Barra de ações admin — visível para superadmin/admin/gestor em TODOS os modos -->
+          <div id="res-admin-toolbar" style="display:none;justify-content:flex-end;gap:8px;margin-bottom:10px;">
+            <button class="btn btn-ghost btn-sm" id="btn-manutencao-espaco"
+                    style="color:#d97706;border-color:#fcd34d;"
+                    onclick="ReservasUI.abrirModalManutencao()">
+              <span class="ms ms-sm">build</span> Manutenção de Espaço
+            </button>
+            <button class="btn btn-ghost btn-sm"
+                    style="color:#dc2626;border-color:#fca5a5;"
+                    onclick="ReservasUI.bloquearCCBJ()">
+              <span class="ms ms-sm">lock</span> CCBJ Fechado
+            </button>
+          </div>
+
           <!-- Toggle de modo: Lista / Agenda / Diagrama -->
           <div style="display:flex;gap:6px;margin-bottom:12px;" id="res-modo-toggle">
             <button class="btn btn-ghost btn-sm res-modo-btn active" data-modo="lista"
@@ -3546,9 +3560,6 @@ select.form-control { cursor: pointer; }
                 </select>
                 <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
                   <span class="ms ms-sm">refresh</span>
-                </button>
-                <button class="btn btn-ghost btn-sm" id="btn-ccbj-fechado" style="display:none;color:#dc2626;border-color:#fca5a5;" onclick="ReservasUI.bloquearCCBJ()" data-bg-skip="1">
-                  <span class="ms ms-sm">lock</span> CCBJ Fechado
                 </button>
                 <button class="btn btn-primario btn-sm" id="btn-res-novo" onclick="ReservasUI.abrirForm()">
                   <span class="ms ms-sm">add</span> Nova Reserva
@@ -3792,6 +3803,38 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
           </div><!-- /ccbj-modal -->
+
+          <!-- MODAL: Manutenção de Espaço -->
+          <div id="modal-manutencao-espaco" class="modal-overlay oculto"
+               onclick="if(event.target===this)ReservasUI._fecharModalManutencao()">
+            <div class="modal-box" style="max-width:440px;background:var(--surface);">
+              <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                  <span class="ms" style="color:#d97706;">build</span>
+                  Manutenção de Espaço
+                </h3>
+                <button class="modal-close" onclick="ReservasUI._fecharModalManutencao()" data-bg-skip="1">✕</button>
+              </div>
+              <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                <div class="form-group" style="margin:0;">
+                  <label class="form-label">Espaço</label>
+                  <select id="manut-espaco-select" class="form-input"
+                          onchange="ReservasUI._atualizarBadgeManutencao()">
+                    <option value="">Selecione…</option>
+                  </select>
+                </div>
+                <div id="manut-status-badge" style="min-height:24px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+                  <button class="btn btn-ghost" onclick="ReservasUI._fecharModalManutencao()" data-bg-skip="1">Cancelar</button>
+                  <button class="btn btn-primario" id="btn-manut-confirmar"
+                          onclick="ReservasUI._confirmarManutencao()">
+                    <span class="ms ms-sm">build</span>
+                    <span id="btn-manut-label">Enviar para Manutenção</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div><!-- /modal-manutencao-espaco -->
 
           <!-- MODO AGENDA -->
           <div id="res-modo-agenda" style="display:none;">
@@ -6169,12 +6212,12 @@ select.form-control { cursor: pointer; }
 
         <!-- Tab: PCCS -->
         <div id="rh-tab-pccs" class="rh-tab-pane">
-          <div class="card">
+          <div class="card" style="overflow:visible;">
             <div class="card-header">
               <div class="card-titulo"><span class="ms">schema</span> Plano de Cargos, Carreiras e Salários</div>
               <button class="btn btn-primario btn-sm" id="rh-btn-novo-pccs" onclick="RhUI.abrirFormPccs()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo Plano</button>
             </div>
-            <div id="rh-pccs-lista"></div>
+            <div id="rh-pccs-corpo"></div>
           </div>
         </div>
 
@@ -6414,6 +6457,14 @@ select.form-control { cursor: pointer; }
                     <option value="culpa_reciproca">Culpa Recíproca</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Férias vencidas não gozadas</label>
+                  <select id="rh-resc-periodos-vencidos" class="form-control">
+                    <option value="0">Nenhuma (já gozou ou &lt; 12 meses)</option>
+                    <option value="1" selected>1 período (padrão)</option>
+                    <option value="2">2 períodos (mora em dobro)</option>
+                  </select>
+                </div>
                 <div class="form-group"><label class="form-label">Economia esperada/mês (R$)</label><input type="number" id="rh-resc-economia" class="form-control" placeholder="Ex: salário do substituto"></div>
               </div>
               <div style="margin-top:12px;"><button id="rh-btn-calc-rescisao" class="btn btn-primary" onclick="BtnGuard.wrap('rh-btn-calc-rescisao','Calculando…',RhUI.calcularRescisao)">Calcular Rescisão</button></div>
@@ -6537,7 +6588,9 @@ var GAS = {
     salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); },
     // Banco de Dados
     obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); },
-    obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); }
+    obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); },
+    // Manutenção de espaço
+    alternarManutencao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarManutencaoEspaco({espacoId:id}); }
   },
   // Painel de Orgs — Fase 9 (superadmin)
   orgs: {
@@ -6777,7 +6830,8 @@ var GAS = {
     iniciar:                 function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_iniciar(id); },
     concluir:                function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); },
     bloquear:                function(p,ds,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_bloquear(p,ds); },
-    cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); }
+    cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); },
+    disponibilidadeItens:    function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_disponibilidadeItens(p||{}); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -21386,15 +21440,21 @@ var RhUI = (function() {
     var meses=parseInt((document.getElementById('rh-resc-meses')||{}).value||'0')||0;
     var tipo=(document.getElementById('rh-resc-tipo')||{}).value||'sem_justa_causa';
     var economia=parseFloat((document.getElementById('rh-resc-economia')||{}).value||'0')||0;
+    var periodosVencidos=parseInt((document.getElementById('rh-resc-periodos-vencidos')||{}).value||'1')||0;
     var el=document.getElementById('rh-resc-resultado');
     if (!salario||!meses){ Toast.aviso('Preencha salário e meses.'); if(done) done(); return; }
-    GAS.ponto.calcularRescisao({salarioBruto:salario,mesesTrabalhados:meses,tipoRescisao:tipo,economiaMensal:economia},function(r){
+    GAS.ponto.calcularRescisao({salarioBruto:salario,mesesTrabalhados:meses,tipoRescisao:tipo,economiaMensal:economia,periodosVencidosNaoGozados:periodosVencidos},function(r){
       if(done) done();
       if (!r||!r.ok){ if(el) el.innerHTML='Erro.'; return; }
       var c=r.data;
       if(!el) return;
+      var cardFV = c.feriasVencidas > 0
+        ? _lRh('Férias Vencidas ('+c.periodosVencidos+'×)', c.feriasVencidas)
+        : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'+
+            '<div style="font-size:11px;color:var(--text2);">Férias Vencidas</div>'+
+            '<div style="font-size:13px;color:var(--muted);">— não aplicável</div></div>';
       el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-        _lRh('Aviso Prévio',c.avisoPrevio)+_lRh('Férias Vencidas',c.feriasVencidas)+
+        _lRh('Aviso Prévio',c.avisoPrevio)+cardFV+
         _lRh('Férias Proporcionais',c.feriasProporcionais)+_lRh('13º Proporcional',c.decimo3Proporcional)+
         _lRh('FGTS Saldo (est.)',c.fgtsSaldoEstimado)+_lRh('Multa FGTS',c.multaFGTS)+
       '</div>'+
@@ -21402,7 +21462,7 @@ var RhUI = (function() {
         '<span style="font-weight:600;">CUSTO TOTAL DA RESCISÃO</span>'+
         '<span style="font-size:20px;font-weight:700;">R$ '+_fmtMoeda(c.totalRescisao)+'</span>'+
       '</div>'+
-      (c.mesesBreakEven?'<p style="font-size:13px;margin-top:10px;">⏱ Break-even: <strong>'+c.mesesBreakEven+' meses</strong></p>':'');
+      (c.mesesBreakEven?'<p style="font-size:13px;margin-top:10px;">Break-even: <strong>'+c.mesesBreakEven+' meses</strong></p>':'');
     },function(e){ if(done) done(); if(el) el.innerHTML='Erro: '+(e.message||''); });
   }
 

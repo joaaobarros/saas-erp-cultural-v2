@@ -324,12 +324,16 @@ var PontoEngine = (function() {
     var fgtsAliq = cfg.aliquota_fgts || 0.08;
 
     // Aviso prévio (base: 30 dias + 3 por ano, máx 90)
-    var diasAP  = Math.min(90, 30 + Math.floor(meses/12) * 3);
+    var anosCompletos = Math.floor(meses / 12);
+    var diasAP  = Math.min(90, 30 + anosCompletos * 3);
     var valorAP = tipo === 'pedido_demissao' ? 0 : (s / 30 * diasAP);
 
-    // Saldo de salário (último mês proporcional — calculado fora)
-    // Férias vencidas + proporcionais + 1/3
-    var feriasVencidas     = (Math.floor(meses/12)) * s * (1 + 1/3);
+    // Férias vencidas: usa valor explícito do usuário quando informado;
+    // caso contrário 0 (seguro — usuário deve informar se há períodos não gozados)
+    var periodosVencidos = (p.periodosVencidosNaoGozados != null)
+      ? Math.max(0, Math.min(2, Number(p.periodosVencidosNaoGozados) || 0))
+      : (anosCompletos > 0 ? 1 : 0);
+    var feriasVencidas     = periodosVencidos * s * (1 + 1/3);
     var mesesPropFerias    = meses % 12;
     var feriasProporcionais = (s * (1 + 1/3)) * (mesesPropFerias / 12);
     // 13º proporcional
@@ -350,12 +354,13 @@ var PontoEngine = (function() {
       : null;
 
     return {
-      tipoRescisao:        tipo,
-      salarioBruto:        s,
-      mesesTrabalhados:    meses,
-      avisoPrevio:         Math.round(valorAP * 100) / 100,
-      feriasVencidas:      Math.round(feriasVencidas * 100) / 100,
-      feriasProporcionais: Math.round(feriasProporcionais * 100) / 100,
+      tipoRescisao:           tipo,
+      salarioBruto:           s,
+      mesesTrabalhados:       meses,
+      periodosVencidos:       periodosVencidos,
+      avisoPrevio:            Math.round(valorAP * 100) / 100,
+      feriasVencidas:         Math.round(feriasVencidas * 100) / 100,
+      feriasProporcionais:    Math.round(feriasProporcionais * 100) / 100,
       decimo3Proporcional: Math.round(decimo3 * 100) / 100,
       fgtsSaldoEstimado:   Math.round(fgtsSaldo * 100) / 100,
       multaFGTS:           Math.round(multaFGTS * 100) / 100,
