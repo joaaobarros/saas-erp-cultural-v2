@@ -627,6 +627,16 @@ function ctrl_pccs_obterSalario(cargoId, nivel, classe, referencia) {
   }, 'ctrl_pccs_obterSalario');
 }
 
+function ctrl_pccs_aplicarReajuste(pccsId, percentual) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem aplicar reajuste.');
+    PCCSRepository.aplicarReajuste(pccsId, percentual, ctx.email);
+    return { aplicado: true };
+  }, 'ctrl_pccs_aplicarReajuste');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════

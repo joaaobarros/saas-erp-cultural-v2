@@ -6465,6 +6465,7 @@ var GAS = {
     salvarCargo:     function(pid,c,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvarCargo(pid,c); },
     excluirCargo:    function(pid,cid,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_excluirCargo(pid,cid); },
     obterSalario:    function(cid,n,cl,r,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_obterSalario(cid,n,cl,r); },
+    aplicarReajuste: function(pid,pct,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_aplicarReajuste(pid,pct); },
     // Histórico RH
     historico:          function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
     registrarEvento:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
@@ -20145,6 +20146,7 @@ var RhUI = (function() {
   var _carregado     = false;
   var _abaAtiva      = 'equipe';
   var _colaboradores = [];
+  var _pccsList      = [];
 
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
@@ -20358,6 +20360,7 @@ var RhUI = (function() {
     el.innerHTML = _empty('Carregando…');
     GAS.rh.listarPccs(function(resp){
       var lista = (resp&&resp.ok&&resp.data)?resp.data:[];
+      _pccsList = lista;
       if (!lista.length){ el.innerHTML = _empty('Nenhum plano PCCS cadastrado.'); return; }
       el.innerHTML = lista.map(function(p){
         var cargos = p.cargos || [];
@@ -20390,7 +20393,9 @@ var RhUI = (function() {
               '<td style="padding:7px 10px;">'+_badgeGrupo(c.grupo||'')+'</td>'+
               '<td style="padding:7px 10px;font-size:12px;color:var(--text2);">'+_esc(tipoClasse)+' '+_esc(classe)+'</td>'+
               '<td style="padding:7px 10px;font-size:12px;">'+faixaTxt+'</td>'+
-              '<td style="padding:7px 10px;text-align:right;">'+
+              '<td style="padding:7px 10px;text-align:right;white-space:nowrap;">'+
+                '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')">'+
+                '<span class="ms ms-sm">edit</span></button>'+
                 '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')">'+
                 '<span class="ms ms-sm">delete</span></button></td></tr>';
           });
@@ -20401,9 +20406,17 @@ var RhUI = (function() {
             '<div style="display:flex;align-items:center;gap:4px;">'+
               '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+headerInfo+
             '</div>'+
-            '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" '+
-              'onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1">'+
-              '<span class="ms ms-sm">add</span> Cargo</button>'+
+            '<div style="display:flex;gap:6px;align-items:center;">'+
+              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
+                'onclick="RhUI.abrirModalReajuste(\''+_esc(p.id)+'\',\''+_esc(p.nome||'Plano')+'\')">'+
+                '<span class="ms ms-sm">trending_up</span> Reajuste</button>'+
+              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
+                'onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')">'+
+                '<span class="ms ms-sm">edit</span></button>'+
+              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" '+
+                'onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')" data-bg-skip="1">'+
+                '<span class="ms ms-sm">add</span> Cargo</button>'+
+            '</div>'+
           '</div>'+
           (tabela?
             '<table style="width:100%;">'+
@@ -20419,20 +20432,24 @@ var RhUI = (function() {
     },function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
   }
 
-  function abrirFormPccs() {
+  function abrirFormPccs(pccsId) {
+    var plano = pccsId ? (_pccsList.filter(function(p){ return p.id===pccsId; })[0]||null) : null;
+    var isEdit = !!plano;
+    var vig = (plano&&plano.vigencia) ? plano.vigencia : {};
     _abrirModalRh('<div style="padding:20px;min-width:380px;">'+
-      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Plano PCCS</h3>'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">'+(isEdit?'Editar Plano PCCS':'Novo Plano PCCS')+'</h3>'+
+      '<input type="hidden" id="rh-pccs-id-m" value="'+(isEdit?_esc(plano.id):'')+'">'+
       '<div class="form-group"><label class="form-label">Nome *</label>'+
-        '<input id="rh-pccs-nome-m" class="form-input" placeholder="Ex: PCCS IDM 2026"></div>'+
+        '<input id="rh-pccs-nome-m" class="form-input" placeholder="Ex: PCCS IDM 2026" value="'+(isEdit?_esc(plano.nome||''):'')+'"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
         '<div class="form-group"><label class="form-label">Vigência início</label>'+
-          '<input id="rh-pccs-ini-m" class="form-input" type="date"></div>'+
+          '<input id="rh-pccs-ini-m" class="form-input" type="date" value="'+_esc(vig.inicio||'')+'"></div>'+
         '<div class="form-group"><label class="form-label">Vigência fim</label>'+
-          '<input id="rh-pccs-fim-m" class="form-input" type="date"></div>'+
+          '<input id="rh-pccs-fim-m" class="form-input" type="date" value="'+_esc(vig.fim||'')+'"></div>'+
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:12px;">'+
         '<button id="rh-btn-salvar-pccs-m" class="btn btn-primario" onclick="RhUI._salvarPccs()">'+
-          '<span class="ms ms-sm">save</span> Criar</button>'+
+          '<span class="ms ms-sm">save</span> '+(isEdit?'Salvar':'Criar')+'</button>'+
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
       '</div></div>');
   }
@@ -20440,17 +20457,20 @@ var RhUI = (function() {
   function _salvarPccs() {
     var nome=(document.getElementById('rh-pccs-nome-m')||{}).value||'';
     if (!nome.trim()){ Toast.aviso('Nome obrigatório.'); return; }
+    var idEdit=(document.getElementById('rh-pccs-id-m')||{}).value||'';
+    var dados = {
+      nome: nome,
+      vigencia: {
+        inicio: (document.getElementById('rh-pccs-ini-m')||{}).value||null,
+        fim:    (document.getElementById('rh-pccs-fim-m')||{}).value||null
+      }
+    };
+    if (idEdit) dados.id = idEdit;
     BtnGuard.wrap('rh-btn-salvar-pccs-m','Salvando…',function(done){
-      GAS.rh.salvarPccs({
-        nome: nome,
-        vigencia: {
-          inicio: (document.getElementById('rh-pccs-ini-m')||{}).value||null,
-          fim:    (document.getElementById('rh-pccs-fim-m')||{}).value||null
-        }
-      },function(resp){
+      GAS.rh.salvarPccs(dados,function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
-        _fecharModalRh(); Toast.sucesso('Plano criado!'); carregarPccs();
+        _fecharModalRh(); Toast.sucesso(idEdit?'Plano atualizado!':'Plano criado!'); carregarPccs();
       },function(e){ done(); Toast.erro(e.message||e); });
     });
   }
@@ -20476,24 +20496,39 @@ var RhUI = (function() {
     }
   }
 
-  function abrirFormCargo(pccsId) {
-    var gruposOpts = _PCCS_GRUPOS.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('');
+  function abrirFormCargo(pccsId, cargoId) {
+    var cargo = null;
+    if (cargoId) {
+      var plano = _pccsList.filter(function(p){ return p.id===pccsId; })[0];
+      if (plano) cargo = (plano.cargos||[]).filter(function(c){ return c.id===cargoId; })[0]||null;
+    }
+    var isEdit    = !!cargo;
+    var tipoAtual = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].nivel  : 'FIXA';
+    var clsAtual  = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].classe : '';
+    var grupoAtual= cargo ? (cargo.grupo||'') : '';
+    var gruposOpts = _PCCS_GRUPOS.map(function(g){
+      return '<option value="'+g+'"'+(g===grupoAtual?' selected':'')+'>'+g+'</option>';
+    }).join('');
+    var classesOpts = (tipoAtual==='ORIENTADOR' ? _PCCS_CLASSES_ORIENTADOR : _PCCS_CLASSES_FIXA).map(function(c){
+      return '<option value="'+c+'"'+(c===clsAtual?' selected':'')+'>'+c+'</option>';
+    }).join('');
     _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
-      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Novo Cargo</h3>'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">'+(isEdit?'Editar Cargo':'Novo Cargo')+'</h3>'+
       '<input type="hidden" id="rh-cargo-pccs-id" value="'+_esc(pccsId)+'">'+
+      '<input type="hidden" id="rh-cargo-id-m"   value="'+(isEdit?_esc(cargo.id):'')+'">'+
       '<div class="form-group"><label class="form-label">Nome do cargo *</label>'+
-        '<input id="rh-cargo-nome-m" class="form-input" placeholder="Ex: Analista de Formação"></div>'+
+        '<input id="rh-cargo-nome-m" class="form-input" placeholder="Ex: Analista de Formação" value="'+(isEdit?_esc(cargo.nome||''):'')+'"></div>'+
       '<div class="form-group"><label class="form-label">Área / Departamento</label>'+
-        '<input id="rh-cargo-area-m" class="form-input" placeholder="Ex: Formação e Ação Educativa"></div>'+
+        '<input id="rh-cargo-area-m" class="form-input" placeholder="Ex: Formação e Ação Educativa" value="'+(isEdit?_esc(cargo.area||''):'')+'"></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
         '<div class="form-group"><label class="form-label">Tabela *</label>'+
           '<select id="rh-cargo-tipo-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()">'+
-            '<option value="FIXA">Faixa Fixa</option>'+
-            '<option value="ORIENTADOR">Por Orientador</option>'+
+            '<option value="FIXA"'+(tipoAtual==='FIXA'?' selected':'')+'>Faixa Fixa</option>'+
+            '<option value="ORIENTADOR"'+(tipoAtual==='ORIENTADOR'?' selected':'')+'>Por Orientador</option>'+
           '</select></div>'+
         '<div class="form-group"><label class="form-label">Classe *</label>'+
-          '<select id="rh-cargo-classe-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()" data-tipo-atual="FIXA">'+
-            _pccsClassesOpts('FIXA')+
+          '<select id="rh-cargo-classe-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()" data-tipo-atual="'+tipoAtual+'">'+
+            classesOpts+
           '</select></div>'+
       '</div>'+
       '<div class="form-group"><label class="form-label">Grupo</label>'+
@@ -20504,10 +20539,9 @@ var RhUI = (function() {
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:4px;">'+
         '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()">'+
-          '<span class="ms ms-sm">save</span> Adicionar</button>'+
+          '<span class="ms ms-sm">save</span> '+(isEdit?'Salvar':'Adicionar')+'</button>'+
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
       '</div></div>');
-    // inicializa preview
     setTimeout(function(){ RhUI._pccsPreviewSalario(); }, 50);
   }
 
@@ -20515,6 +20549,7 @@ var RhUI = (function() {
     var pccsId = (document.getElementById('rh-cargo-pccs-id')||{}).value||'';
     var nome   = (document.getElementById('rh-cargo-nome-m')||{}).value||'';
     if (!nome.trim()){ Toast.aviso('Nome obrigatório.'); return; }
+    var idEdit = (document.getElementById('rh-cargo-id-m')||{}).value||'';
     var tipo   = (document.getElementById('rh-cargo-tipo-m')||{}).value||'FIXA';
     var classe = (document.getElementById('rh-cargo-classe-m')||{}).value||'';
     var grupo  = (document.getElementById('rh-cargo-grupo-m')||{}).value||'';
@@ -20526,11 +20561,12 @@ var RhUI = (function() {
                    'Operacional':'operacional' }[grupo] || 'operacional';
     var cargo = { nome:nome, area:area, tipo:tipoV2, grupo:grupo,
                   descricao:nome+(area?' — '+area:''), tabela:tabela };
+    if (idEdit) cargo.id = idEdit;
     BtnGuard.wrap('rh-btn-salvar-cargo-m','Salvando…',function(done){
       GAS.rh.salvarCargo(pccsId,cargo,function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
-        _fecharModalRh(); Toast.sucesso('Cargo adicionado!'); carregarPccs();
+        _fecharModalRh(); Toast.sucesso(idEdit?'Cargo atualizado!':'Cargo adicionado!'); carregarPccs();
       },function(e){ done(); Toast.erro(e.message||e); });
     });
   }
@@ -20545,6 +20581,34 @@ var RhUI = (function() {
         done(); _fecharModalRh();
         if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
         Toast.sucesso('Cargo excluído.'); carregarPccs();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function abrirModalReajuste(pccsId, planoNome) {
+    _abrirModalRh('<div style="padding:20px;min-width:350px;">'+
+      '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">Aplicar Reajuste Salarial</h3>'+
+      '<p style="font-size:12px;color:var(--text2);margin:0 0 16px;">'+_esc(planoNome)+'</p>'+
+      '<input type="hidden" id="rh-reaj-pccs-id" value="'+_esc(pccsId)+'">'+
+      '<div class="form-group"><label class="form-label">Percentual (%)</label>'+
+        '<input id="rh-reaj-pct" class="form-input" type="number" step="0.5" min="0.1" placeholder="Ex: 5.0"></div>'+
+      '<p style="font-size:12px;color:var(--text2);margin:2px 0 14px;">Recalcula todos os steps salariais dos cargos deste plano pelo percentual informado.</p>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="rh-btn-aplicar-reaj" class="btn btn-primario" onclick="RhUI._aplicarReajustePccs()">'+
+          '<span class="ms ms-sm">trending_up</span> Aplicar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+  }
+
+  function _aplicarReajustePccs() {
+    var pccsId = (document.getElementById('rh-reaj-pccs-id')||{}).value||'';
+    var pct    = parseFloat((document.getElementById('rh-reaj-pct')||{}).value)||0;
+    if (!pct||pct<=0){ Toast.aviso('Informe um percentual válido.'); return; }
+    BtnGuard.wrap('rh-btn-aplicar-reaj','Aplicando…',function(done){
+      GAS.rh.aplicarReajuste(pccsId,pct,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        _fecharModalRh(); Toast.sucesso('Reajuste de '+pct+'% aplicado!'); carregarPccs();
       },function(e){ done(); Toast.erro(e.message||e); });
     });
   }
@@ -20990,6 +21054,7 @@ var RhUI = (function() {
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
+    abrirModalReajuste:abrirModalReajuste, _aplicarReajustePccs:_aplicarReajustePccs,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,

@@ -162,6 +162,34 @@ var PCCSRepository = (function() {
     return true;
   }
 
+  /**
+   * Aplica reajuste percentual a todos os steps de todos os cargos do plano.
+   */
+  function aplicarReajuste(pccsId, percentual, email) {
+    var orgId = _getOrgId();
+    var pct = parseFloat(percentual);
+    if (isNaN(pct) || pct <= 0) throw new Error('Percentual inválido.');
+    var fator = 1 + pct / 100;
+
+    modifyJSON(ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var pccs = lista.find(function(p) { return p.id === pccsId && p.orgId === orgId; });
+      if (!pccs) throw new Error('PCCS não encontrado: ' + pccsId);
+      (pccs.cargos || []).forEach(function(cargo) {
+        (cargo.tabela || []).forEach(function(pos) {
+          if (pos.salarioBase) pos.salarioBase = Math.round(pos.salarioBase * fator * 100) / 100;
+        });
+      });
+      pccs.atualizadoEm = agora();
+      return lista;
+    });
+
+    AuditoriaService.registrar('PCCS_REAJUSTE_APLICADO', 'pessoas',
+      { pccsId: pccsId, percentual: pct, orgId: orgId, usuario: email });
+    Logger.info('pccs_repository', 'aplicarReajuste', pccsId + ': ' + pct + '%');
+    return true;
+  }
+
   return {
     listarAtivo:            listarAtivo,
     listarTodos:            listarTodos,
@@ -169,7 +197,8 @@ var PCCSRepository = (function() {
     obterSalarioPorPosicao: obterSalarioPorPosicao,
     salvar:                 salvar,
     salvarCargo:            salvarCargo,
-    excluirCargo:           excluirCargo
+    excluirCargo:           excluirCargo,
+    aplicarReajuste:        aplicarReajuste
   };
 
 })();
