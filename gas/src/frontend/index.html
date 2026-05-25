@@ -6414,8 +6414,8 @@ select.form-control { cursor: pointer; }
                   <input type="text" inputmode="decimal" id="rh-clt-va-dia" class="form-control" placeholder="27,01" oninput="RhUI._maskMoeda(this)" onblur="RhUI.calcularCLT()">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">VA — desconto do colaborador (%)</label>
-                  <input type="number" id="rh-clt-va-desc" class="form-control" placeholder="0" min="0" max="100" step="0.5" oninput="RhUI.calcularCLT()">
+                  <label class="form-label">VA — desconto do colaborador (R$/mês)</label>
+                  <input type="text" inputmode="decimal" id="rh-clt-va-desc" class="form-control" placeholder="0,00" oninput="RhUI._maskMoeda(this)" onblur="RhUI.calcularCLT()">
                 </div>
                 <div class="form-group">
                   <label class="form-label">VR — valor por dia (R$)</label>
@@ -13472,6 +13472,196 @@ var ReservasUI = (function() {
     if (bCanc) bCanc.addEventListener('click', function() { overlay.remove(); _cancelar(id); });
   }
 
+  // ── Itens volantes — estado ──────────────────────────
+  var _itensDisponibilidade = [];
+  var _itensChips = [];
+
+  function _parseItensVolantesUI(str) {
+    if (!str) return [];
+    return String(str).split('|').map(function(s) {
+      var m = s.trim().match(/^(\d+)[xX]\s*(.+)$/);
+      return m ? { qtd: Number(m[1]), nome: m[2].trim() } : null;
+    }).filter(Boolean);
+  }
+
+  function _carregarDisponibilidadeItens() {
+    var sala = (document.getElementById('res-sala').value||'').trim();
+    var data = (document.getElementById('res-data').value||'').trim();
+    var ini  = (document.getElementById('res-hora-ini').value||'').trim();
+    var fim  = (document.getElementById('res-hora-fim').value||'').trim();
+    var blocoV = document.getElementById('res-itens-volantes-bloco');
+    if (!blocoV) return;
+    if (!sala || !data || !ini || !fim) { blocoV.style.display = 'none'; return; }
+    blocoV.style.display = '';
+    var excluirId = (document.getElementById('res-id').value||'').trim() || null;
+    var params = { sala: sala, data: data, horaInicio: ini, horaTermino: fim };
+    if (excluirId) params.excluirReservaId = excluirId;
+    GAS.reservas.disponibilidadeItens(params, function(resp) {
+      _itensDisponibilidade = (resp && resp.ok && resp.data && resp.data.itens) ? resp.data.itens : [];
+      _populateItemSelect();
+      _revalidarChips();
+    }, function() { _itensDisponibilidade = []; _populateItemSelect(); });
+  }
+
+  function _populateItemSelect() {
+    var sel = document.getElementById('res-item-select');
+    if (!sel) return;
+    if (!_itensDisponibilidade.length) {
+      sel.innerHTML = '<option value="">Nenhum item no catálogo</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">Selecione um item…</option>' +
+      _itensDisponibilidade.map(function(item) {
+        var qtdLabel = item.disponivel > 0
+          ? '(' + item.disponivel + ' disponível' + (item.disponivel !== 1 ? 'eis' : '') + ')'
+          : '(indisponível)';
+        var disabledAttr = item.disponivel <= 0 ? ' disabled' : '';
+        var styleAttr = item.disponivel <= 0 ? ' style="color:var(--color-error)"' : '';
+        return '<option value="' + escaparHtml(item.id) + '"' + disabledAttr + styleAttr + '>'
+          + escaparHtml(item.nome) + ' ' + qtdLabel + '</option>';
+      }).join('');
+  }
+
+  function _adicionarItem() {
+    var sel = document.getElementById('res-item-select');
+    var qtdEl = document.getElementById('res-item-qtd');
+    if (!sel || !sel.value) { Toast.aviso('Selecione um item.'); return; }
+    if (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].disabled) {
+      Toast.aviso('Este item está indisponível no horário selecionado.'); return;
+    }
+    var qtd = Math.max(1, parseInt((qtdEl && qtdEl.value) || '1', 10));
+    var itemData = _itensDisponibilidade.filter(function(i){ return i.id === sel.value; })[0];
+    if (!itemData) { Toast.aviso('Item não encontrado no catálogo.'); return; }
+    if (qtd > itemData.disponivel) {
+      Toast.aviso('Quantidade solicitada (' + qtd + ') excede o disponível (' + itemData.disponivel + ').'); return;
+    }
+    var existente = _itensChips.filter(function(c){ return c.id === itemData.id; })[0];
+    if (existente) {
+      var novaQtd = existente.qtd + qtd;
+      if (novaQtd > itemData.disponivel) {
+        Toast.aviso('Total solicitado excederia o disponível (' + itemData.disponivel + ').'); return;
+      }
+      existente.qtd = novaQtd;
+      existente.disponivel = itemData.disponivel;
+    } else {
+      _itensChips.push({ id: itemData.id, nome: itemData.nome, qtd: qtd, disponivel: itemData.disponivel });
+    }
+    _renderChips();
+    sel.value = '';
+    if (qtdEl) qtdEl.value = 1;
+  }
+
+  function _removerItemChip(id) {
+    _itensChips = _itensChips.filter(function(c){ return c.id !== id; });
+    _renderChips();
+  }
+
+  function _revalidarChips() {
+    _itensChips.forEach(function(c) {
+      var atualizado = _itensDisponibilidade.filter(function(i){ return i.id === c.id; })[0];
+      c.disponivel = atualizado ? atualizado.disponivel : 0;
+    });
+    _renderChips();
+  }
+
+  function _renderChips() {
+    var container = document.getElementById('res-itens-chips');
+    var hint = document.getElementById('res-itens-hint');
+    if (!container) return;
+    var temIndisponivel = false;
+    if (!_itensChips.length) {
+      container.innerHTML = '<span style="font-size:12px;color:var(--muted);">Nenhum item adicionado.</span>';
+      if (hint) hint.style.display = 'none';
+      return;
+    }
+    container.innerHTML = _itensChips.map(function(c) {
+      var ok  = c.disponivel >= c.qtd;
+      if (!ok) temIndisponivel = true;
+      var cor = ok ? '#16a34a' : '#dc2626';
+      var bg  = ok ? '#f0fdf4' : '#fff1f2';
+      var safeId = c.id.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;'
+        + 'border:1px solid ' + cor + ';background:' + bg + ';font-size:12px;color:' + cor + ';">'
+        + escaparHtml(c.qtd + 'x ' + c.nome) + (ok ? '' : ' ⚠️')
+        + '<button type="button" onclick="ReservasUI._removerItemChip(\'' + safeId + '\')"'
+        + ' style="background:none;border:none;cursor:pointer;color:' + cor + ';padding:0 0 0 4px;font-size:14px;line-height:1;" data-bg-skip="1">✕</button>'
+        + '</span>';
+    }).join('');
+    if (hint) hint.style.display = temIndisponivel ? '' : 'none';
+  }
+
+  function _serializarItensVolantes() {
+    return _itensChips.map(function(c){ return c.qtd + 'x ' + c.nome; }).join(' | ');
+  }
+
+  function _temChipsIndisponiveis() {
+    return _itensChips.some(function(c){ return c.disponivel < c.qtd; });
+  }
+
+  // ── Manutenção de Espaço ─────────────────────────────
+  var _espacosManutencao = [];
+
+  function abrirModalManutencao() {
+    var modal = document.getElementById('modal-manutencao-espaco');
+    if (!modal) return;
+    GAS.admin.listarEspacos(function(r) {
+      _espacosManutencao = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      var sel = document.getElementById('manut-espaco-select');
+      if (sel) {
+        sel.innerHTML = '<option value="">Selecione…</option>' +
+          _espacosManutencao.map(function(e) {
+            return '<option value="' + escaparHtml(e.id) + '">'
+              + escaparHtml(e.nome) + (e.emManutencao ? ' [Em manutenção]' : '') + '</option>';
+          }).join('');
+      }
+      var badge = document.getElementById('manut-status-badge');
+      if (badge) badge.innerHTML = '';
+      var lbl = document.getElementById('btn-manut-label');
+      if (lbl) lbl.textContent = 'Enviar para Manutenção';
+      modal.classList.remove('oculto');
+    }, function() { Toast.erro('Erro ao carregar espaços.'); });
+  }
+
+  function _fecharModalManutencao() {
+    var modal = document.getElementById('modal-manutencao-espaco');
+    if (modal) modal.classList.add('oculto');
+  }
+
+  function _atualizarBadgeManutencao() {
+    var sel = document.getElementById('manut-espaco-select');
+    var id  = sel ? sel.value : '';
+    var badge = document.getElementById('manut-status-badge');
+    var lbl   = document.getElementById('btn-manut-label');
+    if (!id) {
+      if (badge) badge.innerHTML = '';
+      if (lbl)   lbl.textContent = 'Enviar para Manutenção';
+      return;
+    }
+    var esp = _espacosManutencao.filter(function(e){ return e.id === id; })[0];
+    var emManut = esp && esp.emManutencao;
+    if (badge) badge.innerHTML = emManut
+      ? '<span class="badge badge-warning">Em Manutenção</span>'
+      : '<span class="badge badge-success">Disponível</span>';
+    if (lbl) lbl.textContent = emManut ? 'Liberar Espaço' : 'Enviar para Manutenção';
+  }
+
+  function _confirmarManutencao() {
+    var sel = document.getElementById('manut-espaco-select');
+    var id  = sel ? sel.value : '';
+    if (!id) { Toast.aviso('Selecione um espaço.'); return; }
+    BtnGuard.wrap('btn-manut-confirmar', 'Processando…', function(done) {
+      GAS.admin.alternarManutencao(id, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        var novoStatus = resp.data && resp.data.emManutencao;
+        Toast.sucesso(novoStatus ? 'Espaço enviado para manutenção.' : 'Espaço liberado da manutenção.');
+        _fecharModalManutencao();
+        carregar();
+        if (typeof MapaUI !== 'undefined' && MapaUI.carregar) MapaUI.carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
   return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
     verificarDisponibilidade:verificarDisponibilidade,
     popularSelectEspacos:popularSelectEspacos, aoSelecionarEspaco:aoSelecionarEspaco,
@@ -13514,7 +13704,16 @@ var ReservasUI = (function() {
     _ccbjRemoverData:   function(d)  { window._BloqueioUI && window._BloqueioUI.removerData(d); },
     _ccbjLimparDatas:   function()   { window._BloqueioUI && window._BloqueioUI.limparDatas(); },
     _ccbjGerarDatas:    function(t)  { window._BloqueioUI && window._BloqueioUI.gerarDatas(t); },
-    _ccbjConfirmar:     function()   { window._BloqueioUI && window._BloqueioUI.confirmar(); }
+    _ccbjConfirmar:     function()   { window._BloqueioUI && window._BloqueioUI.confirmar(); },
+    // Itens volantes
+    _adicionarItem:                _adicionarItem,
+    _removerItemChip:              _removerItemChip,
+    _carregarDisponibilidadeItens: _carregarDisponibilidadeItens,
+    // Manutenção
+    abrirModalManutencao:   abrirModalManutencao,
+    _fecharModalManutencao: _fecharModalManutencao,
+    _atualizarBadgeManutencao: _atualizarBadgeManutencao,
+    _confirmarManutencao:   _confirmarManutencao
   };
 })();
 
@@ -21516,7 +21715,7 @@ var RhUI = (function() {
       vtValorPasse:   _parseMoeda((document.getElementById('rh-clt-vt-passe')||{}).value),
       vtQtdPassagens: parseInt((document.getElementById('rh-clt-vt-qtd')||{}).value||'2')||2,
       vaValorDia:     _parseMoeda((document.getElementById('rh-clt-va-dia')||{}).value),
-      vaDescontoPct:  parseFloat((document.getElementById('rh-clt-va-desc')||{}).value||'0')||0,
+      vaDescontoVal:  _parseMoeda((document.getElementById('rh-clt-va-desc')||{}).value),
       vrValorDia:     _parseMoeda((document.getElementById('rh-clt-vr-dia')||{}).value),
       vrDescontoPct:  parseFloat((document.getElementById('rh-clt-vr-desc')||{}).value||'0')||0,
       psValorInd:     _parseMoeda((document.getElementById('rh-clt-ps-ind')||{}).value),
