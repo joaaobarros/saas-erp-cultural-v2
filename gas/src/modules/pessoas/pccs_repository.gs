@@ -202,6 +202,32 @@ var PCCSRepository = (function() {
     return true;
   }
 
+  /**
+   * Salva a tabelaSalarial e parâmetros de um plano PCCS sem alterar cargos.
+   * @param {string} pccsId
+   * @param {Object} tabelaSalarial  Mapa { "FIXA_A": [v1,v2,v3,v4,v5], ... }
+   * @param {Object} parametros      { crescimentoStep, pisoFaixaFixa, pisoOrientador, anoReferencia, ... }
+   * @param {string} email
+   */
+  function salvarTabelaSalarial(pccsId, tabelaSalarial, parametros, email) {
+    var orgId = ConfigOrg.obterOrgId();
+    modifyJSON(ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var pccs = lista.find(function(p) { return p.id === pccsId && p.orgId === orgId; });
+      if (!pccs) throw new Error('PCCS não encontrado: ' + pccsId);
+      pccs.tabelaSalarial = tabelaSalarial;
+      if (parametros && typeof parametros === 'object') {
+        pccs.parametros = Object.assign(pccs.parametros || {}, parametros);
+      }
+      pccs.atualizadoEm = agora();
+      return lista;
+    });
+    AuditoriaService.registrar('PCCS_TABELA_SALVA', 'pessoas',
+      { pccsId: pccsId, orgId: orgId, usuario: email });
+    Logger.info('pccs_repository', 'salvarTabelaSalarial', pccsId);
+    return true;
+  }
+
   return {
     listarAtivo:            listarAtivo,
     listarTodos:            listarTodos,
@@ -210,7 +236,8 @@ var PCCSRepository = (function() {
     salvar:                 salvar,
     salvarCargo:            salvarCargo,
     excluirCargo:           excluirCargo,
-    aplicarReajuste:        aplicarReajuste
+    aplicarReajuste:        aplicarReajuste,
+    salvarTabelaSalarial:   salvarTabelaSalarial
   };
 
 })();

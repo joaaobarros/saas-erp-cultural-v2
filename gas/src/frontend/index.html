@@ -6559,6 +6559,7 @@ var GAS = {
     excluirCargo:    function(pid,cid,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_excluirCargo(pid,cid); },
     obterSalario:    function(cid,n,cl,r,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_obterSalario(cid,n,cl,r); },
     aplicarReajuste: function(pid,pct,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_aplicarReajuste(pid,pct); },
+    salvarTabela:    function(pid,ts,p,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvarTabela(pid,ts,p); },
     // Histórico RH
     historico:          function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
     registrarEvento:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
@@ -20517,6 +20518,9 @@ var RhUI = (function() {
             '</div>'+
             '<div style="display:flex;gap:6px;align-items:center;">'+
               '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
+                'onclick="RhUI.abrirModalTabelaSalarial(\''+_esc(p.id)+'\')">'+
+                '<span class="ms ms-sm">table_chart</span> Tabela Salarial</button>'+
+              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
                 'onclick="RhUI.abrirModalReajuste(\''+_esc(p.id)+'\',\''+_esc(p.nome||'Plano')+'\')">'+
                 '<span class="ms ms-sm">trending_up</span> Reajuste</button>'+
               '<button class="btn btn-ghost btn-sm" data-bg-skip="1" '+
@@ -20732,6 +20736,182 @@ var RhUI = (function() {
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
         _fecharModalRh(); Toast.sucesso('Reajuste de '+pct+'% aplicado!'); carregarPccs();
       },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── TABELA SALARIAL ─────────────────────────────────────────
+  function abrirModalTabelaSalarial(pccsId) {
+    var plano = (_pccsList||[]).find(function(p){ return p.id===pccsId; });
+    if (!plano) { Toast.erro('Plano não encontrado.'); return; }
+
+    var ts = plano.tabelaSalarial || {};
+    var params = plano.parametros || {};
+    var crescStepPct = (((params.crescimentoStep||0.075)*100)).toFixed(1);
+
+    function getSteps(tipo, cls) {
+      var key = tipo+'_'+cls;
+      var from = ts[key];
+      return (Array.isArray(from) && from.length===5) ? from : (_PCCS_SAL_DEFAULT[key]||[0,0,0,0,0]);
+    }
+
+    function buildRow(tipo, cls) {
+      var key = tipo+'_'+cls;
+      var steps = getSteps(tipo, cls);
+      var amp = (steps[0]&&steps[4]) ? (((steps[4]/steps[0])-1)*100).toFixed(1)+'%' : '—';
+      var cells = steps.map(function(v,i){
+        return '<td style="padding:3px 2px;"><input type="number" step="0.01" min="0" id="pccs-ts-'+key+'-'+(i+1)+
+          '" class="form-input" style="width:100px;text-align:right;padding:4px 6px;font-size:12px;" value="'+
+          (v||0).toFixed(2)+'"></td>';
+      }).join('');
+      return '<tr style="border-bottom:1px solid var(--border);">'+
+        '<td style="padding:4px 10px;font-weight:700;font-size:12px;white-space:nowrap;color:var(--text2);">'+_esc(cls)+'</td>'+
+        cells+
+        '<td style="padding:4px 8px;font-size:11px;color:var(--muted);" id="pccs-ts-'+key+'-amp">'+amp+'</td>'+
+        '<td style="padding:4px 4px;"><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 5px;" '+
+          'data-bg-skip="1" title="Recalcular steps" onclick="RhUI._pccsRecalcRow(\''+key+'\')">↺</button></td></tr>';
+    }
+
+    var headerRow = '<thead style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);'+
+      'background:var(--surface2);border-bottom:2px solid var(--border);">'+
+      '<tr><th style="padding:7px 10px;text-align:left;">Classe</th>'+
+      '<th style="padding:7px 8px;text-align:center;">Ref. 1</th>'+
+      '<th style="padding:7px 8px;text-align:center;">Ref. 2</th>'+
+      '<th style="padding:7px 8px;text-align:center;">Ref. 3</th>'+
+      '<th style="padding:7px 8px;text-align:center;">Ref. 4</th>'+
+      '<th style="padding:7px 8px;text-align:center;">Ref. 5</th>'+
+      '<th style="padding:7px 8px;text-align:left;">Amp.</th>'+
+      '<th style="padding:7px 4px;"></th></tr></thead>';
+
+    var rowsFixa = _PCCS_CLASSES_FIXA.map(function(cls){ return buildRow('FIXA',cls); }).join('');
+    var rowsOrient = _PCCS_CLASSES_ORIENTADOR.map(function(cls){ return buildRow('ORIENTADOR',cls); }).join('');
+
+    var html =
+      '<div style="padding:20px 22px 18px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'+
+          '<div>'+
+            '<h3 style="margin:0;font-size:15px;font-weight:700;">Tabela Salarial</h3>'+
+            '<p style="margin:3px 0 0;font-size:12px;color:var(--text2);">'+_esc(plano.nome||'Plano')+'</p>'+
+          '</div>'+
+        '</div>'+
+
+        // Parâmetros
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px;">'+
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:8px;">Parâmetros do Plano</div>'+
+          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">'+
+            '<div class="form-group" style="margin:0;">'+
+              '<label class="form-label" style="font-size:11px;">Ano referência</label>'+
+              '<input type="number" id="pccs-param-ano" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.anoReferencia||2025)+'">'+
+            '</div>'+
+            '<div class="form-group" style="margin:0;">'+
+              '<label class="form-label" style="font-size:11px;">Piso Faixa Fixa (R$)</label>'+
+              '<input type="number" step="0.01" id="pccs-param-piso-fixa" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.pisoFaixaFixa||1747.16)+'">'+
+            '</div>'+
+            '<div class="form-group" style="margin:0;">'+
+              '<label class="form-label" style="font-size:11px;">Piso Por Orientador (R$)</label>'+
+              '<input type="number" step="0.01" id="pccs-param-piso-orient" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+(params.pisoOrientador||1584.74)+'">'+
+            '</div>'+
+            '<div class="form-group" style="margin:0;">'+
+              '<label class="form-label" style="font-size:11px;">Crescimento/Step (%)</label>'+
+              '<input type="number" step="0.1" min="0.1" id="pccs-param-step-pct" class="form-input" style="font-size:12px;padding:5px 8px;" value="'+crescStepPct+'">'+
+            '</div>'+
+          '</div>'+
+          '<div style="margin-top:10px;text-align:right;">'+
+            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI._pccsRecalcTodos()" '+
+              'style="font-size:11px;">Recalcular todos os steps pelo %</button>'+
+          '</div>'+
+        '</div>'+
+
+        '<input type="hidden" id="pccs-tabela-pccs-id" value="'+_esc(pccsId)+'">'+
+
+        // Faixa Fixa
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;">'+
+          '<span class="ms ms-sm">work</span> Faixa Fixa (CLT) — '+_PCCS_CLASSES_FIXA.length+' classes'+
+        '</div>'+
+        '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">'+
+          '<table style="width:100%;border-collapse:collapse;">'+headerRow+'<tbody>'+rowsFixa+'</tbody></table>'+
+        '</div>'+
+
+        // Por Orientador
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;">'+
+          '<span class="ms ms-sm">school</span> Por Orientador (PJ) — '+_PCCS_CLASSES_ORIENTADOR.length+' classes'+
+        '</div>'+
+        '<div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:20px;">'+
+          '<table style="width:100%;border-collapse:collapse;">'+headerRow+'<tbody>'+rowsOrient+'</tbody></table>'+
+        '</div>'+
+
+        '<div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px;">'+
+          '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+          '<button id="rh-btn-salvar-tabela" class="btn btn-primario" onclick="RhUI._salvarTabelaSalarial()">'+
+            '<span class="ms ms-sm">save</span> Salvar Tabela Salarial</button>'+
+        '</div>'+
+      '</div>';
+
+    _abrirModalRhLargo(html);
+  }
+
+  function _pccsRecalcRow(key) {
+    var ref1El = document.getElementById('pccs-ts-'+key+'-1');
+    if (!ref1El) return;
+    var base = parseFloat(ref1El.value)||0;
+    if (!base) { Toast.aviso('Informe o Ref. 1 de '+key+' primeiro.'); return; }
+    var pct = parseFloat((document.getElementById('pccs-param-step-pct')||{}).value)||7.5;
+    var fator = 1 + pct/100;
+    for (var i=2; i<=5; i++) {
+      base = Math.round(base * fator * 100) / 100;
+      var el = document.getElementById('pccs-ts-'+key+'-'+i);
+      if (el) el.value = base.toFixed(2);
+    }
+    // atualiza amplitude
+    var ref1 = parseFloat((document.getElementById('pccs-ts-'+key+'-1')||{}).value)||0;
+    var ref5 = parseFloat((document.getElementById('pccs-ts-'+key+'-5')||{}).value)||0;
+    var ampEl = document.getElementById('pccs-ts-'+key+'-amp');
+    if (ampEl) ampEl.textContent = (ref1&&ref5) ? (((ref5/ref1)-1)*100).toFixed(1)+'%' : '—';
+  }
+
+  function _pccsRecalcTodos() {
+    _PCCS_CLASSES_FIXA.forEach(function(cls){ _pccsRecalcRow('FIXA_'+cls); });
+    _PCCS_CLASSES_ORIENTADOR.forEach(function(cls){ _pccsRecalcRow('ORIENTADOR_'+cls); });
+    Toast.sucesso('Steps recalculados!');
+  }
+
+  function _salvarTabelaSalarial() {
+    var pccsId = (document.getElementById('pccs-tabela-pccs-id')||{}).value||'';
+    if (!pccsId) { Toast.erro('Plano não identificado.'); return; }
+
+    var allKeys = _PCCS_CLASSES_FIXA.map(function(c){ return 'FIXA_'+c; })
+      .concat(_PCCS_CLASSES_ORIENTADOR.map(function(c){ return 'ORIENTADOR_'+c; }));
+
+    var tabela = {};
+    var invalido = false;
+    allKeys.forEach(function(key) {
+      var steps = [];
+      for (var i=1; i<=5; i++) {
+        var el = document.getElementById('pccs-ts-'+key+'-'+i);
+        var v = el ? parseFloat(el.value) : 0;
+        if (!v || v<=0) invalido = true;
+        steps.push(Math.round((v||0)*100)/100);
+      }
+      tabela[key] = steps;
+    });
+    if (invalido) { Toast.aviso('Preencha todos os valores (maiores que zero).'); return; }
+
+    var pctStep = parseFloat((document.getElementById('pccs-param-step-pct')||{}).value)||7.5;
+    var parametros = {
+      anoReferencia:   parseInt((document.getElementById('pccs-param-ano')||{}).value)||2025,
+      pisoFaixaFixa:   parseFloat((document.getElementById('pccs-param-piso-fixa')||{}).value)||1747.16,
+      pisoOrientador:  parseFloat((document.getElementById('pccs-param-piso-orient')||{}).value)||1584.74,
+      crescimentoStep: Math.round(pctStep/100*10000)/10000,
+      atualizadoEm:    new Date().toISOString()
+    };
+
+    BtnGuard.wrap('rh-btn-salvar-tabela','Salvando…',function(done){
+      GAS.rh.salvarTabela(pccsId, tabela, parametros, function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        _fecharModalRh();
+        Toast.sucesso('Tabela salarial salva com sucesso!');
+        carregarPccs();
+      }, function(e){ done(); Toast.erro(e.message||e); });
     });
   }
 
@@ -21258,6 +21438,18 @@ var RhUI = (function() {
   }
   function _fecharModalRh(){ document.querySelectorAll('.rh-modal-overlay').forEach(function(m){ m.remove(); }); }
 
+  function _abrirModalRhLargo(html) {
+    var overlay=document.createElement('div');
+    overlay.className='rh-modal-overlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.70);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px 12px;overflow-y:auto;';
+    var box=document.createElement('div');
+    box.style.cssText='background:var(--surface);border-radius:20px;border-top:3px solid var(--color-primary);max-width:900px;width:100%;max-height:none;box-shadow:0 24px 80px rgba(0,0,0,.20),0 8px 20px rgba(0,0,0,.10);';
+    box.innerHTML=html;
+    overlay.appendChild(box);
+    overlay.addEventListener('click',function(e){ if(e.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
   function _abrirModalConfirmarRh(opts) {
     _abrirModalRh('<div>'+
       '<div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">'+
@@ -21285,6 +21477,7 @@ var RhUI = (function() {
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
     abrirModalReajuste:abrirModalReajuste, _aplicarReajustePccs:_aplicarReajustePccs,
+    abrirModalTabelaSalarial:abrirModalTabelaSalarial, _pccsRecalcRow:_pccsRecalcRow, _pccsRecalcTodos:_pccsRecalcTodos, _salvarTabelaSalarial:_salvarTabelaSalarial,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,

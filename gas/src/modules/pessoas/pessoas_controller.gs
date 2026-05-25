@@ -637,6 +637,16 @@ function ctrl_pccs_aplicarReajuste(pccsId, percentual) {
   }, 'ctrl_pccs_aplicarReajuste');
 }
 
+function ctrl_pccs_salvarTabela(pccsId, tabelaSalarial, parametros) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    if (['admin','superadmin','rh'].indexOf(ctx.papel) === -1)
+      throw new Error('Apenas RH ou Admin podem editar a tabela salarial.');
+    PCCSRepository.salvarTabelaSalarial(pccsId, tabelaSalarial, parametros || {}, ctx.email);
+    return { salvo: true };
+  }, 'ctrl_pccs_salvarTabela');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════
