@@ -177,15 +177,21 @@ var PontoEngine = (function() {
     var nMeses        = Number(params.nMeses || 0);
 
     var cfg = _getParametrosRH(orgId);
-    var fgtsAliq = cfg.aliquota_fgts || 0.08;
+    var fgtsAliq         = cfg.aliquota_fgts              || 0.08;
+    var inssPatronalAliq = cfg.aliquota_inss_patronal      || 0.20;
+    var satAliq          = cfg.aliquota_sat                || 0.01;
+    var sistemaSAliq     = cfg.aliquota_sistema_s          || 0.0566;
+    var pisAliq          = cfg.aliquota_pis                || 0.01;
 
-    // ── Encargos patronais — tabela IDM/usuário: 20% + 6,6% (S+SAT) + 8% + 1% = 35,6%
+    // ── Encargos patronais — lidos de encargos_trabalhistas.json (ou defaults)
     var inss         = _calcularINSS(salarioTotal, cfg.tabela_inss || []);
-    var inssPatronal = salarioTotal * 0.20;                // (c)
-    var sistemaSsat  = salarioTotal * 0.066;               // (d) Sistema S + SAT — 6,6%
-    var fgts         = salarioTotal * fgtsAliq;            // (e) 8%
-    var pis          = salarioTotal * 0.01;                // (f) PIS 1%
-    var encargosTotal = inssPatronal + sistemaSsat + fgts + pis;   // IV = 35,6%
+    var inssPatronal = salarioTotal * inssPatronalAliq;          // (c) INSS patronal
+    var sat          = salarioTotal * satAliq;                   // (d1) SAT/RAT
+    var sistemaS     = salarioTotal * sistemaSAliq;              // (d2) Sistema S
+    var sistemaSsat  = sat + sistemaS;                           // (d) total S+SAT
+    var fgts         = salarioTotal * fgtsAliq;                  // (e) FGTS
+    var pis          = salarioTotal * pisAliq;                   // (f) PIS
+    var encargosTotal = inssPatronal + sistemaSsat + fgts + pis; // IV
 
     // ── Benefícios ────────────────────────────────────────────────────────────
     // Vale Transporte: empresa paga passes – 6% do salário (desconto obrigatório)
@@ -247,12 +253,21 @@ var PontoEngine = (function() {
       salarioBruto:        R(salarioBruto),
       reajuste:            R(reajuste),
       salarioTotal:        R(salarioTotal),
-      // Encargos (IV) — 35,6%
+      // Encargos (IV) — alíquotas lidas de encargos_trabalhistas.json
       inssPatronal:        R(inssPatronal),
+      sat:                 R(sat),
+      sistemaS:            R(sistemaS),
       sistemaSsat:         R(sistemaSsat),
       fgts:                R(fgts),
-      pis:                 R(pis),
+      pisPasep:            R(pis),
+      pis:                 R(pis),          // alias de retrocompatibilidade
       encargosTotal:       R(encargosTotal),
+      // Alíquotas vigentes (para exibição no frontend)
+      _aliqInssPatronal:   inssPatronalAliq,
+      _aliqSat:            satAliq,
+      _aliqSistemaS:       sistemaSAliq,
+      _aliqFgts:           fgtsAliq,
+      _aliqPis:            pisAliq,
       // INSS empregado (referência)
       inssEmpregado:       R(inss),
       salarioLiquido:      R(salarioLiquido),
@@ -622,7 +637,15 @@ var PontoEngine = (function() {
   }
 
   function _getParametrosRH(orgId) {
-    try { return SistemaConfigService.getParametrosRH(orgId) || {}; } catch(e) { return {}; }
+    // Tenta obter parâmetros fundidos (config_org + encargos_trabalhistas.json).
+    // EncargosEngine tem prioridade sobre os defaults do config_service.
+    try {
+      if (typeof EncargosEngine !== 'undefined' && EncargosEngine.getParametrosRHComEncargos) {
+        return EncargosEngine.getParametrosRHComEncargos(orgId) || {};
+      }
+    } catch (_) {}
+    // Fallback: apenas config_service (comportamento anterior)
+    try { return SistemaConfigService.getParametrosRH() || {}; } catch(e) { return {}; }
   }
 
   function _buscarColaborador(orgId, colaboradorId) {

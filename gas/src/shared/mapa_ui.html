@@ -14,6 +14,8 @@ var MapaUI=(function(){
   var _zoom=1,_panX=0,_panY=0,_drag={ativo:false,sx:0,sy:0};
   var _filtros={tipo:'todos',status:'todos'};
   var _terrenoCarregado=false,_terrenoConfig=null;
+  var _meuPapel='colaborador';
+  var _PAPEIS_GESTAO=['superadmin','admin','gestor','infraestrutura'];
   var _SL={disponivel:'Disponível',ocupado:'Ocupado',em_uso:'Em uso',
     aguardando:'Aguardando',manutencao:'Manutenção',bloqueado:'Bloqueado',default:'—'};
   var _SC={disponivel:'badge-success',ocupado:'badge-error',em_uso:'badge-accent',
@@ -48,6 +50,11 @@ var MapaUI=(function(){
   // ─── Carregar / atualizar ───────────────────────────────────
   function carregar(){
     _carregado=true;
+    // Capturar papel do usuário para controles admin
+    try {
+      var _boot=App.getBoot?App.getBoot():null;
+      if(_boot&&_boot.usuarioPapel) _meuPapel=_boot.usuarioPapel;
+    } catch(e){}
     var inp=document.getElementById('mapa-data');
     if(inp&&!inp.value)inp.value=new Date().toISOString().slice(0,10);
     var data=_getDataAtual();
@@ -311,6 +318,18 @@ var MapaUI=(function(){
             ' Carregando…</div>'+
         '</div>'+
       '</div>'+
+      // Itens fixos do espaço (informativo para todos)
+      (info.itensFixos&&Object.keys(info.itensFixos).length>0?
+        '<div class="mapa-pl-secao" style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">'+
+          '<h4 style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;margin:0 0 8px;">'+
+            '<span class="ms ms-sm" style="vertical-align:middle;">inventory_2</span> Equipamentos Fixos</h4>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+
+            Object.keys(info.itensFixos).map(function(nome){
+              return '<span style="font-size:12px;padding:2px 8px;border-radius:12px;background:var(--surface2);color:var(--text);">'
+                +escaparHtml(nome)+' ('+escaparHtml(String(info.itensFixos[nome]))+')'+'</span>';
+            }).join('')+
+          '</div>'+
+        '</div>':'')+
       // Botões de ação
       '<div class="mapa-pl-acoes">'+
         (info.aceitaReserva!==false?
@@ -319,14 +338,19 @@ var MapaUI=(function(){
         (info.possuiChaves?
           '<button id="mapa-btn-chave" data-bg-skip="1" class="btn btn-secondary btn-sm" style="width:100%;margin-top:5px">'+
           '<span class="ms ms-sm">key</span> Solicitar Chave</button>':'')+
+        (_PAPEIS_GESTAO.indexOf(_meuPapel)!==-1?
+          '<button id="mapa-btn-manutencao" data-bg-skip="1" class="btn btn-ghost btn-sm" style="width:100%;margin-top:5px;color:'+(info.emManutencao?'#16a34a':'#d97706')+';border-color:'+(info.emManutencao?'#86efac':'#fcd34d')+';">'+
+          '<span class="ms ms-sm">build</span> '+(info.emManutencao?'Liberar Espaço':'Manutenção')+'</button>':'')+
       '</div>';
 
     // ⚠️ FIX: addEventListener — NÃO chamar BtnGuard.wrap aqui pois ele
     // executa fn(done) imediatamente (não é um registro de click handler).
     var bR=document.getElementById('mapa-btn-reserva');
     var bC=document.getElementById('mapa-btn-chave');
+    var bM=document.getElementById('mapa-btn-manutencao');
     if(bR)bR.addEventListener('click',function(){MapaUI.solicitarReserva(_selecionado);});
     if(bC)bC.addEventListener('click',function(){MapaUI.solicitarChave(_selecionado);});
+    if(bM)bM.addEventListener('click',function(){ MapaUI._alternarManutencao(_selecionado, bM); });
 
     // Carregar timeline de forma assíncrona
     _carregarTimeline(id, _getDataAtual());
@@ -800,6 +824,21 @@ var MapaUI=(function(){
   // ─── Filtros ────────────────────────────────────────────────
   function setFiltro(campo,valor){_filtros[campo]=valor;_cores();}
 
+  // ─── Alternar manutenção (admin) ───────────────────────────
+  function _alternarManutencao(espacoId, btnEl) {
+    if (!espacoId) return;
+    if (_PAPEIS_GESTAO.indexOf(_meuPapel) === -1) { Toast.aviso('Permissão insuficiente.'); return; }
+    BtnGuard.wrap(btnEl, 'Processando…', function(done) {
+      GAS.admin.alternarManutencao(espacoId, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        var novoStatus = resp.data && resp.data.emManutencao;
+        Toast.sucesso(novoStatus ? 'Espaço em manutenção.' : 'Espaço liberado.');
+        carregar();  // recarrega mapa inteiro — atualiza cores e painel
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
   // ─── API pública ────────────────────────────────────────────
   function atualizarTerreno(cfg){
     _terrenoConfig=cfg;
@@ -816,6 +855,7 @@ var MapaUI=(function(){
     setFiltro:setFiltro,
     solicitarReserva:solicitarReserva,
     solicitarChave:solicitarChave,
-    atualizarTerreno:atualizarTerreno
+    atualizarTerreno:atualizarTerreno,
+    _alternarManutencao:_alternarManutencao
   };
 })();
