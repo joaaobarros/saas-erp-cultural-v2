@@ -84,23 +84,25 @@ var PCCSRepository = (function() {
     var id = dados.id || gerarId('pcs');
     var agora_ = agora();
 
-    var registro = {
-      id:         id,
-      orgId:      orgId,
-      nome:       String(dados.nome || '').trim(),
-      vigencia:   dados.vigencia || { inicio: null, fim: null },
-      parametros: dados.parametros || null,
-      ativo:      dados.ativo !== false,
-      cargos:     Array.isArray(dados.cargos) ? dados.cargos : [],
-      criadoEm:     dados.criadoEm || agora_,
-      atualizadoEm: agora_,
-      criadoPor:    dados.criadoPor || email,
-      versao:       (dados.versao || 0) + 1
-    };
-
+    var registro;
     modifyJSON(ARQUIVO, function(lista) {
       if (!Array.isArray(lista)) lista = [];
       var idx = lista.findIndex(function(p) { return p.id === id && p.orgId === orgId; });
+      var existing = idx >= 0 ? lista[idx] : null;
+      registro = {
+        id:             id,
+        orgId:          orgId,
+        nome:           String(dados.nome || '').trim(),
+        vigencia:       dados.vigencia || (existing && existing.vigencia) || { inicio: null, fim: null },
+        parametros:     dados.parametros || (existing && existing.parametros) || null,
+        ativo:          dados.ativo !== false,
+        tabelaSalarial: dados.tabelaSalarial || (existing && existing.tabelaSalarial) || null,
+        cargos:         Array.isArray(dados.cargos) ? dados.cargos : (existing ? existing.cargos || [] : []),
+        criadoEm:       (existing && existing.criadoEm) || dados.criadoEm || agora_,
+        atualizadoEm:   agora_,
+        criadoPor:      (existing && existing.criadoPor) || dados.criadoPor || email,
+        versao:         ((existing && existing.versao) || dados.versao || 0) + 1
+      };
       if (idx >= 0) lista[idx] = registro; else lista.push(registro);
       return lista;
     });
@@ -180,6 +182,16 @@ var PCCSRepository = (function() {
           if (pos.salarioBase) pos.salarioBase = Math.round(pos.salarioBase * fator * 100) / 100;
         });
       });
+      if (pccs.tabelaSalarial && typeof pccs.tabelaSalarial === 'object') {
+        Object.keys(pccs.tabelaSalarial).forEach(function(key) {
+          var arr = pccs.tabelaSalarial[key];
+          if (Array.isArray(arr)) {
+            pccs.tabelaSalarial[key] = arr.map(function(v) {
+              return typeof v === 'number' ? Math.round(v * fator * 100) / 100 : v;
+            });
+          }
+        });
+      }
       pccs.atualizadoEm = agora();
       return lista;
     });

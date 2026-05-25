@@ -149,80 +149,137 @@ var PontoEngine = (function() {
 
   /**
    * Calcula custo CLT completo mensal para um colaborador.
-   * Inclui: salário bruto, INSS, FGTS, PIS/Pasep, Sistema S,
-   * benefícios (VT + VA), provisões (13º, férias+1/3, FGTS rescisório).
+   *
+   * Parâmetros aceitos em `params`:
+   *   salarioBruto        {number}  Salário bruto base
+   *   reajuste            {number}  Reajuste por acordo coletivo (R$) — soma ao salário
+   *   horasSemanais       {number}  Padrão 40
+   *   diasUteis           {number}  Dias úteis no mês — padrão 22
+   *   nMeses              {number}  Nº de meses do contrato (para custo total do contrato)
+   *   vtValorPasse        {number}  Valor unitário de cada passagem VT (R$)
+   *   vtQtdPassagens      {number}  Passagens por dia — padrão 2
+   *   vaValorDia          {number}  Vale Alimentação por dia (R$)
+   *   vaDescontoPct       {number}  % desconto VA do colaborador — padrão 0 (empresa paga tudo)
+   *   vrValorDia          {number}  Vale Refeição por dia (R$)
+   *   vrDescontoPct       {number}  % desconto VR do colaborador — padrão 0
+   *   psValorInd          {number}  Plano de saúde individual (R$/mês)
+   *   psValorDep          {number}  Plano de saúde por dependente (R$/mês)
+   *   psNumDep            {number}  Nº de dependentes no plano
+   *   psDescontoPct       {number}  % desconto PS do colaborador — padrão 30%
    */
   function calcularCustoCLT(orgId, params) {
+    params = params || {};
     var salarioBruto  = Number(params.salarioBruto || 0);
-    var diasMes       = Number(params.diasMes || 30);
+    var reajuste      = Number(params.reajuste || 0);
+    var salarioTotal  = salarioBruto + reajuste;           // III
+    var diasUteis     = Number(params.diasUteis || params.diasVT || 22);
     var horasSemanais = Number(params.horasSemanais || 40);
-    var usaVT         = params.usaVT !== false;
-    var usaVA         = params.usaVA !== false;
-    var diasVT        = Number(params.diasVT || 22);   // dias úteis no mês
+    var nMeses        = Number(params.nMeses || 0);
 
     var cfg = _getParametrosRH(orgId);
+    var fgtsAliq = cfg.aliquota_fgts || 0.08;
 
-    // ── Encargos sobre o salário ──────────────────────────────────────────────
-    var inss          = _calcularINSS(salarioBruto, cfg.tabela_inss || []);
-    var fgts          = salarioBruto * (cfg.aliquota_fgts || 0.08);
-    var pis           = salarioBruto * (cfg.aliquota_pis  || 0.0065);
-
-    // Sistema S (SESI/SENAI ou SESC/SENAC — 3,1% padrão)
-    var sistemaS      = salarioBruto * 0.031;
-
-    // Outros encargos patronais obrigatórios (INSS patronal 20% + RAT + Terceiros)
-    var inssPatronal  = salarioBruto * 0.20;
-    var rat           = salarioBruto * 0.02;   // Risco Acidente Trabalho (grau 1)
+    // ── Encargos patronais — tabela IDM/usuário: 20% + 6,6% (S+SAT) + 8% + 1% = 35,6%
+    var inss         = _calcularINSS(salarioTotal, cfg.tabela_inss || []);
+    var inssPatronal = salarioTotal * 0.20;                // (c)
+    var sistemaSsat  = salarioTotal * 0.066;               // (d) Sistema S + SAT — 6,6%
+    var fgts         = salarioTotal * fgtsAliq;            // (e) 8%
+    var pis          = salarioTotal * 0.01;                // (f) PIS 1%
+    var encargosTotal = inssPatronal + sistemaSsat + fgts + pis;   // IV = 35,6%
 
     // ── Benefícios ────────────────────────────────────────────────────────────
-    var vtBruto       = usaVT ? (cfg.vale_transporte_A || 5.4) * 2 * diasVT : 0;
-    var descontoVT    = usaVT ? Math.min(vtBruto, salarioBruto * 0.06) : 0;
-    var vtLiquido     = Math.max(0, vtBruto - descontoVT);   // custo líquido para empresa
+    // Vale Transporte: empresa paga passes – 6% do salário (desconto obrigatório)
+    var vtValorPasse   = Number(params.vtValorPasse || 0);
+    var vtQtd          = Number(params.vtQtdPassagens || 2);
+    var vtBruto        = vtValorPasse > 0 ? vtValorPasse * vtQtd * diasUteis : 0;
+    var vtDesconto     = vtBruto > 0 ? Math.min(vtBruto, salarioTotal * 0.06) : 0;
+    var vtLiquido      = Math.max(0, vtBruto - vtDesconto);
 
-    var vaBruto       = usaVA ? (cfg.vale_alimentacao || 27.01) * diasVT : 0;
-    var descontoVA    = usaVA ? Math.min(vaBruto, salarioBruto * (cfg.desconto_vale_alimentacao || 0.01)) : 0;
-    var vaLiquido     = Math.max(0, vaBruto - descontoVA);
+    // Vale Alimentação
+    var vaValorDia     = Number(params.vaValorDia || 0);
+    var vaBruto        = vaValorDia > 0 ? vaValorDia * diasUteis : 0;
+    var vaDescontoPct  = Number(params.vaDescontoPct || 0);
+    var vaDesconto     = vaBruto > 0 ? vaBruto * (vaDescontoPct / 100) : 0;
+    var vaLiquido      = Math.max(0, vaBruto - vaDesconto);
+
+    // Vale Refeição
+    var vrValorDia     = Number(params.vrValorDia || 0);
+    var vrBruto        = vrValorDia > 0 ? vrValorDia * diasUteis : 0;
+    var vrDescontoPct  = Number(params.vrDescontoPct || 0);
+    var vrDesconto     = vrBruto > 0 ? vrBruto * (vrDescontoPct / 100) : 0;
+    var vrLiquido      = Math.max(0, vrBruto - vrDesconto);
+
+    // Plano de Saúde
+    var psInd          = Number(params.psValorInd || 0);
+    var psDep          = Number(params.psValorDep || 0);
+    var psNumDep       = Number(params.psNumDep || 0);
+    var psBruto        = psInd + psDep * psNumDep;
+    var psDescontoPct  = Number(params.psDescontoPct !== undefined ? params.psDescontoPct : 30);
+    var psDesconto     = psBruto > 0 ? psBruto * (psDescontoPct / 100) : 0;
+    var psLiquido      = Math.max(0, psBruto - psDesconto);
+
+    var beneficiosTotal = vtLiquido + vaLiquido + vrLiquido + psLiquido;   // V
 
     // ── Provisões mensais ─────────────────────────────────────────────────────
-    var provisao13    = salarioBruto / 12;
-    var provisaoFerias = (salarioBruto * (1 + 1/3)) / 12;   // salário + 1/3
-    var provisaoFGTSRescisorio = (provisao13 + provisaoFerias) * (cfg.aliquota_fgts || 0.08);
+    // Férias + encargos: 1 mês (salary + 1/3 bonus) provisioned monthly + INSS+FGTS on that
+    var provisaoFerBase  = salarioTotal * (1 + 1/3) / 12;
+    var provisaoFerEnc   = provisaoFerBase * (0.20 + fgtsAliq);  // INSS patronal + FGTS sobre férias
+    var provisaoFerias   = provisaoFerBase + provisaoFerEnc;     // (m)
 
-    // ── Totais ────────────────────────────────────────────────────────────────
-    var encargosPatronais = inssPatronal + rat + fgts + pis + sistemaS;
-    var beneficiosEmpresa = vtLiquido + vaLiquido;
-    var provisoesTotal    = provisao13 + provisaoFerias + provisaoFGTSRescisorio;
-    var custoTotal        = salarioBruto + encargosPatronais + beneficiosEmpresa + provisoesTotal;
+    // 13° + encargos: 1 mês salary / 12 + INSS patronal + FGTS sobre 13°
+    var provisao13Base   = salarioTotal / 12;
+    var provisao13Enc    = provisao13Base * (0.20 + fgtsAliq);
+    var provisao13       = provisao13Base + provisao13Enc;        // (n)
 
-    // Custo líquido para o colaborador (deduz INSS do empregado do salário bruto)
-    var salarioLiquido = salarioBruto - inss;   // sem cálculo de IR (simplificado)
+    // FGTS rescisório: multa de 40% sobre FGTS acumulado — provisão mensal do passivo
+    var provisaoFGTSResc = fgts * 0.40;                           // (o)
 
+    var provisoesTotal   = provisaoFerias + provisao13 + provisaoFGTSResc;  // VI
+
+    // ── Custo total ───────────────────────────────────────────────────────────
+    var custoMensal      = salarioTotal + encargosTotal + beneficiosTotal + provisoesTotal;  // VII
+    var custoContrato    = nMeses > 0 ? custoMensal * nMeses : null;                         // VIII
+
+    var salarioLiquido   = salarioTotal - inss;
+
+    var R = function(v){ return Math.round(v * 100) / 100; };
     return {
-      salarioBruto:          salarioBruto,
-      salarioLiquido:        Math.round(salarioLiquido * 100) / 100,
-      // Encargos
-      inssEmpregado:         Math.round(inss * 100) / 100,
-      inssPatronal:          Math.round(inssPatronal * 100) / 100,
-      fgts:                  Math.round(fgts * 100) / 100,
-      pisPasep:              Math.round(pis * 100) / 100,
-      sistemaS:              Math.round(sistemaS * 100) / 100,
-      rat:                   Math.round(rat * 100) / 100,
-      // Benefícios
-      valeTransporteBruto:   Math.round(vtBruto * 100) / 100,
-      valeTransporteLiquido: Math.round(vtLiquido * 100) / 100,
-      valeAlimentacaoBruto:  Math.round(vaBruto * 100) / 100,
-      valeAlimentacaoLiquido: Math.round(vaLiquido * 100) / 100,
-      // Provisões
-      provisao13:            Math.round(provisao13 * 100) / 100,
-      provisaoFerias:        Math.round(provisaoFerias * 100) / 100,
-      provisaoFGTSResc:      Math.round(provisaoFGTSRescisorio * 100) / 100,
+      // Remuneração (III)
+      salarioBruto:        R(salarioBruto),
+      reajuste:            R(reajuste),
+      salarioTotal:        R(salarioTotal),
+      // Encargos (IV) — 35,6%
+      inssPatronal:        R(inssPatronal),
+      sistemaSsat:         R(sistemaSsat),
+      fgts:                R(fgts),
+      pis:                 R(pis),
+      encargosTotal:       R(encargosTotal),
+      // INSS empregado (referência)
+      inssEmpregado:       R(inss),
+      salarioLiquido:      R(salarioLiquido),
+      // Benefícios (V)
+      vtBruto:             R(vtBruto),
+      vtDesconto:          R(vtDesconto),
+      vtLiquido:           R(vtLiquido),
+      vaBruto:             R(vaBruto),
+      vaDesconto:          R(vaDesconto),
+      vaLiquido:           R(vaLiquido),
+      vrBruto:             R(vrBruto),
+      vrDesconto:          R(vrDesconto),
+      vrLiquido:           R(vrLiquido),
+      psBruto:             R(psBruto),
+      psDesconto:          R(psDesconto),
+      psLiquido:           R(psLiquido),
+      beneficiosTotal:     R(beneficiosTotal),
+      // Provisões (VI)
+      provisaoFerias:      R(provisaoFerias),
+      provisao13:          R(provisao13),
+      provisaoFGTSResc:    R(provisaoFGTSResc),
+      provisoesTotal:      R(provisoesTotal),
       // Totais
-      encargosPatronais:     Math.round(encargosPatronais * 100) / 100,
-      beneficiosEmpresa:     Math.round(beneficiosEmpresa * 100) / 100,
-      provisoesTotal:        Math.round(provisoesTotal * 100) / 100,
-      custoTotal:            Math.round(custoTotal * 100) / 100,
-      // Índice multiplicador (custo total / salário bruto)
-      multiplicador:         Math.round((custoTotal / salarioBruto) * 100) / 100
+      custoMensal:         R(custoMensal),
+      custoContrato:       custoContrato !== null ? R(custoContrato) : null,
+      multiplicador:       salarioBruto > 0 ? R(custoMensal / salarioBruto) : 0
     };
   }
 

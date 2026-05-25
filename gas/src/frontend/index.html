@@ -20414,7 +20414,7 @@ var RhUI = (function() {
 
   // ─── PCCS ───────────────────────────────────────────────────
   // ── PCCS — tabela salarial local (lookup de step para preview no form) ──────
-  var _PCCS_SAL = {
+  var _PCCS_SAL_DEFAULT = {
     'FIXA_PISO':[1747.16,1747.16,1747.16,1747.16,1747.16],
     'FIXA_A':[1796.62,1931.37,2076.22,2231.94,2399.34],'FIXA_B':[2219.82,2386.30,2565.27,2757.67,2964.50],
     'FIXA_C':[2731.49,2936.35,3156.58,3393.32,3647.82],'FIXA_D':[3350.18,3601.45,3871.55,4161.92,4474.07],
@@ -20434,6 +20434,13 @@ var RhUI = (function() {
   };
   var _PCCS_CLASSES_FIXA      = ['PISO','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q'];
   var _PCCS_CLASSES_ORIENTADOR= ['F','G','H','I','J','K','L','M','N','O','P','Q'];
+  var _rhSetores = null;
+  function _pccsGetSteps(tipo, classe) {
+    var plano = (_pccsList||[]).find(function(p){ return p.ativo; }) || (_pccsList||[])[0];
+    var ts = plano && plano.tabelaSalarial;
+    var key = tipo + '_' + classe;
+    return (ts && Array.isArray(ts[key]) ? ts[key] : null) || _PCCS_SAL_DEFAULT[key] || [];
+  }
   var _PCCS_GRUPOS = ['Gestão Estratégica','Gestão Tática','Assessoramento','Administrativo','Operacional'];
 
   var _BADGE_GRUPO = {
@@ -20585,12 +20592,11 @@ var RhUI = (function() {
   function _pccsPreviewSalario() {
     var tipo   = (document.getElementById('rh-cargo-tipo-m')||{}).value||'FIXA';
     var classe = (document.getElementById('rh-cargo-classe-m')||{}).value||'';
-    var steps  = _PCCS_SAL[tipo+'_'+classe]||[];
+    var steps  = _pccsGetSteps(tipo, classe);
     var el     = document.getElementById('rh-cargo-preview-sal');
     if (!el) return;
     el.textContent = steps.length ?
-      'Step 1: R$ '+_fmtMoeda(steps[0])+'  →  Step 5: R$ '+_fmtMoeda(steps[4]) : '—';
-    // atualiza options de classe ao mudar tipo
+      'Ref. 1: R$ '+_fmtMoeda(steps[0])+'  →  Ref. '+steps.length+': R$ '+_fmtMoeda(steps[steps.length-1]) : '—';
     var selClasse = document.getElementById('rh-cargo-classe-m');
     if (selClasse && selClasse.dataset.tipoAtual !== tipo) {
       selClasse.innerHTML = _pccsClassesOpts(tipo);
@@ -20604,47 +20610,61 @@ var RhUI = (function() {
       var plano = _pccsList.filter(function(p){ return p.id===pccsId; })[0];
       if (plano) cargo = (plano.cargos||[]).filter(function(c){ return c.id===cargoId; })[0]||null;
     }
-    var isEdit    = !!cargo;
-    var tipoAtual = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].nivel  : 'FIXA';
-    var clsAtual  = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].classe : '';
-    var grupoAtual= cargo ? (cargo.grupo||'') : '';
-    var gruposOpts = _PCCS_GRUPOS.map(function(g){
-      return '<option value="'+g+'"'+(g===grupoAtual?' selected':'')+'>'+g+'</option>';
-    }).join('');
-    var classesOpts = (tipoAtual==='ORIENTADOR' ? _PCCS_CLASSES_ORIENTADOR : _PCCS_CLASSES_FIXA).map(function(c){
-      return '<option value="'+c+'"'+(c===clsAtual?' selected':'')+'>'+c+'</option>';
-    }).join('');
-    _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
-      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">'+(isEdit?'Editar Cargo':'Novo Cargo')+'</h3>'+
-      '<input type="hidden" id="rh-cargo-pccs-id" value="'+_esc(pccsId)+'">'+
-      '<input type="hidden" id="rh-cargo-id-m"   value="'+(isEdit?_esc(cargo.id):'')+'">'+
-      '<div class="form-group"><label class="form-label">Nome do cargo *</label>'+
-        '<input id="rh-cargo-nome-m" class="form-input" placeholder="Ex: Analista de Formação" value="'+(isEdit?_esc(cargo.nome||''):'')+'"></div>'+
-      '<div class="form-group"><label class="form-label">Área / Departamento</label>'+
-        '<input id="rh-cargo-area-m" class="form-input" placeholder="Ex: Formação e Ação Educativa" value="'+(isEdit?_esc(cargo.area||''):'')+'"></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-        '<div class="form-group"><label class="form-label">Tabela *</label>'+
-          '<select id="rh-cargo-tipo-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()">'+
-            '<option value="FIXA"'+(tipoAtual==='FIXA'?' selected':'')+'>Faixa Fixa</option>'+
-            '<option value="ORIENTADOR"'+(tipoAtual==='ORIENTADOR'?' selected':'')+'>Por Orientador</option>'+
-          '</select></div>'+
-        '<div class="form-group"><label class="form-label">Classe *</label>'+
-          '<select id="rh-cargo-classe-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()" data-tipo-atual="'+tipoAtual+'">'+
-            classesOpts+
-          '</select></div>'+
-      '</div>'+
-      '<div class="form-group"><label class="form-label">Grupo</label>'+
-        '<select id="rh-cargo-grupo-m" class="form-input select-sm">'+gruposOpts+'</select></div>'+
-      '<div style="margin:8px 0 14px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:12px;">'+
-        '<span style="color:var(--text2);">Faixa salarial: </span>'+
-        '<span id="rh-cargo-preview-sal" style="font-weight:600;">—</span>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px;margin-top:4px;">'+
-        '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()">'+
-          '<span class="ms ms-sm">save</span> '+(isEdit?'Salvar':'Adicionar')+'</button>'+
-        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
-      '</div></div>');
-    setTimeout(function(){ RhUI._pccsPreviewSalario(); }, 50);
+    var _render = function(setores) {
+      var isEdit    = !!cargo;
+      var tipoAtual = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].nivel  : 'FIXA';
+      var clsAtual  = (cargo&&cargo.tabela&&cargo.tabela[0]) ? cargo.tabela[0].classe : '';
+      var areaAtual = cargo ? (cargo.area||'') : '';
+      var grupoAtual= cargo ? (cargo.grupo||'') : '';
+      var gruposOpts = _PCCS_GRUPOS.map(function(g){
+        return '<option value="'+g+'"'+(g===grupoAtual?' selected':'')+'>'+g+'</option>';
+      }).join('');
+      var classesOpts = (tipoAtual==='ORIENTADOR' ? _PCCS_CLASSES_ORIENTADOR : _PCCS_CLASSES_FIXA).map(function(c){
+        return '<option value="'+c+'"'+(c===clsAtual?' selected':'')+'>'+c+'</option>';
+      }).join('');
+      var setoresOpts = (setores&&setores.length) ? setores.map(function(s){
+        var nome = (s&&typeof s==='object') ? (s.label||s.nome||s.id||'') : String(s);
+        return '<option value="'+_esc(nome)+'"'+(nome===areaAtual?' selected':'')+'>'+_esc(nome)+'</option>';
+      }).join('') : '';
+      var areaField = setoresOpts
+        ? '<select id="rh-cargo-area-m" class="form-input select-sm"><option value="">— Selecione o setor —</option>'+setoresOpts+'</select>'
+        : '<input id="rh-cargo-area-m" class="form-input" placeholder="Ex: Formação e Ação Educativa" value="'+(isEdit?_esc(areaAtual):'')+'"></input>';
+      _abrirModalRh('<div style="padding:20px;min-width:420px;">'+
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">'+(isEdit?'Editar Cargo':'Novo Cargo')+'</h3>'+
+        '<input type="hidden" id="rh-cargo-pccs-id" value="'+_esc(pccsId)+'">'+
+        '<input type="hidden" id="rh-cargo-id-m"   value="'+(isEdit?_esc(cargo.id):'')+'">'+
+        '<div class="form-group"><label class="form-label">Nome do cargo *</label>'+
+          '<input id="rh-cargo-nome-m" class="form-input" placeholder="Ex: Analista de Formação" value="'+(isEdit?_esc(cargo.nome||''):'')+'"></div>'+
+        '<div class="form-group"><label class="form-label">Setor / Área</label>'+areaField+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+          '<div class="form-group"><label class="form-label">Tabela *</label>'+
+            '<select id="rh-cargo-tipo-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()">'+
+              '<option value="FIXA"'+(tipoAtual==='FIXA'?' selected':'')+'>Faixa Fixa</option>'+
+              '<option value="ORIENTADOR"'+(tipoAtual==='ORIENTADOR'?' selected':'')+'>Por Orientador</option>'+
+            '</select></div>'+
+          '<div class="form-group"><label class="form-label">Classe *</label>'+
+            '<select id="rh-cargo-classe-m" class="form-input select-sm" onchange="RhUI._pccsPreviewSalario()" data-tipo-atual="'+tipoAtual+'">'+
+              classesOpts+
+            '</select></div>'+
+        '</div>'+
+        '<div class="form-group"><label class="form-label">Grupo</label>'+
+          '<select id="rh-cargo-grupo-m" class="form-input select-sm">'+gruposOpts+'</select></div>'+
+        '<div style="margin:8px 0 14px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:12px;">'+
+          '<span style="color:var(--text2);">Faixa salarial: </span>'+
+          '<span id="rh-cargo-preview-sal" style="font-weight:600;">—</span>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:4px;">'+
+          '<button id="rh-btn-salvar-cargo-m" class="btn btn-primario" onclick="RhUI._salvarCargo()">'+
+            '<span class="ms ms-sm">save</span> '+(isEdit?'Salvar':'Adicionar')+'</button>'+
+          '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+        '</div></div>');
+      setTimeout(function(){ RhUI._pccsPreviewSalario(); }, 50);
+    };
+    if (_rhSetores !== null) { _render(_rhSetores); return; }
+    GAS.admin.listarSetores(function(resp) {
+      _rhSetores = (resp&&resp.ok&&Array.isArray(resp.data)) ? resp.data : [];
+      _render(_rhSetores);
+    }, function() { _rhSetores = []; _render([]); });
   }
 
   function _salvarCargo() {
@@ -20656,7 +20676,7 @@ var RhUI = (function() {
     var classe = (document.getElementById('rh-cargo-classe-m')||{}).value||'';
     var grupo  = (document.getElementById('rh-cargo-grupo-m')||{}).value||'';
     var area   = (document.getElementById('rh-cargo-area-m')||{}).value||'';
-    var steps  = _PCCS_SAL[tipo+'_'+classe]||[];
+    var steps  = _pccsGetSteps(tipo, classe);
     var tabela = steps.map(function(v,i){ return { nivel:tipo, classe:classe, referencia:i+1, salarioBase:v }; });
     var tipoV2 = { 'Gestão Estratégica':'estrategico','Gestão Tática':'tatico',
                    'Assessoramento':'assessoramento','Administrativo':'administrativo',
@@ -20916,7 +20936,7 @@ var RhUI = (function() {
       var lista=(resp&&resp.ok)?resp.data:[];
       if (status) lista=lista.filter(function(f){ return f.status===status; });
       if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma solicitação de férias.'); return; }
-      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
+      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
         lista.map(function(f){
           var acoes='';
           if (f.status==='pendente'){
@@ -20924,23 +20944,44 @@ var RhUI = (function() {
             acoes+='<button class="btn btn-error btn-sm" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
           }
           if (f.status==='aprovado') acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
+          var isAcordo = f.tipo==='nao_oficial';
+          var tipoBadge = isAcordo
+            ? '<span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;">Acordo</span>'
+            : '<span style="background:var(--surface2);color:var(--text2);font-size:10px;border-radius:4px;padding:2px 6px;">Oficial</span>';
+          var diasInfo = f.totalDias||'—';
+          if (isAcordo && f.diasGozados) diasInfo += ' <span style="font-size:10px;color:var(--text2);">('+f.diasGozados+'g)</span>';
           return '<tr><td>'+_esc(f.nomeColaborador||f.idColaborador||'—')+'</td>'+
-            '<td>'+_fmtData(f.dataInicio)+'</td><td>'+_fmtData(f.dataFim)+'</td>'+
-            '<td>'+(f.totalDias||'—')+'</td><td>'+_badge(f.status||'')+'</td>'+
+            '<td>'+_fmtData(f.dataInicio||f.inicio)+'</td><td>'+_fmtData(f.dataFim||f.fim)+'</td>'+
+            '<td>'+diasInfo+'</td><td>'+tipoBadge+'</td><td>'+_badge(f.status||'')+'</td>'+
             '<td>'+acoes+'</td></tr>';
         }).join('')+'</tbody></table>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
   }
 
   function abrirFormFerias() {
-    _abrirModalRh('<div style="padding:20px;min-width:360px;">'+
+    _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
       '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Solicitar Férias</h3>'+
-      '<div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>'+
+      '<div class="form-group"><label class="form-label">Colaborador *</label>'+
+        '<select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-        '<div class="form-group"><label class="form-label">Início *</label><input id="rh-fer-inicio-m" class="form-input" type="date"></div>'+
-        '<div class="form-group"><label class="form-label">Fim *</label><input id="rh-fer-fim-m" class="form-input" type="date"></div>'+
+        '<div class="form-group"><label class="form-label">Início *</label>'+
+          '<input id="rh-fer-inicio-m" class="form-input" type="date" oninput="RhUI._feriasCalcSaldo()"></div>'+
+        '<div class="form-group"><label class="form-label">Fim *</label>'+
+          '<input id="rh-fer-fim-m" class="form-input" type="date" oninput="RhUI._feriasCalcSaldo()"></div>'+
       '</div>'+
-      '<div class="form-group"><label class="form-label">Observações</label><textarea id="rh-fer-obs-m" class="form-input" rows="2"></textarea></div>'+
+      '<div class="form-group"><label class="form-label">Tipo</label>'+
+        '<select id="rh-fer-tipo-m" class="form-input select-sm" onchange="RhUI._feriasToggleTipo()">'+
+          '<option value="oficial">Oficial</option>'+
+          '<option value="nao_oficial">Não Oficial (Acordo Interno)</option>'+
+        '</select></div>'+
+      '<div id="rh-fer-nao-oficial-bloco" style="display:none;background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--warning,#e65100);margin-bottom:8px;">Acordo interno — período não formalizado integralmente</div>'+
+        '<div class="form-group"><label class="form-label">Dias realmente gozados no período</label>'+
+          '<input id="rh-fer-dias-gozados-m" class="form-input" type="number" min="1" placeholder="Ex: 10" oninput="RhUI._feriasCalcSaldo()"></div>'+
+        '<div id="rh-fer-saldo-info" style="font-size:12px;color:var(--text2);margin-top:4px;">Saldo para uso posterior: —</div>'+
+      '</div>'+
+      '<div class="form-group"><label class="form-label">Observações</label>'+
+        '<textarea id="rh-fer-obs-m" class="form-input" rows="2"></textarea></div>'+
       '<div style="display:flex;gap:8px;margin-top:12px;">'+
         '<button id="rh-btn-enviar-ferias-m" class="btn btn-primario" onclick="RhUI._enviarFerias()"><span class="ms ms-sm">send</span> Solicitar</button>'+
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
@@ -20948,15 +20989,41 @@ var RhUI = (function() {
     _popularSelectColaboradores('rh-fer-colab-m');
   }
 
+  function _feriasToggleTipo() {
+    var tipo = (document.getElementById('rh-fer-tipo-m')||{}).value||'oficial';
+    var bloco = document.getElementById('rh-fer-nao-oficial-bloco');
+    if (bloco) bloco.style.display = tipo==='nao_oficial' ? '' : 'none';
+  }
+
+  function _feriasCalcSaldo() {
+    var inicio  = (document.getElementById('rh-fer-inicio-m')||{}).value||'';
+    var fim     = (document.getElementById('rh-fer-fim-m')||{}).value||'';
+    var gozados = parseInt((document.getElementById('rh-fer-dias-gozados-m')||{}).value||'0')||0;
+    var el = document.getElementById('rh-fer-saldo-info');
+    if (!el) return;
+    if (!inicio||!fim) { el.textContent='Saldo para uso posterior: —'; return; }
+    var total = Math.round((new Date(fim)-new Date(inicio))/(1000*60*60*24))+1;
+    var saldo = total - gozados;
+    el.textContent = 'Total: '+total+' dias · Gozados: '+gozados+' · Saldo: '+Math.max(0,saldo)+' dias';
+    el.style.color = saldo < 0 ? 'var(--danger,#c62828)' : 'var(--text2)';
+  }
+
   function _enviarFerias() {
-    var idColab=(document.getElementById('rh-fer-colab-m')||{}).value||'';
-    var inicio=(document.getElementById('rh-fer-inicio-m')||{}).value||'';
-    var fim=(document.getElementById('rh-fer-fim-m')||{}).value||'';
-    var obs=(document.getElementById('rh-fer-obs-m')||{}).value||'';
+    var idColab  = (document.getElementById('rh-fer-colab-m')||{}).value||'';
+    var inicio   = (document.getElementById('rh-fer-inicio-m')||{}).value||'';
+    var fim      = (document.getElementById('rh-fer-fim-m')||{}).value||'';
+    var tipo     = (document.getElementById('rh-fer-tipo-m')||{}).value||'oficial';
+    var obs      = (document.getElementById('rh-fer-obs-m')||{}).value||'';
     if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
     if (!inicio||!fim){ Toast.aviso('Informe o período.'); return; }
+    var dados = { idColaborador:idColab, dataInicio:inicio, dataFim:fim, observacoes:obs, tipo:tipo };
+    if (tipo==='nao_oficial') {
+      var goz = parseInt((document.getElementById('rh-fer-dias-gozados-m')||{}).value||'0')||0;
+      if (!goz){ Toast.aviso('Informe os dias realmente gozados.'); return; }
+      dados.diasGozados = goz;
+    }
     BtnGuard.wrap('rh-btn-enviar-ferias-m','Solicitando…',function(done){
-      GAS.rh.solicitarFerias({idColaborador:idColab,dataInicio:inicio,dataFim:fim,observacoes:obs},function(resp){
+      GAS.rh.solicitarFerias(dados,function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
         _fecharModalRh(); Toast.sucesso('Férias solicitadas!'); carregarFerias();
@@ -21022,28 +21089,89 @@ var RhUI = (function() {
   }
 
   // ─── FOLHA ──────────────────────────────────────────────────
+  function _maskMoeda(el) {
+    var raw = el.value.replace(/\D/g, '');
+    if (!raw) { el.value = ''; return; }
+    var num = parseInt(raw, 10) / 100;
+    el.value = num.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function _parseMoeda(str) {
+    if (!str) return 0;
+    return parseFloat(String(str).replace(/\./g,'').replace(',','.')) || 0;
+  }
   function calcularCLT() {
-    var salario=parseFloat(document.getElementById('rh-clt-salario').value||'0')||0;
-    var horas=parseInt(document.getElementById('rh-clt-horas').value||'40')||40;
-    var vt=document.getElementById('rh-clt-vt').checked;
-    var va=document.getElementById('rh-clt-va').checked;
-    var el=document.getElementById('rh-clt-resultado');
-    if (!salario){ if(el) el.innerHTML=''; return; }
-    if(el) el.innerHTML='<p style="color:var(--muted);font-size:13px;">Calculando…</p>';
-    GAS.ponto.custoCLT({salarioBruto:salario,horasSemanais:horas,valeTransporte:vt,valeAlimentacao:va},function(r){
-      if (!r||!r.ok){ if(el) el.innerHTML='<p style="color:var(--color-error);font-size:13px;">Erro.</p>'; return; }
-      var c=r.data;
-      if(!el) return;
-      el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-        _lRh('Salário Bruto',c.salarioBruto)+_lRh('INSS',c.inss)+_lRh('FGTS (8%)',c.fgts)+
-        _lRh('PIS',c.pis)+_lRh('Sistema S',c.sistemaS)+_lRh('Vale Transporte',c.valeTransporte)+
-        _lRh('Vale Alimentação',c.valeAlimentacao)+_lRh('13º (provisão)',c.decimo3)+_lRh('Férias (provisão)',c.ferias)+
-      '</div>'+
-      '<div style="background:var(--color-primary);color:#fff;border-radius:8px;padding:14px 20px;display:flex;justify-content:space-between;margin-top:10px;">'+
-        '<span style="font-weight:600;">CUSTO TOTAL MENSAL</span>'+
-        '<span style="font-size:20px;font-weight:700;">R$ '+_fmtMoeda(c.custoTotal)+'</span>'+
-      '</div>';
-    },function(e){ if(el) el.innerHTML='<p style="color:var(--color-error);font-size:13px;">'+(e.message||'Erro')+'</p>'; });
+    var el = document.getElementById('rh-clt-resultado');
+    var salario = _parseMoeda((document.getElementById('rh-clt-salario')||{}).value);
+    if (!salario) { if (el) el.innerHTML = ''; return; }
+    if (el) el.innerHTML = '<p style="color:var(--text2);font-size:13px;">Calculando…</p>';
+    var params = {
+      salarioBruto:   salario,
+      reajuste:       _parseMoeda((document.getElementById('rh-clt-reajuste')||{}).value),
+      nMeses:         parseInt((document.getElementById('rh-clt-meses')||{}).value||'0')||0,
+      diasUteis:      parseInt((document.getElementById('rh-clt-duteis')||{}).value||'22')||22,
+      vtValorPasse:   _parseMoeda((document.getElementById('rh-clt-vt-passe')||{}).value),
+      vtQtdPassagens: parseInt((document.getElementById('rh-clt-vt-qtd')||{}).value||'2')||2,
+      vaValorDia:     _parseMoeda((document.getElementById('rh-clt-va-dia')||{}).value),
+      vaDescontoPct:  parseFloat((document.getElementById('rh-clt-va-desc')||{}).value||'0')||0,
+      vrValorDia:     _parseMoeda((document.getElementById('rh-clt-vr-dia')||{}).value),
+      vrDescontoPct:  parseFloat((document.getElementById('rh-clt-vr-desc')||{}).value||'0')||0,
+      psValorInd:     _parseMoeda((document.getElementById('rh-clt-ps-ind')||{}).value),
+      psNumDep:       parseInt((document.getElementById('rh-clt-ps-dep-n')||{}).value||'0')||0,
+      psValorDep:     _parseMoeda((document.getElementById('rh-clt-ps-dep-v')||{}).value),
+      psDescontoPct:  parseFloat((document.getElementById('rh-clt-ps-desc')||{}).value||'30')||30
+    };
+    GAS.ponto.custoCLT(params, function(r) {
+      if (!r||!r.ok) { if (el) el.innerHTML='<p style="color:var(--danger,#c62828);font-size:13px;">Erro ao calcular.</p>'; return; }
+      var c = r.data;
+      if (!el) return;
+      var _R = function(v) { return 'R$&nbsp;' + _fmtMoeda(v||0); };
+      var _sec = function(titulo, cor, linhas) {
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">' +
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:'+cor+';margin-bottom:8px;">'+titulo+'</div>' +
+          linhas.map(function(l){
+            return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);'+(l[2]?'font-weight:700;':'')+'">' +
+              '<span>'+l[0]+'</span><span>'+_R(l[1])+'</span></div>';
+          }).join('') + '</div>';
+      };
+      el.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:860px;">' +
+          _sec('III — Remuneração','var(--primary,#1a237e)',[
+            ['Salário Bruto',c.salarioBruto],
+            ['Reajuste Acordo Coletivo',c.reajuste],
+            ['Total Remuneração',c.salarioTotal,true]
+          ]) +
+          _sec('IV — Encargos Patronais (35,6%)','var(--warning,#e65100)',[
+            ['INSS Patronal (20%)',c.inssPatronal],
+            ['Sistema S + SAT (6,6%)',c.sistemaSsat],
+            ['FGTS (8%)',c.fgts],
+            ['PIS (1%)',c.pis],
+            ['Total Encargos',c.encargosTotal,true]
+          ]) +
+          _sec('V — Benefícios (custo empresa)','var(--info,#0277bd)',[
+            ['Vale Transporte (líq.)',c.vtLiquido],
+            ['Vale Alimentação (líq.)',c.vaLiquido],
+            ['Vale Refeição (líq.)',c.vrLiquido],
+            ['Plano de Saúde (líq.)',c.psLiquido],
+            ['Total Benefícios',c.beneficiosTotal,true]
+          ]) +
+          _sec('VI — Provisões Mensais','var(--success,#2e7d32)',[
+            ['Férias + 1/3 + encargos',c.provisaoFerias],
+            ['13º + encargos',c.provisao13],
+            ['FGTS rescisório (40%)',c.provisaoFGTSResc],
+            ['Total Provisões',c.provisoesTotal,true]
+          ]) +
+        '</div>' +
+        '<div style="background:var(--primary,#1a237e);color:#fff;border-radius:8px;padding:14px 20px;margin-top:12px;max-width:860px;display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:14px;font-weight:600;">VII — CUSTO MENSAL (III+IV+V+VI)</span>' +
+          '<span style="font-size:22px;font-weight:700;">'+_R(c.custoMensal)+'</span>' +
+        '</div>' +
+        (c.multiplicador?'<p style="font-size:12px;color:var(--text2);margin-top:6px;max-width:860px;text-align:right;">Multiplicador: '+c.multiplicador+'× o salário bruto · INSS empregado: '+_R(c.inssEmpregado)+' · Salário líquido est.: '+_R(c.salarioLiquido)+'</p>':'') +
+        (params.nMeses>0&&c.custoContrato?
+          '<div style="background:var(--success,#2e7d32);color:#fff;border-radius:8px;padding:14px 20px;margin-top:6px;max-width:860px;display:flex;justify-content:space-between;align-items:center;">' +
+            '<span style="font-size:13px;font-weight:600;">VIII — CUSTO TOTAL CONTRATO ('+params.nMeses+' meses)</span>' +
+            '<span style="font-size:20px;font-weight:700;">'+_R(c.custoContrato)+'</span>' +
+          '</div>' : '');
+    }, function(e) { if (el) el.innerHTML='<p style="color:var(--danger,#c62828);font-size:13px;">Erro: '+((e&&e.message)||'Falha')+'</p>'; });
   }
 
   function simularReajuste(done) {
@@ -21066,7 +21194,7 @@ var RhUI = (function() {
   function _lRh(label, valor) {
     return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;">'+
       '<div style="font-size:11px;color:var(--text2);">'+label+'</div>'+
-      '<div style="font-size:15px;font-weight:600;">R$ '+_fmtMoeda(valor)+'</div></div>';
+      '<div style="font-size:15px;font-weight:600;">R$ '+_fmtMoeda(valor||0)+'</div></div>';
   }
 
   // ─── RESCISÃO ───────────────────────────────────────────────
@@ -21165,10 +21293,11 @@ var RhUI = (function() {
     carregarEscalas:carregarEscalas, abrirFormEscala:abrirFormEscala, fecharFormEscala:fecharFormEscala,
     salvarEscala:salvarEscala, excluirEscala:excluirEscala, _confirmarExcluirEscala:_confirmarExcluirEscala,
     carregarFerias:carregarFerias, abrirFormFerias:abrirFormFerias, _enviarFerias:_enviarFerias,
+    _feriasToggleTipo:_feriasToggleTipo, _feriasCalcSaldo:_feriasCalcSaldo,
     aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
     recusarFerias:recusarFerias, _confirmarRecusarFerias:_confirmarRecusarFerias,
     cancelarFerias:cancelarFerias, _confirmarCancelarFerias:_confirmarCancelarFerias,
-    calcularCLT:calcularCLT, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
+    calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
     carregarIndicadores:carregarIndicadores, _fecharModalRh:_fecharModalRh
   };
 })();

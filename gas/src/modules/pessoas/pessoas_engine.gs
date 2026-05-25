@@ -343,6 +343,8 @@ var PessoasEngine = (function () {
     orgId = orgId || _orgId();
     dados = dados || {};
     if (!dados.idColaborador) throw new Error('idColaborador é obrigatório.');
+    dados.inicio = dados.inicio || dados.dataInicio || null;
+    dados.fim    = dados.fim    || dados.dataFim    || null;
     if (!dados.inicio || !dados.fim) throw new Error('Datas de início e fim são obrigatórias.');
     if (new Date(dados.fim) <= new Date(dados.inicio))
       throw new Error('Data de fim deve ser posterior à data de início.');
