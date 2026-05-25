@@ -223,6 +223,16 @@ function inicializarSistema() {
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
 
+  // Encargos trabalhistas — inicializa JSON e instala trigger anual
+  try {
+    var orgCfg = getOrgConfig();
+    if (typeof EncargosRepository !== 'undefined') {
+      EncargosRepository.inicializar(orgCfg.orgId);
+      Logger.info('setup', 'inicializarSistema', 'EncargosRepository inicializado.');
+    }
+    _instalarTriggerAnualEncargos();
+  } catch(e) { Logger.warn('setup', 'inicializarSistema', 'encargos: ' + e.message); }
+
   // Catálogo SEPLAG — pré-carregar os ~60 itens padrão (idempotente)
   try {
     if (typeof ItensDespesaService !== 'undefined') {
@@ -1123,4 +1133,91 @@ function fase9_validarIsolamento() {
   };
   Logger.info('setup', 'fase9_validarIsolamento', JSON.stringify(resultado));
   return resultado;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FASE 16 — Encargos Trabalhistas automáticos
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Prepara o índice de encargos trabalhistas e instala o trigger anual.
+ * Executar uma vez no GAS Editor: fase16_encargos_prepararIndice()
+ * Idempotente — seguro re-executar.
+ */
+function fase16_encargos_prepararIndice() {
+  var orgId = getOrgConfig().orgId;
+
+  // 1. Inicializa o JSON de encargos (cria com tabela 2025 se não existir)
+  var doc = EncargosRepository.inicializar(orgId);
+  Logger.info('setup', 'fase16_encargos_prepararIndice',
+    'encargos_trabalhistas.json pronto. Ano ativo: ' + doc.anoAtivo);
+
+  // 2. Verifica se há versão mais nova e aplica automaticamente
+  var status = EncargosEngine.verificarNecessidadeAtualizacao(orgId);
+  if (status.precisaAtualizar) {
+    EncargosEngine.atualizarParaAno(orgId, status.anoDisponivel, 'fase16_setup');
+    Logger.info('setup', 'fase16_encargos_prepararIndice',
+      'Tabela atualizada para ' + status.anoDisponivel);
+  }
+
+  // 3. Instala/renova trigger automático anual
+  _instalarTriggerAnualEncargos();
+
+  return {
+    ok:           true,
+    anoAtivo:     doc.anoAtivo,
+    anoDisponivel: status.anoDisponivel,
+    triggerInstalado: true
+  };
+}
+
+/**
+ * Função invocada pelo trigger automático (ScriptApp time-based).
+ * Aplica a tabela oficial mais recente SE o ano disponível for maior que o ativo.
+ * Campos com override manual são preservados.
+ *
+ * Trigger: dia 1 de cada mês às 06:00 → verifica se há nova tabela disponível.
+ */
+function triggerAtualizacaoAnualEncargos() {
+  try {
+    var orgId = getOrgConfig().orgId;
+    var resultado = EncargosEngine.executarAtualizacaoAutomatica(orgId);
+    Logger.info('setup', 'triggerAtualizacaoAnualEncargos', JSON.stringify({
+      acao: resultado.acao || 'nenhuma',
+      anoAplicado: resultado.anoAplicado,
+      itensAtualizados: resultado.itensAtualizados
+    }));
+    return resultado;
+  } catch (e) {
+    Logger.error('setup', 'triggerAtualizacaoAnualEncargos', e.message);
+    return { ok: false, erro: e.message };
+  }
+}
+
+/**
+ * Instala (ou renova) o trigger mensal que verifica encargos atualizados.
+ * Remove duplicatas antes de instalar.
+ * Privado — chamado por inicializarSistema() e fase16_encargos_prepararIndice().
+ */
+function _instalarTriggerAnualEncargos() {
+  try {
+    // Remove triggers existentes com o mesmo handler (evita duplicatas)
+    ScriptApp.getProjectTriggers().forEach(function(t) {
+      if (t.getHandlerFunction() === 'triggerAtualizacaoAnualEncargos') {
+        ScriptApp.deleteTrigger(t);
+      }
+    });
+    // Instala trigger: executa no dia 1 de cada mês às 06:00
+    // Verifica internamente se há nova tabela disponível (idempotente)
+    ScriptApp.newTrigger('triggerAtualizacaoAnualEncargos')
+      .timeBased()
+      .onMonthDay(1)
+      .atHour(6)
+      .create();
+    Logger.info('setup', '_instalarTriggerAnualEncargos',
+      'Trigger triggerAtualizacaoAnualEncargos instalado (dia 1 de cada mês, 06:00).');
+  } catch (e) {
+    Logger.warn('setup', '_instalarTriggerAnualEncargos',
+      'Não foi possível instalar trigger: ' + e.message);
+  }
 }

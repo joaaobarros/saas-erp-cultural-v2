@@ -6188,6 +6188,7 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn rh-tab-btn" data-rh-tab="folha" onclick="RhUI.setTab('folha',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> Folha</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="rescisao" onclick="RhUI.setTab('rescisao',this)" data-bg-skip="1"><span class="ms ms-sm">receipt_long</span> Rescisão</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="indicadores" onclick="RhUI.setTab('indicadores',this)" data-bg-skip="1"><span class="ms ms-sm">bar_chart</span> Indicadores</button>
+          <button class="tab-btn rh-tab-btn" data-rh-tab="encargos" onclick="RhUI.setTab('encargos',this)" data-bg-skip="1"><span class="ms ms-sm">account_balance</span> Encargos</button>
         </div>
 
         <!-- Tab: EQUIPE -->
@@ -21275,18 +21276,18 @@ var RhUI = (function() {
   function _pccsRecalcRow(key) {
     var ref1El = document.getElementById('pccs-ts-'+key+'-1');
     if (!ref1El) return;
-    var base = parseFloat(ref1El.value)||0;
+    var base = _parseMoeda(ref1El.value)||0;
     if (!base) { Toast.aviso('Informe o Ref. 1 de '+key+' primeiro.'); return; }
     var pct = parseFloat((document.getElementById('pccs-param-step-pct')||{}).value)||7.5;
     var fator = 1 + pct/100;
     for (var i=2; i<=5; i++) {
       base = Math.round(base * fator * 100) / 100;
       var el = document.getElementById('pccs-ts-'+key+'-'+i);
-      if (el) el.value = base.toFixed(2);
+      if (el) el.value = _fmtMoeda(base);
     }
     // atualiza amplitude
-    var ref1 = parseFloat((document.getElementById('pccs-ts-'+key+'-1')||{}).value)||0;
-    var ref5 = parseFloat((document.getElementById('pccs-ts-'+key+'-5')||{}).value)||0;
+    var ref1 = _parseMoeda((document.getElementById('pccs-ts-'+key+'-1')||{}).value)||0;
+    var ref5 = _parseMoeda((document.getElementById('pccs-ts-'+key+'-5')||{}).value)||0;
     var ampEl = document.getElementById('pccs-ts-'+key+'-amp');
     if (ampEl) ampEl.textContent = (ref1&&ref5) ? (((ref5/ref1)-1)*100).toFixed(1)+'%' : '—';
   }
@@ -21310,7 +21311,7 @@ var RhUI = (function() {
       var steps = [];
       for (var i=1; i<=5; i++) {
         var el = document.getElementById('pccs-ts-'+key+'-'+i);
-        var v = el ? parseFloat(el.value) : 0;
+        var v = el ? _parseMoeda(el.value) : 0;
         if (!v || v<=0) invalido = true;
         steps.push(Math.round((v||0)*100)/100);
       }
@@ -21321,8 +21322,8 @@ var RhUI = (function() {
     var pctStep = parseFloat((document.getElementById('pccs-param-step-pct')||{}).value)||7.5;
     var parametros = {
       anoReferencia:   parseInt((document.getElementById('pccs-param-ano')||{}).value)||2025,
-      pisoFaixaFixa:   parseFloat((document.getElementById('pccs-param-piso-fixa')||{}).value)||1747.16,
-      pisoOrientador:  parseFloat((document.getElementById('pccs-param-piso-orient')||{}).value)||1584.74,
+      pisoFaixaFixa:   _parseMoeda((document.getElementById('pccs-param-piso-fixa')||{}).value)||1747.16,
+      pisoOrientador:  _parseMoeda((document.getElementById('pccs-param-piso-orient')||{}).value)||1584.74,
       crescimentoStep: Math.round(pctStep/100*10000)/10000,
       atualizadoEm:    new Date().toISOString()
     };
