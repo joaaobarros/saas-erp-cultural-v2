@@ -6378,7 +6378,7 @@ select.form-control { cursor: pointer; }
           <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
             <div style="padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);">
               <div class="card-titulo"><span class="ms">payments</span> Calculadora de Custo CLT</div>
-              <div style="font-size:11px;color:var(--text2);margin-top:4px;margin-left:28px;">Encargos: 20% INSS + 6,6% S.S+SAT + 8% FGTS + 1% PIS = 35,6%</div>
+              <div id="rh-clt-encargos-desc" style="font-size:11px;color:var(--text2);margin-top:4px;margin-left:28px;">Encargos: INSS + Sistema S + SAT + FGTS + PIS (alíquotas de <em>Encargos Trabalhistas</em>)</div>
             </div>
             <div style="padding:20px 24px;">
 
@@ -20794,6 +20794,7 @@ var RhUI = (function() {
     if (tab==='escalas')     carregarEscalas();
     if (tab==='ferias')      carregarFerias();
     if (tab==='indicadores') carregarIndicadores();
+    if (tab==='encargos')    EncargosUI.aoAbrir();
   }
 
   // ─── EQUIPE ─────────────────────────────────────────────────
@@ -21875,11 +21876,12 @@ var RhUI = (function() {
             ['Reajuste Acordo Coletivo',c.reajuste],
             ['Total Remuneração',c.salarioTotal,true]
           ]) +
-          _sec('Encargos Patronais (35,6%)','var(--warning,#e65100)',[
-            ['INSS Patronal (20%)',c.inssPatronal],
-            ['Sistema S + SAT (6,6%)',c.sistemaSsat],
-            ['FGTS (8%)',c.fgts],
-            ['PIS (1%)',c.pis],
+          _sec('Encargos Patronais ('+(c._aliqInssPatronal?((((c._aliqInssPatronal||0)+(c._aliqSat||0)+(c._aliqSistemaS||0)+(c._aliqFgts||0)+(c._aliqPis||0))*100).toFixed(1)+'%'):'≈35,6%')+')','var(--warning,#e65100)',[
+            ['INSS Patronal ('+(c._aliqInssPatronal?((c._aliqInssPatronal*100).toFixed(0)+'%'):'20%')+')',c.inssPatronal],
+            ['Sistema S ('+(c._aliqSistemaS?((c._aliqSistemaS*100).toFixed(2)+'%'):'5,66%')+')',c.sistemaS||c.sistemaSsat],
+            ['SAT/RAT ('+(c._aliqSat?((c._aliqSat*100).toFixed(0)+'%'):'1%')+')',c.sat||(c.sistemaSsat-(c.sistemaS||0))],
+            ['FGTS ('+(c._aliqFgts?((c._aliqFgts*100).toFixed(0)+'%'):'8%')+')',c.fgts],
+            ['PIS ('+(c._aliqPis?((c._aliqPis*100).toFixed(1)+'%'):'1%')+')',c.pisPasep||c.pis],
             ['Total Encargos',c.encargosTotal,true]
           ]) +
           _sec('Benefícios (custo empresa)','var(--info,#0277bd)',[
@@ -22058,6 +22060,483 @@ var RhUI = (function() {
   };
 })();
 Router.registrar('rh', 'RH / Depto. Pessoal', RhUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EncargosUI — Encargos Trabalhistas (automáticos + manuais)
+// ═══════════════════════════════════════════════════════════════════════════
+var EncargosUI = (function() {
+  var _carregado = false;
+  var _doc       = null;    // cache local do documento de encargos
+
+  var _CHAVE_LABEL = {
+    inssPatronal: 'INSS Patronal',
+    fgts:         'FGTS',
+    pisPasep:     'PIS/PASEP',
+    sat:          'SAT/RAT',
+    sistemaS:     'Sistema S'
+  };
+  var _TIPO_LABEL = {
+    atualizacao_oficial: 'Atualização oficial',
+    edicao_manual:       'Edição manual',
+    edicao_tabela_inss:  'Edição tabela INSS',
+    edicao_tabela_irrf:  'Edição tabela IRRF',
+    restauracao_oficial: 'Restauração oficial',
+    inicializacao:       'Inicialização'
+  };
+
+  function _R(v) { return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function _pct(v) { return (Number(v||0)*100).toLocaleString('pt-BR',{minimumFractionDigits:4,maximumFractionDigits:4}) + '%'; }
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function _fmtDt(s) { return (s||'').slice(0,19).replace('T',' '); }
+
+  function _badgeFonte(fonte) {
+    var ok = fonte === 'oficial';
+    return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:'+(ok?'#d1fae5':'#fef3c7')+';color:'+(ok?'#065f46':'#92400e')+'">'+(ok?'oficial':'manual')+'</span>';
+  }
+
+  // ── Carregar e renderizar ────────────────────────────────────────────────
+
+  function aoAbrir() {
+    if (!_carregado) carregar();
+  }
+
+  function carregar() {
+    _setStatus('Carregando encargos…');
+    GAS.encargos.listar(function(resp) {
+      if (!resp || !resp.ok) { _setStatus('Erro ao carregar.'); return; }
+      _doc = resp.data.doc;
+      _renderAliquotas(_doc);
+      _renderSalMin(_doc);
+      _renderTabelaINSS(_doc.tabelaINSS || []);
+      _renderTabelaIRRF(_doc.tabelaIRRF || []);
+      _renderHistorico();
+      _popularSelectAnos(resp.data.anosDisponiveis || [2025, 2024]);
+      var badge = resp.data.precisaAtualizar
+        ? '<span style="color:#d97706;font-weight:600;">⚠ Nova tabela disponível: ' + resp.data.anoDisponivel + '</span>'
+        : '✅ Tabela ' + resp.data.anoAtivo + ' em vigor · atualizado em ' + _fmtDt((_doc||{}).atualizadoEm);
+      _setStatus(badge);
+      _carregado = true;
+    }, function(e) { _setStatus('Erro: ' + (e.message||e)); });
+  }
+
+  function _setStatus(html) {
+    var el = document.getElementById('enc-status-bar');
+    if (el) el.innerHTML = html;
+  }
+
+  function _popularSelectAnos(anos) {
+    var sel = document.getElementById('enc-sel-ano');
+    if (!sel) return;
+    sel.innerHTML = anos.map(function(a){
+      return '<option value="'+a+'"'+(a===new Date().getFullYear()?' selected':'')+'>'+a+'</option>';
+    }).join('');
+  }
+
+  // ── Alíquotas simples ────────────────────────────────────────────────────
+
+  function _renderAliquotas(doc) {
+    var tbody = document.getElementById('enc-corpo-aliquotas');
+    if (!tbody) return;
+    var al = doc.aliquotas || {};
+    var linhas = Object.keys(_CHAVE_LABEL).map(function(chave) {
+      var item = al[chave] || {};
+      var editInfo = item.fonte === 'manual'
+        ? _esc(item.editadoPor || '') + ' · ' + _fmtDt(item.editadoEm)
+        : '—';
+      var btnRestaurar = item.fonte === 'manual'
+        ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EncargosUI._restaurar(\''+_esc(chave)+'\')" title="Restaurar valor oficial">↩ Oficial</button>'
+        : '';
+      return '<tr>'
+        + '<td><strong>'+_esc(_CHAVE_LABEL[chave]||chave)+'</strong><br><span style="font-size:11px;color:var(--text2);">'+_esc(item.descricao||'')+'</span></td>'
+        + '<td style="font-size:16px;font-weight:700;">'+_pct(item.valor)+'</td>'
+        + '<td>'+_badgeFonte(item.fonte||'oficial')+(item.justificativa?'<br><span style="font-size:10px;color:var(--text2);">'+_esc(item.justificativa)+'</span>':'')+'</td>'
+        + '<td>'+(item.anoRef||'—')+'</td>'
+        + '<td style="font-size:11px;">'+editInfo+'</td>'
+        + '<td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EncargosUI._editarAliquota(\''+_esc(chave)+'\','+Number(item.valor||0)+')">✏ Editar</button> '+btnRestaurar+'</td>'
+        + '</tr>';
+    });
+    tbody.innerHTML = linhas.join('');
+  }
+
+  function _editarAliquota(chave, valorAtual) {
+    var label = _CHAVE_LABEL[chave] || chave;
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
+    overlay.onclick = function(){ document.body.removeChild(box); };
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:28px 32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
+    modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">Editar ' + _esc(label) + '</h3>'
+      + '<div class="form-group" style="margin-bottom:12px;">'
+      + '<label class="form-label">Nova alíquota (%)</label>'
+      + '<input id="_enc-modal-val" type="number" class="form-control" step="0.01" min="0" max="100" value="'+(valorAtual*100).toFixed(4)+'">'
+      + '</div>'
+      + '<div class="form-group" style="margin-bottom:16px;">'
+      + '<label class="form-label">Justificativa (obrigatória)</label>'
+      + '<input id="_enc-modal-just" type="text" class="form-control" placeholder="Ex: Portaria MPS 1.234/2025">'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button class="btn btn-ghost" onclick="this.closest(\'[style*=fixed]\').remove()">Cancelar</button>'
+      + '<button id="_enc-modal-btn" class="btn btn-primario" onclick="EncargosUI._confirmarEditarAliquota(\''+_esc(chave)+'\')">Salvar</button>'
+      + '</div>';
+    box.appendChild(overlay);
+    box.appendChild(modal);
+    document.body.appendChild(box);
+    setTimeout(function(){ var i=document.getElementById('_enc-modal-val'); if(i)i.focus(); }, 80);
+  }
+
+  function _confirmarEditarAliquota(chave) {
+    var valEl  = document.getElementById('_enc-modal-val');
+    var justEl = document.getElementById('_enc-modal-just');
+    if (!valEl || !justEl) return;
+    var pctStr = (valEl.value||'').replace(',','.');
+    var pct = parseFloat(pctStr);
+    if (isNaN(pct) || pct < 0) { Toast.aviso('Valor inválido.'); return; }
+    var just = (justEl.value||'').trim();
+    if (!just) { Toast.aviso('Informe uma justificativa.'); return; }
+    var btn = document.getElementById('_enc-modal-btn');
+    BtnGuard.travar(btn, 'Salvando…');
+    GAS.encargos.salvarAliquota(
+      { chave: chave, valor: pct/100, justificativa: just },
+      function(resp) {
+        BtnGuard.liberar(btn);
+        if (resp && resp.ok) {
+          Toast.sucesso('Alíquota salva.');
+          document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
+          _carregado = false; carregar();
+        } else { Toast.erro('Erro ao salvar.'); }
+      },
+      function(e) { BtnGuard.liberar(btn); Toast.erro(e.message||'Erro.'); }
+    );
+  }
+
+  function _restaurar(chave) {
+    if (!confirm('Restaurar "' + (_CHAVE_LABEL[chave]||chave) + '" para o valor oficial? O override manual será removido.')) return;
+    GAS.encargos.restaurarOficial({ chave: chave }, function(resp) {
+      if (resp && resp.ok) { Toast.sucesso('Valor oficial restaurado.'); _carregado = false; carregar(); }
+      else Toast.erro('Erro ao restaurar.');
+    });
+  }
+
+  // ── Salário mínimo ───────────────────────────────────────────────────────
+
+  function _renderSalMin(doc) {
+    var el = document.getElementById('enc-sal-minimo-container');
+    if (!el) return;
+    var sm = doc.salarioMinimo || {};
+    var editInfo = sm.fonte === 'manual'
+      ? '<span style="font-size:12px;color:var(--text2);">Editado por: '+_esc(sm.editadoPor||'')+'</span>'
+      : '<span style="font-size:12px;color:var(--text2);">'+_esc(sm.descricao||'')+'</span>';
+    var btnRestaurar = sm.fonte === 'manual'
+      ? '<button class="btn btn-ghost btn-sm" onclick="EncargosUI._restaurarSalMin()" style="font-size:11px;">↩ Oficial</button>'
+      : '';
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
+      + '<div><span style="font-size:28px;font-weight:800;color:var(--primary);">R$ '+_R(sm.valor)+'</span></div>'
+      + '<div>'+_badgeFonte(sm.fonte||'oficial')+'</div>'
+      + '<div>'+editInfo+'</div>'
+      + '<div style="margin-left:auto;display:flex;gap:8px;">'
+      + btnRestaurar
+      + '<button class="btn btn-outline btn-sm" onclick="EncargosUI._editarSalMin('+Number(sm.valor||0)+')" style="font-size:12px;">✏ Editar</button>'
+      + '</div></div>'
+      + (sm.justificativa ? '<p style="font-size:12px;color:var(--text2);margin:8px 0 0;">Justificativa: '+_esc(sm.justificativa)+'</p>' : '');
+  }
+
+  function _editarSalMin(valorAtual) {
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
+    overlay.onclick = function(){ document.body.removeChild(box); };
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:28px 32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
+    modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">Editar Salário Mínimo</h3>'
+      + '<div class="form-group" style="margin-bottom:12px;">'
+      + '<label class="form-label">Valor (R$)</label>'
+      + '<input id="_enc-sm-val" type="number" class="form-control" step="0.01" min="0" value="'+Number(valorAtual).toFixed(2)+'">'
+      + '</div>'
+      + '<div class="form-group" style="margin-bottom:16px;">'
+      + '<label class="form-label">Justificativa (obrigatória)</label>'
+      + '<input id="_enc-sm-just" type="text" class="form-control" placeholder="Ex: Decreto 12.302/2024">'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button class="btn btn-ghost" onclick="this.closest(\'[style*=fixed]\').remove()">Cancelar</button>'
+      + '<button id="_enc-sm-btn" class="btn btn-primario" onclick="EncargosUI._confirmarSalMin()">Salvar</button>'
+      + '</div>';
+    box.appendChild(overlay);
+    box.appendChild(modal);
+    document.body.appendChild(box);
+    setTimeout(function(){ var i=document.getElementById('_enc-sm-val'); if(i)i.focus(); }, 80);
+  }
+
+  function _confirmarSalMin() {
+    var valEl  = document.getElementById('_enc-sm-val');
+    var justEl = document.getElementById('_enc-sm-just');
+    if (!valEl||!justEl) return;
+    var val = parseFloat((valEl.value||'').replace(',','.'));
+    if (isNaN(val)||val<=0) { Toast.aviso('Valor inválido.'); return; }
+    var just = (justEl.value||'').trim();
+    if (!just) { Toast.aviso('Informe uma justificativa.'); return; }
+    var btn = document.getElementById('_enc-sm-btn');
+    BtnGuard.travar(btn,'Salvando…');
+    GAS.encargos.salvarSalMin({valor:val,justificativa:just}, function(resp){
+      BtnGuard.liberar(btn);
+      if (resp&&resp.ok){ Toast.sucesso('Salário mínimo salvo.'); document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove(); _carregado=false; carregar(); }
+      else Toast.erro('Erro ao salvar.');
+    }, function(e){ BtnGuard.liberar(btn); Toast.erro(e.message||'Erro.'); });
+  }
+
+  function _restaurarSalMin() {
+    if (!confirm('Restaurar Salário Mínimo para o valor oficial? O override manual será removido.')) return;
+    GAS.encargos.restaurarOficial({chave:'salarioMinimo'}, function(resp){
+      if (resp&&resp.ok){ Toast.sucesso('Restaurado.'); _carregado=false; carregar(); }
+      else Toast.erro('Erro.');
+    });
+  }
+
+  // ── Tabela INSS ──────────────────────────────────────────────────────────
+
+  function _renderTabelaINSS(tabela) {
+    var tbody = document.getElementById('enc-corpo-inss');
+    if (!tbody) return;
+    if (!tabela.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted-text">Nenhuma faixa configurada.</td></tr>'; return; }
+    tbody.innerHTML = tabela.map(function(f, i) {
+      var ate = f.ate !== null && f.ate !== undefined ? 'R$ '+_R(f.ate) : 'Sem limite';
+      return '<tr>'
+        + '<td>Faixa '+(i+1)+(f.descricao?' — '+_esc(f.descricao):'')+'</td>'
+        + '<td>R$ '+_R(f.de)+'</td>'
+        + '<td>'+ate+'</td>'
+        + '<td style="font-weight:700;">'+_pct(f.aliquota)+'</td>'
+        + '<td>'+_badgeFonte(f.fonte||'oficial')+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function abrirModalTabelaINSS() {
+    var tabela = (_doc && _doc.tabelaINSS) || [];
+    _abrirModalTabela('INSS — Empregado (progressiva)',
+      ['De (R$)', 'Até (R$) — vazio = sem limite', 'Alíquota (%)'],
+      tabela.map(function(f){ return [f.de, f.ate===null?'':f.ate, (f.aliquota*100).toFixed(4)]; }),
+      function(linhas, just) {
+        var novaTabela = linhas.map(function(l){
+          return { de: parseFloat(l[0])||0, ate: l[1]===''?null:parseFloat(l[1]), aliquota: parseFloat(l[2])/100 };
+        });
+        GAS.encargos.salvarTabelaINSS({tabela:novaTabela, justificativa:just}, function(r){
+          if (r&&r.ok){ Toast.sucesso('Tabela INSS salva ('+r.data.faixas+' faixas).'); _carregado=false; carregar(); }
+          else Toast.erro('Erro ao salvar.');
+        }, function(e){ Toast.erro(e.message||'Erro.'); });
+      }
+    );
+  }
+
+  // ── Tabela IRRF ──────────────────────────────────────────────────────────
+
+  function _renderTabelaIRRF(tabela) {
+    var tbody = document.getElementById('enc-corpo-irrf');
+    if (!tbody) return;
+    if (!tabela.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted-text">Nenhuma faixa configurada.</td></tr>'; return; }
+    tbody.innerHTML = tabela.map(function(f, i) {
+      var ate = f.ate !== null && f.ate !== undefined ? 'R$ '+_R(f.ate) : 'Sem limite';
+      return '<tr>'
+        + '<td>'+_esc(f.descricao||('Faixa '+(i+1)))+'</td>'
+        + '<td>R$ '+_R(f.de)+'</td>'
+        + '<td>'+ate+'</td>'
+        + '<td style="font-weight:700;">'+(f.aliquota===0?'Isento':_pct(f.aliquota))+'</td>'
+        + '<td>R$ '+_R(f.deducao)+'</td>'
+        + '<td>'+_badgeFonte(f.fonte||'oficial')+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function abrirModalTabelaIRRF() {
+    var tabela = (_doc && _doc.tabelaIRRF) || [];
+    _abrirModalTabela('IRRF — Empregado',
+      ['De (R$)', 'Até (R$) — vazio = sem limite', 'Alíquota (%)', 'Dedução (R$)'],
+      tabela.map(function(f){ return [f.de, f.ate===null?'':f.ate, (f.aliquota*100).toFixed(4), f.deducao||0]; }),
+      function(linhas, just) {
+        var novaTabela = linhas.map(function(l){
+          return { de:parseFloat(l[0])||0, ate:l[1]===''?null:parseFloat(l[1]), aliquota:parseFloat(l[2])/100, deducao:parseFloat(l[3])||0 };
+        });
+        GAS.encargos.salvarTabelaIRRF({tabela:novaTabela, justificativa:just}, function(r){
+          if (r&&r.ok){ Toast.sucesso('Tabela IRRF salva ('+r.data.faixas+' faixas).'); _carregado=false; carregar(); }
+          else Toast.erro('Erro ao salvar.');
+        }, function(e){ Toast.erro(e.message||'Erro.'); });
+      }
+    );
+  }
+
+  // ── Modal genérico de edição de tabela ──────────────────────────────────
+
+  function _abrirModalTabela(titulo, colunas, linhasIniciais, onSalvar) {
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
+    overlay.onclick = function(){ document.body.removeChild(box); };
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:24px 28px;width:680px;max-width:97vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
+
+    function _buildRows(linhas) {
+      return linhas.map(function(l, i){
+        var cells = colunas.map(function(_, ci){
+          return '<td><input type="text" class="form-control" style="min-width:100px;font-size:12px;" value="'+_esc(String(l[ci]!==undefined?l[ci]:''))+'"></td>';
+        }).join('');
+        return '<tr>'+cells+'<td><button type="button" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 5px;" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>';
+      }).join('');
+    }
+
+    var thCols = colunas.map(function(c){ return '<th style="font-size:12px;">'+_esc(c)+'</th>'; }).join('')+'<th></th>';
+
+    modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">Editar tabela — '+_esc(titulo)+'</h3>'
+      + '<table class="tabela-dados" style="width:100%;margin-bottom:12px;"><thead><tr>'+thCols+'</tr></thead>'
+      + '<tbody id="_enc-tabela-body">'+_buildRows(linhasIniciais)+'</tbody></table>'
+      + '<button type="button" class="btn btn-ghost btn-sm" style="font-size:12px;margin-bottom:16px;" onclick="EncargosUI._addLinhaModal('+colunas.length+')">+ Adicionar faixa</button>'
+      + '<div class="form-group" style="margin-bottom:16px;">'
+      + '<label class="form-label">Justificativa (obrigatória)</label>'
+      + '<input id="_enc-tabela-just" type="text" class="form-control" placeholder="Ex: Portaria MPS 1.383/2024">'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button class="btn btn-ghost" onclick="this.closest(\'[style*=fixed]\').remove()">Cancelar</button>'
+      + '<button id="_enc-tabela-btn" class="btn btn-primario" onclick="EncargosUI._confirmarModalTabela()">Salvar tabela</button>'
+      + '</div>';
+
+    // Guarda callback no closure via atributo de dados do modal
+    box._onSalvar = onSalvar;
+    box._ncols    = colunas.length;
+    box.appendChild(overlay);
+    box.appendChild(modal);
+    document.body.appendChild(box);
+  }
+
+  function _addLinhaModal(ncols) {
+    var tbody = document.getElementById('_enc-tabela-body');
+    if (!tbody) return;
+    var cells = [];
+    for (var i=0; i<ncols; i++) cells.push('<td><input type="text" class="form-control" style="min-width:100px;font-size:12px;" value="0"></td>');
+    cells.push('<td><button type="button" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 5px;" onclick="this.closest(\'tr\').remove()">✕</button></td>');
+    var tr = document.createElement('tr');
+    tr.innerHTML = cells.join('');
+    tbody.appendChild(tr);
+  }
+
+  function _confirmarModalTabela() {
+    var box = document.querySelector('[style*="position:fixed"][style*="z-index:3000"]');
+    if (!box) return;
+    var tbody = document.getElementById('_enc-tabela-body');
+    var justEl = document.getElementById('_enc-tabela-just');
+    var just = justEl ? (justEl.value||'').trim() : '';
+    if (!just) { Toast.aviso('Informe uma justificativa.'); return; }
+    var linhas = [];
+    if (tbody) tbody.querySelectorAll('tr').forEach(function(tr){
+      var vals = [];
+      tr.querySelectorAll('input[type=text]').forEach(function(inp){ vals.push(inp.value); });
+      if (vals.length) linhas.push(vals);
+    });
+    if (!linhas.length) { Toast.aviso('Adicione pelo menos uma faixa.'); return; }
+    var btn = document.getElementById('_enc-tabela-btn');
+    BtnGuard.travar(btn,'Salvando…');
+    box._onSalvar(linhas, just);
+    // Fecha o modal após 1.5s (callback cuida do reload)
+    setTimeout(function(){ if (document.body.contains(box)) document.body.removeChild(box); }, 1500);
+  }
+
+  // ── Aplicar tabela oficial ───────────────────────────────────────────────
+
+  function previewOficial() {
+    var ano = parseInt((document.getElementById('enc-sel-ano')||{}).value||new Date().getFullYear());
+    GAS.encargos.previewOficial(ano, function(resp) {
+      if (!resp||!resp.ok) { Toast.aviso('Tabela não disponível para '+ano+'.'); return; }
+      var tab = resp.data;
+      var linhas = Object.keys(tab.aliquotas||{}).map(function(k){
+        var it = tab.aliquotas[k];
+        return '<tr><td>'+_esc(it.label||k)+'</td><td>'+_pct(it.valor)+'</td><td style="font-size:11px;color:var(--text2);">'+_esc(it.descricao||'')+'</td></tr>';
+      });
+      var html = '<div style="max-height:60vh;overflow-y:auto;">'
+        + '<p style="font-size:13px;margin-bottom:12px;color:var(--text2);">Pré-visualização da tabela oficial <strong>'+ano+'</strong> — ainda não aplicada.</p>'
+        + '<table class="tabela-dados"><thead><tr><th>Encargo</th><th>Alíquota</th><th>Base legal</th></tr></thead><tbody>'+linhas.join('')+'</tbody></table>'
+        + '<p style="font-size:12px;margin-top:10px;color:var(--text2);">Salário Mínimo: <strong>R$ '+_R((tab.salarioMinimo||{}).valor)+'</strong></p>'
+        + '</div>';
+      _abrirModalSimples('Pré-visualização · Tabela ' + ano, html, null, '620px');
+    });
+  }
+
+  function aplicarOficial() {
+    var ano = parseInt((document.getElementById('enc-sel-ano')||{}).value||new Date().getFullYear());
+    if (!confirm('Aplicar a tabela oficial de ' + ano + '? Campos editados manualmente NÃO serão alterados.')) return;
+    GAS.encargos.aplicarOficial(ano, function(resp) {
+      if (resp && resp.ok) {
+        Toast.sucesso('Tabela ' + ano + ' aplicada. ' + (resp.data.itensAtualizados||0) + ' itens atualizados.');
+        _carregado = false; carregar();
+      } else { Toast.erro('Erro ao aplicar tabela oficial.'); }
+    }, function(e){ Toast.erro(e.message||'Erro.'); });
+  }
+
+  // ── Histórico ────────────────────────────────────────────────────────────
+
+  function _renderHistorico() {
+    var el = document.getElementById('enc-historico-conteudo');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando histórico…</p>';
+    GAS.encargos.historico(20, function(resp) {
+      var lista = (resp&&resp.ok)?resp.data:[];
+      if (!lista.length) { el.innerHTML = '<p class="muted-text">Nenhuma alteração registrada.</p>'; return; }
+      el.innerHTML = lista.map(function(h){
+        var tipoLabel = _TIPO_LABEL[h.tipo] || h.tipo;
+        var itens = (h.itens||[]).map(function(it){
+          return '<span style="font-size:11px;color:var(--text2);">' + _esc(it.campo||'') + (it.novo!==undefined?' → '+it.novo:'') + '</span>';
+        }).join(' · ');
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;">'
+          + '<span class="ms ms-sm" style="color:var(--text2);margin-top:2px;">' + (h.tipo==='atualizacao_oficial'?'download':h.tipo==='edicao_manual'?'edit':'history') + '</span>'
+          + '<div style="flex:1;">'
+          + '<div style="font-size:13px;font-weight:600;">'+_esc(tipoLabel)+(h.ano?' · '+h.ano:'')+'</div>'
+          + '<div style="font-size:11px;color:var(--text2);">'+_fmtDt(h.data)+' · '+_esc(h.usuario||'')+'</div>'
+          + (itens?'<div style="margin-top:3px;">'+itens+'</div>':'')
+          + '</div>'
+          + '</div>';
+      }).join('');
+    });
+  }
+
+  // ── Helper modal simples ─────────────────────────────────────────────────
+
+  function _abrirModalSimples(titulo, conteudoHtml, onConfirmar, largura) {
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
+    overlay.onclick = function(){ document.body.removeChild(box); };
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:24px 28px;width:'+(largura||'520px')+';max-width:97vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;max-height:90vh;overflow-y:auto;';
+    modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">'+_esc(titulo)+'</h3>'
+      + conteudoHtml
+      + '<div style="display:flex;justify-content:flex-end;margin-top:16px;">'
+      + (onConfirmar ? '<button id="_enc-modal-conf" class="btn btn-primario" onclick="('+onConfirmar+')()">Confirmar</button> ' : '')
+      + '<button class="btn btn-ghost" onclick="this.closest(\'[style*=fixed]\').remove()">Fechar</button>'
+      + '</div>';
+    box.appendChild(overlay);
+    box.appendChild(modal);
+    document.body.appendChild(box);
+  }
+
+  // ── API pública ──────────────────────────────────────────────────────────
+
+  return {
+    aoAbrir:                aoAbrir,
+    carregar:               carregar,
+    previewOficial:         previewOficial,
+    aplicarOficial:         aplicarOficial,
+    abrirModalTabelaINSS:   abrirModalTabelaINSS,
+    abrirModalTabelaIRRF:   abrirModalTabelaIRRF,
+    _editarAliquota:        _editarAliquota,
+    _confirmarEditarAliquota: _confirmarEditarAliquota,
+    _restaurar:             _restaurar,
+    _editarSalMin:          _editarSalMin,
+    _confirmarSalMin:       _confirmarSalMin,
+    _restaurarSalMin:       _restaurarSalMin,
+    _addLinhaModal:         _addLinhaModal,
+    _confirmarModalTabela:  _confirmarModalTabela
+  };
+})();
 
 // Boot
 document.addEventListener('DOMContentLoaded', function() {
