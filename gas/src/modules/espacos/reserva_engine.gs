@@ -24,16 +24,18 @@
 // ── FSM de Reserva ────────────────────────────────────────────────────────
 
 var STATUS_RESERVA = Object.freeze({
-  PENDENTE:   'pendente',
-  CONFIRMADO: 'confirmado',
-  EM_USO:     'em_uso',
-  CONCLUIDO:  'concluido',
-  CANCELADO:  'cancelado'
+  PENDENTE:    'pendente',
+  CONFIRMADO:  'confirmado',
+  HABILITADO:  'habilitado',
+  EM_USO:      'em_uso',
+  CONCLUIDO:   'concluido',
+  CANCELADO:   'cancelado'
 });
 
 var _TRANSICOES_RESERVA = {
   'pendente':   ['confirmado', 'cancelado'],
-  'confirmado': ['em_uso',     'cancelado'],
+  'confirmado': ['habilitado', 'em_uso', 'cancelado'],
+  'habilitado': ['em_uso',     'cancelado'],
   'em_uso':     ['concluido'],
   'concluido':  [],   // terminal
   'cancelado':  []    // terminal
@@ -76,7 +78,7 @@ var ReservaEngine = (function () {
    * @returns {boolean}
    */
   function _horariosSobrepoem(ini1, fim1, ini2, fim2) {
-    var BUFFER = 0; // pode ser aumentado para 5 min se necessário
+    var BUFFER = 5; // 5 minutos de margem entre reservas
     return ini1 < (fim2 + BUFFER) && ini2 < (fim1 + BUFFER);
   }
 
@@ -397,6 +399,32 @@ var ReservaEngine = (function () {
         reservaId: id, sala: reserva.sala, data: reserva.data,
         motivo: motivo || '', autor: autor, orgId: orgId
       });
+
+      // Notificação urgente para admins quando cancelamento ocorre no próprio dia
+      var _hojeCanc = new Date().toISOString().slice(0, 10);
+      if (reserva.data === _hojeCanc) {
+        try {
+          var _todosUsuarios = (typeof AcessoService !== 'undefined' && AcessoService.listarUsuarios)
+            ? AcessoService.listarUsuarios() : [];
+          _todosUsuarios
+            .filter(function(u) {
+              return (u.papel === 'admin' || u.papel === 'superadmin') && u.email && u.email !== autor;
+            })
+            .forEach(function(u) {
+              GmailApp.sendEmail(
+                u.email,
+                '⚠️ Reserva cancelada HOJE — ' + (reserva.salaNome || reserva.sala || '') + ' ' + (reserva.horaInicio || ''),
+                'Cancelamento no próprio dia.\n\nEspaço: ' + (reserva.salaNome || reserva.sala) +
+                '\nEvento: ' + (reserva.nomeAcao || '') +
+                '\nHorário: ' + (reserva.horaInicio || '') + '–' + (reserva.horaTermino || '') +
+                '\nCancelado por: ' + autor +
+                '\nMotivo: ' + (motivo || 'não informado')
+              );
+            });
+        } catch (_e) {
+          Logger.warn('reserva_engine', 'mudarStatus', 'Email urgente cancelamento mesmo dia falhou: ' + (_e.message || ''));
+        }
+      }
     }
 
     // Chamar orquestrador para reserva confirmada (cria tarefa de preparação)

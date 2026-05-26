@@ -212,6 +212,23 @@ function ctrl_reservas_iniciar(id) {
 }
 
 /**
+ * Habilita uma reserva confirmada para entrada (confirmado → habilitado).
+ * Restrito a: infraestrutura, gestor, admin, superadmin.
+ * @param {string} id
+ */
+function ctrl_reservas_habilitar(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    if (!id) throw new Error('ID da reserva é obrigatório.');
+    var nivel = _nivelReservas(ctx.email);
+    if (_NIVEL_GESTAO.indexOf(nivel) === -1) {
+      throw new Error('Sem permissão para habilitar reservas.');
+    }
+    return ReservaEngine.mudarStatus(id, 'habilitado', ctx.email, ctx.orgId);
+  }, 'ctrl_reservas_habilitar');
+}
+
+/**
  * Conclui o uso de um espaço (em_uso → concluido).
  * @param {string} id
  */
