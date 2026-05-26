@@ -6515,6 +6515,126 @@ select.form-control { cursor: pointer; }
           </div>
         </div>
 
+        <!-- Tab: ENCARGOS TRABALHISTAS -->
+        <div id="rh-tab-encargos" class="rh-tab-pane">
+
+          <!-- Barra de ação superior -->
+          <div class="card" style="padding:14px 20px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div style="flex:1;">
+                <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;">
+                  <span class="ms">account_balance</span> Encargos Trabalhistas
+                </div>
+                <div id="enc-status-bar" style="font-size:12px;color:var(--text2);margin-top:2px;">Carregando…</div>
+              </div>
+              <select id="enc-sel-ano" class="form-control" style="width:120px;font-size:13px;">
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+              <button class="btn btn-outline btn-sm" id="enc-btn-preview" onclick="EncargosUI.previewOficial()" data-bg-skip="1">
+                <span class="ms ms-sm">preview</span> Pré-visualizar
+              </button>
+              <button class="btn btn-primario btn-sm" id="enc-btn-aplicar"
+                onclick="BtnGuard.wrap('enc-btn-aplicar','Aplicando tabela oficial…',EncargosUI.aplicarOficial)">
+                <span class="ms ms-sm">download</span> Aplicar tabela oficial
+              </button>
+            </div>
+          </div>
+
+          <!-- Card: Alíquotas simples -->
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="ms ms-sm">percent</span>
+              <span style="font-weight:600;font-size:14px;">Alíquotas Patronais</span>
+              <span style="font-size:11px;color:var(--text2);margin-left:4px;">— editáveis individualmente</span>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="tabela-dados" id="enc-tab-aliquotas">
+                <thead>
+                  <tr>
+                    <th>Encargo</th><th>Alíquota vigente</th><th>Fonte</th>
+                    <th>Ano ref.</th><th>Última edição</th><th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="enc-corpo-aliquotas">
+                  <tr><td colspan="6" class="muted-text" style="padding:16px;">Carregando…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Card: Salário Mínimo -->
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="ms ms-sm">payments</span>
+              <span style="font-weight:600;font-size:14px;">Salário Mínimo Nacional</span>
+            </div>
+            <div style="padding:16px 20px;" id="enc-sal-minimo-container">
+              <p class="muted-text">Carregando…</p>
+            </div>
+          </div>
+
+          <!-- Card: Tabela INSS Progressiva -->
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="ms ms-sm">table_chart</span>
+                <span style="font-weight:600;font-size:14px;">Tabela INSS — Empregado (progressiva)</span>
+              </div>
+              <button class="btn btn-outline btn-sm" id="enc-btn-editar-inss"
+                onclick="EncargosUI.abrirModalTabelaINSS()" data-bg-skip="1">
+                <span class="ms ms-sm">edit</span> Editar tabela
+              </button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="tabela-dados" id="enc-tab-inss">
+                <thead>
+                  <tr><th>Faixa</th><th>De (R$)</th><th>Até (R$)</th><th>Alíquota</th><th>Fonte</th></tr>
+                </thead>
+                <tbody id="enc-corpo-inss">
+                  <tr><td colspan="5" class="muted-text" style="padding:16px;">Carregando…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Card: Tabela IRRF -->
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="ms ms-sm">receipt_long</span>
+                <span style="font-weight:600;font-size:14px;">Tabela IRRF — Empregado</span>
+              </div>
+              <button class="btn btn-outline btn-sm" id="enc-btn-editar-irrf"
+                onclick="EncargosUI.abrirModalTabelaIRRF()" data-bg-skip="1">
+                <span class="ms ms-sm">edit</span> Editar tabela
+              </button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="tabela-dados" id="enc-tab-irrf">
+                <thead>
+                  <tr><th>Faixa</th><th>De (R$)</th><th>Até (R$)</th><th>Alíquota</th><th>Dedução (R$)</th><th>Fonte</th></tr>
+                </thead>
+                <tbody id="enc-corpo-irrf">
+                  <tr><td colspan="6" class="muted-text" style="padding:16px;">Carregando…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Card: Histórico -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="ms ms-sm">history</span>
+              <span style="font-weight:600;font-size:14px;">Histórico de Alterações</span>
+            </div>
+            <div id="enc-historico-conteudo" style="padding:12px 20px;max-height:320px;overflow-y:auto;">
+              <p class="muted-text">Carregando…</p>
+            </div>
+          </div>
+
+        </div><!-- /rh-tab-encargos -->
+
       </div><!-- /view-rh -->
 
     </div><!-- /conteudo -->
@@ -7075,6 +7195,17 @@ var GAS = {
     exportarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_exportar_csv_colabore(d||{}); },
     importarAFD:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_importar_afd(d||{}); },
     importarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_importar_csv_colabore(d||{}); }
+  },
+  encargos: {
+    listar:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_listar(); },
+    historico:         function(n,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_historico(n||50); },
+    previewOficial:    function(ano,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_preview_oficial(ano); },
+    salvarAliquota:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_aliquota(d); },
+    salvarSalMin:      function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_salario_minimo(d); },
+    salvarTabelaINSS:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_tabela_inss(d); },
+    salvarTabelaIRRF:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_tabela_irrf(d); },
+    restaurarOficial:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_restaurar_oficial(d); },
+    aplicarOficial:    function(ano,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_aplicar_oficial(ano); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
