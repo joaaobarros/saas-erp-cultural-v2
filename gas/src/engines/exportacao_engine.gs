@@ -277,37 +277,321 @@ var ExportacaoEngine = (function () {
   // ─── SNIIC (MinC — indicadores anuais) ────────────────────────────────────
 
   /**
-   * Gera indicadores anuais SNIIC (Sistema Nacional de Informações e Indicadores Culturais).
+   * Gera relatório anual SNIIC completo.
+   *
+   * Seções geradas:
+   *   1. identificacao     — dados do equipamento cultural (config_org.json + espaços)
+   *   2. funcionamento     — dias/semana, horários, meses em atividade
+   *   3. recursos_humanos  — efetivos, bolsistas, voluntários, agentes culturais
+   *   4. atividades        — ações por categoria SNIIC + distribuição mensal
+   *   5. publico_atendido  — inscrições, presenças, faixas etárias, PcD, NPS
+   *   6. recursos_financeiros — captado por esfera (federal/estadual/municipal/próprios)
+   *
+   * Retorna também `csv` — planilha CSV com BOM UTF-8, formato Seção/Campo/Valor,
+   * pronto para upload ou importação no portal SNIIC/MinC.
    *
    * @param {string} orgId
-   * @param {number} ano — ex: 2024
-   * @returns {Object} indicadores
+   * @param {number} ano — ex: 2025
+   * @returns {Object} { ano, identificacao, funcionamento, recursos_humanos,
+   *                     atividades, publico_atendido, recursos_financeiros, csv }
    */
   function gerarSNIIC(orgId, ano) {
-    var org    = getOrgConfig();
-    var acoes  = AcaoRepository.listar(orgId, {}).filter(function(a) {
-      var d = new Date(a.dataInicio || a.criadoEm);
-      return (!ano || d.getFullYear() === ano) && a.status !== 'cancelada';
-    });
+    var org   = getOrgConfig();
+    orgId     = orgId || org.orgId;
+    ano       = ano   || new Date().getFullYear();
+    var anoN  = Number(ano);
+    var agora = new Date();
 
-    var metricas  = PublicoEngine.obterMetricas(orgId);
-    var porTipo   = {};
-    acoes.forEach(function(a) {
-      var tipo = a.tipo || 'outros';
-      if (!porTipo[tipo]) porTipo[tipo] = 0;
-      porTipo[tipo]++;
-    });
+    function _desteAno(iso) {
+      if (!iso) return false;
+      try { return new Date(iso).getFullYear() === anoN; } catch(_) { return false; }
+    }
 
-    return {
-      ano:              ano || new Date().getFullYear(),
-      municipio:        org.municipio || 'Fortaleza',
-      uf:               org.uf || 'CE',
-      nome_equipamento: org.nome || org.titulo || '',
-      total_acoes:      acoes.length,
-      total_publico:    metricas.totalInscricoes,
-      acoes_por_tipo:   porTipo,
-      nps_medio:        metricas.nps
+    // ── 1. Identificação ────────────────────────────────────────────────────
+    var espacos = [];
+    try { espacos = SistemaConfigService.getEspacos() || []; } catch(_) {}
+
+    var identificacao = {
+      nome_equipamento:    org.nome || org.titulo || '',
+      tipo_equipamento:    org.tipoEquipamento || 'Centro Cultural',
+      cnpj:                org.cnpj || '',
+      logradouro:          org.logradouro || '',
+      municipio:           org.municipio || 'Fortaleza',
+      uf:                  org.uf || 'CE',
+      cep:                 org.cep || '',
+      email:               org.email || '',
+      telefone:            org.telefone || '',
+      site:                org.site || '',
+      ano_fundacao:        org.anoFundacao || '',
+      capacidade_total:    espacos.reduce(function(s, e) { return s + (Number(e.capacidade) || 0); }, 0),
+      quantidade_espacos:  espacos.filter(function(e) { return e.ativo !== false; }).length
     };
+
+    // ── 2. Funcionamento ────────────────────────────────────────────────────
+    var orgCfg = {};
+    try { orgCfg = SistemaConfigService.getOrgConfig ? SistemaConfigService.getOrgConfig() : {}; } catch(_) {}
+
+    var funcionamento = {
+      meses_atividade_ano: 12,
+      dias_semana:         Number(orgCfg.diasSemana) || 5,
+      hora_abertura:       orgCfg.horaAbertura    || '08:00',
+      hora_encerramento:   orgCfg.horaEncerramento || '22:00',
+      entrada_gratuita:    true
+    };
+
+    // ── 3. Recursos Humanos ─────────────────────────────────────────────────
+    var colaboradores = [];
+    try { colaboradores = ColaboradorRepository.listar(orgId, {}); } catch(_) {}
+    var ativos = colaboradores.filter(function(c) {
+      return c.status !== 'desligado' && c.status !== 'afastado';
+    });
+
+    var voluntariosTotal = 0;
+    try {
+      var allVol = VoluntarioRepository.listar(orgId, {});
+      voluntariosTotal = allVol.filter(function(v) { return v.status === 'ativo'; }).length;
+    } catch(_) {}
+
+    var agentesAtivos = 0;
+    try {
+      var allAg = AgenteCulturalRepository.listar(orgId, {});
+      agentesAtivos = allAg.filter(function(a) { return a.status === 'ativo'; }).length;
+    } catch(_) {}
+
+    var recursosHumanos = {
+      efetivos:                ativos.filter(function(c) {
+        var v = (c.vinculo || '').toLowerCase();
+        return v === 'clt' || v === 'estatutario' || v === 'comissionado';
+      }).length,
+      terceirizados_bolsistas: ativos.filter(function(c) {
+        var v = (c.vinculo || '').toLowerCase();
+        return v === 'bolsista' || v === 'prestador' || v === 'terceirizado';
+      }).length,
+      voluntarios:             voluntariosTotal,
+      agentes_culturais:       agentesAtivos,
+      total_equipe:            ativos.length + voluntariosTotal
+    };
+
+    // ── 4. Atividades por categoria SNIIC ───────────────────────────────────
+    var CATEGORIAS = {
+      artes_cenicas:  ['teatro','dança','danca','circo','cênicas','cenicas','performance','clown','mímica','mimica'],
+      artes_visuais:  ['exposição','exposicao','galeria','artes visuais','fotografia','instalação','instalacao','escultura','pintura','grafite'],
+      audiovisual:    ['cinema','audiovisual','vídeo','video','filme','documentário','documentario','animação','animacao'],
+      musica:         ['música','musica','show','concerto','sarau','banda','coral','forró','forro','samba','chorinho','mpb','jazz','rock','rap','hip-hop'],
+      formacao:       ['curso','oficina','workshop','formação','formacao','capacitação','capacitacao','residência','residencia','aula','treinamento'],
+      humanidades:    ['lançamento','lancamento','palestra','debate','literatura','poesia','seminário','seminario','congresso','fórum','forum','mesa redonda'],
+      patrimonio:     ['patrimônio','patrimonio','popular','folclore','tradição','tradicao','artesanato','capoeira','maracatu','reisado','bumba','quadrilha'],
+      outros:         []
+    };
+
+    var por_cat = {};
+    Object.keys(CATEGORIAS).forEach(function(c) { por_cat[c] = { quantidade: 0, acoes: [] }; });
+
+    var acoes = [];
+    try {
+      acoes = AcaoRepository.listar(orgId, {}).filter(function(a) {
+        return _desteAno(a.dataInicio || a.criadoEm) && a.status !== 'cancelada';
+      });
+    } catch(_) {}
+
+    acoes.forEach(function(a) {
+      var txt = ((a.tipo || '') + ' ' + (a.linguagemCultural || '') + ' ' + (a.nome || '')).toLowerCase();
+      var cat = 'outros';
+      Object.keys(CATEGORIAS).forEach(function(c) {
+        if (c === 'outros') return;
+        if (CATEGORIAS[c].some(function(kw) { return txt.indexOf(kw) >= 0; })) cat = c;
+      });
+      por_cat[cat].quantidade++;
+      por_cat[cat].acoes.push(a.nome);
+    });
+
+    var MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var por_mes = MESES.map(function(label, idx) {
+      var m = idx + 1;
+      return {
+        mes: m, label: label,
+        quantidade: acoes.filter(function(a) {
+          try { return new Date(a.dataInicio || a.criadoEm).getMonth() + 1 === m; } catch(_) { return false; }
+        }).length
+      };
+    });
+
+    // ── 5. Público Atendido ─────────────────────────────────────────────────
+    var metricas = { totalInscricoes: 0, nps: null };
+    try { metricas = PublicoEngine.obterMetricas(orgId) || metricas; } catch(_) {}
+
+    var inscricoes = [];
+    try {
+      inscricoes = PublicoRepository.listar(orgId, {}).filter(function(i) {
+        return _desteAno(i.criadoEm || i.dataInscricao);
+      });
+    } catch(_) {}
+
+    var faixas = { f0_12: 0, f13_17: 0, f18_29: 0, f30_59: 0, f60mais: 0, pcd: 0 };
+    inscricoes.forEach(function(i) {
+      var fx = (i.faixaEtaria || '').toLowerCase();
+      if (fx === 'crianca' || fx === '0-12')              faixas.f0_12++;
+      else if (fx === 'adolescente' || fx === '13-17')    faixas.f13_17++;
+      else if (fx === 'jovem' || fx === '18-29')          faixas.f18_29++;
+      else if (fx === 'adulto' || fx === '30-59')         faixas.f30_59++;
+      else if (fx === 'idoso' || fx === '60+')            faixas.f60mais++;
+      if (i.pcd || i.ehPcd) faixas.pcd++;
+    });
+
+    var publicoAtendido = {
+      total_inscricoes:     inscricoes.length,
+      total_presencas:      inscricoes.filter(function(i) {
+                              return i.status === 'presente' || i.status === 'certificado';
+                            }).length,
+      total_gratuito:       inscricoes.filter(function(i) {
+                              return !i.valorIngresso || Number(i.valorIngresso) === 0;
+                            }).length,
+      total_pago:           inscricoes.filter(function(i) {
+                              return Number(i.valorIngresso) > 0;
+                            }).length,
+      faixa_0_12:           faixas.f0_12,
+      faixa_13_17:          faixas.f13_17,
+      faixa_18_29:          faixas.f18_29,
+      faixa_30_59:          faixas.f30_59,
+      faixa_60_mais:        faixas.f60mais,
+      pcd:                  faixas.pcd,
+      nps_medio:            metricas.nps
+    };
+
+    // ── 6. Recursos Financeiros ─────────────────────────────────────────────
+    var recursos = { total_captado: 0, federal: 0, estadual: 0, municipal: 0, proprios: 0, outros: 0 };
+    try {
+      ContratoRepository.listar(orgId, {})
+        .filter(function(c) {
+          return (c.status === 'ativo' || c.status === 'encerrado') &&
+                 _desteAno(c.vigenciaInicio || c.criadoEm);
+        })
+        .forEach(function(c) {
+          var v   = Number(c.valorTotal) || 0;
+          var mod = (c.modalidade || '').toLowerCase();
+          recursos.total_captado += v;
+          if (mod === 'lei_rouanet' || mod === 'lei_aldir_blanc' ||
+              mod === 'edital_federal' || mod.indexOf('federal') >= 0) {
+            recursos.federal += v;
+          } else if (mod === 'procultura' || mod === 'edital_estadual' ||
+                     mod.indexOf('estadual') >= 0) {
+            recursos.estadual += v;
+          } else if (mod === 'edital_municipal' || mod.indexOf('municipal') >= 0) {
+            recursos.municipal += v;
+          } else if (mod === 'contrato_gestao' || mod.indexOf('proprio') >= 0) {
+            recursos.proprios += v;
+          } else {
+            recursos.outros += v;
+          }
+        });
+    } catch(_) {}
+
+    // ── Monta resultado final ───────────────────────────────────────────────
+    var resultado = {
+      ano:                  anoN,
+      data_geracao:         agora.toISOString(),
+      sistema:              'TRAMAR — ERP Cultural SaaS v2',
+      identificacao:        identificacao,
+      funcionamento:        funcionamento,
+      recursos_humanos:     recursosHumanos,
+      atividades: {
+        total:              acoes.length,
+        por_categoria:      por_cat,
+        por_mes:            por_mes
+      },
+      publico_atendido:     publicoAtendido,
+      recursos_financeiros: recursos
+    };
+
+    resultado.csv = _gerarCsvSNIIC(resultado);
+    return resultado;
+  }
+
+  /**
+   * Converte o objeto SNIIC para CSV (Seção / Campo / Valor) com BOM UTF-8.
+   */
+  function _gerarCsvSNIIC(d) {
+    var BOM = '﻿';
+    var lin = ['"Seção","Campo","Valor"'];
+
+    function add(s, campo, valor) {
+      var v = (valor === null || valor === undefined) ? '' : String(valor);
+      lin.push('"' + s + '","' + campo + '","' + v.replace(/"/g, '""') + '"');
+    }
+
+    // 1. Identificação
+    var id = d.identificacao || {};
+    add('1. Identificação', 'Nome do Equipamento',  id.nome_equipamento);
+    add('1. Identificação', 'Tipo de Equipamento',  id.tipo_equipamento);
+    add('1. Identificação', 'CNPJ',                 id.cnpj);
+    add('1. Identificação', 'Município',             id.municipio);
+    add('1. Identificação', 'UF',                   id.uf);
+    add('1. Identificação', 'CEP',                  id.cep);
+    add('1. Identificação', 'E-mail',               id.email);
+    add('1. Identificação', 'Telefone',             id.telefone);
+    add('1. Identificação', 'Site',                 id.site);
+    add('1. Identificação', 'Ano de Fundação',      id.ano_fundacao);
+    add('1. Identificação', 'Quantidade de Espaços',id.quantidade_espacos);
+    add('1. Identificação', 'Capacidade Total',     id.capacidade_total);
+
+    // 2. Funcionamento
+    var fn = d.funcionamento || {};
+    add('2. Funcionamento', 'Meses em Atividade/Ano', fn.meses_atividade_ano);
+    add('2. Funcionamento', 'Dias por Semana',         fn.dias_semana);
+    add('2. Funcionamento', 'Horário de Abertura',     fn.hora_abertura);
+    add('2. Funcionamento', 'Horário de Encerramento', fn.hora_encerramento);
+    add('2. Funcionamento', 'Entrada Gratuita',        fn.entrada_gratuita ? 'Sim' : 'Não');
+
+    // 3. Recursos Humanos
+    var rh = d.recursos_humanos || {};
+    add('3. Recursos Humanos', 'Efetivos (CLT/Estatutários)',   rh.efetivos);
+    add('3. Recursos Humanos', 'Terceirizados / Bolsistas',     rh.terceirizados_bolsistas);
+    add('3. Recursos Humanos', 'Voluntários',                   rh.voluntarios);
+    add('3. Recursos Humanos', 'Agentes Culturais Ativos',      rh.agentes_culturais);
+    add('3. Recursos Humanos', 'Total da Equipe',               rh.total_equipe);
+
+    // 4. Atividades por categoria
+    var at  = d.atividades   || {};
+    var pc  = at.por_categoria || {};
+    add('4. Atividades', 'Total de Ações no Ano',                at.total);
+    add('4. Atividades', 'Artes Cênicas (teatro/dança/circo)',   (pc.artes_cenicas || {}).quantidade || 0);
+    add('4. Atividades', 'Artes Visuais (exposições/galerias)',  (pc.artes_visuais || {}).quantidade || 0);
+    add('4. Atividades', 'Audiovisual (cinema/vídeo)',           (pc.audiovisual   || {}).quantidade || 0);
+    add('4. Atividades', 'Música (shows/concertos/saraus)',      (pc.musica        || {}).quantidade || 0);
+    add('4. Atividades', 'Formação (cursos/oficinas/workshops)', (pc.formacao      || {}).quantidade || 0);
+    add('4. Atividades', 'Humanidades (palestras/debates/lit.)',(pc.humanidades   || {}).quantidade || 0);
+    add('4. Atividades', 'Patrimônio e Diversidade',            (pc.patrimonio    || {}).quantidade || 0);
+    add('4. Atividades', 'Outros',                              (pc.outros        || {}).quantidade || 0);
+
+    // Distribuição mensal
+    (at.por_mes || []).forEach(function(m) {
+      add('4.1 Atividades por Mês', m.label || ('Mês ' + m.mes), m.quantidade);
+    });
+
+    // 5. Público
+    var pub = d.publico_atendido || {};
+    add('5. Público Atendido', 'Total de Inscrições',             pub.total_inscricoes);
+    add('5. Público Atendido', 'Presenças Confirmadas',           pub.total_presencas);
+    add('5. Público Atendido', 'Acesso Gratuito',                 pub.total_gratuito);
+    add('5. Público Atendido', 'Acesso Pago',                     pub.total_pago);
+    add('5. Público Atendido', 'Faixa 0–12 anos',                 pub.faixa_0_12);
+    add('5. Público Atendido', 'Faixa 13–17 anos',                pub.faixa_13_17);
+    add('5. Público Atendido', 'Faixa 18–29 anos',                pub.faixa_18_29);
+    add('5. Público Atendido', 'Faixa 30–59 anos',                pub.faixa_30_59);
+    add('5. Público Atendido', '60 anos ou mais',                 pub.faixa_60_mais);
+    add('5. Público Atendido', 'Pessoas com Deficiência (PcD)',   pub.pcd);
+    add('5. Público Atendido', 'NPS Médio',                       pub.nps_medio != null ? pub.nps_medio : '');
+
+    // 6. Recursos
+    var rf = d.recursos_financeiros || {};
+    add('6. Recursos Financeiros', 'Total Captado (R$)',       rf.total_captado);
+    add('6. Recursos Financeiros', 'Recursos Federais (R$)',   rf.federal);
+    add('6. Recursos Financeiros', 'Recursos Estaduais (R$)',  rf.estadual);
+    add('6. Recursos Financeiros', 'Recursos Municipais (R$)', rf.municipal);
+    add('6. Recursos Financeiros', 'Recursos Próprios (R$)',   rf.proprios);
+    add('6. Recursos Financeiros', 'Outros Recursos (R$)',     rf.outros);
+
+    return BOM + lin.join('\r\n');
   }
 
   // ─── PNAB (Política Nacional Aldir Blanc — Lei 14.399/2022) ─────────────────

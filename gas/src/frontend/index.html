@@ -3274,6 +3274,29 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
 
+          <!-- SNIIC -->
+          <div class="card" style="margin-top:16px;">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">bar_chart</span> SNIIC — Indicadores Culturais Nacionais (MinC)</div>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:0 0 12px;">
+              Gera o relatório anual para o Sistema Nacional de Informações e Indicadores Culturais (SNIIC/MinC).
+              Exporta planilha CSV (Seção / Campo / Valor) pronta para importação no portal do Ministério da Cultura,
+              com 6 seções: Identificação, Funcionamento, Recursos Humanos, Atividades Culturais, Público Atendido e Recursos Financeiros.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Ano de referência</label>
+                <input id="exp-sniic-fin-ano" class="form-input" type="number" style="width:110px;" value="">
+              </div>
+              <button class="btn btn-primario" id="btn-exp-sniic-fin"
+                onclick="ExportacoesUI.gerarSNIIC()">
+                <span class="ms ms-sm">bar_chart</span> Gerar SNIIC
+              </button>
+            </div>
+            <div id="exp-sniic-fin-resultado" style="display:none;margin-top:14px;"></div>
+          </div>
+
         </div><!-- /tab exportacoes -->
 
       </div><!-- /view-financeiro -->
@@ -9119,6 +9142,9 @@ var ExportacoesUI = (function() {
 
     var anoEl = document.getElementById('exp-pnab-ano');
     if (anoEl && !anoEl.value) anoEl.value = new Date().getFullYear();
+
+    var anoSniic = document.getElementById('exp-sniic-fin-ano');
+    if (anoSniic && !anoSniic.value) anoSniic.value = new Date().getFullYear();
   }
 
   function baixarSALIC() {
@@ -9177,7 +9203,93 @@ var ExportacoesUI = (function() {
     });
   }
 
-  return { aoAbrir: aoAbrir, baixarSALIC: baixarSALIC, gerarPNAB: gerarPNAB };
+  function gerarSNIIC() {
+    var anoEl = document.getElementById('exp-sniic-fin-ano');
+    var ano   = anoEl ? (parseInt(anoEl.value) || new Date().getFullYear()) : new Date().getFullYear();
+    BtnGuard.wrap('btn-exp-sniic-fin', 'Gerando SNIIC…', function(done) {
+      GAS.exportacao.sniic({ ano: ano }, function(resp) {
+        done();
+        if (!resp || !resp.ok) {
+          Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar SNIIC.');
+          return;
+        }
+        var d   = resp.data || {};
+        var csv = d.csv;
+        var res = document.getElementById('exp-sniic-fin-resultado');
+        if (res) {
+          res.style.display = '';
+          res.innerHTML = _renderSNIICResumo(d);
+        }
+        if (csv) {
+          _baixarArquivo(csv, 'SNIIC_' + ano + '_' + (d.identificacao && d.identificacao.municipio || 'equipamento').replace(/\s/g,'_') + '.csv', 'text/csv');
+          Toast.sucesso('SNIIC ' + ano + ' gerado: ' + (d.atividades && d.atividades.total || 0) + ' ações, ' + ((d.publico_atendido && d.publico_atendido.total_inscricoes) || 0) + ' inscrições.');
+        } else {
+          Toast.sucesso('SNIIC ' + ano + ' gerado com sucesso.');
+        }
+      }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
+    });
+  }
+
+  function _renderSNIICResumo(d) {
+    var id  = d.identificacao        || {};
+    var rh  = d.recursos_humanos     || {};
+    var at  = d.atividades           || {};
+    var pub = d.publico_atendido     || {};
+    var rf  = d.recursos_financeiros || {};
+    var pc  = at.por_categoria       || {};
+
+    function _fmtR(v) {
+      var n = Number(v) || 0;
+      return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    var LABEL_CAT = {
+      artes_cenicas: 'Artes Cênicas', artes_visuais: 'Artes Visuais',
+      audiovisual: 'Audiovisual', musica: 'Música',
+      formacao: 'Formação', humanidades: 'Humanidades',
+      patrimonio: 'Patrimônio', outros: 'Outros'
+    };
+
+    var catRows = Object.keys(LABEL_CAT).map(function(c) {
+      var qtd = (pc[c] || {}).quantidade || 0;
+      if (!qtd) return '';
+      return '<tr><td>' + LABEL_CAT[c] + '</td><td style="text-align:right;font-weight:600;">' + qtd + '</td></tr>';
+    }).join('');
+
+    var mesRows = (at.por_mes || []).map(function(m) {
+      if (!m.quantidade) return '';
+      var bw = Math.round((m.quantidade / (at.total || 1)) * 100);
+      return '<tr><td>' + m.label + '</td><td style="text-align:right;">' + m.quantidade
+        + '</td><td style="width:80px;"><div style="height:8px;background:var(--primary);border-radius:4px;width:' + bw + '%;opacity:.7;"></div></td></tr>';
+    }).filter(Boolean).join('');
+
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;">'
+      + _sniicStatCard('Ações no Ano',    at.total || 0,                   'event')
+      + _sniicStatCard('Inscrições',      pub.total_inscricoes || 0,       'group')
+      + _sniicStatCard('Presenças',       pub.total_presencas || 0,        'how_to_reg')
+      + _sniicStatCard('Equipe',          rh.total_equipe || 0,            'badge')
+      + _sniicStatCard('Agentes Cult.',   rh.agentes_culturais || 0,       'star')
+      + _sniicStatCard('Total Captado',   _fmtR(rf.total_captado),         'payments')
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+      + (catRows ? '<div><p style="font-size:12px;font-weight:600;color:var(--text-secondary);margin:0 0 6px;">Atividades por Categoria</p>'
+          + '<table style="width:100%;font-size:13px;border-collapse:collapse;">' + catRows + '</table></div>' : '')
+      + (mesRows ? '<div><p style="font-size:12px;font-weight:600;color:var(--text-secondary);margin:0 0 6px;">Distribuição Mensal</p>'
+          + '<table style="width:100%;font-size:13px;border-collapse:collapse;">' + mesRows + '</table></div>' : '')
+      + '</div>'
+      + '<p style="font-size:11px;color:var(--text-secondary);margin:10px 0 0;">Download automático do CSV iniciado. Arquivo: SNIIC_' + d.ano + '.csv</p>';
+  }
+
+  function _sniicStatCard(label, valor, icon) {
+    return '<div style="background:var(--bg-card,#f8f8f8);border-radius:8px;padding:10px 12px;">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+      + '<span class="ms" style="font-size:15px;color:var(--primary);">' + icon + '</span>'
+      + '<span style="font-size:11px;color:var(--text-secondary);">' + label + '</span></div>'
+      + '<div style="font-size:18px;font-weight:700;color:var(--text-primary);">' + valor + '</div>'
+      + '</div>';
+  }
+
+  return { aoAbrir: aoAbrir, baixarSALIC: baixarSALIC, gerarPNAB: gerarPNAB, gerarSNIIC: gerarSNIIC };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -17772,17 +17884,132 @@ var PublicoUI = (function() {
   }
 
   function exportarSNIIC(done) {
-    var ano = parseInt(document.getElementById('pub-exp-ano-sniic').value);
+    var ano = parseInt(document.getElementById('pub-exp-ano-sniic').value) || new Date().getFullYear();
     GAS.exportacao.sniic({ ano: ano }, function(resp) {
       done();
-      if (!resp || !resp.ok) { Toast.erro('Erro ao gerar SNIIC.'); return; }
-      var d = resp.data;
+      if (!resp || !resp.ok) {
+        Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao gerar SNIIC.');
+        return;
+      }
+      var d   = resp.data || {};
+      var csv = d.csv;
       var res = document.getElementById('pub-exp-resultado');
-      res.innerHTML = '<div class="alert alert-success"><strong>SNIIC '+d.ano+':</strong> '
-        + d.total_acoes + ' ações, ' + d.total_publico + ' público, NPS médio: '
-        + (d.nps_medio != null ? d.nps_medio : '—') + '.</div>';
+
+      // ── Dashboard de resultado ──────────────────────────────────────────
+      var id  = d.identificacao        || {};
+      var rh  = d.recursos_humanos     || {};
+      var at  = d.atividades           || {};
+      var pub = d.publico_atendido     || {};
+      var rf  = d.recursos_financeiros || {};
+      var pc  = at.por_categoria       || {};
+      var pm  = at.por_mes             || [];
+
+      function _fmtR(v) {
+        var n = Number(v) || 0;
+        return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function _sc(label, val, icon) {
+        return '<div style="background:var(--bg-card,#f4f4f8);border-radius:8px;padding:10px 12px;">'
+          + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">'
+          + '<span class="ms" style="font-size:14px;color:var(--primary);">' + icon + '</span>'
+          + '<span style="font-size:11px;color:var(--text-secondary);">' + label + '</span></div>'
+          + '<div style="font-size:17px;font-weight:700;">' + val + '</div>'
+          + '</div>';
+      }
+
+      var LABEL_CAT = {
+        artes_cenicas:'Artes Cênicas', artes_visuais:'Artes Visuais',
+        audiovisual:'Audiovisual', musica:'Música',
+        formacao:'Formação', humanidades:'Humanidades',
+        patrimonio:'Patrimônio e Diversidade', outros:'Outros'
+      };
+      var catItens = Object.keys(LABEL_CAT).map(function(c) {
+        var qtd = (pc[c] || {}).quantidade || 0;
+        if (!qtd) return '';
+        var pct = at.total ? Math.round(qtd / at.total * 100) : 0;
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">'
+          + '<span style="flex:1;font-size:12px;">' + LABEL_CAT[c] + '</span>'
+          + '<div style="width:100px;height:8px;background:var(--border,#e5e5e5);border-radius:4px;">'
+          + '<div style="width:' + pct + '%;height:100%;background:var(--primary);border-radius:4px;"></div></div>'
+          + '<span style="font-size:12px;font-weight:600;min-width:24px;text-align:right;">' + qtd + '</span>'
+          + '</div>';
+      }).filter(Boolean).join('');
+
+      var mesItens = pm.filter(function(m){ return m.quantidade > 0; }).map(function(m) {
+        var bw = at.total ? Math.round(m.quantidade / at.total * 100) : 0;
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+          + '<span style="width:28px;font-size:11px;color:var(--text-secondary);">' + m.label + '</span>'
+          + '<div style="flex:1;height:8px;background:var(--border,#e5e5e5);border-radius:4px;">'
+          + '<div style="width:' + bw + '%;height:100%;background:var(--primary);opacity:.7;border-radius:4px;"></div></div>'
+          + '<span style="font-size:11px;min-width:18px;text-align:right;">' + m.quantidade + '</span>'
+          + '</div>';
+      }).join('');
+
+      var html = '<div style="border:1px solid var(--border,#e5e5e5);border-radius:10px;padding:16px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
+        + '<div><strong style="font-size:14px;">SNIIC ' + d.ano + '</strong>'
+        + '<span style="font-size:12px;color:var(--text-secondary);margin-left:8px;">' + (id.nome_equipamento || '') + ' · ' + (id.municipio || '') + '/' + (id.uf || '') + '</span></div>'
+        + (csv ? '<button class="btn btn-sm btn-secondary" onclick="PublicoUI._downloadSNIICCsv()" style="font-size:12px;">'
+          + '<span class="ms" style="font-size:13px;vertical-align:middle;">download</span> CSV</button>' : '')
+        + '</div>'
+        // Stats
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px;">'
+        + _sc('Ações',           at.total || 0,                    'event')
+        + _sc('Inscrições',      pub.total_inscricoes || 0,        'group')
+        + _sc('Presenças',       pub.total_presencas || 0,         'how_to_reg')
+        + _sc('NPS Médio',       pub.nps_medio != null ? pub.nps_medio : '—', 'thumb_up')
+        + _sc('Equipe Total',    rh.total_equipe || 0,             'badge')
+        + _sc('Captado',         _fmtR(rf.total_captado),          'payments')
+        + '</div>'
+        // Categorias + Meses lado a lado
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+        + (catItens ? '<div><p style="font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 8px;">Atividades por Categoria</p>' + catItens + '</div>' : '<div></div>')
+        + (mesItens ? '<div><p style="font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 8px;">Distribuição Mensal</p>' + mesItens + '</div>' : '<div></div>')
+        + '</div>'
+        // Público faixas
+        + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border,#e5e5e5);">'
+        + '<p style="font-size:11px;font-weight:600;color:var(--text-secondary);margin:0 0 6px;">Público por Faixa Etária</p>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+        + _faixaBadge('0–12',  pub.faixa_0_12)
+        + _faixaBadge('13–17', pub.faixa_13_17)
+        + _faixaBadge('18–29', pub.faixa_18_29)
+        + _faixaBadge('30–59', pub.faixa_30_59)
+        + _faixaBadge('60+',   pub.faixa_60_mais)
+        + _faixaBadge('PcD',   pub.pcd)
+        + '</div></div>'
+        + '<p style="font-size:11px;color:var(--text-secondary);margin:10px 0 0;">'
+        + 'Gerado em ' + new Date().toLocaleString('pt-BR') + ' · Download do CSV iniciado automaticamente.'
+        + '</p>'
+        + '</div>';
+
+      res.innerHTML = html;
       res.style.display = '';
+
+      // Download automático
+      if (csv) {
+        _downloadCSV(csv, 'SNIIC_' + ano + '.csv');
+        Toast.sucesso('SNIIC ' + ano + ': ' + (at.total || 0) + ' ações · ' + (pub.total_inscricoes || 0) + ' inscrições · CSV baixado.');
+      } else {
+        Toast.sucesso('SNIIC ' + ano + ' gerado com sucesso.');
+      }
+
+      // Armazena CSV para re-download manual
+      _sniicCsvCache = csv;
     });
+  }
+
+  function _faixaBadge(label, val) {
+    if (!val) return '';
+    return '<span style="background:var(--primary-light,#ede9ff);color:var(--primary);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;">'
+      + label + ': ' + val + '</span>';
+  }
+
+  var _sniicCsvCache = null;
+  function _downloadSNIICCsv() {
+    if (_sniicCsvCache) {
+      var ano = parseInt(document.getElementById('pub-exp-ano-sniic').value) || new Date().getFullYear();
+      _downloadCSV(_sniicCsvCache, 'SNIIC_' + ano + '.csv');
+    }
   }
 
   function _downloadCSV(csv, nome) {
@@ -17806,14 +18033,15 @@ var PublicoUI = (function() {
   }
 
   return {
-    aoAbrir:       aoAbrir,
-    abrirTab:      abrirTab,
-    filtrarInscricoes: filtrarInscricoes,
-    confirmar:     confirmar,
-    cancelar:      cancelar,
-    exportarCSV:   exportarCSV,
-    exportarCODIP: exportarCODIP,
-    exportarSNIIC: exportarSNIIC
+    aoAbrir:            aoAbrir,
+    abrirTab:           abrirTab,
+    filtrarInscricoes:  filtrarInscricoes,
+    confirmar:          confirmar,
+    cancelar:           cancelar,
+    exportarCSV:        exportarCSV,
+    exportarCODIP:      exportarCODIP,
+    exportarSNIIC:      exportarSNIIC,
+    _downloadSNIICCsv:  _downloadSNIICCsv
   };
 })();
 
