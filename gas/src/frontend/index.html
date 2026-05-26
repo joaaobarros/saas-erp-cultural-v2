@@ -1701,6 +1701,55 @@ select.form-control { cursor: pointer; }
 .rh-timeline li { display:flex; gap:14px; padding:0 0 20px; position:relative; }
 .rh-timeline li .tl-dot { width:10px; height:10px; border-radius:50%; background:var(--color-primary); flex-shrink:0; margin-top:4px; z-index:1; position:relative; left:11px; }
 .rh-timeline .tl-body { flex:1; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; font-size:13px; }
+/* ── Fase 17 — Holerite ───────────────────────────────────────────────── */
+.hol-stats-strip  { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px; }
+.hol-stat         { background:var(--surface2); border-radius:10px; padding:14px 16px; }
+.hol-stat-lbl     { font-size:11px; color:var(--text2); margin-bottom:4px; }
+.hol-stat-val     { font-size:20px; font-weight:700; color:var(--text1); }
+.hol-stat-sub     { font-size:11px; color:var(--text2); margin-top:2px; }
+/* Lista de holerites */
+.hol-lista        { border-collapse:collapse; width:100%; font-size:13px; }
+.hol-lista th     { padding:8px 10px; text-align:left; font-weight:600; font-size:11px; color:var(--text2); border-bottom:2px solid var(--border); white-space:nowrap; }
+.hol-lista td     { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.hol-lista tr:last-child td { border-bottom:none; }
+.hol-lista tr:hover td { background:var(--surface2); }
+/* Badge status holerite */
+.hol-badge        { display:inline-block; border-radius:99px; padding:2px 10px; font-size:11px; font-weight:600; }
+.hol-badge-gerado { background:#e0f2fe; color:#0369a1; }
+.hol-badge-pago   { background:#dcfce7; color:#166534; }
+.hol-badge-cancelado { background:#fee2e2; color:#991b1b; }
+/* Modal holerite — contracheque formal */
+.hol-modal-overlay  { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px; }
+.hol-modal-box      { background:var(--surface); border-radius:14px; box-shadow:0 24px 80px rgba(0,0,0,.3); width:100%; max-width:680px; max-height:92vh; overflow-y:auto; }
+.hol-modal-header   { padding:20px 24px 14px; border-bottom:1px solid var(--border); }
+.hol-modal-title    { font-size:16px; font-weight:700; color:var(--text1); }
+.hol-modal-sub      { font-size:12px; color:var(--text2); margin-top:2px; }
+.hol-modal-body     { padding:20px 24px; }
+.hol-modal-footer   { padding:14px 24px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+/* Cabeçalho do contracheque */
+.hol-ch-header    { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; padding:14px 16px; background:var(--surface2); border-radius:8px; }
+.hol-ch-field     { font-size:12px; }
+.hol-ch-lbl       { color:var(--text2); font-size:10px; text-transform:uppercase; letter-spacing:.5px; }
+.hol-ch-val       { font-weight:600; margin-top:1px; }
+/* Tabelas proventos/descontos */
+.hol-table        { border-collapse:collapse; width:100%; font-size:12px; margin-bottom:12px; }
+.hol-table thead tr { background:var(--surface2); }
+.hol-table th     { padding:7px 10px; text-align:left; font-size:11px; font-weight:600; color:var(--text2); }
+.hol-table td     { padding:7px 10px; border-top:1px solid var(--border); }
+.hol-table .hol-td-val { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+.hol-section-title{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--text2); margin:16px 0 6px; }
+/* Totais */
+.hol-totais       { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
+.hol-total-box    { border-radius:8px; padding:12px 14px; text-align:center; }
+.hol-total-box.proventos  { background:#e0f2fe; }
+.hol-total-box.descontos  { background:#fee2e2; }
+.hol-total-box.liquido    { background:#dcfce7; }
+.hol-total-box .htb-lbl  { font-size:10px; color:var(--text2); margin-bottom:4px; }
+.hol-total-box .htb-val  { font-size:18px; font-weight:700; }
+/* Empresa */
+.hol-empresa-box  { background:var(--surface2); border-radius:8px; padding:14px 16px; font-size:12px; }
+.hol-empresa-row  { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border); }
+.hol-empresa-row:last-child { border-bottom:none; font-weight:700; font-size:13px; }
 
   </style>
 </head>
@@ -6461,7 +6510,7 @@ select.form-control { cursor: pointer; }
         <!-- Tab: FOLHA -->
         <div id="rh-tab-folha" class="rh-tab-pane">
 
-          <!-- Sub-nav Folha: Dashboard | Calculadora -->
+          <!-- Sub-nav Folha: Dashboard | Calculadora | Processamento -->
           <div class="rh-folha-sub-nav" style="margin-bottom:16px;">
             <button class="rh-folha-sub-btn ativo" id="rh-folha-btn-dash"
               onclick="RhUI.setSubAbaFolha('dash',this)" data-bg-skip="1">
@@ -6470,6 +6519,10 @@ select.form-control { cursor: pointer; }
             <button class="rh-folha-sub-btn" id="rh-folha-btn-calc"
               onclick="RhUI.setSubAbaFolha('calc',this)" data-bg-skip="1">
               <span class="ms ms-sm">calculate</span> Calculadora
+            </button>
+            <button class="rh-folha-sub-btn" id="rh-folha-btn-proc"
+              onclick="RhUI.setSubAbaFolha('proc',this)" data-bg-skip="1">
+              <span class="ms ms-sm">receipt_long</span> Processamento
             </button>
           </div>
 
@@ -6577,6 +6630,79 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
           </div><!-- /rh-folha-painel-calc -->
+
+          <!-- ── Painel: Processamento de Folha (F17) ──────────────────── -->
+          <div id="rh-folha-painel-proc" class="rh-folha-painel">
+
+            <!-- Seletor de competência + ações -->
+            <div class="card" style="padding:16px 20px;margin-bottom:16px;">
+              <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;">
+                <div class="form-group" style="margin:0;min-width:160px;">
+                  <label class="form-label" style="font-size:11px;">Competência</label>
+                  <input type="month" id="hol-input-mes" class="form-input"
+                    style="padding:6px 10px;font-size:13px;">
+                </div>
+                <button class="btn btn-ghost btn-sm" id="hol-btn-metricas"
+                  onclick="BtnGuard.wrap('hol-btn-metricas','Carregando…',HoleriteUI.carregarMetricas)"
+                  style="font-size:12px;">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+                <button class="btn btn-primario btn-sm" id="hol-btn-processar"
+                  onclick="BtnGuard.wrap('hol-btn-processar','Processando…',HoleriteUI.processarFolha)"
+                  style="font-size:12px;">
+                  <span class="ms ms-sm">play_circle</span> Processar Folha do Mês
+                </button>
+                <button class="btn btn-ghost btn-sm" id="hol-btn-exportar"
+                  onclick="BtnGuard.wrap('hol-btn-exportar','Exportando…',HoleriteUI.exportarCSV)"
+                  style="font-size:12px;">
+                  <span class="ms ms-sm">download</span> Exportar CSV
+                </button>
+              </div>
+              <div id="hol-proc-feedback" style="margin-top:10px;font-size:13px;"></div>
+            </div>
+
+            <!-- Stats da competência -->
+            <div id="hol-stats-area"></div>
+
+            <!-- Lista de holerites -->
+            <div class="card" style="padding:0;overflow:hidden;">
+              <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;">
+                <div class="card-titulo" style="flex:1;font-size:14px;"><span class="ms">receipt</span> Holerites da Competência</div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <select id="hol-filtro-status" class="form-input" style="width:auto;padding:5px 8px;font-size:12px;" onchange="HoleriteUI.renderLista()">
+                    <option value="">Todos</option>
+                    <option value="gerado">Gerado</option>
+                    <option value="pago">Pago</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+              <div style="overflow-x:auto;">
+                <table class="hol-lista">
+                  <thead>
+                    <tr>
+                      <th>Colaborador</th>
+                      <th>Cargo</th>
+                      <th>Setor</th>
+                      <th>Vínculo</th>
+                      <th style="text-align:right;">Bruto</th>
+                      <th style="text-align:right;">Descontos</th>
+                      <th style="text-align:right;">Líquido</th>
+                      <th style="text-align:right;">Custo Total</th>
+                      <th>Status</th>
+                      <th style="text-align:center;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hol-lista-corpo">
+                    <tr><td colspan="10" class="muted-text" style="padding:24px;text-align:center;">
+                      Selecione uma competência e clique em Atualizar.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- /rh-folha-painel-proc -->
+
         </div><!-- /rh-tab-folha -->
 
         <!-- Tab: RESCISÃO -->
@@ -6956,7 +7082,16 @@ var GAS = {
     // ── F16.3 — Dashboard RH ──
     dashboardFolha:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_folha(p||{}); },
     dashboardPonto:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_ponto(p||{}); },
-    dashboardTurnover:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_turnover(p||{}); }
+    dashboardTurnover:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_turnover(p||{}); },
+    // ── F17 — Holerites ──
+    holeriteMetricas:       function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_metricas(p||{}); },
+    holeriteListar:         function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_listar(p||{}); },
+    holeriteObter:          function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_obter(id); },
+    holeriteGerar:          function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_gerar(p||{}); },
+    holeriteProcessarFolha: function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_processarFolha(p||{}); },
+    holeriteMarcarPago:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_marcarPago(id); },
+    holeriteCancelar:       function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_cancelar(id,m||''); },
+    holeriteExportarCSV:    function(mr,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_exportarCSV(mr); }
   },
   // Solicitações de Reserva (workflow de aprovação)
   solicitacoes: {
@@ -22393,7 +22528,8 @@ var RhUI = (function() {
     if (btn) btn.classList.add('ativo');
     var painel = document.getElementById('rh-folha-painel-' + aba);
     if (painel) painel.classList.add('ativo');
-    if (aba === 'dash') carregarDashboardFolha();
+    if (aba === 'dash')  carregarDashboardFolha();
+    if (aba === 'proc')  HoleriteUI.aoAbrirProcessamento();
   }
 
   // ─── F16.3: Dashboard de Folha ───────────────────────────────
@@ -22709,6 +22845,399 @@ var RhUI = (function() {
   };
 })();
 Router.registrar('rh', 'RH / Depto. Pessoal', RhUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HoleriteUI — Fase 17 — Processamento de Folha e Holerites
+// ═══════════════════════════════════════════════════════════════════════════
+var HoleriteUI = (function() {
+
+  var _cache       = [];    // holerites da competência atual
+  var _metricasCache = null;
+
+  // ── Helpers internos ────────────────────────────────────────────────────
+
+
+
+  function _mesRefAtual() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function _getMesRef() {
+    var el = document.getElementById('hol-input-mes');
+    return el && el.value ? el.value : _mesRefAtual();
+  }
+
+  function _badgeStatus(status) {
+    var cls = { gerado: 'hol-badge-gerado', pago: 'hol-badge-pago', cancelado: 'hol-badge-cancelado' };
+    var lbl = { gerado: 'Gerado', pago: 'Pago', cancelado: 'Cancelado' };
+    return '<span class="hol-badge ' + (cls[status] || '') + '">' + (lbl[status] || status) + '</span>';
+  }
+
+  function _feedback(msg, tipo) {
+    var el = document.getElementById('hol-proc-feedback');
+    if (!el) return;
+    var cor = tipo === 'ok' ? '#166534' : tipo === 'erro' ? '#991b1b' : '#0369a1';
+    el.innerHTML = '<span style="color:' + cor + ';font-size:13px;">' + msg + '</span>';
+    if (tipo === 'ok') setTimeout(function(){ el.innerHTML = ''; }, 5000);
+  }
+
+  // ── aoAbrirProcessamento ─────────────────────────────────────────────────
+
+  function aoAbrirProcessamento() {
+    var el = document.getElementById('hol-input-mes');
+    if (el && !el.value) el.value = _mesRefAtual();
+    // Carregar automaticamente se ainda sem dados
+    if (!_cache.length) carregarMetricas();
+  }
+
+  // ── carregarMetricas ────────────────────────────────────────────────────
+
+  function carregarMetricas(done) {
+    var mesRef = _getMesRef();
+    var statsEl = document.getElementById('hol-stats-area');
+
+    if (statsEl) statsEl.innerHTML = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+
+    GAS.rh.holeriteMetricas({ mesRef: mesRef }, function(resp) {
+      if (done) done();
+      var m = (resp && resp.ok && resp.data) ? resp.data : null;
+      _metricasCache = m;
+      if (statsEl) statsEl.innerHTML = m ? _renderStats(m) : '';
+      // Também carregar a lista
+      _carregarLista(mesRef);
+    }, function(e) {
+      if (done) done();
+      if (statsEl) statsEl.innerHTML = '';
+      _carregarLista(mesRef);
+    });
+  }
+
+  function _renderStats(m) {
+    return '<div class="hol-stats-strip" style="margin-bottom:16px;">' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Holerites gerados</div><div class="hol-stat-val">' + m.total + '</div><div class="hol-stat-sub">' + m.gerados + ' gerado · ' + m.pagos + ' pago</div></div>' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Total Bruto (Proventos)</div><div class="hol-stat-val">' + fmtMoeda(m.totalBruto) + '</div></div>' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Total Descontos</div><div class="hol-stat-val" style="color:#dc2626;">' + fmtMoeda(m.totalDescontos) + '</div></div>' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Total Líquido</div><div class="hol-stat-val" style="color:#16a34a;">' + fmtMoeda(m.totalLiquido) + '</div></div>' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Encargos Patronais</div><div class="hol-stat-val" style="color:#d97706;">' + fmtMoeda(m.totalEncargosPat) + '</div></div>' +
+      '<div class="hol-stat"><div class="hol-stat-lbl">Custo Total Empresa</div><div class="hol-stat-val" style="color:#7c3aed;font-size:22px;">' + fmtMoeda(m.totalCusto) + '</div><div class="hol-stat-sub">bruto + encargos + provisões</div></div>' +
+      '</div>';
+  }
+
+  // ── Carregar lista ───────────────────────────────────────────────────────
+
+  function _carregarLista(mesRef) {
+    var tbody = document.getElementById('hol-lista-corpo');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="10" class="muted-text" style="padding:20px;text-align:center;">Carregando holerites…</td></tr>';
+
+    GAS.rh.holeriteListar({ mesRef: mesRef }, function(resp) {
+      _cache = (resp && resp.ok && Array.isArray(resp.data)) ? resp.data : [];
+      renderLista();
+    }, function(e) {
+      _cache = [];
+      renderLista();
+    });
+  }
+
+  // ── renderLista ─────────────────────────────────────────────────────────
+
+  function renderLista() {
+    var tbody = document.getElementById('hol-lista-corpo');
+    if (!tbody) return;
+    var filtro = (document.getElementById('hol-filtro-status') || {}).value || '';
+    var lista  = filtro ? _cache.filter(function(h){ return h.status === filtro; }) : _cache;
+
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="muted-text" style="padding:24px;text-align:center;">Nenhum holerite encontrado para esta competência.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = lista.map(function(h) {
+      var idStr = JSON.stringify(h.id).replace(/"/g, "'");
+      return '<tr>' +
+        '<td><strong>' + (h.nome || '—') + '</strong></td>' +
+        '<td style="font-size:12px;">' + (h.cargo || '—') + '</td>' +
+        '<td style="font-size:12px;">' + (h.setor || '—') + '</td>' +
+        '<td style="font-size:11px;">' + (h.vinculo || '—').toUpperCase() + '</td>' +
+        '<td style="text-align:right;">' + fmtMoeda(h.totalProventos) + '</td>' +
+        '<td style="text-align:right;color:#dc2626;">' + fmtMoeda(h.totalDescontos) + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:#16a34a;">' + fmtMoeda(h.salarioLiquido) + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:#7c3aed;">' + fmtMoeda(h.custoTotalEmpresa) + '</td>' +
+        '<td>' + _badgeStatus(h.status) + '</td>' +
+        '<td style="text-align:center;white-space:nowrap;">' +
+          '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" ' +
+            'onclick="HoleriteUI.abrirHolerite(' + idStr + ')" data-bg-skip="1">' +
+            '<span class="ms ms-sm">visibility</span> Ver' +
+          '</button>' +
+          (h.status === 'gerado'
+            ? ' <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#16a34a;" ' +
+                'onclick="HoleriteUI.marcarPago(' + idStr + ')" data-bg-skip="1">' +
+                '<span class="ms ms-sm">check_circle</span> Pagar' +
+              '</button>'
+            : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // ── processarFolha ───────────────────────────────────────────────────────
+
+  function processarFolha(done) {
+    var mesRef = _getMesRef();
+    if (!mesRef) { _feedback('Selecione uma competência.', 'erro'); if (done) done(); return; }
+    _feedback('Processando folha de ' + mesRef + '…', 'info');
+    GAS.rh.holeriteProcessarFolha({ mesRef: mesRef }, function(resp) {
+      if (done) done();
+      if (!resp || !resp.ok) { _feedback('Erro ao processar: ' + ((resp && resp.error) || 'desconhecido'), 'erro'); return; }
+      var d = resp.data;
+      var msg = '✅ Folha processada: ' + d.processados + ' holerites gerados' +
+        (d.erros > 0 ? ' · ⚠️ ' + d.erros + ' erro(s)' : '');
+      _feedback(msg, d.erros > 0 ? 'info' : 'ok');
+      carregarMetricas();
+    }, function(e) {
+      if (done) done();
+      _feedback('Erro: ' + e, 'erro');
+    });
+  }
+
+  // ── exportarCSV ───────────────────────────────────────────────────────────
+
+  function exportarCSV(done) {
+    var mesRef = _getMesRef();
+    GAS.rh.holeriteExportarCSV(mesRef, function(resp) {
+      if (done) done();
+      if (!resp || !resp.ok || !resp.data) { Toast.show('Erro ao exportar.', 'erro'); return; }
+      var d = resp.data;
+      var bom  = '﻿';
+      var blob = new Blob([bom + d.conteudo], { type: 'text/csv;charset=utf-8;' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href     = url;
+      a.download = d.nomeArquivo;
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.show('CSV exportado: ' + d.totalLinhas + ' holerites.', 'ok');
+    }, function(e) {
+      if (done) done();
+      Toast.show('Erro ao exportar: ' + e, 'erro');
+    });
+  }
+
+  // ── marcarPago ───────────────────────────────────────────────────────────
+
+  var _idPagamentoPendente = null;
+
+  function marcarPago(id) {
+    _idPagamentoPendente = id;
+    _abrirModalConfirmar({
+      titulo:         'Confirmar Pagamento',
+      mensagem:       'Marcar o holerite como <strong>Pago</strong>? Esta ação não pode ser desfeita.',
+      idBtn:          'hol-btn-confirmar-pagar',
+      labelConfirmar: 'Confirmar Pagamento',
+      corIcone:       '#16a34a',
+      icone:          'check_circle',
+      onConfirm:      'HoleriteUI._executarPagamento()'
+    });
+  }
+
+  function _executarPagamento() {
+    var id = _idPagamentoPendente;
+    _idPagamentoPendente = null;
+    var modal = document.querySelector('.modal-simples');
+    if (modal) modal.remove();
+    if (!id) return;
+    GAS.rh.holeriteMarcarPago(id, function(resp) {
+      if (!resp || !resp.ok) { Toast.show('Erro ao marcar como pago.', 'erro'); return; }
+      Toast.show('Holerite marcado como pago!', 'ok');
+      carregarMetricas();
+    }, function(e) { Toast.show('Erro: ' + e, 'erro'); });
+  }
+
+  // ── abrirHolerite — modal contracheque ──────────────────────────────────
+
+  function abrirHolerite(id) {
+    // Buscar do cache primeiro; se não, chamar backend
+    var h = _cache.find(function(x){ return x.id === id; });
+    if (h) {
+      _mostrarModalHolerite(h);
+    } else {
+      GAS.rh.holeriteObter(id, function(resp) {
+        if (!resp || !resp.ok || !resp.data) { Toast.show('Holerite não encontrado.', 'erro'); return; }
+        _mostrarModalHolerite(resp.data);
+      });
+    }
+  }
+
+  function _mostrarModalHolerite(h) {
+    // Remove modal anterior se existir
+    var old = document.getElementById('hol-modal-detalhe');
+    if (old) old.remove();
+
+    var _fR  = fmtMoeda;
+    var _pct = function(v) { return v ? (v * 100).toFixed(2) + '%' : '—'; };
+
+    // Linhas de proventos
+    var rowsProv = (h.proventos || []).map(function(p) {
+      return '<tr><td style="color:var(--text2);font-size:11px;">' + p.codigo + '</td>' +
+        '<td>' + p.descricao + '</td>' +
+        '<td style="color:var(--text2);font-size:12px;">' + (p.referencia || '') + '</td>' +
+        '<td class="hol-td-val" style="color:#16a34a;">' + _fR(p.valor) + '</td></tr>';
+    }).join('');
+
+    // Linhas de descontos
+    var rowsDesc = (h.descontos || []).map(function(d) {
+      return '<tr><td style="color:var(--text2);font-size:11px;">' + d.codigo + '</td>' +
+        '<td>' + d.descricao + '</td>' +
+        '<td style="color:var(--text2);font-size:12px;">' + (d.referencia || '') + '</td>' +
+        '<td class="hol-td-val" style="color:#dc2626;">(' + _fR(d.valor) + ')</td></tr>';
+    }).join('');
+
+    var ep = h.encargosPatronais || {};
+    var pr = h.provisoes || {};
+
+    var html =
+      '<div class="hol-modal-overlay" id="hol-modal-detalhe">' +
+        '<div class="hol-modal-box">' +
+
+          // Header
+          '<div class="hol-modal-header">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;">' +
+              '<div>' +
+                '<div class="hol-modal-title"><span class="ms ms-sm">receipt</span> Holerite / Contracheque</div>' +
+                '<div class="hol-modal-sub">Competência: <strong>' + (h.competencia || h.mesRef || '—') + '</strong> &nbsp;·&nbsp; ' + _badgeStatus(h.status) + '</div>' +
+              '</div>' +
+              '<button onclick="document.getElementById(\'hol-modal-detalhe\').remove()" ' +
+                'style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);padding:0;line-height:1;" data-bg-skip="1">✕</button>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="hol-modal-body">' +
+
+            // Dados do colaborador
+            '<div class="hol-ch-header">' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Nome</div><div class="hol-ch-val">' + (h.nome || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Cargo</div><div class="hol-ch-val">' + (h.cargo || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Setor</div><div class="hol-ch-val">' + (h.setor || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Vínculo</div><div class="hol-ch-val">' + (h.vinculo || '—').toUpperCase() + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">CPF</div><div class="hol-ch-val">' + (h.cpf || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">PIS/PASEP</div><div class="hol-ch-val">' + (h.pis || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Admissão</div><div class="hol-ch-val">' + (h.dataAdmissao || '—') + '</div></div>' +
+              '<div class="hol-ch-field"><div class="hol-ch-lbl">Dias Úteis</div><div class="hol-ch-val">' + (h.diasUteis || 22) + ' dias</div></div>' +
+            '</div>' +
+
+            // Proventos
+            '<div class="hol-section-title">Proventos</div>' +
+            '<table class="hol-table"><thead><tr>' +
+              '<th style="width:60px;">Cód.</th><th>Descrição</th><th>Referência</th><th style="text-align:right;">Valor</th>' +
+            '</tr></thead><tbody>' + rowsProv + '</tbody></table>' +
+
+            // Descontos
+            '<div class="hol-section-title">Descontos</div>' +
+            '<table class="hol-table"><thead><tr>' +
+              '<th style="width:60px;">Cód.</th><th>Descrição</th><th>Referência</th><th style="text-align:right;">Valor</th>' +
+            '</tr></thead><tbody>' + rowsDesc + '</tbody></table>' +
+
+            // Totais
+            '<div class="hol-totais">' +
+              '<div class="hol-total-box proventos"><div class="htb-lbl">Total Proventos</div><div class="htb-val" style="color:#0369a1;">' + _fR(h.totalProventos) + '</div></div>' +
+              '<div class="hol-total-box descontos"><div class="htb-lbl">Total Descontos</div><div class="htb-val" style="color:#991b1b;">' + _fR(h.totalDescontos) + '</div></div>' +
+              '<div class="hol-total-box liquido"><div class="htb-lbl">Salário Líquido</div><div class="htb-val" style="color:#166534;">' + _fR(h.salarioLiquido) + '</div></div>' +
+            '</div>' +
+
+            // Encargos patronais (visão empresa)
+            '<div class="hol-section-title">Encargos e Custo Empresa</div>' +
+            '<div class="hol-empresa-box">' +
+              '<div class="hol-empresa-row"><span>Salário Bruto (Proventos)</span><span>' + _fR(h.totalProventos) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>INSS Patronal</span><span>' + _fR(ep.inssPatronal) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>FGTS (competência)</span><span>' + _fR(ep.fgts) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>SAT/RAT</span><span>' + _fR(ep.rat) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>Sistema S</span><span>' + _fR(ep.sistemaS) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>PIS Patronal</span><span>' + _fR(ep.pis) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>Total Encargos Patronais</span><span style="color:#d97706;font-weight:700;">' + _fR(ep.total) + '</span></div>' +
+              '<div class="hol-empresa-row" style="border-top:2px solid var(--border);margin-top:6px;padding-top:6px;"><span>Provisão Férias + 1/3</span><span>' + _fR(pr.ferias) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>Provisão 13° Salário</span><span>' + _fR(pr.decTerceiro) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>Prov. FGTS Rescisório (40%)</span><span>' + _fR(pr.fgtsResc) + '</span></div>' +
+              '<div class="hol-empresa-row"><span>Total Provisões</span><span style="color:#d97706;font-weight:700;">' + _fR(pr.total) + '</span></div>' +
+              (h.beneficiosEmpresa > 0
+                ? '<div class="hol-empresa-row"><span>Benefícios (empresa)</span><span>' + _fR(h.beneficiosEmpresa) + '</span></div>'
+                : '') +
+              '<div class="hol-empresa-row" style="border-top:2px solid var(--border);margin-top:6px;padding-top:6px;font-size:15px;">' +
+                '<span>💼 Custo Total Empresa</span><span style="color:#7c3aed;">' + _fR(h.custoTotalEmpresa) + '</span>' +
+              '</div>' +
+            '</div>' +
+
+            // Rodapé
+            '<div style="margin-top:14px;font-size:11px;color:var(--text2);">' +
+              'Gerado em ' + (h.geradoEm ? new Date(h.geradoEm).toLocaleString('pt-BR') : '—') +
+              ' · ID: ' + (h.id || '—') +
+              (h.observacoes ? ' · Obs: ' + h.observacoes : '') +
+            '</div>' +
+
+          '</div>' + // /hol-modal-body
+
+          '<div class="hol-modal-footer">' +
+            (h.status === 'gerado'
+              ? '<button class="btn btn-primario btn-sm" onclick="document.getElementById(\'hol-modal-detalhe\').remove();HoleriteUI.marcarPago(' + JSON.stringify(h.id).replace(/"/g,"'") + ')" data-bg-skip="1">' +
+                '<span class="ms ms-sm">check_circle</span> Marcar como Pago</button>'
+              : '') +
+            '<button class="btn btn-ghost btn-sm" onclick="HoleriteUI._imprimirHolerite()" data-bg-skip="1">' +
+              '<span class="ms ms-sm">print</span> Imprimir</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'hol-modal-detalhe\').remove()" data-bg-skip="1">Fechar</button>' +
+          '</div>' +
+
+        '</div>' +
+      '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+
+  function _imprimirHolerite() {
+    var el = document.getElementById('hol-modal-detalhe');
+    if (!el) return;
+    var conteudo = el.querySelector('.hol-modal-box').innerHTML;
+    var w = window.open('', '_blank', 'width=750,height=900');
+    w.document.write('<html><head><title>Holerite</title><style>' +
+      'body{font-family:Inter,Arial,sans-serif;font-size:13px;color:#111;padding:24px;}' +
+      '.hol-ch-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:12px;}' +
+      '.hol-ch-lbl{font-size:9px;text-transform:uppercase;color:#666;}' +
+      '.hol-ch-val{font-weight:600;margin-top:1px;}' +
+      '.hol-table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:10px;}' +
+      '.hol-table th,.hol-table td{border:1px solid #ddd;padding:5px 8px;}' +
+      '.hol-table th{background:#f5f5f5;font-weight:600;}' +
+      '.hol-td-val{text-align:right;}' +
+      '.hol-totais{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;}' +
+      '.hol-total-box{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;}' +
+      '.htb-val{font-size:14px;font-weight:700;}' +
+      '.hol-empresa-box{border:1px solid #ddd;border-radius:6px;padding:10px;}' +
+      '.hol-empresa-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;}' +
+      '.hol-empresa-row:last-child{border-bottom:none;font-weight:700;}' +
+      '.hol-section-title{font-size:10px;font-weight:700;text-transform:uppercase;color:#666;margin:12px 0 4px;}' +
+      '.hol-modal-header{margin-bottom:12px;}' +
+      '.hol-modal-title{font-size:15px;font-weight:700;}' +
+      '.hol-modal-sub{font-size:11px;color:#666;}' +
+      '.hol-modal-footer{display:none;}' +
+      'button{display:none!important;}' +
+      '</style></head><body>' + conteudo + '</body></html>');
+    w.document.close();
+    w.focus();
+    setTimeout(function(){ w.print(); }, 400);
+  }
+
+  // ── API pública ────────────────────────────────────────────────────────
+
+  return {
+    aoAbrirProcessamento: aoAbrirProcessamento,
+    carregarMetricas:     carregarMetricas,
+    renderLista:          renderLista,
+    processarFolha:       processarFolha,
+    exportarCSV:          exportarCSV,
+    marcarPago:           marcarPago,
+    _executarPagamento:   _executarPagamento,
+    abrirHolerite:        abrirHolerite,
+    _imprimirHolerite:    _imprimirHolerite
+  };
+})();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EncargosUI — Encargos Trabalhistas (automáticos + manuais)

@@ -45,7 +45,7 @@ var SCHEMA_ABAS = {
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
     'Funcionarios', 'Vinculos', 'Escalas', 'Ferias', 'Ocorrencias',
-    'Afastamentos', 'ParametrosRH', 'Avaliacoes'
+    'Afastamentos', 'ParametrosRH', 'Avaliacoes', 'Holerites'
   ],
   FINANCEIRO: [
     'Contratos', 'ContratosVersoes', 'Rubricas', 'Pagamentos',
@@ -216,6 +216,14 @@ function inicializarSistema() {
       typeof PontoRepository.prepararIndice === 'function') {
     try { PontoRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'PontoRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 17 — Holerites: garante aba EQUIPES.Holerites
+  if (typeof HoleriteRepository !== 'undefined' &&
+      typeof HoleriteRepository.prepararIndice === 'function') {
+    try { HoleriteRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'HoleriteRepository.prepararIndice: ' + e.message);
     }
   }
 
@@ -1219,5 +1227,26 @@ function _instalarTriggerAnualEncargos() {
   } catch (e) {
     Logger.warn('setup', '_instalarTriggerAnualEncargos',
       'Não foi possível instalar trigger: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FASE 17 — Holerites e Processamento de Folha
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Prepara o índice de Holerites (aba EQUIPES.Holerites).
+ * Executar no GAS Editor após o deploy da Fase 17.
+ * @returns {{ ok, aba }}
+ */
+function fase17_holerite_prepararIndice() {
+  try {
+    var r = HoleriteRepository.prepararIndice();
+    Logger.info('setup', 'fase17_holerite_prepararIndice',
+      r.ok ? 'Aba ' + r.aba + ' garantida.' : 'Falha: ' + r.motivo);
+    return r;
+  } catch(e) {
+    Logger.error('setup', 'fase17_holerite_prepararIndice', e.message);
+    return { ok: false, motivo: e.message };
   }
 }
