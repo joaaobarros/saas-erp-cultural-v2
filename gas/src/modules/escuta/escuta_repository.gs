@@ -18,6 +18,8 @@ var EscutaRepository = (function() {
   var ARQUIVO_ESPONTANEA  = 'escuta_espontanea.json';
   var ARQUIVO_SATURACAO   = 'escuta_saturacao.json';
   var ARQUIVO_PULSE       = 'pulse_respostas.json';
+  var ARQUIVO_PERFIS      = 'perfis_analiticos.json';
+  var ARQUIVO_ALERTAS     = 'escuta_alertas.json';
   var ABA_ESCUTA          = 'EQUIPES.Escuta';
   var HEADERS_ESCUTA      = [
     'pesquisaId','rodada','dataInicio','dataFim','totalConvidados','totalRespostas',
@@ -200,6 +202,89 @@ var EscutaRepository = (function() {
     return id;
   }
 
+  // ─── [F20] Perfil analítico do colaborador ─────────────────────────────────
+
+  /**
+   * Salva ou atualiza o perfil analítico (gênero, raça, vínculo, nível, etc.)
+   * de um colaborador. Chave única: (orgId, email).
+   */
+  function salvarPerfilAnalitico(orgId, email, dados) {
+    modifyJSON(ARQUIVO_PERFIS, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = lista.findIndex(function(p) { return p.orgId === orgId && p.email === email; });
+      var reg = Object.assign({}, dados, { orgId: orgId, email: email, atualizadoEm: new Date().toISOString() });
+      if (idx >= 0) lista[idx] = reg;
+      else lista.push(reg);
+      return lista;
+    });
+  }
+
+  /**
+   * Obtém o perfil analítico de um colaborador específico.
+   */
+  function obterPerfilAnalitico(orgId, email) {
+    var lista = lerJSON(ARQUIVO_PERFIS);
+    if (!Array.isArray(lista)) return null;
+    return lista.find(function(p) { return p.orgId === orgId && p.email === email; }) || null;
+  }
+
+  /**
+   * Lista todos os perfis analíticos de uma organização.
+   */
+  function listarPerfis(orgId) {
+    var lista = lerJSON(ARQUIVO_PERFIS);
+    if (!Array.isArray(lista)) return [];
+    return lista.filter(function(p) { return p.orgId === orgId; });
+  }
+
+  // ─── [F20] Alertas persistidos ─────────────────────────────────────────────
+
+  /**
+   * Lista alertas (ativos e resolvidos) de uma organização.
+   * @param {string} orgId
+   * @param {boolean} [apenasAtivos] — se true, filtra só status='ativo'
+   */
+  function listarAlertas(orgId, apenasAtivos) {
+    var lista = lerJSON(ARQUIVO_ALERTAS);
+    if (!Array.isArray(lista)) return [];
+    return lista.filter(function(a) {
+      return a.orgId === orgId && (!apenasAtivos || a.status === 'ativo');
+    });
+  }
+
+  /**
+   * Salva um array de novos alertas (idempotente por chave orgId+tipo+periodo).
+   */
+  function salvarAlertas(orgId, novos) {
+    if (!novos || !novos.length) return;
+    modifyJSON(ARQUIVO_ALERTAS, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      novos.forEach(function(a) {
+        var chave = a.tipo + '|' + (a.periodo || '');
+        var existe = lista.some(function(x) { return x.orgId === orgId && (x.tipo + '|' + (x.periodo||'')) === chave; });
+        if (!existe) lista.push(Object.assign({ id: gerarId('ALT'), orgId: orgId, status: 'ativo', criadoEm: new Date().toISOString() }, a));
+      });
+      return lista;
+    });
+  }
+
+  /**
+   * Resolve (fecha) um alerta específico.
+   */
+  function resolverAlerta(orgId, alertaId, acao, email) {
+    modifyJSON(ARQUIVO_ALERTAS, function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      var idx = lista.findIndex(function(a) { return a.orgId === orgId && a.id === alertaId; });
+      if (idx >= 0) {
+        lista[idx].status    = 'resolvido';
+        lista[idx].acao      = acao || '';
+        lista[idx].resolvidoPor  = email;
+        lista[idx].resolvidoEm   = new Date().toISOString();
+      }
+      return lista;
+    });
+  }
+
   // ─── Índice Sheet ────────────────────────────────────────────────────────────
 
   function prepararIndice() {
@@ -254,6 +339,14 @@ var EscutaRepository = (function() {
     // [E2] Pulse
     listarPulseRespostas:         listarPulseRespostas,
     salvarPulseResposta:          salvarPulseResposta,
+    // [F20] Perfil analítico
+    salvarPerfilAnalitico:        salvarPerfilAnalitico,
+    obterPerfilAnalitico:         obterPerfilAnalitico,
+    listarPerfis:                 listarPerfis,
+    // [F20] Alertas
+    listarAlertas:                listarAlertas,
+    salvarAlertas:                salvarAlertas,
+    resolverAlerta:               resolverAlerta,
     // Sheet
     prepararIndice:               prepararIndice,
     sincronizarSheet:             sincronizarSheet

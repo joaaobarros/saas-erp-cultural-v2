@@ -6413,58 +6413,230 @@ select.form-control { cursor: pointer; }
       </div><!-- /view-estrategia -->
 
       <!-- ══════════════════════════════════════════════════════════ -->
-      <!-- VIEW: ESCUTA INSTITUCIONAL (Fase 11.2)                    -->
+      <!-- VIEW: ESCUTA INSTITUCIONAL (Fase 20 — Completa)          -->
       <!-- ══════════════════════════════════════════════════════════ -->
       <div id="view-escuta" class="view">
-        <div class="mod-header">
+        <div class="view-header">
           <div>
-            <h2 style="margin:0;font-size:20px;font-weight:700;">Escuta Institucional</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Clima organizacional · 8 dimensões científicas</p>
+            <h2 class="view-title">Escuta Institucional</h2>
+            <p class="view-subtitle">Clima organizacional · UWES · JDC · CVF · NR-1</p>
           </div>
-          <button id="btn-nova-pesquisa" class="btn btn-primario"
-                  onclick="BtnGuard.wrap('btn-nova-pesquisa','Abrindo…',EscutaUI.abrirForm)">
-            <span class="ms ms-sm">add</span> Nova Pesquisa
-          </button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="btn-escuta-refresh" class="btn btn-secundario btn-sm"
+                    onclick="BtnGuard.wrap('btn-escuta-refresh','Atualizando…',EscutaUI.carregar)" data-bg-skip="1">
+              <span class="ms ms-sm">refresh</span>
+            </button>
+            <button id="btn-nova-pesquisa" class="btn btn-primario"
+                    onclick="BtnGuard.wrap('btn-nova-pesquisa','Abrindo…',EscutaUI.abrirFormPesquisa)">
+              <span class="ms ms-sm">add</span> Nova Pesquisa
+            </button>
+          </div>
         </div>
 
-        <!-- Stats -->
+        <!-- KPI Strip -->
         <div id="escuta-stats" class="stats-strip" style="margin-bottom:16px;"></div>
 
-        <!-- Tabs -->
+        <!-- Tabs: 6 abas -->
         <div class="tab-bar" style="margin-bottom:16px;">
-          <button class="tab-btn tab-ativa" onclick="EscutaUI.setTab('pesquisas',this)" data-bg-skip="1">Pesquisas</button>
-          <button class="tab-btn" onclick="EscutaUI.setTab('resultados',this)" data-bg-skip="1">Resultados</button>
-          <button class="tab-btn" onclick="EscutaUI.setTab('evolucao',this)" data-bg-skip="1">Evolução Histórica</button>
-          <button class="tab-btn" onclick="EscutaUI.setTab('responder',this)" data-bg-skip="1">Responder Pesquisa</button>
+          <button class="tab-btn tab-ativa" onclick="EscutaUI.setTab('painel',this)" data-bg-skip="1">Painel</button>
+          <button class="tab-btn" onclick="EscutaUI.setTab('livre',this)" data-bg-skip="1">Escuta Livre</button>
+          <button class="tab-btn" onclick="EscutaUI.setTab('alertas',this)" data-bg-skip="1">Alertas <span id="escuta-badge-alertas" style="display:none;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;margin-left:4px;"></span></button>
+          <button class="tab-btn" onclick="EscutaUI.setTab('distribuicao',this)" data-bg-skip="1">Distribuição</button>
+          <button class="tab-btn" onclick="EscutaUI.setTab('relatorios',this)" data-bg-skip="1">Relatórios</button>
+          <button class="tab-btn" onclick="EscutaUI.setTab('gestao',this)" data-bg-skip="1">Gestão</button>
         </div>
 
-        <!-- Tab: Pesquisas -->
-        <div id="escuta-tab-pesquisas">
-          <div id="escuta-lista"><p class="muted-text">⏳ Carregando…</p></div>
+        <!-- ── Aba: Painel ─────────────────────────────────────────── -->
+        <div id="escuta-tab-painel">
+          <!-- Dimensões -->
+          <div id="escuta-painel-dimensoes" style="margin-bottom:20px;">
+            <p class="muted-text">⏳ Carregando…</p>
+          </div>
+          <!-- Evolução histórica (gráfico de barras) -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Evolução do Clima</h4>
+            <div id="escuta-grafico-evolucao" style="display:flex;gap:8px;align-items:flex-end;min-height:100px;">
+              <p class="muted-text" style="font-size:12px;">Sem histórico de pesquisas encerradas.</p>
+            </div>
+          </div>
+          <!-- Pesquisas formais -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h4 style="margin:0;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Pesquisas Formais</h4>
+              <div class="filter-bar" style="margin:0;gap:6px;">
+                <select id="escuta-filtro-status" class="select-sm" onchange="EscutaUI.filtrarLista()" style="font-size:12px;">
+                  <option value="">Todos os status</option>
+                  <option value="ativa">Ativas</option>
+                  <option value="rascunho">Rascunhos</option>
+                  <option value="encerrada">Encerradas</option>
+                </select>
+              </div>
+            </div>
+            <div id="escuta-lista"><p class="muted-text">⏳ Carregando…</p></div>
+          </div>
         </div>
 
-        <!-- Tab: Resultados -->
-        <div id="escuta-tab-resultados" class="oculto">
+        <!-- ── Aba: Escuta Livre ───────────────────────────────────── -->
+        <div id="escuta-tab-livre" class="oculto">
+          <!-- Pesquisa formal ativa (responder) -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Responder Pesquisa Ativa</h4>
+            <div id="escuta-form-resposta"><p class="muted-text">⏳ Verificando pesquisa ativa…</p></div>
+          </div>
+          <!-- Relato espontâneo -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 8px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Relato Espontâneo</h4>
+            <p style="font-size:12px;color:var(--text2);margin:0 0 10px;">Compartilhe algo que está sentindo. Seu relato é analisado e contribui para melhores condições de trabalho.</p>
+            <textarea id="escuta-txt-espontanea" class="form-control" rows="3" placeholder="Descreva como se sente no trabalho…" style="margin-bottom:8px;"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="escuta-dim-espontanea" class="select-sm" style="font-size:12px;">
+                <option value="">Dimensão (opcional)</option>
+                <option value="vigor">Vigor</option>
+                <option value="dedicacao">Dedicação</option>
+                <option value="absorcao">Absorção</option>
+                <option value="demanda">Demanda/Carga</option>
+                <option value="controle">Controle/Autonomia</option>
+                <option value="colaboracao">Colaboração</option>
+                <option value="inovacao">Inovação</option>
+                <option value="seguranca">Segurança Psicológica</option>
+              </select>
+              <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="escuta-anonimo-espontanea" checked> Anônimo
+              </label>
+              <button id="btn-enviar-espontanea" class="btn btn-primario btn-sm"
+                      onclick="BtnGuard.wrap('btn-enviar-espontanea','Enviando…',EscutaUI.enviarEspontanea)">
+                Enviar Relato
+              </button>
+            </div>
+          </div>
+          <!-- Perfil analítico (voluntário) -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <h4 style="margin:0 0 4px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Meu Perfil Analítico</h4>
+            <p style="font-size:12px;color:var(--text2);margin:0 0 12px;">Informações demográficas voluntárias para análise de equidade. Dados protegidos pela LGPD.</p>
+            <div id="escuta-form-perfil"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+        </div>
+
+        <!-- ── Aba: Alertas ───────────────────────────────────────── -->
+        <div id="escuta-tab-alertas" class="oculto">
           <div class="filter-bar" style="margin-bottom:12px;">
-            <label class="form-label" style="text-transform:none;margin:0;">Pesquisa:</label>
+            <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">Status:</label>
+            <select id="escuta-filtro-alertas" class="select-sm" onchange="EscutaUI.carregarAlertas()">
+              <option value="true">Apenas ativos</option>
+              <option value="false">Todos</option>
+            </select>
+          </div>
+          <div id="escuta-lista-alertas"><p class="muted-text">⏳ Carregando alertas…</p></div>
+        </div>
+
+        <!-- ── Aba: Distribuição ──────────────────────────────────── -->
+        <div id="escuta-tab-distribuicao" class="oculto">
+          <!-- Pulse dashboard -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h4 style="margin:0;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Sistema Pulse — Médias por Dimensão</h4>
+              <div class="filter-bar" style="margin:0;">
+                <input type="month" id="escuta-periodo-pulse" class="select-sm"
+                       onchange="EscutaUI.carregarPulseDash()"
+                       value="" style="font-size:12px;">
+              </div>
+            </div>
+            <div id="escuta-pulse-dash"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+          <!-- Saturação por dimensão -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Saturação por Dimensão</h4>
+            <div id="escuta-saturacao-conteudo"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+          <!-- Participação histórica (12 meses) -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Participação Histórica (12 meses)</h4>
+            <div id="escuta-participacao-hist"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+        </div>
+
+        <!-- ── Aba: Relatórios ────────────────────────────────────── -->
+        <div id="escuta-tab-relatorios" class="oculto">
+          <div class="filter-bar" style="margin-bottom:16px;">
+            <label class="form-label" style="text-transform:none;margin:0;font-size:13px;">Pesquisa:</label>
             <select id="escuta-sel-resultado" class="select-sm" onchange="EscutaUI.carregarResultado()">
               <option value="">— selecionar —</option>
             </select>
-            <button class="btn btn-secundario btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">Cruzamento</button>
+            <button class="btn btn-secundario btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">
+              <span class="ms ms-sm">analytics</span> Cruzamento
+            </button>
+            <button id="btn-gerar-relatorio" class="btn btn-secundario btn-sm"
+                    onclick="BtnGuard.wrap('btn-gerar-relatorio','Gerando…',EscutaUI.gerarRelatorio)">
+              <span class="ms ms-sm">description</span> Relatório
+            </button>
           </div>
-          <div id="escuta-resultado-conteudo"><p class="muted-text">Selecione uma pesquisa para ver os resultados.</p></div>
+          <div id="escuta-resultado-conteudo"><p class="muted-text">Selecione uma pesquisa encerrada para ver os resultados.</p></div>
         </div>
 
-        <!-- Tab: Evolução -->
-        <div id="escuta-tab-evolucao" class="oculto">
-          <div id="escuta-evolucao-conteudo"><p class="muted-text">⏳ Carregando evolução histórica…</p></div>
-        </div>
-
-        <!-- Tab: Responder -->
-        <div id="escuta-tab-responder" class="oculto">
-          <div id="escuta-form-resposta"><p class="muted-text">⏳ Verificando pesquisa ativa…</p></div>
+        <!-- ── Aba: Gestão ────────────────────────────────────────── -->
+        <div id="escuta-tab-gestao" class="oculto">
+          <!-- Governança / marcadores metodológicos -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Marcadores Metodológicos</h4>
+            <div id="escuta-governanca-conteudo"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+          <!-- Banco de perguntas pulse -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Banco de Perguntas Pulse</h4>
+            <div id="escuta-banco-perguntas"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+          <!-- Configuração -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Configurações</h4>
+            <div id="escuta-config-form"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+          <!-- Ciclo de feedback -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Ciclo de Feedback</h4>
+            <div id="escuta-feedback-conteudo"><p class="muted-text" style="font-size:12px;">Selecione uma pesquisa nos Relatórios para ver o feedback.</p></div>
+          </div>
+          <!-- LGPD -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+            <h4 style="margin:0 0 4px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">LGPD — Supressão de Dados</h4>
+            <p style="font-size:12px;color:var(--text2);margin:0 0 10px;">Remove e-mails identificadores de respostas pulse/espontânea com mais de 90 dias (operação irreversível).</p>
+            <button id="btn-lgpd-suprimir" class="btn btn-sm" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;"
+                    onclick="BtnGuard.wrap('btn-lgpd-suprimir','Suprimindo…',EscutaUI.suprimirEmails)">
+              Suprimir E-mails Antigos (LGPD)
+            </button>
+          </div>
         </div>
       </div><!-- /view-escuta -->
+
+      <!-- ══ PULSE WIDGET — flutuante, canto inferior direito ══════ -->
+      <div id="pulse-widget" style="display:none;position:fixed;bottom:80px;right:20px;z-index:800;
+           background:var(--surface);border:1px solid var(--border);border-radius:16px;
+           box-shadow:0 8px 32px rgba(0,0,0,.18);padding:16px;width:300px;max-width:calc(100vw - 40px);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">Escuta Pulse</p>
+            <p id="pulse-dimensao" style="margin:2px 0 0;font-size:11px;color:var(--primary);font-weight:600;"></p>
+          </div>
+          <button onclick="EscutaUI.fecharPulse()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2);padding:0;line-height:1;" data-bg-skip="1">✕</button>
+        </div>
+        <p id="pulse-pergunta" style="font-size:13px;font-weight:500;margin:0 0 12px;line-height:1.4;"></p>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:10px;color:var(--text2);">Discordo</span>
+          <span style="font-size:10px;color:var(--text2);">Concordo</span>
+        </div>
+        <div id="pulse-opcoes" style="display:flex;gap:6px;justify-content:center;margin-bottom:12px;"></div>
+        <p id="pulse-contexto-label" style="font-size:11px;color:var(--text2);margin:0 0 4px;display:none;">Contexto (opcional):</p>
+        <p style="font-size:10px;color:var(--text2);text-align:center;margin:0;">Resposta anônima · Anti-spam ativo</p>
+      </div>
+      <!-- Botão flutuante pulse -->
+      <button id="pulse-fab" title="Escuta Pulse"
+              onclick="EscutaUI.abrirPulse()"
+              data-bg-skip="1"
+              style="display:none;position:fixed;bottom:20px;right:20px;z-index:799;
+                     width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+                     background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.24);
+                     font-size:22px;align-items:center;justify-content:center;">
+        <span class="ms">record_voice_over</span>
+      </button>
 
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- VIEW: DASHBOARD UNIFICADO (Fase 11.3)                     -->
@@ -7821,19 +7993,47 @@ var GAS = {
     desvincularAcao: function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_desvincular_acao(d); },
     excluir:         function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estrategia_excluir(id); }
   },
-  // ── Fase 11.2: Escuta Institucional ──────────────────────────────────────
+  // ── Fase 20: Escuta Institucional Completa ───────────────────────────────
   escuta: {
-    listar:            function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_listar(p||{}); },
-    obter:             function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_obter(p||{}); },
-    metricas:          function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_metricas({}); },
-    catalogo:          function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_catalogo({}); },
-    salvar:            function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_salvar(d); },
-    mudarStatus:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_mudar_status(d); },
-    excluir:           function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_excluir(p||{}); },
-    resultados:        function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_resultados(p||{}); },
-    cruzamento:        function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_cruzamento(p||{}); },
-    evolucao:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_evolucao(p||{}); },
-    registrarResposta: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_registrar_resposta(d); }
+    // Pesquisas formais
+    listar:              function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_listar(p||{}); },
+    obter:               function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_obter(p||{}); },
+    metricas:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_metricas({}); },
+    catalogo:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_catalogo({}); },
+    salvar:              function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_salvar(d); },
+    mudarStatus:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_mudar_status(d); },
+    excluir:             function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_excluir(p||{}); },
+    resultados:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_resultados(p||{}); },
+    cruzamento:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_cruzamento(p||{}); },
+    evolucao:            function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_evolucao(p||{}); },
+    registrarResposta:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_registrar_resposta(d); },
+    // [F20] Dados unificados
+    dados:               function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_dados({}); },
+    // [F20] Pulse
+    pulseObter:          function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_obter({}); },
+    pulseResponder:      function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_responder(d); },
+    pulseDashboard:      function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_dashboard(p||{}); },
+    // [F20] Escuta espontânea
+    espontaneaRegistrar: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_espontanea_registrar(d); },
+    espontaneaListar:    function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_espontanea_listar(p||{}); },
+    // [F20] Alertas
+    alertasListar:       function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_alertas_listar(p||{}); },
+    alertasResolver:     function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_alertas_resolver(d); },
+    // [F20] Config
+    configObter:         function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_config_obter({}); },
+    configSalvar:        function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_config_salvar(d); },
+    perguntaToggle:      function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pergunta_toggle(d); },
+    // [F20] Perfil analítico
+    perfilObter:         function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_perfil_obter(p||{}); },
+    perfilSalvar:        function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_perfil_salvar(d); },
+    // [F20] Análises e relatórios
+    relatorio:           function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_relatorio(p||{}); },
+    governanca:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_governanca(p||{}); },
+    saturacao:           function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_saturacao(p||{}); },
+    feedback:            function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_feedback(p||{}); },
+    participacao:        function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_participacao({}); },
+    bancoPerguntas:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_banco_perguntas({}); },
+    suprimirEmails:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_suprimir_emails({}); }
   },
   // ── Fase 11.3: Dashboard Unificado ────────────────────────────────────────
   dashboard: {
@@ -21358,36 +21558,75 @@ var AuditoriaVisualUI = (function() {
 })();
 Router.registrar('auditoria', 'Auditoria', AuditoriaVisualUI.aoAbrir);
 
-// ─── Fase 11.2: EscutaUI ────────────────────────────────────────────────────
+// ─── Fase 20: EscutaUI — Completa ──────────────────────────────────────────
 var EscutaUI = (function() {
-  var _carregado = false;
-  var _lista     = [];
-  var _tabAtual  = 'pesquisas';
+  var _carregado   = false;
+  var _lista       = [];
+  var _tabAtual    = 'painel';
+  var _papel       = '';
+  var _ABAS        = ['painel','livre','alertas','distribuicao','relatorios','gestao'];
+  var _pulseAtual  = null;   // pergunta pulse carregada
 
-  function aoAbrir() {
-    if (!_carregado) carregar();
-    setTab('pesquisas', document.querySelector('#view-escuta .tab-btn'));
+  // ── helpers ──────────────────────────────────────────────────────────────
+  function _esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function _cor(pct) {
+    return pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)';
+  }
+  function _nivelLabel(n) {
+    return { excelente:'Excelente', bom:'Bom', regular:'Regular', baixo:'Baixo', critico:'Crítico' }[n] || (n||'');
+  }
+  function _periodoAtual() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+  function _badgeCl(s) {
+    return { ativa:'success', encerrada:'primary', cancelada:'danger', rascunho:'secondary', arquivada:'muted' }[s] || 'secondary';
   }
 
-  function carregar() {
+  // ── ciclo de vida ─────────────────────────────────────────────────────────
+  function aoAbrir() {
+    _papel = (window._userPapel || '');
+    if (!_carregado) carregar();
+    else setTab('painel', document.querySelector('#view-escuta .tab-btn'));
+    _tentarMostrarPulse();
+  }
+
+  function carregar(done) {
     var el = document.getElementById('escuta-lista');
     if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando…</p>';
-    GAS.escuta.metricas(function(r) {
-      if (r && r.ok) _renderStats(r.data);
+    // Carrega dados unificados (metricas + governanca + pulse + participacao)
+    GAS.escuta.dados(function(r) {
+      if (r && r.ok && r.data) {
+        var d = r.data;
+        _renderStats(d.metricas);
+        if (d.alertasAtivos > 0) {
+          var badge = document.getElementById('escuta-badge-alertas');
+          if (badge) { badge.style.display = 'inline'; badge.textContent = d.alertasAtivos; }
+        }
+      }
+      if (done) done();
     }, function(){});
+    // Pesquisas formais
     GAS.escuta.listar({}, function(r) {
       _carregado = true;
       _lista = (r && r.ok && r.data) ? r.data : [];
       _renderLista();
       _popularSelects();
+      _renderEvolucao(_lista);
+      setTab('painel', document.querySelector('#view-escuta .tab-btn'));
     }, function(e) {
-      if (el) el.innerHTML = '<p class="muted-text">Erro ao carregar: ' + _esc(e.message||e) + '</p>';
+      _carregado = true;
+      if (el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>';
     });
   }
 
+  // ── tabs ─────────────────────────────────────────────────────────────────
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['pesquisas','resultados','evolucao','responder'].forEach(function(t) {
+    _ABAS.forEach(function(t) {
       var el = document.getElementById('escuta-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -21395,16 +21634,20 @@ var EscutaUI = (function() {
       b.classList.remove('tab-ativa');
     });
     if (btn) btn.classList.add('tab-ativa');
-    if (tab === 'evolucao') _carregarEvolucao();
-    if (tab === 'responder') _carregarFormResponder();
+    // Lazy-load por aba
+    if (tab === 'livre')        _carregarAbaLivre();
+    if (tab === 'alertas')      carregarAlertas();
+    if (tab === 'distribuicao') _carregarAbaDistribuicao();
+    if (tab === 'gestao')       _carregarAbaGestao();
   }
 
+  // ── KPI strip ────────────────────────────────────────────────────────────
   function _renderStats(m) {
     var el = document.getElementById('escuta-stats');
-    if (!el) return;
+    if (!el || !m) return;
     var ultima = m.ultimaMedia ? (Math.round(m.ultimaMedia*10)/10 + '/5') : 'N/A';
     el.innerHTML = [
-      '<div class="stat-card"><div class="stat-valor">' + (m.total||0) + '</div><div class="stat-label">Total</div></div>',
+      '<div class="stat-card"><div class="stat-valor">' + (m.total||0) + '</div><div class="stat-label">Pesquisas</div></div>',
       '<div class="stat-card"><div class="stat-valor" style="color:var(--success)">' + (m.ativas||0) + '</div><div class="stat-label">Ativas</div></div>',
       '<div class="stat-card"><div class="stat-valor">' + (m.concluidas||0) + '</div><div class="stat-label">Concluídas</div></div>',
       '<div class="stat-card"><div class="stat-valor" style="color:var(--primary)">' + ultima + '</div><div class="stat-label">Último Clima</div></div>'
@@ -21412,232 +21655,669 @@ var EscutaUI = (function() {
     if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('escuta-stats');
   }
 
-  function _renderLista() {
+  // ── lista de pesquisas ───────────────────────────────────────────────────
+  function filtrarLista() {
+    var f   = (document.getElementById('escuta-filtro-status')||{}).value || '';
+    var vis = f ? _lista.filter(function(p){ return p.status === f; }) : _lista;
+    _renderListaFiltrada(vis);
+  }
+
+  function _renderLista() { filtrarLista(); }
+
+  function _renderListaFiltrada(lista) {
     var el = document.getElementById('escuta-lista');
     if (!el) return;
-    if (!_lista.length) {
-      el.innerHTML = '<div class="empty-state"><p>Nenhuma pesquisa cadastrada. Clique em "+ Nova Pesquisa".</p></div>';
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state"><p>Nenhuma pesquisa encontrada.</p></div>';
       return;
     }
-    var cores = { rascunho:'secondary', ativa:'success', encerrada:'primary', cancelada:'danger', arquivada:'muted' };
-    el.innerHTML = _lista.map(function(p) {
-      var pct = p.totalConvidados ? Math.round((p.totalRespostas||0)/p.totalConvidados*100) : 0;
-      return '<div class="item-card" style="border-left:3px solid var(--'+_badgeCl(p.status)+'-color,var(--border));padding:12px 16px;margin-bottom:8px;border-radius:8px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
-        '<div>' +
-          '<span class="badge-' + (cores[p.status]||'secondary') + '" style="font-size:11px;padding:2px 8px;border-radius:20px;">' + _esc(p.status) + '</span>' +
-          ' <strong>' + _esc(p.titulo) + '</strong>' +
-          '<div style="font-size:12px;color:var(--text2);margin-top:2px;">Rodada ' + (p.rodada||'—') + ' · ' + (p.dataInicio||'') + ' → ' + (p.dataFim||'') +
-            (p.status==='ativa' ? ' · <strong>' + (p.totalRespostas||0) + '/' + (p.convidados&&p.convidados.length||'?') + ' respostas (' + pct + '%)</strong>' : '') +
+    el.innerHTML = lista.map(function(p) {
+      var pct  = p.totalConvidados ? Math.round((p.totalRespostas||0)/p.totalConvidados*100) : 0;
+      var bCl  = _badgeCl(p.status);
+      var idS  = JSON.stringify(p.id).replace(/"/g,"'");
+      return '<div style="border-left:3px solid;border-left-color:var(--' + bCl + '-color,var(--border));padding:10px 14px;margin-bottom:8px;border-radius:8px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--border);">' +
+        '<div style="min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+            '<span class="badge-' + bCl + '" style="font-size:10px;padding:2px 8px;border-radius:20px;">' + _esc(p.status) + '</span>' +
+            '<strong style="font-size:13px;">' + _esc(p.titulo) + '</strong>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--text2);margin-top:3px;">Rodada ' + (p.rodada||'—') +
+            ' · ' + (p.dataInicio||'') + ' → ' + (p.dataFim||'') +
+            (p.status === 'ativa' ? ' · <strong>' + (p.totalRespostas||0) + ' resp. (' + pct + '%)</strong>' : '') +
           '</div>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-          (p.status==='rascunho'   ? '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-ativar-esc-'+p.id+'" onclick="BtnGuard.wrap(\'btn-ativar-esc-'+p.id+'\',\'Ativando…\',function(){EscutaUI.mudarStatus(\''+p.id+'\',\'ativa\')})">Ativar</button>' : '') +
-          (p.status==='ativa'      ? '<button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-enc-esc-'+p.id+'" onclick="BtnGuard.wrap(\'btn-enc-esc-'+p.id+'\',\'Encerrando…\',function(){EscutaUI.mudarStatus(\''+p.id+'\',\'encerrada\')})">Encerrar</button>' : '') +
-          '<button class="btn btn-sm btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.verResultados(\''+p.id+'\')" data-bg-skip="1">Resultados</button>' +
-          (p.status==='rascunho' ? '<button class="btn btn-sm btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.abrirForm(\''+p.id+'\')" data-bg-skip="1">Editar</button>' : '') +
+        '<div style="display:flex;gap:5px;flex-shrink:0;">' +
+          (p.status==='rascunho' ? '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;" id="btn-ativar-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Ativando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'ativa\')})">Ativar</button>' : '') +
+          (p.status==='ativa'    ? '<button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;" id="btn-enc-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Encerrando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'encerrada\')})">Encerrar</button>' : '') +
+          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 9px;" onclick="EscutaUI.verResultados(' + idS + ')" data-bg-skip="1">Resultados</button>' +
+          (p.status==='rascunho' ? '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 9px;" onclick="EscutaUI.abrirFormPesquisa(' + idS + ')" data-bg-skip="1">Editar</button>' : '') +
         '</div>' +
       '</div>';
     }).join('');
   }
 
+  // ── evolução histórica (gráfico de barras inline) ────────────────────────
+  function _renderEvolucao(lista) {
+    var el = document.getElementById('escuta-grafico-evolucao');
+    if (!el) return;
+    var enc = lista.filter(function(p){ return p.status==='encerrada' && p.resultadoFinal; })
+                   .sort(function(a,b){ return new Date(a.dataEncerramento||0) - new Date(b.dataEncerramento||0); })
+                   .slice(-8);
+    if (!enc.length) {
+      el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem histórico de pesquisas encerradas.</p>';
+      return;
+    }
+    el.innerHTML = enc.map(function(p) {
+      var m   = p.resultadoFinal;
+      var v   = m ? m.mediaPonderada : null;
+      var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
+      var cor = _cor(pct);
+      var conf = m ? (m.indiceConfianca||0) : 0;
+      return '<div style="text-align:center;flex:1;">' +
+        '<div style="font-size:10px;color:var(--text2);margin-bottom:3px;">R' + (p.rodada||'?') + '</div>' +
+        '<div style="height:72px;display:flex;align-items:flex-end;justify-content:center;">' +
+          '<div style="width:28px;background:' + cor + ';border-radius:4px 4px 0 0;height:' + pct + '%;min-height:4px;" title="' + (v||'N/A') + '/5 · ' + conf + '% conf."></div>' +
+        '</div>' +
+        '<div style="font-size:10px;font-weight:700;margin-top:2px;color:var(--text1);">' + (v||'?') + '</div>' +
+        '<div style="font-size:9px;color:var(--text2);">' + conf + '%</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── selects compartilhados ───────────────────────────────────────────────
   function _popularSelects() {
     var sel = document.getElementById('escuta-sel-resultado');
     if (!sel) return;
-    var encerradas = _lista.filter(function(p){ return p.status==='encerrada'; });
+    var enc = _lista.filter(function(p){ return p.status==='encerrada'; });
     sel.innerHTML = '<option value="">— selecionar —</option>' +
-      encerradas.map(function(p){
-        return '<option value="' + p.id + '">' + _esc(p.titulo) + ' (rodada ' + (p.rodada||'') + ')</option>';
+      enc.map(function(p){
+        return '<option value="' + p.id + '">' + _esc(p.titulo) + ' (R' + (p.rodada||'') + ')</option>';
       }).join('');
+    // Período pulse
+    var mp = document.getElementById('escuta-periodo-pulse');
+    if (mp) mp.value = _periodoAtual();
   }
 
-  function carregarResultado() {
-    var id  = document.getElementById('escuta-sel-resultado').value;
-    var el  = document.getElementById('escuta-resultado-conteudo');
-    if (!id) { if (el) el.innerHTML = '<p class="muted-text">Selecione uma pesquisa.</p>'; return; }
-    if (el) el.innerHTML = '<p class="muted-text">⏳ Calculando…</p>';
-    GAS.escuta.resultados({ id: id }, function(r) {
-      if (!r || !r.ok) { if (el) el.innerHTML = '<p class="muted-text">Erro ao carregar resultados.</p>'; return; }
-      var res = r.data;
-      var dims = res.scoresPorDimensao || {};
-      var dimHtml = Object.keys(dims).map(function(k) {
-        var v = dims[k];
-        var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
-        var cor = pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)';
-        return '<div style="margin-bottom:10px;">' +
-          '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">' +
-            '<span>' + k + '</span><span style="font-weight:600;">' + (v!=null?v+'/5':'N/A') + '</span>' +
-          '</div>' +
-          '<div style="background:var(--border);border-radius:4px;height:8px;">' +
-            '<div style="width:' + pct + '%;background:' + cor + ';height:8px;border-radius:4px;"></div>' +
-          '</div></div>';
-      }).join('');
-      if (el) el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
-        '<div>' +
-          '<h4 style="margin:0 0 12px;font-size:14px;color:var(--text2);">INDICADORES</h4>' +
-          '<div class="stats-strip" style="gap:10px;">' +
-            '<div class="stat-card" style="padding:10px 14px;"><div class="stat-valor">' + (res.totalRespostas||0) + '/' + (res.totalConvidados||0) + '</div><div class="stat-label">Respostas</div></div>' +
-            '<div class="stat-card" style="padding:10px 14px;"><div class="stat-valor">' + (res.indiceConfianca||0) + '%</div><div class="stat-label">Confiança</div></div>' +
-            '<div class="stat-card" style="padding:10px 14px;"><div class="stat-valor" style="color:var(--primary)">' + (res.mediaPonderada||'N/A') + '</div><div class="stat-label">Média</div></div>' +
-          '</div>' +
-          '<p style="font-size:13px;margin-top:12px;"><strong>Ponto forte:</strong> ' + _esc(res.dimensaoMaisAlta||'—') + '</p>' +
-          '<p style="font-size:13px;"><strong>Atenção:</strong> ' + _esc(res.dimensaoMaisBaixa||'—') + '</p>' +
-        '</div>' +
-        '<div><h4 style="margin:0 0 12px;font-size:14px;color:var(--text2);">DIMENSÕES (1–5)</h4>' + dimHtml + '</div>' +
-      '</div>';
-    }, function(e){ if (el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
-  }
-
-  function carregarCruzamento() {
-    var id = document.getElementById('escuta-sel-resultado').value;
-    var el = document.getElementById('escuta-resultado-conteudo');
-    if (!id) { Toast.aviso('Selecione uma pesquisa encerrada.'); return; }
-    if (el) el.innerHTML = '<p class="muted-text">⏳ Analisando cruzamentos…</p>';
-    GAS.escuta.cruzamento({ id: id }, function(r) {
-      if (!r || !r.ok) { if (el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
-      var d = r.data;
-      var corr = d.correlacaoAbsenteismo;
-      var corrHtml = corr
-        ? '<p style="font-size:13px;">Vigor médio (afastados): <strong>' + corr.mediaVigorAfastados + '</strong> vs geral: <strong>' + corr.mediaVigorGeral + '</strong> (delta: <span style="color:' + (corr.delta<0?'var(--danger)':'var(--success)') + '">' + (corr.delta>0?'+':'') + corr.delta + '</span>)</p>'
-        : '<p class="muted-text" style="font-size:13px;">Cruzamento com absenteísmo não disponível (dados anônimos ou sem afastamentos).</p>';
-      if (el) el.innerHTML = '<h4 style="margin:0 0 8px;font-size:14px;">Cruzamento: Clima × Absenteísmo</h4>' + corrHtml;
-    }, function(e){ if (el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
-  }
-
-  function verResultados(id) {
-    var sel = document.getElementById('escuta-sel-resultado');
-    if (sel) { sel.value = id; }
-    setTab('resultados', document.querySelectorAll('#view-escuta .tab-bar .tab-btn')[1]);
-    carregarResultado();
-  }
-
-  function _carregarEvolucao() {
-    var el = document.getElementById('escuta-evolucao-conteudo');
-    if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando…</p>';
-    GAS.escuta.evolucao({ ultimas: 8 }, function(r) {
-      if (!r || !r.ok || !r.data || !r.data.length) {
-        if (el) el.innerHTML = '<div class="empty-state"><p>Sem histórico de pesquisas encerradas.</p></div>';
-        return;
-      }
-      var evo = r.data;
-      var bars = evo.map(function(e) {
-        var pct = e.mediaPonderada != null ? Math.round(((e.mediaPonderada-1)/4)*100) : 0;
-        var cor = pct>=70?'var(--success)':pct>=40?'var(--warning)':'var(--danger)';
-        return '<div style="text-align:center;flex:1;">' +
-          '<div style="font-size:11px;color:var(--text2);margin-bottom:4px;">R' + (e.rodada||'?') + '</div>' +
-          '<div style="height:80px;display:flex;align-items:flex-end;justify-content:center;">' +
-            '<div style="width:32px;background:' + cor + ';border-radius:4px 4px 0 0;height:' + pct + '%;min-height:4px;" title="' + (e.mediaPonderada||'N/A') + '/5 · ' + (e.indiceConfianca||0) + '% conf."></div>' +
-          '</div>' +
-          '<div style="font-size:11px;font-weight:600;margin-top:2px;">' + (e.mediaPonderada||'?') + '</div>' +
-          '<div style="font-size:10px;color:var(--text2);">' + (e.indiceConfianca||0) + '%</div>' +
-        '</div>';
-      }).join('');
-      if (el) el.innerHTML = '<h4 style="margin:0 0 12px;font-size:14px;color:var(--text2);">EVOLUÇÃO DO CLIMA (últimas rodadas)</h4>' +
-        '<div style="display:flex;gap:8px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;min-height:130px;">' + bars + '</div>' +
-        '<p style="font-size:12px;color:var(--text2);margin-top:8px;">Barras: média geral / Número: nota 1–5 / %: índice de confiança</p>';
-    }, function(e){ if (el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
+  // ── Aba: Livre ───────────────────────────────────────────────────────────
+  function _carregarAbaLivre() {
+    _carregarFormResponder();
+    _carregarFormPerfil();
   }
 
   function _carregarFormResponder() {
     var el = document.getElementById('escuta-form-resposta');
-    if (el) el.innerHTML = '<p class="muted-text">⏳ Verificando pesquisa ativa…</p>';
+    if (!el) return;
     var ativas = _lista.filter(function(p){ return p.status === 'ativa'; });
     if (!ativas.length) {
-      if (el) el.innerHTML = '<div class="empty-state"><p>Não há pesquisa de clima ativa no momento.</p></div>';
+      el.innerHTML = '<div class="empty-state" style="padding:16px;"><p>Não há pesquisa de clima ativa no momento.</p></div>';
       return;
     }
     var p = ativas[0];
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando questionário…</p>';
     GAS.escuta.catalogo(function(r) {
-      if (!r || !r.ok) { if (el) el.innerHTML = '<p class="muted-text">Erro ao carregar questionário.</p>'; return; }
+      if (!r || !r.ok) { el.innerHTML = '<p class="muted-text">Erro ao carregar questionário.</p>'; return; }
       var dims = r.data || [];
-      var perguntas = dims.map(function(d) {
-        return '<div style="margin-bottom:16px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">' +
-          '<p style="font-size:13px;font-weight:600;margin:0 0 8px;">' + _esc(d.label) + ' <span style="font-weight:400;color:var(--text2);">(' + d.grupo + ')</span></p>' +
-          '<p style="font-size:12px;color:var(--text2);margin:0 0 10px;">' + _esc(d.descricao) + '</p>' +
-          '<div style="display:flex;gap:8px;align-items:center;">' +
+      var html = '<h4 style="margin:0 0 2px;font-size:14px;">' + _esc(p.titulo) + '</h4>' +
+        '<p style="font-size:12px;color:var(--text2);margin:0 0 12px;">Prazo: ' + (p.dataFim||'—') + (p.anonima ? ' · Anônima' : '') + '</p>';
+      dims.forEach(function(d) {
+        html += '<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface1,var(--bg));border:1px solid var(--border);border-radius:8px;">' +
+          '<p style="font-size:12px;font-weight:600;margin:0 0 4px;">' + _esc(d.label) + ' <span style="font-weight:400;color:var(--text2);">(' + d.grupo + ')</span></p>' +
+          '<p style="font-size:11px;color:var(--text2);margin:0 0 8px;">' + _esc(d.descricao) + '</p>' +
+          '<div style="display:flex;gap:6px;align-items:center;">' +
             [1,2,3,4,5].map(function(n){
-              return '<label style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-size:12px;font-weight:600;">' +
-                '<input type="radio" name="dim-' + d.id + '" value="' + n + '" style="width:18px;height:18px;cursor:pointer;"> ' + n + '</label>';
+              return '<label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:700;">' +
+                '<input type="radio" name="dim-' + d.id + '" value="' + n + '" style="width:16px;height:16px;"> ' + n + '</label>';
             }).join('') +
-            '<span style="font-size:11px;color:var(--text2);margin-left:8px;">1=Discordo · 5=Concordo</span>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-      if (el) el.innerHTML = '<h4 style="margin:0 0 4px;font-size:15px;">' + _esc(p.titulo) + '</h4>' +
-        '<p style="font-size:13px;color:var(--text2);margin:0 0 16px;">Prazo: ' + (p.dataFim||'—') + (p.anonima ? ' · Suas respostas são anônimas' : '') + '</p>' +
-        perguntas +
-        '<div style="margin-top:12px;display:flex;gap:8px;align-items:center;">' +
-          '<label style="font-size:13px;display:flex;align-items:center;gap:6px;">' +
-            '<input type="checkbox" id="escuta-anonima" checked> Resposta anônima' +
-          '</label>' +
-          '<button id="btn-enviar-escuta" class="btn btn-primary" onclick="BtnGuard.wrap(\'btn-enviar-escuta\',\'Enviando…\',function(done){EscutaUI.enviarResposta(\'' + p.id + '\',done)})">Enviar Respostas</button>' +
-        '</div>';
-    }, function(){ if (el) el.innerHTML = '<p class="muted-text">Erro ao carregar questionário.</p>'; });
+            '<span style="font-size:10px;color:var(--text2);margin-left:6px;">1=Discordo · 5=Concordo</span>' +
+          '</div></div>';
+      });
+      html += '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+        '<label style="font-size:12px;display:flex;align-items:center;gap:5px;"><input type="checkbox" id="escuta-anonima" checked> Resposta anônima</label>' +
+        '<button id="btn-enviar-escuta" class="btn btn-primario btn-sm" onclick="BtnGuard.wrap(\'btn-enviar-escuta\',\'Enviando…\',function(done){EscutaUI.enviarResposta(\'' + p.id + '\',done)})">Enviar Respostas</button>' +
+      '</div>';
+      el.innerHTML = html;
+    }, function(){ el.innerHTML = '<p class="muted-text">Erro ao carregar questionário.</p>'; });
   }
 
   function enviarResposta(pesquisaId, done) {
     var respostas = {};
     document.querySelectorAll('#escuta-form-resposta input[type=radio]:checked').forEach(function(inp) {
-      var dimId = inp.name.replace('dim-', '');
-      respostas[dimId] = Number(inp.value);
+      respostas[inp.name.replace('dim-','')] = Number(inp.value);
     });
-    if (Object.keys(respostas).length === 0) { Toast.aviso('Responda ao menos uma dimensão.'); if(done) done(); return; }
-    var anonima = document.getElementById('escuta-anonima') && document.getElementById('escuta-anonima').checked;
+    if (!Object.keys(respostas).length) { Toast.aviso('Responda ao menos uma dimensão.'); if(done) done(); return; }
+    var anonima = !!(document.getElementById('escuta-anonima')||{}).checked;
     GAS.escuta.registrarResposta({ pesquisaId: pesquisaId, respostas: respostas, anonima: anonima }, function(r) {
       if (done) done();
-      if (!r || !r.ok) { Toast.erro('Erro: ' + ((r&&r.error&&r.error.message)||'Tente novamente.')); return; }
-      Toast.sucesso('✅ Resposta registrada! Obrigado pela participação.');
+      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('✅ Resposta registrada! Obrigado.');
       var el = document.getElementById('escuta-form-resposta');
-      if (el) el.innerHTML = '<div class="empty-state"><p>✅ Você já respondeu esta pesquisa.</p></div>';
-    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro ao enviar.'); });
+      if (el) el.innerHTML = '<div class="empty-state" style="padding:16px;"><p>✅ Participação registrada.</p></div>';
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
   }
 
-  function abrirForm(id) {
-    var item = id ? _lista.find(function(p){ return p.id===id; }) : null;
-    var overlay = document.createElement('div');
-    overlay.id  = 'modal-escuta-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.52);';
-    var box = document.createElement('div');
-    box.style.cssText = 'background:var(--surface);border-radius:20px;border-top:3px solid var(--color-primary);padding:28px 32px;width:90%;max-width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.20),0 8px 20px rgba(0,0,0,.10);';
-    box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">' +
-      '<h3 style="margin:0;">' + (id?'Editar':'Nova') + ' Pesquisa de Clima</h3>' +
-      '<button onclick="document.getElementById(\'modal-escuta-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;" data-bg-skip="1">✕</button>' +
-    '</div>' +
-    '<div class="form-group"><label class="form-label">Título *</label><input id="esc-f-titulo" class="form-control" value="' + _esc(item?item.titulo:'') + '" placeholder="Pesquisa de Clima Q1 2026"></div>' +
-    '<div class="form-group"><label class="form-label">Descrição</label><textarea id="esc-f-desc" class="form-control" rows="2">' + _esc(item?item.descricao:'') + '</textarea></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
-      '<div class="form-group"><label class="form-label">Data Início</label><input type="date" id="esc-f-inicio" class="form-control" value="' + _esc(item?item.dataInicio:'') + '"></div>' +
-      '<div class="form-group"><label class="form-label">Data Fim</label><input type="date" id="esc-f-fim" class="form-control" value="' + _esc(item?item.dataFim:'') + '"></div>' +
-    '</div>' +
-    '<div class="form-group" style="display:flex;align-items:center;gap:8px;">' +
-      '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '><label style="font-size:13px;">Respostas anônimas</label>' +
-    '</div>' +
-    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
-      '<button class="btn btn-secondary" onclick="document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
-      '<button id="btn-salvar-escuta" class="btn btn-primary" onclick="BtnGuard.wrap(\'btn-salvar-escuta\',\'Salvando…\',EscutaUI.salvar)">Salvar</button>' +
-    '</div>';
-    if (id) box.dataset.editId = id;
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  function enviarEspontanea(done) {
+    var txt = (document.getElementById('escuta-txt-espontanea')||{}).value || '';
+    if (!txt.trim()) { Toast.aviso('Digite um relato.'); if(done) done(); return; }
+    var dim  = (document.getElementById('escuta-dim-espontanea')||{}).value || '';
+    var anon = !!(document.getElementById('escuta-anonimo-espontanea')||{}).checked;
+    GAS.escuta.espontaneaRegistrar({ texto: txt.trim(), dimensaoId: dim||undefined, anonimo: anon }, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Relato enviado! Obrigado.');
+      var t = document.getElementById('escuta-txt-espontanea');
+      if (t) t.value = '';
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
   }
 
-  function salvar(done) {
-    var box = document.querySelector('#modal-escuta-overlay [data-edit-id], #modal-escuta-overlay div');
-    var editId = (document.querySelector('#modal-escuta-overlay div[data-edit-id]') || {}).dataset && document.querySelector('#modal-escuta-overlay div[data-edit-id]') ? document.querySelector('#modal-escuta-overlay div[data-edit-id]').dataset.editId : null;
-    var titulo = (document.getElementById('esc-f-titulo')||{}).value || '';
-    if (!titulo.trim()) { Toast.aviso('Título obrigatório.'); if(done) done(); return; }
+  function _carregarFormPerfil() {
+    var el = document.getElementById('escuta-form-perfil');
+    if (!el) return;
+    GAS.escuta.perfilObter({}, function(r) {
+      var p = (r && r.ok && r.data) ? r.data : {};
+      var opts = function(arr, val) {
+        return arr.map(function(o){ return '<option value="' + o + '"' + (val===o?' selected':'') + '>' + o + '</option>'; }).join('');
+      };
+      el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Gênero</label>' +
+          '<select id="pf-genero" class="select-sm"><option value="">—</option>' + opts(['Mulher','Homem','Não-binário','Outro','Prefiro não dizer'], p.genero) + '</select></div>' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Raça/Cor</label>' +
+          '<select id="pf-raca" class="select-sm"><option value="">—</option>' + opts(['Branca','Preta','Parda','Amarela','Indígena','Prefiro não dizer'], p.raca) + '</select></div>' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Vínculo</label>' +
+          '<select id="pf-vinculo" class="select-sm"><option value="">—</option>' + opts(['CLT','PJ','Voluntário','Estagiário','Outro'], p.vinculo) + '</select></div>' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Nível</label>' +
+          '<select id="pf-nivel" class="select-sm"><option value="">—</option>' + opts(['Operacional','Técnico','Analista','Coordenador','Gestão'], p.nivel) + '</select></div>' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Faixa Salarial</label>' +
+          '<select id="pf-faixa" class="select-sm"><option value="">—</option>' + opts(['Até 2 SM','2–4 SM','4–8 SM','Acima de 8 SM'], p.faixaSalarial) + '</select></div>' +
+        '<div class="form-group"><label class="form-label" style="font-size:11px;">Tempo de Casa</label>' +
+          '<select id="pf-tempo" class="select-sm"><option value="">—</option>' + opts(['Menos de 1 ano','1–3 anos','3–5 anos','Mais de 5 anos'], p.tempoDeCasa) + '</select></div>' +
+      '</div>' +
+      '<p style="font-size:11px;color:var(--text2);margin:8px 0;">Dados voluntários e protegidos pela LGPD.</p>' +
+      '<button id="btn-salvar-perfil" class="btn btn-secundario btn-sm" onclick="BtnGuard.wrap(\'btn-salvar-perfil\',\'Salvando…\',EscutaUI.salvarPerfil)">Salvar Perfil</button>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não foi possível carregar o perfil.</p>'; });
+  }
+
+  function salvarPerfil(done) {
     var dados = {
-      titulo:    titulo.trim(),
-      descricao: (document.getElementById('esc-f-desc')||{}).value || '',
-      dataInicio:(document.getElementById('esc-f-inicio')||{}).value || '',
-      dataFim:   (document.getElementById('esc-f-fim')||{}).value || '',
-      anonima:   (document.getElementById('esc-f-anonima')||{}).checked !== false
+      genero:       (document.getElementById('pf-genero')||{}).value  || undefined,
+      raca:         (document.getElementById('pf-raca')||{}).value    || undefined,
+      vinculo:      (document.getElementById('pf-vinculo')||{}).value || undefined,
+      nivel:        (document.getElementById('pf-nivel')||{}).value   || undefined,
+      faixaSalarial:(document.getElementById('pf-faixa')||{}).value   || undefined,
+      tempoDeCasa:  (document.getElementById('pf-tempo')||{}).value   || undefined
+    };
+    GAS.escuta.perfilSalvar(dados, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro('Erro ao salvar perfil.'); return; }
+      Toast.sucesso('Perfil analítico salvo!');
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  // ── Aba: Alertas ─────────────────────────────────────────────────────────
+  function carregarAlertas() {
+    var el = document.getElementById('escuta-lista-alertas');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    var apenasAtivos = (document.getElementById('escuta-filtro-alertas')||{}).value !== 'false';
+    GAS.escuta.alertasListar({ apenasAtivos: apenasAtivos }, function(r) {
+      var lista = (r && r.ok && r.data) ? r.data : [];
+      if (!lista.length) { el.innerHTML = '<div class="empty-state"><p>Nenhum alerta ' + (apenasAtivos?'ativo':'') + '.</p></div>'; return; }
+      el.innerHTML = lista.map(function(a) {
+        var idS = JSON.stringify(a.id).replace(/"/g,"'");
+        var corBadge = a.status==='ativo' ? 'danger' : 'muted';
+        return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 14px;margin-bottom:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);">' +
+          '<div>' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+              '<span class="badge-' + corBadge + '" style="font-size:10px;padding:2px 8px;border-radius:20px;">' + _esc(a.status) + '</span>' +
+              '<strong style="font-size:12px;">' + _esc(a.tipo||'alerta') + '</strong>' +
+            '</div>' +
+            '<p style="font-size:12px;margin:0 0 2px;">' + _esc(a.descricao||a.mensagem||'') + '</p>' +
+            (a.acao ? '<p style="font-size:11px;color:var(--text2);margin:0;">Ação: ' + _esc(a.acao) + '</p>' : '') +
+            '<p style="font-size:10px;color:var(--text2);margin:2px 0 0;">' + (a.criadoEm||'').substring(0,10) + '</p>' +
+          '</div>' +
+          (a.status === 'ativo' ?
+            '<button id="btn-res-alerta-' + a.id + '" class="btn btn-sm btn-secundario" style="font-size:11px;white-space:nowrap;" onclick="EscutaUI.resolverAlerta(' + idS + ')">Resolver</button>' : '') +
+        '</div>';
+      }).join('');
+    }, function(e){ el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
+  }
+
+  function resolverAlerta(alertaId) {
+    var _raw = prompt('Descreva a ação tomada para resolver este alerta:');
+    if (_raw === null) return;
+    var acao = _raw.trim() || 'Resolvido.';
+    GAS.escuta.alertasResolver({ alertaId: alertaId, acao: acao }, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao resolver alerta.'); return; }
+      Toast.sucesso('Alerta resolvido!');
+      carregarAlertas();
+    }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  // ── Aba: Distribuição ────────────────────────────────────────────────────
+  function _carregarAbaDistribuicao() {
+    carregarPulseDash();
+    _carregarSaturacao();
+    _carregarParticipacao();
+  }
+
+  function carregarPulseDash() {
+    var el = document.getElementById('escuta-pulse-dash');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    var per = (document.getElementById('escuta-periodo-pulse')||{}).value || _periodoAtual();
+    GAS.escuta.pulseDashboard({ periodo: per }, function(r) {
+      if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados pulse no período.</p>'; return; }
+      var d = r.data;
+      var medias = d.mediaPorDimensao || {};
+      var html = '';
+      Object.keys(medias).forEach(function(dim) {
+        var v   = medias[dim];
+        var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
+        var cor = _cor(pct);
+        html += '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
+            '<span style="text-transform:capitalize;">' + dim + '</span>' +
+            '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'N/D') + '</span>' +
+          '</div>' +
+          '<div style="background:var(--border);border-radius:4px;height:7px;">' +
+            '<div style="width:' + pct + '%;background:' + cor + ';height:7px;border-radius:4px;"></div>' +
+          '</div></div>';
+      });
+      el.innerHTML = (html || '<p class="muted-text" style="font-size:12px;">Sem respostas pulse neste período.</p>') +
+        '<p style="font-size:10px;color:var(--text2);margin-top:6px;">' +
+          'Total respostas: ' + (d.totalRespostas||0) + ' · Meta saturação: ' + (d.metaSaturacao||'—') +
+        '</p>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
+  }
+
+  function _carregarSaturacao() {
+    var el = document.getElementById('escuta-saturacao-conteudo');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    GAS.escuta.saturacao({ periodo: _periodoAtual() }, function(r) {
+      if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados.</p>'; return; }
+      var d = r.data;
+      var dims = d.dimensoes || {};
+      var html = '';
+      Object.keys(dims).forEach(function(dim) {
+        var s   = dims[dim];
+        var col = s.coletados || 0;
+        var met = s.meta || 10;
+        var pct = Math.min(100, Math.round((col/met)*100));
+        var cor = pct >= 100 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)';
+        html += '<div style="margin-bottom:8px;">' +
+          '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">' +
+            '<span style="text-transform:capitalize;">' + dim + '</span>' +
+            '<span style="font-weight:700;">' + col + '/' + met + '</span>' +
+          '</div>' +
+          '<div style="background:var(--border);border-radius:4px;height:6px;">' +
+            '<div style="width:' + pct + '%;background:' + cor + ';height:6px;border-radius:4px;"></div>' +
+          '</div></div>';
+      });
+      el.innerHTML = html || '<p class="muted-text" style="font-size:12px;">Sem dados de saturação.</p>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; });
+  }
+
+  function _carregarParticipacao() {
+    var el = document.getElementById('escuta-participacao-hist');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    GAS.escuta.participacao(function(r) {
+      if (!r || !r.ok || !r.data || !r.data.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem histórico.</p>'; return; }
+      var hist = r.data;
+      var maxP = hist.reduce(function(mx, x){ return Math.max(mx, x.totalPulse + x.totalEspontanea); }, 1);
+      el.innerHTML = '<div style="display:flex;gap:4px;align-items:flex-end;height:60px;margin-bottom:6px;">' +
+        hist.map(function(h) {
+          var total = h.totalPulse + h.totalEspontanea;
+          var pct   = Math.round((total/maxP)*100);
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="' + h.periodo + ': ' + total + '">' +
+            '<div style="width:100%;background:var(--primary);border-radius:2px 2px 0 0;height:' + pct + '%;min-height:2px;"></div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="display:flex;gap:4px;">' +
+        hist.map(function(h) {
+          return '<div style="flex:1;text-align:center;font-size:9px;color:var(--text2);">' + (h.periodo||'').slice(5) + '</div>';
+        }).join('') +
+      '</div>' +
+      '<p style="font-size:10px;color:var(--text2);margin-top:6px;">Pulse + Espontânea por mês</p>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; });
+  }
+
+  // ── Aba: Relatórios ──────────────────────────────────────────────────────
+  function carregarResultado() {
+    var id = (document.getElementById('escuta-sel-resultado')||{}).value;
+    var el = document.getElementById('escuta-resultado-conteudo');
+    if (!id) { if (el) el.innerHTML = '<p class="muted-text">Selecione uma pesquisa encerrada.</p>'; return; }
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Calculando…</p>';
+    GAS.escuta.resultados({ id: id }, function(r) {
+      if (!r || !r.ok) { if (el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
+      var res  = r.data;
+      var dims = res.scoresPorDimensao || {};
+      var nvl  = res.nivelPorDimensao  || {};
+      var dimHtml = Object.keys(dims).map(function(k) {
+        var v   = dims[k];
+        var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
+        var cor = _cor(pct);
+        return '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;align-items:center;">' +
+            '<span style="text-transform:capitalize;">' + k + '</span>' +
+            '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'N/A') + ' <span style="font-size:10px;color:var(--text2);">' + _nivelLabel(nvl[k]) + '</span></span>' +
+          '</div>' +
+          '<div style="background:var(--border);border-radius:4px;height:7px;">' +
+            '<div style="width:' + pct + '%;background:' + cor + ';height:7px;border-radius:4px;"></div>' +
+          '</div></div>';
+      }).join('');
+      var confLabel = res.confiancaRepresentativa ? '✅ Representativa' : res.confiancaSuficiente ? '⚠️ Suficiente' : '🔴 Baixa';
+      if (el) el.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' +
+          '<div>' +
+            '<h5 style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">Indicadores</h5>' +
+            '<div class="stats-strip" style="gap:8px;margin-bottom:12px;">' +
+              '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;">' + (res.totalRespostas||0) + '/' + (res.totalConvidados||0) + '</div><div class="stat-label">Respostas</div></div>' +
+              '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;">' + (res.indiceConfianca||0) + '%</div><div class="stat-label">Confiança</div></div>' +
+              '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;color:var(--primary)">' + (res.mediaPonderada||'N/A') + '</div><div class="stat-label">Média</div></div>' +
+            '</div>' +
+            '<p style="font-size:12px;margin:0 0 4px;">Confiança: <strong>' + confLabel + '</strong></p>' +
+            '<p style="font-size:12px;margin:0 0 4px;">Clima geral: <strong>' + _nivelLabel(res.nivelClimaGeral) + '</strong></p>' +
+            '<p style="font-size:12px;margin:0 0 4px;">Ponto forte: <strong>' + _esc(res.dimensaoMaisAlta||'—') + '</strong></p>' +
+            '<p style="font-size:12px;margin:0;">Atenção: <strong>' + _esc(res.dimensaoMaisBaixa||'—') + '</strong></p>' +
+          '</div>' +
+          '<div><h5 style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">Dimensões (1–5)</h5>' + dimHtml + '</div>' +
+        '</div>';
+    }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
+  }
+
+  function carregarCruzamento() {
+    var id = (document.getElementById('escuta-sel-resultado')||{}).value;
+    var el = document.getElementById('escuta-resultado-conteudo');
+    if (!id) { Toast.aviso('Selecione uma pesquisa encerrada.'); return; }
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Analisando cruzamentos…</p>';
+    GAS.escuta.cruzamento({ id: id }, function(r) {
+      if (!r || !r.ok) { if (el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
+      var d    = r.data;
+      var corr = d.correlacaoAbsenteismo;
+      var corrHtml = corr
+        ? '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;">' +
+            '<p style="font-size:12px;margin:0 0 6px;"><strong>Vigor médio (afastados):</strong> ' + (corr.mediaVigorAfastados||'N/D') + '</p>' +
+            '<p style="font-size:12px;margin:0;"><strong>Vigor médio (geral):</strong> ' + (corr.mediaVigorGeral||'N/D') +
+              ' <span style="color:' + (corr.delta<0?'var(--danger)':'var(--success)') + '">(' + (corr.delta>0?'+':'') + corr.delta + ')</span></p>' +
+          '</div>'
+        : '<p class="muted-text" style="font-size:12px;margin-top:12px;">Cruzamento indisponível (pesquisa anônima ou sem afastamentos).</p>';
+      var fairHtml = '';
+      if (d.fairness && d.fairness.gaps && d.fairness.gaps.length) {
+        fairHtml = '<div style="margin-top:12px;"><h5 style="font-size:12px;margin:0 0 6px;color:var(--text2);">GAPS DE EQUIDADE (Δ≥0.8)</h5>' +
+          d.fairness.gaps.map(function(g) {
+            return '<p style="font-size:12px;margin:0 0 4px;">• ' + _esc(g.dimensao) + ' · ' + _esc(g.estrato) + ': <strong style="color:var(--danger);">' + g.delta + '</strong></p>';
+          }).join('') + '</div>';
+      }
+      if (el) el.innerHTML = '<h5 style="margin:0 0 4px;font-size:13px;">Cruzamento: Clima × Pessoas</h5>' + corrHtml + fairHtml;
+    }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
+  }
+
+  function gerarRelatorio(done) {
+    var id = (document.getElementById('escuta-sel-resultado')||{}).value;
+    var el = document.getElementById('escuta-resultado-conteudo');
+    if (!id) { Toast.aviso('Selecione uma pesquisa encerrada.'); if(done) done(); return; }
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Gerando relatório…</p>';
+    GAS.escuta.relatorio({ pesquisaId: id }, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro ao gerar.</p>'; return; }
+      var rep  = r.data;
+      var recs = (rep.recomendacoesPorDimensao || []).map(function(x) {
+        return '<li style="font-size:12px;margin-bottom:4px;"><strong style="text-transform:capitalize;">' + _esc(x.dimensao) + ':</strong> ' + _esc(x.recomendacao) + '</li>';
+      }).join('');
+      if (el) el.innerHTML =
+        '<h5 style="margin:0 0 8px;font-size:13px;">' + _esc(rep.titulo||'Relatório') + '</h5>' +
+        '<p style="font-size:12px;color:var(--text2);margin:0 0 8px;">Gerado em ' + (rep.geradoEm||'').substring(0,10) + '</p>' +
+        '<p style="font-size:12px;margin:0 0 4px;">Média ponderada: <strong>' + (rep.mediaPonderada||'N/A') + '</strong></p>' +
+        '<p style="font-size:12px;margin:0 0 4px;">Respostas: <strong>' + (rep.totalRespostas||0) + '/' + (rep.totalConvidados||0) + '</strong></p>' +
+        (recs ? '<h5 style="margin:12px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">Recomendações por Dimensão</h5><ul style="padding-left:16px;margin:0;">' + recs + '</ul>' : '');
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  function verResultados(id) {
+    var sel = document.getElementById('escuta-sel-resultado');
+    if (sel) sel.value = id;
+    setTab('relatorios', document.querySelectorAll('#view-escuta .tab-bar .tab-btn')[4]);
+    carregarResultado();
+  }
+
+  // ── Aba: Gestão ──────────────────────────────────────────────────────────
+  function _carregarAbaGestao() {
+    _carregarGovernanca();
+    _carregarBancoPerguntas();
+    _carregarConfig();
+  }
+
+  function _carregarGovernanca() {
+    var el = document.getElementById('escuta-governanca-conteudo');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    GAS.escuta.governanca({}, function(r) {
+      if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados.</p>'; return; }
+      var g = r.data;
+      var q = g.qualidadeMetodologica || 0;
+      var qCor = q >= 70 ? 'var(--success)' : q >= 40 ? 'var(--warning)' : 'var(--danger)';
+      var fatores = g.fatores || [];
+      var motor   = g.motorMetodologico || {};
+      var avisos  = motor.avisos || [];
+
+      var fatHtml = fatores.map(function(f) {
+        return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
+          '<span>' + _esc(f.nome) + '</span>' +
+          '<span style="font-weight:700;color:' + (f.pontos>=f.max*0.7?'var(--success)':'var(--warning)') + '">' + f.pontos + '/' + f.max + '</span>' +
+        '</div>';
+      }).join('');
+
+      var avisosHtml = avisos.length
+        ? '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">' +
+            '<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin:0 0 6px;">Motor Metodológico</p>' +
+            avisos.map(function(a) {
+              return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:11px;">' +
+                '<span style="color:var(--warning);">⚠</span><span>' + _esc(a) + '</span>' +
+              '</div>';
+            }).join('') +
+          '</div>'
+        : '<p style="font-size:11px;color:var(--success);margin-top:8px;">✅ Motor metodológico sem avisos.</p>';
+
+      el.innerHTML =
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
+          '<div style="width:56px;height:56px;border-radius:50%;background:' + qCor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800;">' + q + '</div>' +
+          '<div>' +
+            '<p style="margin:0;font-size:14px;font-weight:700;">Qualidade Metodológica</p>' +
+            '<p style="margin:0;font-size:11px;color:var(--text2);">' + (q>=70?'Alta qualidade':q>=40?'Qualidade moderada':'Qualidade baixa — revisar') + '</p>' +
+          '</div>' +
+        '</div>' +
+        fatHtml + avisosHtml;
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
+  }
+
+  function _carregarBancoPerguntas() {
+    var el = document.getElementById('escuta-banco-perguntas');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    GAS.escuta.bancoPerguntas(function(r) {
+      if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; return; }
+      var lista = r.data;
+      el.innerHTML = lista.map(function(p) {
+        var chk = p.ativo !== false ? 'checked' : '';
+        var idS = JSON.stringify(p.id||p.perguntaId||'').replace(/"/g,"'");
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensaoId||p.dimensao||'') + '</span>' +
+            ' ' + _esc(p.texto||p.pergunta||'') +
+          '</div>' +
+          '<label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;cursor:pointer;">' +
+            '<input type="checkbox" ' + chk + ' onchange="EscutaUI.togglePergunta(' + idS + ',this.checked)"> Ativa' +
+          '</label>' +
+        '</div>';
+      }).join('') || '<p class="muted-text" style="font-size:12px;">Sem perguntas no catálogo.</p>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
+  }
+
+  function togglePergunta(perguntaId, ativo) {
+    GAS.escuta.perguntaToggle({ perguntaId: perguntaId, ativo: ativo }, function(r) {
+      Toast.sucesso(ativo ? 'Pergunta ativada.' : 'Pergunta desativada.');
+    }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  function _carregarConfig() {
+    var el = document.getElementById('escuta-config-form');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    GAS.escuta.configObter(function(r) {
+      if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; return; }
+      var c = r.data;
+      el.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div class="form-group"><label class="form-label" style="font-size:11px;">Máx. Perguntas/Dia</label>' +
+            '<input type="number" id="cfg-limite-dia" class="form-control" value="' + (c.limiteDia||3) + '" min="1" max="10" style="font-size:12px;"></div>' +
+          '<div class="form-group"><label class="form-label" style="font-size:11px;">Anti-Spam (horas)</label>' +
+            '<input type="number" id="cfg-antispam" class="form-control" value="' + (c.antiSpamHoras||4) + '" min="1" max="24" style="font-size:12px;"></div>' +
+          '<div class="form-group"><label class="form-label" style="font-size:11px;">Confiança Mínima (%)</label>' +
+            '<input type="number" id="cfg-confianca" class="form-control" value="' + (c.confiancaMin||15) + '" min="5" max="100" style="font-size:12px;"></div>' +
+          '<div class="form-group"><label class="form-label" style="font-size:11px;">Grupo Mínimo (subgrupos)</label>' +
+            '<input type="number" id="cfg-grupo-min" class="form-control" value="' + (c.grupoMinimo||5) + '" min="3" max="20" style="font-size:12px;"></div>' +
+        '</div>' +
+        '<button id="btn-salvar-config-escuta" class="btn btn-secundario btn-sm" style="margin-top:8px;" onclick="BtnGuard.wrap(\'btn-salvar-config-escuta\',\'Salvando…\',EscutaUI.salvarConfig)">Salvar Configurações</button>';
+    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
+  }
+
+  function salvarConfig(done) {
+    var dados = {
+      limiteDia:    parseInt((document.getElementById('cfg-limite-dia')||{}).value)||3,
+      antiSpamHoras:parseInt((document.getElementById('cfg-antispam')||{}).value)||4,
+      confiancaMin: parseInt((document.getElementById('cfg-confianca')||{}).value)||15,
+      grupoMinimo:  parseInt((document.getElementById('cfg-grupo-min')||{}).value)||5
+    };
+    GAS.escuta.configSalvar(dados, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro('Erro ao salvar configuração.'); return; }
+      Toast.sucesso('Configurações salvas!');
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  function suprimirEmails(done) {
+    var _raw = confirm('Suprimir e-mails de respostas com mais de 90 dias? Esta ação é IRREVERSÍVEL (LGPD).');
+    if (!_raw) { if(done) done(); return; }
+    GAS.escuta.suprimirEmails(function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro('Erro.'); return; }
+      Toast.sucesso('E-mails suprimidos: ' + ((r.data&&r.data.suprimidos)||0));
+    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  // ── Pulse Widget ──────────────────────────────────────────────────────────
+  function _tentarMostrarPulse() {
+    GAS.escuta.pulseObter(function(r) {
+      if (r && r.ok && r.data && r.data.pergunta) {
+        _pulseAtual = r.data;
+        var fab = document.getElementById('pulse-fab');
+        if (fab) { fab.style.display = 'flex'; }
+        // Mostra FAB mas não abre automaticamente — respeita experiência do usuário
+      }
+    }, function(){});
+  }
+
+  function abrirPulse() {
+    if (!_pulseAtual) {
+      GAS.escuta.pulseObter(function(r) {
+        if (r && r.ok && r.data && r.data.pergunta) {
+          _pulseAtual = r.data;
+          _renderPulseWidget();
+        } else {
+          Toast.aviso('Nenhuma pergunta disponível no momento.');
+        }
+      }, function(){ Toast.aviso('Sem perguntas pulse disponíveis.'); });
+    } else {
+      _renderPulseWidget();
+    }
+  }
+
+  function _renderPulseWidget() {
+    var w  = document.getElementById('pulse-widget');
+    var pq = document.getElementById('pulse-pergunta');
+    var pd = document.getElementById('pulse-dimensao');
+    var po = document.getElementById('pulse-opcoes');
+    if (!w || !_pulseAtual) return;
+    if (pq) pq.textContent = _pulseAtual.pergunta || '';
+    if (pd) pd.textContent = _pulseAtual.dimensaoLabel || '';
+    if (po) {
+      po.innerHTML = [1,2,3,4,5].map(function(n) {
+        return '<button onclick="EscutaUI.responderPulse(' + n + ')" data-bg-skip="1"' +
+          ' style="width:36px;height:36px;border-radius:50%;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:700;">' + n + '</button>';
+      }).join('');
+    }
+    w.style.display = 'block';
+  }
+
+  function fecharPulse() {
+    var w = document.getElementById('pulse-widget');
+    if (w) w.style.display = 'none';
+  }
+
+  function responderPulse(valor) {
+    if (!_pulseAtual) return;
+    var pergId = _pulseAtual.perguntaId || _pulseAtual.id;
+    var dimId  = _pulseAtual.dimensaoId || _pulseAtual.dimensao;
+    GAS.escuta.pulseResponder({ perguntaId: pergId, dimensaoId: dimId, valor: valor }, function(r) {
+      fecharPulse();
+      _pulseAtual = null;
+      if (r && r.ok) Toast.sucesso('Obrigado pela resposta pulse!');
+    }, function(e){ fecharPulse(); Toast.erro((e&&e.message)||'Erro ao registrar pulse.'); });
+  }
+
+  // ── Formulário de pesquisa formal ─────────────────────────────────────────
+  function abrirFormPesquisa(id) {
+    var item = id ? _lista.find(function(p){ return p.id===id; }) : null;
+    var ov   = document.createElement('div');
+    ov.id    = 'modal-escuta-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.52);';
+    var box  = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:16px;padding:24px 28px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.22);';
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
+        '<h3 style="margin:0;font-size:16px;">' + (id?'Editar':'Nova') + ' Pesquisa</h3>' +
+        '<button onclick="document.getElementById(\'modal-escuta-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);" data-bg-skip="1">✕</button>' +
+      '</div>' +
+      '<div class="form-group"><label class="form-label">Título *</label><input id="esc-f-titulo" class="form-control" value="' + _esc(item?item.titulo:'') + '" placeholder="Pesquisa de Clima Q2 2026"></div>' +
+      '<div class="form-group"><label class="form-label">Descrição</label><textarea id="esc-f-desc" class="form-control" rows="2" style="resize:vertical;">' + _esc(item?item.descricao:'') + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label">Início</label><input type="date" id="esc-f-inicio" class="form-control" value="' + _esc(item?item.dataInicio:'') + '"></div>' +
+        '<div class="form-group"><label class="form-label">Fim</label><input type="date" id="esc-f-fim" class="form-control" value="' + _esc(item?item.dataFim:'') + '"></div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">' +
+        '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '>' +
+        '<label style="font-size:13px;">Respostas anônimas</label>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button class="btn btn-secundario" onclick="document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '<button id="btn-salvar-escuta" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-salvar-escuta\',\'Salvando…\',EscutaUI.salvarPesquisa)">Salvar</button>' +
+      '</div>';
+    if (id) box.dataset.editId = id;
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  }
+
+  function salvarPesquisa(done) {
+    var boxEl  = document.querySelector('#modal-escuta-overlay div[data-edit-id]');
+    var editId = boxEl ? boxEl.dataset.editId : null;
+    var titulo = ((document.getElementById('esc-f-titulo')||{}).value||'').trim();
+    if (!titulo) { Toast.aviso('Título obrigatório.'); if(done) done(); return; }
+    var dados = {
+      titulo:    titulo,
+      descricao: (document.getElementById('esc-f-desc')||{}).value||'',
+      dataInicio:(document.getElementById('esc-f-inicio')||{}).value||'',
+      dataFim:   (document.getElementById('esc-f-fim')||{}).value||'',
+      anonima:   !!(document.getElementById('esc-f-anonima')||{}).checked
     };
     if (editId) dados.id = editId;
     GAS.escuta.salvar(dados, function(r) {
       if (done) done();
-      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao salvar.'); return; }
-      document.getElementById('modal-escuta-overlay') && document.getElementById('modal-escuta-overlay').remove();
+      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      var ov = document.getElementById('modal-escuta-overlay');
+      if (ov) ov.remove();
       Toast.sucesso('Pesquisa salva!');
       _carregado = false;
       carregar();
@@ -21653,10 +22333,23 @@ var EscutaUI = (function() {
     }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
   }
 
-  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function _badgeCl(s) { return {ativa:'success',encerrada:'primary',cancelada:'danger',rascunho:'secondary'}[s]||'secondary'; }
-
-  return { aoAbrir, carregar, setTab, abrirForm, salvar, mudarStatus, verResultados, carregarResultado, carregarCruzamento, enviarResposta };
+  return {
+    aoAbrir, carregar, setTab, filtrarLista,
+    // Pesquisas
+    abrirFormPesquisa, salvarPesquisa, mudarStatus, verResultados,
+    // Relatórios
+    carregarResultado, carregarCruzamento, gerarRelatorio,
+    // Escuta livre
+    enviarResposta, enviarEspontanea, salvarPerfil,
+    // Alertas
+    carregarAlertas, resolverAlerta,
+    // Distribuição
+    carregarPulseDash,
+    // Gestão
+    togglePergunta, salvarConfig, suprimirEmails,
+    // Pulse widget
+    abrirPulse, fecharPulse, responderPulse
+  };
 })();
 Router.registrar('escuta', 'Escuta Institucional', EscutaUI.aoAbrir);
 

@@ -979,6 +979,190 @@ var EscutaEngine = (function() {
     });
   }
 
+  // ─── [F20] Perfil analítico ─────────────────────────────────────────────────
+
+  /**
+   * Salva ou atualiza o perfil demográfico/analítico de um colaborador.
+   * Campos aceitos: genero, raca, orientacao, faixaSalarial, vinculo, nivel,
+   *                 tempoDeCasa, regiao, deficiencia.
+   */
+  function salvarPerfilAnalitico(orgId, email, dados, emailAdmin) {
+    EscutaRepository.salvarPerfilAnalitico(orgId, email, dados);
+    AuditoriaService.registrar('ESCUTA_PERFIL_SALVO', 'escuta', { email: email }, emailAdmin || email);
+  }
+
+  /**
+   * Obtém perfil analítico de um colaborador.
+   */
+  function obterPerfilAnalitico(orgId, email) {
+    return EscutaRepository.obterPerfilAnalitico(orgId, email);
+  }
+
+  // ─── [F20] Resolução de alertas ─────────────────────────────────────────────
+
+  /**
+   * Resolve um alerta registrado na organização.
+   * @param {string} orgId
+   * @param {string} alertaId — ID do alerta
+   * @param {string} acao — descrição da ação tomada
+   * @param {string} emailAdmin — quem resolveu
+   */
+  function resolverAlerta(orgId, alertaId, acao, emailAdmin) {
+    EscutaRepository.resolverAlerta(orgId, alertaId, acao, emailAdmin);
+    AuditoriaService.registrar('ESCUTA_ALERTA_RESOLVIDO', 'escuta', { alertaId: alertaId, acao: acao }, emailAdmin);
+    return { ok: true };
+  }
+
+  // ─── [F20] Participação histórica ───────────────────────────────────────────
+
+  /**
+   * Obtém 12 meses de participação (pulse + espontânea) para gráficos de tendência.
+   * @param {string} orgId
+   * @returns {Array} — [{periodo, totalPulse, totalEspontanea, totalColaboradores}]
+   */
+  function obterParticipacaoHistorica(orgId) {
+    var resultado = [];
+    var agora = new Date();
+    for (var i = 11; i >= 0; i--) {
+      var d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+      var periodo = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      var pulse = EscutaRepository.listarPulseRespostas(orgId, periodo).length;
+      var espontanea = EscutaRepository.listarEspontanea(orgId, periodo).length;
+      resultado.push({ periodo: periodo, totalPulse: pulse, totalEspontanea: espontanea });
+    }
+    return resultado;
+  }
+
+  // ─── [F20] LGPD — supressão de e-mails antigos ──────────────────────────────
+
+  /**
+   * Remove o e-mail identificador de respostas pulse com mais de 90 dias.
+   * Operação irreversível — LGPD art.16.
+   * @param {string} orgId
+   * @returns {{ suprimidos: number }}
+   */
+  function suprimirEmailsAntigos(orgId) {
+    var limite = new Date();
+    limite.setDate(limite.getDate() - 90);
+    var suprimidos = 0;
+    modifyJSON('pulse_respostas.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      lista.forEach(function(r) {
+        if (r.orgId === orgId && r.email && new Date(r.criadoEm || 0) < limite) {
+          delete r.email;
+          r._lgpd = 'suprimido';
+          suprimidos++;
+        }
+      });
+      return lista;
+    });
+    modifyJSON('escuta_espontanea.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      lista.forEach(function(r) {
+        if (r.orgId === orgId && r.email && new Date(r.criadoEm || 0) < limite) {
+          delete r.email;
+          r._lgpd = 'suprimido';
+          suprimidos++;
+        }
+      });
+      return lista;
+    });
+    AuditoriaService.registrar('ESCUTA_LGPD_SUPRESSAO', 'escuta', { suprimidos: suprimidos }, 'sistema');
+    return { suprimidos: suprimidos };
+  }
+
+  // ─── [F20] Configuração do módulo ───────────────────────────────────────────
+
+  var _CONFIG_DEFAULTS = {
+    limiteDia:       3,       // max perguntas pulse por dia
+    antiSpamHoras:   4,       // horas mínimas entre perguntas
+    confiancaMin:    15,      // % mínimo para índice suficiente
+    confiancaRepresentativa: 35,
+    grupoMinimo:     5,       // respostas mínimas para análise de subgrupo
+    metaSaturacao:   null,    // null = calcular dinâmico (25% dos colaboradores, clamp 10–25)
+    notificarGestores: true,
+    perguntasAtivas:  {}      // override de perguntas por perguntaId: true/false
+  };
+
+  /**
+   * Obtém configuração do módulo de escuta da organização.
+   * Combina defaults com config salva em config_org.json.escutaConfig.
+   */
+  function obterConfigEscuta(orgId) {
+    var cfg = getOrgConfig();
+    var salvo = (cfg && cfg.escutaConfig) ? cfg.escutaConfig : {};
+    return Object.assign({}, _CONFIG_DEFAULTS, salvo);
+  }
+
+  /**
+   * Salva configuração do módulo de escuta.
+   * Persiste em config_org.json.escutaConfig.
+   */
+  function salvarConfigEscuta(orgId, config, email) {
+    var cfg = getOrgConfig();
+    cfg.escutaConfig = Object.assign({}, obterConfigEscuta(orgId), config);
+    // Usa modifyJSON pois getOrgConfig retorna o objeto — precisamos gravar no arquivo
+    modifyJSON('config_org.json', function(obj) {
+      if (!obj || typeof obj !== 'object') obj = {};
+      obj.escutaConfig = cfg.escutaConfig;
+      return obj;
+    });
+    AuditoriaService.registrar('ESCUTA_CONFIG_SALVA', 'escuta', { campos: Object.keys(config) }, email);
+    return { ok: true };
+  }
+
+  /**
+   * Ativa ou desativa uma pergunta do catálogo pulse para esta organização.
+   * Persiste o override em config_org.json.escutaPerguntas.
+   */
+  function togglePergunta(orgId, perguntaId, ativo, email) {
+    modifyJSON('config_org.json', function(obj) {
+      if (!obj || typeof obj !== 'object') obj = {};
+      if (!obj.escutaPerguntas) obj.escutaPerguntas = {};
+      obj.escutaPerguntas[perguntaId] = ativo;
+      return obj;
+    });
+    AuditoriaService.registrar('ESCUTA_PERGUNTA_TOGGLE', 'escuta', { perguntaId: perguntaId, ativo: ativo }, email);
+    return { ok: true };
+  }
+
+  // ─── [F20] Dashboard unificado (substitui múltiplas chamadas no frontend) ───
+
+  /**
+   * Carrega todos os dados da tela de escuta em uma única chamada GAS.
+   * Inclui: métricas, governança, pulse dashboard, participação histórica.
+   * @param {string} orgId
+   * @returns {{ metricas, governanca, pulse, participacao }}
+   */
+  function obterDadosUnificados(orgId) {
+    var agora = new Date();
+    var periodo = agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0');
+
+    var metricas = EscutaRepository.metricasPesquisas(orgId);
+    var evolucao = obterEvolucaoClimaHistorica(orgId, 4);
+    metricas.evolucao   = evolucao;
+    metricas.ultimaMedia = evolucao.length ? evolucao[evolucao.length - 1].mediaPonderada : null;
+
+    var gov;
+    try { gov = obterGovernanca(orgId); } catch(e) { gov = { ok: false, motivo: e.message }; }
+
+    var pulseDash;
+    try { pulseDash = EscutaPulseEngine.obterDashboardPulse(orgId, periodo); } catch(e) { pulseDash = null; }
+
+    var participacao;
+    try { participacao = obterParticipacaoHistorica(orgId); } catch(e) { participacao = []; }
+
+    var alertasAtivos = EscutaRepository.listarAlertas(orgId, true);
+
+    return {
+      metricas:     metricas,
+      governanca:   gov,
+      pulse:        pulseDash,
+      participacao: participacao,
+      alertasAtivos: alertasAtivos.length
+    };
+  }
+
   // ─── API pública ──────────────────────────────────────────────────────────────
 
   return {
@@ -1000,9 +1184,23 @@ var EscutaEngine = (function() {
     obterGovernanca:            obterGovernanca,        // [C1]
     obterFeedback:              obterFeedback,          // [C2]
     // Catálogo e histórico
-    obterCatalogoDimensoes:     obterCatalogoDimensoes,
+    obterCatalogoDimensoes:      obterCatalogoDimensoes,
     obterEvolucaoClimaHistorica: obterEvolucaoClimaHistorica,
+    // [F20] Perfil analítico
+    salvarPerfilAnalitico:       salvarPerfilAnalitico,
+    obterPerfilAnalitico:        obterPerfilAnalitico,
+    // [F20] Alertas
+    resolverAlerta:              resolverAlerta,
+    // [F20] Participação + LGPD
+    obterParticipacaoHistorica:  obterParticipacaoHistorica,
+    suprimirEmailsAntigos:       suprimirEmailsAntigos,
+    // [F20] Configuração
+    obterConfigEscuta:           obterConfigEscuta,
+    salvarConfigEscuta:          salvarConfigEscuta,
+    togglePergunta:              togglePergunta,
+    // [F20] Dados unificados
+    obterDadosUnificados:        obterDadosUnificados,
     // Helpers expostos
-    nivelClimatico:             _nivelClimatico         // [A3] para uso externo
+    nivelClimatico:              _nivelClimatico         // [A3] para uso externo
   };
 })();

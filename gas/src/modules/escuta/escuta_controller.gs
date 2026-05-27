@@ -198,3 +198,280 @@ function ctrl_escuta_registrar_resposta(params) {
     );
   }, 'ctrl_escuta_registrar_resposta');
 }
+
+// ─── [F20] Carregamento unificado ──────────────────────────────────────────
+
+/**
+ * Carrega todos os dados da tela de Escuta em uma única chamada.
+ * Retorna: metricas, governanca, pulse, participacao, alertasAtivos.
+ */
+function ctrl_escuta_dados(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    return EscutaEngine.obterDadosUnificados(ctx.orgId);
+  }, 'ctrl_escuta_dados');
+}
+
+// ─── [F20] Pulse ─────────────────────────────────────────────────────────────
+
+/**
+ * Obtém próxima pergunta pulse para o colaborador atual.
+ * Respeita anti-spam (limiteDia, antiSpamHoras) e saturação.
+ */
+function ctrl_escuta_pulse_obter(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    return EscutaPulseEngine.obterPerguntaPulse(ctx.orgId, ctx.email);
+  }, 'ctrl_escuta_pulse_obter');
+}
+
+/**
+ * Registra resposta a uma pergunta pulse.
+ * params: { perguntaId, dimensaoId, valor (1-5), contexto? }
+ */
+function ctrl_escuta_pulse_responder(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    return EscutaPulseEngine.registrarRespostaPulse(
+      ctx.orgId, ctx.email, params.perguntaId, params.dimensaoId,
+      params.valor, params.contexto
+    );
+  }, 'ctrl_escuta_pulse_responder');
+}
+
+/**
+ * Dashboard consolidado do sistema pulse (médias por dimensão, tendências).
+ * params: { periodo? } — YYYY-MM, default: mês atual
+ */
+function ctrl_escuta_pulse_dashboard(params) {
+  return GasResponse.wrap(function() {
+    params   = params || {};
+    var ctx  = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    var agora  = new Date();
+    var periodo = params.periodo || (agora.getFullYear() + '-' + String(agora.getMonth()+1).padStart(2,'0'));
+    return EscutaPulseEngine.obterDashboardPulse(ctx.orgId, periodo);
+  }, 'ctrl_escuta_pulse_dashboard');
+}
+
+// ─── [F20] Escuta espontânea ─────────────────────────────────────────────────
+
+/**
+ * Registra relato espontâneo do colaborador com análise de sentimento.
+ * params: { texto, dimensaoId?, anonimo? }
+ */
+function ctrl_escuta_espontanea_registrar(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    return EscutaEngine.registrarEspontanea(
+      ctx.orgId, ctx.email, params.texto, params.dimensaoId, params.anonimo
+    );
+  }, 'ctrl_escuta_espontanea_registrar');
+}
+
+/**
+ * Lista relatos espontâneos do período (RH+).
+ * params: { periodo? } — YYYY-MM
+ */
+function ctrl_escuta_espontanea_listar(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    var agora   = new Date();
+    var periodo = params.periodo || (agora.getFullYear() + '-' + String(agora.getMonth()+1).padStart(2,'0'));
+    return EscutaEngine.resumoEspontanea(ctx.orgId, periodo);
+  }, 'ctrl_escuta_espontanea_listar');
+}
+
+// ─── [F20] Alertas ───────────────────────────────────────────────────────────
+
+/**
+ * Lista alertas da organização (RH+).
+ * params: { apenasAtivos? }
+ */
+function ctrl_escuta_alertas_listar(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaRepository.listarAlertas(ctx.orgId, params.apenasAtivos !== false);
+  }, 'ctrl_escuta_alertas_listar');
+}
+
+/**
+ * Resolve um alerta (registra ação tomada).
+ * params: { alertaId, acao }
+ */
+function ctrl_escuta_alertas_resolver(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.resolverAlerta(ctx.orgId, params.alertaId, params.acao, ctx.email);
+  }, 'ctrl_escuta_alertas_resolver');
+}
+
+// ─── [F20] Configuração ──────────────────────────────────────────────────────
+
+/**
+ * Obtém configuração atual do módulo de Escuta.
+ */
+function ctrl_escuta_config_obter(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.obterConfigEscuta(ctx.orgId);
+  }, 'ctrl_escuta_config_obter');
+}
+
+/**
+ * Salva configuração do módulo (RH+).
+ * params: { limiteDia?, antiSpamHoras?, confiancaMin?, notificarGestores?, ... }
+ */
+function ctrl_escuta_config_salvar(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.salvarConfigEscuta(ctx.orgId, params, ctx.email);
+  }, 'ctrl_escuta_config_salvar');
+}
+
+/**
+ * Ativa/desativa uma pergunta do catálogo pulse (RH+).
+ * params: { perguntaId, ativo }
+ */
+function ctrl_escuta_pergunta_toggle(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.togglePergunta(ctx.orgId, params.perguntaId, !!params.ativo, ctx.email);
+  }, 'ctrl_escuta_pergunta_toggle');
+}
+
+// ─── [F20] Perfil analítico ───────────────────────────────────────────────────
+
+/**
+ * Obtém o perfil analítico do colaborador autenticado (ou de outro se RH+).
+ * params: { email? } — se omitido, usa o próprio e-mail
+ */
+function ctrl_escuta_perfil_obter(params) {
+  return GasResponse.wrap(function() {
+    params   = params || {};
+    var ctx  = _ctxEscuta();
+    var alvo = params.email || ctx.email;
+    if (alvo !== ctx.email) _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.obterPerfilAnalitico(ctx.orgId, alvo);
+  }, 'ctrl_escuta_perfil_obter');
+}
+
+/**
+ * Salva perfil analítico do colaborador autenticado (ou de outro se RH+).
+ * params: { email?, genero?, raca?, orientacao?, faixaSalarial?, vinculo?, nivel?, tempoDeCasa?, regiao?, deficiencia? }
+ */
+function ctrl_escuta_perfil_salvar(params) {
+  return GasResponse.wrap(function() {
+    params   = params || {};
+    var ctx  = _ctxEscuta();
+    var alvo = params.email || ctx.email;
+    if (alvo !== ctx.email) _assertGestaoEscuta(ctx.papel);
+    var campos = ['genero','raca','orientacao','faixaSalarial','vinculo','nivel','tempoDeCasa','regiao','deficiencia'];
+    var dados  = {};
+    campos.forEach(function(c) { if (params[c] !== undefined) dados[c] = params[c]; });
+    EscutaEngine.salvarPerfilAnalitico(ctx.orgId, alvo, dados, ctx.email);
+    return { ok: true };
+  }, 'ctrl_escuta_perfil_salvar');
+}
+
+// ─── [F20] Relatório e análises avançadas ────────────────────────────────────
+
+/**
+ * Gera relatório completo de uma pesquisa (RH+).
+ * params: { pesquisaId }
+ */
+function ctrl_escuta_relatorio(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.gerarRelatorio(ctx.orgId, params.pesquisaId);
+  }, 'ctrl_escuta_relatorio');
+}
+
+/**
+ * Painel de governança metodológica (qualidade 0-100, motor metodológico).
+ * params: { pesquisaId? }
+ */
+function ctrl_escuta_governanca(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.obterGovernanca(ctx.orgId, params.pesquisaId);
+  }, 'ctrl_escuta_governanca');
+}
+
+/**
+ * Saturação por dimensão no período (RH+).
+ * params: { periodo? }
+ */
+function ctrl_escuta_saturacao(params) {
+  return GasResponse.wrap(function() {
+    params   = params || {};
+    var ctx  = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    var agora   = new Date();
+    var periodo = params.periodo || (agora.getFullYear() + '-' + String(agora.getMonth()+1).padStart(2,'0'));
+    return EscutaEngine.obterSaturacao(ctx.orgId, periodo);
+  }, 'ctrl_escuta_saturacao');
+}
+
+/**
+ * Ciclo de feedback: ações tomadas (RH+).
+ * params: { pesquisaId? }
+ */
+function ctrl_escuta_feedback(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.obterFeedback(ctx.orgId, params.pesquisaId);
+  }, 'ctrl_escuta_feedback');
+}
+
+/**
+ * Participação histórica: 12 meses de pulse + espontânea (RH+).
+ */
+function ctrl_escuta_participacao(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaEngine.obterParticipacaoHistorica(ctx.orgId);
+  }, 'ctrl_escuta_participacao');
+}
+
+/**
+ * Catálogo de perguntas pulse com estado ativo/inativo (RH+).
+ */
+function ctrl_escuta_banco_perguntas(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+    return EscutaPulseEngine.obterCatalogoPerguntas(ctx.orgId);
+  }, 'ctrl_escuta_banco_perguntas');
+}
+
+/**
+ * Suprime e-mails antigos (LGPD 90 dias) — apenas superadmin.
+ */
+function ctrl_escuta_suprimir_emails(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    if (ctx.papel !== 'superadmin') throw new Error('Acesso negado. Apenas superadmin.');
+    return EscutaEngine.suprimirEmailsAntigos(ctx.orgId);
+  }, 'ctrl_escuta_suprimir_emails');
+}

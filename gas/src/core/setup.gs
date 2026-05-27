@@ -227,6 +227,14 @@ function inicializarSistema() {
     }
   }
 
+  // Fase 20 — Escuta Completa: re-garante aba EQUIPES.Escuta (idempotente)
+  if (typeof EscutaRepository !== 'undefined' &&
+      typeof EscutaRepository.prepararIndice === 'function') {
+    try { EscutaRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'EscutaRepository.prepararIndice(F20): ' + e.message);
+    }
+  }
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
@@ -1247,6 +1255,28 @@ function fase17_holerite_prepararIndice() {
     return r;
   } catch(e) {
     Logger.error('setup', 'fase17_holerite_prepararIndice', e.message);
+    return { ok: false, motivo: e.message };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FASE 20 — Escuta Institucional Completa
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Prepara índice de Escuta (aba EQUIPES.Escuta) e garante
+ * que os arquivos JSON auxiliares existam no Drive.
+ * Executar no GAS Editor após o deploy da Fase 20.
+ * @returns {{ ok, aba }}
+ */
+function fase20_escuta_prepararIndice() {
+  try {
+    var r = EscutaRepository.prepararIndice();
+    Logger.info('setup', 'fase20_escuta_prepararIndice',
+      r.ok ? 'Aba ' + (r.aba || 'EQUIPES.Escuta') + ' garantida.' : 'Falha: ' + r.motivo);
+    return r;
+  } catch(e) {
+    Logger.error('setup', 'fase20_escuta_prepararIndice', e.message);
     return { ok: false, motivo: e.message };
   }
 }
