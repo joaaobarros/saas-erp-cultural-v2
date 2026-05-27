@@ -197,13 +197,33 @@ var AcessoService = (function () {
         return { ok: false, mensagem: 'emailAlvo e emailAdmin são obrigatórios.' };
       }
 
-      // Admin deve estar ativo no próprio sistema (ou ser superadmin configurado)
+      // Admin deve estar ativo e possuir papel administrativo
       var adminStatus = verificar(emailAdmin);
-      var superAdminEmail = (PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL') || '').toLowerCase();
-      var ehSuperAdmin = superAdminEmail && emailAdmin === superAdminEmail;
 
-      if (!ehSuperAdmin && adminStatus.status !== 'ativo') {
-        return { ok: false, mensagem: 'Sem permissão para aprovar acessos.' };
+      var superAdminEmail =
+        (PropertiesService.getScriptProperties()
+          .getProperty('ADMIN_EMAIL') || '')
+          .toLowerCase();
+
+      var ehSuperAdmin =
+        superAdminEmail &&
+        emailAdmin === superAdminEmail;
+
+      var papelAdmin =
+        adminStatus.registro &&
+        adminStatus.registro.papel
+          ? String(adminStatus.registro.papel).toLowerCase()
+          : '';
+
+      var ehAdmin =
+        papelAdmin === 'admin' ||
+        papelAdmin === 'superadmin';
+
+      if (!ehSuperAdmin && !ehAdmin) {
+        return {
+          ok: false,
+          mensagem: 'Apenas Admin ou SuperAdmin podem executar esta operação.'
+        };
       }
 
       var registros = _lerRegistros();
