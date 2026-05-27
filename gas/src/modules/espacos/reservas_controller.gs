@@ -323,3 +323,21 @@ function ctrl_reservas_disponibilidadeItens(params) {
     return { itens: itens };
   }, 'ctrl_reservas_disponibilidadeItens');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// PÓS-EVENTO
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Registra ou atualiza os dados de execução pós-evento de uma reserva.
+ *
+ * @param {string} id — ID da reserva
+ * @param {Object} dados — { realizado, contabilizar, publicoPresente, observacoes, comprovacoes[] }
+ */
+function ctrl_reservas_registrarPosEvento(id, dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    if (!id) throw new Error('ID da reserva é obrigatório.');
+    return ReservaEngine.registrarPosEvento(id, dados || {}, ctx.email, ctx.orgId);
+  }, 'ctrl_reservas_registrarPosEvento');
+}

@@ -9,7 +9,11 @@
  *   { id, orgId, data, horaInicio, horaTermino, sala, turno,
  *     nomeAcao, tipoAcao, responsavel, setor, coResponsavel, release,
  *     itensVolantes, status, motivoCancelamento, observacoes,
- *     acaoId, idLote, criadoEm, atualizadoEm, criadoPor, versao }
+ *     acaoId, idLote, criadoEm, atualizadoEm, criadoPor, versao,
+ *     minutosMontagem, minutosEncerramento, posEvento }
+ *
+ * posEvento: { realizado, contabilizar, publicoPresente, observacoes,
+ *              comprovacoes:[{url,descricao,tipo}], registradoPor, registradoEm }
  *
  * REGRA: nenhum outro módulo lê/escreve ESPACOS.Reservas diretamente.
  *
@@ -29,7 +33,8 @@ var ReservaRepository = (function () {
     'Sala', 'Turno', 'NomeAcao', 'TipoAcao', 'Responsavel',
     'Setor', 'CoResponsavel', 'Release', 'ItensVolantes',
     'Status', 'MotivoCancelamento', 'Observacoes',
-    'AcaoId', 'IdLote', 'CriadoEm', 'AtualizadoEm', 'CriadoPor', 'Versao'
+    'AcaoId', 'IdLote', 'CriadoEm', 'AtualizadoEm', 'CriadoPor', 'Versao',
+    'MinutosMontagem', 'MinutosEncerramento', 'PosEvento'
   ];
 
   var _COL = {};
@@ -38,6 +43,16 @@ var ReservaRepository = (function () {
   // ── Helpers internos ──────────────────────────────────────────────────
 
   function _orgId() { return getOrgConfig().orgId; }
+
+  function _parsePosEvento(raw) {
+    if (!raw) return null;
+    try { return JSON.parse(String(raw)); } catch (_) { return null; }
+  }
+
+  /** Número seguro de colunas a ler: nunca mais do que o Sheet tem. */
+  function _nCols(aba) {
+    return Math.min(aba.getLastColumn() || _HEADERS.length, _HEADERS.length);
+  }
 
   function _getSheet() {
     var props   = PropertiesService.getScriptProperties();
@@ -48,57 +63,63 @@ var ReservaRepository = (function () {
 
   function _linhaParaReserva(row) {
     return {
-      id:                row[_COL.ID]                || '',
-      orgId:             row[_COL.OrgId]             || '',
-      data:              row[_COL.Data]              ? _normalizarData(row[_COL.Data]) : '',
-      horaInicio:        _normalizarHora(row[_COL.HoraInicio]),
-      horaTermino:       _normalizarHora(row[_COL.HoraTermino]),
-      sala:              row[_COL.Sala]              || '',
-      turno:             row[_COL.Turno]             || '',
-      nomeAcao:          row[_COL.NomeAcao]          || '',
-      tipoAcao:          row[_COL.TipoAcao]          || '',
-      responsavel:       row[_COL.Responsavel]       || '',
-      setor:             row[_COL.Setor]             || '',
-      coResponsavel:     row[_COL.CoResponsavel]     || '',
-      release:           row[_COL.Release]           || '',
-      itensVolantes:     row[_COL.ItensVolantes]     || '',
-      status:            row[_COL.Status]            || 'pendente',
-      motivoCancelamento:row[_COL.MotivoCancelamento]|| '',
-      observacoes:       row[_COL.Observacoes]       || '',
-      acaoId:            row[_COL.AcaoId]            || '',
-      idLote:            row[_COL.IdLote]            || '',
-      criadoEm:          row[_COL.CriadoEm]          || '',
-      atualizadoEm:      row[_COL.AtualizadoEm]      || '',
-      criadoPor:         row[_COL.CriadoPor]         || '',
-      versao:            Number(row[_COL.Versao]     || 1)
+      id:                  row[_COL.ID]                  || '',
+      orgId:               row[_COL.OrgId]               || '',
+      data:                row[_COL.Data]                ? _normalizarData(row[_COL.Data]) : '',
+      horaInicio:          _normalizarHora(row[_COL.HoraInicio]),
+      horaTermino:         _normalizarHora(row[_COL.HoraTermino]),
+      sala:                row[_COL.Sala]                || '',
+      turno:               row[_COL.Turno]               || '',
+      nomeAcao:            row[_COL.NomeAcao]            || '',
+      tipoAcao:            row[_COL.TipoAcao]            || '',
+      responsavel:         row[_COL.Responsavel]         || '',
+      setor:               row[_COL.Setor]               || '',
+      coResponsavel:       row[_COL.CoResponsavel]       || '',
+      release:             row[_COL.Release]             || '',
+      itensVolantes:       row[_COL.ItensVolantes]       || '',
+      status:              row[_COL.Status]              || 'pendente',
+      motivoCancelamento:  row[_COL.MotivoCancelamento]  || '',
+      observacoes:         row[_COL.Observacoes]         || '',
+      acaoId:              row[_COL.AcaoId]              || '',
+      idLote:              row[_COL.IdLote]              || '',
+      criadoEm:            row[_COL.CriadoEm]            || '',
+      atualizadoEm:        row[_COL.AtualizadoEm]        || '',
+      criadoPor:           row[_COL.CriadoPor]           || '',
+      versao:              Number(row[_COL.Versao]       || 1),
+      minutosMontagem:     Number(row[_COL.MinutosMontagem]     || 0),
+      minutosEncerramento: Number(row[_COL.MinutosEncerramento] || 0),
+      posEvento:           _parsePosEvento(row[_COL.PosEvento])
     };
   }
 
   function _reservaParaLinha(r) {
     return [
-      r.id                || '',
-      r.orgId             || '',
-      r.data              || '',
-      r.horaInicio        || '',
-      r.horaTermino       || '',
-      r.sala              || '',
-      r.turno             || '',
-      r.nomeAcao          || '',
-      r.tipoAcao          || '',
-      r.responsavel       || '',
-      r.setor             || '',
-      r.coResponsavel     || '',
-      r.release           || '',
-      r.itensVolantes     || '',
-      r.status            || 'pendente',
-      r.motivoCancelamento|| '',
-      r.observacoes       || '',
-      r.acaoId            || '',
-      r.idLote            || '',
-      r.criadoEm          || '',
-      r.atualizadoEm      || '',
-      r.criadoPor         || '',
-      r.versao            || 1
+      r.id                  || '',
+      r.orgId               || '',
+      r.data                || '',
+      r.horaInicio          || '',
+      r.horaTermino         || '',
+      r.sala                || '',
+      r.turno               || '',
+      r.nomeAcao            || '',
+      r.tipoAcao            || '',
+      r.responsavel         || '',
+      r.setor               || '',
+      r.coResponsavel       || '',
+      r.release             || '',
+      r.itensVolantes       || '',
+      r.status              || 'pendente',
+      r.motivoCancelamento  || '',
+      r.observacoes         || '',
+      r.acaoId              || '',
+      r.idLote              || '',
+      r.criadoEm            || '',
+      r.atualizadoEm        || '',
+      r.criadoPor           || '',
+      r.versao              || 1,
+      Number(r.minutosMontagem     || 0),
+      Number(r.minutosEncerramento || 0),
+      r.posEvento ? JSON.stringify(r.posEvento) : ''
     ];
   }
 
@@ -152,14 +173,29 @@ var ReservaRepository = (function () {
     try {
       var aba = _getSheet();
       if (!aba) throw new Error('Aba Reservas não encontrada.');
-      var existente = aba.getRange(1, 1, 1, _HEADERS.length).getValues()[0];
-      var vazia = existente.every(function (v) { return !v; });
-      if (vazia) {
+      var lastCol = aba.getLastColumn();
+      if (lastCol === 0) {
+        // Aba nova: escrever todos os headers
         aba.getRange(1, 1, 1, _HEADERS.length).setValues([_HEADERS]);
         aba.setFrozenRows(1);
         Logger.info('reserva_repository', 'prepararIndice', 'Cabeçalho criado em ESPACOS.Reservas');
+      } else {
+        var existente = aba.getRange(1, 1, 1, lastCol).getValues()[0];
+        var vazia = existente.every(function (v) { return !v; });
+        if (vazia) {
+          // Aba com colunas mas sem dados: reescrever headers completos
+          if (lastCol < _HEADERS.length) aba.insertColumnsAfter(lastCol, _HEADERS.length - lastCol);
+          aba.getRange(1, 1, 1, _HEADERS.length).setValues([_HEADERS]);
+          aba.setFrozenRows(1);
+        } else if (lastCol < _HEADERS.length) {
+          // Aba existente com dados: apenas acrescentar colunas que faltam
+          var novosCabecalhos = _HEADERS.slice(lastCol);
+          aba.getRange(1, lastCol + 1, 1, novosCabecalhos.length).setValues([novosCabecalhos]);
+          Logger.info('reserva_repository', 'prepararIndice',
+            'Colunas adicionadas à ESPACOS.Reservas: ' + novosCabecalhos.join(', '));
+        }
       }
-      return { ok: true, aba: 'ESPACOS.Reservas' };
+      return { ok: true, aba: 'ESPACOS.Reservas', colunas: _HEADERS.length };
     } catch (e) {
       Logger.error('reserva_repository', 'prepararIndice', e.message);
       return { ok: false, erro: e.message };
@@ -176,7 +212,7 @@ var ReservaRepository = (function () {
     try {
       var aba = _getSheet();
       if (!aba || aba.getLastRow() < 2) return [];
-      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _HEADERS.length).getValues();
+      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
       var result = [];
       var f = filtros || {};
 
@@ -212,7 +248,7 @@ var ReservaRepository = (function () {
     try {
       var aba = _getSheet();
       if (!aba || aba.getLastRow() < 2) return null;
-      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _HEADERS.length).getValues();
+      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
       for (var i = 0; i < dados.length; i++) {
         if (String(dados[i][_COL.ID]).trim() === String(id).trim() &&
             dados[i][_COL.OrgId] === orgId) {
@@ -304,7 +340,7 @@ var ReservaRepository = (function () {
     try {
       var aba = _getSheet();
       if (!aba || aba.getLastRow() < 2) return [];
-      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _HEADERS.length).getValues();
+      var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
       var result = [];
       dados.forEach(function (row) {
         if (!row[_COL.ID]) return;
@@ -349,6 +385,59 @@ var ReservaRepository = (function () {
   }
 
   /**
+   * Grava (ou substitui) o bloco posEvento de uma reserva.
+   * Operação leve: atualiza apenas as colunas MinutosMontagem, MinutosEncerramento,
+   * PosEvento, AtualizadoEm e Versao — sem reescrever a linha inteira.
+   * @param {string} id
+   * @param {string} orgId
+   * @param {Object} posEvento
+   */
+  function atualizarPosEvento(id, orgId, posEvento) {
+    var aba = _getSheet();
+    if (!aba || aba.getLastRow() < 2) throw new Error('Reserva não encontrada: ' + id);
+    var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][_COL.ID]).trim() === String(id).trim() &&
+          dados[i][_COL.OrgId] === orgId) {
+        aba.getRange(i + 2, _COL.PosEvento + 1)
+           .setValue(posEvento ? JSON.stringify(posEvento) : '');
+        aba.getRange(i + 2, _COL.AtualizadoEm + 1)
+           .setValue(agora ? agora() : new Date().toISOString());
+        aba.getRange(i + 2, _COL.Versao + 1)
+           .setValue(Number(dados[i][_COL.Versao] || 1) + 1);
+        return;
+      }
+    }
+    throw new Error('[ReservaRepository.atualizarPosEvento] Reserva não encontrada: ' + id);
+  }
+
+  /**
+   * Atualiza campos de pré-evento (minutosMontagem e minutosEncerramento).
+   * @param {string} id
+   * @param {string} orgId
+   * @param {number} minutosMontagem
+   * @param {number} minutosEncerramento
+   */
+  function atualizarPreEvento(id, orgId, minutosMontagem, minutosEncerramento) {
+    var aba = _getSheet();
+    if (!aba || aba.getLastRow() < 2) throw new Error('Reserva não encontrada: ' + id);
+    var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][_COL.ID]).trim() === String(id).trim() &&
+          dados[i][_COL.OrgId] === orgId) {
+        aba.getRange(i + 2, _COL.MinutosMontagem + 1).setValue(Number(minutosMontagem || 0));
+        aba.getRange(i + 2, _COL.MinutosEncerramento + 1).setValue(Number(minutosEncerramento || 0));
+        aba.getRange(i + 2, _COL.AtualizadoEm + 1)
+           .setValue(agora ? agora() : new Date().toISOString());
+        aba.getRange(i + 2, _COL.Versao + 1)
+           .setValue(Number(dados[i][_COL.Versao] || 1) + 1);
+        return;
+      }
+    }
+    throw new Error('[ReservaRepository.atualizarPreEvento] Reserva não encontrada: ' + id);
+  }
+
+  /**
    * Métricas rápidas de reservas.
    * @param {string} orgId
    * @returns {{ total, pendente, confirmado, em_uso, concluido, cancelado, hoje }}
@@ -386,6 +475,8 @@ var ReservaRepository = (function () {
     salvarLote:                salvarLote,
     listarAtivosParaConflito:  listarAtivosParaConflito,
     atualizarStatus:           atualizarStatus,
+    atualizarPosEvento:        atualizarPosEvento,
+    atualizarPreEvento:        atualizarPreEvento,
     metricas:                  metricas
   };
 

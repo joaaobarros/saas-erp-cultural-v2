@@ -708,6 +708,66 @@ var ReservaEngine = (function () {
     };
   }
 
+  // ── Pós-evento ────────────────────────────────────────────────────────
+
+  /**
+   * Calcula duração total de uma reserva em minutos (horaTermino − horaInicio).
+   * @param {Reserva} r
+   * @returns {number} minutos (0 se inválido)
+   */
+  function _duracaoMin(r) {
+    var ini = _horaParaMin(r.horaInicio);
+    var fim = _horaParaMin(r.horaTermino);
+    return (ini >= 0 && fim > ini) ? fim - ini : 0;
+  }
+
+  /**
+   * Registra ou atualiza o bloco pós-evento de uma reserva.
+   * Calcula tempoAtividadeMin = duração − montagem − encerramento.
+   *
+   * @param {string} id — ID da reserva
+   * @param {Object} dados — { realizado, contabilizar, publicoPresente, observacoes, comprovacoes[] }
+   * @param {string} emailUsuario
+   * @param {string} [orgId]
+   * @returns {{ ok, posEvento }}
+   */
+  function registrarPosEvento(id, dados, emailUsuario, orgId) {
+    orgId = orgId || _orgId();
+    var reserva = ReservaRepository.buscarPorId(id, orgId);
+    if (!reserva) throw new Error('Reserva não encontrada: ' + id);
+
+    var anterior = reserva.posEvento || {};
+    var posEvento = {
+      realizado:         dados.realizado         !== undefined ? !!dados.realizado        : (anterior.realizado !== false ? true : false),
+      contabilizar:      dados.contabilizar       !== undefined ? !!dados.contabilizar     : (anterior.contabilizar !== false ? true : false),
+      publicoPresente:   dados.publicoPresente    !== undefined ? Number(dados.publicoPresente || 0) : (anterior.publicoPresente || 0),
+      observacoes:       dados.observacoes        !== undefined ? (dados.observacoes || '') : (anterior.observacoes || ''),
+      comprovacoes:      dados.comprovacoes       !== undefined ? (dados.comprovacoes  || []) : (anterior.comprovacoes || []),
+      registradoPor:     emailUsuario || '',
+      registradoEm:      agora ? agora() : new Date().toISOString()
+    };
+
+    // Calcular tempo real de atividade (excluindo montagem e encerramento)
+    var duracaoTotal = _duracaoMin(reserva);
+    var montagemMin  = Number(reserva.minutosMontagem     || 0);
+    var encerrMin    = Number(reserva.minutosEncerramento  || 0);
+    posEvento.tempoAtividadeMin = Math.max(0, duracaoTotal - montagemMin - encerrMin);
+
+    ReservaRepository.atualizarPosEvento(id, orgId, posEvento);
+
+    AuditoriaService.registrar('POS_EVENTO_REGISTRADO', 'espacos', {
+      reservaId: id, realizado: posEvento.realizado,
+      publicoPresente: posEvento.publicoPresente,
+      tempoAtividadeMin: posEvento.tempoAtividadeMin,
+      autor: emailUsuario, orgId: orgId
+    });
+
+    Logger.info('reserva_engine', 'registrarPosEvento',
+      id + ' — realizado=' + posEvento.realizado + ' público=' + posEvento.publicoPresente);
+
+    return { ok: true, posEvento: posEvento };
+  }
+
   // ── Helpers privados ────────────────────────────────────────────────
 
   function _inferirTurno(horaInicio, horaTermino) {
@@ -740,11 +800,12 @@ var ReservaEngine = (function () {
     verificarDisponibilidade: verificarDisponibilidade,
 
     // Escrita
-    criar:         criar,
-    criarLote:     criarLote,
-    criarBloqueio: criarBloqueio,
-    atualizar:     atualizar,
-    mudarStatus:   mudarStatus,
+    criar:               criar,
+    criarLote:           criarLote,
+    criarBloqueio:       criarBloqueio,
+    atualizar:           atualizar,
+    mudarStatus:         mudarStatus,
+    registrarPosEvento:  registrarPosEvento,
 
     // Guarda de conflito (exposta para testes)
     assertSemConflito:          assertSemConflito,

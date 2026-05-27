@@ -120,6 +120,7 @@ var AcaoEngine = (function () {
           dataInicio:          dados.dataInicio || '',
           dataFim:             dados.dataFim    || '',
           publicoPrevisto:     parseInt(dados.publicoPrevisto || 0, 10),
+          metaExecucao:        dados.metaExecucao || null,
           riderTecnico:        dados.riderTecnico || [],
           criadoEm:            agora,
           atualizadoEm:        agora,
@@ -311,7 +312,7 @@ var AcaoEngine = (function () {
     var campos = [
       'nome', 'tipo', 'descricao', 'descricaoPublica', 'visibilidadePublica',
       'responsavel', 'setor', 'equipe', 'dataInicio', 'dataFim',
-      'publicoPrevisto', 'riderTecnico'
+      'publicoPrevisto', 'metaExecucao', 'riderTecnico'
     ];
     campos.forEach(function(c) {
       if (novos[c] !== undefined && novos[c] !== null) {

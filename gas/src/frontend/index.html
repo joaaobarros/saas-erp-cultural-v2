@@ -3645,11 +3645,11 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Hora início *</label>
-                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
+                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora término *</label>
-                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
+                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();">
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Nome da Ação / Evento *</label>
@@ -3666,6 +3666,22 @@ select.form-control { cursor: pointer; }
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Observações</label>
                 <textarea id="res-obs" class="form-input" rows="2" placeholder="Equipamentos necessários, configuração…"></textarea>
+              </div>
+              <!-- Bloco: Tempos de montagem/encerramento -->
+              <div class="form-group">
+                <label class="form-label" title="Tempo de preparação antes do início da atividade (montagem, soundcheck, organização)">Montagem (min)</label>
+                <input type="number" id="res-montagem" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" title="Tempo de encerramento após o fim da atividade (desmontagem, limpeza, retirada)">Encerramento (min)</label>
+                <input type="number" id="res-encerramento" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="color:var(--muted);">Tempo de atividade</label>
+                <div id="res-tempo-atividade" style="padding:7px 10px;background:var(--surface2);border-radius:var(--r-sm);font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center;">
+                  <span class="ms ms-sm" style="font-size:14px;margin-right:6px;color:var(--muted);">timer</span>
+                  <span id="res-tempo-atividade-val">—</span>
+                </div>
               </div>
               <!-- Bloco: Itens fixos do espaço (informativo) -->
               <div class="form-group" id="res-itens-fixos-bloco" style="grid-column:1/-1;display:none;">
@@ -3694,6 +3710,9 @@ select.form-control { cursor: pointer; }
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;">
               <button class="btn btn-ghost btn-sm" id="btn-res-checar" onclick="ReservasUI.verificarDisponibilidade()">
                 <span class="ms ms-sm">search</span> Checar disponibilidade
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1">
+                <span class="ms ms-sm">calendar_month</span> Lote
               </button>
               <button class="btn btn-ghost" onclick="ReservasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
               <button class="btn btn-primario" id="btn-res-salvar" onclick="ReservasUI.salvar()">
@@ -3727,9 +3746,6 @@ select.form-control { cursor: pointer; }
                 </select>
                 <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
                   <span class="ms ms-sm">refresh</span>
-                </button>
-                <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1">
-                  <span class="ms ms-sm">calendar_month</span> Lote
                 </button>
                 <button class="btn btn-primario btn-sm" id="btn-res-novo" onclick="ReservasUI.abrirForm()">
                   <span class="ms ms-sm">add</span> Nova Reserva
@@ -4237,6 +4253,96 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
           </div><!-- /modal-manutencao-espaco -->
+
+          <!-- MODAL: Pós-evento -->
+          <div id="pos-evento-modal" class="modal-overlay oculto"
+               onclick="if(event.target===this)ReservasUI._fecharPosEvento()">
+            <div class="modal-box" style="max-width:560px;width:100%;">
+              <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);">
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                  <span class="ms" style="color:var(--color-success);">assignment_turned_in</span>
+                  Registrar Execução
+                </h3>
+                <button class="modal-close" onclick="ReservasUI._fecharPosEvento()" data-bg-skip="1">✕</button>
+              </div>
+              <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                <!-- Info da reserva -->
+                <div id="pos-evento-info" style="background:var(--surface2);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:var(--text2);"></div>
+
+                <!-- Realizado? -->
+                <div style="display:flex;gap:16px;align-items:center;">
+                  <span style="font-size:13px;font-weight:600;min-width:120px;">Atividade realizada?</span>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                    <input type="radio" name="pos-realizado" id="pos-realizado-sim" value="sim" checked
+                           onchange="ReservasUI._onPosRealizadoChange()"> Sim
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                    <input type="radio" name="pos-realizado" id="pos-realizado-nao" value="nao"
+                           onchange="ReservasUI._onPosRealizadoChange()"> Não
+                  </label>
+                </div>
+
+                <!-- Campos visíveis apenas se realizado = sim -->
+                <div id="pos-campos-execucao" style="display:flex;flex-direction:column;gap:12px;">
+                  <!-- Contabilizar para a ação -->
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="checkbox" id="pos-contabilizar" checked style="width:16px;height:16px;cursor:pointer;">
+                    <label for="pos-contabilizar" style="font-size:13px;cursor:pointer;">
+                      Contabilizar esta reserva para as metas da ação
+                    </label>
+                  </div>
+
+                  <!-- Tempo de atividade (informativo, calculado) -->
+                  <div style="display:flex;gap:12px;align-items:center;background:var(--surface2);border-radius:var(--r-sm);padding:8px 12px;">
+                    <span class="ms ms-sm" style="color:var(--muted);">timer</span>
+                    <span style="font-size:13px;color:var(--text2);">Tempo de atividade calculado:</span>
+                    <strong id="pos-tempo-calc" style="font-size:13px;">—</strong>
+                  </div>
+
+                  <!-- Público presente -->
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Público presente</label>
+                    <input type="number" id="pos-publico" class="form-input" min="0" placeholder="Número de participantes">
+                  </div>
+
+                  <!-- Comprovações -->
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Comprovações (links Drive, fotos, atas)</label>
+                    <div id="pos-comprovacoes-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+                    <div style="display:flex;gap:8px;">
+                      <input type="text" id="pos-comp-url" class="form-input" placeholder="https://… ou ID do arquivo Drive" style="flex:1;">
+                      <input type="text" id="pos-comp-desc" class="form-input" placeholder="Descrição" style="flex:1;">
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._adicionarComprovacao()" data-bg-skip="1">
+                        <span class="ms ms-sm">add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div><!-- /pos-campos-execucao -->
+
+                <!-- Motivo de não realização (visível apenas se realizado = não) -->
+                <div id="pos-campos-nao-realizado" style="display:none;">
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Motivo de não realização</label>
+                    <textarea id="pos-obs" class="form-input" rows="2" placeholder="Descreva o motivo…"></textarea>
+                  </div>
+                </div>
+
+                <!-- Observações (sempre visível) -->
+                <div id="pos-campos-obs" class="form-group" style="margin:0;display:none;">
+                  <label class="form-label">Observações gerais</label>
+                  <textarea id="pos-obs-gerais" class="form-input" rows="2" placeholder="Observações sobre a execução…"></textarea>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+                  <button class="btn btn-ghost" onclick="ReservasUI._fecharPosEvento()" data-bg-skip="1">Cancelar</button>
+                  <button class="btn btn-primario" id="btn-pos-evento-salvar"
+                          onclick="ReservasUI._salvarPosEvento()">
+                    <span class="ms ms-sm">save</span> Salvar execução
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div><!-- /pos-evento-modal -->
 
           <!-- MODO AGENDA -->
           <div id="res-modo-agenda" style="display:none;">
@@ -7531,7 +7637,8 @@ var GAS = {
     concluir:                function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir(id); },
     bloquear:                function(p,ds,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_bloquear(p,ds); },
     cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); },
-    disponibilidadeItens:    function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_disponibilidadeItens(p||{}); }
+    disponibilidadeItens:    function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_disponibilidadeItens(p||{}); },
+    registrarPosEvento:      function(id,d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_registrarPosEvento(id,d||{}); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -13436,6 +13543,16 @@ var ReservasUI = (function() {
         btns += '<button class="btn btn-ghost btn-sm btn-res-concluir" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">done_all</span> Concluir</button>';
       }
       btns += '<button class="btn btn-ghost btn-sm btn-res-editar" data-id="'+escaparHtml(r.id)+'" title="Editar"><span class="ms ms-sm">edit</span></button>';
+      // Botão pós-evento: visível para reservas cuja data já passou (ou concluídas/em_uso)
+      var hoje = new Date().toISOString().slice(0,10);
+      var posPassado = (r.data || '') <= hoje && r.status !== 'cancelado';
+      if (posPassado) {
+        var temPos = r.posEvento && r.posEvento.registradoEm;
+        btns += '<button class="btn btn-ghost btn-sm btn-res-pos-evento" data-id="'+escaparHtml(r.id)+'" title="Registrar execução" style="color:' + (temPos ? 'var(--color-success)' : 'var(--muted)') + ';">'
+          + '<span class="ms ms-sm">assignment_turned_in</span>'
+          + (temPos ? '' : '')
+          + '</button>';
+      }
 
       var linhas = '';
       linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;">';
@@ -13484,6 +13601,13 @@ var ReservasUI = (function() {
         var id = this.getAttribute('data-id');
         var r = _listaCacheTotal.filter(function(x){ return x.id === id; })[0];
         if (r) abrirForm(r);
+      });
+    });
+    el.querySelectorAll('.btn-res-pos-evento').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = this.getAttribute('data-id');
+        var r = _listaCacheTotal.filter(function(x){ return x.id === id; })[0];
+        if (r) _abrirPosEvento(r);
       });
     });
   }
@@ -13586,7 +13710,10 @@ var ReservasUI = (function() {
           return '<option value="'+escaparHtml(s.id)+'"'+sel+'>'+escaparHtml(s.nome)+'</option>';
         }).join('');
     }
-    document.getElementById('res-obs').value       = dados && dados.observacoes || '';
+    document.getElementById('res-obs').value         = dados && dados.observacoes || '';
+    document.getElementById('res-montagem').value    = dados && dados.minutosMontagem    != null ? dados.minutosMontagem    : 0;
+    document.getElementById('res-encerramento').value= dados && dados.minutosEncerramento != null ? dados.minutosEncerramento : 0;
+    ReservasUI._atualizarTempoAtividade();
     document.getElementById('reservas-form-titulo').textContent = dados && dados.id ? 'Editar Reserva' : 'Nova Reserva';
     document.getElementById('res-disp-resultado').style.display = 'none';
     // Inicializar chips de itens volantes
@@ -13667,10 +13794,12 @@ var ReservasUI = (function() {
     var dados = {
       sala: sala, data: data, horaInicio: ini, horaTermino: fim,
       nomeAcao: nome,
-      tipoAcao:      (document.getElementById('res-tipo-acao').value||'').trim(),
-      setor:         (document.getElementById('res-setor').value||'').trim(),
-      observacoes:   (document.getElementById('res-obs').value||'').trim(),
-      itensVolantes: _serializarItensVolantes()
+      tipoAcao:            (document.getElementById('res-tipo-acao').value||'').trim(),
+      setor:               (document.getElementById('res-setor').value||'').trim(),
+      observacoes:         (document.getElementById('res-obs').value||'').trim(),
+      itensVolantes:       _serializarItensVolantes(),
+      minutosMontagem:     parseInt(document.getElementById('res-montagem').value||0, 10) || 0,
+      minutosEncerramento: parseInt(document.getElementById('res-encerramento').value||0, 10) || 0
     };
     var id = (document.getElementById('res-id').value||'').trim();
     BtnGuard.wrap('btn-res-salvar', 'Salvando…', function(done) {
@@ -13738,6 +13867,143 @@ var ReservasUI = (function() {
         if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
         Toast.sucesso('Reserva habilitada para entrada.'); carregar();
       }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
+  }
+
+  // ── Tempo de atividade (pré-evento) ──────────────────────────────────────
+  function _atualizarTempoAtividade() {
+    var ini = (document.getElementById('res-hora-ini') || {}).value || '';
+    var fim = (document.getElementById('res-hora-fim') || {}).value || '';
+    var mont = parseInt((document.getElementById('res-montagem') || {}).value || 0, 10) || 0;
+    var ence = parseInt((document.getElementById('res-encerramento') || {}).value || 0, 10) || 0;
+    var el = document.getElementById('res-tempo-atividade-val');
+    if (!el) return;
+    if (!ini || !fim) { el.textContent = '—'; return; }
+    var pI = ini.split(':'), pF = fim.split(':');
+    var minIni = parseInt(pI[0],10)*60 + parseInt(pI[1]||0,10);
+    var minFim = parseInt(pF[0],10)*60 + parseInt(pF[1]||0,10);
+    var atividade = minFim - minIni - mont - ence;
+    if (atividade < 0) { el.textContent = '⚠ Montagem/encerramento superam a duração'; el.style.color='var(--color-error)'; return; }
+    el.style.color = 'var(--text2)';
+    var h = Math.floor(atividade / 60), m = atividade % 60;
+    el.textContent = (h > 0 ? h + 'h ' : '') + m + 'min de contato com o público';
+  }
+
+  // ── Pós-evento ────────────────────────────────────────────────────────────
+  var _posEventoReservaAtual = null;
+  var _posEventoComprovacoes = [];
+
+  function _abrirPosEvento(reserva) {
+    _posEventoReservaAtual = reserva;
+    _posEventoComprovacoes = (reserva.posEvento && reserva.posEvento.comprovacoes) ? reserva.posEvento.comprovacoes.slice() : [];
+
+    // Preencher info da reserva
+    var esp = _espacosPorId[reserva.sala] || reserva.sala || '—';
+    var info = document.getElementById('pos-evento-info');
+    if (info) {
+      var dur = 0;
+      if (reserva.horaInicio && reserva.horaTermino) {
+        var pI = reserva.horaInicio.split(':'), pF = reserva.horaTermino.split(':');
+        dur = parseInt(pF[0],10)*60+parseInt(pF[1]||0,10) - (parseInt(pI[0],10)*60+parseInt(pI[1]||0,10));
+      }
+      var mont = Number(reserva.minutosMontagem || 0), ence = Number(reserva.minutosEncerramento || 0);
+      var atv  = Math.max(0, dur - mont - ence);
+      var fmtMin = function(m) { var h=Math.floor(m/60),mi=m%60; return (h>0?h+'h ':'')+mi+'min'; };
+      info.innerHTML =
+        '<strong>' + escaparHtml(reserva.nomeAcao || '—') + '</strong><br>' +
+        '<span style="color:var(--muted)">' + escaparHtml(esp) + ' &bull; ' +
+        escaparHtml(_fmtDataPtBR(reserva.data)) + ' &bull; ' +
+        escaparHtml(reserva.horaInicio || '') + '–' + escaparHtml(reserva.horaTermino || '') + '</span>' +
+        (atv > 0 ? '<br><span style="color:var(--muted);font-size:12px;">Montagem: ' + mont + 'min | Encerramento: ' + ence + 'min | <strong>Atividade: ' + fmtMin(atv) + '</strong></span>' : '');
+      var tempoEl = document.getElementById('pos-tempo-calc');
+      if (tempoEl) tempoEl.textContent = atv > 0 ? fmtMin(atv) : (dur > 0 ? fmtMin(dur) + ' (sem desconto)' : '—');
+    }
+
+    // Preencher campos com dados existentes
+    var pe = reserva.posEvento || {};
+    var realizado = pe.realizado !== false;
+    document.getElementById('pos-realizado-sim').checked = realizado;
+    document.getElementById('pos-realizado-nao').checked = !realizado;
+    document.getElementById('pos-contabilizar').checked  = pe.contabilizar !== false;
+    document.getElementById('pos-publico').value          = pe.publicoPresente || '';
+    var obsGeraisEl = document.getElementById('pos-obs-gerais');
+    if (obsGeraisEl) obsGeraisEl.value = pe.observacoes || '';
+    var obsNaoEl = document.getElementById('pos-obs');
+    if (obsNaoEl) obsNaoEl.value = (!realizado && pe.observacoes) ? pe.observacoes : '';
+    _posEventoComprovacoes = (pe.comprovacoes || []).slice();
+    _renderComprovacoes();
+    _onPosRealizadoChange();
+
+    document.getElementById('pos-evento-modal').classList.remove('oculto');
+  }
+
+  function _fecharPosEvento() {
+    document.getElementById('pos-evento-modal').classList.add('oculto');
+    _posEventoReservaAtual = null;
+    _posEventoComprovacoes = [];
+  }
+
+  function _onPosRealizadoChange() {
+    var sim = document.getElementById('pos-realizado-sim').checked;
+    var execEl = document.getElementById('pos-campos-execucao');
+    var naoEl  = document.getElementById('pos-campos-nao-realizado');
+    var obsEl  = document.getElementById('pos-campos-obs');
+    if (execEl) execEl.style.display = sim ? '' : 'none';
+    if (naoEl)  naoEl.style.display  = sim ? 'none' : '';
+    if (obsEl)  obsEl.style.display  = sim ? '' : 'none';
+  }
+
+  function _adicionarComprovacao() {
+    var url  = (document.getElementById('pos-comp-url').value  || '').trim();
+    var desc = (document.getElementById('pos-comp-desc').value || '').trim();
+    if (!url) { Toast.aviso('Informe a URL da comprovação.'); return; }
+    _posEventoComprovacoes.push({ url: url, descricao: desc, tipo: 'link' });
+    document.getElementById('pos-comp-url').value  = '';
+    document.getElementById('pos-comp-desc').value = '';
+    _renderComprovacoes();
+  }
+
+  function _renderComprovacoes() {
+    var el = document.getElementById('pos-comprovacoes-lista');
+    if (!el) return;
+    if (!_posEventoComprovacoes.length) { el.innerHTML = ''; return; }
+    el.innerHTML = _posEventoComprovacoes.map(function(c, i) {
+      return '<div style="display:flex;gap:6px;align-items:center;background:var(--surface2);border-radius:var(--r-sm);padding:5px 10px;font-size:12px;">'
+        + '<span class="ms ms-sm" style="font-size:13px;color:var(--muted);">link</span>'
+        + '<a href="' + escaparHtml(c.url) + '" target="_blank" style="flex:1;color:var(--color-primary);word-break:break-all;">' + escaparHtml(c.descricao || c.url) + '</a>'
+        + '<button type="button" onclick="ReservasUI._removerComprovacao(' + i + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:0;" data-bg-skip="1">✕</button>'
+        + '</div>';
+    }).join('');
+  }
+
+  function _removerComprovacao(idx) {
+    _posEventoComprovacoes.splice(idx, 1);
+    _renderComprovacoes();
+  }
+
+  function _salvarPosEvento() {
+    if (!_posEventoReservaAtual) return;
+    var id = _posEventoReservaAtual.id;
+    var realizado = document.getElementById('pos-realizado-sim').checked;
+    var obsNaoEl  = document.getElementById('pos-obs');
+    var obsGeraisEl = document.getElementById('pos-obs-gerais');
+    var dados = {
+      realizado:       realizado,
+      contabilizar:    document.getElementById('pos-contabilizar').checked,
+      publicoPresente: parseInt(document.getElementById('pos-publico').value || 0, 10) || 0,
+      observacoes:     realizado
+        ? ((obsGeraisEl && obsGeraisEl.value) || '').trim()
+        : ((obsNaoEl    && obsNaoEl.value)    || '').trim(),
+      comprovacoes: _posEventoComprovacoes
+    };
+    BtnGuard.wrap('btn-pos-evento-salvar', 'Salvando…', function(done) {
+      GAS.reservas.registrarPosEvento(id, dados, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar execução.'); return; }
+        _fecharPosEvento();
+        Toast.sucesso('Execução registrada.');
+        carregar();
+      }, function(err) { done(); Toast.erro('Erro: ' + (err.message || err)); });
     });
   }
 
@@ -14523,7 +14789,15 @@ var ReservasUI = (function() {
     abrirModalManutencao:   abrirModalManutencao,
     _fecharModalManutencao: _fecharModalManutencao,
     _atualizarBadgeManutencao: _atualizarBadgeManutencao,
-    _confirmarManutencao:   _confirmarManutencao
+    _confirmarManutencao:   _confirmarManutencao,
+    // Pré-evento
+    _atualizarTempoAtividade: _atualizarTempoAtividade,
+    // Pós-evento
+    _fecharPosEvento:      _fecharPosEvento,
+    _onPosRealizadoChange: _onPosRealizadoChange,
+    _adicionarComprovacao: _adicionarComprovacao,
+    _removerComprovacao:   _removerComprovacao,
+    _salvarPosEvento:      _salvarPosEvento
   };
 })();
 
@@ -14807,6 +15081,21 @@ var ReservasUI = (function() {
       if (el && !el.value) el.value = hoje;
       if (el) el.min = hoje;
     });
+    // Pré-preencher campos de texto com o que estiver no formulário de reserva
+    var formSala    = document.getElementById('res-sala');
+    var formSalaVal = formSala ? formSala.value : '';
+    var formHoraIni = (document.getElementById('res-hora-ini')||{}).value || '';
+    var formHoraFim = (document.getElementById('res-hora-fim')||{}).value || '';
+    var formNome    = (document.getElementById('res-nome-acao')||{}).value || '';
+    var formObs     = (document.getElementById('res-obs')||{}).value || '';
+    var formSetor   = document.getElementById('res-setor');
+    var formSetorVal= formSetor ? formSetor.value : '';
+    var elHoraIni = document.getElementById('lote-hora-ini');
+    var elHoraFim = document.getElementById('lote-hora-fim');
+    if (elHoraIni) elHoraIni.value = formHoraIni;
+    if (elHoraFim) elHoraFim.value = formHoraFim;
+    document.getElementById('lote-nome-acao').value = formNome;
+    document.getElementById('lote-obs').value = formObs;
     // Popular selects de espaço e setor
     var sel = document.getElementById('lote-sala');
     if (sel) {
@@ -14814,6 +15103,7 @@ var ReservasUI = (function() {
         var esp = (r && r.ok && Array.isArray(r.data)) ? r.data.filter(function(e){ return e.aceitaReserva !== false; }) : [];
         sel.innerHTML = '<option value="">Selecione o espaço…</option>' +
           esp.map(function(e){ return '<option value="'+escaparHtml(e.id)+'">'+escaparHtml(e.nome)+' (cap. '+(e.capacidade||'?')+')</option>'; }).join('');
+        if (formSalaVal) sel.value = formSalaVal;
       }, function(){});
     }
     var selSetor = document.getElementById('lote-setor');
@@ -14822,9 +15112,8 @@ var ReservasUI = (function() {
       var setores = (boot && boot.setores) || [];
       selSetor.innerHTML = '<option value="">Selecione…</option>' +
         setores.map(function(s){ return '<option value="'+escaparHtml(s.id)+'">'+escaparHtml(s.nome)+'</option>'; }).join('');
+      if (formSetorVal) selSetor.value = formSetorVal;
     }
-    document.getElementById('lote-nome-acao').value = '';
-    document.getElementById('lote-obs').value = '';
     _renderChips();
     _selecionarModo('manual');
     document.getElementById('lote-modal').classList.remove('oculto');
