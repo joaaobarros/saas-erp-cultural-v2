@@ -126,9 +126,9 @@ var MapaAcaoEngine = (function () {
       if (!acaoId) throw new Error('acaoId é obrigatório.');
       if (!nome || !String(nome).trim()) throw new Error('Nome do local é obrigatório.');
 
-      var espacos  = ConfigService.getEspacos(orgId) || [];
+      var espacos  = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
       var terreno  = null;
-      try { terreno = ConfigService.getTerreno ? ConfigService.getTerreno(orgId) : null; } catch(_) {}
+      try { terreno = SistemaConfigService.getTerreno ? SistemaConfigService.getTerreno(orgId) : null; } catch(_) {}
 
       var layers  = _layersPadrao();
       var layerId = layers[0].id; // layer padrão: Estrutura Física
