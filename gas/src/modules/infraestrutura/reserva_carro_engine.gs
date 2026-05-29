@@ -177,8 +177,8 @@ var ReservaCarroEngine = (function() {
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.transitar('reservas_carro', rc.status, STATUS.APROVADA,
-      { id: id, usuario: emailAprovador });
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.APROVADA,
+      id, emailAprovador);
 
     var conflito = _verificarConflito(rc.data, rc.horaSaida, rc.horaChegada, orgId, id);
     if (conflito) {
@@ -222,8 +222,8 @@ var ReservaCarroEngine = (function() {
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.transitar('reservas_carro', rc.status, STATUS.RECUSADA,
-      { id: id, usuario: emailAprovador });
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.RECUSADA,
+      id, emailAprovador);
 
     var atualizado = ReservaCarroRepository.atualizar(id, {
       status:        STATUS.RECUSADA,
@@ -258,8 +258,8 @@ var ReservaCarroEngine = (function() {
     if (rc.solicitante !== email && !_podAprovar(email))
       throw new Error('Sem permissão para cancelar esta reserva.');
 
-    FsmGuardian.transitar('reservas_carro', rc.status, STATUS.CANCELADA,
-      { id: id, usuario: email });
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CANCELADA,
+      id, email);
 
     var atualizado = ReservaCarroRepository.atualizar(id, {
       status:       STATUS.CANCELADA,
@@ -285,8 +285,8 @@ var ReservaCarroEngine = (function() {
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.transitar('reservas_carro', rc.status, STATUS.CONCLUIDA,
-      { id: id, usuario: email });
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CONCLUIDA,
+      id, email);
 
     var atualizado = ReservaCarroRepository.atualizar(id, {
       status: STATUS.CONCLUIDA

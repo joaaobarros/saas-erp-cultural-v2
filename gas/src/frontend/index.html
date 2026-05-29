@@ -2239,8 +2239,20 @@ select.form-control { cursor: pointer; }
 
         <div class="stats-strip" id="carro-metricas"></div>
 
-        <!-- Filtros -->
-        <div class="filter-bar" style="margin-bottom:12px;">
+        <!-- Toggle de modo: Lista / Agenda -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;" id="carro-modo-toggle">
+          <button class="btn btn-ghost btn-sm res-modo-btn active" data-modo="lista"
+                  onclick="ReservasCarroUI.setModo('lista')" data-bg-skip="1">
+            <span class="ms ms-sm">view_list</span> Lista
+          </button>
+          <button class="btn btn-ghost btn-sm res-modo-btn" data-modo="agenda"
+                  onclick="ReservasCarroUI.setModo('agenda')" data-bg-skip="1">
+            <span class="ms ms-sm">calendar_month</span> Agenda
+          </button>
+        </div>
+
+        <!-- Filtros (lista) -->
+        <div class="filter-bar" id="carro-filtros-lista" style="margin-bottom:12px;">
           <select id="carro-filtro-status" class="select-sm" onchange="ReservasCarroUI.carregar()">
             <option value="">Todos os status</option>
             <option value="PENDENTE">Pendentes</option>
@@ -2255,7 +2267,8 @@ select.form-control { cursor: pointer; }
           </button>
         </div>
 
-        <div class="card" style="padding:0;">
+        <!-- Vista Lista -->
+        <div id="carro-view-lista" class="card" style="padding:0;">
           <div id="carro-lista" style="min-height:120px;">
             <div class="empty-state" style="padding:32px 20px;">
               <span class="ms" style="font-size:32px;color:var(--muted)">directions_car</span>
@@ -2264,9 +2277,21 @@ select.form-control { cursor: pointer; }
           </div>
         </div>
 
+        <!-- Vista Agenda -->
+        <div id="carro-view-agenda" style="display:none;">
+          <div class="card" style="padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.agendaMes(-1)" data-bg-skip="1"><span class="ms ms-sm">chevron_left</span></button>
+              <strong id="carro-agenda-titulo" style="font-size:15px;"></strong>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.agendaMes(1)" data-bg-skip="1"><span class="ms ms-sm">chevron_right</span></button>
+            </div>
+            <div id="carro-agenda-grid"></div>
+          </div>
+        </div>
+
         <!-- Modal Formulário -->
         <div id="carro-modal-overlay" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
-          <div id="carro-modal-box" style="background:var(--surface);border-radius:12px;width:min(640px,96vw);max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+          <div id="carro-modal-box" style="background:var(--surface);border-radius:12px;width:min(680px,96vw);max-height:92vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
               <h3 style="margin:0;font-size:16px;">Nova Reserva de Veículo</h3>
               <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.fecharFormulario()" data-bg-skip="1" style="padding:4px 8px;">
@@ -2281,7 +2306,9 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Setor / Equipe</label>
-                <input id="carro-f-setor" type="text" class="form-control" placeholder="Ex: Comunicação">
+                <select id="carro-f-setor" class="form-control">
+                  <option value="">— Selecione o setor —</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Hora de Saída *</label>
@@ -2299,28 +2326,44 @@ select.form-control { cursor: pointer; }
               <span style="font-size:11px;color:var(--muted)">Informe os nomes dos passageiros, separados por vírgula.</span>
             </div>
 
+            <!-- LOCAL DE SAÍDA -->
             <div class="form-group">
               <label class="form-label">Local de Saída *</label>
-              <input id="carro-f-local-saida" type="text" class="form-control" placeholder="Ex: CCBJ — R. São João, 288, Centro-Sul" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Local de Chegada (Destino) *</label>
-              <input id="carro-f-local-chegada" type="text" class="form-control" placeholder="Ex: Secretaria Municipal de Cultura" required>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                Link do Mapa
-                <span style="font-size:11px;color:var(--muted);font-weight:normal;"> (opcional — cole o link do Google Maps)</span>
-              </label>
               <div style="display:flex;gap:8px;">
-                <input id="carro-f-mapa" type="url" class="form-control" placeholder="https://maps.google.com/...">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.gerarLinkMapa()" data-bg-skip="1" title="Gerar link a partir dos endereços acima" style="white-space:nowrap;">
-                  <span class="ms ms-sm">map</span> Gerar
+                <input id="carro-f-local-saida" type="text" class="form-control" placeholder="Ex: CCBJ — R. São João, 288, Centro-Sul" oninput="ReservasCarroUI.debouncePreviewMapa()" required>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.usarLocalizacaoAtual('saida')" data-bg-skip="1" title="Usar minha localização atual" style="white-space:nowrap;padding:0 10px;">
+                  <span class="ms ms-sm">my_location</span>
                 </button>
               </div>
+              <div id="carro-preview-saida" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+                <iframe id="carro-iframe-saida" style="width:100%;height:160px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+              </div>
             </div>
+
+            <!-- LOCAL DE CHEGADA -->
+            <div class="form-group">
+              <label class="form-label">Local de Chegada (Destino) *</label>
+              <div style="display:flex;gap:8px;">
+                <input id="carro-f-local-chegada" type="text" class="form-control" placeholder="Ex: Secretaria Municipal de Cultura" oninput="ReservasCarroUI.debouncePreviewMapa()" required>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.usarLocalizacaoAtual('chegada')" data-bg-skip="1" title="Usar minha localização atual" style="white-space:nowrap;padding:0 10px;">
+                  <span class="ms ms-sm">my_location</span>
+                </button>
+              </div>
+              <div id="carro-preview-chegada" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+                <iframe id="carro-iframe-chegada" style="width:100%;height:160px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+              </div>
+            </div>
+
+            <!-- Rota completa (aparece quando ambos preenchidos) -->
+            <div id="carro-preview-rota" style="display:none;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+              <div style="padding:8px 12px;background:var(--surface2);font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;">
+                <span><span class="ms ms-sm" style="vertical-align:middle;margin-right:4px;">directions</span>Rota sugerida</span>
+                <a id="carro-link-rota" href="#" target="_blank" rel="noopener" style="font-size:11px;color:var(--primario);text-decoration:none;">Abrir no Google Maps</a>
+              </div>
+              <iframe id="carro-iframe-rota" style="width:100%;height:200px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+
+            <input type="hidden" id="carro-f-mapa">
 
             <div class="form-group">
               <label class="form-label">Observação</label>
@@ -8221,6 +8264,7 @@ var GAS = {
     feedback:            function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_feedback(p||{}); },
     participacao:        function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_participacao({}); },
     bancoPerguntas:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_banco_perguntas({}); },
+    pulseMonitoramento:  function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_monitoramento(p||{}); },
     suprimirEmails:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_suprimir_emails({}); }
   },
   // ── Fase 11.3: Dashboard Unificado ────────────────────────────────────────
@@ -8267,7 +8311,8 @@ var GAS = {
     recusar:  function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_recusar(id,m||''); },
     cancelar: function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_cancelar(id,m||''); },
     concluir: function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_concluir(id); },
-    metricas: function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_metricas(); }
+    metricas: function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_metricas(); },
+    geocode:  function(e,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_geocode(e); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -12220,15 +12265,19 @@ var AprovacaoReservaUI = (function() {
 // RESERVAS DE VEÍCULO — Fase 21
 // ═══════════════════════════════════════════════════════════
 var ReservasCarroUI = (function() {
-  var _carregado = false;
-  var _papel     = '';
+  var _carregado    = false;
+  var _papel        = '';
+  var _modo         = 'lista';
+  var _cache        = [];
+  var _mesAgenda    = new Date();
+  var _debounceTimer = null;
+
+  var _MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var _DIAS_SEM = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 
   function _setPapel(papel) {
     _papel = papel || '';
-    var ehAprovador = ['infraestrutura','gestor','admin','superadmin'].indexOf(_papel) >= 0;
-    document.querySelectorAll('.carro-acao-aprovador').forEach(function(el) {
-      el.style.display = ehAprovador ? '' : 'none';
-    });
   }
 
   function _badgeCls(status) {
@@ -12256,10 +12305,10 @@ var ReservasCarroUI = (function() {
     var el = document.getElementById('carro-metricas');
     if (!el) return;
     el.innerHTML =
-      '<div class="stat-item"><div class="stat-value">' + (m.pendentes||0) + '</div><div class="stat-label">Pendentes</div></div>' +
-      '<div class="stat-item"><div class="stat-value">' + (m.aprovadas||0) + '</div><div class="stat-label">Aprovadas</div></div>' +
+      '<div class="stat-item"><div class="stat-value">' + (m.pendentes||0)  + '</div><div class="stat-label">Pendentes</div></div>' +
+      '<div class="stat-item"><div class="stat-value">' + (m.aprovadas||0)  + '</div><div class="stat-label">Aprovadas</div></div>' +
       '<div class="stat-item"><div class="stat-value">' + (m.concluidas||0) + '</div><div class="stat-label">Concluídas</div></div>' +
-      '<div class="stat-item"><div class="stat-value">' + (m.total||0) + '</div><div class="stat-label">Total</div></div>';
+      '<div class="stat-item"><div class="stat-value">' + (m.total||0)      + '</div><div class="stat-label">Total</div></div>';
     _atualizarBadge(m.pendentes || 0);
   }
 
@@ -12292,8 +12341,8 @@ var ReservasCarroUI = (function() {
         if (rota.mapaUrl) {
           rotaHtml += ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" title="Ver no mapa" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;">map</span></a>';
         }
-        var isPendente  = rc.status === 'PENDENTE';
-        var isAprovada  = rc.status === 'APROVADA';
+        var isPendente   = rc.status === 'PENDENTE';
+        var isAprovada   = rc.status === 'APROVADA';
         var isCancelavel = isPendente || isAprovada;
         var acoes = '';
         if (ehAprovador && isPendente) {
@@ -12329,15 +12378,87 @@ var ReservasCarroUI = (function() {
       '</tbody></table>';
   }
 
+  function _renderAgenda(todas) {
+    var grid   = document.getElementById('carro-agenda-grid');
+    var titulo = document.getElementById('carro-agenda-titulo');
+    if (!grid || !titulo) return;
+
+    var mes = _mesAgenda.getMonth();
+    var ano = _mesAgenda.getFullYear();
+    titulo.textContent = _MESES[mes] + ' ' + ano;
+
+    var prefixo = ano + '-' + (mes < 9 ? '0' : '') + (mes + 1) + '-';
+    var ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    var primeiroDS = new Date(ano, mes, 1).getDay(); // 0=dom
+    var offset = (primeiroDS + 6) % 7; // ajusta para seg=0
+
+    var hoje = new Date();
+    var dH = hoje.getDate(), mH = hoje.getMonth(), aH = hoje.getFullYear();
+
+    var cabecalho = _DIAS_SEM.map(function(d) {
+      return '<div style="text-align:center;font-weight:600;font-size:11px;color:var(--muted);padding:6px 2px;">' + d + '</div>';
+    }).join('');
+
+    var cells = '';
+    for (var i = 0; i < offset; i++) {
+      cells += '<div style="min-height:64px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);opacity:.4;"></div>';
+    }
+    for (var dia = 1; dia <= ultimoDia; dia++) {
+      var ds = prefixo + (dia < 10 ? '0' : '') + dia;
+      var ehHoje = dia === dH && mes === mH && ano === aH;
+      var reservasDia = todas.filter(function(r) { return r.data === ds; });
+      var chips = reservasDia.map(function(r) {
+        var cls = _badgeCls(r.status);
+        var label = (r.horaSaida || '?') + ' ' + escaparHtml((r.solicitante||'').split('@')[0].slice(0,10));
+        var tip = escaparHtml(r.solicitante||'') + ' ' + escaparHtml(r.horaSaida||'') + '–' + escaparHtml(r.horaChegada||'') + ' ' + escaparHtml((r.rota||{}).localChegada||'');
+        return '<div class="badge ' + cls + '" title="' + tip + '" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;">' + label + '</div>';
+      }).join('');
+      cells += '<div style="min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);">' +
+        '<div style="font-size:11px;font-weight:' + (ehHoje ? '700' : '500') + ';color:' + (ehHoje ? 'var(--primario)' : 'var(--muted)') + ';margin-bottom:3px;">' + dia + '</div>' +
+        chips +
+      '</div>';
+    }
+
+    grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">' + cabecalho + cells + '</div>';
+  }
+
+  function setModo(modo) {
+    _modo = modo;
+    var elLista   = document.getElementById('carro-view-lista');
+    var elAgenda  = document.getElementById('carro-view-agenda');
+    var elFiltros = document.getElementById('carro-filtros-lista');
+
+    if (elLista)   elLista.style.display   = modo === 'lista'  ? '' : 'none';
+    if (elAgenda)  elAgenda.style.display  = modo === 'agenda' ? '' : 'none';
+    if (elFiltros) elFiltros.style.display = modo === 'lista'  ? '' : 'none';
+
+    var btns = document.querySelectorAll('#carro-modo-toggle .res-modo-btn');
+    btns.forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-modo') === modo);
+    });
+
+    if (modo === 'agenda') {
+      if (_cache.length) _renderAgenda(_cache);
+      else carregar();
+    }
+  }
+
+  function agendaMes(delta) {
+    _mesAgenda = new Date(_mesAgenda.getFullYear(), _mesAgenda.getMonth() + delta, 1);
+    _renderAgenda(_cache);
+  }
+
   function carregar() {
     var el = document.getElementById('carro-lista');
-    if (el) el.innerHTML = '<p class="muted-text" style="padding:20px;">Carregando…</p>';
+    if (el && _modo === 'lista') el.innerHTML = '<p class="muted-text" style="padding:20px;">Carregando…</p>';
 
     var filtros = {};
-    var fs = document.getElementById('carro-filtro-status');
-    var fd = document.getElementById('carro-filtro-data');
-    if (fs && fs.value) filtros.status = fs.value;
-    if (fd && fd.value) filtros.data   = fd.value;
+    if (_modo === 'lista') {
+      var fs = document.getElementById('carro-filtro-status');
+      var fd = document.getElementById('carro-filtro-data');
+      if (fs && fs.value) filtros.status = fs.value;
+      if (fd && fd.value) filtros.data   = fd.value;
+    }
 
     GAS.reservasCarro.metricas(function(rm) {
       if (rm && rm.ok) _renderMetricas(rm.data);
@@ -12346,22 +12467,46 @@ var ReservasCarroUI = (function() {
     GAS.reservasCarro.listar(filtros, function(r) {
       _carregado = true;
       var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      _renderLista(itens);
+      _cache = itens;
+      if (_modo === 'lista') _renderLista(itens);
+      else _renderAgenda(itens);
     }, function(err) {
-      var el2 = document.getElementById('carro-lista');
-      if (el2) el2.innerHTML = '<p class="error-text" style="padding:20px;">Erro: ' + escaparHtml((err&&err.message)||String(err)) + '</p>';
+      if (_modo === 'lista') {
+        var el2 = document.getElementById('carro-lista');
+        if (el2) el2.innerHTML = '<p class="error-text" style="padding:20px;">Erro: ' + escaparHtml((err&&err.message)||String(err)) + '</p>';
+      }
     });
+  }
+
+  function _popularSetores(selectId) {
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    var boot = (window.App && App.getBoot) ? App.getBoot() : null;
+    var setores = (boot && Array.isArray(boot.setores)) ? boot.setores : [];
+    sel.innerHTML = '<option value="">— Selecione o setor —</option>' +
+      setores.map(function(s) {
+        return '<option value="' + escaparHtml(s.nome || s.id || '') + '">' + escaparHtml(s.nome || s.id || '') + '</option>';
+      }).join('');
   }
 
   function abrirFormulario() {
     var overlay = document.getElementById('carro-modal-overlay');
     if (!overlay) return;
-    // Limpa campos
-    ['carro-f-data','carro-f-saida','carro-f-chegada','carro-f-setor','carro-f-passageiros',
-     'carro-f-local-saida','carro-f-local-chegada','carro-f-mapa','carro-f-obs'].forEach(function(id) {
+    ['carro-f-data','carro-f-saida','carro-f-chegada','carro-f-passageiros',
+     'carro-f-mapa','carro-f-obs'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
+    _popularSetores('carro-f-setor');
+    // Esconde previews de mapa
+    ['carro-preview-saida','carro-preview-chegada','carro-preview-rota'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    var elSaida   = document.getElementById('carro-f-local-saida');
+    var elChegada = document.getElementById('carro-f-local-chegada');
+    if (elSaida)   elSaida.value   = '';
+    if (elChegada) elChegada.value = '';
     overlay.style.display = 'flex';
   }
 
@@ -12370,15 +12515,80 @@ var ReservasCarroUI = (function() {
     if (overlay) overlay.style.display = 'none';
   }
 
-  function gerarLinkMapa() {
-    var origem  = (document.getElementById('carro-f-local-saida')  || {}).value || '';
-    var destino = (document.getElementById('carro-f-local-chegada') || {}).value || '';
-    if (!origem || !destino) { Toast.aviso('Preencha origem e destino para gerar o link.'); return; }
-    var url = 'https://www.google.com/maps/dir/' +
-      encodeURIComponent(origem) + '/' + encodeURIComponent(destino);
-    var el = document.getElementById('carro-f-mapa');
-    if (el) el.value = url;
+  // ── Mapa ao vivo ────────────────────────────────────────────────────────────
+
+  function debouncePreviewMapa() {
+    if (_debounceTimer) clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(_atualizarPreviewMapa, 600);
   }
+
+  function _atualizarPreviewMapa() {
+    var saida   = (document.getElementById('carro-f-local-saida')   || {}).value || '';
+    var chegada = (document.getElementById('carro-f-local-chegada') || {}).value || '';
+
+    var pSaida   = document.getElementById('carro-preview-saida');
+    var pChegada = document.getElementById('carro-preview-chegada');
+    var pRota    = document.getElementById('carro-preview-rota');
+    var iSaida   = document.getElementById('carro-iframe-saida');
+    var iChegada = document.getElementById('carro-iframe-chegada');
+    var iRota    = document.getElementById('carro-iframe-rota');
+    var linkRota = document.getElementById('carro-link-rota');
+    var hidMapa  = document.getElementById('carro-f-mapa');
+
+    if (saida && chegada) {
+      // Rota completa — esconde individuais, mostra rota
+      if (pSaida)   pSaida.style.display   = 'none';
+      if (pChegada) pChegada.style.display = 'none';
+      if (pRota && iRota) {
+        iRota.src = 'https://maps.google.com/maps?saddr=' + encodeURIComponent(saida) +
+                    '&daddr=' + encodeURIComponent(chegada) + '&hl=pt-BR&output=embed';
+        pRota.style.display = '';
+      }
+      var rotaUrl = 'https://www.google.com/maps/dir/' + encodeURIComponent(saida) + '/' + encodeURIComponent(chegada);
+      if (linkRota) linkRota.href = rotaUrl;
+      if (hidMapa)  hidMapa.value = rotaUrl;
+    } else {
+      if (pRota) pRota.style.display = 'none';
+
+      if (saida && pSaida && iSaida) {
+        iSaida.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(saida) + '&hl=pt-BR&output=embed&z=14';
+        pSaida.style.display = '';
+      } else if (pSaida) {
+        pSaida.style.display = 'none';
+      }
+
+      if (chegada && pChegada && iChegada) {
+        iChegada.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(chegada) + '&hl=pt-BR&output=embed&z=14';
+        pChegada.style.display = '';
+      } else if (pChegada) {
+        pChegada.style.display = 'none';
+      }
+
+      if (hidMapa && !saida && !chegada) hidMapa.value = '';
+    }
+  }
+
+  function usarLocalizacaoAtual(campo) {
+    if (!navigator.geolocation) { Toast.aviso('Geolocalização não disponível neste navegador.'); return; }
+    Toast.info('Obtendo sua localização…');
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      var coord = pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+      var elId  = campo === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
+      var el    = document.getElementById(elId);
+      if (el) { el.value = coord; _atualizarPreviewMapa(); }
+      // Tenta traduzir coordenada em endereço via backend
+      GAS.reservasCarro.geocode(coord, function(r) {
+        if (r && r.ok && r.data && r.data.formatado) {
+          el = document.getElementById(elId);
+          if (el) { el.value = r.data.formatado; _atualizarPreviewMapa(); }
+        }
+      }, function() {});
+    }, function() {
+      Toast.aviso('Não foi possível obter a localização. Verifique as permissões do navegador.');
+    });
+  }
+
+  // ── Salvar / Ações ──────────────────────────────────────────────────────────
 
   function salvar() {
     var data       = (document.getElementById('carro-f-data')         || {}).value || '';
@@ -12391,11 +12601,11 @@ var ReservasCarroUI = (function() {
     var mapaUrl    = (document.getElementById('carro-f-mapa')         || {}).value || '';
     var obs        = (document.getElementById('carro-f-obs')          || {}).value || '';
 
-    if (!data)       { Toast.aviso('Informe a data da viagem.');      return; }
-    if (!horaSaida)  { Toast.aviso('Informe a hora de saída.');       return; }
-    if (!horaCheg)   { Toast.aviso('Informe a hora de chegada.');     return; }
-    if (!localSaida) { Toast.aviso('Informe o local de saída.');      return; }
-    if (!localCheg)  { Toast.aviso('Informe o local de chegada.');    return; }
+    if (!data)       { Toast.aviso('Informe a data da viagem.');   return; }
+    if (!horaSaida)  { Toast.aviso('Informe a hora de saída.');    return; }
+    if (!horaCheg)   { Toast.aviso('Informe a hora de chegada.');  return; }
+    if (!localSaida) { Toast.aviso('Informe o local de saída.');   return; }
+    if (!localCheg)  { Toast.aviso('Informe o local de chegada.'); return; }
 
     var passageiros = passRaw ? passRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
 
@@ -12418,6 +12628,7 @@ var ReservasCarroUI = (function() {
         if (r && r.ok) {
           Toast.sucesso('Solicitação enviada! Aguarde aprovação da Infraestrutura.');
           fecharFormulario();
+          _carregado = false;
           carregar();
         } else {
           Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar.');
@@ -12443,8 +12654,8 @@ var ReservasCarroUI = (function() {
   }
 
   function abrirModalRecusa(id) {
-    var overlay = document.getElementById('carro-modal-recusa-overlay');
-    var inputId = document.getElementById('carro-recusa-id');
+    var overlay  = document.getElementById('carro-modal-recusa-overlay');
+    var inputId  = document.getElementById('carro-recusa-id');
     var inputMot = document.getElementById('carro-recusa-motivo');
     if (!overlay || !inputId || !inputMot) return;
     inputId.value  = id;
@@ -12511,18 +12722,21 @@ var ReservasCarroUI = (function() {
   }
 
   return {
-    aoAbrir:           aoAbrir,
-    carregar:          carregar,
-    abrirFormulario:   abrirFormulario,
-    fecharFormulario:  fecharFormulario,
-    gerarLinkMapa:     gerarLinkMapa,
-    salvar:            salvar,
-    aprovar:           aprovar,
-    abrirModalRecusa:  abrirModalRecusa,
-    fecharModalRecusa: fecharModalRecusa,
-    confirmarRecusa:   confirmarRecusa,
-    cancelar:          cancelar,
-    concluir:          concluir
+    aoAbrir:              aoAbrir,
+    carregar:             carregar,
+    setModo:              setModo,
+    agendaMes:            agendaMes,
+    abrirFormulario:      abrirFormulario,
+    fecharFormulario:     fecharFormulario,
+    debouncePreviewMapa:  debouncePreviewMapa,
+    usarLocalizacaoAtual: usarLocalizacaoAtual,
+    salvar:               salvar,
+    aprovar:              aprovar,
+    abrirModalRecusa:     abrirModalRecusa,
+    fecharModalRecusa:    fecharModalRecusa,
+    confirmarRecusa:      confirmarRecusa,
+    cancelar:             cancelar,
+    concluir:             concluir
   };
 })();
 

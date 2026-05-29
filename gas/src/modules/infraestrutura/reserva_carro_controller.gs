@@ -71,6 +71,21 @@ function ctrl_carro_metricas() {
   }, 'ctrl_carro_metricas');
 }
 
+function ctrl_carro_geocode(endereco) {
+  return GasResponse.wrap(function() {
+    if (!endereco) throw new Error('Endereço não informado.');
+    var geocoder = Maps.newGeocoder().setLanguage('pt-BR').setRegion('BR');
+    var res = geocoder.geocode(String(endereco));
+    if (!res || !res.results || !res.results.length) throw new Error('Endereço não encontrado.');
+    var r = res.results[0];
+    return {
+      formatado: r.formatted_address,
+      lat:       r.geometry.location.lat,
+      lng:       r.geometry.location.lng
+    };
+  }, 'ctrl_carro_geocode');
+}
+
 /**
  * Prepara aba ESPACOS.ReservasCarro.
  * Executar uma vez no GAS Editor após o deploy da Fase 21.
