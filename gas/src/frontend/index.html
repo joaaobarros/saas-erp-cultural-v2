@@ -2334,6 +2334,9 @@ select.form-control { cursor: pointer; }
                 <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.usarLocalizacaoAtual('saida')" data-bg-skip="1" title="Usar minha localização atual" style="white-space:nowrap;padding:0 10px;">
                   <span class="ms ms-sm">my_location</span>
                 </button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirMapaPicker('saida')" data-bg-skip="1" title="Selecionar no mapa" style="white-space:nowrap;padding:0 10px;">
+                  <span class="ms ms-sm">place</span>
+                </button>
               </div>
               <div id="carro-preview-saida" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
                 <iframe id="carro-iframe-saida" style="width:100%;height:160px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
@@ -2347,6 +2350,9 @@ select.form-control { cursor: pointer; }
                 <input id="carro-f-local-chegada" type="text" class="form-control" placeholder="Ex: Secretaria Municipal de Cultura" oninput="ReservasCarroUI.debouncePreviewMapa()" required>
                 <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.usarLocalizacaoAtual('chegada')" data-bg-skip="1" title="Usar minha localização atual" style="white-space:nowrap;padding:0 10px;">
                   <span class="ms ms-sm">my_location</span>
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirMapaPicker('chegada')" data-bg-skip="1" title="Selecionar no mapa" style="white-space:nowrap;padding:0 10px;">
+                  <span class="ms ms-sm">place</span>
                 </button>
               </div>
               <div id="carro-preview-chegada" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
@@ -2374,6 +2380,34 @@ select.form-control { cursor: pointer; }
               <button class="btn btn-ghost" onclick="ReservasCarroUI.fecharFormulario()" data-bg-skip="1">Cancelar</button>
               <button class="btn btn-primario" id="btn-carro-salvar" onclick="ReservasCarroUI.salvar()">
                 <span class="ms ms-sm">send</span> Enviar Solicitação
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Seletor de Local no Mapa -->
+        <div id="carro-mapa-picker-overlay" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.6);align-items:flex-start;justify-content:center;padding-top:40px;">
+          <div style="background:var(--surface);border-radius:12px;width:min(620px,96vw);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);max-height:calc(100vh - 80px);">
+            <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+              <div>
+                <div id="carro-mapa-picker-titulo" style="font-size:15px;font-weight:600;">Selecionar local</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Clique no mapa para marcar o ponto ou busque pelo endereço</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.fecharMapaPicker()" data-bg-skip="1" style="padding:4px 8px;"><span class="ms">close</span></button>
+            </div>
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;">
+              <input id="carro-mapa-picker-busca" type="text" class="form-control" placeholder="Buscar endereço em Fortaleza…" style="flex:1;font-size:13px;" onkeydown="if(event.key==='Enter'){event.preventDefault();ReservasCarroUI.buscarNoMapa();}">
+              <button class="btn btn-primario btn-sm" onclick="ReservasCarroUI.buscarNoMapa()" data-bg-skip="1" style="padding:0 14px;"><span class="ms ms-sm">search</span></button>
+            </div>
+            <div id="carro-leaflet-map" style="width:100%;height:360px;flex-shrink:0;background:#e8e8e8;"></div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--surface2);flex-shrink:0;">
+              <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;">Endereço selecionado</div>
+              <div id="carro-mapa-picker-endereco" style="font-size:13px;color:var(--text);min-height:18px;">— clique no mapa para selecionar —</div>
+            </div>
+            <div style="padding:12px 14px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);flex-shrink:0;">
+              <button class="btn btn-ghost" onclick="ReservasCarroUI.fecharMapaPicker()" data-bg-skip="1">Cancelar</button>
+              <button class="btn btn-primario" id="btn-carro-mapa-confirmar" onclick="ReservasCarroUI.confirmarMapaPicker()" data-bg-skip="1" disabled style="opacity:.5;cursor:not-allowed;">
+                <span class="ms ms-sm">check</span> Confirmar local
               </button>
             </div>
           </div>
@@ -12286,6 +12320,10 @@ var ReservasCarroUI = (function() {
   var _cache        = [];
   var _mesAgenda    = new Date();
   var _debounceTimer = null;
+  var _mapaCampoAtual = null;
+  var _mapaPickerMap  = null;
+  var _mapaPickerMarker = null;
+  var _mapaPickerEnd  = '';
 
   var _MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -12428,8 +12466,12 @@ var ReservasCarroUI = (function() {
         var tip = escaparHtml(r.solicitante||'') + ' ' + escaparHtml(r.horaSaida||'') + '–' + escaparHtml(r.horaChegada||'') + ' ' + escaparHtml((r.rota||{}).localChegada||'');
         return '<div class="badge ' + cls + '" title="' + tip + '" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;">' + label + '</div>';
       }).join('');
-      cells += '<div style="min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);">' +
-        '<div style="font-size:11px;font-weight:' + (ehHoje ? '700' : '500') + ';color:' + (ehHoje ? 'var(--primario)' : 'var(--muted)') + ';margin-bottom:3px;">' + dia + '</div>' +
+      var dsSafe = escaparHtml(ds);
+      cells += '<div onclick="ReservasCarroUI._abrirFormularioDia(\'' + dsSafe + '\')" style="cursor:pointer;min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);transition:background .15s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'var(--surface)\'">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+          '<span style="font-size:11px;font-weight:' + (ehHoje ? '700' : '500') + ';color:' + (ehHoje ? 'var(--primario)' : 'var(--muted)') + ';">' + dia + '</span>' +
+          '<span style="font-size:14px;color:var(--muted);opacity:.5;line-height:1;" title="Nova reserva neste dia">+</span>' +
+        '</div>' +
         chips +
       '</div>';
     }
@@ -12461,6 +12503,12 @@ var ReservasCarroUI = (function() {
   function agendaMes(delta) {
     _mesAgenda = new Date(_mesAgenda.getFullYear(), _mesAgenda.getMonth() + delta, 1);
     _renderAgenda(_cache);
+  }
+
+  function _abrirFormularioDia(ds) {
+    abrirFormulario();
+    var elData = document.getElementById('carro-f-data');
+    if (elData) elData.value = ds;
   }
 
   function carregar() {
@@ -12513,6 +12561,11 @@ var ReservasCarroUI = (function() {
       if (el) el.value = '';
     });
     _popularSetores('carro-f-setor');
+    // Data mínima = hoje (bloquear passado)
+    var hoje = new Date();
+    var minData = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + String(hoje.getDate()).padStart(2,'0');
+    var elDataF = document.getElementById('carro-f-data');
+    if (elDataF) { elDataF.min = minData; if (!elDataF.value) elDataF.value = ''; }
     // Esconde previews de mapa
     ['carro-preview-saida','carro-preview-chegada','carro-preview-rota'].forEach(function(id) {
       var el = document.getElementById(id);
@@ -12603,6 +12656,130 @@ var ReservasCarroUI = (function() {
     });
   }
 
+  // ── Seletor de local no mapa (Leaflet + OpenStreetMap) ─────────────────────
+
+  function abrirMapaPicker(campo) {
+    _mapaCampoAtual = campo;
+    _mapaPickerEnd  = '';
+    var overlay = document.getElementById('carro-mapa-picker-overlay');
+    if (!overlay) return;
+    var titulo = document.getElementById('carro-mapa-picker-titulo');
+    if (titulo) titulo.textContent = campo === 'saida' ? 'Selecionar local de saída' : 'Selecionar local de chegada';
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = '— clique no mapa para selecionar —';
+    var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+    if (btnConf) { btnConf.disabled = true; btnConf.style.opacity = '.5'; btnConf.style.cursor = 'not-allowed'; }
+    var elId = campo === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
+    var valorAtual = (document.getElementById(elId) || {}).value || '';
+    var elBusca = document.getElementById('carro-mapa-picker-busca');
+    if (elBusca) elBusca.value = valorAtual;
+    overlay.style.display = 'flex';
+    _iniciarLeaflet(function() {
+      if (valorAtual) _buscarEnderecoMapa(valorAtual);
+    });
+  }
+
+  function fecharMapaPicker() {
+    var overlay = document.getElementById('carro-mapa-picker-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function confirmarMapaPicker() {
+    if (!_mapaPickerEnd) return;
+    var elId = _mapaCampoAtual === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
+    var el = document.getElementById(elId);
+    if (el) { el.value = _mapaPickerEnd; _atualizarPreviewMapa(); }
+    fecharMapaPicker();
+  }
+
+  function buscarNoMapa() {
+    var elBusca = document.getElementById('carro-mapa-picker-busca');
+    var q = elBusca ? elBusca.value.trim() : '';
+    if (!q) return;
+    _buscarEnderecoMapa(q);
+  }
+
+  function _iniciarLeaflet(cb) {
+    if (_mapaPickerMap) {
+      setTimeout(function() { _mapaPickerMap.invalidateSize(); if (cb) cb(); }, 150);
+      return;
+    }
+    if (!document.getElementById('leaflet-css')) {
+      var lnk = document.createElement('link');
+      lnk.id = 'leaflet-css';
+      lnk.rel = 'stylesheet';
+      lnk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(lnk);
+    }
+    function _criar() {
+      var cont = document.getElementById('carro-leaflet-map');
+      if (!cont || _mapaPickerMap) { if (cb) cb(); return; }
+      // CCBJ — Fortaleza, CE
+      _mapaPickerMap = L.map('carro-leaflet-map').setView([-3.7160, -38.5376], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(_mapaPickerMap);
+      _mapaPickerMap.on('click', function(e) {
+        _colocarMarcadorMapa(e.latlng.lat, e.latlng.lng);
+        _reverseGeocodeMapa(e.latlng.lat, e.latlng.lng);
+      });
+      setTimeout(function() { _mapaPickerMap.invalidateSize(); if (cb) cb(); }, 200);
+    }
+    if (window.L) { _criar(); return; }
+    var scr = document.createElement('script');
+    scr.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    scr.onload = _criar;
+    document.head.appendChild(scr);
+  }
+
+  function _colocarMarcadorMapa(lat, lng) {
+    if (_mapaPickerMarker) {
+      _mapaPickerMarker.setLatLng([lat, lng]);
+    } else {
+      _mapaPickerMarker = L.marker([lat, lng]).addTo(_mapaPickerMap);
+    }
+    _mapaPickerMap.setView([lat, lng], Math.max(_mapaPickerMap.getZoom(), 16));
+  }
+
+  function _buscarEnderecoMapa(query) {
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = 'Buscando…';
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query) + '&countrycodes=br&limit=1&accept-language=pt-BR')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data || !data.length) { if (elEnd) elEnd.textContent = 'Endereço não encontrado. Tente outros termos.'; return; }
+        var item = data[0];
+        var lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+        _colocarMarcadorMapa(lat, lng);
+        _mapaPickerEnd = item.display_name;
+        if (elEnd) elEnd.textContent = item.display_name;
+        var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+        if (btnConf) { btnConf.disabled = false; btnConf.style.opacity = ''; btnConf.style.cursor = ''; }
+      })
+      .catch(function() { if (elEnd) elEnd.textContent = 'Erro ao buscar. Clique diretamente no mapa.'; });
+  }
+
+  function _reverseGeocodeMapa(lat, lng) {
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = 'Obtendo endereço…';
+    var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+    if (btnConf) { btnConf.disabled = true; btnConf.style.opacity = '.5'; btnConf.style.cursor = 'not-allowed'; }
+    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat.toFixed(6) + '&lon=' + lng.toFixed(6) + '&accept-language=pt-BR')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var end = (data && data.display_name) ? data.display_name : lat.toFixed(6) + ',' + lng.toFixed(6);
+        _mapaPickerEnd = end;
+        if (elEnd) elEnd.textContent = end;
+        if (btnConf) { btnConf.disabled = false; btnConf.style.opacity = ''; btnConf.style.cursor = ''; }
+      })
+      .catch(function() {
+        _mapaPickerEnd = lat.toFixed(6) + ',' + lng.toFixed(6);
+        if (elEnd) elEnd.textContent = _mapaPickerEnd;
+        if (btnConf) { btnConf.disabled = false; btnConf.style.opacity = ''; btnConf.style.cursor = ''; }
+      });
+  }
+
   // ── Salvar / Ações ──────────────────────────────────────────────────────────
 
   function salvar() {
@@ -12621,6 +12798,12 @@ var ReservasCarroUI = (function() {
     if (!horaCheg)   { Toast.aviso('Informe a hora de chegada.');  return; }
     if (!localSaida) { Toast.aviso('Informe o local de saída.');   return; }
     if (!localCheg)  { Toast.aviso('Informe o local de chegada.'); return; }
+
+    // Bloquear data/hora passada
+    if (new Date(data + 'T' + horaSaida + ':00') < new Date()) {
+      Toast.aviso('Não é possível solicitar reserva para data e horário já passados.');
+      return;
+    }
 
     var passageiros = passRaw ? passRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
 
@@ -12741,10 +12924,15 @@ var ReservasCarroUI = (function() {
     carregar:             carregar,
     setModo:              setModo,
     agendaMes:            agendaMes,
+    _abrirFormularioDia:  _abrirFormularioDia,
     abrirFormulario:      abrirFormulario,
     fecharFormulario:     fecharFormulario,
     debouncePreviewMapa:  debouncePreviewMapa,
     usarLocalizacaoAtual: usarLocalizacaoAtual,
+    abrirMapaPicker:      abrirMapaPicker,
+    fecharMapaPicker:     fecharMapaPicker,
+    confirmarMapaPicker:  confirmarMapaPicker,
+    buscarNoMapa:         buscarNoMapa,
     salvar:               salvar,
     aprovar:              aprovar,
     abrirModalRecusa:     abrirModalRecusa,
@@ -14824,6 +15012,16 @@ var ReservasUI = (function() {
     document.getElementById('res-encerramento').value= dados && dados.minutosEncerramento != null ? dados.minutosEncerramento : 0;
     ReservasUI._atualizarTempoAtividade();
     document.getElementById('reservas-form-titulo').textContent = dados && dados.id ? 'Editar Reserva' : 'Nova Reserva';
+    // Data mínima = hoje, apenas para novas reservas (edição pode manter data original)
+    var _elResData = document.getElementById('res-data');
+    if (_elResData) {
+      if (!dados || !dados.id) {
+        var _hj = new Date();
+        _elResData.min = _hj.getFullYear() + '-' + String(_hj.getMonth()+1).padStart(2,'0') + '-' + String(_hj.getDate()).padStart(2,'0');
+      } else {
+        _elResData.min = '';
+      }
+    }
     document.getElementById('res-disp-resultado').style.display = 'none';
     // Inicializar chips de itens volantes
     _itensChips = [];
@@ -14896,6 +15094,12 @@ var ReservasUI = (function() {
     if (!data) { Toast.aviso('Data é obrigatória.'); return; }
     if (!ini||!fim) { Toast.aviso('Horário de início e término são obrigatórios.'); return; }
     if (!nome) { Toast.aviso('Nome da ação/evento é obrigatório.'); return; }
+    // Bloquear data/hora passada apenas em novas reservas
+    var _resId = (document.getElementById('res-id').value||'').trim();
+    if (!_resId && new Date(data + 'T' + ini + ':00') < new Date()) {
+      Toast.aviso('Não é possível reservar para data e horário já passados.');
+      return;
+    }
     if (_temChipsIndisponiveis()) {
       Toast.erro('Há itens indisponíveis no horário selecionado. Remova-os antes de salvar.');
       return;
