@@ -2326,6 +2326,14 @@ select.form-control { cursor: pointer; }
               <span style="font-size:11px;color:var(--muted)">Informe os nomes dos passageiros, separados por vírgula.</span>
             </div>
 
+            <div class="form-group">
+              <label class="form-label">Vincular a uma Ação <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+              <select id="carro-f-acao" class="form-control">
+                <option value="">— Nenhuma —</option>
+              </select>
+              <input type="hidden" id="carro-f-acao-nome">
+            </div>
+
             <!-- LOCAL DE SAÍDA -->
             <div class="form-group">
               <label class="form-label">Local de Saída *</label>
@@ -2382,6 +2390,86 @@ select.form-control { cursor: pointer; }
                 <span class="ms ms-sm">send</span> Enviar Solicitação
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Modal Detalhes da Reserva (agenda) -->
+        <div id="carro-det-overlay" style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.3);display:flex;flex-direction:column;">
+            <!-- Cabeçalho -->
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;">
+              <div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">Reserva de Veículo</div>
+                <span id="carro-det-status-badge" class="badge"></span>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._fecharDetalhes()" data-bg-skip="1" style="padding:4px 8px;flex-shrink:0;"><span class="ms">close</span></button>
+            </div>
+            <!-- Corpo -->
+            <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+              <!-- Data / Horário -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Data</div>
+                  <div id="carro-det-data" style="font-size:14px;font-weight:600;"></div>
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Horário</div>
+                  <div id="carro-det-horario" style="font-size:14px;font-weight:600;"></div>
+                </div>
+              </div>
+              <!-- Solicitante -->
+              <div>
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Solicitante</div>
+                <div id="carro-det-solicitante" style="font-size:13px;"></div>
+              </div>
+              <!-- Passageiros -->
+              <div id="carro-det-pass-bloco">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Passageiros</div>
+                <div id="carro-det-pass" style="font-size:13px;"></div>
+              </div>
+              <!-- Rota -->
+              <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Rota</div>
+                <div style="display:flex;align-items:flex-start;gap:8px;">
+                  <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:2px;">
+                    <span class="ms ms-sm" style="color:var(--primario);font-size:16px;">trip_origin</span>
+                    <div style="width:1px;height:18px;background:var(--border);margin:2px 0;"></div>
+                    <span class="ms ms-sm" style="color:#ef4444;font-size:16px;">place</span>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div id="carro-det-saida" style="font-size:13px;margin-bottom:20px;word-break:break-word;"></div>
+                    <div id="carro-det-chegada" style="font-size:13px;word-break:break-word;"></div>
+                  </div>
+                </div>
+                <div id="carro-det-mapa-link-bloco" style="margin-top:10px;display:none;">
+                  <a id="carro-det-mapa-link" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--primario);text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                    <span class="ms ms-sm">open_in_new</span> Ver rota no Google Maps
+                  </a>
+                </div>
+              </div>
+              <!-- Observação -->
+              <div id="carro-det-obs-bloco" style="display:none;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Observação</div>
+                <div id="carro-det-obs" style="font-size:13px;color:var(--text);"></div>
+              </div>
+              <!-- Motivo de recusa -->
+              <div id="carro-det-recusa-bloco" style="display:none;background:#fef2f2;border-radius:8px;padding:10px 12px;">
+                <div style="font-size:10px;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Motivo da recusa</div>
+                <div id="carro-det-recusa" style="font-size:13px;color:#7f1d1d;"></div>
+              </div>
+              <!-- Ação vinculada -->
+              <div id="carro-det-acao-bloco" style="display:none;background:var(--surface2);border-radius:8px;padding:10px 14px;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Ação vinculada</div>
+                <div id="carro-det-acao-nome" style="font-size:13px;"></div>
+              </div>
+              <!-- Aprovador -->
+              <div id="carro-det-aprov-bloco" style="display:none;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Aprovado por</div>
+                <div id="carro-det-aprov" style="font-size:12px;color:var(--muted);"></div>
+              </div>
+            </div>
+            <!-- Rodapé com ações -->
+            <div id="carro-det-acoes" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0;"></div>
           </div>
         </div>
 
@@ -12394,6 +12482,10 @@ var ReservasCarroUI = (function() {
         if (rota.mapaUrl) {
           rotaHtml += ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" title="Ver no mapa" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;">map</span></a>';
         }
+        if (rc.acaoId && rc.acaoNome) {
+          var sacaoId = JSON.stringify(rc.acaoId).replace(/"/g,"'");
+          rotaHtml += '<br><a href="#" onclick="event.preventDefault();AcoesUI.abrirPainel(' + sacaoId + ')" style="font-size:11px;color:var(--primario);text-decoration:none;white-space:nowrap;"><span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">event</span> ' + escaparHtml(rc.acaoNome) + '</a>';
+        }
         var isPendente   = rc.status === 'PENDENTE';
         var isAprovada   = rc.status === 'APROVADA';
         var isCancelavel = isPendente || isAprovada;
@@ -12464,7 +12556,8 @@ var ReservasCarroUI = (function() {
         var cls = _badgeCls(r.status);
         var label = (r.horaSaida || '?') + ' ' + escaparHtml((r.solicitante||'').split('@')[0].slice(0,10));
         var tip = escaparHtml(r.solicitante||'') + ' ' + escaparHtml(r.horaSaida||'') + '–' + escaparHtml(r.horaChegada||'') + ' ' + escaparHtml((r.rota||{}).localChegada||'');
-        return '<div class="badge ' + cls + '" title="' + tip + '" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;">' + label + '</div>';
+        var sid = JSON.stringify(r.id).replace(/"/g, "'");
+        return '<div class="badge ' + cls + '" title="' + tip + '" onclick="event.stopPropagation();ReservasCarroUI._verDetalhesAgenda(' + sid + ')" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer;">' + label + '</div>';
       }).join('');
       var dsSafe = escaparHtml(ds);
       cells += '<div onclick="ReservasCarroUI._abrirFormularioDia(\'' + dsSafe + '\')" style="cursor:pointer;min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);transition:background .15s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'var(--surface)\'">' +
@@ -12556,10 +12649,28 @@ var ReservasCarroUI = (function() {
     var overlay = document.getElementById('carro-modal-overlay');
     if (!overlay) return;
     ['carro-f-data','carro-f-saida','carro-f-chegada','carro-f-passageiros',
-     'carro-f-mapa','carro-f-obs'].forEach(function(id) {
+     'carro-f-mapa','carro-f-obs','carro-f-acao-nome'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
+    // Resetar select de ação e carregar lista
+    var selAcao = document.getElementById('carro-f-acao');
+    if (selAcao) {
+      selAcao.innerHTML = '<option value="">— Carregando ações… —</option>';
+      GAS.acoes.listar({}, function(r) {
+        var acoes = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+        var ativas = acoes.filter(function(a) {
+          return a.status !== 'cancelada' && a.status !== 'arquivada';
+        });
+        selAcao.innerHTML = '<option value="">— Nenhuma —</option>' +
+          ativas.map(function(a) {
+            return '<option value="' + escaparHtml(a.id) + '" data-nome="' + escaparHtml(a.nome||'') + '">' +
+              escaparHtml(a.nome || a.id) + '</option>';
+          }).join('');
+      }, function() {
+        selAcao.innerHTML = '<option value="">— Nenhuma —</option>';
+      });
+    }
     _popularSetores('carro-f-setor');
     // Data mínima = hoje (bloquear passado)
     var hoje = new Date();
@@ -12654,6 +12765,112 @@ var ReservasCarroUI = (function() {
     }, function() {
       Toast.aviso('Não foi possível obter a localização. Verifique as permissões do navegador.');
     });
+  }
+
+  // ── Detalhes da reserva (clique na agenda) ─────────────────────────────────
+
+  function _verDetalhesAgenda(id) {
+    var r = _cache.filter(function(x) { return x.id === id; })[0];
+    if (!r) return;
+    var rota = r.rota || {};
+
+    // Status badge
+    var badge = document.getElementById('carro-det-status-badge');
+    if (badge) { badge.className = 'badge ' + _badgeCls(r.status); badge.textContent = r.status; }
+
+    // Data / horário
+    var elData = document.getElementById('carro-det-data');
+    if (elData) elData.textContent = r.data || '—';
+    var elHor = document.getElementById('carro-det-horario');
+    if (elHor) elHor.textContent = (r.horaSaida||'?') + ' – ' + (r.horaChegada||'?');
+
+    // Solicitante
+    var elSol = document.getElementById('carro-det-solicitante');
+    if (elSol) {
+      elSol.innerHTML = escaparHtml(r.solicitante||'—') +
+        (r.solicitanteSetor ? ' <span style="color:var(--muted);font-size:12px;">/ ' + escaparHtml(r.solicitanteSetor) + '</span>' : '');
+    }
+
+    // Passageiros
+    var elPassB = document.getElementById('carro-det-pass-bloco');
+    var elPass  = document.getElementById('carro-det-pass');
+    var passLista = Array.isArray(r.passageiros) ? r.passageiros.filter(Boolean) : [];
+    if (elPassB) elPassB.style.display = passLista.length ? '' : 'none';
+    if (elPass)  elPass.textContent = passLista.length ? passLista.join(', ') : '';
+
+    // Rota
+    var elSaida   = document.getElementById('carro-det-saida');
+    var elChegada = document.getElementById('carro-det-chegada');
+    if (elSaida)   elSaida.textContent   = escaparHtml(rota.localSaida   || '—');
+    if (elChegada) elChegada.textContent = escaparHtml(rota.localChegada || '—');
+    var linkBloco = document.getElementById('carro-det-mapa-link-bloco');
+    var link      = document.getElementById('carro-det-mapa-link');
+    if (linkBloco && link && rota.mapaUrl) {
+      link.href = rota.mapaUrl;
+      linkBloco.style.display = '';
+    } else if (linkBloco) {
+      linkBloco.style.display = 'none';
+    }
+
+    // Observação
+    var elObsB = document.getElementById('carro-det-obs-bloco');
+    var elObs  = document.getElementById('carro-det-obs');
+    if (elObsB) elObsB.style.display = r.observacao ? '' : 'none';
+    if (elObs)  elObs.textContent = r.observacao || '';
+
+    // Motivo recusa
+    var elRecB = document.getElementById('carro-det-recusa-bloco');
+    var elRec  = document.getElementById('carro-det-recusa');
+    if (elRecB) elRecB.style.display = r.motivoRecusa ? '' : 'none';
+    if (elRec)  elRec.textContent = r.motivoRecusa || '';
+
+    // Aprovador
+    var elAprovB = document.getElementById('carro-det-aprov-bloco');
+    var elAprov  = document.getElementById('carro-det-aprov');
+    if (elAprovB) elAprovB.style.display = r.aprovador ? '' : 'none';
+    if (elAprov)  elAprov.textContent = r.aprovador || '';
+
+    // Ação vinculada
+    var elAcaoB = document.getElementById('carro-det-acao-bloco');
+    var elAcaoNm = document.getElementById('carro-det-acao-nome');
+    if (elAcaoB && elAcaoNm) {
+      if (r.acaoId && r.acaoNome) {
+        elAcaoNm.innerHTML = '<a href="#" onclick="event.preventDefault();ReservasCarroUI._fecharDetalhes();AcoesUI.abrirPainel(' +
+          JSON.stringify(r.acaoId).replace(/"/g,"'") + ')" style="color:var(--primario);text-decoration:none;">' +
+          escaparHtml(r.acaoNome) + ' <span class="ms ms-sm" style="vertical-align:middle;font-size:14px;">open_in_new</span></a>';
+        elAcaoB.style.display = '';
+      } else {
+        elAcaoB.style.display = 'none';
+      }
+    }
+
+    // Botões de ação
+    var elAcoes = document.getElementById('carro-det-acoes');
+    if (elAcoes) {
+      var ehAprovador = ['infraestrutura','gestor','admin','superadmin'].indexOf(_papel) >= 0;
+      var sid = JSON.stringify(id).replace(/"/g, "'");
+      var btns = '';
+      if (ehAprovador && r.status === 'PENDENTE') {
+        btns += '<button class="btn btn-primario btn-sm" id="btn-carro-det-apr-' + escaparHtml(id) + '" onclick="ReservasCarroUI._fecharDetalhes();ReservasCarroUI.aprovar(' + sid + ',document.getElementById(\'btn-carro-apr-\'+' + sid + '))" data-bg-skip="1">Aprovar</button>';
+        btns += '<button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._fecharDetalhes();ReservasCarroUI.abrirModalRecusa(' + sid + ')" data-bg-skip="1">Recusar</button>';
+      }
+      if (ehAprovador && r.status === 'APROVADA') {
+        btns += '<button class="btn btn-ghost btn-sm" id="btn-carro-det-con-' + escaparHtml(id) + '" onclick="ReservasCarroUI._fecharDetalhes();ReservasCarroUI.concluir(' + sid + ',document.getElementById(\'btn-carro-det-con-\'+' + sid + '))" data-bg-skip="1">Concluir</button>';
+      }
+      if (r.status === 'PENDENTE' || r.status === 'APROVADA') {
+        btns += '<button class="btn btn-ghost btn-sm" id="btn-carro-det-can-' + escaparHtml(id) + '" onclick="ReservasCarroUI._fecharDetalhes();ReservasCarroUI.cancelar(' + sid + ',document.getElementById(\'btn-carro-det-can-\'+' + sid + '))" data-bg-skip="1" style="color:#ef4444;">Cancelar</button>';
+      }
+      if (!btns) btns = '<button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._fecharDetalhes()" data-bg-skip="1">Fechar</button>';
+      elAcoes.innerHTML = btns;
+    }
+
+    var overlay = document.getElementById('carro-det-overlay');
+    if (overlay) overlay.style.display = 'flex';
+  }
+
+  function _fecharDetalhes() {
+    var overlay = document.getElementById('carro-det-overlay');
+    if (overlay) overlay.style.display = 'none';
   }
 
   // ── Seletor de local no mapa (Leaflet + OpenStreetMap) ─────────────────────
@@ -12792,6 +13009,13 @@ var ReservasCarroUI = (function() {
     var localCheg  = (document.getElementById('carro-f-local-chegada')|| {}).value || '';
     var mapaUrl    = (document.getElementById('carro-f-mapa')         || {}).value || '';
     var obs        = (document.getElementById('carro-f-obs')          || {}).value || '';
+    var selAcao    = document.getElementById('carro-f-acao');
+    var acaoId     = selAcao ? (selAcao.value || '') : '';
+    var acaoNome   = '';
+    if (selAcao && selAcao.selectedIndex >= 0) {
+      var optSel = selAcao.options[selAcao.selectedIndex];
+      acaoNome = optSel ? (optSel.getAttribute('data-nome') || optSel.textContent || '') : '';
+    }
 
     if (!data)       { Toast.aviso('Informe a data da viagem.');   return; }
     if (!horaSaida)  { Toast.aviso('Informe a hora de saída.');    return; }
@@ -12816,6 +13040,8 @@ var ReservasCarroUI = (function() {
       localSaida:       localSaida,
       localChegada:     localCheg,
       mapaUrl:          mapaUrl,
+      acaoId:           acaoId,
+      acaoNome:         acaoNome,
       observacao:       obs
     };
 
@@ -12925,6 +13151,8 @@ var ReservasCarroUI = (function() {
     setModo:              setModo,
     agendaMes:            agendaMes,
     _abrirFormularioDia:  _abrirFormularioDia,
+    _verDetalhesAgenda:   _verDetalhesAgenda,
+    _fecharDetalhes:      _fecharDetalhes,
     abrirFormulario:      abrirFormulario,
     fecharFormulario:     fecharFormulario,
     debouncePreviewMapa:  debouncePreviewMapa,

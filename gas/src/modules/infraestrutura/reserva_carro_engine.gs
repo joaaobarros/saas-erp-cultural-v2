@@ -127,6 +127,8 @@ var ReservaCarroEngine = (function() {
         localChegada: dados.localChegada || '',
         mapaUrl:      dados.mapaUrl      || ''
       },
+      acaoId:     dados.acaoId   || '',
+      acaoNome:   dados.acaoNome || '',
       observacao: dados.observacao || ''
     };
 
