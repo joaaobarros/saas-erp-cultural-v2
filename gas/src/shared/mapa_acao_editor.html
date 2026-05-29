@@ -61,8 +61,28 @@ var MapaAcaoEditorUI = (function() {
     { id:'banheiro',       label:'Banheiro',        cor:'#60a5fa' },
     { id:'guarita',        label:'Guarita',         cor:'#3b82f6' },
     { id:'estacionamento', label:'Estacionamento',  cor:'#2563eb' },
+    // Equipe
+    { id:'av_coord',       label:'Coordenador',     cor:'#f59e0b' },
+    { id:'av_tecnico',     label:'Técnico',          cor:'#64748b' },
+    { id:'av_seguranca',   label:'Segurança',        cor:'#1d4ed8' },
+    { id:'av_voluntario',  label:'Voluntário',       cor:'#ec4899' },
+    { id:'av_fotografo',   label:'Fotógrafo',        cor:'#7c3aed' },
+    { id:'av_recepcao',    label:'Recepção',         cor:'#0891b2' },
+    // Público
+    { id:'av_pub_pe',      label:'Em Pé',            cor:'#f97316' },
+    { id:'av_pub_sent',    label:'Sentado',          cor:'#ea580c' },
+    { id:'av_pub_grupo',   label:'Grupo',            cor:'#dc2626' },
+    { id:'av_pub_fila',    label:'Fila',             cor:'#b91c1c' },
+    { id:'av_pub_plateia', label:'Plateia',          cor:'#7f1d1d' },
+    { id:'av_pub_vip',     label:'VIP',              cor:'#d97706' },
+    // Animais
+    { id:'av_cao',         label:'Cão',              cor:'#78350f' },
+    { id:'av_cavalo',      label:'Cavalo',           cor:'#92400e' },
+    { id:'av_pombo',       label:'Pássaro',          cor:'#6b7280' },
+    { id:'av_gato',        label:'Gato',             cor:'#44403c' },
+    { id:'av_peixe',       label:'Peixe',            cor:'#0ea5e9' },
     // Outros
-    { id:'outro',          label:'Outro',           cor:'#a78bfa' }
+    { id:'outro',          label:'Outro',            cor:'#a78bfa' }
   ];
 
   // ── Seções colapsáveis da palette ────────────────────────
@@ -73,7 +93,10 @@ var MapaAcaoEditorUI = (function() {
     { id:'luz',       label:'Luz',              icone:'wb_incandescent', cats:['eq_luz','refletor','moving_head','par_led','dimmer','follow_spot','strobo'], abertaDefault:false },
     { id:'av',        label:'AV / Vídeo',       icone:'videocam',        cats:['eq_av','projetor','tela_proj','monitor_av','camera_video','mesa_av'],      abertaDefault:false },
     { id:'logistica', label:'Logística',        icone:'inventory_2',     cats:['gerador','extensao','rack','banheiro','guarita','estacionamento'],         abertaDefault:false },
-    { id:'outros',    label:'Outros',           icone:'category',        cats:['outro'],                                                                  abertaDefault:false }
+    { id:'equipe',     label:'Equipe',           icone:'badge',           cats:['av_coord','av_tecnico','av_seguranca','av_voluntario','av_fotografo','av_recepcao'],          abertaDefault:false },
+    { id:'publico_av', label:'Público',          icone:'groups',          cats:['av_pub_pe','av_pub_sent','av_pub_grupo','av_pub_fila','av_pub_plateia','av_pub_vip'],         abertaDefault:false },
+    { id:'animais',    label:'Animais',          icone:'pets',            cats:['av_cao','av_cavalo','av_pombo','av_gato','av_peixe'],                                        abertaDefault:false },
+    { id:'outros',     label:'Outros',           icone:'category',        cats:['outro'],                                                                                    abertaDefault:false }
   ];
   var _paletteSecState = {};
 
@@ -267,6 +290,156 @@ var MapaAcaoEditorUI = (function() {
                '<circle cx="8"  cy="9"   r="4" fill="#334155" opacity=".5"/>'+
                '<circle cx="-8" cy="-12" r="3" fill="#334155" opacity=".4"/>'+
                '<circle cx="8"  cy="-12" r="3" fill="#334155" opacity=".4"/>';
+      // ── Equipe ──
+      case 'av_coord':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="0"  y1="-4"  x2="0"  y2="2"  stroke="#fff" stroke-width="1.5" opacity=".75"/>'+
+               '<line x1="-3" y1="-1"  x2="3"  y2="-1" stroke="#fff" stroke-width="1.5" opacity=".75"/>'+
+               '<circle cx="0" cy="-1" r="1.2" fill="#fff" opacity=".5"/>';
+      case 'av_tecnico':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="-3" y1="-3.5" x2="3"  y2="2.5" stroke="#fff" stroke-width="2"   opacity=".7"/>'+
+               '<circle cx="3"  cy="2.5"  r="1.5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".6"/>'+
+               '<circle cx="-3" cy="-3.5" r="1.5" fill="none" stroke="#fff" stroke-width="1.5" opacity=".6"/>';
+      case 'av_seguranca':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<path d="M0,-4 L3.5,-3 L3.5,0 Q3.5,3 0,4.5 Q-3.5,3 -3.5,0 L-3.5,-3 Z" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>'+
+               '<line x1="0" y1="-3" x2="0" y2="3" stroke="#fff" stroke-width="1" opacity=".4"/>';
+      case 'av_voluntario':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<path d="M0,3 C-3.5,0.5 -4.5,-2 -2.5,-3.5 C-0.5,-5 0,-2.5 0,-2.5 C0,-2.5 0.5,-5 2.5,-3.5 C4.5,-2 3.5,0.5 0,3Z" fill="#fff" opacity=".65"/>';
+      case 'av_fotografo':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<rect x="-8" y="-4.5" width="6" height="4.5" rx="1" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/>'+
+               '<circle cx="-5" cy="-2.2" r="1.5" fill="none" stroke="#fff" stroke-width="1"   opacity=".5"/>'+
+               '<rect x="-7" y="-6"   width="3"   height="1.5" rx="0.5" fill="#fff" opacity=".5"/>';
+      case 'av_recepcao':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-5.5" width="10" height="11" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="5.5" x2="-3" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="5.5" x2="3"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<rect x="2" y="-4.5" width="5" height="7"   rx="0.5" fill="#fff" opacity=".3"/>'+
+               '<rect x="3" y="-6"   width="3" height="2"   rx="0.5" fill="'+cor+'" opacity=".7"/>'+
+               '<line x1="3" y1="-2.5" x2="6" y2="-2.5" stroke="#fff" stroke-width="1" opacity=".6"/>'+
+               '<line x1="3" y1="-1"   x2="6" y2="-1"   stroke="#fff" stroke-width="1" opacity=".6"/>'+
+               '<line x1="3" y1="0.5"  x2="6" y2="0.5"  stroke="#fff" stroke-width="1" opacity=".6"/>';
+      // ── Público ──
+      case 'av_pub_pe':
+        return '<circle cx="0" cy="-9" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<line x1="0"  y1="-5.5" x2="0"  y2="4"  stroke="'+cor+'" stroke-width="3"/>'+
+               '<line x1="-6" y1="-1"   x2="6"  y2="-1" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="0"  y1="4"    x2="-4" y2="12" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="0"  y1="4"    x2="4"  y2="12" stroke="'+cor+'" stroke-width="2.5"/>';
+      case 'av_pub_sent':
+        return '<circle cx="0" cy="-10" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<line x1="0"  y1="-6.5" x2="0"  y2="0"  stroke="'+cor+'" stroke-width="3"/>'+
+               '<line x1="-6" y1="-3"   x2="6"  y2="-3" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="-7" y1="0"    x2="7"  y2="0"  stroke="'+cor+'" stroke-width="3"/>'+
+               '<line x1="-4" y1="0"    x2="-4" y2="9"  stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="4"  y1="0"    x2="4"  y2="9"  stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="-4" y1="9"    x2="-8" y2="9"  stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="4"  y1="9"    x2="8"  y2="9"  stroke="'+cor+'" stroke-width="2.5"/>';
+      case 'av_pub_grupo':
+        return '<circle cx="-5" cy="-7" r="3"   fill="'+cor+'" opacity=".5"/>'+
+               '<ellipse cx="-5" cy="2" rx="4" ry="5" fill="'+cor+'" opacity=".35"/>'+
+               '<circle cx="5"  cy="-7" r="3"   fill="'+cor+'" opacity=".5"/>'+
+               '<ellipse cx="5"  cy="2" rx="4" ry="5" fill="'+cor+'" opacity=".35"/>'+
+               '<circle cx="0"  cy="-7" r="3.5" fill="'+cor+'" opacity=".85"/>'+
+               '<ellipse cx="0"  cy="3" rx="4.5" ry="5.5" fill="'+cor+'" opacity=".65"/>';
+      case 'av_pub_fila':
+        return '<circle cx="-9" cy="-8" r="2.5" fill="'+cor+'" opacity=".7"/>'+
+               '<ellipse cx="-9" cy="1" rx="3" ry="4" fill="'+cor+'" opacity=".5"/>'+
+               '<circle cx="-3" cy="-8" r="2.5" fill="'+cor+'" opacity=".7"/>'+
+               '<ellipse cx="-3" cy="1" rx="3" ry="4" fill="'+cor+'" opacity=".5"/>'+
+               '<circle cx="3"  cy="-8" r="2.5" fill="'+cor+'" opacity=".7"/>'+
+               '<ellipse cx="3"  cy="1" rx="3" ry="4" fill="'+cor+'" opacity=".5"/>'+
+               '<circle cx="9"  cy="-8" r="2.5" fill="'+cor+'" opacity=".7"/>'+
+               '<ellipse cx="9"  cy="1" rx="3" ry="4" fill="'+cor+'" opacity=".5"/>';
+      case 'av_pub_plateia':
+        return '<rect x="-13" y="-11" width="26" height="22" rx="2" fill="'+cor+'" opacity=".12"/>'+
+               '<circle cx="-9" cy="-8" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="-3" cy="-8" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="3"  cy="-8" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="9"  cy="-8" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="-9" cy="-1" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="-3" cy="-1" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="3"  cy="-1" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="9"  cy="-1" r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="-9" cy="6"  r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="-3" cy="6"  r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="3"  cy="6"  r="2" fill="'+cor+'" opacity=".7"/>'+
+               '<circle cx="9"  cy="6"  r="2" fill="'+cor+'" opacity=".7"/>';
+      case 'av_pub_vip':
+        return '<path d="M-4,-13 L-4,-9.5 L-1.5,-11.5 L0,-9.5 L1.5,-11.5 L4,-9.5 L4,-13 Z" fill="'+cor+'" opacity=".85"/>'+
+               '<line x1="-4" y1="-13" x2="4" y2="-13" stroke="'+cor+'" stroke-width="1.5"/>'+
+               '<circle cx="0" cy="-6.5" r="3.5" fill="'+cor+'" opacity=".9"/>'+
+               '<rect x="-5" y="-3"   width="10" height="10" rx="2" fill="'+cor+'" opacity=".65"/>'+
+               '<line x1="-2" y1="7"  x2="-3" y2="13" stroke="'+cor+'" stroke-width="2.5"/>'+
+               '<line x1="2"  y1="7"  x2="3"  y2="13" stroke="'+cor+'" stroke-width="2.5"/>';
+      // ── Animais ──
+      case 'av_cao':
+        return '<ellipse cx="-1" cy="3"   rx="9"   ry="4.5" fill="'+cor+'" opacity=".85"/>'+
+               '<circle  cx="8"  cy="-1"  r="5"             fill="'+cor+'" opacity=".85"/>'+
+               '<ellipse cx="11.5" cy="1" rx="2.5" ry="2"   fill="'+cor+'" opacity=".75"/>'+
+               '<ellipse cx="7"  cy="-6.5" rx="2"  ry="3"   fill="'+cor+'" opacity=".7"/>'+
+               '<path d="M-10,0 Q-14,-4 -11,-7" fill="none" stroke="'+cor+'" stroke-width="2.5" stroke-linecap="round"/>'+
+               '<line x1="-6" y1="7.5" x2="-6" y2="13"  stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="-1" y1="7.5" x2="-1" y2="13"  stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="4"  y1="7.5" x2="4"  y2="13"  stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="9"  y1="3.5" x2="9"  y2="9.5" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>';
+      case 'av_cavalo':
+        return '<ellipse cx="0" cy="2" rx="11" ry="5"   fill="'+cor+'" opacity=".8"/>'+
+               '<rect   x="4"  y="-9"  width="5" height="10" rx="2" fill="'+cor+'" opacity=".85"/>'+
+               '<circle cx="8"  cy="-10" r="4.5" fill="'+cor+'" opacity=".85"/>'+
+               '<polygon points="7,-14 9,-14 9,-11 7,-11" fill="'+cor+'" opacity=".7"/>'+
+               '<path d="M-11,0 Q-14,-3 -12,-6" fill="none" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<path d="M4,-9 Q2,-13 5,-14 Q6,-13 5,-9" fill="'+cor+'" opacity=".55"/>'+
+               '<line x1="-7" y1="7"  x2="-7" y2="13" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="-2" y1="7"  x2="-2" y2="13" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="3"  y1="7"  x2="3"  y2="13" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<line x1="8"  y1="4"  x2="8"  y2="10" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>';
+      case 'av_pombo':
+        return '<ellipse cx="1"  cy="1"    rx="7"   ry="4" fill="'+cor+'" opacity=".8"/>'+
+               '<circle  cx="8"  cy="-1.5" r="3.5"        fill="'+cor+'" opacity=".85"/>'+
+               '<polygon points="11.5,-1.5 14,-3 14,-0.5" fill="'+cor+'" opacity=".7"/>'+
+               '<path d="M-2,-2 Q-8,-9 -13,-6 Q-8,-1 -2,1" fill="'+cor+'" opacity=".6"/>'+
+               '<path d="M1,-2 Q3,-8 7,-7 Q4,-2 1,0"       fill="'+cor+'" opacity=".4"/>'+
+               '<path d="M-6,4 Q-10,9 -8,12 Q-4,12 -3,9 Q-1,12 2,10 Q5,9 5,5" fill="'+cor+'" opacity=".55"/>'+
+               '<circle cx="9" cy="-2" r="1" fill="#fff" opacity=".7"/>';
+      case 'av_gato':
+        return '<ellipse cx="0"  cy="4"  rx="8" ry="6"  fill="'+cor+'" opacity=".8"/>'+
+               '<circle  cx="5"  cy="-5" r="5"          fill="'+cor+'" opacity=".85"/>'+
+               '<polygon points="2,-9 4,-14 8,-10"        fill="'+cor+'" opacity=".85"/>'+
+               '<polygon points="7,-9 10,-14 12,-10"       fill="'+cor+'" opacity=".85"/>'+
+               '<path d="M-8,6 Q-14,2 -12,-2" fill="none" stroke="'+cor+'" stroke-width="3" stroke-linecap="round"/>'+
+               '<circle cx="4" cy="-5.5" r="1" fill="#fff" opacity=".65"/>'+
+               '<circle cx="7" cy="-5.5" r="1" fill="#fff" opacity=".65"/>'+
+               '<line x1="5" y1="-3" x2="12" y2="-2" stroke="'+cor+'" stroke-width="1" opacity=".5"/>'+
+               '<line x1="5" y1="-3" x2="12" y2="-4" stroke="'+cor+'" stroke-width="1" opacity=".5"/>';
+      case 'av_peixe':
+        return '<ellipse cx="1" cy="0" rx="10" ry="6"      fill="'+cor+'" opacity=".8"/>'+
+               '<path d="M-9,-1 L-13,-7 L-14,0 L-13,7 L-9,1 Z" fill="'+cor+'" opacity=".65"/>'+
+               '<path d="M-2,-6 Q3,-12 8,-8 Q5,-6 -2,-6"    fill="'+cor+'" opacity=".5"/>'+
+               '<circle cx="8"   cy="-1"  r="2.5" fill="#fff" opacity=".7"/>'+
+               '<circle cx="8.5" cy="-1"  r="1.2" fill="'+cor+'" opacity=".6"/>'+
+               '<path d="M-2,1 Q1,-3 4,1 Q1,5 -2,1"   fill="none" stroke="#fff" stroke-width="0.8" opacity=".3"/>'+
+               '<path d="M4,1 Q7,-3 10,1 Q7,5 4,1"    fill="none" stroke="#fff" stroke-width="0.8" opacity=".3"/>'+
+               '<path d="M11,-1 Q12,0 11,1" fill="none" stroke="#fff" stroke-width="1" opacity=".5"/>';
       default:
         return '<polygon points="0,-13 12,-4 8,11 -8,11 -12,-4" fill="'+cor+'" opacity=".8"/>';
     }
