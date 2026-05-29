@@ -1,5 +1,5 @@
 
-// shared/mapa_acao_editor.html — Editor Visual de Mapa de Evento
+// shared/mapa_acao_editor.html — Editor Visual de Mapa de Evento v2
 // Incluir via: <?!= include('shared/mapa_acao_editor'); ?>
 // ATENCAO: NAO envolver em tags script.
 
@@ -9,15 +9,16 @@
 var MapaAcaoEditorUI = (function() {
 
   // ── Estado ───────────────────────────────────────────────
-  var _mapa        = null;   // objeto mapa atual (com layers + elementos)
-  var _container   = null;   // elemento DOM onde o editor é montado
-  var _cbSalvar    = null;   // callback(mapaAtualizado)
-  var _cbVoltar    = null;   // callback()
-  var _selId       = null;   // id do elemento selecionado
-  var _drag        = null;   // estado de drag { type, startX, startY, ... }
-  var _pan         = null;   // estado de pan do canvas
-  var _vb          = { x:0, y:0, w:900, h:660 }; // viewBox
-  var _edSvg       = null;
+  var _mapa          = null;   // objeto mapa atual (com layers + elementos)
+  var _container     = null;   // elemento DOM onde o editor é montado
+  var _cbSalvar      = null;   // callback(mapaAtualizado)
+  var _cbVoltar      = null;   // callback()
+  var _selId         = null;   // id do elemento selecionado
+  var _drag          = null;   // estado de drag { type, startX, startY, ... }
+  var _pan           = null;   // estado de pan do canvas
+  var _vb            = { x:0, y:0, w:900, h:660 }; // viewBox
+  var _edSvg         = null;
+  var _activeLayerId = null;   // camada ativa para novos elementos
 
   // ── Categorias de objetos ────────────────────────────────
   var _CATEGORIAS = [
@@ -35,7 +36,7 @@ var MapaAcaoEditorUI = (function() {
     { id:'outro',         label:'Outro',          cor:'#a78bfa' }
   ];
 
-  // SVG ícones para palette (30×30 viewBox "-15 -15 30 30")
+  // SVG ícones para palette (viewBox "-15 -15 30 30")
   function _iconeCategoria(catId, cor) {
     cor = cor || '#6b7280';
     switch (catId) {
@@ -90,13 +91,7 @@ var MapaAcaoEditorUI = (function() {
     }
   }
 
-  // SVG ícone de espaço (forma conforme mapaConfig)
-  function _iconeEspaco(cor) {
-    return '<rect x="-13" y="-10" width="26" height="20" rx="3" fill="' + cor + '" opacity=".7" stroke="' + cor + '" stroke-width="2"/>' +
-           '<text y="4" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">ESP</text>';
-  }
-
-  // ── Cores padrão por layer (fallback) ───────────────────
+  // ── Cores padrão ─────────────────────────────────────────
   var _COR_DEFAULT = '#6366f1';
 
   function _corDoLayer(layerId) {
@@ -117,48 +112,76 @@ var MapaAcaoEditorUI = (function() {
     return l ? l.nome : '—';
   }
 
-  // ── NS SVG ──────────────────────────────────────────────
   var _NS = 'http://www.w3.org/2000/svg';
 
   // ── Inicialização ────────────────────────────────────────
-
-  /**
-   * Inicializa o editor dentro de um container DOM.
-   * @param {HTMLElement} container
-   * @param {Object}      mapa       — objeto MapaAcao completo
-   * @param {Function}    cbSalvar   — callback(mapaAtualizado)
-   * @param {Function}    cbVoltar   — callback()
-   */
   function init(container, mapa, cbSalvar, cbVoltar) {
-    _container = container;
-    _mapa      = JSON.parse(JSON.stringify(mapa)); // deep copy
-    _cbSalvar  = cbSalvar;
-    _cbVoltar  = cbVoltar;
-    _selId     = null;
-    _drag      = null;
-    _pan       = null;
-    _vb        = { x: 0, y: 0, w: 900, h: 660 };
+    _container     = container;
+    _mapa          = JSON.parse(JSON.stringify(mapa));
+    _cbSalvar      = cbSalvar;
+    _cbVoltar      = cbVoltar;
+    _selId         = null;
+    _drag          = null;
+    _pan           = null;
+    _activeLayerId = null;
+    _vb            = { x: 0, y: 0, w: 900, h: 660 };
+
+    // Define camada ativa como a primeira layer existente
+    if (_mapa.layers && _mapa.layers.length > 0) {
+      _activeLayerId = _mapa.layers[0].id;
+    }
 
     _renderEditor();
     _renderCanvas();
     _renderLayerSidebar();
     _renderPalette();
     _initIO();
+
+    // Ouvir mudança de fullscreen para atualizar ícone
+    document.addEventListener('fullscreenchange', _onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', _onFullscreenChange);
   }
 
   // ── Layout do editor ────────────────────────────────────
-
   function _renderEditor() {
     _container.innerHTML =
+      '<style>' +
+        '@media print {' +
+          '.mae-no-print { display:none !important; }' +
+          '#mae-svg { width:100vw !important; height:auto !important; page-break-inside:avoid; }' +
+        '}' +
+        '#mae-wrap:fullscreen { background:#f1f5f9; }' +
+        '#mae-wrap:-webkit-full-screen { background:#f1f5f9; }' +
+      '</style>' +
       '<div id="mae-wrap" style="display:flex;flex-direction:column;height:100%;min-height:520px;">' +
         // Topbar
-        '<div id="mae-topbar" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;">' +
+        '<div id="mae-topbar" class="mae-no-print" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;">' +
           '<button onclick="MapaAcaoEditorUI._voltar()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--text2,#64748b);display:flex;align-items:center;gap:4px;font-size:13px;padding:4px 8px;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'">' +
             '<span class="ms ms-sm">arrow_back</span> Locais' +
           '</button>' +
           '<span class="ms" style="color:var(--color-primary,#4f46e5);font-size:18px;">map</span>' +
           '<div style="flex:1;font-size:14px;font-weight:700;color:var(--text,#1e293b);">' + escaparHtml(_mapa.nome || 'Mapa') + '</div>' +
           '<span style="font-size:12px;color:var(--text2,#64748b);" id="mae-status-txt"></span>' +
+          // Botão download (dropdown)
+          '<div style="position:relative;display:inline-block;">' +
+            '<button id="mae-btn-download" data-bg-skip="1" onclick="MapaAcaoEditorUI._toggleMenuDownload()" ' +
+              'style="background:var(--surface2,#f8fafc);color:var(--text,#1e293b);border:1px solid var(--border,#e2e8f0);cursor:pointer;border-radius:6px;padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:4px;">' +
+              '<span class="ms ms-sm">download</span> Baixar' +
+              '<span class="ms ms-sm">expand_more</span>' +
+            '</button>' +
+            '<div id="mae-menu-download" style="display:none;position:absolute;right:0;top:36px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:200;min-width:160px;padding:4px;">' +
+              '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._baixarSvg()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;background:none;border:none;cursor:pointer;font-size:13px;text-align:left;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'"><span class="ms ms-sm">image</span> Download SVG</button>' +
+              '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._baixarPng()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;background:none;border:none;cursor:pointer;font-size:13px;text-align:left;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'"><span class="ms ms-sm">photo</span> Download PNG</button>' +
+              '<hr style="margin:4px 0;border:none;border-top:1px solid var(--border,#e2e8f0);">' +
+              '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._imprimirMapa()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;background:none;border:none;cursor:pointer;font-size:13px;text-align:left;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'"><span class="ms ms-sm">print</span> Imprimir</button>' +
+            '</div>' +
+          '</div>' +
+          // Botão fullscreen
+          '<button id="mae-btn-fullscreen" data-bg-skip="1" onclick="MapaAcaoEditorUI._toggleFullscreen()" title="Tela cheia" ' +
+            'style="background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);cursor:pointer;border-radius:6px;padding:6px 8px;display:flex;align-items:center;">' +
+            '<span class="ms" style="font-size:18px;">fullscreen</span>' +
+          '</button>' +
+          // Botão salvar
           '<button id="mae-btn-salvar" onclick="BtnGuard.wrap(\'mae-btn-salvar\',\'Salvando…\',MapaAcaoEditorUI._salvar)" style="background:var(--color-primary,#4f46e5);color:#fff;border:none;cursor:pointer;border-radius:6px;padding:6px 18px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:4px;">' +
             '<span class="ms ms-sm">save</span> Salvar mapa' +
           '</button>' +
@@ -166,11 +189,10 @@ var MapaAcaoEditorUI = (function() {
         // Corpo 3 colunas
         '<div style="display:flex;flex:1;overflow:hidden;">' +
           // Sidebar esquerda — Palette
-          '<div id="mae-palette-col" style="width:200px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);padding:12px 10px;">' +
+          '<div id="mae-palette-col" class="mae-no-print" style="width:210px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);padding:10px 8px;">' +
             '<div id="mae-palette-espacos"></div>' +
             '<div style="height:1px;background:var(--border,#e2e8f0);margin:10px 0;"></div>' +
-            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:8px;letter-spacing:.06em;">Objetos</div>' +
-            '<div id="mae-palette-objs" style="display:grid;grid-template-columns:1fr 1fr;gap:5px;"></div>' +
+            '<div id="mae-palette-objs"></div>' +
           '</div>' +
           // Canvas central
           '<div style="flex:1;overflow:hidden;position:relative;background:var(--surface2,#f1f5f9);">' +
@@ -178,16 +200,16 @@ var MapaAcaoEditorUI = (function() {
               '<svg id="mae-svg" viewBox="0 0 900 660" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"></svg>' +
             '</div>' +
             // Zoom controls
-            '<div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px;">' +
+            '<div class="mae-no-print" style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px;">' +
               '<button onclick="MapaAcaoEditorUI._zoom(1)"  data-bg-skip="1" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;">+</button>' +
               '<button onclick="MapaAcaoEditorUI._zoom(-1)" data-bg-skip="1" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;">−</button>' +
               '<button onclick="MapaAcaoEditorUI._resetZoom()" data-bg-skip="1" title="Ajustar" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;"><span class="ms" style="font-size:16px;">fit_screen</span></button>' +
             '</div>' +
             // Legenda de layers
-            '<div id="mae-legenda" style="position:absolute;bottom:10px;left:10px;z-index:2;background:rgba(255,255,255,.92);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:6px 10px;font-size:11px;line-height:1.8;max-width:200px;box-shadow:0 2px 8px rgba(0,0,0,.08);"></div>' +
+            '<div id="mae-legenda" class="mae-no-print" style="position:absolute;bottom:10px;left:10px;z-index:2;background:rgba(255,255,255,.92);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:6px 10px;font-size:11px;line-height:1.8;max-width:200px;box-shadow:0 2px 8px rgba(0,0,0,.08);"></div>' +
           '</div>' +
           // Sidebar direita — Layers + Propriedades
-          '<div id="mae-right-col" style="width:240px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-left:1px solid var(--border,#e2e8f0);">' +
+          '<div id="mae-right-col" class="mae-no-print" style="width:240px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-left:1px solid var(--border,#e2e8f0);">' +
             '<div id="mae-layer-panel" style="padding:12px 12px 0;"></div>' +
             '<div style="height:1px;background:var(--border,#e2e8f0);margin:10px 0;"></div>' +
             '<div id="mae-props-panel" style="padding:0 12px 12px;"></div>' +
@@ -199,47 +221,64 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── Palette esquerda ────────────────────────────────────
-
   function _renderPalette() {
-    // Espaços já no mapa
-    var pEsp = document.getElementById('mae-palette-espacos');
-    if (pEsp) {
-      var espacos = (_mapa.elementos || []).filter(function(el) { return el.tipo === 'espaco'; });
-      if (espacos.length === 0) {
-        pEsp.innerHTML = '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-bottom:4px;">Sem espaços no mapa.</div>';
-      } else {
-        pEsp.innerHTML =
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:8px;letter-spacing:.06em;">Espaços</div>' +
-          espacos.map(function(el) {
-            var cor = _corDoLayer(el.layerId);
-            return '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._selecionarEl(\'' + escaparHtml(el.id) + '\')" ' +
-              'style="display:flex;align-items:center;gap:6px;width:100%;padding:5px 6px;background:none;border:none;cursor:pointer;border-radius:5px;margin-bottom:3px;text-align:left;" ' +
-              'onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'">' +
-              '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + ';flex-shrink:0;"></span>' +
-              '<span style="font-size:12px;color:var(--text,#1e293b);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(el.nome) + '</span>' +
-            '</button>';
-          }).join('');
-      }
-    }
+    _renderPaletteEspacos();
+    _renderPaletteObjetos();
+  }
 
-    // Objetos
-    var pObj = document.getElementById('mae-palette-objs');
-    if (pObj) {
-      pObj.innerHTML = _CATEGORIAS.map(function(cat) {
-        return '<button data-bg-skip="1" ' +
-          'onclick="MapaAcaoEditorUI._adicionarObjeto(\'' + cat.id + '\')" ' +
-          'style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;background:var(--surface2,#f8fafc);border:1.5px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:10px;color:var(--text2,#64748b);" ' +
-          'onmouseover="this.style.borderColor=\'' + cat.cor + '\'" onmouseout="this.style.borderColor=\'var(--border,#e2e8f0)\'" ' +
-          'title="' + escaparHtml(cat.label) + '">' +
-          '<svg width="30" height="30" viewBox="-15 -15 30 30">' + _iconeCategoria(cat.id, cat.cor) + '</svg>' +
-          escaparHtml(cat.label) +
+  function _renderPaletteEspacos() {
+    var pEsp = document.getElementById('mae-palette-espacos');
+    if (!pEsp) return;
+
+    var espacos = (_mapa.elementos || []).filter(function(el) { return el.tipo === 'espaco'; });
+    var html = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:6px;letter-spacing:.06em;">Espaços</div>';
+
+    if (espacos.length === 0) {
+      html += '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-bottom:4px;font-style:italic;">Sem espaços no mapa.</div>';
+    } else {
+      html += espacos.map(function(el) {
+        var cor = _layerVisivel(el.layerId) ? _corDoLayer(el.layerId) : '#9ca3af';
+        return '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._selecionarEl(\'' + escaparHtml(el.id) + '\')" ' +
+          'style="display:flex;align-items:center;gap:6px;width:100%;padding:5px 6px;background:none;border:none;cursor:pointer;border-radius:5px;margin-bottom:2px;text-align:left;" ' +
+          'onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'">' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + cor + ';flex-shrink:0;"></span>' +
+          '<span style="font-size:12px;color:var(--text,#1e293b);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(el.nome) + '</span>' +
         '</button>';
       }).join('');
     }
+
+    // Botão: Novo espaço custom
+    html += '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._adicionarNovoEspaco()" ' +
+      'style="width:100%;display:flex;align-items:center;gap:5px;padding:5px 6px;margin-top:4px;background:none;border:1.5px dashed var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:11px;color:var(--text2,#64748b);" ' +
+      'onmouseover="this.style.borderColor=\'var(--color-primary,#4f46e5)\';this.style.color=\'var(--color-primary,#4f46e5)\'" ' +
+      'onmouseout="this.style.borderColor=\'var(--border,#e2e8f0)\';this.style.color=\'var(--text2,#64748b)\'">' +
+      '<span class="ms ms-sm">add</span> Novo espaço' +
+    '</button>';
+
+    pEsp.innerHTML = html;
+  }
+
+  function _renderPaletteObjetos() {
+    var pObj = document.getElementById('mae-palette-objs');
+    if (!pObj) return;
+
+    pObj.innerHTML =
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:8px;letter-spacing:.06em;">Objetos</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
+      _CATEGORIAS.map(function(cat) {
+        return '<button data-bg-skip="1" ' +
+          'onclick="MapaAcaoEditorUI._adicionarObjeto(\'' + cat.id + '\')" ' +
+          'title="' + escaparHtml(cat.label) + '" ' +
+          'style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;background:none;border:none;border-radius:10px;cursor:pointer;font-size:10px;color:var(--text2,#64748b);" ' +
+          'onmouseover="this.style.background=\'rgba(0,0,0,.06)\'" onmouseout="this.style.background=\'none\'">' +
+          '<svg width="36" height="36" viewBox="-15 -15 30 30" style="overflow:visible;">' + _iconeCategoria(cat.id, cat.cor) + '</svg>' +
+          '<span style="font-size:9.5px;text-align:center;line-height:1.2;">' + escaparHtml(cat.label) + '</span>' +
+        '</button>';
+      }).join('') +
+      '</div>';
   }
 
   // ── Layer sidebar (direita) ──────────────────────────────
-
   function _renderLayerSidebar() {
     var panel = document.getElementById('mae-layer-panel');
     if (!panel) return;
@@ -247,59 +286,73 @@ var MapaAcaoEditorUI = (function() {
     var layers = _mapa.layers || [];
 
     var html =
-      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Camadas</div>' +
-      layers.map(function(l) {
-        var vis = l.visivel !== false;
-        return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;padding:7px 8px;border-radius:8px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);">' +
-          '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + (l.cor || _COR_DEFAULT) + ';margin-top:2px;flex-shrink:0;"></span>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:12px;font-weight:600;color:var(--text,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(l.nome) + '</div>' +
-            (l.descricao ? '<div style="font-size:10px;color:var(--text2,#64748b);margin-top:1px;word-break:break-word;">' + escaparHtml(l.descricao) + '</div>' : '') +
+      '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Camadas</div>';
+
+    // Dica de camada ativa
+    if (_activeLayerId) {
+      html += '<div style="font-size:10px;color:var(--text2,#64748b);margin-bottom:8px;padding:5px 7px;background:var(--surface2,#f8fafc);border-radius:6px;">Clique numa camada para ativá-la. Novos objetos serão inseridos nela.</div>';
+    }
+
+    html += layers.map(function(l) {
+      var vis    = l.visivel !== false;
+      var ativa  = l.id === _activeLayerId;
+      var borda  = ativa ? ('2px solid ' + (l.cor || _COR_DEFAULT)) : '1px solid var(--border,#e2e8f0)';
+      var fundo  = ativa ? _hexToRgba(l.cor || _COR_DEFAULT, 0.06) : 'var(--surface2,#f8fafc)';
+
+      return '<div onclick="MapaAcaoEditorUI._ativarLayer(\'' + escaparHtml(l.id) + '\')" ' +
+        'title="Ativar camada" ' +
+        'style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;padding:7px 8px;border-radius:8px;background:' + fundo + ';border:' + borda + ';cursor:pointer;">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + (l.cor || _COR_DEFAULT) + ';margin-top:2px;flex-shrink:0;"></span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--text,#1e293b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(l.nome) +
+            (ativa ? ' <span style="font-size:9px;background:' + (l.cor||_COR_DEFAULT) + ';color:#fff;border-radius:3px;padding:1px 4px;vertical-align:middle;">ativa</span>' : '') +
           '</div>' +
-          '<div style="display:flex;gap:3px;flex-shrink:0;">' +
-            '<button data-bg-skip="1" title="' + (vis ? 'Ocultar' : 'Mostrar') + '" onclick="MapaAcaoEditorUI._toggleLayer(\'' + escaparHtml(l.id) + '\')" ' +
-              'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
-              'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
-              '<span class="ms" style="font-size:16px;color:' + (vis ? 'var(--text2,#64748b)' : 'var(--muted,#94a3b8)') + ';">' + (vis ? 'visibility' : 'visibility_off') + '</span>' +
-            '</button>' +
-            '<button data-bg-skip="1" title="Editar camada" onclick="MapaAcaoEditorUI._editarLayer(\'' + escaparHtml(l.id) + '\')" ' +
-              'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
-              'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
-              '<span class="ms" style="font-size:16px;color:var(--text2,#64748b);">edit</span>' +
-            '</button>' +
-            '<button data-bg-skip="1" title="Excluir camada" onclick="MapaAcaoEditorUI._excluirLayer(\'' + escaparHtml(l.id) + '\')" ' +
-              'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
-              'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
-              '<span class="ms" style="font-size:16px;color:var(--color-error,#ef4444);">delete</span>' +
-            '</button>' +
-          '</div>' +
-        '</div>';
-      }).join('') +
-      '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._novaLayerForm()" ' +
-        'style="width:100%;display:flex;align-items:center;gap:6px;padding:7px 8px;background:none;border:1.5px dashed var(--border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text2,#64748b);" ' +
-        'onmouseover="this.style.borderColor=\'var(--color-primary,#4f46e5)\';this.style.color=\'var(--color-primary,#4f46e5)\'" ' +
-        'onmouseout="this.style.borderColor=\'var(--border,#e2e8f0)\';this.style.color=\'var(--text2,#64748b)\'">' +
-        '<span class="ms ms-sm">add</span> Nova camada' +
-      '</button>' +
-      '<div id="mae-nova-layer-form" style="display:none;margin-top:10px;padding:10px;background:var(--surface2,#f8fafc);border-radius:8px;border:1px solid var(--border,#e2e8f0);">' +
-        '<div style="font-size:11px;font-weight:600;color:var(--text,#1e293b);margin-bottom:8px;">Nova camada</div>' +
-        _layerInput('nl-nome',      'Nome',        'text',  '') +
-        _layerInput('nl-desc',      'Descrição',   'text',  '') +
-        '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
-          '<div style="flex:1;">' +
-            '<label style="font-size:11px;color:var(--text2,#64748b);">Cor</label>' +
-            '<input id="nl-cor" type="color" value="#6366f1" style="width:100%;height:32px;border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;">' +
-          '</div>' +
-          '<div style="flex:1;">' +
-            '<label style="font-size:11px;color:var(--text2,#64748b);">Ícone (MS)</label>' +
-            '<input id="nl-icone" type="text" value="layers" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;">' +
-          '</div>' +
+          (l.descricao ? '<div style="font-size:10px;color:var(--text2,#64748b);margin-top:1px;word-break:break-word;">' + escaparHtml(l.descricao) + '</div>' : '') +
         '</div>' +
-        '<div style="display:flex;gap:6px;">' +
-          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._salvarNovaLayer()" style="flex:1;padding:6px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Criar</button>' +
-          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._fecharLayerForm()" style="flex:1;padding:6px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;">Cancelar</button>' +
+        '<div style="display:flex;gap:3px;flex-shrink:0;" onclick="event.stopPropagation()">' +
+          '<button data-bg-skip="1" title="' + (vis ? 'Ocultar' : 'Mostrar') + '" onclick="MapaAcaoEditorUI._toggleLayer(\'' + escaparHtml(l.id) + '\')" ' +
+            'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
+            'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
+            '<span class="ms" style="font-size:16px;color:' + (vis ? 'var(--text2,#64748b)' : 'var(--muted,#94a3b8)') + ';">' + (vis ? 'visibility' : 'visibility_off') + '</span>' +
+          '</button>' +
+          '<button data-bg-skip="1" title="Editar camada" onclick="MapaAcaoEditorUI._editarLayer(\'' + escaparHtml(l.id) + '\')" ' +
+            'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
+            'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
+            '<span class="ms" style="font-size:16px;color:var(--text2,#64748b);">edit</span>' +
+          '</button>' +
+          '<button data-bg-skip="1" title="Excluir camada" onclick="MapaAcaoEditorUI._excluirLayer(\'' + escaparHtml(l.id) + '\')" ' +
+            'style="background:none;border:none;cursor:pointer;padding:2px;border-radius:4px;" ' +
+            'onmouseover="this.style.background=\'var(--border,#e2e8f0)\'" onmouseout="this.style.background=\'none\'">' +
+            '<span class="ms" style="font-size:16px;color:var(--color-error,#ef4444);">delete</span>' +
+          '</button>' +
         '</div>' +
       '</div>';
+    }).join('') +
+    '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._novaLayerForm()" ' +
+      'style="width:100%;display:flex;align-items:center;gap:6px;padding:7px 8px;background:none;border:1.5px dashed var(--border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text2,#64748b);" ' +
+      'onmouseover="this.style.borderColor=\'var(--color-primary,#4f46e5)\';this.style.color=\'var(--color-primary,#4f46e5)\'" ' +
+      'onmouseout="this.style.borderColor=\'var(--border,#e2e8f0)\';this.style.color=\'var(--text2,#64748b)\'">' +
+      '<span class="ms ms-sm">add</span> Nova camada' +
+    '</button>' +
+    '<div id="mae-nova-layer-form" style="display:none;margin-top:10px;padding:10px;background:var(--surface2,#f8fafc);border-radius:8px;border:1px solid var(--border,#e2e8f0);">' +
+      '<div style="font-size:11px;font-weight:600;color:var(--text,#1e293b);margin-bottom:8px;">Nova camada</div>' +
+      _layerInput('nl-nome',  'Nome',      'text',  '') +
+      _layerInput('nl-desc',  'Descrição', 'text',  '') +
+      '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:var(--text2,#64748b);">Cor</label>' +
+          '<input id="nl-cor" type="color" value="#6366f1" style="width:100%;height:32px;border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;">' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:var(--text2,#64748b);">Ícone (MS)</label>' +
+          '<input id="nl-icone" type="text" value="layers" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;">' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._salvarNovaLayer()" style="flex:1;padding:6px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Criar</button>' +
+        '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._fecharLayerForm()" style="flex:1;padding:6px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;">Cancelar</button>' +
+      '</div>' +
+    '</div>';
 
     panel.innerHTML = html;
     _renderLegenda();
@@ -327,8 +380,7 @@ var MapaAcaoEditorUI = (function() {
     }).join('');
   }
 
-  // ── Painel de propriedades (direita, abaixo das layers) ─
-
+  // ── Painel de propriedades ───────────────────────────────
   function _renderProps() {
     var panel = document.getElementById('mae-props-panel');
     if (!panel) return;
@@ -348,21 +400,18 @@ var MapaAcaoEditorUI = (function() {
 
     panel.innerHTML =
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Propriedades</div>' +
-      // Nome
       '<div style="margin-bottom:8px;">' +
         '<label style="font-size:11px;color:var(--text2,#64748b);">Nome</label>' +
         '<input id="mae-prop-nome" type="text" value="' + escaparHtml(el.nome || '') + '" ' +
           'style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" ' +
           'onchange="MapaAcaoEditorUI._propChange()">' +
       '</div>' +
-      // Layer
       '<div style="margin-bottom:8px;">' +
         '<label style="font-size:11px;color:var(--text2,#64748b);">Camada</label>' +
         '<select id="mae-prop-layer" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propChange()">' +
           layerOptions +
         '</select>' +
       '</div>' +
-      // Categoria (só objetos)
       (el.tipo === 'objeto' ?
         '<div style="margin-bottom:8px;">' +
           '<label style="font-size:11px;color:var(--text2,#64748b);">Categoria</label>' +
@@ -371,7 +420,6 @@ var MapaAcaoEditorUI = (function() {
           '</select>' +
         '</div>'
       : '') +
-      // Quantidade (só objetos)
       (el.tipo === 'objeto' ?
         '<div style="margin-bottom:8px;">' +
           '<label style="font-size:11px;color:var(--text2,#64748b);">Quantidade</label>' +
@@ -380,7 +428,6 @@ var MapaAcaoEditorUI = (function() {
             'onchange="MapaAcaoEditorUI._propChange()">' +
         '</div>'
       : '') +
-      // Capacidade (só espaços)
       (el.tipo === 'espaco' ?
         '<div style="margin-bottom:8px;">' +
           '<label style="font-size:11px;color:var(--text2,#64748b);">Capacidade</label>' +
@@ -389,7 +436,6 @@ var MapaAcaoEditorUI = (function() {
             'onchange="MapaAcaoEditorUI._propChange()">' +
         '</div>'
       : '') +
-      // Posição (X, Y)
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
         '<div><label style="font-size:11px;color:var(--text2,#64748b);">Pos. X</label>' +
           '<input id="mae-prop-cx" type="number" value="' + Math.round(el.mapaConfig ? el.mapaConfig.cx || 0 : 0) + '" ' +
@@ -400,21 +446,18 @@ var MapaAcaoEditorUI = (function() {
             'style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" ' +
             'onchange="MapaAcaoEditorUI._propPosChange()"></div>' +
       '</div>' +
-      // Notas
       '<div style="margin-bottom:8px;">' +
         '<label style="font-size:11px;color:var(--text2,#64748b);">Notas</label>' +
         '<textarea id="mae-prop-notas" rows="2" ' +
           'style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;resize:vertical;" ' +
           'onchange="MapaAcaoEditorUI._propChange()">' + escaparHtml(el.notas || '') + '</textarea>' +
       '</div>' +
-      // Reservar espaço original
       (el.tipo === 'espaco' && el.espacoOriginalId ?
         '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._abrirModalReserva(\'' + escaparHtml(el.id) + '\')" ' +
           'style="width:100%;padding:7px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:8px;">' +
           '<span class="ms ms-sm">event_available</span> Reservar espaço original' +
         '</button>'
       : '') +
-      // Excluir elemento
       '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._excluirElemento()" ' +
         'style="width:100%;padding:6px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;">' +
         '<span class="ms ms-sm">delete</span> Remover elemento' +
@@ -422,11 +465,9 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── Canvas SVG ──────────────────────────────────────────
-
   function _renderCanvas() {
     if (!_edSvg) return;
 
-    // Limpa tudo exceto defs
     while (_edSvg.lastChild) _edSvg.removeChild(_edSvg.lastChild);
 
     // Background
@@ -450,7 +491,7 @@ var MapaAcaoEditorUI = (function() {
     gridRect.setAttribute('fill', 'url(#mae-grid)');
     _edSvg.appendChild(gridRect);
 
-    // Terreno (se existir)
+    // Terreno
     if (_mapa.terreno && _mapa.terreno.path) {
       var terrG = document.createElementNS(_NS, 'g');
       var terrP = document.createElementNS(_NS, 'path');
@@ -475,21 +516,37 @@ var MapaAcaoEditorUI = (function() {
     while (g.lastChild) g.removeChild(g.lastChild);
 
     (_mapa.elementos || []).forEach(function(el) {
-      if (!_layerVisivel(el.layerId)) return;
+      var layerOculta = !_layerVisivel(el.layerId);
+
+      // Objetos em layer oculta: pular totalmente
+      if (layerOculta && el.tipo !== 'espaco') return;
+
       var cfg = el.mapaConfig || { forma: 'rect', cx: 200, cy: 200, w: 80, h: 60, r: 40, rotacao: 0 };
-      var cor = _corDoLayer(el.layerId);
+
+      // Cor: layer oculta = cinza guia; visível = cor da camada
+      var cor          = layerOculta ? '#9ca3af' : _corDoLayer(el.layerId);
+      var fillOpacity  = layerOculta ? 0.10 : 0.35;
+      var strokeOpacity = layerOculta ? 0.35 : 1;
 
       var g2 = document.createElementNS(_NS, 'g');
       g2.setAttribute('id', 'mae-el-' + el.id);
       g2.setAttribute('transform', 'translate(' + (cfg.cx || 0) + ',' + (cfg.cy || 0) + ') rotate(' + (cfg.rotacao || 0) + ')');
-      g2.style.cursor = 'move';
+
+      if (layerOculta) {
+        // Espaço em cinza: não interativo, sem seleção
+        g2.style.cursor       = 'default';
+        g2.style.pointerEvents = 'none';
+        g2.style.opacity      = '0.6';
+      } else {
+        g2.style.cursor = 'move';
+      }
 
       // Forma
-      var shape = _criarForma(cfg, cor, el.id === _selId);
+      var shape = _criarForma(cfg, cor, !layerOculta && el.id === _selId, fillOpacity, strokeOpacity);
       g2.appendChild(shape);
 
       // Ícone de objeto sobreposto
-      if (el.tipo === 'objeto') {
+      if (el.tipo === 'objeto' && !layerOculta) {
         var ico = document.createElementNS(_NS, 'g');
         ico.setAttribute('transform', 'translate(0,0)');
         ico.innerHTML = _iconeCategoria(el.categoria || 'outro', '#fff');
@@ -498,18 +555,22 @@ var MapaAcaoEditorUI = (function() {
       }
 
       // Label
+      var labelY = cfg.forma === 'circle'
+        ? (cfg.r || 40) + 14
+        : (cfg.h || 60) / 2 + 14;
+
       var txt = document.createElementNS(_NS, 'text');
       txt.setAttribute('text-anchor', 'middle');
-      txt.setAttribute('y', (cfg.forma === 'circle' ? (cfg.r || 40) + 14 : (cfg.h || 60) / 2 + 14));
+      txt.setAttribute('y', labelY);
       txt.setAttribute('font-size', '11');
-      txt.setAttribute('fill', 'var(--text,#1e293b)');
+      txt.setAttribute('fill', layerOculta ? '#9ca3af' : 'var(--text,#1e293b)');
       txt.setAttribute('font-weight', '600');
       txt.style.pointerEvents = 'none';
       txt.textContent = el.nome.length > 18 ? el.nome.substring(0, 16) + '…' : el.nome;
       g2.appendChild(txt);
 
-      // Alça de seleção ao selecionar
-      if (el.id === _selId) {
+      // Alças de seleção (só quando visível e selecionado)
+      if (!layerOculta && el.id === _selId) {
         var hw = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
         var hh = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
         var sel = document.createElementNS(_NS, 'rect');
@@ -521,7 +582,6 @@ var MapaAcaoEditorUI = (function() {
         sel.style.pointerEvents = 'none';
         g2.insertBefore(sel, g2.firstChild);
 
-        // Alça de resize (canto inferior direito)
         var rh = document.createElementNS(_NS, 'circle');
         rh.setAttribute('cx', hw + 4); rh.setAttribute('cy', hh + 4);
         rh.setAttribute('r', '6');
@@ -531,12 +591,16 @@ var MapaAcaoEditorUI = (function() {
         g2.appendChild(rh);
       }
 
-      g2.addEventListener('mousedown', function(e) { _startDragEl(e, el.id); });
+      if (!layerOculta) {
+        g2.addEventListener('mousedown', function(e) { _startDragEl(e, el.id); });
+      }
       g.appendChild(g2);
     });
   }
 
-  function _criarForma(cfg, cor, selecionado) {
+  function _criarForma(cfg, cor, selecionado, fillOpacity, strokeOpacity) {
+    fillOpacity   = fillOpacity   !== undefined ? fillOpacity   : 0.35;
+    strokeOpacity = strokeOpacity !== undefined ? strokeOpacity : 1;
     var hw = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
     var hh = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
     var el;
@@ -556,8 +620,9 @@ var MapaAcaoEditorUI = (function() {
       el = document.createElementNS(_NS, 'polygon');
       el.setAttribute('points', _pontosPoligono(cfg, hw, hh));
     }
-    el.setAttribute('fill', _hexToRgba(cor, 0.35));
+    el.setAttribute('fill', _hexToRgba(cor, fillOpacity));
     el.setAttribute('stroke', cor);
+    el.setAttribute('stroke-opacity', strokeOpacity);
     el.setAttribute('stroke-width', selecionado ? '2.5' : '1.5');
     return el;
   }
@@ -590,7 +655,6 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── ViewBox / Zoom / Pan ─────────────────────────────────
-
   function _updateViewBox() {
     if (!_edSvg) return;
     _edSvg.setAttribute('viewBox', _vb.x + ' ' + _vb.y + ' ' + _vb.w + ' ' + _vb.h);
@@ -611,14 +675,15 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── IO — drag, pan, seleção ──────────────────────────────
-
   function _initIO() {
     var wrap = document.getElementById('mae-canvas-wrap');
     if (!wrap) return;
 
     wrap.addEventListener('mousedown', function(e) {
       if (e.target === wrap || e.target === _edSvg ||
-          e.target.id === 'mae-elems-g' || e.target.tagName === 'rect' && e.target.getAttribute('fill') === '#f8fafc') {
+          e.target.id === 'mae-elems-g' ||
+          (e.target.tagName === 'rect' && e.target.getAttribute('fill') === '#f8fafc') ||
+          (e.target.tagName === 'rect' && e.target.getAttribute('fill') && e.target.getAttribute('fill').indexOf('url') === 0)) {
         _selId = null;
         _renderElementos();
         _renderProps();
@@ -632,16 +697,37 @@ var MapaAcaoEditorUI = (function() {
 
     document.addEventListener('mousemove', _onMouseMove);
     document.addEventListener('mouseup',   _onMouseUp);
+
+    // Fechar menu download ao clicar fora
+    document.addEventListener('click', function(e) {
+      var menu = document.getElementById('mae-menu-download');
+      var btn  = document.getElementById('mae-btn-download');
+      if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.style.display = 'none';
+      }
+    });
   }
 
+  // ── CORRIGIDO: conversão de coordenadas usando API nativa SVG ──────────
+  // Usa getScreenCTM().inverse() para resolver corretamente em qualquer
+  // nível de zoom, pan e proporção de container (evita o "objeto anda devagar").
   function _svgPt(e) {
     if (!_edSvg) return { x: 0, y: 0 };
+    try {
+      var pt = _edSvg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      var ctm = _edSvg.getScreenCTM();
+      if (ctm) {
+        var sp = pt.matrixTransform(ctm.inverse());
+        return { x: sp.x, y: sp.y };
+      }
+    } catch(_) {}
+    // Fallback
     var rect = _edSvg.getBoundingClientRect();
-    var scaleX = _vb.w / rect.width;
-    var scaleY = _vb.h / rect.height;
     return {
-      x: _vb.x + (e.clientX - rect.left) * scaleX,
-      y: _vb.y + (e.clientY - rect.top)  * scaleY
+      x: _vb.x + (e.clientX - rect.left) * (_vb.w / rect.width),
+      y: _vb.y + (e.clientY - rect.top)  * (_vb.h / rect.height)
     };
   }
 
@@ -654,23 +740,23 @@ var MapaAcaoEditorUI = (function() {
   function _startDragEl(e, elId) {
     e.stopPropagation();
     _selecionarEl(elId);
-    var pt = _svgPt(e);
-    var el = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
+    var pt  = _svgPt(e);
+    var el  = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
     var cfg = el ? (el.mapaConfig || {}) : {};
     _drag = { type: 'move', elId: elId, startX: pt.x, startY: pt.y, origCX: cfg.cx || 0, origCY: cfg.cy || 0 };
   }
 
   function _startResize(e, elId, hw, hh) {
     e.stopPropagation();
-    var pt = _svgPt(e);
-    var el = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
+    var pt  = _svgPt(e);
+    var el  = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
     var cfg = el ? (el.mapaConfig || {}) : {};
     _drag = { type: 'resize', elId: elId, startX: pt.x, startY: pt.y, origW: cfg.w || hw*2, origH: cfg.h || hh*2, origR: cfg.r || hw };
   }
 
   function _onMouseMove(e) {
     if (_pan && !_drag) {
-      var rect = _edSvg ? _edSvg.getBoundingClientRect() : { width: 900, height: 660 };
+      var rect   = _edSvg ? _edSvg.getBoundingClientRect() : { width: 900, height: 660 };
       var scaleX = _pan.vbOrig.w / rect.width;
       var scaleY = _pan.vbOrig.h / rect.height;
       _vb.x = _pan.vbOrig.x - (e.clientX - _pan.startX) * scaleX;
@@ -685,9 +771,9 @@ var MapaAcaoEditorUI = (function() {
     if (!el) return;
 
     if (_drag.type === 'move') {
-      el.mapaConfig = el.mapaConfig || {};
-      el.mapaConfig.cx = _drag.origCX + (pt.x - _drag.startX);
-      el.mapaConfig.cy = _drag.origCY + (pt.y - _drag.startY);
+      el.mapaConfig      = el.mapaConfig || {};
+      el.mapaConfig.cx   = _drag.origCX + (pt.x - _drag.startX);
+      el.mapaConfig.cy   = _drag.origCY + (pt.y - _drag.startY);
     } else if (_drag.type === 'resize') {
       var dw = (pt.x - _drag.startX) * 2;
       var dh = (pt.y - _drag.startY) * 2;
@@ -712,27 +798,27 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── Ações do usuário ─────────────────────────────────────
-
   function _selecionarEl(elId) {
     _selId = elId;
     _renderElementos();
     _renderProps();
   }
 
+  // CORRIGIDO: usa _activeLayerId em vez de sempre layers[0]
   function _adicionarObjeto(catId) {
-    var cat = _CATEGORIAS.filter(function(c) { return c.id === catId; })[0];
+    var cat    = _CATEGORIAS.filter(function(c) { return c.id === catId; })[0];
     var layers = _mapa.layers || [];
-    var layerId = layers.length > 0 ? layers[0].id : 'sem_layer';
+    var layerId = _activeLayerId || (layers.length > 0 ? layers[0].id : 'sem_layer');
     var ts = new Date().getTime();
     var novoEl = {
-      id:          'el_' + ts + '_' + Math.random().toString(36).slice(2, 5),
-      tipo:        'objeto',
-      nome:        cat ? cat.label : catId,
-      layerId:     layerId,
-      categoria:   catId,
-      quantidade:  1,
-      notas:       '',
-      mapaConfig:  {
+      id:         'el_' + ts + '_' + Math.random().toString(36).slice(2, 5),
+      tipo:       'objeto',
+      nome:       cat ? cat.label : catId,
+      layerId:    layerId,
+      categoria:  catId,
+      quantidade: 1,
+      notas:      '',
+      mapaConfig: {
         forma:   'rect',
         cx:      _vb.x + _vb.w / 2,
         cy:      _vb.y + _vb.h / 2,
@@ -749,6 +835,37 @@ var MapaAcaoEditorUI = (function() {
     _renderCanvas();
     _renderProps();
     _setStatus('Objeto adicionado. Posicione no mapa.');
+  }
+
+  // NOVO: cria um espaço custom (sem espacoOriginalId)
+  function _adicionarNovoEspaco() {
+    var layers  = _mapa.layers || [];
+    var layerId = _activeLayerId || (layers.length > 0 ? layers[0].id : 'sem_layer');
+    var ts = new Date().getTime();
+    var novoEl = {
+      id:         'el_' + ts + '_' + Math.random().toString(36).slice(2, 5),
+      tipo:       'espaco',
+      nome:       'Novo Espaço',
+      layerId:    layerId,
+      capacidade: 0,
+      notas:      '',
+      mapaConfig: {
+        forma:   'rect',
+        cx:      _vb.x + _vb.w / 2,
+        cy:      _vb.y + _vb.h / 2,
+        w:       120,
+        h:       80,
+        r:       0,
+        rotacao: 0
+      }
+    };
+    _mapa.elementos = _mapa.elementos || [];
+    _mapa.elementos.push(novoEl);
+    _selecionarEl(novoEl.id);
+    _renderPalette();
+    _renderCanvas();
+    _renderProps();
+    _setStatus('Novo espaço adicionado. Renomeie e posicione no mapa.');
   }
 
   function _propChange() {
@@ -804,11 +921,19 @@ var MapaAcaoEditorUI = (function() {
 
   // ── Layers ──────────────────────────────────────────────
 
+  // NOVO: ativa camada para inserção de novos elementos
+  function _ativarLayer(layerId) {
+    _activeLayerId = layerId;
+    _renderLayerSidebar();
+    _setStatus('Camada "' + _nomeLayer(layerId) + '" ativa para inserção.');
+  }
+
   function _toggleLayer(layerId) {
     var l = (_mapa.layers || []).filter(function(l) { return l.id === layerId; })[0];
     if (l) l.visivel = l.visivel === false ? true : false;
     _renderLayerSidebar();
     _renderElementos();
+    _renderPaletteEspacos();
   }
 
   function _novaLayerForm() {
@@ -829,30 +954,32 @@ var MapaAcaoEditorUI = (function() {
     if (!nome.trim()) { Toast.aviso('Nome da camada é obrigatório.'); return; }
     var ts = new Date().getTime();
     var novaLayer = {
-      id:       'layer_' + ts + '_' + Math.random().toString(36).slice(2, 4),
-      nome:     nome.trim(),
+      id:        'layer_' + ts + '_' + Math.random().toString(36).slice(2, 4),
+      nome:      nome.trim(),
       descricao: desc.trim(),
-      cor:      cor,
-      icone:    icone.trim() || 'layers',
-      visivel:  true
+      cor:       cor,
+      icone:     icone.trim() || 'layers',
+      visivel:   true
     };
     _mapa.layers = _mapa.layers || [];
     _mapa.layers.push(novaLayer);
+    // Ativar a nova camada automaticamente
+    _activeLayerId = novaLayer.id;
     _fecharLayerForm();
     _renderLayerSidebar();
     _renderCanvas();
-    _setStatus('Camada "' + novaLayer.nome + '" criada.');
+    _setStatus('Camada "' + novaLayer.nome + '" criada e ativada.');
   }
 
   function _editarLayer(layerId) {
     var l = (_mapa.layers || []).filter(function(l) { return l.id === layerId; })[0];
     if (!l) return;
-    var novoNome = prompt('Nome da camada:', l.nome);
-    if (novoNome === null) return;
-    var novaDesc = prompt('Descrição:', l.descricao || '');
-    if (novaDesc === null) return;
-    if (novoNome.trim()) l.nome = novoNome.trim();
-    l.descricao = novaDesc.trim();
+    var _raw = prompt('Nome da camada:', l.nome);
+    if (_raw === null) return;
+    var _raw2 = prompt('Descrição:', l.descricao || '');
+    if (_raw2 === null) return;
+    if (_raw.trim()) l.nome = _raw.trim();
+    l.descricao = _raw2.trim();
     _renderLayerSidebar();
     _renderElementos();
     _setStatus('Camada atualizada.');
@@ -862,16 +989,135 @@ var MapaAcaoEditorUI = (function() {
     var emUso = (_mapa.elementos || []).some(function(el) { return el.layerId === layerId; });
     if (emUso) { Toast.aviso('Camada em uso. Reassine os elementos antes de excluir.'); return; }
     _mapa.layers = (_mapa.layers || []).filter(function(l) { return l.id !== layerId; });
+    if (_activeLayerId === layerId) {
+      _activeLayerId = (_mapa.layers && _mapa.layers.length > 0) ? _mapa.layers[0].id : null;
+    }
     _renderLayerSidebar();
     _setStatus('Camada removida.');
   }
 
-  // ── Modal de Reserva ─────────────────────────────────────
-
-  function _abrirModalReserva(elementoId) {
-    var el = (_mapa.elementos || []).filter(function(e) { return e.id === elementoId; })[0];
+  // ── Fullscreen ───────────────────────────────────────────
+  function _toggleFullscreen() {
+    var el = document.getElementById('mae-wrap');
     if (!el) return;
-    var acao = MapaAcaoUI ? MapaAcaoUI._getAcao() : null;
+    try {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+        if (req) { req.call(el); return; }
+      } else {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+        if (exit) { exit.call(document); return; }
+      }
+    } catch(_) {}
+    // Fallback: maximiza dentro da página com position:fixed
+    _toggleFullscreenFallback(el);
+  }
+
+  function _toggleFullscreenFallback(el) {
+    if (el.getAttribute('data-fs') === '1') {
+      el.removeAttribute('data-fs');
+      el.style.cssText = '';
+      var btn = document.getElementById('mae-btn-fullscreen');
+      if (btn) btn.querySelector('.ms').textContent = 'fullscreen';
+    } else {
+      el.setAttribute('data-fs', '1');
+      el.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;';
+      var btn = document.getElementById('mae-btn-fullscreen');
+      if (btn) btn.querySelector('.ms').textContent = 'fullscreen_exit';
+    }
+  }
+
+  function _onFullscreenChange() {
+    var btn = document.getElementById('mae-btn-fullscreen');
+    if (!btn) return;
+    var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.querySelector('.ms').textContent = isFs ? 'fullscreen_exit' : 'fullscreen';
+  }
+
+  // ── Download / Imprimir ──────────────────────────────────
+  function _toggleMenuDownload() {
+    var menu = document.getElementById('mae-menu-download');
+    if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function _baixarSvg() {
+    var menu = document.getElementById('mae-menu-download');
+    if (menu) menu.style.display = 'none';
+    try {
+      var svgEl = document.getElementById('mae-svg');
+      var data  = new XMLSerializer().serializeToString(svgEl);
+      var blob  = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+      var url   = URL.createObjectURL(blob);
+      var a     = document.createElement('a');
+      a.href     = url;
+      a.download = (_mapa.nome || 'mapa') + '.svg';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      _setStatus('SVG baixado com sucesso.');
+    } catch(ex) {
+      Toast.erro('Erro ao baixar SVG: ' + ex.message);
+    }
+  }
+
+  function _baixarPng() {
+    var menu = document.getElementById('mae-menu-download');
+    if (menu) menu.style.display = 'none';
+    try {
+      var svgEl = document.getElementById('mae-svg');
+      var data  = new XMLSerializer().serializeToString(svgEl);
+      var blob  = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+      var url   = URL.createObjectURL(blob);
+      var img   = new Image();
+      img.onload = function() {
+        var canvas   = document.createElement('canvas');
+        canvas.width = 1800; canvas.height = 1320;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, 1800, 1320);
+        ctx.drawImage(img, 0, 0, 1800, 1320);
+        var a      = document.createElement('a');
+        a.href     = canvas.toDataURL('image/png');
+        a.download = (_mapa.nome || 'mapa') + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        _setStatus('PNG baixado com sucesso.');
+      };
+      img.onerror = function() {
+        URL.revokeObjectURL(url);
+        Toast.erro('Erro ao gerar PNG. Tente baixar como SVG.');
+      };
+      img.src = url;
+    } catch(ex) {
+      Toast.erro('Erro ao baixar PNG: ' + ex.message);
+    }
+  }
+
+  function _imprimirMapa() {
+    var menu = document.getElementById('mae-menu-download');
+    if (menu) menu.style.display = 'none';
+    try {
+      var svgEl = document.getElementById('mae-svg');
+      var data  = new XMLSerializer().serializeToString(svgEl);
+      var w = window.open('', '_blank', 'width=1000,height=750');
+      if (!w) { Toast.aviso('Permita pop-ups para imprimir o mapa.'); return; }
+      w.document.write(
+        '<!DOCTYPE html><html><head><title>' + escaparHtml(_mapa.nome || 'Mapa') + '</title>' +
+        '<style>body{margin:0;padding:0;background:#fff;} svg{width:100%;height:auto;max-height:100vh;}</style>' +
+        '</head><body>' + data + '</body></html>'
+      );
+      w.document.close();
+      w.focus();
+      setTimeout(function() { w.print(); }, 400);
+    } catch(ex) {
+      Toast.erro('Erro ao imprimir: ' + ex.message);
+    }
+  }
+
+  // ── Modal de Reserva ─────────────────────────────────────
+  function _abrirModalReserva(elementoId) {
+    var el   = (_mapa.elementos || []).filter(function(e) { return e.id === elementoId; })[0];
+    if (!el) return;
+    var acao        = MapaAcaoUI ? MapaAcaoUI._getAcao() : null;
     var dataDefault = (acao && acao.dataInicio) ? acao.dataInicio : '';
 
     var html =
@@ -936,12 +1182,13 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── Salvar e Voltar ──────────────────────────────────────
-
   function _salvar() {
     if (_cbSalvar) _cbSalvar(JSON.parse(JSON.stringify(_mapa)));
   }
 
   function _voltar() {
+    document.removeEventListener('fullscreenchange', _onFullscreenChange);
+    document.removeEventListener('webkitfullscreenchange', _onFullscreenChange);
     if (_cbVoltar) _cbVoltar();
   }
 
@@ -951,7 +1198,6 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── API pública ──────────────────────────────────────────
-
   return {
     init:               init,
     _voltar:            _voltar,
@@ -960,15 +1206,22 @@ var MapaAcaoEditorUI = (function() {
     _resetZoom:         _resetZoom,
     _selecionarEl:      _selecionarEl,
     _adicionarObjeto:   _adicionarObjeto,
+    _adicionarNovoEspaco: _adicionarNovoEspaco,
     _propChange:        _propChange,
     _propPosChange:     _propPosChange,
     _excluirElemento:   _excluirElemento,
+    _ativarLayer:       _ativarLayer,
     _toggleLayer:       _toggleLayer,
     _novaLayerForm:     _novaLayerForm,
     _fecharLayerForm:   _fecharLayerForm,
     _salvarNovaLayer:   _salvarNovaLayer,
     _editarLayer:       _editarLayer,
     _excluirLayer:      _excluirLayer,
+    _toggleFullscreen:  _toggleFullscreen,
+    _toggleMenuDownload: _toggleMenuDownload,
+    _baixarSvg:         _baixarSvg,
+    _baixarPng:         _baixarPng,
+    _imprimirMapa:      _imprimirMapa,
     _abrirModalReserva: _abrirModalReserva,
     _confirmarReserva:  _confirmarReserva
   };
