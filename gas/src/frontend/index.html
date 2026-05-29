@@ -22585,7 +22585,8 @@ var EscutaUI = (function() {
   var _tabAtual    = 'painel';
   var _papel       = '';
   var _ABAS        = ['painel','livre','alertas','distribuicao','relatorios','gestao'];
-  var _pulseAtual  = null;   // pergunta pulse carregada
+  var _pulseAtual          = null;   // pergunta pulse carregada
+  var _listaBancoPerguntas = [];     // banco de perguntas pulse carregado
 
   // ── helpers ──────────────────────────────────────────────────────────────
   function _esc(s) {
@@ -22697,22 +22698,22 @@ var EscutaUI = (function() {
       var pct  = p.totalConvidados ? Math.round((p.totalRespostas||0)/p.totalConvidados*100) : 0;
       var bCl  = _badgeCl(p.status);
       var idS  = JSON.stringify(p.id).replace(/"/g,"'");
-      return '<div style="border-left:3px solid;border-left-color:var(--' + bCl + '-color,var(--border));padding:10px 14px;margin-bottom:8px;border-radius:8px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--border);">' +
+      return '<div class="item-card" style="border-left:3px solid var(--' + bCl + '-color,var(--border));padding:12px 16px;margin-bottom:8px;border-radius:8px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:12px;">' +
         '<div style="min-width:0;">' +
           '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-            '<span class="badge-' + bCl + '" style="font-size:10px;padding:2px 8px;border-radius:20px;">' + _esc(p.status) + '</span>' +
+            '<span class="badge-' + bCl + '" style="font-size:11px;padding:2px 8px;border-radius:20px;">' + _esc(p.status) + '</span>' +
             '<strong style="font-size:13px;">' + _esc(p.titulo) + '</strong>' +
           '</div>' +
-          '<div style="font-size:11px;color:var(--text2);margin-top:3px;">Rodada ' + (p.rodada||'—') +
+          '<div style="font-size:12px;color:var(--text2);margin-top:3px;">Rodada ' + (p.rodada||'—') +
             ' · ' + (p.dataInicio||'') + ' → ' + (p.dataFim||'') +
             (p.status === 'ativa' ? ' · <strong>' + (p.totalRespostas||0) + ' resp. (' + pct + '%)</strong>' : '') +
           '</div>' +
         '</div>' +
-        '<div style="display:flex;gap:5px;flex-shrink:0;">' +
-          (p.status==='rascunho' ? '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;" id="btn-ativar-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Ativando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'ativa\')})">Ativar</button>' : '') +
-          (p.status==='ativa'    ? '<button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;" id="btn-enc-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Encerrando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'encerrada\')})">Encerrar</button>' : '') +
-          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 9px;" onclick="EscutaUI.verResultados(' + idS + ')" data-bg-skip="1">Resultados</button>' +
-          (p.status==='rascunho' ? '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 9px;" onclick="EscutaUI.abrirFormPesquisa(' + idS + ')" data-bg-skip="1">Editar</button>' : '') +
+        '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+          (p.status==='rascunho' ? '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-ativar-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Ativando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'ativa\')})">Ativar</button>' : '') +
+          (p.status==='ativa'    ? '<button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-enc-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Encerrando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'encerrada\')})">Encerrar</button>' : '') +
+          '<button class="btn btn-sm btn-secundario" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.verResultados(' + idS + ')" data-bg-skip="1">Resultados</button>' +
+          (p.status==='rascunho' ? '<button class="btn btn-sm btn-secundario" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.abrirFormPesquisa(' + idS + ')" data-bg-skip="1">Editar</button>' : '') +
         '</div>' +
       '</div>';
     }).join('');
@@ -22771,7 +22772,7 @@ var EscutaUI = (function() {
     if (!el) return;
     var ativas = _lista.filter(function(p){ return p.status === 'ativa'; });
     if (!ativas.length) {
-      el.innerHTML = '<div class="empty-state" style="padding:16px;"><p>Não há pesquisa de clima ativa no momento.</p></div>';
+      el.innerHTML = '<div class="empty-state" style="padding:16px;"><p>Nenhuma pesquisa de clima formal está ativa no momento.</p><p style="font-size:12px;color:var(--text2);margin-top:4px;">Use a Escuta Espontânea abaixo para registrar percepções a qualquer momento, ou aguarde a gestão ativar uma pesquisa.</p></div>';
       return;
     }
     var p = ativas[0];
@@ -23160,8 +23161,15 @@ var EscutaUI = (function() {
     el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
     GAS.escuta.bancoPerguntas(function(r) {
       if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; return; }
-      var lista = r.data;
-      el.innerHTML = lista.map(function(p) {
+      _listaBancoPerguntas = r.data;
+      var cab = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">' +
+        '<p style="font-size:11px;color:var(--text2);margin:0;">Perguntas do Pulse contínuo — controle quais entram na rotação automática.</p>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(true)" data-bg-skip="1">Habilitar todas</button>' +
+          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(false)" data-bg-skip="1">Desabilitar todas</button>' +
+        '</div>' +
+      '</div>';
+      el.innerHTML = cab + (_listaBancoPerguntas.map(function(p) {
         var chk = p.ativo !== false ? 'checked' : '';
         var idS = JSON.stringify(p.id||p.perguntaId||'').replace(/"/g,"'");
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;">' +
@@ -23170,17 +23178,30 @@ var EscutaUI = (function() {
             ' ' + _esc(p.texto||p.pergunta||'') +
           '</div>' +
           '<label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;cursor:pointer;">' +
-            '<input type="checkbox" ' + chk + ' onchange="EscutaUI.togglePergunta(' + idS + ',this.checked)"> Ativa' +
+            '<input type="checkbox" ' + chk + ' onchange="EscutaUI.togglePergunta(' + idS + ',this.checked)"> Habilitada' +
           '</label>' +
         '</div>';
-      }).join('') || '<p class="muted-text" style="font-size:12px;">Sem perguntas no catálogo.</p>';
+      }).join('') || '<p class="muted-text" style="font-size:12px;">Sem perguntas no catálogo.</p>');
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
   }
 
   function togglePergunta(perguntaId, ativo) {
     GAS.escuta.perguntaToggle({ perguntaId: perguntaId, ativo: ativo }, function(r) {
-      Toast.sucesso(ativo ? 'Pergunta ativada.' : 'Pergunta desativada.');
+      Toast.sucesso(ativo ? 'Pergunta habilitada.' : 'Pergunta desabilitada.');
     }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
+  }
+
+  function toggleTodasPerguntas(ativo) {
+    if (!_listaBancoPerguntas.length) return;
+    var total = 0;
+    for (var i = 0; i < _listaBancoPerguntas.length; i++) {
+      var pid = _listaBancoPerguntas[i].id || _listaBancoPerguntas[i].perguntaId || '';
+      if (!pid) continue;
+      GAS.escuta.perguntaToggle({ perguntaId: pid, ativo: ativo }, function(){}, function(){});
+      total++;
+    }
+    Toast.sucesso((ativo ? 'Habilitando' : 'Desabilitando') + ' ' + total + ' perguntas…');
+    setTimeout(function(){ _carregarBancoPerguntas(); }, 2500);
   }
 
   function _carregarConfig() {
@@ -23368,7 +23389,7 @@ var EscutaUI = (function() {
     // Distribuição
     carregarPulseDash,
     // Gestão
-    togglePergunta, salvarConfig, suprimirEmails,
+    togglePergunta, toggleTodasPerguntas, salvarConfig, suprimirEmails,
     // Pulse widget
     abrirPulse, fecharPulse, responderPulse
   };
