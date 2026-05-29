@@ -254,6 +254,17 @@ var EscutaPulseEngine = (function() {
       });
 
       var pergunta = candidatas[0];
+
+      // Registra impressão (sem PII — sem colaboradorId)
+      try {
+        EscutaRepository.salvarPulseImpressao(orgId, {
+          perguntaId: pergunta.id,
+          dimensao:   pergunta.dimensao,
+          turno:      _turnoAtual().nome,
+          periodo:    periodo
+        });
+      } catch(e) { /* não crítico */ }
+
       return {
         ok:       true,
         pergunta: pergunta,
@@ -469,10 +480,34 @@ var EscutaPulseEngine = (function() {
 
   // ─── Catálogo de perguntas (para exibição) ───────────────────────────────────
 
-  function obterCatalogoPerguntas() {
+  /**
+   * Retorna o catálogo de perguntas pulse.
+   * Se orgId for fornecido, cruza com pulse_respostas.json e pulse_impressoes.json
+   * para enriquecer cada pergunta com: impressoes, respostas, taxaEngajamento, ultimaUsadaEm.
+   * @param {string} [orgId]
+   */
+  function obterCatalogoPerguntas(orgId) {
+    var respostas  = orgId ? EscutaRepository.listarPulseRespostas(orgId)  : [];
+    var impressoes = orgId ? EscutaRepository.listarPulseImpressoes(orgId) : [];
+
     return BANCO_PERGUNTAS.map(function(p) {
-      return { id: p.id, dimensao: p.dimensao, texto: p.texto,
-               tipo: p.tipo, tipoTempo: p.tipoTempo, peso: p.peso, ativa: p.ativa };
+      var nResp = 0, nImp = 0, ultimaUsadaEm = null;
+      if (orgId) {
+        respostas.forEach(function(r) {
+          if (r.perguntaId !== p.id) return;
+          nResp++;
+          if (!ultimaUsadaEm || r.criadoEm > ultimaUsadaEm) ultimaUsadaEm = r.criadoEm;
+        });
+        impressoes.forEach(function(i) { if (i.perguntaId === p.id) nImp++; });
+      }
+      return {
+        id: p.id, dimensao: p.dimensao, texto: p.texto,
+        tipo: p.tipo, tipoTempo: p.tipoTempo, peso: p.peso, ativa: p.ativa,
+        impressoes:      nImp,
+        respostas:       nResp,
+        taxaEngajamento: nImp > 0 ? parseFloat((nResp / nImp).toFixed(3)) : null,
+        ultimaUsadaEm:   ultimaUsadaEm
+      };
     });
   }
 

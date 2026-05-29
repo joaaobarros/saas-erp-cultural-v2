@@ -6812,6 +6812,21 @@ select.form-control { cursor: pointer; }
             <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Banco de Perguntas Pulse</h4>
             <div id="escuta-banco-perguntas"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
           </div>
+          <!-- Monitoramento Pulse -->
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h4 style="margin:0;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Monitoramento Pulse</h4>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="month" id="pulse-monitor-periodo" class="select-sm"
+                       onchange="EscutaUI.carregarMonitoramento()"
+                       style="font-size:11px;padding:3px 6px;">
+                <button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 8px;"
+                        onclick="EscutaUI.carregarMonitoramento()" data-bg-skip="1">Atualizar</button>
+              </div>
+            </div>
+            <div id="escuta-pulse-monitor"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
+          </div>
+
           <!-- Configuração -->
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
             <h4 style="margin:0 0 12px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Configurações</h4>
@@ -23323,7 +23338,16 @@ var EscutaUI = (function() {
   function _carregarAbaGestao() {
     _carregarGovernanca();
     _carregarBancoPerguntas();
+    _inicializarFiltroMonitoramento();
+    _carregarMonitoramentoPulse();
     _carregarConfig();
+  }
+
+  function _inicializarFiltroMonitoramento() {
+    var el = document.getElementById('pulse-monitor-periodo');
+    if (!el || el.value) return;
+    var d = new Date();
+    el.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
 
   function _carregarGovernanca() {
@@ -23384,19 +23408,135 @@ var EscutaUI = (function() {
         '</div>' +
       '</div>';
       el.innerHTML = cab + (_listaBancoPerguntas.map(function(p) {
-        var chk = p.ativo !== false ? 'checked' : '';
-        var idS = JSON.stringify(p.id||p.perguntaId||'').replace(/"/g,"'");
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;">' +
+        var chk  = p.ativo !== false ? 'checked' : '';
+        var idS  = JSON.stringify(p.id||p.perguntaId||'').replace(/"/g,"'");
+        var nImp = p.impressoes || 0;
+        var nRes = p.respostas  || 0;
+        var taxa = (p.taxaEngajamento !== null && p.taxaEngajamento !== undefined)
+          ? Math.round(p.taxaEngajamento * 100) + '%' : '—';
+        var corT = (p.taxaEngajamento === null || p.taxaEngajamento === undefined) ? 'var(--text2)'
+          : p.taxaEngajamento >= 0.5 ? 'var(--success)'
+          : p.taxaEngajamento >= 0.2 ? 'var(--warning)' : 'var(--danger)';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;gap:8px;">' +
           '<div style="flex:1;min-width:0;">' +
             '<span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensaoId||p.dimensao||'') + '</span>' +
             ' ' + _esc(p.texto||p.pergunta||'') +
           '</div>' +
-          '<label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;cursor:pointer;">' +
-            '<input type="checkbox" ' + chk + ' onchange="EscutaUI.togglePergunta(' + idS + ',this.checked)"> Habilitada' +
-          '</label>' +
+          '<div style="display:flex;gap:10px;align-items:center;flex-shrink:0;">' +
+            '<span style="font-size:10px;color:var(--text2);" title="Impressões / Respostas">' + nImp + ' imp · ' + nRes + ' resp</span>' +
+            '<span style="font-size:10px;font-weight:700;color:' + corT + ';" title="Taxa de engajamento">' + taxa + '</span>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">' +
+              '<input type="checkbox" ' + chk + ' onchange="EscutaUI.togglePergunta(' + idS + ',this.checked)"> Habilitada' +
+            '</label>' +
+          '</div>' +
         '</div>';
       }).join('') || '<p class="muted-text" style="font-size:12px;">Sem perguntas no catálogo.</p>');
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
+  }
+
+  function carregarMonitoramento() { _carregarMonitoramentoPulse(); }
+
+  function _carregarMonitoramentoPulse() {
+    var el = document.getElementById('escuta-pulse-monitor');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
+    var periodo = (document.getElementById('pulse-monitor-periodo') || {}).value || '';
+    GAS.escuta.pulseMonitoramento(periodo ? { periodo: periodo } : {}, function(r) {
+      if (!r || !r.ok || !r.data) {
+        el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; return;
+      }
+      var d = r.data;
+      var taxaPct = d.taxaGeral !== null ? Math.round(d.taxaGeral * 100) + '%' : '—';
+      var corTaxa = d.taxaGeral === null ? 'var(--text2)' : d.taxaGeral >= 0.5 ? 'var(--success)' : d.taxaGeral >= 0.2 ? 'var(--warning)' : 'var(--danger)';
+
+      // Resumo geral
+      var resumo =
+        '<div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">' +
+          _monCard('Impressões', d.totalImpressoes, 'var(--primary)') +
+          _monCard('Respostas', d.totalRespostas, 'var(--success)') +
+          _monCard('Taxa geral', taxaPct, corTaxa) +
+          _monCard('Sem resposta', d.semResposta.length, d.semResposta.length > 0 ? 'var(--warning)' : 'var(--success)') +
+        '</div>';
+
+      // Tabela por pergunta
+      var tabelaLinhas = d.porPergunta.filter(function(p) { return p.impressoes > 0; }).map(function(p) {
+        var taxa = p.taxaEngajamento !== null ? Math.round(p.taxaEngajamento * 100) + '%' : '—';
+        var corL = p.taxaEngajamento === null ? 'var(--text2)' : p.taxaEngajamento >= 0.5 ? 'var(--success)' : p.taxaEngajamento >= 0.2 ? 'var(--warning)' : 'var(--danger)';
+        var ult  = p.ultimaUsadaEm ? p.ultimaUsadaEm.slice(0, 10) : '—';
+        return '<tr>' +
+          '<td style="padding:5px 8px;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _esc(p.texto) + '">' + _esc(p.texto) + '</td>' +
+          '<td style="padding:5px 8px;font-size:10px;text-align:center;"><span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensao) + '</span></td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.impressoes + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.respostas + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700;color:' + corL + ';">' + taxa + '</td>' +
+          '<td style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);">' + ult + '</td>' +
+        '</tr>';
+      }).join('');
+
+      var tabela = tabelaLinhas
+        ? '<div style="overflow-x:auto;margin-bottom:14px;">' +
+            '<table style="width:100%;border-collapse:collapse;">' +
+              '<thead><tr style="border-bottom:1px solid var(--border);">' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;">Pergunta</th>' +
+                '<th style="padding:5px 8px;font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;">Dimensão</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Imp.</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Resp.</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Taxa</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Última</th>' +
+              '</tr></thead>' +
+              '<tbody>' + tabelaLinhas + '</tbody>' +
+            '</table>' +
+          '</div>'
+        : '<p class="muted-text" style="font-size:12px;margin-bottom:14px;">Nenhuma impressão registrada no período.</p>';
+
+      // Perguntas problemáticas (impressões mas 0 respostas)
+      var probHtml = '';
+      if (d.semResposta.length) {
+        probHtml = '<div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">' +
+          '<p style="font-size:11px;font-weight:700;color:var(--warning);margin:0 0 6px;">Perguntas exibidas sem nenhuma resposta no período</p>' +
+          d.semResposta.map(function(p) {
+            return '<div style="font-size:11px;padding:2px 0;display:flex;gap:6px;align-items:center;">' +
+              '<span class="badge-secondary" style="font-size:9px;padding:1px 5px;border-radius:10px;flex-shrink:0;">' + _esc(p.dimensao) + '</span>' +
+              _esc(p.texto) + ' <span style="color:var(--text2);margin-left:auto;flex-shrink:0;">' + p.impressoes + ' imp.</span>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      }
+
+      // Colaboradores sem atividade
+      var colab = d.colaboradores;
+      var colabHtml = '';
+      if (colab && colab.total > 0) {
+        var semAct = colab.semAtividade || [];
+        var corColab = semAct.length === 0 ? 'var(--success)' : semAct.length < colab.total * 0.3 ? 'var(--warning)' : 'var(--danger)';
+        colabHtml = '<div style="border-top:1px solid var(--border);padding-top:12px;">' +
+          '<p style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;">Colaboradores sem atividade pulse no período</p>' +
+          '<p style="font-size:12px;margin:0 0 8px;">' +
+            '<span style="font-weight:700;color:' + corColab + ';">' + semAct.length + '</span>' +
+            ' de <strong>' + colab.total + '</strong> colaboradores ativos não tiveram respostas pulse' +
+            (colab.comAtividade > 0 ? ' <span style="color:var(--text2);font-size:11px;">(' + colab.comAtividade + ' com atividade)</span>' : '') +
+          '</p>' +
+          (semAct.length > 0
+            ? '<div style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px 8px;">' +
+                semAct.map(function(c) {
+                  return '<div style="font-size:11px;padding:2px 0;color:var(--text2);">' + _esc(c.nome || c.email) + '</div>';
+                }).join('') +
+              '</div>'
+            : '<p style="font-size:11px;color:var(--success);margin:0;">Todos os colaboradores tiveram atividade no período.</p>') +
+        '</div>';
+      }
+
+      el.innerHTML = resumo + tabela + probHtml + colabHtml;
+    }, function() {
+      el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>';
+    });
+  }
+
+  function _monCard(label, valor, cor) {
+    return '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:80px;">' +
+      '<p style="margin:0;font-size:18px;font-weight:800;color:' + cor + ';">' + valor + '</p>' +
+      '<p style="margin:2px 0 0;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;">' + label + '</p>' +
+    '</div>';
   }
 
   function togglePergunta(perguntaId, ativo) {
@@ -23603,7 +23743,7 @@ var EscutaUI = (function() {
     // Distribuição
     carregarPulseDash,
     // Gestão
-    togglePergunta, toggleTodasPerguntas, salvarConfig, suprimirEmails,
+    togglePergunta, toggleTodasPerguntas, salvarConfig, suprimirEmails, carregarMonitoramento,
     // Pulse widget
     abrirPulse, fecharPulse, responderPulse
   };

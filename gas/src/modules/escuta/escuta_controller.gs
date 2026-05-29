@@ -495,6 +495,90 @@ function ctrl_escuta_banco_perguntas(params) {
 }
 
 /**
+ * Monitoramento operacional do sistema pulse (RH+).
+ * Cruza pulse_impressoes.json × pulse_respostas.json para responder:
+ *   - Quantas vezes cada pergunta foi exibida vs. respondida
+ *   - Quais perguntas tiveram 0 respostas no período (possível problema de config)
+ *   - Quais colaboradores ativos não tiveram nenhuma atividade pulse no período
+ * params: { periodo? } — YYYY-MM, default: mês atual
+ */
+function ctrl_escuta_pulse_monitoramento(params) {
+  return GasResponse.wrap(function() {
+    params  = params || {};
+    var ctx = _ctxEscuta();
+    _assertGestaoEscuta(ctx.papel);
+
+    var agora   = new Date();
+    var periodo = params.periodo ||
+      (agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0'));
+
+    var impressoes = EscutaRepository.listarPulseImpressoes(ctx.orgId, periodo);
+    var respostas  = EscutaRepository.listarPulseRespostas(ctx.orgId, periodo);
+    var catalogo   = EscutaPulseEngine.obterCatalogoPerguntas(ctx.orgId);
+
+    // Agrega por pergunta
+    var porId = {};
+    catalogo.forEach(function(p) {
+      porId[p.id] = {
+        id: p.id, dimensao: p.dimensao, texto: p.texto,
+        impressoes: 0, respostas: 0, ultimaUsadaEm: null, taxaEngajamento: null
+      };
+    });
+    impressoes.forEach(function(i) {
+      if (porId[i.perguntaId]) porId[i.perguntaId].impressoes++;
+    });
+    respostas.forEach(function(r) {
+      if (!porId[r.perguntaId]) return;
+      porId[r.perguntaId].respostas++;
+      if (!porId[r.perguntaId].ultimaUsadaEm || r.criadoEm > porId[r.perguntaId].ultimaUsadaEm)
+        porId[r.perguntaId].ultimaUsadaEm = r.criadoEm;
+    });
+
+    var porPergunta = Object.keys(porId).map(function(id) {
+      var p = porId[id];
+      p.taxaEngajamento = p.impressoes > 0 ? parseFloat((p.respostas / p.impressoes).toFixed(3)) : null;
+      return p;
+    }).sort(function(a, b) { return b.impressoes - a.impressoes; });
+
+    var semResposta = porPergunta.filter(function(p) {
+      return p.impressoes > 0 && p.respostas === 0;
+    });
+
+    // Colaboradores sem atividade (baseado em respostas não-anônimas do período)
+    var idsComAtividade = {};
+    respostas.forEach(function(r) {
+      if (r.colaboradorId) idsComAtividade[r.colaboradorId] = r.criadoEm;
+    });
+
+    var totalAtivos  = 0;
+    var semAtividade = [];
+    try {
+      var colaboradores = ColaboradorRepository.listar(ctx.orgId)
+        .filter(function(c) { return c.status === 'ativo'; });
+      totalAtivos  = colaboradores.length;
+      semAtividade = colaboradores
+        .filter(function(c) { return !idsComAtividade[c.email]; })
+        .map(function(c) { return { nome: c.nome || c.email, email: c.email }; });
+    } catch(e) { /* não crítico */ }
+
+    return {
+      periodo:         periodo,
+      totalImpressoes: impressoes.length,
+      totalRespostas:  respostas.length,
+      taxaGeral:       impressoes.length > 0
+        ? parseFloat((respostas.length / impressoes.length).toFixed(3)) : null,
+      porPergunta:     porPergunta,
+      semResposta:     semResposta,
+      colaboradores: {
+        total:        totalAtivos,
+        comAtividade: Object.keys(idsComAtividade).length,
+        semAtividade: semAtividade
+      }
+    };
+  }, 'ctrl_escuta_pulse_monitoramento');
+}
+
+/**
  * Suprime e-mails antigos (LGPD 90 dias) — apenas superadmin.
  */
 function ctrl_escuta_suprimir_emails(params) {

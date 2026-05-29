@@ -18,6 +18,7 @@ var EscutaRepository = (function() {
   var ARQUIVO_ESPONTANEA  = 'escuta_espontanea.json';
   var ARQUIVO_SATURACAO   = 'escuta_saturacao.json';
   var ARQUIVO_PULSE       = 'pulse_respostas.json';
+  var ARQUIVO_IMPRESSOES  = 'pulse_impressoes.json';
   var ARQUIVO_PERFIS      = 'perfis_analiticos.json';
   var ARQUIVO_ALERTAS     = 'escuta_alertas.json';
   var ABA_ESCUTA          = 'EQUIPES.Escuta';
@@ -202,6 +203,34 @@ var EscutaRepository = (function() {
     return id;
   }
 
+  // ─── [E3] Pulse: impressões (sem PII) ───────────────────────────────────────
+
+  /**
+   * Lista impressões pulse de um período (YYYY-MM).
+   * Cada impressão = uma pergunta exibida ao usuário, sem identificar quem viu.
+   */
+  function listarPulseImpressoes(orgId, periodo) {
+    var lista = lerJSON(ARQUIVO_IMPRESSOES);
+    if (!Array.isArray(lista)) return [];
+    return lista.filter(function(r) {
+      return r.orgId === orgId && (!periodo || r.periodo === periodo);
+    });
+  }
+
+  /**
+   * Registra que uma pergunta pulse foi exibida.
+   * Sem PII — não armazena colaboradorId.
+   * @param {string} orgId
+   * @param {{ perguntaId, dimensao, turno, periodo }} dados
+   */
+  function salvarPulseImpressao(orgId, dados) {
+    modifyJSON(ARQUIVO_IMPRESSOES, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      lista.push(Object.assign({}, dados, { orgId: orgId, criadoEm: new Date().toISOString() }));
+      return lista;
+    });
+  }
+
   // ─── [F20] Perfil analítico do colaborador ─────────────────────────────────
 
   /**
@@ -339,6 +368,9 @@ var EscutaRepository = (function() {
     // [E2] Pulse
     listarPulseRespostas:         listarPulseRespostas,
     salvarPulseResposta:          salvarPulseResposta,
+    // [E3] Impressões pulse (sem PII)
+    listarPulseImpressoes:        listarPulseImpressoes,
+    salvarPulseImpressao:         salvarPulseImpressao,
     // [F20] Perfil analítico
     salvarPerfilAnalitico:        salvarPerfilAnalitico,
     obterPerfilAnalitico:         obterPerfilAnalitico,
