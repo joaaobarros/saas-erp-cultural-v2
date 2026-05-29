@@ -1893,7 +1893,14 @@ select.form-control { cursor: pointer; }
               <div class="card-titulo">
                 <span class="ms">manage_accounts</span> Acessos Pendentes
               </div>
-              <span class="badge badge-warning" id="badge-pendentes" style="display:none"></span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge badge-warning" id="badge-pendentes" style="display:none"></span>
+                <button class="btn btn-ghost btn-sm" data-bg-skip="1"
+                  onclick="window.open(window.location.href.split('?')[0]+'?secao=primeiro_acesso_preview','_blank')"
+                  title="Abre a tela de cadastro exatamente como um colaborador veria ao fazer o primeiro acesso.">
+                  <span class="ms ms-sm">visibility</span> Visualizar Cadastro
+                </button>
+              </div>
             </div>
             <div id="admin-pendentes-lista">
               <div class="empty-state" style="min-height:120px;padding:20px;">
@@ -2171,25 +2178,50 @@ select.form-control { cursor: pointer; }
       <!-- VIEW: Aprovações (Solicitações de Reserva) -->
       <div id="view-aprovacoes" class="view">
         <div class="page-header">
-          <div class="page-title">Aprovações de Reserva</div>
-          <div class="page-subtitle">Solicitações de reserva aguardando avaliação</div>
+          <div class="page-title">Aprovações</div>
+          <div class="page-subtitle">Reservas e acessos aguardando avaliação</div>
         </div>
-        <div class="card">
-          <div class="card-header">
-            <div class="card-titulo"><span class="ms">approval</span> Solicitações</div>
-            <div style="display:flex;gap:8px;">
-              <select id="filtro-sol-status" class="form-input" style="max-width:160px;" onchange="AprovacaoReservaUI.carregar()">
-                <option value="PENDENTE">Pendentes</option>
-                <option value="APROVADO">Aprovadas</option>
-                <option value="RECUSADO">Recusadas</option>
-                <option value="TODOS">Todas</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" onclick="AprovacaoReservaUI.carregar()" data-bg-skip="1">
+        <!-- Abas internas -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn active" id="aprov-tab-btn-reservas" onclick="AprovacaoReservaUI.setTab('reservas',this)">
+            <span class="ms ms-sm">meeting_room</span> Reservas de Espaço
+          </button>
+          <button class="tab-btn" id="aprov-tab-btn-acessos" onclick="AprovacaoReservaUI.setTab('acessos',this)">
+            <span class="ms ms-sm">person_add</span> Primeiros Acessos
+            <span id="badge-aprov-acessos" class="nav-badge oculto" style="position:static;margin-left:4px;display:inline-block;"></span>
+          </button>
+        </div>
+        <!-- Aba: Reservas -->
+        <div id="aprov-tab-reservas">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">approval</span> Solicitações de Reserva</div>
+              <div style="display:flex;gap:8px;">
+                <select id="filtro-sol-status" class="form-input" style="max-width:160px;" onchange="AprovacaoReservaUI.carregar()">
+                  <option value="PENDENTE">Pendentes</option>
+                  <option value="APROVADO">Aprovadas</option>
+                  <option value="RECUSADO">Recusadas</option>
+                  <option value="TODOS">Todas</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="AprovacaoReservaUI.carregar()" data-bg-skip="1">
+                  <span class="ms ms-sm">refresh</span>
+                </button>
+              </div>
+            </div>
+            <div id="lista-solicitacoes"><p class="muted-text">Carregando…</p></div>
+          </div>
+        </div>
+        <!-- Aba: Primeiros Acessos -->
+        <div id="aprov-tab-acessos" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">person_add</span> Solicitações de Acesso</div>
+              <button class="btn btn-ghost btn-sm" onclick="AprovacaoReservaUI.carregarAcessos()" data-bg-skip="1">
                 <span class="ms ms-sm">refresh</span>
               </button>
             </div>
+            <div id="lista-aprov-acessos"><p class="muted-text">Carregando…</p></div>
           </div>
-          <div id="lista-solicitacoes"><p class="muted-text">Carregando…</p></div>
         </div>
       </div><!-- /view-aprovacoes -->
 
@@ -2419,16 +2451,32 @@ select.form-control { cursor: pointer; }
                 </select>
               </div>
               <div class="form-group"><label class="form-label">Tipo de Vínculo</label>
-                <select id="pf-vinculo" class="form-input">
+                <select id="pf-vinculo" class="form-input" onchange="PessoasUI._toggleBeneficios()">
                   <option value="clt">CLT</option><option value="pj">PJ</option>
                   <option value="estagio">Estágio</option><option value="voluntario">Voluntário</option>
                   <option value="bolsista">Bolsista</option><option value="temporario">Temporário</option>
                 </select>
               </div>
               <div class="form-group"><label class="form-label">Data de Admissão</label><input id="pf-admissao" class="form-input" type="date"></div>
+              <div class="form-group"><label class="form-label">Salário Base (R$)</label><input id="pf-salario-base" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
+            </div>
+            <!-- Benefícios (exibidos quando vínculo = CLT) -->
+            <div id="pf-beneficios-clt" style="display:none;background:var(--surface2);border-radius:8px;padding:14px;margin-top:10px;border-left:3px solid var(--color-primary);">
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;margin-bottom:10px;">Benefícios CLT</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Vale Alimentação (R$)</label><input id="pf-alimentacao" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
+                <div class="form-group"><label class="form-label">Desconto Alimentação (R$)</label><input id="pf-desc-alimentacao" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
+                <div class="form-group"><label class="form-label">Plano de Saúde (R$)</label><input id="pf-saude" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
+                <div class="form-group"><label class="form-label">Vale Transporte (R$)</label><input id="pf-transporte" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:8px;padding:10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+                <span style="font-size:13px;color:var(--muted);">Custo Total Mensal:</span>
+                <span id="pf-salario-total" style="font-size:16px;font-weight:700;color:var(--color-primary);">R$ 0,00</span>
+                <span style="font-size:11px;color:var(--muted);">(base + benefícios − descontos)</span>
+              </div>
             </div>
             <input type="hidden" id="pf-id">
-            <div style="display:flex;gap:8px;margin-top:4px;">
+            <div style="display:flex;gap:8px;margin-top:12px;">
               <button class="btn btn-primario" id="btn-pessoas-salvar" onclick="PessoasUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
             </div>
           </div>
@@ -3098,7 +3146,8 @@ select.form-control { cursor: pointer; }
                       </div>
                       <div class="form-group"><label class="form-label">Eixo / Área</label><input id="cd-meta-eixo" class="form-input" type="text" placeholder="Ex: Artes Cênicas"></div>
                       <div class="form-group full-width"><label class="form-label">Ação Contratual</label><input id="cd-meta-acao-contratual" class="form-input" type="text" placeholder="Ex: Ação 2.181 — Apoio a Atividades Culturais"></div>
-                      <div class="form-group full-width"><label class="form-label">Período de Execução</label><input id="cd-meta-periodo" class="form-input" type="text" placeholder="Ex: Jan/2025 a Dez/2025"></div>
+                      <div class="form-group"><label class="form-label">Período de Início</label><input id="cd-meta-inicio" class="form-input" type="date"></div>
+                      <div class="form-group"><label class="form-label">Período de Fim</label><input id="cd-meta-fim" class="form-input" type="date"></div>
                       <div class="form-group full-width"><label class="form-label">Descrição</label><textarea id="cd-meta-descricao" class="form-input" rows="3" placeholder="Descrição da meta" style="resize:vertical;"></textarea></div>
                     </div>
                     <input type="hidden" id="cd-meta-id">
@@ -3160,7 +3209,8 @@ select.form-control { cursor: pointer; }
                     <table style="width:100%;border-collapse:collapse;font-size:12px;" id="cd-mem-tabela">
                       <thead><tr style="background:var(--surface3);">
                         <th style="padding:5px 8px;text-align:left;min-width:140px;">Descrição</th>
-                        <th style="padding:5px 8px;text-align:left;width:90px;">Tipo</th>
+                        <th style="padding:5px 8px;text-align:left;min-width:110px;">Setor</th>
+                        <th style="padding:5px 8px;text-align:left;width:100px;">Tipo</th>
                         <th style="padding:5px 8px;text-align:right;width:60px;">Qtd</th>
                         <th style="padding:5px 8px;text-align:right;width:100px;">Valor Unit.</th>
                         <th style="padding:5px 8px;text-align:right;width:100px;">Subtotal</th>
@@ -3168,7 +3218,7 @@ select.form-control { cursor: pointer; }
                       </tr></thead>
                       <tbody id="cd-mem-tbody"></tbody>
                       <tfoot><tr style="background:var(--surface3);font-weight:600;">
-                        <td colspan="4" style="padding:5px 8px;text-align:right;">Total:</td>
+                        <td colspan="5" style="padding:5px 8px;text-align:right;">Total:</td>
                         <td id="cd-mem-total" style="padding:5px 8px;text-align:right;color:var(--color-primary);">R$ 0,00</td>
                         <td></td>
                       </tr></tfoot>
@@ -7983,8 +8033,10 @@ var GAS = {
       obter:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_obter(id); },
       salvar:         function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_salvar(d); },
       excluir:        function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_excluir(id); },
-      criarDeEspacos: function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_espacos(p); },
-      reservarEspaco: function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_reservar_espaco(p); }
+      criarDeEspacos:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_espacos(p); },
+      criarDeSelecao:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_selecao(p); },
+      espacosDisponiveis:   function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_espacos_disponiveis(); },
+      reservarEspaco:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_reservar_espaco(p); }
     }
   },
   sistemaMetricas: {
@@ -8883,6 +8935,24 @@ var PessoasUI = (function() {
     });
   }
 
+  function _toggleBeneficios() {
+    var vinculo = (document.getElementById('pf-vinculo')||{}).value || '';
+    var bloco = document.getElementById('pf-beneficios-clt');
+    if (bloco) bloco.style.display = vinculo === 'clt' ? '' : 'none';
+    _recalcSalario();
+  }
+
+  function _recalcSalario() {
+    var base     = parseMoeda((document.getElementById('pf-salario-base')||{}).value||'0') || 0;
+    var alim     = parseMoeda((document.getElementById('pf-alimentacao')||{}).value||'0') || 0;
+    var descAlim = parseMoeda((document.getElementById('pf-desc-alimentacao')||{}).value||'0') || 0;
+    var saude    = parseMoeda((document.getElementById('pf-saude')||{}).value||'0') || 0;
+    var transp   = parseMoeda((document.getElementById('pf-transporte')||{}).value||'0') || 0;
+    var total    = base + alim + saude + transp - descAlim;
+    var elTotal  = document.getElementById('pf-salario-total');
+    if (elTotal) elTotal.textContent = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
   function abrirForm(dados) {
     var card = document.getElementById('pessoas-form-card');
     var titulo = document.getElementById('pessoas-form-titulo');
@@ -8894,6 +8964,14 @@ var PessoasUI = (function() {
     _popularSelectCargo(dados && dados.cargo || '');
     document.getElementById('pf-vinculo').value = dados && dados.tipoVinculo || 'clt';
     document.getElementById('pf-admissao').value = dados && dados.dataAdmissao || '';
+    // Campos de salário e benefícios
+    var el = function(id){ return document.getElementById(id); };
+    if (el('pf-salario-base'))      el('pf-salario-base').value      = fmtMoeda(dados && dados.salarioBase || 0);
+    if (el('pf-alimentacao'))       el('pf-alimentacao').value       = fmtMoeda(dados && dados.valeAlimentacao || 0);
+    if (el('pf-desc-alimentacao'))  el('pf-desc-alimentacao').value  = fmtMoeda(dados && dados.descontoAlimentacao || 0);
+    if (el('pf-saude'))             el('pf-saude').value             = fmtMoeda(dados && dados.planoSaude || 0);
+    if (el('pf-transporte'))        el('pf-transporte').value        = fmtMoeda(dados && dados.valeTransporte || 0);
+    _toggleBeneficios();
     titulo.textContent = dados && dados.id ? 'Editar Colaborador' : 'Novo Colaborador';
     document.getElementById('pf-nome').focus();
     card.scrollIntoView({behavior:'smooth',block:'start'});
@@ -8920,13 +8998,18 @@ var PessoasUI = (function() {
     var nome = (document.getElementById('pf-nome').value||'').trim();
     if(!nome){Toast.aviso('Nome é obrigatório.');return;}
     var dados = {
-      id:                document.getElementById('pf-id').value||undefined,
-      nome:              nome,
-      emailInstitucional:document.getElementById('pf-email-inst').value.trim(),
-      setor:             document.getElementById('pf-setor').value.trim(),
-      cargo:             document.getElementById('pf-cargo').value.trim(),
-      tipoVinculo:       document.getElementById('pf-vinculo').value,
-      dataAdmissao:      document.getElementById('pf-admissao').value
+      id:                  document.getElementById('pf-id').value||undefined,
+      nome:                nome,
+      emailInstitucional:  document.getElementById('pf-email-inst').value.trim(),
+      setor:               document.getElementById('pf-setor').value.trim(),
+      cargo:               document.getElementById('pf-cargo').value.trim(),
+      tipoVinculo:         document.getElementById('pf-vinculo').value,
+      dataAdmissao:        document.getElementById('pf-admissao').value,
+      salarioBase:         parseMoeda((document.getElementById('pf-salario-base')||{}).value||'0') || 0,
+      valeAlimentacao:     parseMoeda((document.getElementById('pf-alimentacao')||{}).value||'0') || 0,
+      descontoAlimentacao: parseMoeda((document.getElementById('pf-desc-alimentacao')||{}).value||'0') || 0,
+      planoSaude:          parseMoeda((document.getElementById('pf-saude')||{}).value||'0') || 0,
+      valeTransporte:      parseMoeda((document.getElementById('pf-transporte')||{}).value||'0') || 0
     };
     if(!dados.id) delete dados.id;
     BtnGuard.wrap('btn-pessoas-salvar','Salvando…',function(done){
@@ -8951,7 +9034,8 @@ var PessoasUI = (function() {
     if(!_carregado) carregar();
   }
 
-  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+           _toggleBeneficios:_toggleBeneficios, _recalcSalario:_recalcSalario };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -9330,7 +9414,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-meta-tipo').value           = 'CONTRATUAL';
     document.getElementById('cd-meta-eixo').value           = '';
     document.getElementById('cd-meta-acao-contratual').value= '';
-    document.getElementById('cd-meta-periodo').value        = '';
+    document.getElementById('cd-meta-inicio').value         = '';
+    document.getElementById('cd-meta-fim').value            = '';
     document.getElementById('cd-meta-descricao').value      = '';
     document.getElementById('cd-meta-modal-titulo').textContent = 'Nova Meta';
     document.getElementById('cd-meta-modal').classList.remove('oculto');
@@ -9343,7 +9428,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-meta-tipo').value           = m.tipoMeta || 'CONTRATUAL';
     document.getElementById('cd-meta-eixo').value           = m.eixo || '';
     document.getElementById('cd-meta-acao-contratual').value= m.acaoContratual || '';
-    document.getElementById('cd-meta-periodo').value        = m.periodo || '';
+    document.getElementById('cd-meta-inicio').value         = m.periodoInicio || '';
+    document.getElementById('cd-meta-fim').value            = m.periodoFim || '';
     document.getElementById('cd-meta-descricao').value      = m.descricao || '';
     document.getElementById('cd-meta-modal-titulo').textContent = 'Editar Meta';
     document.getElementById('cd-meta-modal').classList.remove('oculto');
@@ -9354,13 +9440,19 @@ var ContratosDetailUI = (function() {
   function salvarMeta() {
     var titulo = (document.getElementById('cd-meta-titulo').value||'').trim();
     if (!titulo) { Toast.aviso('Título da meta é obrigatório.'); return; }
+    var periodoInicio = document.getElementById('cd-meta-inicio').value || '';
+    var periodoFim    = document.getElementById('cd-meta-fim').value || '';
+    if (periodoInicio && periodoFim && periodoFim < periodoInicio) {
+      Toast.aviso('Período de fim não pode ser anterior ao período de início.'); return;
+    }
     var dados = {
       id:              document.getElementById('cd-meta-id').value || undefined,
       titulo:          titulo,
       tipoMeta:        document.getElementById('cd-meta-tipo').value || 'CONTRATUAL',
       eixo:            document.getElementById('cd-meta-eixo').value.trim(),
       acaoContratual:  document.getElementById('cd-meta-acao-contratual').value.trim(),
-      periodo:         document.getElementById('cd-meta-periodo').value.trim(),
+      periodoInicio:   periodoInicio,
+      periodoFim:      periodoFim,
       descricao:       document.getElementById('cd-meta-descricao').value.trim()
     };
     if (!dados.id) delete dados.id;
@@ -9495,8 +9587,22 @@ var ContratosDetailUI = (function() {
   }
 
   // Memória de Cálculo
+  var _MEM_TIPOS = [
+    ['UN','Unidade'],['hora','Hora técnica'],['parcela','Parcela'],
+    ['mensal','Mensalidade'],['diaria','Diária'],['kit','Kit'],
+    ['litros','Litros'],['km','Km']
+  ];
+
+  function _setoresOpts(valorAtual) {
+    var setores = (App.getBoot && App.getBoot() && App.getBoot().setores) || [];
+    return '<option value="">— Setor —</option>' +
+      setores.map(function(s){
+        return '<option value="'+escaparHtml(s.id)+'"'+(s.id===valorAtual?' selected':'')+'>'+escaparHtml(s.nome||s.id)+'</option>';
+      }).join('');
+  }
+
   function addLinhaMemoria() {
-    _memLinhas.push({ id:'tmp-'+Date.now(), descricao:'', metrica:'UN', qtd:1, valorUnitario:0, subtotal:0 });
+    _memLinhas.push({ id:'tmp-'+Date.now(), descricao:'', setor:'', metrica:'UN', qtd:1, valorUnitario:0, subtotal:0 });
     _renderMemTabela();
   }
 
@@ -9504,17 +9610,16 @@ var ContratosDetailUI = (function() {
     var tbody = document.getElementById('cd-mem-tbody');
     if (!tbody) return;
     if (!_memLinhas.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="padding:8px;color:var(--muted);text-align:center;font-size:12px;">Sem linhas. Clique em "+ Linha" para adicionar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:8px;color:var(--muted);text-align:center;font-size:12px;">Sem linhas. Clique em "+ Linha" para adicionar.</td></tr>';
     } else {
       tbody.innerHTML = _memLinhas.map(function(l, i) {
+        var tiposHtml = _MEM_TIPOS.map(function(t){
+          return '<option value="'+t[0]+'"'+(l.metrica===t[0]?' selected':'')+'>'+t[1]+'</option>';
+        }).join('');
         return '<tr>'
           +'<td><input type="text" class="form-input" style="padding:3px 6px;font-size:12px;" value="'+escaparHtml(l.descricao||'')+'" oninput="ContratosDetailUI._updLinha('+i+',\'descricao\',this.value)"></td>'
-          +'<td><select class="form-input" style="padding:3px 6px;font-size:12px;" onchange="ContratosDetailUI._updLinha('+i+',\'metrica\',this.value)">'
-            +'<option value="UN"'+(l.metrica==='UN'?' selected':'')+'>UN</option>'
-            +'<option value="mensal"'+(l.metrica==='mensal'?' selected':'')+'>mensal</option>'
-            +'<option value="diaria"'+(l.metrica==='diaria'?' selected':'')+'>diária</option>'
-            +'<option value="hora"'+(l.metrica==='hora'?' selected':'')+'>hora</option>'
-          +'</select></td>'
+          +'<td><select class="form-input" style="padding:3px 4px;font-size:11px;" onchange="ContratosDetailUI._updLinha('+i+',\'setor\',this.value)">'+_setoresOpts(l.setor||'')+'</select></td>'
+          +'<td><select class="form-input" style="padding:3px 4px;font-size:11px;" onchange="ContratosDetailUI._updLinha('+i+',\'metrica\',this.value)">'+tiposHtml+'</select></td>'
           +'<td><input type="number" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:58px;" value="'+(l.qtd||1)+'" min="0" oninput="ContratosDetailUI._updLinha('+i+',\'qtd\',this.value)"></td>'
           +'<td><input type="text" inputmode="decimal" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:90px;" value="'+fmtMoeda(l.valorUnitario||0)+'" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI._updLinha('+i+',\'valorUnitario\',parseMoeda(this.value))"></td>'
           +'<td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:600;">'+_R(l.subtotal)+'</td>'
@@ -9533,7 +9638,7 @@ var ContratosDetailUI = (function() {
     var tbody = document.getElementById('cd-mem-tbody');
     if (tbody) {
       var rows = tbody.querySelectorAll('tr');
-      if (rows[i]) { var cells = rows[i].querySelectorAll('td'); if (cells[4]) cells[4].textContent = _R(_memLinhas[i].subtotal); }
+      if (rows[i]) { var cells = rows[i].querySelectorAll('td'); if (cells[5]) cells[5].textContent = _R(_memLinhas[i].subtotal); }
     }
   }
 
@@ -9554,7 +9659,7 @@ var ContratosDetailUI = (function() {
     if (!item) { Toast.aviso('Selecione um item do Catálogo SEPLAG.'); return; }
     if (!metaId || !atvId) { Toast.aviso('Meta e Atividade são obrigatórias.'); return; }
     var mem = _memLinhas.map(function(l) {
-      return { descricao:l.descricao||'', metrica:l.metrica||'UN', qtd:l.qtd||0, valorUnitario:l.valorUnitario||0, subtotal:l.subtotal||0 };
+      return { descricao:l.descricao||'', setor:l.setor||'', metrica:l.metrica||'UN', qtd:l.qtd||0, valorUnitario:l.valorUnitario||0, subtotal:l.subtotal||0 };
     });
     var total = mem.reduce(function(s,l){ return s+(parseFloat(l.subtotal)||0); }, 0);
     var dados = {
@@ -11027,8 +11132,8 @@ var AdminCadastrosUI = (function() {
 
   var _LABEL_PAPEL = {
     colaborador:'Colaborador', habilitador:'Habilitador', rh:'RH',
-    financeiro:'Financeiro', comunicacao:'Comunicação',
-    admin:'Admin', superadmin:'SuperAdmin'
+    financeiro:'Financeiro',   comunicacao:'Comunicação', gestor:'Gestor',
+    admin:'Admin',             superadmin:'SuperAdmin'
   };
 
   function carregarUsuarios() {
@@ -11039,17 +11144,30 @@ var AdminCadastrosUI = (function() {
       var todos = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
       _usuarios = filtro ? todos.filter(function(u){ return u.status === filtro; }) : todos;
       if (!_usuarios.length) { el.innerHTML = '<p class="muted-text">Nenhum usuário.</p>'; return; }
+      var callerPapel   = (_boot && _boot.usuarioPapel) || 'colaborador';
+      var ehSuperadminC = callerPapel === 'superadmin';
+      var podeAtribuir  = (_boot && _boot.papeisAtribuiveis) || [];
+
       var rows = _usuarios.map(function(u) {
         var ini = (u.email || '?')[0].toUpperCase();
         var statusCls = {ativo:'badge-success', pendente:'badge-warning', inativo:'badge-muted'}[u.status||'inativo'] || 'badge-muted';
         var papelLabel = _LABEL_PAPEL[u.papel] || escaparHtml(u.papel||'-');
         var acoes = '';
+
+        // Verificar se caller pode operar sobre este alvo
+        var alvoPapel = u.papel || 'colaborador';
+        var callerPodeEditar = ehSuperadminC || podeAtribuir.indexOf(alvoPapel) !== -1;
+
         if (u.status === 'pendente') {
           acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email) + ')">Aprovar</button> ' +
                   '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Recusar</button>';
         } else if (u.status === 'ativo') {
-          acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ')">Editar</button> ' +
-                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Revogar</button>';
+          if (callerPodeEditar && u.email !== (_boot && _boot.usuarioEmail)) {
+            acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ')">Editar</button> ' +
+                    '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Revogar</button>';
+          } else if (!callerPodeEditar) {
+            acoes = '<span style="font-size:11px;color:var(--muted);">Apenas SuperAdmin</span>';
+          }
         }
         return '<tr>' +
           '<td><div style="display:flex;align-items:center;gap:10px;">' +
@@ -11092,14 +11210,34 @@ var AdminCadastrosUI = (function() {
   }
 
   /* ── seletor de papéis reutilizável ── */
-  var _PAPEIS_OPTIONS =
-    '<option value="colaborador">Colaborador</option>' +
-    '<option value="habilitador">Habilitador</option>' +
-    '<option value="rh">RH</option>' +
-    '<option value="financeiro">Financeiro</option>' +
-    '<option value="comunicacao">Comunicação</option>' +
-    '<option value="admin">Admin</option>' +
-    '<option value="superadmin">SuperAdmin</option>';
+  // Retorna opções de papel filtradas pelo que o usuário logado pode atribuir.
+  // _boot.papeisAtribuiveis contém a lista calculada no backend (PermissoesV2Engine).
+  // Fallback: superadmin vê tudo, admin vê até gestor, outros veem lista vazia.
+  function _getPapeisOptions() {
+    var todos = [
+      ['colaborador','Colaborador'], ['habilitador','Habilitador'],
+      ['rh','RH'],                   ['financeiro','Financeiro'],
+      ['comunicacao','Comunicação'], ['gestor','Gestor'],
+      ['admin','Admin'],             ['superadmin','SuperAdmin']
+    ];
+    var permitidos = (_boot && _boot.papeisAtribuiveis) || [];
+    if (!permitidos.length) {
+      // fallback por papel local se boot ainda não carregou
+      var papel = (_boot && _boot.usuarioPapel) || '';
+      if (papel === 'superadmin') permitidos = todos.map(function(p){ return p[0]; });
+      else if (papel === 'admin') permitidos = ['colaborador','habilitador','rh','financeiro','comunicacao','gestor'];
+      else permitidos = [];
+    }
+    return todos
+      .filter(function(p){ return permitidos.indexOf(p[0]) !== -1; })
+      .map(function(p){ return '<option value="'+p[0]+'">'+p[1]+'</option>'; })
+      .join('');
+  }
+  // Alias estático para locais que não precisam de filtragem (ex: exibição pura)
+  var _PAPEIS_OPTIONS = (function(){
+    return ['colaborador','habilitador','rh','financeiro','comunicacao','gestor','admin','superadmin']
+      .map(function(v){ return '<option value="'+v+'">'+(_LABEL_PAPEL[v]||v)+'</option>'; }).join('');
+  })();
 
   function aprovarUsuario(email) {
     var html =
@@ -11107,7 +11245,7 @@ var AdminCadastrosUI = (function() {
         '<h3 style="margin:0 0 4px;">Aprovar acesso</h3>' +
         '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">' + escaparHtml(email) + '</p>' +
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Papel</label>' +
-        '<select id="apr-papel" class="form-input" style="width:100%;margin:6px 0 20px;">' + _PAPEIS_OPTIONS + '</select>' +
+        '<select id="apr-papel" class="form-input" style="width:100%;margin:6px 0 20px;">' + _getPapeisOptions() + '</select>' +
         '<div style="display:flex;gap:8px;">' +
           '<button class="btn btn-primario" id="btn-confirmar-aprovar" onclick="AdminCadastrosUI._confirmarAprovar(' + JSON.stringify(email) + ',this)">Aprovar</button>' +
           '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
@@ -11162,7 +11300,7 @@ var AdminCadastrosUI = (function() {
         '<h3 style="margin:0 0 4px;">Editar usuário</h3>' +
         '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">' + escaparHtml(email) + '</p>' +
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Papel</label>' +
-        '<select id="edit-papel" class="form-input" style="width:100%;margin:6px 0 14px;">' + _PAPEIS_OPTIONS + '</select>' +
+        '<select id="edit-papel" class="form-input" style="width:100%;margin:6px 0 14px;">' + _getPapeisOptions() + '</select>' +
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Setor</label>' +
         '<select id="edit-setor" class="form-input" style="width:100%;margin:6px 0 20px;">' +
           '<option value="">— Sem setor —</option>' + setorOptions +
@@ -11918,7 +12056,17 @@ var AdminDadosUI = (function() {
 // APROVAÇÃO DE RESERVA UI
 // ═══════════════════════════════════════════════════════════
 var AprovacaoReservaUI = (function() {
-  var _carregado = false;
+  var _tabAtiva = 'reservas';
+
+  function setTab(aba, btn) {
+    _tabAtiva = aba;
+    document.querySelectorAll('#view-aprovacoes .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    document.getElementById('aprov-tab-reservas').style.display = aba === 'reservas' ? '' : 'none';
+    document.getElementById('aprov-tab-acessos').style.display  = aba === 'acessos'  ? '' : 'none';
+    if (aba === 'reservas') carregar();
+    if (aba === 'acessos')  carregarAcessos();
+  }
 
   function carregar() {
     var el = document.getElementById('lista-solicitacoes');
@@ -11928,8 +12076,7 @@ var AprovacaoReservaUI = (function() {
     var fn = status === 'TODOS' ? GAS.solicitacoes.listarTodas : GAS.solicitacoes.listar;
     fn(function(r) {
       var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      _carregado = true;
-      _atualizarBadge(itens.filter(function(s){ return s.status === 'PENDENTE'; }).length);
+      _atualizarBadge(itens.filter(function(s){ return s.status === 'PENDENTE'; }).length, null);
       if (!itens.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;">Nenhuma solicitação.</p>'; return; }
       el.innerHTML = itens.map(function(s) {
         var isPendente = s.status === 'PENDENTE';
@@ -11946,6 +12093,32 @@ var AprovacaoReservaUI = (function() {
               '<button class="btn btn-primario btn-sm" id="btn-apr-' + s.id + '" onclick="AprovacaoReservaUI.aprovar(' + JSON.stringify(s.id) + ',this)">Aprovar</button>' +
               '<button class="btn btn-ghost btn-sm" id="btn-rec-' + s.id + '" onclick="AprovacaoReservaUI.recusar(' + JSON.stringify(s.id) + ',this)">Recusar</button>' +
             '</div>' : '') +
+          '</div></div>';
+      }).join('');
+    }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
+  }
+
+  function carregarAcessos() {
+    var el = document.getElementById('lista-aprov-acessos');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarPendentes(function(r) {
+      var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _atualizarBadgeAcessos(itens.length);
+      if (!itens.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;">Nenhuma solicitação de acesso pendente.</p>'; return; }
+      el.innerHTML = itens.map(function(u) {
+        var eid = JSON.stringify(u.email).replace(/"/g, "'");
+        return '<div class="card" style="margin-bottom:12px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<div>' +
+              '<strong>' + escaparHtml(u.nome || u.email) + '</strong>' +
+              '<br><small class="muted-text">' + escaparHtml(u.email) + ' · Setor desejado: ' + escaparHtml(u.setorDesejado || '—') + '</small>' +
+              '<br><small class="muted-text">Solicitado em: ' + fmtDataPtBR((u.solicitadoEm||'').slice(0,10)) + '</small>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+              '<button class="btn btn-primario btn-sm" id="btn-apracc-' + escaparHtml(u.email) + '" onclick="AprovacaoReservaUI.aprovarAcesso(' + eid + ',this)">Aprovar</button>' +
+              '<button class="btn btn-ghost btn-sm" id="btn-recacc-' + escaparHtml(u.email) + '" onclick="AprovacaoReservaUI.recusarAcesso(' + eid + ',this)">Recusar</button>' +
+            '</div>' +
           '</div></div>';
       }).join('');
     }, function(err) { el.innerHTML = '<p class="error-text">Erro: ' + escaparHtml(err.message||err) + '</p>'; });
@@ -11975,23 +12148,72 @@ var AprovacaoReservaUI = (function() {
     });
   }
 
-  function _atualizarBadge(count) {
+  function aprovarAcesso(email, btn) {
+    var _raw = prompt('Papel a atribuir (colaborador, habilitador, rh, financeiro, comunicacao, gestor, admin):');
+    if (_raw === null) return;
+    var papel = (_raw.trim() || 'colaborador').toLowerCase();
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.acesso.aprovar({ emailAlvo: email, papel: papel }, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Acesso aprovado!'); carregarAcessos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function recusarAcesso(email, btn) {
+    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+      GAS.acesso.revogar({ emailAlvo: email }, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Acesso recusado.'); carregarAcessos(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function _atualizarBadge(countReservas, countAcessos) {
+    // Badge sidebar (total combinado)
     var badge = document.getElementById('badgeSolicitacoes');
     if (!badge) return;
-    badge.textContent = count;
-    badge.classList.toggle('oculto', count === 0);
+    var total = (countReservas || 0) + (countAcessos != null ? countAcessos : 0);
+    badge.textContent = total;
+    badge.classList.toggle('oculto', total === 0);
+  }
+
+  function _atualizarBadgeAcessos(count) {
+    var b = document.getElementById('badge-aprov-acessos');
+    if (!b) return;
+    b.textContent = count;
+    b.style.display = count > 0 ? 'inline-block' : 'none';
+    // Atualizar badge sidebar somando acessos
+    var bSidebar = document.getElementById('badgeSolicitacoes');
+    if (bSidebar) {
+      var atual = parseInt(bSidebar.textContent, 10) || 0;
+      _atualizarBadge(atual, count);
+    }
   }
 
   function atualizarBadge() {
     GAS.solicitacoes.contar(function(r) {
-      if (r && r.ok) _atualizarBadge(r.data.count || 0);
+      var cReservas = (r && r.ok) ? (r.data.count || 0) : 0;
+      // Tentar buscar acessos pendentes também
+      GAS.admin.listarPendentes(function(r2) {
+        var cAcessos = (r2 && r2.ok && Array.isArray(r2.data)) ? r2.data.length : 0;
+        _atualizarBadge(cReservas, cAcessos);
+      }, function() { _atualizarBadge(cReservas, 0); });
     }, function() {});
   }
 
-  function aoAbrir() { carregar(); }
+  function aoAbrir() {
+    setTab('reservas', document.getElementById('aprov-tab-btn-reservas'));
+  }
 
-  return { carregar: carregar, aprovar: aprovar, recusar: recusar,
-    atualizarBadge: atualizarBadge, aoAbrir: aoAbrir };
+  return {
+    carregar: carregar, carregarAcessos: carregarAcessos,
+    aprovar: aprovar,   recusar: recusar,
+    aprovarAcesso: aprovarAcesso, recusarAcesso: recusarAcesso,
+    setTab: setTab, atualizarBadge: atualizarBadge, aoAbrir: aoAbrir
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -18593,9 +18815,10 @@ var AcoesUI = (function() {
 // ═══════════════════════════════════════════════════════════
 var MapaAcaoUI = (function() {
 
-  var _acaoAtual = null;
-  var _mapas     = [];
-  var _carregado = false;
+  var _acaoAtual   = null;
+  var _mapas       = [];
+  var _carregado   = false;
+  var _pickerCustom = [];  // espaços personalizados na sessão do picker
 
   function _getAcao() { return _acaoAtual; }
 
@@ -18661,9 +18884,12 @@ var MapaAcaoUI = (function() {
         '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;margin-bottom:8px;">' +
           '<input type="radio" name="nl-tipo" value="novo" checked style="margin-top:2px;">' +
           '<div><strong style="font-size:13px;">Criar novo mapa</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Canvas em branco com camadas padrão.</span></div></label>' +
-        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;">' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;margin-bottom:8px;">' +
           '<input type="radio" name="nl-tipo" value="espacos" style="margin-top:2px;">' +
-          '<div><strong style="font-size:13px;">Aproveitar mapa dos espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Importa espaços posicionados do mapa CCBJ.</span></div></label></div>' +
+          '<div><strong style="font-size:13px;">Aproveitar mapa dos espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Importa todos os espaços posicionados do mapa CCBJ.</span></div></label>' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;">' +
+          '<input type="radio" name="nl-tipo" value="selecionar" style="margin-top:2px;">' +
+          '<div><strong style="font-size:13px;">Selecionar espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Escolha quais espaços incluir e adicione espaços personalizados para este evento.</span></div></label></div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
         '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 16px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>' +
         '<button id="btn-criar-local" data-bg-skip="1" onclick="MapaAcaoUI._criarMapa()" style="padding:8px 20px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Criar</button>' +
@@ -18678,6 +18904,10 @@ var MapaAcaoUI = (function() {
     document.querySelectorAll('input[name="nl-tipo"]').forEach(function(el){if(el.checked)tipo=el.value;});
     if(!nome.trim()){Toast.aviso('Nome do local é obrigatório.');return;}
     document.querySelectorAll('.modal-simples').forEach(function(m){m.remove();});
+    if(tipo==='selecionar'){
+      _abrirPickerEspacos(nome.trim(), desc.trim());
+      return;
+    }
     if(tipo==='espacos'){
       GAS.acoes.mapaAcao.criarDeEspacos({acaoId:_acaoAtual.id,nome:nome.trim()},function(r){
         if(r&&r.ok){Toast.sucesso('Mapa criado!');_carregado=false;_carregarMapas();}
@@ -18719,7 +18949,220 @@ var MapaAcaoUI = (function() {
     },function(){Toast.erro('Erro de comunicação.');});
   }
 
-  return{aoAbrir:aoAbrir,_abrirModalNovoMapa:_abrirModalNovoMapa,_criarMapa:_criarMapa,_abrirEditor:_abrirEditor,_excluirMapa:_excluirMapa,_getAcao:_getAcao};
+  // ── Picker de espaços (Fase D) ──────────────────────────────
+
+  function _abrirPickerEspacos(nome, desc) {
+    _pickerCustom = [];
+    var html =
+      '<div style="border-radius:17px;overflow:hidden;">' +
+      // Cabeçalho
+      '<div style="background:linear-gradient(135deg,rgba(79,70,229,.05) 0%,var(--surface) 60%);border-bottom:1px solid var(--border,#e2e8f0);padding:14px 20px;display:flex;align-items:center;gap:10px;">' +
+        '<span class="ms" style="color:var(--color-primary,#4f46e5);font-size:20px;">place</span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<strong style="font-size:14px;color:var(--text,#1e293b);">Selecionar espaços</strong>' +
+          '<div style="font-size:11px;color:var(--muted,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">' + escaparHtml(nome) + '</div>' +
+        '</div>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted,#94a3b8);font-size:20px;line-height:1;padding:0 0 0 8px;">&#x2715;</button>' +
+      '</div>' +
+      // Corpo
+      '<div style="padding:16px 20px;max-height:55vh;overflow-y:auto;">' +
+        // Seção CCBJ
+        '<div style="margin-bottom:4px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
+            '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#64748b);">Espaços do CCBJ</span>' +
+            '<div style="display:flex;gap:4px;">' +
+              '<button id="nl-picker-sel-todos" data-bg-skip="1" style="font-size:11px;padding:3px 7px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:4px;cursor:pointer;color:var(--text2,#64748b);">Todos</button>' +
+              '<button id="nl-picker-desel-todos" data-bg-skip="1" style="font-size:11px;padding:3px 7px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:4px;cursor:pointer;color:var(--text2,#64748b);">Nenhum</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="nl-picker-espacos-lista">' +
+            '<div style="text-align:center;padding:20px;color:var(--muted,#94a3b8);">' +
+              '<span class="ms" style="font-size:22px;animation:spin 1s linear infinite;display:inline-block;">progress_activity</span>' +
+              '<p style="margin:6px 0 0;font-size:12px;">Carregando espaços…</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="border-top:1px solid var(--border,#e2e8f0);margin:14px 0;"></div>' +
+        // Seção personalizados
+        '<div>' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#64748b);">Espaços Personalizados</span>' +
+          '<p style="font-size:12px;color:var(--muted,#94a3b8);margin:4px 0 8px;">Crie espaços exclusivos deste evento (tendas, áreas temporárias…).</p>' +
+          '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+            '<input id="nl-picker-custom-nome" type="text" placeholder="Ex: Tenda A, Área VIP, Food Trucks…" style="flex:1;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;background:var(--surface,#fff);color:var(--text,#1e293b);">' +
+            '<button id="nl-picker-add-btn" data-bg-skip="1" style="padding:7px 12px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">+ Adicionar</button>' +
+          '</div>' +
+          '<div id="nl-picker-custom-lista"></div>' +
+        '</div>' +
+      '</div>' +
+      // Rodapé
+      '<div style="padding:12px 20px;border-top:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:8px;background:var(--surface,#fff);">' +
+        '<span id="nl-picker-count" style="flex:1;font-size:12px;color:var(--muted,#94a3b8);">0 selecionado(s)</span>' +
+        '<button id="nl-picker-criar-btn" data-bg-skip="1" style="display:flex;align-items:center;gap:5px;padding:8px 18px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">' +
+          '<span class="ms ms-sm">check_circle</span> Criar mapa</button>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 14px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:7px;cursor:pointer;font-size:13px;color:var(--text,#1e293b);">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+
+    _abrirModalSimples(html);
+    var box = document.querySelector('.modal-simples .modal-box-animar');
+    if (box) box.style.maxWidth = '680px';
+
+    // Carregar espaços CCBJ
+    GAS.acoes.mapaAcao.espacosDisponiveis(function(r) {
+      _renderPickerEspacosCCBJ(r && r.ok ? (r.data || []) : []);
+      var lista = document.getElementById('nl-picker-espacos-lista');
+      if (lista) lista.addEventListener('change', function(ev) {
+        if (ev.target.type === 'checkbox') _atualizarContadorPicker();
+      });
+    }, function() { _renderPickerEspacosCCBJ([]); });
+
+    // Botões Todos / Nenhum
+    var btnTodos = document.getElementById('nl-picker-sel-todos');
+    var btnNenhum = document.getElementById('nl-picker-desel-todos');
+    if (btnTodos) btnTodos.addEventListener('click', function() {
+      document.querySelectorAll('#nl-picker-espacos-lista input[type="checkbox"]').forEach(function(cb){ cb.checked = true; });
+      _atualizarContadorPicker();
+    });
+    if (btnNenhum) btnNenhum.addEventListener('click', function() {
+      document.querySelectorAll('#nl-picker-espacos-lista input[type="checkbox"]').forEach(function(cb){ cb.checked = false; });
+      _atualizarContadorPicker();
+    });
+
+    // Adicionar espaço personalizado
+    var btnAdd = document.getElementById('nl-picker-add-btn');
+    var inpCustom = document.getElementById('nl-picker-custom-nome');
+    function _adicionarCustom() {
+      if (!inpCustom) return;
+      var nomeC = inpCustom.value.trim();
+      if (!nomeC) { Toast.aviso('Informe o nome do espaço personalizado.'); return; }
+      _pickerCustom.push({ nome: nomeC });
+      inpCustom.value = '';
+      _renderPickerCustom();
+      _atualizarContadorPicker();
+    }
+    if (btnAdd) btnAdd.addEventListener('click', _adicionarCustom);
+    if (inpCustom) inpCustom.addEventListener('keydown', function(e) { if (e.key === 'Enter') _adicionarCustom(); });
+
+    // Criar mapa
+    var btnCriar = document.getElementById('nl-picker-criar-btn');
+    if (btnCriar) btnCriar.addEventListener('click', function() {
+      var ids = [];
+      document.querySelectorAll('#nl-picker-espacos-lista input[type="checkbox"]:checked').forEach(function(cb) {
+        ids.push(cb.getAttribute('data-eid'));
+      });
+      if (!ids.length && !_pickerCustom.length) { Toast.aviso('Selecione pelo menos um espaço.'); return; }
+      BtnGuard.wrap(btnCriar, 'Criando…', function(done) {
+        GAS.acoes.mapaAcao.criarDeSelecao({
+          acaoId: _acaoAtual.id, nome: nome, descricao: desc || '',
+          espacosIds: ids, espacosCustom: _pickerCustom.slice()
+        }, function(r) {
+          done();
+          document.querySelectorAll('.modal-simples').forEach(function(m){ m.remove(); });
+          if (r && r.ok) { Toast.sucesso('Mapa criado!'); _carregado = false; _carregarMapas(); }
+          else Toast.erro('Erro: ' + (r && r.error ? r.error.message : 'Tente novamente.'));
+        }, function() { done(); Toast.erro('Erro de comunicação.'); });
+      });
+    });
+
+    _renderPickerCustom();
+  }
+
+  function _renderPickerEspacosCCBJ(espacos) {
+    var el = document.getElementById('nl-picker-espacos-lista');
+    if (!el) return;
+    if (!espacos || !espacos.length) {
+      el.innerHTML = '<p style="color:var(--muted,#94a3b8);font-size:12px;text-align:center;padding:12px 0;">Nenhum espaço disponível.</p>';
+      return;
+    }
+    var catLabels = {
+      uso_publico:'Uso Público', equipes:'Equipes Internas',
+      tecnico:'Técnico', servicos:'Serviços', externo:'Externo'
+    };
+    var grupos = {};
+    var catOrder = ['uso_publico','equipes','tecnico','servicos','externo'];
+    espacos.forEach(function(e) {
+      var cat = e.categoria || 'uso_publico';
+      if (!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(e);
+    });
+    var html = '';
+    catOrder.forEach(function(cat) {
+      if (!grupos[cat] || !grupos[cat].length) return;
+      html += '<div style="margin-bottom:10px;">' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#94a3b8);padding:4px 0 5px;border-bottom:1px solid var(--border,#e2e8f0);margin-bottom:4px;">' +
+          escaparHtml(catLabels[cat] || cat) + ' (' + grupos[cat].length + ')' +
+        '</div>';
+      grupos[cat].forEach(function(e) {
+        var mapaBadge = e.temMapaConfig
+          ? '<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:#e0e7ff;color:#4f46e5;flex-shrink:0;">mapeado</span>'
+          : '<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:#f1f5f9;color:#94a3b8;flex-shrink:0;">sem pos.</span>';
+        html += '<label style="display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;cursor:pointer;" ' +
+          'onmouseover="this.style.background=\'var(--surface2,#f1f5f9)\'" onmouseout="this.style.background=\'\'">' +
+          '<input type="checkbox" data-eid="' + escaparHtml(e.id) + '" style="flex-shrink:0;accent-color:var(--color-primary,#4f46e5);">' +
+          '<span style="flex:1;font-size:13px;color:var(--text,#1e293b);">' + escaparHtml(e.nome) + '</span>' +
+          (e.capacidade ? '<span style="font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' + e.capacidade + ' p.</span>' : '') +
+          mapaBadge +
+        '</label>';
+      });
+      html += '</div>';
+    });
+    // Categorias não mapeadas
+    Object.keys(grupos).forEach(function(cat) {
+      if (catOrder.indexOf(cat) !== -1) return;
+      html += '<div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#94a3b8);padding:4px 0 5px;border-bottom:1px solid var(--border,#e2e8f0);margin-bottom:4px;">' +
+        escaparHtml(cat) + ' (' + grupos[cat].length + ')</div>';
+      grupos[cat].forEach(function(e) {
+        html += '<label style="display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:6px;cursor:pointer;" ' +
+          'onmouseover="this.style.background=\'var(--surface2,#f1f5f9)\'" onmouseout="this.style.background=\'\'">' +
+          '<input type="checkbox" data-eid="' + escaparHtml(e.id) + '" style="flex-shrink:0;accent-color:var(--color-primary,#4f46e5);">' +
+          '<span style="flex:1;font-size:13px;color:var(--text,#1e293b);">' + escaparHtml(e.nome) + '</span>' +
+        '</label>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+    _atualizarContadorPicker();
+  }
+
+  function _renderPickerCustom() {
+    var el = document.getElementById('nl-picker-custom-lista');
+    if (!el) return;
+    if (!_pickerCustom.length) {
+      el.innerHTML = '<p style="font-size:12px;color:var(--muted,#94a3b8);font-style:italic;padding:2px 0;">Nenhum espaço personalizado adicionado.</p>';
+      return;
+    }
+    el.innerHTML = _pickerCustom.map(function(c, i) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px;background:var(--surface2,#f1f5f9);border-radius:6px;">' +
+        '<span class="ms" style="font-size:14px;color:var(--color-primary,#4f46e5);">place</span>' +
+        '<span style="flex:1;font-size:13px;color:var(--text,#1e293b);">' + escaparHtml(c.nome) + '</span>' +
+        '<button data-bg-skip="1" onclick="MapaAcaoUI._removerPickerCustom(' + i + ')" ' +
+          'style="background:none;border:none;cursor:pointer;color:var(--muted,#94a3b8);font-size:14px;padding:0 2px;" title="Remover">&#x2715;</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function _atualizarContadorPicker() {
+    var chkd = document.querySelectorAll('#nl-picker-espacos-lista input[type="checkbox"]:checked').length;
+    var total = chkd + _pickerCustom.length;
+    var el = document.getElementById('nl-picker-count');
+    if (el) el.textContent = total + ' espaço(s) selecionado(s)';
+  }
+
+  function _removerPickerCustom(idx) {
+    _pickerCustom.splice(idx, 1);
+    _renderPickerCustom();
+    _atualizarContadorPicker();
+  }
+
+  return{
+    aoAbrir:aoAbrir,
+    _abrirModalNovoMapa:_abrirModalNovoMapa,
+    _criarMapa:_criarMapa,
+    _abrirEditor:_abrirEditor,
+    _excluirMapa:_excluirMapa,
+    _removerPickerCustom:_removerPickerCustom,
+    _getAcao:_getAcao
+  };
 
 })();
 
@@ -18851,6 +19294,11 @@ var App = (function() {
       // Módulo desativado: ocultar para usuários normais; exibir para superadmin com indicador
       var moduloInativo = item.modulo && ativos.indexOf(item.modulo) === -1;
       if(moduloInativo && !ehSuperadmin) return;
+
+      // Permissão por papel: se o usuário não tem visualizar neste módulo, ocultar
+      // (superadmin sempre vê tudo; módulos sem entrada na matriz são permissivos)
+      var permMod = item.modulo ? ((_boot.permissoesModulos || {})[item.modulo]) : null;
+      if(!ehSuperadmin && permMod && permMod.visualizar === false) return;
 
       var li = document.createElement('li');
       var badgeHtml = item.badge ? '<span id="'+item.badge+'" class="nav-badge oculto">0</span>' : '';
@@ -22160,7 +22608,7 @@ var EscutaUI = (function() {
 
   // ── ciclo de vida ─────────────────────────────────────────────────────────
   function aoAbrir() {
-    _papel = (window._userPapel || '');
+    _papel = (App.getBoot ? (App.getBoot().usuarioPapel || '') : '');
     if (!_carregado) carregar();
     else setTab('painel', document.querySelector('#view-escuta .tab-btn'));
     _tentarMostrarPulse();

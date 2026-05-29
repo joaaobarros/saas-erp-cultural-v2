@@ -99,6 +99,51 @@ function ctrl_mapa_acao_excluir(id) {
 }
 
 /**
+ * Cria um mapa importando apenas os espaços selecionados + espaços personalizados.
+ * @param {Object} params — { acaoId*, nome*, descricao?, espacosIds: [], espacosCustom: [{nome}] }
+ */
+function ctrl_mapa_acao_criar_de_selecao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    if (!params.acaoId) throw new Error('acaoId obrigatório.');
+    if (!params.nome)   throw new Error('nome do local obrigatório.');
+
+    var email = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = MapaAcaoEngine.criarDeSelecao(params, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao criar mapa a partir da seleção.');
+    return resultado;
+  }, 'ctrl_mapa_acao_criar_de_selecao');
+}
+
+/**
+ * Lista os espaços disponíveis para uso no picker de seleção.
+ * Requer apenas usuário autenticado (sem restrição de papel).
+ * Retorna campos suficientes para exibir o picker, sem dados sensíveis.
+ */
+function ctrl_mapa_acao_espacos_disponiveis() {
+  return GasResponse.wrap(function() {
+    AcessoService.verificar();
+    var espacos = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+    return espacos
+      .filter(function(e) { return e.id && e.nome && e.ativo !== false; })
+      .map(function(e) {
+        return {
+          id:            e.id,
+          nome:          e.nome,
+          capacidade:    e.capacidade   || 0,
+          categoria:     e.categoria    || 'uso_publico',
+          tipoEspaco:    e.tipoEspaco   || '',
+          aceitaReserva: e.aceitaReserva !== false,
+          temMapaConfig: !!(e.mapaConfig && e.mapaConfig.cx)
+        };
+      });
+  }, 'ctrl_mapa_acao_espacos_disponiveis');
+}
+
+/**
  * Cria uma Reserva no espaço original a partir de um elemento do mapa.
  * @param {Object} params — { mapaId*, elementoId*, data*, horaInicio*, horaTermino*, observacoes? }
  */

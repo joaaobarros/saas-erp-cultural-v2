@@ -260,11 +260,122 @@ var MapaAcaoEngine = (function () {
     } catch(_) {}
   }
 
+  // ─── Criar a partir de seleção manual ────────────────────────────────────
+
+  /**
+   * Cria um MapaAcao com apenas os espaços escolhidos pelo usuário.
+   * Espaços CCBJ com mapaConfig usam a posição real; os sem mapaConfig
+   * recebem posição automática em grade. Espaços personalizados (sem ID
+   * no banco de espaços) são criados como tipo 'espaco_virtual'.
+   *
+   * @param {Object} params — { acaoId*, nome*, descricao?,
+   *                            espacosIds: string[], espacosCustom: [{nome}] }
+   * @param {string} email
+   * @param {string} orgId
+   */
+  function criarDeSelecao(params, email, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      params = params || {};
+      if (!params.acaoId) throw new Error('acaoId é obrigatório.');
+      if (!params.nome || !String(params.nome).trim()) throw new Error('Nome do local é obrigatório.');
+
+      var espacosIds    = params.espacosIds   || [];
+      var espacosCustom = params.espacosCustom || [];
+
+      var todos  = SistemaConfigService.getEspacos ? SistemaConfigService.getEspacos() : [];
+      var terreno = null;
+      try { terreno = SistemaConfigService.getTerreno ? SistemaConfigService.getTerreno(orgId) : null; } catch(_) {}
+
+      var layers  = _layersPadrao();
+      var layerId = layers[0].id;
+      var ts      = new Date().getTime();
+      var elementos = [];
+      var gridIdx = 0;
+
+      function _autoPos(idx) {
+        var cols = 4, col = idx % cols, row = Math.floor(idx / cols);
+        return { cx: 120 + col * 160, cy: 120 + row * 120 };
+      }
+
+      // Espaços CCBJ selecionados
+      todos.forEach(function(esp, i) {
+        if (espacosIds.indexOf(esp.id) === -1) return;
+        var cfg;
+        if (esp.mapaConfig && esp.mapaConfig.cx) {
+          cfg = JSON.parse(JSON.stringify(esp.mapaConfig));
+        } else {
+          var pos = _autoPos(gridIdx++);
+          cfg = { forma: 'rect', cx: pos.cx, cy: pos.cy, w: 120, h: 80, r: 0, rotacao: 0 };
+        }
+        elementos.push({
+          id:               'el_' + ts + '_s' + i,
+          tipo:             'espaco',
+          nome:             esp.nome || 'Espaço',
+          layerId:          layerId,
+          mapaConfig:       cfg,
+          espacoOriginalId: esp.id,
+          responsaveis:     esp.responsaveis    || [],
+          itensNecessarios: esp.itensFixos       || [],
+          capacidade:       esp.capacidade       || 0,
+          notas:            ''
+        });
+      });
+
+      // Espaços personalizados (sem vínculo com banco)
+      espacosCustom.forEach(function(cust, j) {
+        if (!cust || !cust.nome) return;
+        var pos = _autoPos(gridIdx++);
+        elementos.push({
+          id:               'el_' + ts + '_c' + j,
+          tipo:             'espaco_virtual',
+          nome:             String(cust.nome).trim(),
+          layerId:          layerId,
+          mapaConfig:       { forma: 'rect', cx: pos.cx, cy: pos.cy, w: 120, h: 80, r: 0, rotacao: 0 },
+          espacoOriginalId: null,
+          responsaveis:     [],
+          itensNecessarios: [],
+          capacidade:       0,
+          notas:            ''
+        });
+      });
+
+      var mapasSiblings = MapaAcaoRepository.buscarPorAcao(orgId, params.acaoId);
+      var novo = {
+        id:        'mapaacao_' + ts + '_' + Math.random().toString(36).slice(2, 6),
+        acaoId:    params.acaoId,
+        orgId:     orgId,
+        nome:      String(params.nome).trim(),
+        descricao: (params.descricao || '').trim() || 'Espaços selecionados manualmente',
+        tipoBase:  'selecao',
+        ordem:     mapasSiblings.length,
+        layers:    layers,
+        elementos: elementos,
+        terreno:   terreno,
+        criadoPor: email,
+        criadoEm:  new Date().toISOString()
+      };
+
+      MapaAcaoRepository.salvar(orgId, novo);
+      _auditoria('MAPA_ACAO_CRIADO', novo.id, email, {
+        nome: novo.nome, acaoId: params.acaoId, tipoBase: 'selecao',
+        espacosCCBJ: espacosIds.length, espacosCustom: espacosCustom.length,
+        elementosImportados: elementos.length
+      });
+      return { ok: true, id: novo.id, elementosImportados: elementos.length };
+
+    } catch(e) {
+      Logger.error('mapa_acao_engine', 'criarDeSelecao', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
   // ─── API pública ──────────────────────────────────────────────────────────
 
   return {
     salvar:                salvar,
     criarDeEspacos:        criarDeEspacos,
+    criarDeSelecao:        criarDeSelecao,
     excluir:               excluir,
     reservarEspacoOriginal: reservarEspacoOriginal
   };
