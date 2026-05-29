@@ -13743,21 +13743,23 @@ var ReservasUI = (function() {
         btns += '<button class="btn btn-ghost btn-sm btn-res-concluir" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">done_all</span> Concluir</button>';
       }
       btns += '<button class="btn btn-ghost btn-sm btn-res-editar" data-id="'+escaparHtml(r.id)+'" title="Editar"><span class="ms ms-sm">edit</span></button>';
-      // Botão pós-evento: visível para reservas cuja data já passou (ou concluídas/em_uso)
+
       var hoje = new Date().toISOString().slice(0,10);
       var posPassado = (r.data || '') <= hoje && r.status !== 'cancelado';
-      if (posPassado) {
-        var temPos = r.posEvento && r.posEvento.registradoEm;
-        btns += '<button class="btn btn-ghost btn-sm btn-res-pos-evento" data-id="'+escaparHtml(r.id)+'" title="Registrar execução" style="color:' + (temPos ? 'var(--color-success)' : 'var(--muted)') + ';">'
-          + '<span class="ms ms-sm">assignment_turned_in</span>'
-          + (temPos ? '' : '')
-          + '</button>';
-      }
+      var temPos = posPassado && r.posEvento && r.posEvento.registradoEm;
 
       var linhas = '';
-      linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;">';
+      linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;">';
       linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">location_on</span> '+escaparHtml(nomeEspaco)+'</span>';
-      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">event</span> '+escaparHtml(_fmtDataPtBR(r.data))+'</span>';
+      // Data + botão pós-evento inline
+      linhas += '<span style="display:inline-flex;align-items:center;gap:4px;">'
+        + '<span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">event</span> '
+        + escaparHtml(_fmtDataPtBR(r.data))
+        + (posPassado
+            ? ' <button class="btn btn-ghost btn-sm btn-res-pos-evento" data-id="'+escaparHtml(r.id)+'" title="'+(temPos?'Execução registrada':'Registrar execução')+'" style="padding:0 3px;color:'+(temPos?'var(--color-success)':'var(--muted)')+';">'
+              + '<span class="ms ms-sm">assignment_turned_in</span></button>'
+            : '')
+        + '</span>';
       linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">schedule</span> '+escaparHtml(r.horaInicio||'')+'–'+escaparHtml(r.horaTermino||'')+'</span>';
       if (turnoLabel) linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">wb_sunny</span> '+escaparHtml(turnoLabel)+'</span>';
       if (r.setor)    linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">apartment</span> '+escaparHtml(_nomeSetor(r.setor))+'</span>';
