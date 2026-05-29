@@ -336,6 +336,7 @@ body {
 .view { display: none; animation: fadeIn var(--mid) var(--ease); }
 .view.ativa { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulseThanksBounce { 0%,100% { transform: scale(1); } 30% { transform: scale(1.35); } 60% { transform: scale(.9); } 80% { transform: scale(1.1); } }
 @keyframes modalEntrar { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .modal-box-animar {
   animation: modalEntrar .22s ease forwards;
@@ -6986,18 +6987,18 @@ select.form-control { cursor: pointer; }
                    width:28px;height:28px;border-radius:50%;color:#fff;font-size:16px;
                    display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;">✕</button>
         </div>
-        <!-- Corpo -->
-        <div style="padding:18px 20px 16px;background:#fff;">
+        <!-- Corpo (id pulse-body permite trocar conteúdo por tela de agradecimento) -->
+        <div id="pulse-body" style="padding:18px 20px 16px;background:#fff;">
           <p id="pulse-pergunta" style="font-size:15px;font-weight:700;margin:0 0 20px;
              line-height:1.45;color:#1e293b;"></p>
-          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+          <div id="pulse-escala-labels" style="display:flex;justify-content:space-between;margin-bottom:10px;">
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;
                    letter-spacing:.5px;color:#94a3b8;">Discordo</span>
             <span style="font-size:9px;font-weight:700;text-transform:uppercase;
                    letter-spacing:.5px;color:#94a3b8;">Concordo</span>
           </div>
           <div id="pulse-opcoes" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>
-          <div style="border-top:1px solid #f1f5f9;padding-top:12px;text-align:center;">
+          <div id="pulse-rodape" style="border-top:1px solid #f1f5f9;padding-top:12px;text-align:center;">
             <p style="font-size:9px;font-weight:700;text-transform:uppercase;
                letter-spacing:.5px;color:#94a3b8;margin:0;">Suas respostas são anônimas</p>
           </div>
@@ -11491,7 +11492,8 @@ var AdminCadastrosUI = (function() {
 
   function editarPapel(email) {
     var u = _usuarios.find(function(x){ return x.email === email; }) || {};
-    var setorOptions = _setores.map(function(s) {
+    var setoresList = _setores.length ? _setores : (((App.getBoot() || {}).setores) || []);
+    var setorOptions = setoresList.map(function(s) {
       return '<option value="' + escaparHtml(s.id) + '">' + escaparHtml(s.label || s.nome || s.id) + '</option>';
     }).join('');
     var html =
@@ -24162,10 +24164,24 @@ var EscutaUI = (function() {
 
   function _renderPulseWidget() {
     var w  = document.getElementById('pulse-widget');
-    var pq = document.getElementById('pulse-pergunta');
-    var pd = document.getElementById('pulse-dimensao');
-    var po = document.getElementById('pulse-opcoes');
     if (!w || !_pulseAtual) return;
+
+    // Restaura a estrutura do corpo caso tenha sido substituída pela tela de obrigado
+    var body = document.getElementById('pulse-body');
+    if (!document.getElementById('pulse-pergunta') && body) {
+      body.innerHTML =
+        '<p id="pulse-pergunta" style="font-size:15px;font-weight:700;margin:0 0 20px;' +
+          'line-height:1.45;color:#1e293b;"></p>' +
+        '<div id="pulse-escala-labels" style="display:flex;justify-content:space-between;margin-bottom:10px;">' +
+          '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">Discordo</span>' +
+          '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;">Concordo</span>' +
+        '</div>' +
+        '<div id="pulse-opcoes" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;"></div>' +
+        '<div id="pulse-rodape" style="border-top:1px solid #f1f5f9;padding-top:12px;text-align:center;">' +
+          '<p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin:0;">Suas respostas são anônimas</p>' +
+        '</div>';
+    }
+
     var perg = _pulseAtual.pergunta || {};
     var DIMENSAO_LABELS = {
       vigor:'Energia', dedicacao:'Motivação', absorcao:'Concentração',
@@ -24173,6 +24189,9 @@ var EscutaUI = (function() {
       colaboracao:'Trabalho em equipe', inovacao:'Criatividade',
       seguranca:'Bem-estar no trabalho'
     };
+    var pq = document.getElementById('pulse-pergunta');
+    var pd = document.getElementById('pulse-dimensao');
+    var po = document.getElementById('pulse-opcoes');
     if (pq) pq.textContent = perg.texto || '';
     if (pd) pd.textContent = DIMENSAO_LABELS[perg.dimensao] || '';
     if (po) {
@@ -24198,6 +24217,7 @@ var EscutaUI = (function() {
         }).join('');
       }
     }
+    _pulseEnviando = false; // reseta guard ao abrir nova pergunta
     w.style.display = 'block';
   }
 
@@ -24206,18 +24226,74 @@ var EscutaUI = (function() {
     if (w) w.style.display = 'none';
   }
 
+  var _pulseEnviando = false; // guard anti-duplo-clique
+
   function responderPulse(valor) {
-    if (!_pulseAtual) return;
+    if (!_pulseAtual || _pulseEnviando) return;
+    _pulseEnviando = true;
+
+    // ── 1. Feedback imediato: destaca botão escolhido e desabilita os demais ──
+    var po = document.getElementById('pulse-opcoes');
+    if (po) {
+      var btns = po.querySelectorAll('button');
+      btns.forEach(function(b, i) {
+        b.disabled = true;
+        if (i + 1 === valor) {
+          b.style.transform = 'scale(1.22)';
+          b.style.boxShadow = '0 6px 20px rgba(0,0,0,.28)';
+          b.style.opacity   = '1';
+        } else {
+          b.style.opacity   = '0.28';
+          b.style.transform = 'scale(1)';
+        }
+      });
+    }
+
+    // ── 2. Indicador de loading no rodapé ────────────────────────────────────
+    var rodape = document.getElementById('pulse-rodape');
+    if (rodape) {
+      rodape.innerHTML = '<p style="font-size:10px;font-weight:700;color:var(--primary);' +
+        'text-align:center;margin:0;animation:fadeIn .2s ease;">Enviando sua resposta…</p>';
+    }
+
     var perg  = _pulseAtual.pergunta || {};
     var pergId = perg.id;
     var dimId  = perg.dimensao;
+
     GAS.escuta.pulseResponder({ perguntaId: pergId, dimensaoId: dimId, valor: valor }, function(r) {
-      fecharPulse();
+      _pulseEnviando = false;
       _pulseAtual = null;
-      var fab = document.getElementById('pulse-fab');
-      if (fab) fab.style.display = 'none';
-      if (r && r.ok) Toast.sucesso('Obrigado pela sua resposta!');
-    }, function(e){ fecharPulse(); Toast.erro((e&&e.message)||'Erro ao registrar resposta.'); });
+
+      if (r && r.ok) {
+        // ── 3. Tela de agradecimento (estilo v1 CCBJ) ──────────────────────
+        var body = document.getElementById('pulse-body');
+        if (body) {
+          body.innerHTML =
+            '<div style="text-align:center;padding:28px 20px 24px;animation:fadeIn .35s ease;">' +
+              '<div style="font-size:54px;display:inline-block;margin-bottom:14px;' +
+                'animation:pulseThanksBounce .7s ease;">🙏</div>' +
+              '<p style="font-size:19px;font-weight:800;color:#1e293b;margin:0 0 6px;">Obrigado!</p>' +
+              '<p style="font-size:13px;color:#64748b;margin:0;">Sua resposta foi registrada.</p>' +
+            '</div>';
+        }
+        // ── 4. Auto-fecha e esconde FAB após 2.5 s ─────────────────────────
+        setTimeout(function() {
+          fecharPulse();
+          var fab = document.getElementById('pulse-fab');
+          if (fab) fab.style.display = 'none';
+        }, 2500);
+      } else {
+        // Erro retornado pelo servidor: reabre possibilidade de nova tentativa
+        _pulseAtual = null; // não permitir reenvio da mesma resposta
+        fecharPulse();
+        Toast.erro('Não foi possível registrar. Tente novamente mais tarde.');
+      }
+    }, function(e) {
+      _pulseEnviando = false;
+      _pulseAtual = null;
+      fecharPulse();
+      Toast.erro((e && e.message) || 'Erro ao registrar resposta.');
+    });
   }
 
   // ── Formulário de pesquisa formal ─────────────────────────────────────────
