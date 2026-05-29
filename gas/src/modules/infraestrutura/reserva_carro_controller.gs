@@ -71,6 +71,30 @@ function ctrl_carro_metricas() {
   }, 'ctrl_carro_metricas');
 }
 
+/**
+ * Retorna lista + métricas em uma única chamada GAS,
+ * eliminando o segundo round-trip de ctrl_carro_metricas.
+ */
+function ctrl_carro_dados(filtros) {
+  return GasResponse.wrap(function() {
+    var ctx  = _ctxCarro();
+    var todas = ReservaCarroEngine.listar({}, ctx.email);
+    var metricas = {
+      total:     todas.length,
+      pendentes: todas.filter(function(r){ return r.status === 'PENDENTE';  }).length,
+      aprovadas: todas.filter(function(r){ return r.status === 'APROVADA';  }).length,
+      recusadas: todas.filter(function(r){ return r.status === 'RECUSADA';  }).length,
+      canceladas: todas.filter(function(r){ return r.status === 'CANCELADA'; }).length,
+      concluidas: todas.filter(function(r){ return r.status === 'CONCLUIDA'; }).length
+    };
+    var f = filtros || {};
+    var lista = todas;
+    if (f.status) lista = lista.filter(function(r){ return r.status === f.status; });
+    if (f.data)   lista = lista.filter(function(r){ return r.data   === f.data;   });
+    return { lista: lista, metricas: metricas };
+  }, 'ctrl_carro_dados');
+}
+
 function ctrl_carro_geocode(endereco) {
   return GasResponse.wrap(function() {
     if (!endereco) throw new Error('Endereço não informado.');

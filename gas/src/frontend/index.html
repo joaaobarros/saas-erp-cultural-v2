@@ -2190,6 +2190,10 @@ select.form-control { cursor: pointer; }
             <span class="ms ms-sm">person_add</span> Primeiros Acessos
             <span id="badge-aprov-acessos" class="nav-badge oculto" style="position:static;margin-left:4px;display:inline-block;"></span>
           </button>
+          <button class="tab-btn" id="aprov-tab-btn-carros" onclick="AprovacaoReservaUI.setTab('carros',this)">
+            <span class="ms ms-sm">directions_car</span> Veículo
+            <span id="badge-aprov-carros" class="nav-badge oculto" style="position:static;margin-left:4px;display:inline-block;"></span>
+          </button>
         </div>
         <!-- Aba: Reservas -->
         <div id="aprov-tab-reservas">
@@ -2221,6 +2225,18 @@ select.form-control { cursor: pointer; }
               </button>
             </div>
             <div id="lista-aprov-acessos"><p class="muted-text">Carregando…</p></div>
+          </div>
+        </div>
+        <!-- Aba: Reservas de Veículo -->
+        <div id="aprov-tab-carros" style="display:none;">
+          <div class="card" style="padding:0;">
+            <div class="card-header" style="padding:12px 16px;">
+              <div class="card-titulo"><span class="ms">directions_car</span> Solicitações de Veículo</div>
+              <button class="btn btn-ghost btn-sm" onclick="AprovacaoReservaUI.carregarCarros()" data-bg-skip="1">
+                <span class="ms ms-sm">refresh</span>
+              </button>
+            </div>
+            <div id="lista-aprov-carros"><p class="muted-text" style="padding:20px;">Carregando…</p></div>
           </div>
         </div>
       </div><!-- /view-aprovacoes -->
@@ -8443,6 +8459,7 @@ var GAS = {
   // Reservas de Veículo Institucional — Fase 21
   reservasCarro: {
     listar:   function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_listar(f||{}); },
+    dados:    function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_dados(f||{}); },
     salvar:   function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_salvar(d); },
     aprovar:  function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_aprovar(id); },
     recusar:  function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_recusar(id,m||''); },
@@ -12246,8 +12263,10 @@ var AprovacaoReservaUI = (function() {
     if (btn) btn.classList.add('active');
     document.getElementById('aprov-tab-reservas').style.display = aba === 'reservas' ? '' : 'none';
     document.getElementById('aprov-tab-acessos').style.display  = aba === 'acessos'  ? '' : 'none';
+    document.getElementById('aprov-tab-carros').style.display   = aba === 'carros'   ? '' : 'none';
     if (aba === 'reservas') carregar();
     if (aba === 'acessos')  carregarAcessos();
+    if (aba === 'carros')   carregarCarros();
   }
 
   function carregar() {
@@ -12353,11 +12372,70 @@ var AprovacaoReservaUI = (function() {
     });
   }
 
-  function _atualizarBadge(countReservas, countAcessos) {
-    // Badge sidebar (total combinado)
+  function carregarCarros() {
+    var el = document.getElementById('lista-aprov-carros');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="padding:20px;">Carregando…</p>';
+    GAS.reservasCarro.listar({ status: 'PENDENTE' }, function(r) {
+      var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _atualizarBadgeCarros(itens.length);
+      if (!itens.length) {
+        el.innerHTML = '<p class="muted-text" style="padding:20px;">Nenhuma solicitação de veículo pendente.</p>';
+        return;
+      }
+      el.innerHTML = itens.map(function(rc) {
+        var sid = JSON.stringify(rc.id).replace(/"/g, "'");
+        var rota = rc.rota || {};
+        var destino = rota.localChegada ? escaparHtml(rota.localChegada.split(',')[0]) : '—';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
+          '<div style="min-width:80px;flex-shrink:0;">' +
+            '<div style="font-size:13px;font-weight:600;">' + escaparHtml(rc.data||'—') + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + ' – ' + escaparHtml(rc.horaChegada||'—') + '</div>' +
+          '</div>' +
+          '<div style="flex:1;min-width:120px;">' +
+            '<div style="font-size:13px;">' + escaparHtml(rc.solicitante||'—') + '</div>' +
+            (rc.solicitanteSetor ? '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.solicitanteSetor) + '</div>' : '') +
+            '<div style="font-size:11px;color:var(--muted);margin-top:2px;">Destino: ' + destino + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+            '<button class="btn btn-primario btn-sm" id="btn-aprov-car-apr-' + escaparHtml(rc.id) + '" onclick="AprovacaoReservaUI.aprovarCarro(' + sid + ',this)">Aprovar</button>' +
+            '<button class="btn btn-ghost btn-sm" id="btn-aprov-car-rec-' + escaparHtml(rc.id) + '" onclick="AprovacaoReservaUI.recusarCarro(' + sid + ',this)">Recusar</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }, function(err) {
+      el.innerHTML = '<p class="error-text" style="padding:20px;">Erro: ' + escaparHtml((err&&err.message)||String(err)) + '</p>';
+    });
+  }
+
+  function aprovarCarro(id, btn) {
+    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+      GAS.reservasCarro.aprovar(id, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Reserva de veículo aprovada!'); carregarCarros(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro ao aprovar.');
+      }, function(e) { liberar(); Toast.erro((e&&e.message)||'Erro de comunicação.'); });
+    });
+  }
+
+  function recusarCarro(id, btn) {
+    var _raw = prompt('Motivo da recusa (obrigatório):');
+    if (_raw === null) return;
+    var motivo = _raw.trim();
+    if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
+    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+      GAS.reservasCarro.recusar(id, motivo, function(r) {
+        liberar();
+        if (r && r.ok) { Toast.sucesso('Reserva de veículo recusada.'); carregarCarros(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro ao recusar.');
+      }, function(e) { liberar(); Toast.erro((e&&e.message)||'Erro de comunicação.'); });
+    });
+  }
+
+  function _atualizarBadge(countReservas, countAcessos, countCarros) {
     var badge = document.getElementById('badgeSolicitacoes');
     if (!badge) return;
-    var total = (countReservas || 0) + (countAcessos != null ? countAcessos : 0);
+    var total = (countReservas || 0) + (countAcessos || 0) + (countCarros || 0);
     badge.textContent = total;
     badge.classList.toggle('oculto', total === 0);
   }
@@ -12367,22 +12445,31 @@ var AprovacaoReservaUI = (function() {
     if (!b) return;
     b.textContent = count;
     b.style.display = count > 0 ? 'inline-block' : 'none';
-    // Atualizar badge sidebar somando acessos
     var bSidebar = document.getElementById('badgeSolicitacoes');
     if (bSidebar) {
       var atual = parseInt(bSidebar.textContent, 10) || 0;
-      _atualizarBadge(atual, count);
+      _atualizarBadge(atual, count, 0);
     }
+  }
+
+  function _atualizarBadgeCarros(count) {
+    var b = document.getElementById('badge-aprov-carros');
+    if (!b) return;
+    b.textContent = count;
+    b.classList.toggle('oculto', count === 0);
   }
 
   function atualizarBadge() {
     GAS.solicitacoes.contar(function(r) {
       var cReservas = (r && r.ok) ? (r.data.count || 0) : 0;
-      // Tentar buscar acessos pendentes também
       GAS.admin.listarPendentes(function(r2) {
         var cAcessos = (r2 && r2.ok && Array.isArray(r2.data)) ? r2.data.length : 0;
-        _atualizarBadge(cReservas, cAcessos);
-      }, function() { _atualizarBadge(cReservas, 0); });
+        GAS.reservasCarro.metricas(function(r3) {
+          var cCarros = (r3 && r3.ok && r3.data) ? (r3.data.pendentes || 0) : 0;
+          _atualizarBadgeCarros(cCarros);
+          _atualizarBadge(cReservas, cAcessos, cCarros);
+        }, function() { _atualizarBadge(cReservas, cAcessos, 0); });
+      }, function() { _atualizarBadge(cReservas, 0, 0); });
     }, function() {});
   }
 
@@ -12391,8 +12478,9 @@ var AprovacaoReservaUI = (function() {
   }
 
   return {
-    carregar: carregar, carregarAcessos: carregarAcessos,
+    carregar: carregar, carregarAcessos: carregarAcessos, carregarCarros: carregarCarros,
     aprovar: aprovar,   recusar: recusar,
+    aprovarCarro: aprovarCarro, recusarCarro: recusarCarro,
     aprovarAcesso: aprovarAcesso, recusarAcesso: recusarAcesso,
     setTab: setTab, atualizarBadge: atualizarBadge, aoAbrir: aoAbrir
   };
@@ -12465,62 +12553,59 @@ var ReservasCarroUI = (function() {
       return;
     }
 
-    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
-      '<thead><tr style="background:var(--surface2);">' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;white-space:nowrap;">Data</th>' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;">Horário</th>' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;">Solicitante / Setor</th>' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;">Passageiros</th>' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;">Rota</th>' +
-        '<th style="padding:10px 12px;text-align:left;font-weight:600;">Status</th>' +
-        '<th style="padding:10px 12px;text-align:right;font-weight:600;">Ações</th>' +
-      '</tr></thead><tbody>' +
-      itens.map(function(rc) {
-        var sid = JSON.stringify(rc.id).replace(/"/g, "'");
-        var rota = rc.rota || {};
-        var rotaHtml = escaparHtml(rota.localSaida || '—') + ' <span style="color:var(--muted)">→</span> ' + escaparHtml(rota.localChegada || '—');
-        if (rota.mapaUrl) {
-          rotaHtml += ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" title="Ver no mapa" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;">map</span></a>';
-        }
-        if (rc.acaoId && rc.acaoNome) {
-          var sacaoId = JSON.stringify(rc.acaoId).replace(/"/g,"'");
-          rotaHtml += '<br><a href="#" onclick="event.preventDefault();AcoesUI.abrirPainel(' + sacaoId + ')" style="font-size:11px;color:var(--primario);text-decoration:none;white-space:nowrap;"><span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">event</span> ' + escaparHtml(rc.acaoNome) + '</a>';
-        }
-        var isPendente   = rc.status === 'PENDENTE';
-        var isAprovada   = rc.status === 'APROVADA';
-        var isCancelavel = isPendente || isAprovada;
-        var acoes = '';
-        if (ehAprovador && isPendente) {
-          acoes +=
-            '<button class="btn btn-primario btn-sm" id="btn-carro-apr-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.aprovar(' + sid + ',this)" style="margin-right:4px;">Aprovar</button>' +
-            '<button class="btn btn-ghost btn-sm" id="btn-carro-rec-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.abrirModalRecusa(' + sid + ')">Recusar</button>';
-        }
-        if (ehAprovador && isAprovada) {
-          acoes += '<button class="btn btn-ghost btn-sm" id="btn-carro-con-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.concluir(' + sid + ',this)" style="margin-right:4px;">Concluir</button>';
-        }
-        if (isCancelavel) {
-          acoes += '<button class="btn btn-ghost btn-sm" id="btn-carro-can-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.cancelar(' + sid + ',this)" style="color:#ef4444;">Cancelar</button>';
-        }
-        if (rc.motivoRecusa) {
-          acoes += '<span style="font-size:11px;color:#ef4444;display:block;margin-top:4px;" title="' + escaparHtml(rc.motivoRecusa) + '">Motivo: ' + escaparHtml(rc.motivoRecusa.slice(0,40)) + (rc.motivoRecusa.length > 40 ? '…' : '') + '</span>';
-        }
-        var solicitanteHtml = escaparHtml(rc.solicitante || '—');
-        if (rc.solicitanteSetor) solicitanteHtml += '<br><span style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.solicitanteSetor) + '</span>';
-        if (rc.aprovador) solicitanteHtml += '<br><span style="font-size:11px;color:var(--muted);">Aprov: ' + escaparHtml(rc.aprovador) + '</span>';
-        return '<tr style="border-top:1px solid var(--border);">' +
-          '<td style="padding:10px 12px;white-space:nowrap;"><strong>' + escaparHtml(rc.data || '—') + '</strong><br>' +
-            '<span style="font-size:11px;color:var(--muted);">Solicitado: ' + escaparHtml((rc.dataSolicitacao||'').slice(0,10)) + '</span></td>' +
-          '<td style="padding:10px 12px;white-space:nowrap;">' + escaparHtml(rc.horaSaida||'—') + ' – ' + escaparHtml(rc.horaChegada||'—') + '</td>' +
-          '<td style="padding:10px 12px;">' + solicitanteHtml + '</td>' +
-          '<td style="padding:10px 12px;max-width:200px;">' + _fmtPassageiros(rc.passageiros) + '</td>' +
-          '<td style="padding:10px 12px;max-width:220px;">' + rotaHtml + '</td>' +
-          '<td style="padding:10px 12px;"><span class="badge ' + _badgeCls(rc.status) + '">' + escaparHtml(rc.status) + '</span>' +
-            (rc.observacao ? '<br><span style="font-size:11px;color:var(--muted);" title="' + escaparHtml(rc.observacao) + '">' + escaparHtml(rc.observacao.slice(0,30)) + (rc.observacao.length>30?'…':'') + '</span>' : '') +
-          '</td>' +
-          '<td style="padding:10px 12px;text-align:right;white-space:nowrap;">' + acoes + '</td>' +
-        '</tr>';
-      }).join('') +
-      '</tbody></table>';
+    el.innerHTML = itens.map(function(rc) {
+      var sid  = JSON.stringify(rc.id).replace(/"/g, "'");
+      var rota = rc.rota || {};
+      var saida   = rota.localSaida   ? escaparHtml(rota.localSaida.split(',')[0])   : '—';
+      var chegada = rota.localChegada ? escaparHtml(rota.localChegada.split(',')[0]) : '—';
+      var isPendente   = rc.status === 'PENDENTE';
+      var isAprovada   = rc.status === 'APROVADA';
+      var isCancelavel = isPendente || isAprovada;
+
+      var acoes = [];
+      if (ehAprovador && isPendente) {
+        acoes.push('<button class="btn btn-primario btn-sm" id="btn-carro-apr-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.aprovar(' + sid + ',this)">Aprovar</button>');
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-rec-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.abrirModalRecusa(' + sid + ')">Recusar</button>');
+      }
+      if (ehAprovador && isAprovada) {
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-con-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.concluir(' + sid + ',this)">Concluir</button>');
+      }
+      if (isCancelavel) {
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-can-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.cancelar(' + sid + ',this)" style="color:#ef4444;">Cancelar</button>');
+      }
+
+      var passHtml = _fmtPassageiros(rc.passageiros);
+      var acaoHtml = (rc.acaoId && rc.acaoNome)
+        ? '<div style="font-size:11px;margin-top:2px;"><a href="#" onclick="event.preventDefault();AcoesUI.abrirPainel(' + JSON.stringify(rc.acaoId).replace(/"/g,"'") + ')" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">event</span> ' + escaparHtml(rc.acaoNome) + '</a></div>'
+        : '';
+      var motivoHtml = rc.motivoRecusa
+        ? '<div style="font-size:11px;color:#ef4444;margin-top:2px;" title="' + escaparHtml(rc.motivoRecusa) + '">Recusa: ' + escaparHtml(rc.motivoRecusa.slice(0,50)) + (rc.motivoRecusa.length>50?'…':'') + '</div>'
+        : '';
+      var aprovadorHtml = rc.aprovador
+        ? '<div style="font-size:11px;color:var(--muted);">Aprov: ' + escaparHtml(rc.aprovador.split('@')[0]) + '</div>'
+        : '';
+
+      return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
+        '<div style="min-width:72px;flex-shrink:0;">' +
+          '<div style="font-size:13px;font-weight:600;">' + escaparHtml(rc.data||'—') + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + '–' + escaparHtml(rc.horaChegada||'—') + '</div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:140px;">' +
+          '<div style="font-size:13px;font-weight:500;">' + escaparHtml(rc.solicitante||'—') + '</div>' +
+          (rc.solicitanteSetor ? '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.solicitanteSetor) + '</div>' : '') +
+          '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + saida + ' <span style="color:var(--muted)">→</span> ' + chegada +
+            (rota.mapaUrl ? ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" style="color:var(--primario);" title="Ver mapa"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">map</span></a>' : '') +
+          '</div>' +
+          (passHtml !== '—' ? '<div style="font-size:11px;color:var(--muted);">Pass: ' + passHtml + '</div>' : '') +
+          acaoHtml + aprovadorHtml + motivoHtml +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">' +
+          '<span class="badge ' + _badgeCls(rc.status) + '">' + escaparHtml(rc.status) + '</span>' +
+          (rc.observacao ? '<span style="font-size:10px;color:var(--muted);max-width:120px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escaparHtml(rc.observacao) + '">' + escaparHtml(rc.observacao.slice(0,30)) + (rc.observacao.length>30?'…':'') + '</span>' : '') +
+          (acoes.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">' + acoes.join('') + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
   }
 
   function _renderAgenda(todas) {
@@ -12616,20 +12701,24 @@ var ReservasCarroUI = (function() {
       if (fd && fd.value) filtros.data   = fd.value;
     }
 
-    GAS.reservasCarro.metricas(function(rm) {
-      if (rm && rm.ok) _renderMetricas(rm.data);
-    }, function() {});
-
-    GAS.reservasCarro.listar(filtros, function(r) {
+    GAS.reservasCarro.dados(filtros, function(r) {
       _carregado = true;
-      var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      if (!r || !r.ok) {
+        if (_modo === 'lista') {
+          var el2 = document.getElementById('carro-lista');
+          if (el2) el2.innerHTML = '<p class="error-text" style="padding:20px;">Erro ao carregar reservas.</p>';
+        }
+        return;
+      }
+      if (r.data.metricas) _renderMetricas(r.data.metricas);
+      var itens = Array.isArray(r.data.lista) ? r.data.lista : [];
       _cache = itens;
       if (_modo === 'lista') _renderLista(itens);
       else _renderAgenda(itens);
     }, function(err) {
       if (_modo === 'lista') {
-        var el2 = document.getElementById('carro-lista');
-        if (el2) el2.innerHTML = '<p class="error-text" style="padding:20px;">Erro: ' + escaparHtml((err&&err.message)||String(err)) + '</p>';
+        var elErr = document.getElementById('carro-lista');
+        if (elErr) elErr.innerHTML = '<p class="error-text" style="padding:20px;">Erro: ' + escaparHtml((err&&err.message)||String(err)) + '</p>';
       }
     });
   }
