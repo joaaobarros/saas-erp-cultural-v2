@@ -11490,28 +11490,153 @@ var AdminCadastrosUI = (function() {
     });
   }
 
+  // Labels dos módulos para a matrix de permissões
+  var _PERM_MODULOS = [
+    { id: 'ACOES',       label: 'Ações'         },
+    { id: 'ESPACOS',     label: 'Espaços'        },
+    { id: 'PESSOAS',     label: 'Pessoas'        },
+    { id: 'FINANCEIRO',  label: 'Financeiro'     },
+    { id: 'COMUNICACAO', label: 'Comunicação'    },
+    { id: 'TAREFAS',     label: 'Tarefas'        },
+    { id: 'REUNIOES',    label: 'Reuniões'       },
+    { id: 'RELATORIOS',  label: 'Relatórios'     },
+    { id: 'ADMIN',       label: 'Administração'  },
+    { id: 'MASTER',      label: 'Master'         },
+    { id: 'PUBLICO',     label: 'Público'        }
+  ];
+
+  // Matriz RBAC base por papel (espelho compacto do backend — sem chamar o servidor)
+  var _PERM_MATRIZ = {
+    superadmin: {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},RELATORIOS:{v:1,e:1,x:1},ADMIN:{v:1,e:1,x:1},MASTER:{v:1,e:1,x:1},PUBLICO:{v:1,e:1,x:1}},
+    admin:      {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:0},FINANCEIRO:{v:1,e:1,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:1,e:1,x:0},MASTER:{v:1,e:1,x:0},PUBLICO:{v:1,e:1,x:0}},
+    gestor:     {ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:1,x:0},RELATORIOS:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:1,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
+    financeiro: {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
+    rh:         {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
+    comunicacao:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:1,x:0}},
+    habilitador:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
+    colaborador:{ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}}
+  };
+
+  function _renderMatrizPermissoes(papel, overrides) {
+    var base = _PERM_MATRIZ[papel] || _PERM_MATRIZ.colaborador;
+    var ACOES_MAP = [['v','visualizar'],['e','editar'],['x','excluir']];
+    var rows = _PERM_MODULOS.map(function(m) {
+      var b = base[m.id] || {v:0,e:0,x:0};
+      var o = (overrides && overrides[m.id]) || {};
+      function _cell(ak, fullKey, bv) {
+        var ovr      = o[fullKey]; // backend salva com nome completo
+        var valFinal = (ovr !== undefined) ? !!ovr : !!bv;
+        var temOvr   = (ovr !== undefined && !!ovr !== !!bv);
+        return '<td style="text-align:center;padding:4px 2px;">' +
+          '<input type="checkbox" id="perm-' + m.id + '-' + ak + '"' +
+          (valFinal ? ' checked' : '') +
+          ' style="width:15px;height:15px;cursor:pointer;accent-color:' + (temOvr ? 'var(--accent)' : 'var(--muted)') + ';">' +
+          '</td>';
+      }
+      return '<tr style="border-bottom:1px solid var(--border-subtle);">' +
+        '<td style="padding:5px 8px;font-size:13px;">' + escaparHtml(m.label) + '</td>' +
+        _cell('v','visualizar',b.v) + _cell('e','editar',b.e) + _cell('x','excluir',b.x) +
+        '</tr>';
+    }).join('');
+    return '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;">' +
+      '<thead><tr style="background:var(--surface2,var(--surface));font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);">' +
+        '<th style="text-align:left;padding:5px 8px;">Módulo</th>' +
+        '<th style="text-align:center;padding:5px 4px;">Ver</th>' +
+        '<th style="text-align:center;padding:5px 4px;">Editar</th>' +
+        '<th style="text-align:center;padding:5px 4px;">Excluir</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+      '</table>';
+  }
+
+  function _atualizarMatrizAoPapelMudar() {
+    var sel   = document.getElementById('edit-papel');
+    var wrapM = document.getElementById('edit-perm-wrap');
+    var wrapF = document.getElementById('edit-feat-wrap');
+    if (!sel) return;
+    var novoPapel = sel.value;
+    if (wrapM) wrapM.innerHTML = _renderMatrizPermissoes(novoPapel, {});
+    if (wrapF) wrapF.innerHTML = _renderFeaturesModal(novoPapel, {});
+  }
+
+  function _renderFeaturesModal(papel, featuresOverride) {
+    var cat = ((App.getBoot() || {}).featuresCatalogo) || {};
+    var modulos = Object.keys(cat);
+    if (!modulos.length) return '<p style="font-size:12px;color:var(--muted);">Catálogo não disponível.</p>';
+    return modulos.map(function(modulo) {
+      var feats = cat[modulo];
+      if (!feats || !feats.length) return '';
+      var modInfo = _PERM_MODULOS.find(function(m) { return m.id === modulo; });
+      var rows = feats.map(function(feat) {
+        var padrao   = feat.papeis && feat.papeis.indexOf(papel) !== -1;
+        var ovrMod   = featuresOverride && featuresOverride[modulo];
+        var ovr      = ovrMod && ovrMod[feat.id];
+        var valFinal = (ovr !== undefined) ? !!ovr : padrao;
+        var temOvr   = (ovr !== undefined && !!ovr !== padrao);
+        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border-subtle);">' +
+          '<input type="checkbox" id="feat-' + modulo + '-' + feat.id + '"' +
+          (valFinal ? ' checked' : '') +
+          ' style="width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:' + (temOvr ? 'var(--accent)' : 'var(--muted)') + ';">' +
+          '<label for="feat-' + modulo + '-' + feat.id + '" style="font-size:13px;cursor:pointer;' + (temOvr ? 'color:var(--accent);font-weight:500;' : '') + '">' +
+            escaparHtml(feat.label) +
+          '</label>' +
+          '</div>';
+      }).join('');
+      return '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;padding:4px 0;">' +
+          escaparHtml((modInfo && modInfo.label) || modulo) +
+        '</div>' + rows +
+        '</div>';
+    }).filter(Boolean).join('');
+  }
+
   function editarPapel(email) {
     var u = _usuarios.find(function(x){ return x.email === email; }) || {};
     var setoresList = _setores.length ? _setores : (((App.getBoot() || {}).setores) || []);
     var setorOptions = setoresList.map(function(s) {
       return '<option value="' + escaparHtml(s.id) + '">' + escaparHtml(s.label || s.nome || s.id) + '</option>';
     }).join('');
+    var papelAtual      = u.papel || 'colaborador';
+    var permOvr         = u.permissoesOverride || {};
+    var featOvr         = u.featuresOverride   || {};
+    var temPermOvr      = Object.keys(permOvr).length > 0;
+    var temFeatOvr      = Object.keys(featOvr).length > 0;
+    var temQualquerOvr  = temPermOvr || temFeatOvr;
     var html =
-      '<div style="padding:20px 24px;">' +
+      '<div style="padding:20px 24px;max-height:85vh;overflow-y:auto;">' +
         '<h3 style="margin:0 0 4px;">Editar usuário</h3>' +
         '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">' + escaparHtml(email) + '</p>' +
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Papel</label>' +
-        '<select id="edit-papel" class="form-input" style="width:100%;margin:6px 0 14px;">' + _getPapeisOptions() + '</select>' +
+        '<select id="edit-papel" class="form-input" style="width:100%;margin:6px 0 14px;" onchange="AdminCadastrosUI._atualizarMatrizAoPapelMudar()">' + _getPapeisOptions() + '</select>' +
         '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Setor</label>' +
-        '<select id="edit-setor" class="form-input" style="width:100%;margin:6px 0 20px;">' +
+        '<select id="edit-setor" class="form-input" style="width:100%;margin:6px 0 16px;">' +
           '<option value="">— Sem setor —</option>' + setorOptions +
         '</select>' +
+
+        '<details' + (temPermOvr ? ' open' : '') + ' style="margin-bottom:12px;">' +
+          '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0;">' +
+            '<span class="ms ms-sm" style="font-size:14px;">tune</span> Permissões por módulo' +
+            (temPermOvr ? '<span style="background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;">customizado</span>' : '') +
+          '</summary>' +
+          '<p style="font-size:11px;color:var(--muted);margin:4px 0 4px;">Padrão vem do Papel. Override ativo = roxo.</p>' +
+          '<div id="edit-perm-wrap">' + _renderMatrizPermissoes(papelAtual, permOvr) + '</div>' +
+        '</details>' +
+
+        '<details' + (temFeatOvr ? ' open' : '') + ' style="margin-bottom:20px;">' +
+          '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0;">' +
+            '<span class="ms ms-sm" style="font-size:14px;">toggle_on</span> Funcionalidades específicas' +
+            (temFeatOvr ? '<span style="background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;">customizado</span>' : '') +
+          '</summary>' +
+          '<p style="font-size:11px;color:var(--muted);margin:4px 0 8px;">Controles granulares dentro de cada módulo. Padrão vem do Papel. Override ativo = roxo.</p>' +
+          '<div id="edit-feat-wrap">' + _renderFeaturesModal(papelAtual, featOvr) + '</div>' +
+        '</details>' +
+
         '<div style="display:flex;gap:8px;">' +
           '<button class="btn btn-primario" id="btn-confirmar-editar-papel" onclick="AdminCadastrosUI._confirmarEditarPapel(' + JSON.stringify(email).replace(/"/g,"'") + ',this)">Salvar</button>' +
           '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
         '</div>' +
       '</div>';
-    _abrirModalSimples(html, 'edit-papel', u.papel || 'colaborador');
+    _abrirModalSimples(html, 'edit-papel', papelAtual);
     var selSetor = document.getElementById('edit-setor');
     if (selSetor && u.setor) selSetor.value = u.setor;
   }
@@ -11520,8 +11645,47 @@ var AdminCadastrosUI = (function() {
     var papel = (document.getElementById('edit-papel') || {}).value;
     var setor = (document.getElementById('edit-setor') || {}).value || '';
     if (!papel) return;
+
+    // Coleta permissoesOverride: apenas células que diferem do padrão do papel
+    var base = _PERM_MATRIZ[papel] || _PERM_MATRIZ.colaborador;
+    var permissoesOverride = {};
+    _PERM_MODULOS.forEach(function(m) {
+      var b = base[m.id] || {v:0,e:0,x:0};
+      var modOvr = {};
+      [['v','visualizar'],['e','editar'],['x','excluir']].forEach(function(pair) {
+        var chk = document.getElementById('perm-' + m.id + '-' + pair[0]);
+        if (chk) {
+          var checked = chk.checked;
+          if (!!checked !== !!b[pair[0]]) modOvr[pair[0]] = checked;
+        }
+      });
+      if (Object.keys(modOvr).length > 0) {
+        permissoesOverride[m.id] = {};
+        if (modOvr.v !== undefined) permissoesOverride[m.id].visualizar = modOvr.v;
+        if (modOvr.e !== undefined) permissoesOverride[m.id].editar     = modOvr.e;
+        if (modOvr.x !== undefined) permissoesOverride[m.id].excluir    = modOvr.x;
+      }
+    });
+
+    // Coleta featuresOverride: apenas features que diferem do padrão do papel
+    var cat = ((App.getBoot() || {}).featuresCatalogo) || {};
+    var featuresOverride = {};
+    Object.keys(cat).forEach(function(modulo) {
+      var feats = cat[modulo] || [];
+      var modOvr = {};
+      feats.forEach(function(feat) {
+        var chk = document.getElementById('feat-' + modulo + '-' + feat.id);
+        if (chk) {
+          var checked = chk.checked;
+          var padrao  = feat.papeis && feat.papeis.indexOf(papel) !== -1;
+          if (!!checked !== padrao) modOvr[feat.id] = checked;
+        }
+      });
+      if (Object.keys(modOvr).length > 0) featuresOverride[modulo] = modOvr;
+    });
+
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
-      GAS.acesso.editarPapel({ email: email, papel: papel, setor: setor }, function(r) {
+      GAS.acesso.editarPapel({ email: email, papel: papel, setor: setor, permissoesOverride: permissoesOverride, featuresOverride: featuresOverride }, function(r) {
         liberar();
         var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Usuário atualizado.'); carregarUsuarios(); }
@@ -12064,7 +12228,7 @@ var AdminCadastrosUI = (function() {
     toggleModulo: toggleModulo,
     aprovarUsuario: aprovarUsuario,   _confirmarAprovar: _confirmarAprovar,
     revogarUsuario: revogarUsuario,   _confirmarRevogar: _confirmarRevogar,
-    editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel,
+    editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel, _atualizarMatrizAoPapelMudar: _atualizarMatrizAoPapelMudar,
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
     reativarEspaco: reativarEspaco,
     excluirEspaco: excluirEspaco, _confirmarExcluirEspaco: _confirmarExcluirEspaco, injetarEspacos: function(lista) { lista.forEach(function(e){ var i=_espacos.findIndex(function(x){return x.id===e.id;}); if(i>=0)_espacos[i]=e; else _espacos.push(e); }); },
@@ -24224,6 +24388,12 @@ var EscutaUI = (function() {
   function fecharPulse() {
     var w = document.getElementById('pulse-widget');
     if (w) w.style.display = 'none';
+    // Esconde FAB para a sessão atual — reaparece apenas no próximo login,
+    // quando o engine decide se há nova pergunta disponível (anti-spam e limite diário)
+    var fab = document.getElementById('pulse-fab');
+    if (fab) fab.style.display = 'none';
+    _pulseAtual    = null;
+    _pulseEnviando = false;
   }
 
   var _pulseEnviando = false; // guard anti-duplo-clique
