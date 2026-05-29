@@ -262,10 +262,11 @@ function ctrl_escuta_pulse_responder(params) {
   return GasResponse.wrap(function() {
     params  = params || {};
     var ctx = _ctxEscuta();
-    return EscutaPulseEngine.registrarRespostaPulse(
-      ctx.orgId, ctx.email, params.perguntaId, params.dimensaoId,
-      params.valor, params.contexto
-    );
+    return EscutaPulseEngine.registrarRespostaPulse(ctx.orgId, ctx.email, {
+      perguntaId: params.perguntaId,
+      resposta:   params.valor,
+      anonima:    true
+    });
   }, 'ctrl_escuta_pulse_responder');
 }
 
