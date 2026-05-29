@@ -6433,6 +6433,10 @@ select.form-control { cursor: pointer; }
           </div>
         </div>
 
+        <!-- Banner NR-1 / Pesquisa Ativa — aparece via JS quando há pesquisa ativa com segurança -->
+        <div id="escuta-banner-nr1"
+             style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:14px;"></div>
+
         <!-- KPI Strip -->
         <div id="escuta-stats" class="stats-strip" style="margin-bottom:16px;"></div>
 
@@ -8007,6 +8011,8 @@ var GAS = {
     cruzamento:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_cruzamento(p||{}); },
     evolucao:            function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_evolucao(p||{}); },
     registrarResposta:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_registrar_resposta(d); },
+    // [F20] Verificação rápida (polling badge + banner NR-1)
+    verificarAtiva:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_verificar_ativa({}); },
     // [F20] Dados unificados
     dados:               function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_dados({}); },
     // [F20] Pulse
@@ -18287,7 +18293,7 @@ var App = (function() {
     { id:'rh',            label:'RH / Depto. Pessoal', icone:'badge',              modulo:'PESSOAS' },
     { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
     { id:'ponto',         label:'Ponto & RH',     icone:'timer',                   modulo:'PESSOAS' },
-    { id:'escuta',        label:'Escuta',          icone:'hearing',                 modulo:'PESSOAS' },
+    { id:'escuta',        label:'Escuta',          icone:'hearing',  badge:'badgeEscutaAtiva', modulo:'PESSOAS' },
     { id:'contratacoes',  label:'Contratações',    icone:'handshake',               modulo:'PESSOAS' },
     { id:'financeiro',    label:'Financeiro',      icone:'account_balance_wallet',  modulo:'FINANCEIRO' },
     { id:'taskhub',     label:'Meu Centro',      icone:'hub',                     modulo:null },
@@ -18349,6 +18355,10 @@ var App = (function() {
     // Polling de solicitações pendentes (badge sidebar) a cada 60s
     AprovacaoReservaUI.atualizarBadge();
     setInterval(function(){ AprovacaoReservaUI.atualizarBadge(); }, 60000);
+
+    // Polling de pesquisa escuta ativa (badge sidebar + banner NR-1) a cada 5 min
+    _atualizarBadgeEscuta();
+    setInterval(function(){ _atualizarBadgeEscuta(); }, 300000);
   }
 
   function _popularSelectTipos(selectId, tipos) {
@@ -18547,10 +18557,118 @@ var App = (function() {
     });
   });
 
+  // ── Badge Escuta + Banner NR-1 ──────────────────────────────────────────
+  var _escutaAtivaCache = null;
+
+  function _atualizarBadgeEscuta() {
+    if (typeof GAS === 'undefined' || !GAS.escuta || !GAS.escuta.verificarAtiva) return;
+    GAS.escuta.verificarAtiva(function(r) {
+      if (!r || !r.ok || !r.data) return;
+      var d = r.data;
+      _escutaAtivaCache = d;
+      // Badge sidebar
+      var badge = document.getElementById('badgeEscutaAtiva');
+      if (badge) {
+        if (d.count > 0) {
+          badge.textContent = d.count;
+          badge.classList.remove('oculto');
+        } else {
+          badge.classList.add('oculto');
+        }
+      }
+      // Banner NR-1 na view-escuta (se estiver visível)
+      _renderBannerNR1(d);
+    }, function(){/* silencioso */});
+  }
+
+  function _renderBannerNR1(d) {
+    // Banner na view-escuta
+    var banner = document.getElementById('escuta-banner-nr1');
+    if (!d || !d.count) {
+      if (banner) banner.style.display = 'none';
+      _renderHomeAlertas(null);
+      return;
+    }
+    var nr1 = (d.pesquisas || []).filter(function(p){ return p.isNR1; });
+    var todas = d.pesquisas || [];
+
+    // Card na home (mostra mesmo sem NR-1, se houver pesquisa ativa)
+    _renderHomeAlertas(d);
+
+    // Banner interno da view-escuta — só para NR-1
+    if (!nr1.length) {
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+    var p    = nr1[0];
+    var dias = p.dataFim
+      ? Math.ceil((new Date(p.dataFim) - new Date()) / 86400000)
+      : null;
+    var urgente = dias !== null && dias <= 7;
+    if (!banner) return;
+    banner.style.display = 'block';
+    banner.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;">' +
+        '<span class="ms" style="font-size:22px;color:' + (urgente?'#ef4444':'#f59e0b') + '">warning</span>' +
+        '<div style="flex:1;">' +
+          '<strong style="font-size:13px;">⚠️ Pesquisa NR-1 Ativa: ' + p.titulo + '</strong>' +
+          (dias !== null
+            ? '<span style="margin-left:8px;font-size:11px;font-weight:700;color:' + (urgente?'#ef4444':'#64748b') + ';">' +
+                (urgente ? '🔴 ' : '') + dias + ' dia' + (dias===1?'':'s') + ' restante' + (dias===1?'':'s') +
+              '</span>'
+            : '') +
+          '<p style="font-size:11px;color:var(--text2);margin:2px 0 0;">' +
+            'NR-1 (Portaria MTE 1.419/2024) — riscos psicossociais. ' +
+            '<a href="#" onclick="EscutaUI.setTab(\'livre\',document.querySelectorAll(\'#view-escuta .tab-btn\')[1]);event.preventDefault();" style="color:var(--primary);font-weight:600;">Responder agora →</a>' +
+          '</p>' +
+        '</div>' +
+        '<button onclick="this.parentNode.parentNode.style.display=\'none\'" data-bg-skip="1" ' +
+                'style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1;">✕</button>' +
+      '</div>';
+  }
+
+  function _renderHomeAlertas(d) {
+    var el = document.getElementById('home-alertas');
+    if (!el) return;
+    if (!d || !d.count) { el.innerHTML = ''; return; }
+    var lista = d.pesquisas || [];
+    var nr1   = lista.filter(function(p){ return p.isNR1; });
+    var cor   = nr1.length ? '#fff7ed' : '#eff6ff';
+    var borda = nr1.length ? '#fed7aa' : '#bfdbfe';
+    var bleft = nr1.length ? '#f59e0b' : '#3b82f6';
+    var icone = nr1.length ? 'warning' : 'hearing';
+    var titulo = nr1.length
+      ? '⚠️ Pesquisa NR-1 Ativa — Participação Necessária'
+      : '📋 Pesquisa de Clima Ativa';
+    var items = lista.map(function(p) {
+      var dias = p.dataFim
+        ? Math.ceil((new Date(p.dataFim) - new Date()) / 86400000)
+        : null;
+      return '<li style="font-size:12px;margin-bottom:3px;">' +
+        (p.isNR1 ? '<strong>[NR-1]</strong> ' : '') +
+        p.titulo +
+        (dias !== null ? ' — <strong style="color:' + (dias<=7?'#ef4444':'#64748b') + ';">' + dias + ' dia(s)</strong>' : '') +
+      '</li>';
+    }).join('');
+    el.innerHTML =
+      '<div style="background:' + cor + ';border:1px solid ' + borda + ';border-left:4px solid ' + bleft + ';border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+          '<span class="ms" style="color:' + bleft + ';">' + icone + '</span>' +
+          '<strong style="font-size:13px;">' + titulo + '</strong>' +
+        '</div>' +
+        '<ul style="padding-left:18px;margin:0 0 8px;">' + items + '</ul>' +
+        '<button class="btn btn-primario btn-sm" onclick="Router.navegar(\'escuta\')" data-bg-skip="1">Ir para Escuta Institucional</button>' +
+      '</div>';
+  }
+
+  // Expõe para uso do EscutaUI ao abrir o módulo
+  function atualizarBadgeEscuta() { _atualizarBadgeEscuta(); }
+
   return {
     iniciar,
     getBoot: function(){ return _boot; },
     reconstruirMenu: function(){ _reconstruirMenu(false); },
+    atualizarBadgeEscuta: atualizarBadgeEscuta,
     Toast, BtnGuard, Router
   };
 })();
@@ -21594,6 +21712,8 @@ var EscutaUI = (function() {
     if (!_carregado) carregar();
     else setTab('painel', document.querySelector('#view-escuta .tab-btn'));
     _tentarMostrarPulse();
+    // Atualiza badge + banner NR-1 ao entrar no módulo
+    if (typeof App !== 'undefined' && App.atualizarBadgeEscuta) App.atualizarBadgeEscuta();
   }
 
   function carregar(done) {

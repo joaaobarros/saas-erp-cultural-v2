@@ -199,6 +199,35 @@ function ctrl_escuta_registrar_resposta(params) {
   }, 'ctrl_escuta_registrar_resposta');
 }
 
+// ─── [F20.1] Verificação rápida de pesquisa ativa ──────────────────────────
+
+/**
+ * Retorna informação sobre pesquisas ativas (para badge e banner NR-1).
+ * Chamada leve — usada em polling (a cada 5 min) e ao abrir o módulo.
+ * Não requer papel específico: qualquer usuário ativo pode checar.
+ * @returns {{ count, pesquisas:[{id,titulo,dataFim,isNR1,dimensoes}] }}
+ */
+function ctrl_escuta_verificar_ativa(params) {
+  return GasResponse.wrap(function() {
+    var ctx   = _ctxEscuta();
+    var lista = EscutaRepository.listarPesquisas(ctx.orgId)
+      .filter(function(p) { return p.status === 'ativa'; });
+    var resultado = lista.map(function(p) {
+      var dims  = p.dimensoes || [];
+      var isNR1 = dims.indexOf('seguranca') >= 0;
+      return {
+        id:       p.id,
+        titulo:   p.titulo,
+        dataFim:  p.dataFim,
+        isNR1:    isNR1,
+        dimensoes: dims,
+        totalConvidados: (p.convidados || []).length
+      };
+    });
+    return { count: resultado.length, pesquisas: resultado };
+  }, 'ctrl_escuta_verificar_ativa');
+}
+
 // ─── [F20] Carregamento unificado ──────────────────────────────────────────
 
 /**

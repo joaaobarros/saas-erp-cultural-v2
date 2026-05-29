@@ -908,22 +908,59 @@ var EscutaEngine = (function() {
   function _enviarConvites(orgId, pesquisaId, convidados, pesquisa) {
     try {
       var orgNome = getOrgConfig().orgNome || 'sua organização';
+      var link    = ScriptApp.getService().getUrl();
+      var dims    = pesquisa.dimensoes || [];
+      var isNR1   = dims.indexOf('seguranca') >= 0;
+
+      // Template HTML diferenciado para pesquisas NR-1
+      var assunto = isNR1
+        ? '⚠️ [NR-1] Pesquisa Psicossocial Obrigatória — ' + pesquisa.titulo
+        : '[Escuta Institucional] ' + pesquisa.titulo;
+
       convidados.forEach(function(colaboradorId) {
         var colab = ColaboradorRepository.listar(orgId)
           .find(function(c){ return c.id === colaboradorId; });
         if (!colab || !colab.email) return;
-        var link    = ScriptApp.getService().getUrl() + '?secao=escuta&id=' + pesquisaId + '&resp=' + colaboradorId;
-        var assunto = '[TRAMAR] Pesquisa de Clima — ' + pesquisa.titulo;
-        var corpo   = 'Olá, ' + (colab.nome||'') + '!\n\n'
-          + orgNome + ' iniciou uma rodada de Escuta Institucional.\n'
-          + 'Sua participação é fundamental para melhorarmos o ambiente de trabalho.\n\n'
-          + 'Acesse: ' + link + '\n\n'
-          + 'Prazo: ' + pesquisa.dataFim + '\n'
-          + 'Tempo estimado: 5 minutos\n\n'
-          + (pesquisa.anonima ? '✅ Suas respostas são completamente anônimas.\n' : '')
-          + '\nObrigado!';
+
+        var urlResposta = link + '#escuta';
+
+        var corpo = 'Olá, ' + (colab.nome || colab.email.split('@')[0]) + '!\n\n';
+        if (isNR1) {
+          corpo += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+          corpo += 'ATENÇÃO — AVALIAÇÃO NR-1 (Riscos Psicossociais)\n';
+          corpo += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+          corpo += orgNome + ' está realizando a avaliação de riscos psicossociais\n';
+          corpo += 'exigida pela Norma Regulamentadora NR-1 (Portaria MTE 1.419/2024).\n\n';
+          corpo += 'SUA PARTICIPAÇÃO É OBRIGATÓRIA PARA FINS DE CONFORMIDADE LEGAL.\n\n';
+        } else {
+          corpo += orgNome + ' iniciou uma rodada de Escuta Institucional.\n';
+          corpo += 'Sua participação é fundamental para melhorarmos o ambiente de trabalho.\n\n';
+        }
+
+        corpo += '👉 Acesse: ' + urlResposta + '\n\n';
+        corpo += 'Prazo: ' + (pesquisa.dataFim || 'em aberto') + '\n';
+        corpo += 'Tempo estimado: 5 minutos\n\n';
+
+        if (pesquisa.anonima) {
+          corpo += '🔒 Suas respostas são completamente anônimas.\n';
+          corpo += '   Nem RH nem gestores saberão sua resposta individual.\n\n';
+        }
+
+        if (isNR1) {
+          corpo += '📋 O que é a NR-1?\n';
+          corpo += '   A Norma Regulamentadora 1 exige que empregadores\n';
+          corpo += '   identifiquem e gerenciem riscos psicossociais no trabalho\n';
+          corpo += '   (sobrecarga, assédio, violência, etc.). Os dados coletados\n';
+          corpo += '   são usados para elaborar o Programa de Gerenciamento de\n';
+          corpo += '   Riscos (PGR) e Plano de Ação da organização.\n\n';
+        }
+
+        corpo += 'Obrigado por colaborar!\n' + orgNome;
+
         GmailApp.sendEmail(colab.email, assunto, corpo);
       });
+      Logger.info('escuta', '_enviarConvites',
+        'Convites enviados: ' + convidados.length + ' | NR-1: ' + isNR1);
     } catch(e) {
       Logger.warn('escuta', '_enviarConvites', 'Erro ao enviar convites: ' + e.message);
     }
