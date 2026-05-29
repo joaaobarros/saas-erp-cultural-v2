@@ -42,7 +42,8 @@ var ABA_PARA_MODULO = {
     UsoAtivos:           'UsoAtivos',
     BaixasAtivos:        'BaixasAtivos',
     AlertasInfra:        'AlertasInfra',
-    Solicitacoes:        'Solicitacoes'
+    Solicitacoes:        'Solicitacoes',
+    ReservasCarro:       'ReservasCarro'
   },
   PESSOAL: {
     Tarefas:   'Tarefas',

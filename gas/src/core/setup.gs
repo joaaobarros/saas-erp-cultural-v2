@@ -40,7 +40,7 @@ var SCHEMA_ABAS = {
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
     'Ativos', 'MovimentacoesAtivos', 'Manutencoes', 'UsoAtivos', 'BaixasAtivos',
-    'AlertasInfra', 'Solicitacoes'
+    'AlertasInfra', 'Solicitacoes', 'ReservasCarro'
   ],
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
@@ -232,6 +232,14 @@ function inicializarSistema() {
       typeof EscutaRepository.prepararIndice === 'function') {
     try { EscutaRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'EscutaRepository.prepararIndice(F20): ' + e.message);
+    }
+  }
+
+  // Fase 21 — Reserva de Veículo: garante aba ESPACOS.ReservasCarro
+  if (typeof ReservaCarroRepository !== 'undefined' &&
+      typeof ReservaCarroRepository.prepararIndice === 'function') {
+    try { ReservaCarroRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'ReservaCarroRepository.prepararIndice: ' + e.message);
     }
   }
 
@@ -1262,6 +1270,27 @@ function fase17_holerite_prepararIndice() {
 // ════════════════════════════════════════════════════════════════════════════
 // FASE 20 — Escuta Institucional Completa
 // ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
+// FASE 21 — Reserva de Veículo Institucional
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Prepara aba ESPACOS.ReservasCarro e garante cabeçalho do índice.
+ * Executar no GAS Editor após o deploy da Fase 21.
+ * @returns {{ ok, aba }}
+ */
+function fase21_carro_prepararIndice() {
+  try {
+    var r = ReservaCarroRepository.prepararIndice();
+    Logger.info('setup', 'fase21_carro_prepararIndice',
+      r.ok ? 'Aba ' + r.aba + ' garantida.' : 'Falha: ' + r.motivo);
+    return r;
+  } catch(e) {
+    Logger.error('setup', 'fase21_carro_prepararIndice', e.message);
+    return { ok: false, motivo: e.message };
+  }
+}
 
 /**
  * Prepara índice de Escuta (aba EQUIPES.Escuta) e garante
