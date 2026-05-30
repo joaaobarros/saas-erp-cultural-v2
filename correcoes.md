@@ -2,18 +2,35 @@ Segue o arquivo `.md` com as correções e ajustes solicitados para inclusão no
 
 # Correções e Ajustes — Sistema de Gestão Cultural
 
-## 1. Página de Primeiro Acesso
+## 1. Aba Financeiro
 
 ### Problema identificado
 
-As informações dos setores estão invisíveis no dropdown de seleção de setor, impossibilitando que o usuário compreenda quais opções estão disponíveis para escolha durante o primeiro acesso.
-
+As informações dos setores não estão persistindo após salvamento
 ### Correção solicitada
 
 * Corrigir renderização visual do dropdown de setores.
 * Garantir contraste adequado entre texto e fundo.
 * Validar funcionamento em tema claro e escuro (caso exista).
 * Garantir acessibilidade mínima de leitura.
+* Corrigir persistência das informações dos setores na aba Financeiro. Atualmente, após o salvamento, os dados não permanecem registrados corretamente.
+* Ajustar comportamento de colapso após salvamento de rubricas. Atualmente, ao salvar uma rubrica, toda a meta é recolhida. O comportamento esperado é:
+  - fechar apenas a rubrica salva;
+  - manter a meta expandida;
+  - permitir continuidade do cadastro das demais rubricas sem necessidade de reabrir toda a estrutura.
+* Adicionar possibilidade de expandir/visualizar a lista de Memória de Cálculo sem entrar em modo de edição. Atualmente a visualização só ocorre ao editar o item.
+* Transformar os campos de Descrição da Memória de Cálculo em campos de texto longo (textarea), com expansão vertical automática conforme aumento de conteúdo.
+* No cadastro de rubricas, o campo “Quantidade de Meses” deve ser automaticamente preenchido com a duração calculada da meta, considerando:
+  - data de início da meta;
+  - data de fim da meta.
+* No cadastro da meta, o campo “Quantidade de Meses” deve ser automaticamente preenchido com a duração calculada do contrato, considerando:
+  - data de início do contrato;
+  - data de fim do contrato.
+* Adicionar funcionalidade de drag and drop para reorganização manual das metas.
+* Revisar lógica do card “Valor em Aberto”. O comportamento atual aparenta não corresponder aos valores efetivamente cadastrados. Validar:
+  - fórmula utilizada;
+  - origem dos dados;
+  - consistência entre total previsto, executado e saldo apresentado.
 
 ---
 
@@ -31,6 +48,7 @@ Criar mecanismo que permita ao Superadmin:
 * Simular experiência de usuário em primeiro acesso.
 * Revisar fluxos de cadastro e aprovação.
 * Validar layout e funcionamento da página.
+* Criar perfis de usuários fantasma para visualizar como o sistema opera de acordo com cada perfil e permissões
 
 ### Sugestão técnica
 
@@ -74,7 +92,7 @@ Transformar a aba “Aprovações” em módulo amplo de aprovações internas d
 * validações administrativas;
 * solicitações internas;
 * fluxos de RH;
-* demais aprovações futuras.
+* demais aprovações existentes e futuras.
 
 ---
 
@@ -96,6 +114,7 @@ Adicionar os seguintes campos obrigatórios na memória de cálculo do Plano de 
   * opções:
 
     * unidade
+    * serviço
     * hora técnica
     * parcela
     * mensalidade
@@ -186,11 +205,12 @@ salário base
 - desconto alimentação
 ```
 
-### Observação
+### Procedimento Obrigatório para Claude
 
-Validar:
+Claude deve:
 
-* incidência correta dos benefícios;
-* descontos;
-* reflexos no custo final;
-* compatibilidade com vínculos CLT.
+* Confirmar individualmente cada item corrigido.
+* Atualizar este arquivo conforme avanço das implementações.
+* Marcar como concluídos ([x]) os itens efetivamente resolvidos.
+* Remover observações obsoletas quando necessário.
+* Manter neste arquivo apenas pendências reais e status atualizados.
