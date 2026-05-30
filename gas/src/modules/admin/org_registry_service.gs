@@ -238,7 +238,7 @@ var OrgRegistryService = (function() {
     // 4. SuperAdmin registrado
     var adminOk = false;
     try {
-      var lista = AcessoService ? AcessoService.listarTodos() : [];
+      var lista = AcessoService ? AcessoService.listarUsuarios() : [];
       adminOk = lista.some(function(u) { return u.papel === 'superadmin'; });
     } catch(_) {}
     checks.push({
