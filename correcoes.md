@@ -205,7 +205,77 @@ salário base
 - desconto alimentação
 ```
 
-### Procedimento Obrigatório para Claude
+## [BUG-UI-01] Pulse Widget — inconsistência entre pergunta e escala
+
+**Arquivo:** `gas/src/frontend/index.html`
+**Localização:** `div#pulse-widget` (aproximadamente linha 6622)
+
+### Problema
+O widget exibe perguntas da dimensão **Demanda/Carga** formuladas como afirmações
+(ex.: "Tenho pouco tempo para concluir meu trabalho.") que devem ser respondidas
+em escala Discordo → Concordo.
+
+Porém, o título do widget mostra o **label da dimensão** ("Carga de trabalho") como
+se fosse a pergunta, e os rótulos da escala ficam sem contexto semântico.
+
+### Causa raiz
+O elemento `<p id="pulse-dimensao">` exibe o nome da dimensão logo acima da pergunta,
+e o código que popula o widget usa `_pulseAtual.pergunta` para o texto da pergunta.
+O banco de perguntas (escuta_engine.gs) armazena as perguntas como **afirmações**
+adequadas para escala Likert — o problema está na exibição do label da dimensão
+em posição de destaque, confundindo o usuário.
+
+### Correção
+
+**Opção A — Recomendada:** Remover o label da dimensão do cabeçalho do widget
+(ou movê-lo para um chip secundário menor), deixando apenas a afirmação como foco.
+
+No `index.html`, localizar o bloco dentro de `#pulse-widget`:
+
+```html
+<!-- ANTES -->
+<div>
+  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">Escuta Pulse</p>
+  <p id="pulse-dimensao" style="margin:2px 0 0;font-size:11px;color:var(--primary);font-weight:600;"></p>
+</div>
+Substituir por:
+
+<!-- DEPOIS -->
+<div>
+  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">
+    Uma pergunta rápida
+    <span id="pulse-dimensao" style="font-weight:400;text-transform:none;color:var(--primary);margin-left:4px;"></span>
+  </p>
+</div>
+E garantir que o texto da pergunta seja a afirmação completa, não o label da dimensão.
+O id="pulse-pergunta" já recebe _pulseAtual.pergunta — confirmar que esse campo
+contém a afirmação (ex.: "Tenho pouco tempo para concluir meu trabalho.") e não o
+label da dimensão ("Carga de trabalho").
+
+Opção B — Alternativa rápida: Trocar os rótulos da escala de "Discordo / Concordo"
+para rótulos neutros que funcionem tanto para afirmações quanto para perguntas abertas:
+
+<!-- ANTES -->
+<span style="font-size:10px;color:var(--text2);">Discordo</span>
+<span style="font-size:10px;color:var(--text2);">Concordo</span>
+
+<!-- DEPOIS -->
+<span style="font-size:10px;color:var(--text2);">Nunca</span>
+<span style="font-size:10px;color:var(--text2);">Sempre</span>
+Ou, para "Carga de trabalho" especificamente:
+
+<span style="font-size:10px;color:var(--text2);">Leve</span>
+<span style="font-size:10px;color:var(--text2);">Pesada</span>
+Nota: A Opção B é paliativa. A Opção A resolve a raiz do problema para todas
+as dimensões, mantendo a consistência com o modelo JDC/UWES usado no engine.
+
+Dimensões afetadas no banco de perguntas (escuta_engine.gs)
+demanda → afirmações sobre pressão/carga (escala invertida)
+vigor, dedicacao, absorcao → afirmações positivas UWES
+seguranca → afirmações NR-1
+Todas usam escala Discordo → Concordo — a Opção A resolve todas de uma vez.
+
+## Procedimento Obrigatório para Claude
 
 Claude deve:
 
