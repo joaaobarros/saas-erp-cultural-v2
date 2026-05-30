@@ -10183,7 +10183,7 @@ var FontesUI = (function() {
           '<td><span class="badge '+badge+'">'+escaparHtml(f.status||'—')+'</span></td>';
         if (_podeEditar) {
           html += '<td style="white-space:nowrap">';
-          html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.abrirForm('+JSON.stringify(f)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+          html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.abrirForm('+JSON.stringify(f).replace(/"/g,"'")+')\" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
           if (f.status === 'ativo')     html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'suspenso\')"><span class="ms ms-sm">pause_circle</span></button> ';
           if (f.status === 'suspenso')  html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'ativo\')"><span class="ms ms-sm">play_circle</span></button> ';
           if (f.status !== 'encerrado') html += '<button class="btn btn-ghost btn-sm" onclick="FontesUI.mudarStatus(\''+f.id+'\',\'encerrado\')"><span class="ms ms-sm">stop_circle</span></button>';
@@ -10308,7 +10308,7 @@ var RemanejamentosUI = (function() {
         if (_podeEditar) {
           html += '<td style="white-space:nowrap">';
           if (rem.status === 'rascunho') {
-            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.abrirForm('+JSON.stringify(rem)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.abrirForm('+JSON.stringify(rem).replace(/"/g,"'")+')\" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
             html += '<button class="btn btn-ghost btn-sm" onclick="RemanejamentosUI.submeter(this,\''+rem.id+'\')"><span class="ms ms-sm">send</span></button>';
           }
           if (rem.status === 'aguard_financeiro') {
@@ -10499,7 +10499,7 @@ var AditivosUI = (function() {
         if (_podeEditar) {
           html += '<td style="white-space:nowrap">';
           if (adi.status === 'elaborando') {
-            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.abrirForm('+JSON.stringify(adi)+')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
+            html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.abrirForm('+JSON.stringify(adi).replace(/"/g,"'")+')\" data-bg-skip="1"><span class="ms ms-sm">edit</span></button> ';
             html += '<button class="btn btn-ghost btn-sm" onclick="AditivosUI.submeterInterno(this,\''+adi.id+'\')"><span class="ms ms-sm">send</span> Submeter</button>';
           }
           if (adi.status === 'submetido_interno') {
@@ -10899,11 +10899,11 @@ var AdminCadastrosUI = (function() {
         var papelLabel = _LABEL_PAPEL[u.papel] || escaparHtml(u.papel||'-');
         var acoes = '';
         if (u.status === 'pendente') {
-          acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email) + ')">Aprovar</button> ' +
-                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Recusar</button>';
+          acoes = '<button class="btn btn-primario btn-sm" onclick="AdminCadastrosUI.aprovarUsuario(' + JSON.stringify(u.email).replace(/"/g,"'") + ')">Aprovar</button> ' +
+                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email).replace(/"/g,"'") + ')">Recusar</button>';
         } else if (u.status === 'ativo') {
-          acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email) + ')">Editar</button> ' +
-                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email) + ')">Revogar</button>';
+          acoes = '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.editarPapel(' + JSON.stringify(u.email).replace(/"/g,"'") + ')">Editar</button> ' +
+                  '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.revogarUsuario(' + JSON.stringify(u.email).replace(/"/g,"'") + ')">Revogar</button>';
         }
         return '<tr>' +
           '<td><div style="display:flex;align-items:center;gap:10px;">' +
@@ -10988,7 +10988,7 @@ var AdminCadastrosUI = (function() {
         '<h3 style="margin:0 0 4px;">Confirmar revogação</h3>' +
         '<p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Revogar o acesso de <strong>' + escaparHtml(email) + '</strong>? Esta ação pode ser desfeita depois.</p>' +
         '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="btn-confirmar-revogar" 'onclick="AdminCadastrosUI._confirmarRevogar(' + JSON.stringify(email).replace(/"/g,"'") + ',this)"'>Sim, revogar</button>' +
+          '<button class="btn btn-perigo" id="btn-confirmar-revogar" onclick="AdminCadastrosUI._confirmarRevogar(' + JSON.stringify(email).replace(/"/g,"'") + ',this)">Sim, revogar</button>' +
           '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
         '</div>' +
       '</div>';
@@ -11022,7 +11022,7 @@ var AdminCadastrosUI = (function() {
           '<option value="">— Sem setor —</option>' + setorOptions +
         '</select>' +
         '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-primario" id="btn-confirmar-editar-papel" onclick="AdminCadastrosUI._confirmarEditarPapel(' + JSON.stringify(email) + ',this)">Salvar</button>' +
+          '<button class="btn btn-primario" id="btn-confirmar-editar-papel" onclick="AdminCadastrosUI._confirmarEditarPapel(' + JSON.stringify(email).replace(/"/g,"'") + ',this)">Salvar</button>' +
           '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
         '</div>' +
       '</div>';
@@ -11797,8 +11797,8 @@ var AprovacaoReservaUI = (function() {
               (s.motivoRecusa  ? '<br><span style="color:#ef4444;font-size:12px;">Recusa: ' + escaparHtml(s.motivoRecusa) + '</span>' : '') +
             '</div>' +
             (isPendente ? '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-              '<button class="btn btn-primario btn-sm" id="btn-apr-' + s.id + '" onclick="AprovacaoReservaUI.aprovar(' + JSON.stringify(s.id) + ',this)">Aprovar</button>' +
-              '<button class="btn btn-ghost btn-sm" id="btn-rec-' + s.id + '" onclick="AprovacaoReservaUI.recusar(' + JSON.stringify(s.id) + ',this)">Recusar</button>' +
+              '<button class="btn btn-primario btn-sm" id="btn-apr-' + s.id + '" onclick="AprovacaoReservaUI.aprovar(' + JSON.stringify(s.id).replace(/"/g,"'") + ',this)">Aprovar</button>' +
+              '<button class="btn btn-ghost btn-sm" id="btn-rec-' + s.id + '" onclick="AprovacaoReservaUI.recusar(' + JSON.stringify(s.id).replace(/"/g,"'") + ',this)">Recusar</button>' +
             '</div>' : '') +
           '</div></div>';
       }).join('');
