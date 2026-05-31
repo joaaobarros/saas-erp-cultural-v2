@@ -5,18 +5,25 @@
 
 // ═══════════════════════════════════════════════════════════
 // MAPA EDITOR — Editor visual de posicionamento de espaços
+// Suporta: redimensionar simétrico (arrastar), assimétrico (Ctrl/Shift),
+//          polígono livre (editar vértices), inserção/exclusão de vértices,
+//          mesclagem de formas e rotação.
 // ═══════════════════════════════════════════════════════════
 var MapaEditorUI = (function() {
 
   // ── Estado ───────────────────────────────────────────────
-  var _cb        = null;  // callback(mapaConfig | null) ao salvar
-  var _cfg       = null;  // { forma, cx, cy, w, h, r, rotacao }
-  var _cfgOrig   = null;  // config ao abrir (para cancelar)
-  var _espacos   = [];    // todos os espaços (para contexto)
-  var _espacoId  = null;  // id do espaço sendo editado
-  var _nomEspaco = '';    // nome do espaço sendo editado
-  var _drag      = null;  // { type, startX, startY, origCX, origCY, origW, origH, origR, origRot, startAngle }
-  var _edSvg     = null;  // referência ao SVG do editor
+  var _cb        = null;
+  var _cfg       = null;   // { forma, cx, cy, w, h, r, rotacao, pontos? }
+  var _cfgOrig   = null;
+  var _espacos   = [];
+  var _espacoId  = null;
+  var _nomEspaco = '';
+  var _drag      = null;   // { type:'body'|'resize'|'rotate'|'vertex', ... }
+  var _edSvg     = null;
+  var _edZoom_   = 1;
+  var _edPanX    = 0;
+  var _edPanY    = 0;
+  var _edDragPan = null;
 
   // ── Figuras predefinidas ────────────────────────────────
   var _FORMAS = [
@@ -31,9 +38,9 @@ var MapaEditorUI = (function() {
     { id:'pent',    label:'Pentágono', w:100, h:95,  r:0  }
   ];
 
-  // ── SVG helpers ──────────────────────────────────────────
   var _NS = 'http://www.w3.org/2000/svg';
 
+  // ── Helpers de polígono ─────────────────────────────────
   function _polyCircle(n, rx, ry, startDeg) {
     var pts = [];
     for (var i = 0; i < n; i++) {
@@ -44,6 +51,9 @@ var MapaEditorUI = (function() {
   }
 
   function _cfgPontos(cfg) {
+    if (cfg.forma === 'poly_custom' && cfg.pontos && cfg.pontos.length) {
+      return cfg.pontos.map(function(p) { return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+    }
     var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
     switch (cfg.forma) {
       case 'tri':     return '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh;
@@ -75,6 +85,12 @@ var MapaEditorUI = (function() {
         el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
         el.setAttribute('rx', hw); el.setAttribute('ry', hh);
         return el;
+      case 'poly_custom':
+        el = document.createElementNS(_NS, 'polygon');
+        el.setAttribute('points', (cfg.pontos || []).map(function(p) {
+          return p.x.toFixed(1) + ',' + p.y.toFixed(1);
+        }).join(' '));
+        return el;
       default:
         el = document.createElementNS(_NS, 'polygon');
         el.setAttribute('points', _cfgPontos(cfg));
@@ -84,7 +100,79 @@ var MapaEditorUI = (function() {
 
   function _bboxHW(cfg) {
     if (cfg.forma === 'circle') { var r = cfg.r || 40; return { hw: r, hh: r }; }
+    if (cfg.forma === 'poly_custom' && cfg.pontos && cfg.pontos.length) {
+      var hwM = 1, hhM = 1;
+      cfg.pontos.forEach(function(p) {
+        if (Math.abs(p.x) > hwM) hwM = Math.abs(p.x);
+        if (Math.abs(p.y) > hhM) hhM = Math.abs(p.y);
+      });
+      return { hw: hwM, hh: hhM };
+    }
     return { hw: (cfg.w || 100) / 2, hh: (cfg.h || 80) / 2 };
+  }
+
+  // ── Converter forma para polígono livre ──────────────────
+  function _toPolyCustom(cfg) {
+    if (cfg.forma === 'poly_custom') return JSON.parse(JSON.stringify(cfg));
+    var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
+    var pts;
+    switch (cfg.forma) {
+      case 'rect': case 'square':
+        pts = [{x:-hw,y:-hh},{x:hw,y:-hh},{x:hw,y:hh},{x:-hw,y:hh}];
+        break;
+      case 'circle': {
+        var r = cfg.r || hw; pts = [];
+        for (var ii = 0; ii < 12; ii++) {
+          var aa = (ii * 30) * Math.PI / 180;
+          pts.push({ x: parseFloat((r * Math.cos(aa)).toFixed(1)), y: parseFloat((r * Math.sin(aa)).toFixed(1)) });
+        }
+        break;
+      }
+      case 'ellipse': {
+        pts = [];
+        for (var ii = 0; ii < 12; ii++) {
+          var aa = (ii * 30) * Math.PI / 180;
+          pts.push({ x: parseFloat((hw * Math.cos(aa)).toFixed(1)), y: parseFloat((hh * Math.sin(aa)).toFixed(1)) });
+        }
+        break;
+      }
+      case 'tri':
+        pts = [{x:0,y:-hh},{x:hw,y:hh},{x:-hw,y:hh}];
+        break;
+      case 'diamond':
+        pts = [{x:0,y:-hh},{x:hw,y:0},{x:0,y:hh},{x:-hw,y:0}];
+        break;
+      case 'trap':
+        pts = [{x:-(hw*0.7),y:-hh},{x:(hw*0.7),y:-hh},{x:hw,y:hh},{x:-hw,y:hh}];
+        break;
+      default: {
+        var pStr = _cfgPontos(cfg);
+        if (!pStr) { pts = [{x:-hw,y:-hh},{x:hw,y:-hh},{x:hw,y:hh},{x:-hw,y:hh}]; break; }
+        pts = pStr.split(' ').map(function(p) {
+          var xy = p.split(','); return { x: parseFloat(xy[0]), y: parseFloat(xy[1]) };
+        }).filter(function(p) { return !isNaN(p.x) && !isNaN(p.y); });
+        break;
+      }
+    }
+    return Object.assign(JSON.parse(JSON.stringify(cfg)), { forma: 'poly_custom', pontos: pts, w: hw * 2, h: hh * 2 });
+  }
+
+  // ── Operações sobre vértices ────────────────────────────
+  function _insertVertexOnSeg(segIdx) {
+    if (!_cfg || _cfg.forma !== 'poly_custom') return;
+    var pts = _cfg.pontos, n = pts.length;
+    var a = pts[segIdx], b = pts[(segIdx + 1) % n];
+    var mid = { x: parseFloat(((a.x + b.x) / 2).toFixed(1)), y: parseFloat(((a.y + b.y) / 2).toFixed(1)) };
+    pts.splice(segIdx + 1, 0, mid);
+    _drag = { type: 'vertex', vtxIdx: segIdx + 1, startLX: mid.x, startLY: mid.y, origX: mid.x, origY: mid.y };
+    _renderShape();
+  }
+
+  function _deleteVertex(vi) {
+    if (!_cfg || _cfg.forma !== 'poly_custom' || _cfg.pontos.length <= 3) return;
+    _cfg.pontos.splice(vi, 1);
+    _renderShape();
+    _atualizarInputs();
   }
 
   // ── Coordenadas SVG ─────────────────────────────────────
@@ -108,10 +196,10 @@ var MapaEditorUI = (function() {
     _nomEspaco = espacoNome || 'Espaço';
     _espacos   = espacos || [];
     _cb        = callback;
-    _cfg       = mapaConfig ? JSON.parse(JSON.stringify(mapaConfig))
-                            : null;
+    _cfg       = mapaConfig ? JSON.parse(JSON.stringify(mapaConfig)) : null;
     _cfgOrig   = _cfg ? JSON.parse(JSON.stringify(_cfg)) : null;
     _drag      = null;
+    _edZoom_   = 1; _edPanX = 0; _edPanY = 0;
 
     _montarOverlay();
     _renderContexto();
@@ -127,18 +215,16 @@ var MapaEditorUI = (function() {
   }
 
   function _salvar() {
-    // segundo argumento `true` indica que o usuário clicou em "Concluir" (salvo)
     if (_cb) _cb(_cfg ? JSON.parse(JSON.stringify(_cfg)) : null, true);
     fechar();
   }
 
   function _cancelar() {
-    // segundo argumento `false` indica que o usuário clicou em "Voltar" (cancelado)
     if (_cb) _cb(_cfgOrig ? JSON.parse(JSON.stringify(_cfgOrig)) : _cfgOrig, false);
     fechar();
   }
 
-  // ── Montar o overlay ─────────────────────────────────────
+  // ── Overlay HTML ─────────────────────────────────────────
   function _montarOverlay() {
     fechar();
     var ov = document.createElement('div');
@@ -146,7 +232,6 @@ var MapaEditorUI = (function() {
     ov.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;background:var(--bg,#f1f5f9);';
 
     ov.innerHTML =
-      // ─── Topbar ───
       '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface,#fff);border-bottom:1px solid var(--border,#e2e8f0);flex-shrink:0;">' +
         '<button onclick="MapaEditorUI._cancelar()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--text2,#64748b);display:flex;align-items:center;gap:4px;font-size:13px;padding:4px 8px;border-radius:6px;" onmouseover="this.style.background=\'var(--surface2,#f8fafc)\'" onmouseout="this.style.background=\'none\'">' +
           '<span class="ms ms-sm">arrow_back</span> Voltar' +
@@ -160,12 +245,14 @@ var MapaEditorUI = (function() {
           '<span class="ms ms-sm">check</span> Concluir' +
         '</button>' +
       '</div>' +
-      // ─── Corpo ───
+
       '<div style="display:flex;flex:1;overflow:hidden;">' +
-        // ─── Coluna esquerda ───
-        '<div id="ed-sidebar" style="width:210px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);padding:14px;">' +
+
+        // ─── Sidebar ───
+        '<div id="ed-sidebar" style="width:220px;flex-shrink:0;overflow-y:auto;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);padding:14px;">' +
+
           '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Figuras</div>' +
-          '<div id="ed-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:18px;">' +
+          '<div id="ed-palette" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">' +
             _FORMAS.map(function(f) {
               return '<button id="ed-pal-'+f.id+'" data-forma="'+f.id+'" onclick="MapaEditorUI._selecionarForma(\''+f.id+'\')" data-bg-skip="1" ' +
                 'style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:var(--surface2,#f8fafc);border:1.5px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;font-size:11px;color:var(--text2,#64748b);">' +
@@ -174,16 +261,56 @@ var MapaEditorUI = (function() {
               '</button>';
             }).join('') +
           '</div>' +
+
           '<div id="ed-props" style="display:none;">' +
-            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Propriedades</div>' +
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:8px;letter-spacing:.06em;">Propriedades</div>' +
             _inputProp('ed-cx', 'Posição X', 'number') +
             _inputProp('ed-cy', 'Posição Y', 'number') +
             _inputProp('ed-w',  'Largura',   'number') +
             _inputProp('ed-h',  'Altura',    'number') +
             _inputProp('ed-rot','Rotação °', 'number') +
-            '<div style="margin-top:6px;font-size:10px;color:var(--muted,#94a3b8);">Arraste a figura no mapa para posicionar. Use os pontos de alça para redimensionar.</div>' +
+            '<div style="margin-top:10px;padding:8px;background:var(--surface2,#f8fafc);border-radius:6px;font-size:10px;color:var(--text2,#64748b);line-height:2;">' +
+              '<b style="color:var(--text,#1e293b);">Atalhos de teclado</b><br>' +
+              '<b>Arrastar alça ○</b> → redimensionar<br>' +
+              '<b>Ctrl + alça lateral</b> → só aquele lado<br>' +
+              '<b>Shift + canto</b> → só aquele canto<br>' +
+              '<b>⊙ circular</b> → girar livremente<br>' +
+              '<b>Arrastar figura</b> → mover' +
+            '</div>' +
           '</div>' +
+
+          // ─── Painel vértices ───
+          '<div id="ed-vtx-panel" style="display:none;margin-top:14px;">' +
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:8px;letter-spacing:.06em;">Edição de vértices</div>' +
+            '<button id="ed-btn-vtx" onclick="MapaEditorUI._converterParaPolyCustom()" data-bg-skip="1" ' +
+                    'style="width:100%;display:flex;align-items:center;gap:6px;padding:7px 10px;' +
+                           'background:var(--surface2,#f8fafc);border:1.5px solid var(--border,#e2e8f0);' +
+                           'color:var(--text2,#64748b);border-radius:7px;cursor:pointer;font-size:11px;font-weight:500;margin-bottom:6px;">' +
+              '<span class="ms ms-sm">polyline</span> Editar vértices livremente' +
+            '</button>' +
+            '<div id="ed-vtx-tools" style="display:none;">' +
+              '<div id="ed-vtx-info" style="font-size:10px;color:var(--muted,#94a3b8);margin-bottom:8px;text-align:center;"></div>' +
+              '<div style="padding:8px;background:#f0fdf4;border-radius:6px;font-size:10px;color:#166534;line-height:2;margin-bottom:10px;">' +
+                '<b>Arrastar ●</b> → mover vértice<br>' +
+                '<b>Clicar ● verde</b> → inserir vértice<br>' +
+                '<b>Botão direito ●</b> → excluir vértice' +
+              '</div>' +
+              '<div style="font-size:10px;color:var(--muted,#94a3b8);margin-bottom:4px;font-weight:600;">Mesclar com outro espaço:</div>' +
+              '<select id="ed-merge-target" data-bg-skip="1" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:11px;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);margin-bottom:6px;">' +
+                '<option value="">— selecionar —</option>' +
+              '</select>' +
+              '<button onclick="MapaEditorUI._mesclarCom()" data-bg-skip="1" ' +
+                      'style="width:100%;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 10px;' +
+                             'background:var(--surface2,#f8fafc);border:1.5px solid var(--border,#e2e8f0);' +
+                             'color:var(--text2,#64748b);border-radius:7px;cursor:pointer;font-size:11px;margin-bottom:4px;">' +
+                '<span class="ms ms-sm">join_inner</span> Mesclar formas' +
+              '</button>' +
+              '<div style="font-size:9px;color:var(--muted,#94a3b8);line-height:1.5;">Os vértices dos dois espaços são combinados. Ajuste o resultado manualmente.</div>' +
+            '</div>' +
+          '</div>' +
+
         '</div>' +
+
         // ─── Canvas ───
         '<div style="flex:1;overflow:hidden;position:relative;">' +
           '<div style="position:absolute;bottom:8px;right:8px;z-index:1;display:flex;flex-direction:column;gap:4px;">' +
@@ -200,9 +327,18 @@ var MapaEditorUI = (function() {
             '</svg>' +
           '</div>' +
         '</div>' +
+
       '</div>' +
+
+      // ─── Status bar ───
       '<div style="padding:7px 16px;background:var(--surface,#fff);border-top:1px solid var(--border,#e2e8f0);font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' +
-        'Clique em uma figura para adicioná-la ao mapa. Arraste para mover · Alças para redimensionar · Alça circular para girar.' +
+        'Clique em uma figura para adicioná-la · ' +
+        '<b>Arrastar</b> → mover · ' +
+        '<b>Alças ○</b> → redimensionar simétrico · ' +
+        '<b>Ctrl/Shift + alça lateral</b> → só esse lado · ' +
+        '<b>Shift + canto</b> → só esse canto · ' +
+        '<b>⊙</b> → girar · ' +
+        '<b>Editar vértices</b> → forma livre' +
       '</div>';
 
     document.body.appendChild(ov);
@@ -235,7 +371,6 @@ var MapaEditorUI = (function() {
     }
   }
 
-  // Background simplificado do CCBJ (só contorno do campus + pátio)
   function _svgBackground() {
     return '<defs>' +
       '<filter id="ed-shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/></filter>' +
@@ -249,17 +384,14 @@ var MapaEditorUI = (function() {
       '</g>';
   }
 
-  // ── Zoom/pan do editor ───────────────────────────────────
-  var _edZoom_ = 1, _edPanX = 0, _edPanY = 0, _edDragPan = null;
-
+  // ── Zoom / pan ───────────────────────────────────────────
   function _edZoom(d) { _edZoom_ = Math.max(0.4, Math.min(5, _edZoom_ + d * 0.2)); _edTr(); }
   function _edResetZoom() { _edZoom_ = 1; _edPanX = 0; _edPanY = 0; _edTr(); }
   function _edTr() {
-    var inner = document.getElementById('ed-canvas-wrap');
     if (_edSvg) _edSvg.style.transform = 'scale(' + _edZoom_ + ') translate(' + _edPanX + 'px,' + _edPanY + 'px)';
   }
 
-  // ── Renderizar contexto (outros espaços) ─────────────────
+  // ── Contexto (outros espaços) ────────────────────────────
   function _renderContexto() {
     var layer = document.getElementById('ed-contexto');
     if (!layer || !_edSvg) return;
@@ -270,10 +402,8 @@ var MapaEditorUI = (function() {
       var g = document.createElementNS(_NS, 'g');
       g.setAttribute('transform', 'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
       var sh = _criarElementoForma(cfg);
-      sh.setAttribute('fill', '#e2e8f0');
-      sh.setAttribute('stroke', '#cbd5e1');
-      sh.setAttribute('stroke-width', '1');
-      sh.setAttribute('opacity', '0.7');
+      sh.setAttribute('fill', '#e2e8f0'); sh.setAttribute('stroke', '#cbd5e1');
+      sh.setAttribute('stroke-width', '1'); sh.setAttribute('opacity', '0.7');
       g.appendChild(sh);
       var txt = document.createElementNS(_NS, 'text');
       txt.setAttribute('x', '0'); txt.setAttribute('y', '4');
@@ -292,9 +422,13 @@ var MapaEditorUI = (function() {
     var hLayer = document.getElementById('ed-handles-layer');
     if (!layer || !hLayer || !_edSvg) return;
     layer.innerHTML = ''; hLayer.innerHTML = '';
-    if (!_cfg) { document.getElementById('ed-props') && (document.getElementById('ed-props').style.display = 'none'); return; }
-
-    document.getElementById('ed-props') && (document.getElementById('ed-props').style.display = '');
+    if (!_cfg) {
+      var propsEl = document.getElementById('ed-props');
+      if (propsEl) propsEl.style.display = 'none';
+      return;
+    }
+    var propsEl = document.getElementById('ed-props');
+    if (propsEl) propsEl.style.display = '';
 
     var g = document.createElementNS(_NS, 'g');
     g.id = 'ed-shape-g';
@@ -311,7 +445,7 @@ var MapaEditorUI = (function() {
     var bbox = _bboxHW(_cfg);
     var hw = bbox.hw, hh = bbox.hh;
 
-    // Label do espaço
+    // Label
     var lbl = document.createElementNS(_NS, 'text');
     lbl.setAttribute('x', '0'); lbl.setAttribute('y', '4');
     lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('dominant-baseline', 'middle');
@@ -321,31 +455,34 @@ var MapaEditorUI = (function() {
     lbl.textContent = _nomEspaco.substring(0, 12);
     g.appendChild(lbl);
 
-    // Handles de resize (8 pontos)
-    var HANDLES = [
-      { id:'nw', x:-hw, y:-hh }, { id:'n',  x:0,   y:-hh }, { id:'ne', x:hw,  y:-hh },
-      { id:'w',  x:-hw, y:0   },                              { id:'e',  x:hw,  y:0   },
-      { id:'sw', x:-hw, y:hh  }, { id:'s',  x:0,   y:hh  }, { id:'se', x:hw,  y:hh  }
-    ];
-    HANDLES.forEach(function(h) {
-      var c = document.createElementNS(_NS, 'circle');
-      c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
-      c.setAttribute('r', '6'); c.setAttribute('fill', '#fff');
-      c.setAttribute('stroke', '#4f46e5'); c.setAttribute('stroke-width', '2');
-      c.style.cursor = h.id === 'n' || h.id === 's' ? 'ns-resize'
-                     : h.id === 'e' || h.id === 'w' ? 'ew-resize' : 'nwse-resize';
-      c.setAttribute('data-handle', h.id);
-      g.appendChild(c);
-    });
+    if (_cfg.forma === 'poly_custom') {
+      _renderPolyCustomHandles(g);
+    } else {
+      // Handles de resize (8 pontos)
+      var HANDLES = [
+        { id:'nw', x:-hw, y:-hh }, { id:'n', x:0, y:-hh }, { id:'ne', x:hw, y:-hh },
+        { id:'w',  x:-hw, y:0   },                          { id:'e',  x:hw, y:0   },
+        { id:'sw', x:-hw, y:hh  }, { id:'s', x:0, y:hh  }, { id:'se', x:hw, y:hh  }
+      ];
+      HANDLES.forEach(function(h) {
+        var c = document.createElementNS(_NS, 'circle');
+        c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
+        c.setAttribute('r', '6'); c.setAttribute('fill', '#fff');
+        c.setAttribute('stroke', '#4f46e5'); c.setAttribute('stroke-width', '2');
+        c.style.cursor = (h.id === 'n' || h.id === 's') ? 'ns-resize'
+                       : (h.id === 'e' || h.id === 'w') ? 'ew-resize' : 'nwse-resize';
+        c.setAttribute('data-handle', h.id);
+        g.appendChild(c);
+      });
+    }
 
-    // Handle de rotação (círculo acima do centro)
+    // Handle de rotação (sempre presente)
     var rotOffset = hh + 24;
     var rotLine = document.createElementNS(_NS, 'line');
     rotLine.setAttribute('x1', '0'); rotLine.setAttribute('y1', -(hh + 2));
     rotLine.setAttribute('x2', '0'); rotLine.setAttribute('y2', -(hh + 18));
     rotLine.setAttribute('stroke', '#4f46e5'); rotLine.setAttribute('stroke-width', '1.5');
-    rotLine.setAttribute('stroke-dasharray', '3,2');
-    rotLine.setAttribute('pointer-events', 'none');
+    rotLine.setAttribute('stroke-dasharray', '3,2'); rotLine.setAttribute('pointer-events', 'none');
     g.appendChild(rotLine);
 
     var rotC = document.createElementNS(_NS, 'circle');
@@ -360,8 +497,57 @@ var MapaEditorUI = (function() {
     _atualizarInputs();
   }
 
+  // ── Handles de vértices para poly_custom ─────────────────
+  function _renderPolyCustomHandles(g) {
+    if (!_cfg || !_cfg.pontos) return;
+    var pts = _cfg.pontos, n = pts.length;
+
+    // Midpoints (inserir vértice)
+    for (var i = 0; i < n; i++) {
+      var a = pts[i], b = pts[(i + 1) % n];
+      var mid = document.createElementNS(_NS, 'circle');
+      mid.setAttribute('cx', ((a.x + b.x) / 2).toFixed(1));
+      mid.setAttribute('cy', ((a.y + b.y) / 2).toFixed(1));
+      mid.setAttribute('r', '5');
+      mid.setAttribute('fill', '#16a34a'); mid.setAttribute('stroke', '#fff');
+      mid.setAttribute('stroke-width', '1.5'); mid.setAttribute('opacity', '0.8');
+      mid.setAttribute('cursor', 'pointer'); mid.setAttribute('data-seg', i);
+      mid.setAttribute('title', 'Inserir vértice aqui');
+      g.appendChild(mid);
+    }
+
+    // Vértices
+    for (var i = 0; i < n; i++) {
+      var p = pts[i];
+      var c = document.createElementNS(_NS, 'circle');
+      c.setAttribute('cx', p.x.toFixed(1)); c.setAttribute('cy', p.y.toFixed(1));
+      c.setAttribute('r', '7'); c.setAttribute('fill', '#fff');
+      c.setAttribute('stroke', '#4f46e5'); c.setAttribute('stroke-width', '2.5');
+      c.setAttribute('cursor', 'move'); c.setAttribute('data-vtx', i);
+      g.appendChild(c);
+
+      var numLbl = document.createElementNS(_NS, 'text');
+      numLbl.setAttribute('x', p.x.toFixed(1)); numLbl.setAttribute('y', (p.y + 1).toFixed(1));
+      numLbl.setAttribute('text-anchor', 'middle'); numLbl.setAttribute('dominant-baseline', 'middle');
+      numLbl.setAttribute('font-size', '8'); numLbl.setAttribute('font-weight', '700');
+      numLbl.setAttribute('fill', '#4f46e5'); numLbl.setAttribute('pointer-events', 'none');
+      numLbl.textContent = i + 1;
+      g.appendChild(numLbl);
+    }
+  }
+
   // ── Inputs numéricos ─────────────────────────────────────
   function _atualizarInputs() {
+    var isPolyCustom = _cfg && _cfg.forma === 'poly_custom';
+
+    // Painel de vértices
+    var vtxPanel = document.getElementById('ed-vtx-panel');
+    if (vtxPanel) vtxPanel.style.display = _cfg ? '' : 'none';
+    var btnVtx = document.getElementById('ed-btn-vtx');
+    if (btnVtx) btnVtx.style.display = isPolyCustom ? 'none' : '';
+    var vtxTools = document.getElementById('ed-vtx-tools');
+    if (vtxTools) vtxTools.style.display = isPolyCustom ? '' : 'none';
+
     if (!_cfg) return;
     _setInp('ed-cx',  Math.round(_cfg.cx || 450));
     _setInp('ed-cy',  Math.round(_cfg.cy || 330));
@@ -369,6 +555,26 @@ var MapaEditorUI = (function() {
     _setInp('ed-w',   Math.round(bbox.hw * 2));
     _setInp('ed-h',   Math.round(bbox.hh * 2));
     _setInp('ed-rot', Math.round(_cfg.rotacao || 0));
+
+    // Info de vértices
+    var vtxInfo = document.getElementById('ed-vtx-info');
+    if (vtxInfo && isPolyCustom) {
+      vtxInfo.textContent = (_cfg.pontos || []).length + ' vértices';
+    }
+
+    // Populate merge select
+    if (isPolyCustom) {
+      var sel = document.getElementById('ed-merge-target');
+      if (sel && sel.options.length <= 1) {
+        _espacos.forEach(function(esp) {
+          if (esp.id === _espacoId || !esp.mapaConfig) return;
+          var opt = document.createElement('option');
+          opt.value = esp.id;
+          opt.textContent = esp.nome || esp.id;
+          sel.appendChild(opt);
+        });
+      }
+    }
   }
 
   function _setInp(id, v) { var el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v; }
@@ -377,17 +583,19 @@ var MapaEditorUI = (function() {
     if (!_cfg) return;
     var cx  = parseFloat((document.getElementById('ed-cx') || {}).value) || _cfg.cx;
     var cy  = parseFloat((document.getElementById('ed-cy') || {}).value) || _cfg.cy;
-    var w   = Math.max(20, parseFloat((document.getElementById('ed-w') || {}).value) || 80);
-    var h   = Math.max(20, parseFloat((document.getElementById('ed-h') || {}).value) || 60);
     var rot = parseFloat((document.getElementById('ed-rot') || {}).value) || 0;
     _cfg.cx = cx; _cfg.cy = cy;
-    if (_cfg.forma === 'circle') { _cfg.r = Math.min(w, h) / 2; _cfg.w = w; _cfg.h = h; }
-    else { _cfg.w = w; _cfg.h = h; }
     _cfg.rotacao = ((rot % 360) + 360) % 360;
+    if (_cfg.forma !== 'poly_custom') {
+      var w = Math.max(20, parseFloat((document.getElementById('ed-w') || {}).value) || 80);
+      var h = Math.max(20, parseFloat((document.getElementById('ed-h') || {}).value) || 60);
+      if (_cfg.forma === 'circle') { _cfg.r = Math.min(w, h) / 2; _cfg.w = w; _cfg.h = h; }
+      else { _cfg.w = w; _cfg.h = h; }
+    }
     _renderShape();
   }
 
-  // ── Paleta de formas ────────────────────────────────────
+  // ── Paleta ───────────────────────────────────────────────
   function _atualizarPaleteSel() {
     document.querySelectorAll('#ed-palette button').forEach(function(btn) {
       var sel = _cfg && btn.getAttribute('data-forma') === _cfg.forma;
@@ -401,9 +609,9 @@ var MapaEditorUI = (function() {
     var f = _FORMAS.filter(function(x){ return x.id === formaId; })[0];
     if (!f) return;
     if (_cfg) {
-      // Mantém posição e tamanho atuais, só muda a forma
       _cfg.forma = f.id;
       if (f.id === 'circle') { _cfg.r = Math.min(_cfg.w || f.w, _cfg.h || f.h) / 2; }
+      delete _cfg.pontos;
     } else {
       _cfg = { forma: f.id, cx: 450, cy: 330, w: f.w, h: f.h, r: f.r, rotacao: 0 };
       var remBtn = document.getElementById('ed-btn-remover');
@@ -421,33 +629,94 @@ var MapaEditorUI = (function() {
     if (remBtn) remBtn.style.display = 'none';
   }
 
-  // ── Interações (drag/resize/rotate) ──────────────────────
+  // ── Edição de vértices ───────────────────────────────────
+  function _converterParaPolyCustom() {
+    if (!_cfg) return;
+    _cfg = _toPolyCustom(_cfg);
+    _renderShape();
+    _atualizarPaleteSel();
+  }
+
+  function _mesclarCom() {
+    if (!_cfg || _cfg.forma !== 'poly_custom') return;
+    var sel = document.getElementById('ed-merge-target');
+    if (!sel || !sel.value) return;
+    var espTarget = null;
+    for (var i = 0; i < _espacos.length; i++) {
+      if (_espacos[i].id === sel.value) { espTarget = _espacos[i]; break; }
+    }
+    if (!espTarget || !espTarget.mapaConfig) return;
+
+    var cfgB = _toPolyCustom(espTarget.mapaConfig);
+    var θB = ((cfgB.rotacao || 0) * Math.PI) / 180;
+    var θA = ((_cfg.rotacao || 0) * Math.PI) / 180;
+
+    // Vértices de B → global SVG
+    var bGlobal = cfgB.pontos.map(function(p) {
+      return {
+        x: p.x * Math.cos(θB) - p.y * Math.sin(θB) + cfgB.cx,
+        y: p.x * Math.sin(θB) + p.y * Math.cos(θB) + cfgB.cy
+      };
+    });
+
+    // Global SVG → local A
+    var bLocal = bGlobal.map(function(gp) {
+      var dx = gp.x - _cfg.cx, dy = gp.y - _cfg.cy;
+      return {
+        x: parseFloat((dx * Math.cos(θA) + dy * Math.sin(θA)).toFixed(1)),
+        y: parseFloat((-dx * Math.sin(θA) + dy * Math.cos(θA)).toFixed(1))
+      };
+    });
+
+    _cfg.pontos = _cfg.pontos.concat(bLocal);
+    _renderShape();
+    _atualizarInputs();
+  }
+
+  // ── Interações ───────────────────────────────────────────
   function _initEditorIO() {
     if (!_edSvg) return;
     var wrap = document.getElementById('ed-canvas-wrap');
 
     _edSvg.addEventListener('mousedown', function(e) {
       if (!_cfg) return;
-      var handle = e.target.getAttribute && e.target.getAttribute('data-handle');
+      var handle  = e.target.getAttribute && e.target.getAttribute('data-handle');
+      var vtxAttr = e.target.getAttribute && e.target.getAttribute('data-vtx');
+      var segAttr = e.target.getAttribute && e.target.getAttribute('data-seg');
       var svgP = _svgPt(e);
 
       if (handle === 'rot') {
         e.stopPropagation(); e.preventDefault();
-        var startAngle = Math.atan2(svgP.y - _cfg.cy, svgP.x - _cfg.cx) * 180 / Math.PI;
-        _drag = { type: 'rotate', startAngle: startAngle, origRot: _cfg.rotacao || 0 };
+        _drag = { type: 'rotate',
+                  startAngle: Math.atan2(svgP.y - _cfg.cy, svgP.x - _cfg.cx) * 180 / Math.PI,
+                  origRot: _cfg.rotacao || 0 };
+
       } else if (handle) {
         e.stopPropagation(); e.preventDefault();
         var lp = _localPt(e);
         _drag = { type: 'resize', handle: handle, localPt: lp,
-                  origW: _cfg.w, origH: _cfg.h, origR: _cfg.r };
+                  origW: _cfg.w || 100, origH: _cfg.h || 80, origR: _cfg.r,
+                  origCX: _cfg.cx, origCY: _cfg.cy };
+
+      } else if (vtxAttr !== null && vtxAttr !== undefined && vtxAttr !== '') {
+        e.stopPropagation(); e.preventDefault();
+        var vi = parseInt(vtxAttr);
+        var lp2 = _localPt(e);
+        _drag = { type: 'vertex', vtxIdx: vi,
+                  startLX: lp2.x, startLY: lp2.y,
+                  origX: _cfg.pontos[vi].x, origY: _cfg.pontos[vi].y };
+
+      } else if (segAttr !== null && segAttr !== undefined && segAttr !== '') {
+        e.stopPropagation(); e.preventDefault();
+        _insertVertexOnSeg(parseInt(segAttr));
+
       } else if (e.target.closest && e.target.closest('#ed-shape-g')) {
         e.stopPropagation(); e.preventDefault();
         _drag = { type: 'body', startX: svgP.x, startY: svgP.y, origCX: _cfg.cx, origCY: _cfg.cy };
-        document.getElementById('ed-canvas-wrap').style.cursor = 'grabbing';
+        wrap.style.cursor = 'grabbing';
       }
     });
 
-    // Pan do canvas (só se não há drag de shape)
     wrap.addEventListener('mousedown', function(e) {
       if (_drag) return;
       _edDragPan = { sx: e.clientX - _edPanX * _edZoom_, sy: e.clientY - _edPanY * _edZoom_ };
@@ -461,19 +730,26 @@ var MapaEditorUI = (function() {
           var svgP = _svgPt(e);
           _cfg.cx = _drag.origCX + (svgP.x - _drag.startX);
           _cfg.cy = _drag.origCY + (svgP.y - _drag.startY);
-          // Mover o elemento diretamente para evitar re-render completo
-          var g = document.getElementById('ed-shape-g');
-          if (g) g.setAttribute('transform', 'translate(' + _cfg.cx + ',' + _cfg.cy + ') rotate(' + (_cfg.rotacao || 0) + ')');
+          var gEl = document.getElementById('ed-shape-g');
+          if (gEl) gEl.setAttribute('transform', 'translate(' + _cfg.cx + ',' + _cfg.cy + ') rotate(' + (_cfg.rotacao || 0) + ')');
           _atualizarInputs();
+
         } else if (_drag.type === 'resize') {
-          var lp = _localPt(e);
-          _resize(lp);
+          _resize(_localPt(e), e);
+
         } else if (_drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
-          var curAngle = Math.atan2(svgP2.y - _cfg.cy, svgP2.x - _cfg.cx) * 180 / Math.PI;
-          _cfg.rotacao = (((_drag.origRot + curAngle - _drag.startAngle) % 360) + 360) % 360;
+          var cur = Math.atan2(svgP2.y - _cfg.cy, svgP2.x - _cfg.cx) * 180 / Math.PI;
+          _cfg.rotacao = (((_drag.origRot + cur - _drag.startAngle) % 360) + 360) % 360;
+          _renderShape();
+
+        } else if (_drag.type === 'vertex') {
+          var lp3 = _localPt(e);
+          _cfg.pontos[_drag.vtxIdx].x = parseFloat((_drag.origX + (lp3.x - _drag.startLX)).toFixed(1));
+          _cfg.pontos[_drag.vtxIdx].y = parseFloat((_drag.origY + (lp3.y - _drag.startLY)).toFixed(1));
           _renderShape();
         }
+
       } else if (_edDragPan) {
         _edPanX = (e.clientX - _edDragPan.sx) / _edZoom_;
         _edPanY = (e.clientY - _edDragPan.sy) / _edZoom_;
@@ -483,10 +759,18 @@ var MapaEditorUI = (function() {
 
     document.addEventListener('mouseup', function() {
       if (_drag && (_drag.type === 'resize' || _drag.type === 'rotate')) _renderShape();
-      if (_drag) { document.getElementById('ed-canvas-wrap') && (document.getElementById('ed-canvas-wrap').style.cursor = 'grab'); }
+      if (_drag) wrap.style.cursor = 'grab';
       _drag = null; _edDragPan = null;
-      var wrap2 = document.getElementById('ed-canvas-wrap');
-      if (wrap2) wrap2.style.cursor = 'grab';
+      if (wrap) wrap.style.cursor = 'grab';
+    });
+
+    // Botão direito em vértice → excluir
+    _edSvg.addEventListener('contextmenu', function(e) {
+      var vtxAttr = e.target.getAttribute && e.target.getAttribute('data-vtx');
+      if (vtxAttr !== null && vtxAttr !== undefined && vtxAttr !== '') {
+        e.preventDefault();
+        _deleteVertex(parseInt(vtxAttr));
+      }
     });
 
     _edSvg.addEventListener('wheel', function(e) {
@@ -495,44 +779,85 @@ var MapaEditorUI = (function() {
     }, { passive: false });
   }
 
-  function _resize(lp) {
+  // ── Redimensionar ────────────────────────────────────────
+  function _resize(lp, e) {
     if (!_drag || !_cfg) return;
     var h = _drag.handle;
     var minSz = 20;
+    var oneSided = e && (e.ctrlKey || e.shiftKey);
 
     if (_cfg.forma === 'circle') {
-      // Círculo: resize uniforme
       var dist = Math.sqrt(lp.x * lp.x + lp.y * lp.y);
       var newR = Math.max(minSz / 2, dist);
       _cfg.r = newR; _cfg.w = newR * 2; _cfg.h = newR * 2;
-      var g = document.getElementById('ed-shape-g');
-      if (g) {
-        var c = g.querySelector('circle');
-        if (c) c.setAttribute('r', newR);
+      var gEl = document.getElementById('ed-shape-g');
+      if (gEl) {
+        var circ = gEl.querySelector('circle[r]');
+        if (circ && !circ.getAttribute('data-handle') && !circ.getAttribute('data-vtx')) {
+          circ.setAttribute('r', newR);
+        }
       }
       _atualizarInputs(); return;
     }
 
-    var newHW = Math.abs(lp.x) < minSz / 2 ? minSz / 2 : Math.abs(lp.x);
-    var newHH = Math.abs(lp.y) < minSz / 2 ? minSz / 2 : Math.abs(lp.y);
+    var origHW = (_drag.origW || 100) / 2;
+    var origHH = (_drag.origH || 80) / 2;
 
-    if (h === 'n' || h === 's')  newHW = _drag.origW / 2;
-    if (h === 'e' || h === 'w')  newHH = _drag.origH / 2;
+    if (!oneSided) {
+      // ── Simétrico (comportamento padrão) ──
+      var newHW = Math.max(minSz / 2, Math.abs(lp.x));
+      var newHH = Math.max(minSz / 2, Math.abs(lp.y));
+      if (h === 'n' || h === 's') newHW = origHW;
+      if (h === 'e' || h === 'w') newHH = origHH;
+      _cfg.w = newHW * 2; _cfg.h = newHH * 2;
+      _atualizarInputs(); return;
+    }
+
+    // ── Assimétrico: Ctrl/Shift (lado oposto fixo, centro desloca) ──
+    var isN = (h === 'n' || h === 'nw' || h === 'ne');
+    var isS = (h === 's' || h === 'sw' || h === 'se');
+    var isE = (h === 'e' || h === 'ne' || h === 'se');
+    var isW = (h === 'w' || h === 'nw' || h === 'sw');
+
+    var newHW = origHW, newHH = origHH;
+    var dxLocal = 0, dyLocal = 0;
+
+    if (isN) {
+      newHH = Math.max(minSz / 2, (origHH - lp.y) / 2);
+      dyLocal = origHH - newHH;   // centro desce em coords locais
+    } else if (isS) {
+      newHH = Math.max(minSz / 2, (lp.y + origHH) / 2);
+      dyLocal = newHH - origHH;
+    }
+    if (isE) {
+      newHW = Math.max(minSz / 2, (lp.x + origHW) / 2);
+      dxLocal = newHW - origHW;
+    } else if (isW) {
+      newHW = Math.max(minSz / 2, (origHW - lp.x) / 2);
+      dxLocal = origHW - newHW;
+    }
 
     _cfg.w = newHW * 2; _cfg.h = newHH * 2;
+
+    // Converter deslocamento local → SVG (aplicar rotação)
+    var θ = ((_cfg.rotacao || 0) * Math.PI) / 180;
+    _cfg.cx = _drag.origCX + dxLocal * Math.cos(θ) - dyLocal * Math.sin(θ);
+    _cfg.cy = _drag.origCY + dxLocal * Math.sin(θ) + dyLocal * Math.cos(θ);
     _atualizarInputs();
   }
 
   // ── API pública ─────────────────────────────────────────
   return {
-    abrir:          abrir,
-    fechar:         fechar,
-    _cancelar:      _cancelar,
-    _salvar:        _salvar,
-    _selecionarForma: _selecionarForma,
-    _removerDoMapa: _removerDoMapa,
-    _onInputChange: _onInputChange,
-    _edZoom:        _edZoom,
-    _edResetZoom:   _edResetZoom
+    abrir:                    abrir,
+    fechar:                   fechar,
+    _cancelar:                _cancelar,
+    _salvar:                  _salvar,
+    _selecionarForma:         _selecionarForma,
+    _removerDoMapa:           _removerDoMapa,
+    _converterParaPolyCustom: _converterParaPolyCustom,
+    _mesclarCom:              _mesclarCom,
+    _onInputChange:           _onInputChange,
+    _edZoom:                  _edZoom,
+    _edResetZoom:             _edResetZoom
   };
 })();

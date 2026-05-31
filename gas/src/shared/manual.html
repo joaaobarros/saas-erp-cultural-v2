@@ -1,12 +1,9 @@
-<!--
-@file shared/manual.html
-@layer frontend/shared
-@description ManualUI — manual de uso do sistema filtrado por permissões.
-             Context-aware: abre na seção do módulo que o usuário estava usando.
-             Reapresenta automaticamente quando as permissões do usuário são atualizadas.
-@depends index.html: Router, _boot, escaparHtml, Toast
--->
-<script>
+// @file shared/manual.html
+// @layer frontend/shared
+// @description ManualUI — manual de uso do sistema filtrado por permissões.
+//              Context-aware: abre na seção do módulo que o usuário estava usando.
+//              Reapresenta automaticamente quando as permissões do usuário são atualizadas.
+// @depends index.html: Router, _boot, escaparHtml, Toast
 var ManualUI = (function () {
   'use strict';
 
@@ -323,7 +320,18 @@ var ManualUI = (function () {
         if (feat && feat.gerenciar_espacos) {
           html += _h2('<span class="ms ms-sm">settings</span> Administrar espaços')
             + _card('add_home', 'Criar espaço', 'Cadastre nome, capacidade, recursos disponíveis e se aceita reservas.')
-            + _card('edit', 'Editar ou desativar', 'Atualize as informações ou desative temporariamente espaços em manutenção.');
+            + _card('edit', 'Editar ou desativar', 'Atualize as informações ou desative temporariamente espaços em manutenção.')
+            + _h2('<span class="ms ms-sm">map</span> Editor de Mapa — posicionamento e forma dos espaços')
+            + _card('open_with', 'Mover espaço', 'Arraste a figura para posicioná-la na planta. Use os botões + / − para zoom e arraste o fundo para navegar.')
+            + _card('crop_free', 'Redimensionar (simétrico)', 'Arraste qualquer alça ○ nas bordas ou cantos: o espaço cresce ou encolhe a partir do centro, espelhando os dois lados.')
+            + _card('arrow_outward', 'Redimensionar assimétrico — Ctrl + alça lateral', 'Segure Ctrl e arraste uma alça lateral (topo, base, esquerda ou direita): apenas aquele lado se move. O lado oposto permanece fixo e o centro desloca.')
+            + _card('south_east', 'Redimensionar assimétrico — Shift + canto', 'Segure Shift e arraste um canto (ex.: canto superior esquerdo): apenas aquele canto se move. O canto oposto fica ancorado e o centro ajusta automaticamente.')
+            + _card('rotate_right', 'Girar', 'Arraste a alça circular ⊙ acima da figura para girá-la livremente.')
+            + _card('polyline', 'Editar vértices livremente', 'Clique em "Editar vértices livremente" na barra lateral para converter qualquer figura em polígono livre. Isso permite criar formas irregulares — L, U, T, ou qualquer contorno personalizado.')
+            + _card('add_location', 'Inserir vértice', 'No modo polígono livre, os pontos ● verdes aparecem no meio de cada segmento. Clique em um deles para inserir um novo vértice naquele ponto e depois arraste-o para a posição desejada.')
+            + _card('close', 'Excluir vértice', 'No modo polígono livre, clique com o botão direito sobre um vértice ● branco para removê-lo. O mínimo é 3 vértices.')
+            + _card('join_inner', 'Mesclar formas', 'No modo polígono livre, selecione outro espaço no campo "Mesclar com" e clique em Mesclar. Os vértices dos dois espaços são combinados em uma única forma. Ajuste os vértices resultantes manualmente para obter o contorno desejado.')
+            + _calloutInfo('Dica: para espaços em "L" ou "U", converta o retângulo para polígono livre, insira vértices nos cantos intermediários e mova-os para criar a reentrância.');
         }
         if (feat && feat.gerenciar_ativos) {
           html += _h2('<span class="ms ms-sm">inventory</span> Inventário de ativos')
@@ -962,4 +970,3 @@ var ManualUI = (function () {
   };
 
 })();
-</script>
