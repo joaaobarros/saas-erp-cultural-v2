@@ -7964,7 +7964,8 @@ var GAS = {
     obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); },
     obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); },
     // Manutenção de espaço
-    alternarManutencao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarManutencaoEspaco({espacoId:id}); }
+    alternarManutencao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarManutencaoEspaco({espacoId:id}); },
+    alternarReserva:        function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarReservaEspaco(id); }
   },
   // Painel de Orgs — Fase 9 (superadmin)
   orgs: {
@@ -11221,6 +11222,7 @@ var AdminCadastrosUI = (function() {
           '<div style="display:flex;gap:6px;">' +
             '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.abrirModalEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Editar</button>' +
             (e.ativo !== false ? '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.desativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Desativar</button>' : '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.reativarEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)">Reativar</button>') +
+            '<button class="btn btn-ghost btn-sm" onclick="AdminCadastrosUI.toggleReservaEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ',this)" title="' + (e.aceitaReserva !== false ? 'Desabilitar reservas' : 'Habilitar reservas') + '">' + (e.aceitaReserva !== false ? 'Bloquear reservas' : 'Liberar reservas') + '</button>' +
             '<button class="btn btn-ghost btn-sm" style="color:var(--color-error,#ef4444);" onclick="AdminCadastrosUI.excluirEspaco(' + JSON.stringify(e.id).replace(/"/g,"'") + ')" data-bg-skip="1">Excluir</button>' +
           '</div></div>';
       }).join('') : '<p class="muted-text">Nenhum espaço cadastrado.</p>';
@@ -11589,38 +11591,85 @@ var AdminCadastrosUI = (function() {
     if (!sel) return;
     var novoPapel = sel.value;
     if (wrapM) wrapM.innerHTML = _renderMatrizPermissoes(novoPapel, {});
-    if (wrapF) wrapF.innerHTML = _renderFeaturesModal(novoPapel, {});
+    if (wrapF) wrapF.innerHTML = _renderFeaturesModal(novoPapel, {}, {});
+    _sincronizarFeaturesComModulos();
   }
 
-  function _renderFeaturesModal(papel, featuresOverride) {
+  function _renderFeaturesModal(papel, featuresOverride, permOverrides) {
     var cat = ((App.getBoot() || {}).featuresCatalogo) || {};
+    var basePerms = _PERM_MATRIZ[papel] || _PERM_MATRIZ.colaborador;
     var modulos = Object.keys(cat);
     if (!modulos.length) return '<p style="font-size:12px;color:var(--muted);">Catálogo não disponível.</p>';
     return modulos.map(function(modulo) {
       var feats = cat[modulo];
       if (!feats || !feats.length) return '';
       var modInfo = _PERM_MODULOS.find(function(m) { return m.id === modulo; });
+
+      // Determina se o módulo está ativo (tem permissão de visualizar)
+      var bv = (basePerms[modulo] || {v:0}).v;
+      var permOvrMod = permOverrides && permOverrides[modulo];
+      var ovrV = permOvrMod !== undefined ? permOvrMod.visualizar : undefined;
+      var moduloAtivo = (ovrV !== undefined) ? !!ovrV : !!bv;
+      var muteRow = moduloAtivo ? '' : 'opacity:0.45;pointer-events:none;';
+
       var rows = feats.map(function(feat) {
         var padrao   = feat.papeis && feat.papeis.indexOf(papel) !== -1;
         var ovrMod   = featuresOverride && featuresOverride[modulo];
         var ovr      = ovrMod && ovrMod[feat.id];
         var valFinal = (ovr !== undefined) ? !!ovr : padrao;
-        var temOvr   = (ovr !== undefined && !!ovr !== padrao);
-        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border-subtle);">' +
+        var temOvr   = moduloAtivo && (ovr !== undefined && !!ovr !== padrao);
+        return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border-subtle);' + muteRow + '">' +
           '<input type="checkbox" id="feat-' + modulo + '-' + feat.id + '"' +
           (valFinal ? ' checked' : '') +
-          ' style="width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:' + (temOvr ? 'var(--accent)' : 'var(--muted)') + ';">' +
-          '<label for="feat-' + modulo + '-' + feat.id + '" style="font-size:13px;cursor:pointer;' + (temOvr ? 'color:var(--accent);font-weight:500;' : '') + '">' +
+          (moduloAtivo ? '' : ' disabled') +
+          ' style="width:15px;height:15px;cursor:' + (moduloAtivo ? 'pointer' : 'not-allowed') + ';flex-shrink:0;accent-color:' + (temOvr ? 'var(--accent)' : 'var(--muted)') + ';">' +
+          '<label for="feat-' + modulo + '-' + feat.id + '" style="font-size:13px;cursor:' + (moduloAtivo ? 'pointer' : 'default') + ';' + (temOvr ? 'color:var(--accent);font-weight:500;' : '') + '">' +
             escaparHtml(feat.label) +
           '</label>' +
           '</div>';
       }).join('');
-      return '<div style="margin-bottom:14px;">' +
-        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;padding:4px 0;">' +
+
+      return '<div style="margin-bottom:14px;" data-feat-modulo="' + modulo + '">' +
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;padding:4px 0;display:flex;align-items:center;gap:6px;' + (moduloAtivo ? '' : 'opacity:0.5;') + '">' +
           escaparHtml((modInfo && modInfo.label) || modulo) +
+          (!moduloAtivo ? '<span style="font-size:9px;font-weight:400;text-transform:none;font-style:italic;letter-spacing:0;">módulo sem acesso</span>' : '') +
         '</div>' + rows +
         '</div>';
     }).filter(Boolean).join('');
+  }
+
+  function _sincronizarFeaturesComModulos() {
+    var cat = ((App.getBoot() || {}).featuresCatalogo) || {};
+    _PERM_MODULOS.forEach(function(m) {
+      var chkVer = document.getElementById('perm-' + m.id + '-v');
+      if (!chkVer) return;
+      chkVer.addEventListener('change', function() {
+        var ativo = this.checked;
+        var feats = cat[m.id] || [];
+        var container = document.querySelector('[data-feat-modulo="' + m.id + '"]');
+        if (!container) return;
+        feats.forEach(function(feat) {
+          var chk = document.getElementById('feat-' + m.id + '-' + feat.id);
+          if (!chk) return;
+          chk.disabled = !ativo;
+          chk.style.cursor = ativo ? 'pointer' : 'not-allowed';
+          var row = chk.parentElement;
+          if (row) { row.style.opacity = ativo ? '' : '0.45'; row.style.pointerEvents = ativo ? '' : 'none'; }
+        });
+        var label = container.querySelector('div');
+        if (label) {
+          label.style.opacity = ativo ? '' : '0.5';
+          var msg = label.querySelector('.feat-inativo-msg');
+          if (!ativo && !msg) {
+            var s = document.createElement('span');
+            s.className = 'feat-inativo-msg';
+            s.style.cssText = 'font-size:9px;font-weight:400;text-transform:none;font-style:italic;letter-spacing:0;';
+            s.textContent = 'módulo sem acesso';
+            label.appendChild(s);
+          } else if (ativo && msg) { msg.remove(); }
+        }
+      });
+    });
   }
 
   function editarPapel(email) {
@@ -11661,7 +11710,7 @@ var AdminCadastrosUI = (function() {
             (temFeatOvr ? '<span style="background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;">customizado</span>' : '') +
           '</summary>' +
           '<p style="font-size:11px;color:var(--muted);margin:4px 0 8px;">Controles granulares dentro de cada módulo. Padrão vem do Papel. Override ativo = roxo.</p>' +
-          '<div id="edit-feat-wrap">' + _renderFeaturesModal(papelAtual, featOvr) + '</div>' +
+          '<div id="edit-feat-wrap">' + _renderFeaturesModal(papelAtual, featOvr, permOvr) + '</div>' +
         '</details>' +
 
         '<div style="display:flex;gap:8px;">' +
@@ -11670,6 +11719,7 @@ var AdminCadastrosUI = (function() {
         '</div>' +
       '</div>';
     _abrirModalSimples(html, 'edit-papel', papelAtual);
+    _sincronizarFeaturesComModulos();
     var selSetor = document.getElementById('edit-setor');
     if (selSetor && u.setor) selSetor.value = u.setor;
   }
@@ -11760,6 +11810,22 @@ var AdminCadastrosUI = (function() {
         liberar();
         if (r && r.ok) { Toast.sucesso('Espaço reativado.'); carregarEspacos(); }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+      });
+    });
+  }
+
+  function toggleReservaEspaco(id, btn) {
+    var espaco = _espacos.find(function(e){ return e.id === id; }) || {};
+    var ativando = espaco.aceitaReserva === false;
+    BtnGuard.wrap(btn, ativando ? 'Liberando…' : 'Bloqueando…', function(liberar) {
+      GAS.admin.alternarReserva(id, function(r) {
+        liberar();
+        if (r && r.ok) {
+          Toast.sucesso(r.data && r.data.aceitaReserva ? 'Reservas liberadas.' : 'Reservas bloqueadas.');
+          carregarEspacos();
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        }
       });
     });
   }
@@ -12263,7 +12329,7 @@ var AdminCadastrosUI = (function() {
     revogarUsuario: revogarUsuario,   _confirmarRevogar: _confirmarRevogar,
     editarPapel: editarPapel,         _confirmarEditarPapel: _confirmarEditarPapel, _atualizarMatrizAoPapelMudar: _atualizarMatrizAoPapelMudar,
     desativarEspaco: desativarEspaco, _confirmarDesativarEspaco: _confirmarDesativarEspaco,
-    reativarEspaco: reativarEspaco,
+    reativarEspaco: reativarEspaco, toggleReservaEspaco: toggleReservaEspaco,
     excluirEspaco: excluirEspaco, _confirmarExcluirEspaco: _confirmarExcluirEspaco, injetarEspacos: function(lista) { lista.forEach(function(e){ var i=_espacos.findIndex(function(x){return x.id===e.id;}); if(i>=0)_espacos[i]=e; else _espacos.push(e); }); },
     abrirModalEspaco: abrirModalEspaco, salvarEspaco: salvarEspaco,
     _editarMapa: _editarMapa,

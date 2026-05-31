@@ -196,6 +196,28 @@ var ConfigAdminService = (function () {
   /**
    * Desativa um espaço (não exclui — preserva histórico de reservas).
    */
+  function alternarReservaEspaco(espacoId) {
+    _assertAdmin();
+    var orgId = getOrgConfig().orgId;
+    var email = getEmailSessao();
+    var novoStatus = false;
+
+    modifyJSON('espacos_config.json', function(lista) {
+      var espaco = lista.find(function(e) { return e.id === espacoId && e.orgId === orgId; });
+      if (!espaco) throw new Error('Espaço não encontrado: ' + espacoId);
+      novoStatus = espaco.aceitaReserva === false; // toggle
+      espaco.aceitaReserva = novoStatus;
+      espaco.atualizadoEm  = agora();
+      espaco.versao        = (espaco.versao || 0) + 1;
+      return lista;
+    });
+
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('ESPACO_RESERVA_ALTERNADA', 'espaco',
+      { entidadeId: espacoId, orgId: orgId, usuario: email, aceitaReserva: novoStatus });
+    return { espacoId: espacoId, aceitaReserva: novoStatus };
+  }
+
   function desativarEspaco(espacoId) {
     _assertAdmin();
     var orgId = getOrgConfig().orgId;
@@ -555,6 +577,7 @@ var ConfigAdminService = (function () {
   return {
     listarEspacos:               listarEspacos,
     salvarEspaco:                salvarEspaco,
+    alternarReservaEspaco:       alternarReservaEspaco,
     desativarEspaco:             desativarEspaco,
     excluirEspaco:               excluirEspaco,
     alternarItemFixo:            alternarItemFixo,

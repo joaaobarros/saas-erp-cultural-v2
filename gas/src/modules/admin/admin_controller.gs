@@ -79,6 +79,12 @@ function ctrl_admin_salvarTerreno(params) {
   }, 'ctrl_admin_salvarTerreno');
 }
 
+function ctrl_admin_alternarReservaEspaco(espacoId) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.alternarReservaEspaco(espacoId);
+  }, 'ctrl_admin_alternarReservaEspaco');
+}
+
 function ctrl_admin_desativarEspaco(espacoId) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.desativarEspaco(espacoId);
