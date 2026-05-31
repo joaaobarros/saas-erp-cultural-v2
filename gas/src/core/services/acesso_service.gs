@@ -311,11 +311,10 @@ var AcessoService = (function () {
       return String(r.email || '').toLowerCase() === emailNorm;
     });
     if (existente) {
-      if (existente.status !== 'ativo') {
-        existente.status = 'ativo';
-        existente.papel  = 'admin';
-        _salvarRegistros(registros);
-      }
+      var changed = false;
+      if (existente.status !== 'ativo') { existente.status = 'ativo'; changed = true; }
+      if (existente.papel !== 'admin' && existente.papel !== 'superadmin') { existente.papel = 'admin'; changed = true; }
+      if (changed) _salvarRegistros(registros);
       return;
     }
     registros.push({
@@ -441,6 +440,18 @@ function ctrl_acesso_aprovar(params) {
 function ctrl_acesso_revogar(params) {
   return GasResponse.wrap(function () {
     var emailAdmin = getEmailSessao();
+    var acessoCaller = AcessoService.verificar(emailAdmin);
+    var papelCaller  = acessoCaller && acessoCaller.registro ? (acessoCaller.registro.papel || '') : '';
+
+    // Admin não pode revogar admin nem superadmin
+    if (papelCaller !== 'superadmin' && (papelCaller === 'admin' || papelCaller !== '')) {
+      var listaAtual = AcessoService.listarUsuarios();
+      var alvoAtual  = listaAtual.find(function(u) { return u.email === (params && params.emailAlvo); });
+      var alvoPapel  = alvoAtual ? (alvoAtual.papel || 'colaborador') : 'colaborador';
+      if (alvoPapel === 'admin' || alvoPapel === 'superadmin') {
+        throw new Error('Apenas SuperAdmin pode revogar usuários com papel admin ou superadmin.');
+      }
+    }
     return AcessoService.revogarAcesso(Object.assign(params || {}, { emailAdmin: emailAdmin }));
   }, 'ctrl_acesso_revogar');
 }
@@ -473,21 +484,55 @@ function ctrl_acesso_editarPapel(params) {
     if (!ehAdmin) throw new Error('Acesso negado: apenas administradores podem editar papéis.');
     if (!params || !params.email) throw new Error('Email do usuário é obrigatório.');
 
-    var PAPEIS_VALIDOS = ['colaborador','admin','superadmin','habilitador','comunicacao','rh'];
+    var PAPEIS_VALIDOS = [
+      'colaborador', 'habilitador', 'rh', 'financeiro',
+      'comunicacao', 'gestor', 'admin', 'superadmin'
+    ];
     if (params.papel && PAPEIS_VALIDOS.indexOf(params.papel) === -1)
       throw new Error('Papel inválido: ' + params.papel + '. Válidos: ' + PAPEIS_VALIDOS.join(', '));
+
+    // Hierarquia: admin não pode editar admin/superadmin; só superadmin pode
+    var papelCaller = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
+    if (papelCaller !== 'superadmin') {
+      var PAPEIS_RESTRITOS = ['admin', 'superadmin'];
+      // Verificar papel atual do alvo antes de permitir edição
+      var listaAtual = AcessoService.listarUsuarios();
+      var alvoAtual  = listaAtual.find(function(u) { return u.email === params.email; });
+      var alvoPapel  = alvoAtual ? (alvoAtual.papel || 'colaborador') : 'colaborador';
+      if (PAPEIS_RESTRITOS.indexOf(alvoPapel) !== -1) {
+        throw new Error('Apenas SuperAdmin pode editar usuários com papel admin ou superadmin.');
+      }
+      if (params.papel && PAPEIS_RESTRITOS.indexOf(params.papel) !== -1) {
+        throw new Error('Apenas SuperAdmin pode atribuir papel admin ou superadmin.');
+      }
+    }
 
     modifyJSON('usuarios_acesso.json', function(lista) {
       if (!Array.isArray(lista)) lista = [];
       var usr = lista.find(function(u) { return u.email === params.email; });
       if (!usr) throw new Error('Usuário não encontrado: ' + params.email);
       if (params.papel)  usr.papel  = params.papel;
-      if (params.setor)  usr.setor  = params.setor;
+      if (params.setor !== undefined) usr.setor = params.setor || '';
       if (params.status) usr.status = params.status;
+      // permissoesOverride: null ou {} remove overrides, objeto define overrides por módulo
+      if (params.permissoesOverride !== undefined) {
+        usr.permissoesOverride = (params.permissoesOverride && Object.keys(params.permissoesOverride).length > 0)
+          ? params.permissoesOverride
+          : null;
+      }
+      // featuresOverride: null ou {} remove overrides, objeto define features por módulo
+      if (params.featuresOverride !== undefined) {
+        usr.featuresOverride = (params.featuresOverride && Object.keys(params.featuresOverride).length > 0)
+          ? params.featuresOverride
+          : null;
+      }
       usr.atualizadoEm = agora();
       usr.atualizadoPor = emailAdmin;
       return lista;
     });
+
+    // Invalida o cache de boot do usuário editado para refletir novas permissões
+    try { BootService.limparCache(params.email); } catch(_e) {}
 
     AuditoriaService.registrar('USUARIO_PAPEL_EDITADO', 'acesso',
       { email: params.email, papel: params.papel, setor: params.setor, admin: emailAdmin });

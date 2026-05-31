@@ -34,7 +34,7 @@ function _assertRH(papel) {
     throw new Error('Permissão insuficiente. Apenas RH, Admin ou SuperAdmin podem operar holerites.');
 }
 
-function _assertAdmin(papel) {
+function _assertHolAdmin(papel) {
   if (['superadmin','admin'].indexOf(papel) < 0)
     throw new Error('Permissão insuficiente. Apenas Admin ou SuperAdmin podem executar esta operação.');
 }
@@ -179,7 +179,7 @@ function ctrl_holerite_marcarPago(id) {
 function ctrl_holerite_cancelar(id, motivo) {
   return GasResponse.wrap(function() {
     var ctx = _ctxHolerite();
-    _assertAdmin(ctx.papel);
+    _assertHolAdmin(ctx.papel);
     if (!id) throw new Error('id é obrigatório.');
     return HoleriteRepository.cancelar(ctx.orgId, id, motivo || '', ctx.email);
   }, 'ctrl_holerite_cancelar');

@@ -48,17 +48,6 @@ var BootService = (function () {
     var espacos      = _carregarEspacos(orgId);
     var itens        = _carregarItens(orgId);
 
-    // PermissoesService.obter() retorna null quando PermissoesV2Engine não está disponível;
-    // nesse caso, usa perfil mínimo seguro para não bloquear o boot.
-    var permissoes;
-    try {
-      permissoes = typeof PermissoesService !== 'undefined'
-        ? (PermissoesService.obter(email) || { perfil: 'usuario', setores: [] })
-        : { perfil: 'usuario', setores: [] };
-    } catch(e) {
-      permissoes = { perfil: 'usuario', setores: [] };
-    }
-
     var modulosAtivos = SistemaConfigService.getModulosAtivos();
 
     var tiposAfastamento = [];
@@ -69,26 +58,63 @@ var BootService = (function () {
     } catch(_e) {}
 
     var usuarioPapel = 'colaborador';
+    var acesso       = null;
     try {
-      var acesso = AcessoService.verificar(email);
+      acesso = AcessoService.verificar(email);
       if (acesso && acesso.registro && acesso.registro.papel) {
         usuarioPapel = acesso.registro.papel;
       }
     } catch(_e) {}
 
+    // Matriz de permissões por módulo (papel × módulo → {visualizar, editar, excluir})
+    // Aplica overrides individuais do registro do usuário, se existirem.
+    var permissoesModulos = {};
+    try {
+      var _overrides = (acesso && acesso.registro && acesso.registro.permissoesOverride) || {};
+      permissoesModulos = typeof PermissoesV2Engine !== 'undefined'
+        ? PermissoesV2Engine.mergeOverrides(usuarioPapel, _overrides)
+        : {};
+    } catch(_e) {}
+
+    // Papéis que o usuário pode atribuir (para selects no admin)
+    var papeisAtribuiveis = [];
+    try {
+      papeisAtribuiveis = typeof PermissoesV2Engine !== 'undefined'
+        ? PermissoesV2Engine.papeisAtribuiveisPor(usuarioPapel)
+        : [];
+    } catch(_e) {}
+
+    // Features ativas do usuário (papel + overrides individuais)
+    var featuresAtivas = {};
+    try {
+      var _fovr = (acesso && acesso.registro && acesso.registro.featuresOverride) || {};
+      featuresAtivas = typeof PermissoesV2Engine !== 'undefined'
+        ? PermissoesV2Engine.obterFeaturesPorPapel(usuarioPapel, _fovr)
+        : {};
+    } catch(_e) {}
+
+    // Catálogo público de features — necessário no frontend para o modal de edição
+    var featuresCatalogo = {};
+    try {
+      featuresCatalogo = typeof PermissoesV2Engine !== 'undefined' ? PermissoesV2Engine.FEATURES : {};
+    } catch(_e) {}
+
     var resultado = {
-      orgId:           orgId,
-      orgConfig:       orgConfig,
-      usuarioEmail:    email,
-      usuarioPapel:    usuarioPapel,
-      permissoes:      permissoes,
-      modulosAtivos:   modulosAtivos,
-      setores:         setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
-      espacos:         espacos,
-      itens:           itens,
-      tiposAfastamento: tiposAfastamento,
-      tiposOcorrencia:  tiposOcorrencia,
-      timestamp:       agora()
+      orgId:              orgId,
+      orgConfig:          orgConfig,
+      usuarioEmail:       email,
+      usuarioPapel:       usuarioPapel,
+      permissoesModulos:  permissoesModulos,
+      papeisAtribuiveis:  papeisAtribuiveis,
+      featuresAtivas:     featuresAtivas,
+      featuresCatalogo:   featuresCatalogo,
+      modulosAtivos:      modulosAtivos,
+      setores:            setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
+      espacos:            espacos,
+      itens:              itens,
+      tiposAfastamento:   tiposAfastamento,
+      tiposOcorrencia:    tiposOcorrencia,
+      timestamp:          agora()
     };
 
     cache.put(chave, JSON.stringify(resultado), _CACHE_TTL);

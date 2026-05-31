@@ -52,6 +52,9 @@ function doGet(e) {
       case 'wizard_setup':
         return _renderWizardSetup(e);
 
+      case 'primeiro_acesso_preview':
+        return _renderPrimeiroAcessoPreview(e);
+
       case 'health':
         return _renderHealth();
 
@@ -131,6 +134,34 @@ function _renderPortalPublico(secao, e) {
   return template.evaluate()
     .setTitle(getOrgConfig().titulo + ' — Portal')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ─── Preview da Tela de Primeiro Acesso (superadmin/admin apenas) ────────────
+
+/**
+ * Renderiza a tela de primeiro acesso com dados fictícios para revisão do admin.
+ * Acessível apenas para usuários com papel admin ou superadmin.
+ */
+function _renderPrimeiroAcessoPreview(e) {
+  var email  = getEmailOuNull();
+  var acesso = AcessoService.verificar(email || '');
+  var papel  = acesso && acesso.registro ? (acesso.registro.papel || '') : '';
+  if (papel !== 'admin' && papel !== 'superadmin') {
+    return HtmlService.createHtmlOutput('<html><body style="font-family:sans-serif;padding:40px">' +
+      '<h2>⚠️ Acesso Negado</h2><p>Apenas admin ou superadmin pode visualizar esta página.</p>' +
+      '</body></html>').setTitle('Acesso Negado');
+  }
+  var tpl = HtmlService.createTemplateFromFile('frontend/primeiro_acesso');
+  tpl.orgConfig  = getPublicOrgConfig();
+  tpl.email      = 'preview@' + (getOrgConfig().dominio || 'dominio.org');
+  tpl.mensagem   = '[Modo de preview — nenhuma solicitação será enviada]';
+  tpl.jaSolicitou = false;
+  tpl.setores    = SistemaConfigService.getSetores()
+    .map(function(s) { return { id: s.id, label: s.label }; });
+  return tpl.evaluate()
+    .setTitle(getOrgConfig().titulo + ' — Preview de Primeiro Acesso')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 // ─── Wizard de Setup (admin/superadmin apenas) ───────────────────────────────

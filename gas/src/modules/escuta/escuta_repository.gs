@@ -31,7 +31,7 @@ var EscutaRepository = (function() {
   // ─── Pesquisas formais ──────────────────────────────────────────────────────
 
   function listarPesquisas(orgId) {
-    var lista = lerJSON(ARQUIVO_PESQUISAS);
+    var lista = readJSON(ARQUIVO_PESQUISAS);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(p) { return p.orgId === orgId; });
   }
@@ -73,7 +73,7 @@ var EscutaRepository = (function() {
   // ─── Respostas às pesquisas formais ─────────────────────────────────────────
 
   function listarRespostas(orgId, pesquisaId) {
-    var lista = lerJSON(ARQUIVO_RESPOSTAS);
+    var lista = readJSON(ARQUIVO_RESPOSTAS);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(r) {
       return r.orgId === orgId && r.pesquisaId === pesquisaId;
@@ -81,7 +81,7 @@ var EscutaRepository = (function() {
   }
 
   function listarRespostasPorColaborador(orgId, colaboradorId) {
-    var lista = lerJSON(ARQUIVO_RESPOSTAS);
+    var lista = readJSON(ARQUIVO_RESPOSTAS);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(r) {
       return r.orgId === orgId && r.colaboradorId === colaboradorId;
@@ -114,7 +114,7 @@ var EscutaRepository = (function() {
    * @param {string} [periodo] — YYYY-MM; default: mês atual
    */
   function listarEspontanea(orgId, periodo) {
-    var lista = lerJSON(ARQUIVO_ESPONTANEA);
+    var lista = readJSON(ARQUIVO_ESPONTANEA);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(e) {
       return e.orgId === orgId && (!periodo || (e.periodo || '').startsWith(periodo));
@@ -144,7 +144,7 @@ var EscutaRepository = (function() {
    * @param {string} periodo — YYYY-MM
    */
   function listarSaturacao(orgId, periodo) {
-    var lista = lerJSON(ARQUIVO_SATURACAO);
+    var lista = readJSON(ARQUIVO_SATURACAO);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(s) {
       return s.orgId === orgId && s.periodo === periodo;
@@ -181,7 +181,7 @@ var EscutaRepository = (function() {
    * @param {string} [periodo] — YYYY-MM para filtrar pelo período
    */
   function listarPulseRespostas(orgId, periodo) {
-    var lista = lerJSON(ARQUIVO_PULSE);
+    var lista = readJSON(ARQUIVO_PULSE);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(r) {
       return r.orgId === orgId && (!periodo || r.periodo === periodo);
@@ -210,7 +210,7 @@ var EscutaRepository = (function() {
    * Cada impressão = uma pergunta exibida ao usuário, sem identificar quem viu.
    */
   function listarPulseImpressoes(orgId, periodo) {
-    var lista = lerJSON(ARQUIVO_IMPRESSOES);
+    var lista = readJSON(ARQUIVO_IMPRESSOES);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(r) {
       return r.orgId === orgId && (!periodo || r.periodo === periodo);
@@ -252,7 +252,7 @@ var EscutaRepository = (function() {
    * Obtém o perfil analítico de um colaborador específico.
    */
   function obterPerfilAnalitico(orgId, email) {
-    var lista = lerJSON(ARQUIVO_PERFIS);
+    var lista = readJSON(ARQUIVO_PERFIS);
     if (!Array.isArray(lista)) return null;
     return lista.find(function(p) { return p.orgId === orgId && p.email === email; }) || null;
   }
@@ -261,7 +261,7 @@ var EscutaRepository = (function() {
    * Lista todos os perfis analíticos de uma organização.
    */
   function listarPerfis(orgId) {
-    var lista = lerJSON(ARQUIVO_PERFIS);
+    var lista = readJSON(ARQUIVO_PERFIS);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(p) { return p.orgId === orgId; });
   }
@@ -274,7 +274,7 @@ var EscutaRepository = (function() {
    * @param {boolean} [apenasAtivos] — se true, filtra só status='ativo'
    */
   function listarAlertas(orgId, apenasAtivos) {
-    var lista = lerJSON(ARQUIVO_ALERTAS);
+    var lista = readJSON(ARQUIVO_ALERTAS);
     if (!Array.isArray(lista)) return [];
     return lista.filter(function(a) {
       return a.orgId === orgId && (!apenasAtivos || a.status === 'ativo');
@@ -316,13 +316,39 @@ var EscutaRepository = (function() {
 
   // ─── Índice Sheet ────────────────────────────────────────────────────────────
 
+  function _garantirCabecalho() {
+    try {
+      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_EQUIPES');
+      if (!sheetId) { Logger.warn('escuta_repository', '_garantirCabecalho', 'SHEET_ID_EQUIPES não configurado'); return; }
+      var ss  = SpreadsheetApp.openById(sheetId);
+      var aba = ss.getSheetByName(ABA_ESCUTA);
+      if (!aba) {
+        aba = ss.insertSheet(ABA_ESCUTA);
+        aba.getRange(1, 1, 1, HEADERS_ESCUTA.length).setValues([HEADERS_ESCUTA]);
+        aba.getRange(1, 1, 1, HEADERS_ESCUTA.length).setFontWeight('bold');
+        aba.setFrozenRows(1);
+        return;
+      }
+      var atual = aba.getLastRow() > 0
+        ? aba.getRange(1, 1, 1, Math.max(aba.getLastColumn(), HEADERS_ESCUTA.length)).getValues()[0]
+        : [];
+      var vazio = atual.every(function(v) { return !v; });
+      if (vazio || String(atual[0] || '').trim() !== HEADERS_ESCUTA[0]) {
+        aba.getRange(1, 1, 1, HEADERS_ESCUTA.length).setValues([HEADERS_ESCUTA]);
+        aba.setFrozenRows(1);
+      }
+    } catch(e) { Logger.warn('escuta_repository', '_garantirCabecalho', e.message); }
+  }
+
   function prepararIndice() {
-    DataGateway.garantirAba(ABA_ESCUTA, HEADERS_ESCUTA);
+    _garantirCabecalho();
+    Logger.info('escuta_repository', 'prepararIndice', 'Índice EQUIPES.Escuta OK.');
     return { ok: true };
   }
 
   function sincronizarSheet(orgId, pesquisaId, resumo) {
-    var aba = DataGateway.obterAba(ABA_ESCUTA);
+    var aba;
+    try { aba = _getSheet('SHEET_ID_EQUIPES', ABA_ESCUTA); } catch(e) { return; }
     if (!aba) return;
     var dados = aba.getDataRange().getValues();
     for (var i = dados.length - 1; i >= 1; i--) {

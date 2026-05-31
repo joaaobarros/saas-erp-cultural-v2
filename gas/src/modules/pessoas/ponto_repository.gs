@@ -21,7 +21,7 @@ var PontoRepository = (function() {
   // ─── Registros de ponto ─────────────────────────────────────────────────────
 
   function listarPorColaborador(orgId, colaboradorId, dataInicio, dataFim) {
-    var lista = lerJSON(ARQUIVO_PONTO) || [];
+    var lista = readJSON(ARQUIVO_PONTO) || [];
     return lista.filter(function(r) {
       if (r.orgId !== orgId || r.colaboradorId !== colaboradorId) return false;
       if (dataInicio && r.data < dataInicio) return false;
@@ -31,12 +31,12 @@ var PontoRepository = (function() {
   }
 
   function listarPorData(orgId, data) {
-    var lista = lerJSON(ARQUIVO_PONTO) || [];
+    var lista = readJSON(ARQUIVO_PONTO) || [];
     return lista.filter(function(r){ return r.orgId === orgId && r.data === data; });
   }
 
   function listarPorPeriodo(orgId, dataInicio, dataFim) {
-    var lista = lerJSON(ARQUIVO_PONTO) || [];
+    var lista = readJSON(ARQUIVO_PONTO) || [];
     return lista.filter(function(r) {
       return r.orgId === orgId && r.data >= dataInicio && r.data <= dataFim;
     });
@@ -66,7 +66,7 @@ var PontoRepository = (function() {
   // ─── NSR (Número Sequencial de Registro — AFD) ──────────────────────────────
 
   function proximoNSR(orgId) {
-    var lista = lerJSON(ARQUIVO_PONTO) || [];
+    var lista = readJSON(ARQUIVO_PONTO) || [];
     var registrosOrg = lista.filter(function(r){ return r.orgId === orgId; });
     if (registrosOrg.length === 0) return 1;
     var maxNSR = Math.max.apply(null, registrosOrg.map(function(r){ return Number(r.nsr||0); }));
@@ -76,7 +76,7 @@ var PontoRepository = (function() {
   // ─── Banco de Horas ─────────────────────────────────────────────────────────
 
   function obterBancoHoras(orgId, colaboradorId) {
-    var lista = lerJSON(ARQUIVO_BH) || [];
+    var lista = readJSON(ARQUIVO_BH) || [];
     return lista.find(function(b){ return b.orgId === orgId && b.colaboradorId === colaboradorId; }) || {
       colaboradorId: colaboradorId,
       orgId:         orgId,
@@ -110,14 +110,39 @@ var PontoRepository = (function() {
 
   // ─── Índice Sheet ────────────────────────────────────────────────────────────
 
+  function _garantirCabecalho() {
+    try {
+      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_EQUIPES');
+      if (!sheetId) { Logger.warn('ponto_repository', '_garantirCabecalho', 'SHEET_ID_EQUIPES não configurado'); return; }
+      var ss  = SpreadsheetApp.openById(sheetId);
+      var aba = ss.getSheetByName(ABA_PONTO);
+      if (!aba) {
+        aba = ss.insertSheet(ABA_PONTO);
+        aba.getRange(1, 1, 1, HEADERS_PONTO.length).setValues([HEADERS_PONTO]);
+        aba.getRange(1, 1, 1, HEADERS_PONTO.length).setFontWeight('bold');
+        aba.setFrozenRows(1);
+        return;
+      }
+      var atual = aba.getLastRow() > 0
+        ? aba.getRange(1, 1, 1, Math.max(aba.getLastColumn(), HEADERS_PONTO.length)).getValues()[0]
+        : [];
+      var vazio = atual.every(function(v) { return !v; });
+      if (vazio || String(atual[0] || '').trim() !== HEADERS_PONTO[0]) {
+        aba.getRange(1, 1, 1, HEADERS_PONTO.length).setValues([HEADERS_PONTO]);
+        aba.setFrozenRows(1);
+      }
+    } catch(e) { Logger.warn('ponto_repository', '_garantirCabecalho', e.message); }
+  }
+
   function prepararIndice() {
-    DataGateway.garantirAba(ABA_PONTO, HEADERS_PONTO);
+    _garantirCabecalho();
+    Logger.info('ponto_repository', 'prepararIndice', 'Índice EQUIPES.Ponto OK.');
     return { ok: true };
   }
 
   function sincronizarRegistroSheet(orgId, registro, nomeColaborador, pisColaborador) {
     try {
-      var aba = DataGateway.obterAba(ABA_PONTO);
+      var aba = _getSheet('SHEET_ID_EQUIPES', ABA_PONTO);
       if (!aba) return;
       aba.appendRow([
         registro.id, registro.colaboradorId,

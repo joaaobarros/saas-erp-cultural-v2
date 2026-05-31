@@ -81,22 +81,19 @@ var ReceRepository = (function () {
   // ─── Escrita ──────────────────────────────────────────────────────────────
 
   function salvar(orgId, registro) {
-    return modifyJSON(JSON_KEY, orgId, function(dados) {
-      dados.lista = dados.lista || [];
-      var idx = dados.lista.findIndex(function(r) { return r.id === registro.id; });
-      if (idx >= 0) {
-        dados.lista[idx] = registro;
-      } else {
-        dados.lista.push(registro);
-      }
-      return dados;
+    modifyJSON(JSON_KEY, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = lista.findIndex(function(r) { return r.id === registro.id; });
+      if (idx >= 0) lista[idx] = registro;
+      else lista.push(registro);
+      return lista;
     });
   }
 
   function excluir(orgId, id) {
-    return modifyJSON(JSON_KEY, orgId, function(dados) {
-      dados.lista = (dados.lista || []).filter(function(r) { return r.id !== id; });
-      return dados;
+    modifyJSON(JSON_KEY, function(lista) {
+      if (!Array.isArray(lista)) return [];
+      return lista.filter(function(r) { return r.id !== id; });
     });
   }
 
@@ -119,11 +116,8 @@ var ReceRepository = (function () {
     orgId = orgId || (typeof getOrgConfig === 'function' ? getOrgConfig().orgId : '');
     try {
       // Garante JSON
-      var dados = lerJSON(JSON_KEY, orgId) || {};
-      if (!dados.lista) {
-        dados.lista = [];
-        salvarJSON(JSON_KEY, orgId, dados);
-      }
+      var dados = readJSON(JSON_KEY);
+      if (!Array.isArray(dados)) writeJSON(JSON_KEY, []);
       // Garante aba na Sheet COMUNICACAO
       var prop = PropertiesService.getScriptProperties().getProperty('SHEET_ID_COMUNICACAO') ||
                  PropertiesService.getScriptProperties().getProperty('SHEET_ID_MASTER');
@@ -145,7 +139,7 @@ var ReceRepository = (function () {
   // ─── Privados ─────────────────────────────────────────────────────────────
 
   function _lerDados(orgId) {
-    return lerJSON(JSON_KEY, orgId) || { lista: [] };
+    return { lista: readJSON(JSON_KEY) };
   }
 
   // ─── API pública ──────────────────────────────────────────────────────────

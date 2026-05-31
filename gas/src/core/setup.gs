@@ -227,14 +227,6 @@ function inicializarSistema() {
     }
   }
 
-  // Fase 20 — Escuta Completa: re-garante aba EQUIPES.Escuta (idempotente)
-  if (typeof EscutaRepository !== 'undefined' &&
-      typeof EscutaRepository.prepararIndice === 'function') {
-    try { EscutaRepository.prepararIndice(); } catch(e) {
-      Logger.warn('setup', 'inicializarSistema', 'EscutaRepository.prepararIndice(F20): ' + e.message);
-    }
-  }
-
   // Fase 21 — Reserva de Veículo: garante aba ESPACOS.ReservasCarro
   if (typeof ReservaCarroRepository !== 'undefined' &&
       typeof ReservaCarroRepository.prepararIndice === 'function') {
