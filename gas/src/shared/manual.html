@@ -1,0 +1,965 @@
+<!--
+@file shared/manual.html
+@layer frontend/shared
+@description ManualUI — manual de uso do sistema filtrado por permissões.
+             Context-aware: abre na seção do módulo que o usuário estava usando.
+             Reapresenta automaticamente quando as permissões do usuário são atualizadas.
+@depends index.html: Router, _boot, escaparHtml, Toast
+-->
+<script>
+var ManualUI = (function () {
+  'use strict';
+
+  // ─── Constantes ──────────────────────────────────────────────────────────
+
+  var _CHAVE_PAPEL = 'tramar_manual_papel_visto';
+
+  var _LABELS_PAPEL = {
+    colaborador:  'Colaborador',
+    habilitador:  'Habilitador',
+    rh:           'RH',
+    financeiro:   'Financeiro',
+    comunicacao:  'Comunicação',
+    gestor:       'Gestor',
+    admin:        'Administrador',
+    superadmin:   'Superadministrador'
+  };
+
+  var _DESCRICOES_PAPEL = {
+    colaborador:  'acesso básico: consultar eventos e espaços, gerenciar suas próprias tarefas.',
+    habilitador:  'pode analisar e aprovar reservas de espaços e ações culturais.',
+    rh:           'acesso completo ao módulo de pessoas: cadastros, escalas, ponto, férias e holerites.',
+    financeiro:   'gerencia contratos, rubricas, orçamentos e movimentações financeiras.',
+    comunicacao:  'gerencia a comunicação institucional e pode editar ações culturais.',
+    gestor:       'visão gerencial ampla: edita ações, espaços e reuniões, visualiza finanças e pessoas, aprova solicitações.',
+    admin:        'administrador do sistema: gerencia usuários, configurações e tem acesso a praticamente tudo.',
+    superadmin:   'superadministrador com acesso total ao sistema.'
+  };
+
+  // Mapeia rota do Router → id da seção do manual
+  var _MAPA_ROTA_SECAO = {
+    'home':           'home',
+    'dashboard':      'dashboard',
+    'estrategia':     'estrategia',
+    'acoes':          'acoes',
+    'publico':        'publico',
+    'parcerias':      'parcerias',
+    'acervo':         'acervo',
+    'espacos':        'espacos',
+    'aprovacoes':     'aprovacoes',
+    'reservas-carro': 'reservas-carro',
+    'pessoas':        'pessoas',
+    'ponto':          'ponto',
+    'rh':             'rh',
+    'contratacoes':   'contratacoes',
+    'escuta':         'escuta',
+    'financeiro':     'financeiro',
+    'taskhub':        'taskhub',
+    'tarefas':        'tarefas',
+    'reunioes':       'reunioes',
+    'comunicacao':    'comunicacao',
+    'balcao':         'balcao',
+    'relatorios':     'relatorios',
+    'voluntarios':    'voluntarios',
+    'agentes':        'agentes',
+    'admin':          'admin',
+    'auditoria':      'admin',
+    'sistema-metricas':'admin',
+    'painel-orgs':    'admin'
+  };
+
+  // ─── Estado ──────────────────────────────────────────────────────────────
+
+  var _rotaAnterior        = 'home';
+  var _secaoAtual          = null;
+  var _papelAnteriorMudanca = null;
+
+  // ─── Helpers visuais ─────────────────────────────────────────────────────
+
+  function _card(icone, titulo, desc) {
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:var(--r-md);margin-bottom:8px;">'
+      + '<span class="ms" style="color:var(--color-primary);font-size:20px;margin-top:1px;">' + icone + '</span>'
+      + '<div><div style="font-weight:600;font-size:13px;color:var(--text);line-height:1.4;">' + titulo + '</div>'
+      + (desc ? '<div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5;">' + desc + '</div>' : '')
+      + '</div></div>';
+  }
+
+  function _calloutInfo(html) {
+    return '<div style="background:var(--color-primary-lt);border-left:3px solid var(--color-primary);border-radius:var(--r-md);padding:11px 14px;margin:12px 0;font-size:12.5px;color:var(--text);line-height:1.6;">' + html + '</div>';
+  }
+
+  function _calloutAviso(html) {
+    return '<div style="background:#fef9ee;border-left:3px solid var(--color-warning);border-radius:var(--r-md);padding:11px 14px;margin:12px 0;font-size:12.5px;color:var(--text);line-height:1.6;">'
+      + '<strong style="color:#92400e;">Atenção:</strong> ' + html + '</div>';
+  }
+
+  function _calloutEscuro(html) {
+    return '<div style="background:var(--surface2);border-radius:var(--r-md);padding:11px 14px;margin:12px 0;font-size:12.5px;color:var(--text2);line-height:1.6;border:1px solid var(--border);">' + html + '</div>';
+  }
+
+  function _h2(texto) {
+    return '<h3 style="font-size:14px;font-weight:700;color:var(--text);margin:20px 0 10px;display:flex;align-items:center;gap:7px;">' + texto + '</h3>';
+  }
+
+  function _p(texto) {
+    return '<p style="font-size:13px;color:var(--text2);line-height:1.6;margin:0 0 10px;">' + texto + '</p>';
+  }
+
+  function _ul(items) {
+    return '<ul style="padding-left:18px;margin:0 0 12px;">'
+      + items.map(function(i){ return '<li style="font-size:13px;color:var(--text2);line-height:1.7;">' + i + '</li>'; }).join('')
+      + '</ul>';
+  }
+
+  function _tabela(cabecalho, linhas) {
+    var th = cabecalho.map(function(c){ return '<th style="padding:8px 12px;text-align:left;background:var(--surface2);font-size:12px;border-bottom:1px solid var(--border);">' + c + '</th>'; }).join('');
+    var trs = linhas.map(function(r){
+      return '<tr>' + r.map(function(c,i){ return '<td style="padding:7px 12px;font-size:12px;border-bottom:1px solid var(--border);' + (i===0?'font-weight:600;':'color:var(--text2);') + '">' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    return '<div style="overflow-x:auto;margin:12px 0;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + th + '</tr></thead><tbody>' + trs + '</tbody></table></div>';
+  }
+
+  function _badge(label, cor) {
+    var cores = { verde: '#dcfce7:#166534', azul: '#dbeafe:#1e40af', roxo: '#ede9fe:#6b21a8', laranja: '#fef3c7:#92400e', cinza: '#f1f5f9:#475569' };
+    var c = (cores[cor] || cores.cinza).split(':');
+    return '<span style="display:inline-block;background:' + c[0] + ';color:' + c[1] + ';border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;margin:2px;">' + label + '</span>';
+  }
+
+  // ─── Definição das seções ─────────────────────────────────────────────────
+
+  var _GRUPOS = [
+    { label: 'GERAL',         ids: ['home','dashboard'] },
+    { label: 'PROGRAMAÇÃO',   ids: ['acoes','estrategia','publico','parcerias','acervo'] },
+    { label: 'ESPAÇOS',       ids: ['espacos','aprovacoes','reservas-carro'] },
+    { label: 'PESSOAS & RH',  ids: ['pessoas','ponto','rh','contratacoes','escuta','escuta-lgpd'] },
+    { label: 'FINANCEIRO',    ids: ['financeiro'] },
+    { label: 'OPERAÇÃO',      ids: ['taskhub','tarefas','reunioes'] },
+    { label: 'COMUNICAÇÃO',   ids: ['comunicacao','balcao'] },
+    { label: 'VOLUNTARIADO',  ids: ['voluntarios','agentes'] },
+    { label: 'SISTEMA',       ids: ['relatorios','admin'] }
+  ];
+
+  var _SECOES_DEF = [
+
+    // ── GERAL ─────────────────────────────────────────────────────────────
+
+    { id:'home', label:'Início & Navegação', icone:'home', modulo:null,
+      tags:['início','menu','navegação','sidebar','sair','logout','notificações'],
+      descricao:'Como usar o painel principal e navegar pelo sistema',
+      content: function(papel, feat) {
+        return _p('O TRAMAR centraliza todos os processos do CCBJ em um único lugar. Acesse qualquer funcionalidade pelo menu lateral à esquerda.')
+          + _h2('<span class="ms ms-sm">menu</span> Menu lateral')
+          + _card('open_in_new', 'Navegar entre módulos', 'Clique no ícone ou no nome do módulo para acessá-lo. O item ativo fica destacado em roxo.')
+          + _card('chevron_left', 'Recolher o menu', 'Clique no botão de menu ( ☰ ) na barra superior para compactar o menu lateral e ganhar espaço na tela.')
+          + _card('logout', 'Sair do sistema', 'Clique no ícone de saída no rodapé do menu lateral.')
+          + _h2('<span class="ms ms-sm">notifications</span> Notificações')
+          + _p('Avisos aparecem no canto inferior direito da tela por alguns segundos:')
+          + _ul([
+              _badge('Verde','verde') + ' — ação concluída com sucesso',
+              _badge('Vermelho','laranja') + ' — erro que precisa de atenção',
+              _badge('Amarelo','laranja') + ' — atenção: verifique antes de continuar',
+              _badge('Azul','azul') + ' — informação geral'
+            ]);
+      }
+    },
+
+    { id:'dashboard', label:'Dashboard', icone:'dashboard', modulo:null,
+      tags:['dashboard','métricas','indicadores','gráficos','resumo'],
+      descricao:'Visão geral dos números e indicadores do sistema',
+      content: function(papel, feat) {
+        return _p('O Dashboard reúne os principais números da instituição em um único painel. Use-o para acompanhar o dia a dia.')
+          + _h2('<span class="ms ms-sm">bar_chart</span> O que você encontra aqui')
+          + _card('museum', 'Espaços', 'Quantos espaços estão disponíveis, em uso ou em manutenção.')
+          + _card('people', 'Equipe', 'Total de colaboradores ativos, afastados e cargos.')
+          + _card('event', 'Ações culturais', 'Quantidade de ações em cada fase: planejamento, aprovadas, em execução.')
+          + _card('task_alt', 'Tarefas', 'Resumo das tarefas em aberto e concluídas.')
+          + _calloutInfo('O Dashboard é atualizado automaticamente cada vez que você acessa. Recarregue a página para ver os números mais recentes.');
+      }
+    },
+
+    // ── PROGRAMAÇÃO ───────────────────────────────────────────────────────
+
+    { id:'acoes', label:'Ações Culturais', icone:'event', modulo:'ACOES',
+      tags:['ação','evento','cultural','criar','editar','aprovar','agenda','publicar','mapa'],
+      descricao:'Planejamento, execução e acompanhamento de ações culturais',
+      content: function(papel, feat) {
+        var html = _p('Uma <strong>Ação Cultural</strong> é qualquer evento, projeto ou atividade realizada pelo CCBJ. Cada ação passa por um fluxo de aprovação antes de entrar em execução.')
+          + _h2('<span class="ms ms-sm">schema</span> Fluxo de uma ação')
+          + _tabela(['Etapa','O que significa'],[
+              ['Rascunho','Ação criada, ainda sendo preenchida. Só o criador pode ver.'],
+              ['Em análise','Enviada para aprovação. Aguarda avaliação.'],
+              ['Aprovada','Pronta para execução. Pode aparecer na agenda pública.'],
+              ['Em execução','Acontecendo agora. Equipe e recursos alocados.'],
+              ['Concluída','Encerrada. Dados disponíveis para relatórios.'],
+              ['Arquivada','Guardada para referência histórica.']
+            ])
+          + _h2('<span class="ms ms-sm">visibility</span> O que você pode ver')
+          + _card('list', 'Lista de ações', 'Todas as ações do CCBJ com filtros por status, período e responsável.')
+          + _card('calendar_month', 'Cronograma', 'Visualize as ações em formato de agenda ou linha do tempo.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Criar e editar ações')
+            + _card('add_circle', 'Nova ação', 'Clique em "Nova Ação", preencha título, data, espaço, equipe envolvida e envie para aprovação.')
+            + _card('edit', 'Editar ação', 'Ações em rascunho ou devolvidas podem ser editadas. Ações aprovadas precisam de revisão antes de alterar.')
+            + _card('map', 'Mapa de ação', 'Planeje recursos, atividades e cronograma detalhado da ação usando o editor visual.');
+        }
+        if (feat && feat.publicar_agenda) {
+          html += _h2('<span class="ms ms-sm">public</span> Publicar na agenda pública')
+            + _card('share', 'Publicar', 'Ações aprovadas podem ser publicadas na agenda pública do CCBJ para divulgação ao público externo.')
+            + _calloutAviso('Verifique todas as informações antes de publicar. Datas, local e descrição ficam visíveis para qualquer pessoa.');
+        }
+        if (feat && feat.aprovar_acao) {
+          html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar ações')
+            + _card('thumb_up', 'Aprovar', 'Acesse "Aprovações" no menu para ver as ações aguardando análise. Revise e aprove ou recuse com justificativa.')
+            + _card('thumb_down', 'Recusar', 'A ação volta ao criador com sua justificativa para que ele faça os ajustes necessários.');
+        }
+        return html;
+      }
+    },
+
+    { id:'estrategia', label:'Estratégia', icone:'flag', modulo:'ACOES',
+      tags:['estratégia','objetivo','kpi','indicador','risco','meta','planejamento'],
+      descricao:'Objetivos estratégicos, indicadores e acompanhamento de metas',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Estratégia conecta o planejamento de longo prazo com a execução do dia a dia por meio de objetivos mensuráveis.')
+          + _h2('<span class="ms ms-sm">flag</span> O que você encontra aqui')
+          + _card('flag', 'Objetivos estratégicos', 'Os grandes objetivos da instituição, organizados por eixos temáticos.')
+          + _card('bar_chart', 'Indicadores (KPIs)', 'Métricas que mostram se os objetivos estão sendo atingidos. Cada indicador tem meta e prazo definidos.')
+          + _card('warning', 'Riscos', 'Ameaças mapeadas para cada objetivo, com probabilidade, impacto e plano de mitigação.')
+          + _card('calendar_month', 'Calendário estratégico', 'Visão de todos os marcos e entregas planejados ao longo do ano.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar a estratégia')
+            + _card('add', 'Criar objetivo', 'Defina título, eixo, responsável e prazo. Vincule indicadores para medir o avanço.')
+            + _card('trending_up', 'Atualizar indicadores', 'Registre o valor atual de cada KPI para manter o painel sempre atualizado.');
+        }
+        return html;
+      }
+    },
+
+    { id:'publico', label:'Público & Inscrições', icone:'groups', modulo:'PUBLICO',
+      tags:['público','inscrição','presença','certificado','pesquisa','satisfação','lista espera'],
+      descricao:'Inscrições de participantes, presenças, pesquisas e certificados',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Público gerencia tudo relacionado aos participantes das ações culturais: quem se inscreveu, quem compareceu e como avaliou o evento.')
+          + _h2('<span class="ms ms-sm">assignment</span> O que você vê aqui')
+          + _card('how_to_reg', 'Inscrições', 'Lista de todos os participantes inscritos. Mostra se estão na lista principal ou na fila de espera.')
+          + _card('fact_check', 'Presenças', 'Registro de quem efetivamente compareceu a cada sessão.')
+          + _card('star_rate', 'Pesquisas de satisfação', 'Respostas ao formulário enviado após cada evento (NPS e perguntas abertas).')
+          + _card('workspace_premium', 'Certificados', 'Certificados emitidos automaticamente para quem atingiu o mínimo de presença.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar participantes')
+            + _card('check_circle', 'Confirmar presença', 'Marque a presença de cada participante por sessão. Participantes com presença suficiente recebem certificado automaticamente.')
+            + _card('pending_actions', 'Promover da fila de espera', 'Quando um inscrito cancela, o próximo da fila de espera é promovido automaticamente.')
+            + _card('send', 'Enviar pesquisa de satisfação', 'Dispare a pesquisa pós-evento para todos os participantes confirmados.');
+        }
+        html += _calloutInfo('O portal de inscrições é público — qualquer pessoa pode se inscrever em ações abertas sem precisar de login no sistema.');
+        return html;
+      }
+    },
+
+    { id:'parcerias', label:'Parcerias', icone:'handshake', modulo:'ACOES',
+      tags:['parceria','parceiro','institucional','vinculo','organização'],
+      descricao:'Parcerias institucionais e seus vínculos com ações culturais',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Parcerias registra organizações e pessoas com as quais o CCBJ mantém relações institucionais.')
+          + _card('business', 'Parceiros cadastrados', 'Ver a lista de parceiros com informações de contato, tipo de parceria e ações vinculadas.')
+          + _card('link', 'Vínculo com ações', 'Cada parceria pode ser vinculada a uma ou mais ações culturais para rastrear colaborações.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Cadastrar e editar parcerias')
+            + _card('add', 'Nova parceria', 'Informe nome da organização, tipo de parceria, responsável pelo contato e ações relacionadas.');
+        }
+        return html;
+      }
+    },
+
+    { id:'acervo', label:'Acervo Cultural', icone:'photo_library', modulo:'ACOES',
+      tags:['acervo','imagem','foto','documento','lgpd','autorização','cultural'],
+      descricao:'Acervo de imagens e documentos culturais com controle de autorização',
+      content: function(papel, feat) {
+        var html = _p('O Acervo reúne registros fotográficos e documentais das ações do CCBJ, com controle rigoroso de autorização de uso de imagem conforme a LGPD.')
+          + _h2('<span class="ms ms-sm">folder</span> Situações de cada item no acervo')
+          + _tabela(['Situação','Significado'],[
+              ['Não verificado','Recém adicionado. Ainda não foi analisado quanto à autorização.'],
+              ['Autorizado','A pessoa na imagem autorizou o uso. Pode ser usado normalmente.'],
+              ['Restrito','Uso restrito. Não deve ser divulgado externamente.'],
+              ['Sem pessoas','Imagem sem pessoas identificáveis. Pode ser usada livremente.']
+            ]);
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar o acervo')
+            + _card('upload', 'Adicionar item', 'Faça o upload da imagem ou documento, informe a ação vinculada e o status inicial.')
+            + _card('verified', 'Atualizar autorização', 'Mude o status de cada item conforme a autorização obtida.');
+        }
+        html += _calloutAviso('Nunca divulgue externamente imagens com status "Não verificado" ou "Restrito". Isso pode violar os direitos de imagem das pessoas envolvidas.');
+        return html;
+      }
+    },
+
+    // ── ESPAÇOS ───────────────────────────────────────────────────────────
+
+    { id:'espacos', label:'Espaços & Reservas', icone:'meeting_room', modulo:'ESPACOS',
+      tags:['espaço','sala','reserva','disponibilidade','calendário','chave','ativo','inventário'],
+      descricao:'Consulta e reserva de espaços físicos do CCBJ',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Espaços permite consultar a disponibilidade e fazer reservas dos espaços físicos do CCBJ.')
+          + _h2('<span class="ms ms-sm">event_available</span> Consultar disponibilidade')
+          + _card('calendar_month', 'Calendário de reservas', 'Veja todas as reservas confirmadas de cada espaço em formato de calendário. Identifique horários livres rapidamente.')
+          + _card('search', 'Verificar espaço específico', 'Filtre por nome do espaço e data para ver se está disponível no horário desejado.');
+        if (feat && feat.reservar_espaco) {
+          html += _h2('<span class="ms ms-sm">add_circle</span> Fazer uma reserva')
+            + _card('event_available', 'Solicitar reserva', 'Clique em "Nova Reserva", escolha o espaço, data, horário, propósito e quantas pessoas estarão presentes.')
+            + _card('schedule', 'Acompanhar status', 'Após enviar, sua solicitação ficará como "Pendente" até ser aprovada. Você receberá uma notificação.')
+            + _calloutInfo('Reservas precisam de aprovação de um habilitador ou gestor. Não utilize o espaço antes da aprovação.');
+        }
+        if (feat && feat.aprovar_reserva) {
+          html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar reservas')
+            + _card('inbox', 'Ver pendentes', 'Acesse "Aprovações" no menu para ver todas as solicitações aguardando sua análise.')
+            + _card('check', 'Aprovar ou recusar', 'Avalie a solicitação e aprove ou recuse com justificativa. O solicitante é notificado imediatamente.');
+        }
+        if (feat && feat.gerenciar_chaves) {
+          html += _h2('<span class="ms ms-sm">key</span> Controle de chaves')
+            + _card('key', 'Retirada', 'Registre quem retirou a chave, horário e espaço vinculado.')
+            + _card('assignment_returned', 'Devolução', 'Confirme a devolução da chave para liberar o espaço para outros usuários.')
+            + _calloutAviso('Sempre registre a retirada e devolução. Chaves não registradas dificultam o controle de acesso.');
+        }
+        if (feat && feat.gerenciar_espacos) {
+          html += _h2('<span class="ms ms-sm">settings</span> Administrar espaços')
+            + _card('add_home', 'Criar espaço', 'Cadastre nome, capacidade, recursos disponíveis e se aceita reservas.')
+            + _card('edit', 'Editar ou desativar', 'Atualize as informações ou desative temporariamente espaços em manutenção.');
+        }
+        if (feat && feat.gerenciar_ativos) {
+          html += _h2('<span class="ms ms-sm">inventory</span> Inventário de ativos')
+            + _card('inventory_2', 'Ver inventário', 'Consulte todos os ativos do CCBJ (equipamentos, mobiliário, etc.) por espaço ou categoria.')
+            + _card('add_box', 'Cadastrar ativo', 'Informe nome, categoria, localização e quantidade disponível.');
+        }
+        return html;
+      }
+    },
+
+    { id:'aprovacoes', label:'Aprovações', icone:'task_alt', modulo:'ESPACOS',
+      tags:['aprovação','pendente','reserva','solicitação','recusar','aceitar'],
+      descricao:'Central de solicitações de reservas e ações aguardando análise',
+      content: function(papel, feat) {
+        return _p('A central de Aprovações reúne todas as solicitações que precisam da sua avaliação antes de serem confirmadas.')
+          + _h2('<span class="ms ms-sm">inbox</span> O que aparece aqui')
+          + _card('meeting_room', 'Reservas de espaço', 'Solicitações de uso de espaços físicos aguardando aprovação.')
+          + _card('event', 'Ações culturais', 'Propostas de novas ações enviadas para análise.')
+          + _h2('<span class="ms ms-sm">how_to_vote</span> Como analisar')
+          + _card('visibility', '1. Revisar a solicitação', 'Leia todos os detalhes: solicitante, espaço/ação, data, propósito e observações.')
+          + _card('check_circle', '2. Aprovar', 'Clique em Aprovar para confirmar. A pessoa é notificada imediatamente.')
+          + _card('cancel', '3. Recusar com justificativa', 'Se houver conflito ou problema, recuse e escreva o motivo. A pessoa poderá ajustar e reenviar.')
+          + _calloutInfo('Solicitações pendentes há mais de 48h aparecem destacadas. Tente analisar sempre dentro desse prazo.');
+      }
+    },
+
+    { id:'reservas-carro', label:'Reserva de Veículo', icone:'directions_car', modulo:'ESPACOS',
+      tags:['carro','veículo','transporte','reserva','viagem'],
+      descricao:'Solicitação e aprovação de reservas do veículo institucional',
+      content: function(papel, feat) {
+        var html = _p('Este módulo controla o uso do veículo institucional do CCBJ, garantindo que não haja conflitos de agenda.');
+        if (feat && feat.reservar_carro) {
+          html += _h2('<span class="ms ms-sm">car_rental</span> Solicitar veículo')
+            + _card('add', 'Nova solicitação', 'Informe a data, horário de saída e retorno, destino e finalidade da viagem.')
+            + _card('schedule', 'Aguardar aprovação', 'Sua solicitação fica "Pendente" até ser avaliada. Você será avisado quando for aprovada ou recusada.')
+            + _calloutAviso('Não retire o veículo antes da aprovação formal. Em caso de urgência, contate diretamente um aprovador.');
+        }
+        if (feat && feat.aprovar_reserva_carro) {
+          html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar solicitações')
+            + _card('inbox', 'Ver pendentes', 'Acesse a aba de pendentes para ver as solicitações aguardando sua análise.')
+            + _card('check', 'Aprovar ou recusar', 'Aprovando, o solicitante é notificado. Ao recusar, informe o motivo.');
+        }
+        return html;
+      }
+    },
+
+    // ── PESSOAS & RH ──────────────────────────────────────────────────────
+
+    { id:'pessoas', label:'Colaboradores', icone:'badge', modulo:'PESSOAS',
+      tags:['colaborador','cadastro','pessoa','equipe','status','desligamento','afastamento'],
+      descricao:'Cadastro e acompanhamento dos colaboradores da instituição',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Colaboradores é o cadastro central de todas as pessoas que trabalham ou trabalharam no CCBJ.')
+          + _h2('<span class="ms ms-sm">badge</span> O que você vê')
+          + _card('list', 'Lista de colaboradores', 'Nome, cargo, setor e status de cada colaborador.')
+          + _card('account_circle', 'Ficha do colaborador', 'Histórico de cargos, setor, data de entrada, contato e observações.')
+          + _tabela(['Status','Significado'],[
+              ['Ativo','Trabalhando normalmente.'],
+              ['Afastado','Temporariamente afastado (licença, férias, etc.).'],
+              ['Desligado','Não faz mais parte da equipe.']
+            ]);
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar cadastros')
+            + _card('person_add', 'Novo colaborador', 'Preencha nome, cargo, setor, data de início e dados de contato.')
+            + _card('edit', 'Editar informações', 'Atualize cargo, setor ou qualquer dado cadastral.')
+            + _card('swap_horiz', 'Mudar status', 'Registre afastamentos, retornos ou desligamentos.');
+        }
+        if (feat && feat.ver_salario) {
+          html += _h2('<span class="ms ms-sm">attach_money</span> Dados salariais')
+            + _card('payments', 'Salário e carga horária', 'Visualize e edite o salário bruto, carga horária e benefícios.')
+            + _calloutEscuro('Dados salariais são visíveis apenas para RH, Financeiro e Administração. Trate com discrição.');
+        }
+        return html;
+      }
+    },
+
+    { id:'ponto', label:'Ponto & Escalas', icone:'schedule', modulo:'PESSOAS',
+      tags:['ponto','escala','horário','férias','afastamento','presença','folha'],
+      descricao:'Registro de ponto, escalas de trabalho e solicitações de férias',
+      content: function(papel, feat) {
+        var html = _p('Este módulo cuida do controle de frequência e das escalas de trabalho da equipe.')
+          + _h2('<span class="ms ms-sm">calendar_month</span> Escala de trabalho')
+          + _card('view_week', 'Ver sua escala', 'Consulte seus dias e horários de trabalho do mês atual e dos próximos meses.')
+          + _card('event_busy', 'Solicitar férias', 'Registre uma solicitação de férias informando o período desejado. Aguarde aprovação.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">fingerprint</span> Registro de ponto')
+            + _card('login', 'Registrar entrada/saída', 'Lance seu horário de entrada, intervalo e saída. Faça isso no mesmo dia para evitar divergências.')
+            + _card('sick', 'Lançar afastamento', 'Registre faltas justificadas, licenças médicas ou outros tipos de afastamento com o documento de suporte.');
+        }
+        if (feat && feat.aprovar_ferias) {
+          html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar férias e afastamentos')
+            + _card('inbox', 'Solicitações pendentes', 'Veja as solicitações da equipe aguardando sua análise.')
+            + _card('check_circle', 'Aprovar ou ajustar período', 'Aprove o período solicitado ou sugira datas alternativas com justificativa.');
+        }
+        if (feat && feat.lancar_ponto_outros) {
+          html += _h2('<span class="ms ms-sm">edit_calendar</span> Corrigir ponto de outros')
+            + _card('edit', 'Editar registro', 'Corrija entradas incorretas de outros colaboradores. Todas as edições ficam registradas na auditoria.');
+        }
+        return html;
+      }
+    },
+
+    { id:'rh', label:'Recursos Humanos', icone:'work', modulo:'PESSOAS',
+      tags:['rh','cargo','pcc','plano de cargos','setor','escala','turno','departamento'],
+      descricao:'Configurações de RH: cargos, plano de carreiras e escalas',
+      content: function(papel, feat) {
+        return _p('O módulo de RH centraliza as definições estruturais da gestão de pessoas: cargos, plano de carreiras e configurações de turnos.')
+          + _h2('<span class="ms ms-sm">work</span> Cargos e carreiras')
+          + _card('badge', 'Cargos cadastrados', 'Lista de todos os cargos da instituição com nível, área e carga horária esperada.')
+          + _card('trending_up', 'Plano de Cargos e Carreiras (PCC)', 'Estrutura de progressão: como um colaborador avança entre os níveis ao longo do tempo. Use como referência para promoções.')
+          + _h2('<span class="ms ms-sm">schedule</span> Escalas e turnos')
+          + _card('view_week', 'Configurar escalas', 'Defina os padrões de escala (ex: segunda a sexta, 08h–17h) e aplique a cada colaborador.')
+          + _calloutInfo('As escalas definidas aqui são usadas automaticamente para calcular frequência e gerar alertas de atraso.');
+      }
+    },
+
+    { id:'contratacoes', label:'Contratações', icone:'description', modulo:'PESSOAS',
+      tags:['contratação','habilitação','prestador','proposta','contrato','análise'],
+      descricao:'Processo de habilitação e contratação de prestadores de serviço',
+      content: function(papel, feat) {
+        var html = _p('Este módulo gerencia o processo de contratação de prestadores externos: desde o envio da proposta até a assinatura do contrato.')
+          + _h2('<span class="ms ms-sm">schema</span> Etapas do processo')
+          + _tabela(['Etapa','O que acontece'],[
+              ['Proposta enviada','O prestador submeteu os dados e está aguardando análise.'],
+              ['Em análise','Um habilitador ou gestor está avaliando a proposta.'],
+              ['Aprovada','Proposta aceita. Contrato sendo elaborado.'],
+              ['Reprovada','Proposta recusada. Veja a justificativa para entender o motivo.'],
+              ['Contratado','Contrato assinado. Prestador ativo.']
+            ]);
+        html += _card('visibility', 'Acompanhar contratos', 'Veja o status de cada contrato e o histórico de interações.');
+        var podeAnalisar = ['habilitador','gestor','admin','superadmin'].indexOf(papel) !== -1;
+        if (podeAnalisar) {
+          html += _h2('<span class="ms ms-sm">fact_check</span> Analisar proposta')
+            + _card('rate_review', 'Revisar documentos', 'Confira os documentos e dados enviados pelo prestador.')
+            + _card('check_circle', 'Aprovar ou reprovar', 'Registre sua decisão com justificativa. O prestador é notificado.');
+        }
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar contratos')
+            + _card('add', 'Novo contrato', 'Cadastre um novo processo de habilitação vinculando ao prestador, serviço e valor.')
+            + _card('edit', 'Atualizar informações', 'Edite dados do contrato conforme o processo avança.');
+        }
+        return html;
+      }
+    },
+
+    { id:'escuta', label:'Escuta Institucional', icone:'psychology', modulo:'PESSOAS',
+      tags:['escuta','clima','pesquisa','pulse','bem-estar','anônimo','responder','satisfação'],
+      descricao:'Pesquisa de clima organizacional e canal de escuta contínua',
+      content: function(papel, feat) {
+        var html = _p('A Escuta Institucional é o canal do CCBJ para acompanhar o bem-estar da equipe de forma contínua e sigilosa. Seus dados são sempre tratados de forma agregada — nunca individual.')
+          + _h2('<span class="ms ms-sm">quiz</span> Como responder à pesquisa de clima')
+          + _card('star', 'Escala de resposta', 'As perguntas usam uma escala de 1 a 5: 1 = discordo totalmente, 5 = concordo totalmente. Responda com base em como você está se sentindo hoje ou nesta semana.')
+          + _card('psychology', 'O que é medido', 'A pesquisa cobre oito dimensões do bem-estar no trabalho: energia, carga de trabalho, clareza de papel, apoio da equipe, autonomia, cultura organizacional, liderança e segurança psicológica.')
+          + _calloutInfo('Suas respostas são completamente anônimas. O sistema nunca vincula uma resposta a um nome ou e-mail. Veja a seção <strong>Pesquisa & LGPD</strong> para entender como isso funciona.')
+          + _h2('<span class="ms ms-sm">flash_on</span> O que é o Pulse')
+          + _card('bolt', 'Pergunta rápida', 'O Pulse é uma pergunta única que aparece periodicamente — leva cerca de 30 segundos para responder. É uma forma de capturar como você está em tempo real, sem precisar de uma pesquisa longa.')
+          + _card('auto_renew', 'Como funciona a rotação', 'As perguntas do Pulse se alternam pelas oito dimensões para que nenhuma área seja negligenciada. Você não receberá a mesma pergunta em intervalos curtos.')
+          + _calloutEscuro('Limite diário: até 3 respostas por dia, com pelo menos 4 horas de intervalo entre cada uma. Isso evita sobrecarga e garante que as respostas reflitam momentos diferentes do dia.')
+          + _h2('<span class="ms ms-sm">record_voice_over</span> Escuta Espontânea')
+          + _card('chat_bubble', 'Relato livre', 'Use a Escuta Espontânea para registrar qualquer situação que você queira que a instituição saiba — uma dificuldade, uma sugestão, um elogio. Escolha a categoria mais próxima e escreva livremente.')
+          + _card('lock', 'Anonimato garantido', 'Seu nome nunca é associado ao relato. A análise é feita por categoria e sentimento geral — nunca por pessoa.');
+        if (feat && feat.publicar_escuta) {
+          html += _h2('<span class="ms ms-sm">publish</span> Criar e publicar pesquisas')
+            + _card('add_circle', 'Nova pesquisa', 'Acesse "Gestão > Pesquisas Personalizadas" e clique em Nova Pesquisa. Defina título, período e até 5 perguntas.')
+            + _card('send', 'Publicar', 'Após criar, publique a pesquisa para que ela apareça para os colaboradores.')
+            + _h2('<span class="ms ms-sm">insights</span> Interpretar os resultados')
+            + _card('bar_chart', 'Painel de resultados', 'Veja os indicadores de cada dimensão em gráficos agregados. Quanto mais perto de 5, melhor.')
+            + _card('warning', 'Alertas automáticos', 'O sistema gera alertas quando detecta padrões preocupantes: burnout, falta de apoio, clima baixo em um setor. Alertas aparecem no painel de governança.')
+            + _calloutAviso('Resultados só são exibidos quando há pelo menos 15% de participação. Abaixo disso, os dados são bloqueados para proteger o anonimato.');
+        }
+        html += _p('Para entender completamente a metodologia, as garantias de anonimato e a conformidade com a LGPD, acesse a seção <strong>Pesquisa & LGPD</strong> no menu ao lado.');
+        return html;
+      }
+    },
+
+    { id:'escuta-lgpd', label:'Pesquisa & LGPD', icone:'shield', modulo:'PESSOAS',
+      tags:['lgpd','anonimato','privacidade','metodologia','dimensão','pesquisa','clima','conformidade','lei','dados'],
+      descricao:'Metodologia científica, garantias de anonimato e conformidade com a LGPD',
+      content: function(papel, feat) {
+        return _h2('<span class="ms ms-sm">science</span> Metodologia científica — 8 dimensões')
+          + _p('As perguntas da pesquisa de clima foram construídas a partir de quatro escalas internacionalmente validadas, adaptadas para o contexto do CCBJ:')
+          + _tabela(['Sigla','Escala completa','O que mede'],
+              [
+                ['UWES', 'Utrecht Work Engagement Scale', 'Vigor, Dedicação e Absorção — o quanto a pessoa está envolvida e motivada com o trabalho'],
+                ['JDC', 'Job Demand-Control', 'Carga de trabalho (quanto é exigido) e Autonomia (quanto controle a pessoa tem sobre seu trabalho). Ambas têm escala invertida: nota alta = situação ruim.'],
+                ['CVF', 'Competing Values Framework', 'Colaboração dentro da equipe e Inovação na cultura organizacional'],
+                ['NR-1', 'Norma Regulamentadora 1 — Psicossocial', 'Segurança Psicológica: se a pessoa se sente segura para expressar opiniões, cometer erros e pedir ajuda. Tem peso 1,5× por ser obrigatória legalmente.']
+              ])
+          + _calloutInfo('<strong>Como o clima geral é calculado:</strong> média das dimensões de Vigor, Dedicação, Autonomia, Colaboração e Inovação. Carga e Risco Psicossocial são monitorados em alertas separados — por isso não entram na nota geral.')
+          + _h2('<span class="ms ms-sm">balance</span> Amostragem justa (Fairness Sampling)')
+          + _p('O sistema distribui as perguntas de forma inteligente para garantir que ninguém seja sobrecarregado e todas as dimensões sejam cobertas:')
+          + _ul([
+              'Limite diário por pessoa: até 3 respostas por dia',
+              'Intervalo mínimo: 4 horas entre perguntas para a mesma pessoa',
+              'Prioridade para dimensões com menos respostas no período atual',
+              'Mesma pergunta não é repetida para a mesma pessoa em menos de 48 horas',
+              'Dimensões que já atingiram a meta do período entram em saturação e descansam'
+            ])
+          + _h2('<span class="ms ms-sm">lock</span> Garantias de anonimato')
+          + _card('link_off', 'Desvinculação automática', 'No momento em que a resposta é salva no sistema, o e-mail da pessoa é removido. Só fica o conteúdo da resposta e a dimensão avaliada — sem identificação.')
+          + _card('person_off', 'Pulse sem dados pessoais', 'As impressões do Pulse armazenam apenas qual dimensão foi respondida. Nem o horário é associado ao usuário.')
+          + _card('group', 'Sempre resultados agregados', 'O sistema nunca exibe respostas individuais. Todos os gráficos e painéis mostram médias por grupo, dimensão ou setor.')
+          + _card('visibility_off', 'Grupos pequenos protegidos', 'Se um setor tiver menos de 5 respondentes, os dados daquele grupo são ocultados para proteger as pessoas.')
+          + _h2('<span class="ms ms-sm">gavel</span> Conformidade com a LGPD')
+          + _tabela(['Item','Como o sistema atende'],
+              [
+                ['Base legal', 'Art. 7°, I — consentimento expresso ao criar conta; Art. 7°, VI — legítimo interesse institucional em saúde organizacional'],
+                ['Finalidade', 'Pesquisa de bem-estar dos colaboradores. Dados nunca usados para avaliação de desempenho individual.'],
+                ['Revogação', 'Você pode revogar o consentimento a qualquer momento sem nenhum prejuízo. Procure o administrador.'],
+                ['Supressão de e-mail', 'Após 90 dias, o e-mail vinculado a qualquer resposta é apagado automaticamente (Art. 16 — direito ao esquecimento).'],
+                ['Retenção de dados brutos', 'Dados completamente anonimizados podem ser mantidos por até 365 dias para análise histórica.']
+              ])
+          + _h2('<span class="ms ms-sm">bar_chart</span> Limiares de confiança dos resultados')
+          + _tabela(['Participação','O que o sistema faz'],
+              [
+                ['Menos de 15%', 'Resultados bloqueados. Nenhum gráfico ou indicador é exibido.'],
+                ['15% a 35%', 'Resultados exibidos com aviso de baixa confiança estatística.'],
+                ['Acima de 35%', 'Dados representativos. Resultados exibidos normalmente.']
+              ])
+          + _h2('<span class="ms ms-sm">do_not_disturb</span> O que este sistema não faz')
+          + _ul([
+              'Não identifica indivíduos em sofrimento',
+              'Não é um canal de denúncia formal',
+              'Não avalia o desempenho de ninguém',
+              'Não faz diagnóstico clínico ou psicológico',
+              'Não substitui acompanhamento de saúde mental',
+              'Não garante representatividade estatística rigorosa (é uma ferramenta de monitoramento, não de pesquisa acadêmica)'
+            ]);
+      }
+    },
+
+    // ── FINANCEIRO ────────────────────────────────────────────────────────
+
+    { id:'financeiro', label:'Financeiro & Contratos', icone:'account_balance', modulo:'FINANCEIRO',
+      tags:['financeiro','contrato','rubrica','orçamento','holerite','folha','pagamento','movimentação'],
+      descricao:'Contratos, rubricas, orçamento e processamento financeiro',
+      content: function(papel, feat) {
+        var html = _p('O módulo Financeiro centraliza a gestão de contratos, rubricas orçamentárias e movimentações financeiras da instituição.')
+          + _h2('<span class="ms ms-sm">description</span> O que você vê')
+          + _card('description', 'Contratos', 'Lista de contratos ativos e encerrados: prestadores, valores, vigência e status.')
+          + _card('category', 'Rubricas', 'Categorias orçamentárias que organizam para onde vai cada real do orçamento.')
+          + _card('account_balance_wallet', 'Orçamento', 'Visão do orçamento aprovado e do quanto já foi executado por rubrica e período.');
+        if (feat && feat.editar) {
+          html += _h2('<span class="ms ms-sm">edit</span> Lançar movimentações')
+            + _card('add', 'Nova movimentação', 'Registre uma entrada ou saída financeira vinculada a uma rubrica e contrato.')
+            + _card('receipt', 'Anexar comprovante', 'Anexe o documento de suporte (nota fiscal, recibo, etc.) diretamente à movimentação.');
+        }
+        if (feat && feat.aprovar_contrato) {
+          html += _h2('<span class="ms ms-sm">gavel</span> Aprovar contratos')
+            + _card('task_alt', 'Analisar proposta de contrato', 'Revise os termos, valores e prazo. Aprove ou recuse com justificativa registrada.')
+            + _card('edit_document', 'Aditivos', 'Contratos aprovados podem ter aditivos para ajustar prazo ou valor. Cada aditivo passa pelo mesmo fluxo de aprovação.');
+        }
+        if (feat && feat.aprovar_orcamento) {
+          html += _h2('<span class="ms ms-sm">swap_horiz</span> Remanejar orçamento')
+            + _card('swap_horiz', 'Transferir entre rubricas', 'Quando o orçamento de uma rubrica está sobrando e outra precisa de mais recursos, faça o remanejamento com justificativa registrada.');
+        }
+        if (feat && feat.ver_relatorio_completo) {
+          html += _h2('<span class="ms ms-sm">summarize</span> Relatório financeiro completo')
+            + _card('bar_chart', 'Relatório detalhado', 'Acesse o relatório completo com todos os valores, por período, rubrica, contrato e responsável. Exportável para planilha.');
+        }
+        if (feat && feat.gerar_holerite) {
+          html += _h2('<span class="ms ms-sm">receipt_long</span> Holerites')
+            + _card('receipt_long', 'Gerar holerite', 'Processe a folha do mês para gerar holerites individuais de todos os colaboradores.')
+            + _card('send', 'Enviar para colaboradores', 'Após gerar, os holerites ficam disponíveis para cada colaborador visualizar no sistema.')
+            + _calloutAviso('Verifique todos os lançamentos de ponto e afastamentos antes de processar a folha. Correções após o processamento exigem reprocessamento.');
+        }
+        return html;
+      }
+    },
+
+    // ── OPERAÇÃO ──────────────────────────────────────────────────────────
+
+    { id:'taskhub', label:'Meu Centro', icone:'hub', modulo:null,
+      tags:['taskhub','hub','centro','minhas tarefas','resumo','painel pessoal'],
+      descricao:'Painel pessoal com suas tarefas, ações e solicitações pendentes',
+      content: function(papel, feat) {
+        return _p('O Meu Centro é o seu painel pessoal: tudo o que precisa da sua atenção, reunido em um único lugar.')
+          + _card('task', 'Minhas tarefas', 'Todas as tarefas atribuídas a você, com prazo e status. Organize por prioridade ou data.')
+          + _card('event', 'Ações relacionadas', 'Ações culturais nas quais você está envolvido como responsável ou participante.')
+          + _card('pending_actions', 'Solicitações aguardando você', 'Reservas, aprovações ou qualquer item que precise da sua ação imediata.')
+          + _calloutInfo('Use o Meu Centro como ponto de partida do dia. Tudo que precisa de atenção aparece aqui.');
+      }
+    },
+
+    { id:'tarefas', label:'Tarefas', icone:'task_alt', modulo:'TAREFAS',
+      tags:['tarefa','pendente','concluída','atribuir','status','prioridade','equipe'],
+      descricao:'Gerenciamento de tarefas individuais e da equipe',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Tarefas permite criar, acompanhar e concluir atividades — suas próprias e, dependendo do seu perfil, as da equipe.')
+          + _h2('<span class="ms ms-sm">list</span> Minhas tarefas')
+          + _card('task', 'Ver minhas tarefas', 'Lista de todas as tarefas atribuídas a você. Filtre por status: A fazer, Em progresso, Concluída.')
+          + _card('edit', 'Atualizar status', 'Mova a tarefa para "Em progresso" quando começar e "Concluída" quando terminar.')
+          + _card('flag', 'Definir prioridade', 'Marque tarefas como urgentes para que elas apareçam destacadas no topo.');
+        if (feat && feat.atribuir_tarefas) {
+          html += _h2('<span class="ms ms-sm">person_add</span> Criar tarefas para a equipe')
+            + _card('add_task', 'Nova tarefa', 'Clique em "Nova Tarefa", defina título, descrição, prazo e responsável.')
+            + _card('assignment_ind', 'Atribuir', 'Escolha um ou mais membros da equipe para receber a tarefa. Eles serão notificados.');
+        }
+        if (feat && feat.ver_tarefas_equipe) {
+          html += _h2('<span class="ms ms-sm">groups</span> Visão da equipe')
+            + _card('bar_chart', 'Tarefas de todos', 'Veja as tarefas de toda a equipe em um único painel. Identifique gargalos e sobrecargas.');
+        }
+        return html;
+      }
+    },
+
+    { id:'reunioes', label:'Reuniões', icone:'groups', modulo:'REUNIOES',
+      tags:['reunião','pauta','ata','decisão','arquivar','convidar','participante'],
+      descricao:'Registro de pautas, atas e decisões das reuniões institucionais',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Reuniões registra pautas, participantes, discussões e decisões das reuniões do CCBJ, formando um histórico acessível a todos.')
+          + _h2('<span class="ms ms-sm">visibility</span> Consultar reuniões')
+          + _card('event_note', 'Lista de reuniões', 'Acesse reuniões passadas, em andamento e futuras. Veja a pauta, participantes e ata.')
+          + _card('history', 'Histórico de decisões', 'Todas as decisões registradas ficam arquivadas para consulta futura.');
+        if (feat && feat.criar_pauta) {
+          html += _h2('<span class="ms ms-sm">add</span> Criar reunião')
+            + _card('add_circle', 'Nova reunião', 'Defina título, data, horário, local e convide os participantes.')
+            + _card('list', 'Adicionar pautas', 'Inclua os tópicos que serão discutidos. Participantes podem sugerir pautas antes da reunião.')
+            + _card('edit_note', 'Registrar discussões', 'Durante ou após a reunião, registre o que foi discutido e as decisões tomadas em cada pauta.');
+        }
+        if (feat && feat.fechar_reuniao) {
+          html += _h2('<span class="ms ms-sm">task_alt</span> Finalizar reunião')
+            + _card('check_circle', 'Encerrar e gerar ata', 'Ao finalizar, o sistema gera automaticamente a ata com todas as decisões registradas.')
+            + _card('archive', 'Arquivar', 'Reuniões finalizadas são arquivadas e ficam disponíveis para consulta histórica.');
+        }
+        return html;
+      }
+    },
+
+    // ── COMUNICAÇÃO ───────────────────────────────────────────────────────
+
+    { id:'comunicacao', label:'Comunicação & RECE', icone:'campaign', modulo:'COMUNICACAO',
+      tags:['comunicação','rece','demanda','entrega','evento externo','divulgação','comunicado','email'],
+      descricao:'Demandas de comunicação, entregas e registro de eventos para divulgação',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Comunicação gerencia as demandas e entregas de materiais de divulgação, além do RECE — Registro de Eventos Culturais para divulgação externa.')
+          + _h2('<span class="ms ms-sm">assignment</span> Demandas de comunicação')
+          + _card('pending', 'Ver demandas', 'Lista de solicitações de materiais de comunicação (cartazes, posts, textos, etc.) com status e prazo.')
+          + _card('check_circle', 'Ver entregas', 'Materiais já finalizados e entregues às áreas solicitantes.');
+        if (feat && feat.editar) {
+          html += _card('add', 'Criar demanda', 'Registre uma nova solicitação informando o tipo de material, prazo e área solicitante.')
+            + _card('upload', 'Registrar entrega', 'Ao concluir um material, registre a entrega e anexe o arquivo final.');
+        }
+        if (feat && feat.enviar_comunicado) {
+          html += _h2('<span class="ms ms-sm">mail</span> Enviar comunicado')
+            + _card('send', 'Comunicado interno', 'Envie um e-mail ou mensagem para todos os colaboradores ou para um setor específico.')
+            + _calloutAviso('Comunicados em massa são enviados para todos os destinatários de uma vez. Revise o texto antes de enviar.');
+        }
+        html += _h2('<span class="ms ms-sm">star</span> RECE — Agenda de eventos externos')
+          + _card('event', 'O que é o RECE', 'O RECE (Registro de Eventos Culturais Externos) é a agenda pública do CCBJ — eventos abertos ao público que precisam de divulgação externa.')
+          + _card('add', 'Registrar evento no RECE', 'Preencha título, data, local, descrição e material visual. Após publicar, o evento aparece na agenda pública.');
+        return html;
+      }
+    },
+
+    { id:'balcao', label:'Balcão de Atendimento', icone:'support_agent', modulo:'COMUNICACAO',
+      tags:['balcão','atendimento','fila','suporte','solicitação','público'],
+      descricao:'Fila de atendimento ao público e colaboradores',
+      content: function(papel, feat) {
+        var html = _p('O Balcão gerencia a fila de atendimentos presenciais ou remotos — solicitações de informação, dúvidas e pedidos que chegam ao CCBJ.')
+          + _card('queue', 'Ver fila de atendimentos', 'Consulte os atendimentos em aberto, em andamento e encerrados.');
+        if (feat && feat.gerir_balcao) {
+          html += _h2('<span class="ms ms-sm">headset_mic</span> Gerenciar atendimentos')
+            + _card('add', 'Abrir atendimento', 'Registre uma nova solicitação com dados do solicitante, tipo e descrição do pedido.')
+            + _card('forward', 'Encaminhar', 'Se necessário, encaminhe o atendimento para outro setor responsável.')
+            + _card('check_circle', 'Encerrar', 'Registre como o atendimento foi resolvido e encerre para liberar a fila.');
+        }
+        return html;
+      }
+    },
+
+    // ── VOLUNTARIADO ──────────────────────────────────────────────────────
+
+    { id:'voluntarios', label:'Voluntários', icone:'volunteer_activism', modulo:'MASTER',
+      tags:['voluntário','voluntariado','colaboração','parceiro','externo'],
+      descricao:'Cadastro e acompanhamento de voluntários da instituição',
+      content: function(papel, feat) {
+        var html = _p('O módulo de Voluntários registra todas as pessoas que contribuem com o CCBJ de forma voluntária, sem vínculo empregatício.')
+          + _card('list', 'Lista de voluntários', 'Nome, área de atuação, disponibilidade e ações nas quais participou.')
+          + _card('link', 'Vínculo com ações', 'Cada voluntário pode ser vinculado às ações em que participou para formar um histórico.');
+        if (feat && feat.editar) {
+          html += _card('person_add', 'Cadastrar voluntário', 'Informe nome, contato, área de interesse e disponibilidade de dias e horários.');
+        }
+        return html;
+      }
+    },
+
+    { id:'agentes', label:'Agentes Culturais', icone:'person_pin', modulo:'MASTER',
+      tags:['agente','cultural','artista','parceiro','externo','CCBJ'],
+      descricao:'Cadastro de agentes e produtores culturais parceiros',
+      content: function(papel, feat) {
+        var html = _p('Os Agentes Culturais são artistas, produtores e outros profissionais da cultura com os quais o CCBJ mantém relação. Diferente de colaboradores, não têm vínculo empregatício com a instituição.')
+          + _card('person_pin', 'Lista de agentes', 'Cadastro completo com área de atuação, contato, portfólio e ações vinculadas.')
+          + _card('event', 'Histórico de ações', 'Veja em quais ações cada agente participou como artista, palestrante ou produtor.');
+        if (feat && feat.editar) {
+          html += _card('person_add', 'Novo agente', 'Preencha nome, área de atuação, links de portfólio e dados de contato.');
+        }
+        return html;
+      }
+    },
+
+    // ── SISTEMA ───────────────────────────────────────────────────────────
+
+    { id:'relatorios', label:'Relatórios', icone:'summarize', modulo:'RELATORIOS',
+      tags:['relatório','exportar','dados','análise','planilha'],
+      descricao:'Relatórios gerenciais disponíveis conforme o seu perfil',
+      content: function(papel, feat) {
+        return _p('O módulo de Relatórios consolida dados do sistema em formatos prontos para análise e prestação de contas.')
+          + _card('bar_chart', 'Relatórios disponíveis', 'Os relatórios que aparecem para você dependem do seu perfil de acesso. Gestores e Admins têm acesso a relatórios gerenciais completos.')
+          + _card('download', 'Exportar', 'Todos os relatórios podem ser exportados em formato de planilha (CSV ou Excel) para uso externo.')
+          + _card('filter_list', 'Filtrar por período', 'Defina o período desejado antes de gerar o relatório para obter dados mais precisos.');
+      }
+    },
+
+    { id:'admin', label:'Administração', icone:'admin_panel_settings', modulo:'ADMIN',
+      tags:['admin','superadmin','usuário','acesso','módulo','configuração','auditoria','organização'],
+      descricao:'Gerenciamento de usuários, módulos e configurações do sistema',
+      content: function(papel, feat) {
+        var ehAdmin = (papel === 'admin' || papel === 'superadmin');
+        if (!ehAdmin) return _p('Esta área é exclusiva para administradores do sistema.');
+        return _p('O painel de Administração é o centro de controle do sistema. Use com atenção — as ações aqui afetam todos os usuários.')
+          + _h2('<span class="ms ms-sm">people</span> Gerenciar usuários')
+          + _card('person_check', 'Aprovar novos acessos', 'Quando alguém do domínio da instituição acessa o sistema pela primeira vez, você recebe uma notificação para aprovar e definir o perfil de acesso.')
+          + _card('edit', 'Editar perfil de acesso', 'Mude o nível de acesso de qualquer usuário. A mudança entra em vigor imediatamente no próximo login.')
+          + _card('block', 'Revogar acesso', 'Remova o acesso de um colaborador desligado ou afastado. O usuário não consegue mais entrar no sistema.')
+          + _calloutAviso('Ao trocar o perfil de acesso de um usuário, o sistema reapresenta o manual automaticamente para que ele entenda o que mudou.')
+          + _h2('<span class="ms ms-sm">widgets</span> Configurar módulos')
+          + _card('toggle_on', 'Ativar / desativar módulos', 'Controle quais módulos estão disponíveis na sua organização. Módulos desativados ficam invisíveis para os usuários.')
+          + _h2('<span class="ms ms-sm">business</span> Configurações da organização')
+          + _card('apartment', 'Dados da instituição', 'Nome, logo e domínio de e-mail autorizado para acesso.')
+          + _card('schedule', 'Expediente e turnos', 'Configure os horários de funcionamento e os turnos de trabalho para uso no controle de ponto.')
+          + _h2('<span class="ms ms-sm">manage_search</span> Auditoria')
+          + _card('history', 'Histórico de todas as ações', 'Cada criação, edição ou exclusão no sistema é registrada com usuário, data e hora. Consulte para identificar quem fez o quê.')
+          + (papel === 'superadmin' ? _h2('<span class="ms ms-sm">corporate_fare</span> Painel de organizações (SuperAdmin)')
+              + _card('corporate_fare', 'Gerenciar todas as orgs', 'Como SuperAdmin, você pode visualizar e administrar todas as organizações no sistema.') : '');
+      }
+    }
+
+  ];
+
+  // ─── Funções internas ─────────────────────────────────────────────────
+
+  function _boot() { return (window.App && App.getBoot) ? App.getBoot() : null; }
+
+  function _papel() {
+    var b = _boot();
+    return (b && b.usuarioPapel) ? String(b.usuarioPapel) : 'colaborador';
+  }
+
+  function _perm(modulo) {
+    var b = _boot();
+    return (b && b.permissoesModulos && b.permissoesModulos[modulo]) || {};
+  }
+
+  function _feat(modulo) {
+    var b = _boot();
+    return (b && b.featuresAtivas && b.featuresAtivas[modulo]) || {};
+  }
+
+  function _podeVerSecao(sec) {
+    if (!sec.modulo) return true;
+    var p = _perm(sec.modulo);
+    return !!p.visualizar;
+  }
+
+  function _secoesFiltradas() {
+    return _SECOES_DEF.filter(_podeVerSecao);
+  }
+
+  function _renderNav() {
+    var ul = document.getElementById('manual-nav-lista');
+    if (!ul) return;
+    var papel = _papel();
+    var secoes = _secoesFiltradas();
+    var html = '';
+
+    _GRUPOS.forEach(function(grupo) {
+      var idsNoGrupo = grupo.ids.filter(function(id) {
+        return secoes.some(function(s){ return s.id === id; });
+      });
+      if (!idsNoGrupo.length) return;
+
+      html += '<div style="font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);'
+        + 'padding:10px 16px 4px;font-weight:700;">' + grupo.label + '</div>';
+
+      idsNoGrupo.forEach(function(id) {
+        var sec = _SECOES_DEF.filter(function(s){ return s.id === id; })[0];
+        if (!sec) return;
+        var ativo = id === _secaoAtual;
+        html += '<div class="manual-nav-item' + (ativo ? ' ativo' : '') + '" onclick="ManualUI.navegar(\'' + id + '\')">'
+          + '<span class="ms ms-sm" style="' + (ativo ? '' : 'color:var(--muted);') + '">' + (sec.icone || 'article') + '</span>'
+          + escaparHtml(sec.label)
+          + '</div>';
+      });
+    });
+
+    ul.innerHTML = html;
+  }
+
+  function _noticeMudanca() {
+    if (!_papelAnteriorMudanca) return '';
+    var papelAtual = _papel();
+    var labelAnt = _LABELS_PAPEL[_papelAnteriorMudanca] || _papelAnteriorMudanca;
+    var labelNov = _LABELS_PAPEL[papelAtual] || papelAtual;
+    var descAnt  = _DESCRICOES_PAPEL[_papelAnteriorMudanca] || '';
+    var descNov  = _DESCRICOES_PAPEL[papelAtual] || '';
+    return '<div id="manual-notice-permissao" style="background:linear-gradient(135deg,var(--color-primary-lt),#fff);'
+      + 'border:1px solid var(--color-primary);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:24px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<span class="ms" style="color:var(--color-primary);font-size:22px;">manage_accounts</span>'
+      + '<strong style="font-size:15px;color:var(--color-primary);">Suas permissões foram atualizadas</strong>'
+      + '</div>'
+      + '<p style="font-size:13px;color:var(--text);margin:0 0 4px;line-height:1.6;">'
+      + 'Antes você tinha o perfil de <strong>' + escaparHtml(labelAnt) + '</strong>: ' + escaparHtml(descAnt)
+      + '</p>'
+      + '<p style="font-size:13px;color:var(--text);margin:0 0 14px;line-height:1.6;">'
+      + 'Agora você é <strong>' + escaparHtml(labelNov) + '</strong>: ' + escaparHtml(descNov)
+      + '</p>'
+      + '<p style="font-size:12px;color:var(--text2);margin:0 0 14px;">Use o menu ao lado para explorar o que está disponível para o seu novo perfil.</p>'
+      + '<button class="btn btn-primario btn-sm" onclick="ManualUI.confirmarPermissao()" data-bg-skip="1">Entendi, continuar</button>'
+      + '</div>';
+  }
+
+  function _renderSecao(sec) {
+    if (!sec) return '<p style="color:var(--text2);">Seção não encontrada.</p>';
+    var papel   = _papel();
+    var modulo  = sec.modulo || '';
+    var permMod = _perm(modulo);
+    var featMod = _feat(modulo);
+    var featCombinada = Object.assign({ visualizar: !!permMod.visualizar, editar: !!permMod.editar, excluir: !!permMod.excluir }, featMod);
+
+    var conteudo = typeof sec.content === 'function'
+      ? sec.content(papel, featCombinada)
+      : '<p style="color:var(--text2);">Conteúdo em elaboração.</p>';
+
+    return _noticeMudanca()
+      + '<div class="manual-section">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
+      + '<span class="ms" style="font-size:30px;color:var(--color-primary);">' + (sec.icone || 'article') + '</span>'
+      + '<div><h2 style="margin:0;font-size:1.18rem;font-weight:700;color:var(--text);">' + escaparHtml(sec.label) + '</h2>'
+      + (sec.descricao ? '<p style="margin:3px 0 0;color:var(--text2);font-size:12.5px;">' + escaparHtml(sec.descricao) + '</p>' : '')
+      + '</div></div>'
+      + '<hr style="margin:14px 0;border:none;border-top:1px solid var(--border);">'
+      + conteudo
+      + '</div>';
+  }
+
+  // ─── API Pública ──────────────────────────────────────────────────────
+
+  function setRotaAnterior(rota) {
+    if (rota && rota !== 'manual') {
+      var secaoId = _MAPA_ROTA_SECAO[rota] || 'home';
+      _rotaAnterior = secaoId;
+    }
+  }
+
+  function setPapelAnterior(p) {
+    _papelAnteriorMudanca = p;
+  }
+
+  function verificarMudancaPermissao(papelAtual) {
+    try {
+      var anterior = localStorage.getItem(_CHAVE_PAPEL);
+      if (anterior && anterior !== papelAtual) return anterior;
+      if (!anterior) localStorage.setItem(_CHAVE_PAPEL, papelAtual);
+    } catch(e) {}
+    return null;
+  }
+
+  function marcarPapelVisto(papel) {
+    try { localStorage.setItem(_CHAVE_PAPEL, papel); } catch(e) {}
+  }
+
+  function aoAbrir() {
+    var b = _boot();
+    if (b) marcarPapelVisto(b.usuarioPapel || 'colaborador');
+    _renderNav();
+    navegar(_rotaAnterior || 'home');
+  }
+
+  function navegar(id) {
+    var secaoAlvo = _SECOES_DEF.filter(function(s){ return s.id === id && _podeVerSecao(s); })[0]
+                 || _SECOES_DEF.filter(function(s){ return s.id === 'home'; })[0];
+    if (!secaoAlvo) return;
+    _secaoAtual = secaoAlvo.id;
+    var el = document.getElementById('manual-conteudo');
+    if (el) {
+      el.innerHTML = _renderSecao(secaoAlvo);
+      el.scrollTop = 0;
+    }
+    _renderNav();
+  }
+
+  function buscar(q) {
+    var ul = document.getElementById('manual-nav-lista');
+    if (!ul) return;
+    if (!q || !q.trim()) { _renderNav(); return; }
+    var ql = q.toLowerCase().trim();
+    var secoes = _secoesFiltradas();
+    var html = '';
+    var encontradas = secoes.filter(function(s) {
+      return s.label.toLowerCase().indexOf(ql) !== -1
+          || (s.descricao || '').toLowerCase().indexOf(ql) !== -1
+          || (s.tags || []).some(function(t){ return t.toLowerCase().indexOf(ql) !== -1; });
+    });
+    if (!encontradas.length) {
+      html = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum resultado para "' + escaparHtml(q) + '"</div>';
+    } else {
+      html += '<div style="font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:10px 16px 4px;font-weight:700;">'
+        + encontradas.length + ' resultado' + (encontradas.length > 1 ? 's' : '') + '</div>';
+      encontradas.forEach(function(sec) {
+        var ativo = sec.id === _secaoAtual;
+        html += '<div class="manual-nav-item' + (ativo ? ' ativo' : '') + '" onclick="ManualUI.navegar(\'' + sec.id + '\')">'
+          + '<span class="ms ms-sm" style="' + (ativo ? '' : 'color:var(--muted);') + '">' + (sec.icone || 'article') + '</span>'
+          + escaparHtml(sec.label)
+          + '</div>';
+      });
+    }
+    ul.innerHTML = html;
+  }
+
+  function confirmarPermissao() {
+    _papelAnteriorMudanca = null;
+    var notice = document.getElementById('manual-notice-permissao');
+    if (notice) notice.remove();
+  }
+
+  return {
+    aoAbrir:                    aoAbrir,
+    navegar:                    navegar,
+    buscar:                     buscar,
+    setRotaAnterior:            setRotaAnterior,
+    setPapelAnterior:           setPapelAnterior,
+    verificarMudancaPermissao:  verificarMudancaPermissao,
+    confirmarPermissao:         confirmarPermissao
+  };
+
+})();
+</script>

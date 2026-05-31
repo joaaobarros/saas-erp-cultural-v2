@@ -8962,6 +8962,7 @@ var Toast = (function() {
     }, dur);
   }
   return {
+    mostrar: mostrar,
     sucesso: function(msg) { mostrar(msg,'sucesso'); },
     erro:    function(msg) { mostrar(msg,'erro',6000); },
     aviso:   function(msg) { mostrar(msg,'aviso'); },
@@ -17952,6 +17953,7 @@ var AtivosUI = (function() {
 <?!= include('shared/mapa_editor'); ?>
 <?!= include('shared/terreno_editor'); ?>
 <?!= include('shared/mapa_acao_editor'); ?>
+<?!= include('shared/manual'); ?>
 // ═══════════════════════════════════════════════════════════
 // PESSOAS — Controlador de Tabs (Fase 3)
 // ═══════════════════════════════════════════════════════════
@@ -20597,7 +20599,13 @@ var App = (function() {
 
     if(primeiraVez) {
       Router.registrar('home', 'Início', null);
-      Router.navegar('home');
+      var _papelMudou = typeof ManualUI !== 'undefined' && ManualUI.verificarMudancaPermissao(_boot.usuarioPapel);
+      if (_papelMudou) {
+        ManualUI.setPapelAnterior(_papelMudou);
+        Router.navegar('manual');
+      } else {
+        Router.navegar('home');
+      }
     }
   }
 
