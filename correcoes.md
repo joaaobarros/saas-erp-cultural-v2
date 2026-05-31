@@ -1,36 +1,45 @@
-Segue o arquivo `.md` com as correções e ajustes solicitados para inclusão no sistema de gestão cultural:
-
 # Correções e Ajustes — Sistema de Gestão Cultural
+> Arquivo unificado. Fonte única de verdade para pendências, bugs e melhorias.
+> Atualizado em: 2026-05-31
+
+---
+
+## Status geral
+
+- [ ] 1. Aba Financeiro — múltiplas correções
+- [ ] 2. Superadmin — acesso ao primeiro acesso
+- [ ] 3. Permissões e Aprovações — visibilidade e alertas
+- [ ] 4. Aprovações — expansão do módulo
+- [ ] 5. Memória de Cálculo — novos campos
+- [ ] 6. Modais "Nova Meta" / "Editar Meta" — período de execução
+- [ ] 7. Modal "Adicionar Pessoal" — dropdown de cargos
+- [ ] 8. Integração Financeiro ↔ RH
+- [ ] 9. Cálculo automático de salários — benefícios
+- [ ] BUG-UI-01. Pulse Widget — inconsistência pergunta/escala
+
+---
 
 ## 1. Aba Financeiro
 
-### Problema identificado
+### Problemas identificados
 
-As informações dos setores não estão persistindo após salvamento
-### Correção solicitada
+As informações dos setores não estão persistindo após salvamento. Além disso, o comportamento de colapso e a experiência de cadastro precisam de melhorias.
 
-* Corrigir renderização visual do dropdown de setores.
-* Garantir contraste adequado entre texto e fundo.
-* Validar funcionamento em tema claro e escuro (caso exista).
-* Garantir acessibilidade mínima de leitura.
-* Corrigir persistência das informações dos setores na aba Financeiro. Atualmente, após o salvamento, os dados não permanecem registrados corretamente.
-* Ajustar comportamento de colapso após salvamento de rubricas. Atualmente, ao salvar uma rubrica, toda a meta é recolhida. O comportamento esperado é:
-  - fechar apenas a rubrica salva;
-  - manter a meta expandida;
-  - permitir continuidade do cadastro das demais rubricas sem necessidade de reabrir toda a estrutura.
-* Adicionar possibilidade de expandir/visualizar a lista de Memória de Cálculo sem entrar em modo de edição. Atualmente a visualização só ocorre ao editar o item.
-* Transformar os campos de Descrição da Memória de Cálculo em campos de texto longo (textarea), com expansão vertical automática conforme aumento de conteúdo.
-* No cadastro de rubricas, o campo “Quantidade de Meses” deve ser automaticamente preenchido com a duração calculada da meta, considerando:
-  - data de início da meta;
-  - data de fim da meta.
-* No cadastro da meta, o campo “Quantidade de Meses” deve ser automaticamente preenchido com a duração calculada do contrato, considerando:
-  - data de início do contrato;
-  - data de fim do contrato.
-* Adicionar funcionalidade de drag and drop para reorganização manual das metas.
-* Revisar lógica do card “Valor em Aberto”. O comportamento atual aparenta não corresponder aos valores efetivamente cadastrados. Validar:
-  - fórmula utilizada;
-  - origem dos dados;
-  - consistência entre total previsto, executado e saldo apresentado.
+### Correções
+
+- [ ] **1.1** Corrigir renderização visual do dropdown de setores (contraste texto/fundo; `color:var(--text)` e `background:var(--surface)` explícitos no select inline de `_renderMemTabela`).
+- [ ] **1.2** Garantir contraste adequado em tema claro e escuro.
+- [ ] **1.3** Corrigir persistência do campo `setor` na Memória de Cálculo — backend (`contratos_engine.gs → adicionarItemMemoriaRubrica`) deve incluir o campo `setor` no objeto `novoItem`.
+- [ ] **1.4** Corrigir colapso pós-save de rubrica:
+  - Capturar estado de expansão antes do reload (`_captureExpandState`).
+  - Restaurar após re-render (`_restoreExpandState`).
+  - Fechar apenas o formulário da rubrica salva; manter meta expandida.
+- [ ] **1.5** Adicionar visualização read-only da Memória de Cálculo (botão "visibility" em `_renderRubricas` → modal com tabela read-only via `_verMemoria(r)`).
+- [ ] **1.6** Transformar campo "Descrição" da Memória de Cálculo em `<textarea>` com auto-expand vertical.
+- [ ] **1.7** Auto-fill "Quantidade de Meses" na rubrica a partir das datas de início/fim da meta correspondente.
+- [ ] **1.8** Auto-fill "Quantidade de Meses" no modal de meta a partir das datas do contrato (`_obj.vigenciaInicio` / `_obj.vigenciaFim`). Campo `#cd-meta-qtd-meses` (read-only, calculado automaticamente).
+- [ ] **1.9** Drag and drop para reorganização manual de metas (HTML5 Drag API + endpoint `ctrl_contratos_reordenarMetas`).
+- [ ] **1.10** Revisar lógica do card "Valor em Aberto" — verificar se `valorAtivos` do backend representa valor previsto ou saldo real; ajustar fórmula/label.
 
 ---
 
@@ -38,25 +47,18 @@ As informações dos setores não estão persistindo após salvamento
 
 ### Problema identificado
 
-O usuário com perfil de Superadmin é automaticamente redirecionado para dentro do sistema após login, impossibilitando a revisão e validação da página de primeiro acesso.
+O usuário Superadmin é automaticamente redirecionado para dentro do sistema após login, impossibilitando a revisão da página de primeiro acesso.
 
-### Correção solicitada
+### Status
 
-Criar mecanismo que permita ao Superadmin:
+> **Botão "Visualizar Primeiro Acesso" JÁ EXISTE** no painel Admin (linha ≈ 1911 do index.html):  
+> `window.open(url + '?secao=primeiro_acesso_preview', '_blank')`  
+> O router.gs já serve a view preview com validação de papel admin/superadmin.
 
-* Visualizar manualmente a página de primeiro acesso.
-* Simular experiência de usuário em primeiro acesso.
-* Revisar fluxos de cadastro e aprovação.
-* Validar layout e funcionamento da página.
-* Criar perfis de usuários fantasma para visualizar como o sistema opera de acordo com cada perfil e permissões
+### Correções
 
-### Sugestão técnica
-
-Adicionar:
-
-* botão “Visualizar Primeiro Acesso”
-  ou
-* parâmetro de rota administrativa de simulação.
+- [ ] **2.1** Verificar visibilidade do card Admin onde o botão reside para usuário superadmin.
+- [ ] **2.2** Implementar "Perfis Fantasma" — botão no painel Admin "Simular como [papel]" que abre nova aba com parâmetro `?simular_papel=colaborador` (ou `gestor`, `financeiro`, etc.). Seguir padrão do `_renderPrimeiroAcessoPreview` em `router.gs`.
 
 ---
 
@@ -64,15 +66,48 @@ Adicionar:
 
 ### Problemas identificados
 
-* Superadmin não consegue revisar permissões e aprovações corretamente.
-* Nenhum alerta/notificação apareceu indicando existência de primeiro acesso pendente para aprovação.
+- Superadmin não consegue revisar permissões e aprovações (aba pode estar restrita ao módulo ESPACOS).
+- Nenhum alerta/notificação para primeiro acesso pendente.
+- Lista de aprovações não atualiza automaticamente.
 
-### Correções solicitadas
+### Correções
 
-* Restaurar visualização completa das permissões para Superadmin.
-* Corrigir fluxo de aprovações de primeiro acesso.
-* Implementar alertas/notificações administrativas para novas solicitações pendentes.
-* Garantir atualização em tempo real ou recarregamento automático da lista de aprovações.
+- [ ] **3.1** RBAC: remover restrição `modulo:'ESPACOS'` do item de menu `aprovacoes` (linha ≈ 20199); garantir visibilidade para `admin` e `superadmin` sempre.
+- [ ] **3.2** Badge/notificação no boot: após `getBootstrap()`, verificar `_boot.aprovacoesPendentes` (ou chamar `GAS.acesso.contarPendentes()`); exibir badge no menu "Aprovações".
+- [ ] **3.3** Adicionar aba "Permissões" ao `tab-bar` de `#view-aprovacoes`, listando usuários com acesso pendente via `GAS.acesso.listarPendentes()` (já existe em `acesso_service.gs`).
+- [ ] **3.4** Botão de refresh já existe nas abas — verificar se carregarAcessos() retorna dados corretos para superadmin.
+
+### Arquitetura do Módulo Central de Aprovações (IMPLEMENTACAO_CORRECAO_3.md — integrado)
+
+> **Status atual**: Aprovações já cobre Reservas de Espaço, Primeiros Acessos e Veículos via `AprovacaoReservaUI`.  
+> O módulo centralizado (`AprovacoesEngine`) é planejado para fases futuras.
+
+**Schema de Aprovação** (para `aprovacoes.json` — fase futura):
+```javascript
+{
+  id: "aprov_<uuid>",
+  tipo: "primeiro_acesso|reserva|permissao|contratacao|outro",
+  status: "pendente|aprovada|rejeitada|em_analise",
+  solicitanteMail: "user@org.br",
+  solicitanteNome: "João Silva",
+  payload: { ...tipo-específico },
+  solicitadoEm: "2026-05-28T10:30:00Z",
+  analisadoPor: "admin@org.br",
+  analisadoEm: "2026-05-28T11:00:00Z",
+  motivoRejeicao: null,
+  tags: ["primeiro_acesso", "urgente"],
+  processoId: null
+}
+```
+
+**Fluxo FSM**: `pendente → em_analise → aprovada/rejeitada`
+
+**Dependências**:
+- ✅ `AcessoService.verificar()` — já existe
+- ✅ `AuditoriaService.registrar()` — já existe
+- ✅ `NotificationEngine` — já existe
+- ✅ `FsmGuardian` — já existe
+- ❌ `AprovacoesEngine` — a criar em fase futura
 
 ---
 
@@ -80,82 +115,56 @@ Adicionar:
 
 ### Problema identificado
 
-A aba “Aprovações” atualmente aparenta estar restrita apenas a reservas.
+A aba "Aprovações" cobre: Reservas de Espaço, Primeiros Acessos, Veículos. Não cobre ainda: permissões, RH, solicitações internas.
 
-### Correção solicitada
+### Correções
 
-Transformar a aba “Aprovações” em módulo amplo de aprovações internas do sistema, contemplando:
-
-* reservas;
-* primeiros acessos;
-* permissões;
-* validações administrativas;
-* solicitações internas;
-* fluxos de RH;
-* demais aprovações existentes e futuras.
+- [ ] **4.1** Adicionar aba "Permissões" (cf. item 3.3).
+- [ ] **4.2** (Fase futura) Criar `AprovacoesEngine` centralizado com schema unificado que suporte todos os tipos de aprovação.
+- [ ] **4.3** (Fase futura) Implementar alertas proativos: email ao superadmin quando novo acesso pendente; lembrete após 48h sem resposta.
 
 ---
 
 ## 5. Memória de Cálculo — Plano de Trabalho
 
-### Correção solicitada
+### Status
 
-Adicionar os seguintes campos obrigatórios na memória de cálculo do Plano de Trabalho:
+> Os campos **Descrição**, **Setor** e **Tipo** JÁ EXISTEM no formulário de memória de cálculo.
+> - Setor: dropdown dinâmico via `App.getBoot().setores`
+> - Tipo: array `_MEM_TIPOS` com 8 opções
 
-### Novos campos
+### Correções
 
-* **Descrição**
-* **Setor**
+- [ ] **5.1** Adicionar tipo "Serviço" ao `_MEM_TIPOS` (atualmente: Unidade, Hora técnica, Parcela, Mensalidade, Diária, Kit, Litros, Km).
 
-  * tipo: dropdown;
-  * opções vinculadas aos setores cadastrados no sistema.
-* **Tipo**
-
-  * opções:
-
-    * unidade
-    * serviço
-    * hora técnica
-    * parcela
-    * mensalidade
-    * diária
-    * kit
-    * litros
-    * km
+**Lista completa esperada:**
+- Unidade, Serviço, Hora técnica, Parcela, Mensalidade, Diária, Kit, Litros, Km
 
 ---
 
-## 6. Modais “Nova Meta” e “Editar Meta”
+## 6. Modais "Nova Meta" e "Editar Meta"
 
-### Correção solicitada
+### Status
 
-Adicionar dois campos de período de execução:
+> Os campos **Período de Início** (`#cd-meta-inicio`) e **Período de Fim** (`#cd-meta-fim`) JÁ EXISTEM com `type="date"` no modal de meta.
 
-* Período de início
-* Período de fim
+### Correções
 
-### Requisitos técnicos
-
-* Ambos devem utilizar datepicker.
-* Permitir seleção facilitada de datas.
-* Validar coerência entre início e fim.
+- [ ] **6.1** Adicionar campo "Duração (meses)" (`#cd-meta-qtd-meses`, read-only) calculado automaticamente das datas do contrato — cf. item 1.8.
+- [ ] **6.2** Validar coerência: `cd-meta-fim >= cd-meta-inicio`.
 
 ---
 
-## 7. Modal “Adicionar Pessoal”
+## 7. Modal "Adicionar Pessoal"
 
-### Problema identificado
+### Status
 
-Cadastro de pessoal não aproveita lista de cargos já cadastrados no sistema.
+> O campo "Cargo" JÁ É um `<select>` dinâmico (`#pf-cargo`) populado via `GAS.rh.listarCargos()` → `ctrl_pccs_listarCargos()`.
 
-### Correção solicitada
+### Correções
 
-Permitir que o campo “Cargo”:
-
-* utilize dropdown;
-* seja integrado à lista de cargos previamente cadastrados;
-* permita busca/filtro;
-* evite duplicidade manual de cargos.
+- [ ] **7.1** Verificar se `_popularSelectCargo()` é chamado ao abrir o modal de pessoal. Se não, corrigir.
+- [ ] **7.2** Garantir que a busca/filtro funciona no select (pelo menos via browser nativo).
 
 ---
 
@@ -163,18 +172,13 @@ Permitir que o campo “Cargo”:
 
 ### Problema identificado
 
-Cadastro de pessoal no Financeiro está isolado do RH.
+Cadastro de pessoal no Financeiro está isolado do RH. Funcionários CLT não têm vínculo automático.
 
-### Correção solicitada
+### Correções
 
-Criar integração direta entre módulos Financeiro e RH.
-
-### Regras esperadas
-
-* Funcionários CLT devem possuir vínculo automático entre os dois módulos.
-* Alterações cadastrais devem refletir simultaneamente em RH e Financeiro.
-* Evitar duplicidade de cadastro.
-* Garantir consistência de dados trabalhistas e financeiros.
+- [ ] **8.1** Investigar estrutura atual: verificar se `Financeiro.pessoal` e `RH.colaboradores` compartilham mesmo identificador (email ou CPF).
+- [ ] **8.2** Criar sincronização: ao salvar funcionário CLT no Financeiro, propagar dados básicos ao RH (ou vice-versa).
+- [ ] **8.3** Evitar duplicidade: verificar existência antes de criar novo colaborador.
 
 ---
 
@@ -184,103 +188,66 @@ Criar integração direta entre módulos Financeiro e RH.
 
 Os benefícios não estão sendo calculados corretamente no cálculo automático salarial.
 
-### Correção solicitada
-
-O cálculo deve considerar:
-
-* alimentação;
-* plano de saúde;
-* vale transporte;
-* desconto alimentação.
-
 ### Fórmula esperada
 
-Salário total deve considerar:
-
-```text
+```
 salário base
 + alimentação
 + plano de saúde
 + vale transporte
 - desconto alimentação
+= Custo Total Mensal
 ```
 
-## [BUG-UI-01] Pulse Widget — inconsistência entre pergunta e escala
+### Campos existentes
 
-**Arquivo:** `gas/src/frontend/index.html`
-**Localização:** `div#pulse-widget` (aproximadamente linha 6622)
+- `#pf-alimentacao`, `#pf-saude`, `#pf-transporte`, `#pf-desc-alimentacao` (linha ≈ 2638)
+- `#pf-salario-total` (resultado exibido)
+
+### Correções
+
+- [ ] **9.1** Verificar função `_recalcSalario()` no `PessoasUI` — confirmar que usa todos os 4 campos.
+- [ ] **9.2** Corrigir se necessário para: `total = base + alim + saude + vt - descAlim`.
+
+---
+
+## BUG-UI-01. Pulse Widget — inconsistência pergunta/escala
+
+**Arquivo:** `gas/src/frontend/index.html` ≈ linha 6994  
+**Dimensões afetadas:** demanda, vigor, dedicacao, absorcao, seguranca (todos usam Discordo→Concordo)
 
 ### Problema
-O widget exibe perguntas da dimensão **Demanda/Carga** formuladas como afirmações
-(ex.: "Tenho pouco tempo para concluir meu trabalho.") que devem ser respondidas
-em escala Discordo → Concordo.
 
-Porém, o título do widget mostra o **label da dimensão** ("Carga de trabalho") como
-se fosse a pergunta, e os rótulos da escala ficam sem contexto semântico.
+`#pulse-dimensao` é renderizado em `font-size:14px; font-weight:800` como cabeçalho principal. O texto da dimensão (ex.: "Carga de trabalho") aparece em destaque em vez da afirmação, confundindo o usuário sobre o que está sendo perguntado.
 
-### Causa raiz
-O elemento `<p id="pulse-dimensao">` exibe o nome da dimensão logo acima da pergunta,
-e o código que popula o widget usa `_pulseAtual.pergunta` para o texto da pergunta.
-O banco de perguntas (escuta_engine.gs) armazena as perguntas como **afirmações**
-adequadas para escala Likert — o problema está na exibição do label da dimensão
-em posição de destaque, confundindo o usuário.
+### Correção (Opção A — recomendada)
 
-### Correção
-
-**Opção A — Recomendada:** Remover o label da dimensão do cabeçalho do widget
-(ou movê-lo para um chip secundário menor), deixando apenas a afirmação como foco.
-
-No `index.html`, localizar o bloco dentro de `#pulse-widget`:
+- [ ] **BUG-UI-01.1** Mover `#pulse-dimensao` para chip secundário inline no cabeçalho:
 
 ```html
 <!-- ANTES -->
-<div>
-  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">Escuta Pulse</p>
-  <p id="pulse-dimensao" style="margin:2px 0 0;font-size:11px;color:var(--primary);font-weight:600;"></p>
-</div>
-Substituir por:
+<p style="margin:0;font-size:9px;font-weight:800;...">Uma pergunta rápida</p>
+<p id="pulse-dimensao" style="margin:5px 0 0;font-size:14px;color:#fff;font-weight:800;..."></p>
 
 <!-- DEPOIS -->
-<div>
-  <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">
-    Uma pergunta rápida
-    <span id="pulse-dimensao" style="font-weight:400;text-transform:none;color:var(--primary);margin-left:4px;"></span>
-  </p>
-</div>
-E garantir que o texto da pergunta seja a afirmação completa, não o label da dimensão.
-O id="pulse-pergunta" já recebe _pulseAtual.pergunta — confirmar que esse campo
-contém a afirmação (ex.: "Tenho pouco tempo para concluir meu trabalho.") e não o
-label da dimensão ("Carga de trabalho").
+<p style="margin:0;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.8);">
+  Uma pergunta rápida
+  <span id="pulse-dimensao" style="font-weight:400;text-transform:none;font-size:9px;opacity:.7;margin-left:4px;"></span>
+</p>
+```
 
-Opção B — Alternativa rápida: Trocar os rótulos da escala de "Discordo / Concordo"
-para rótulos neutros que funcionem tanto para afirmações quanto para perguntas abertas:
+---
 
-<!-- ANTES -->
-<span style="font-size:10px;color:var(--text2);">Discordo</span>
-<span style="font-size:10px;color:var(--text2);">Concordo</span>
+## Checklist de auditoria pré-deploy
 
-<!-- DEPOIS -->
-<span style="font-size:10px;color:var(--text2);">Nunca</span>
-<span style="font-size:10px;color:var(--text2);">Sempre</span>
-Ou, para "Carga de trabalho" especificamente:
-
-<span style="font-size:10px;color:var(--text2);">Leve</span>
-<span style="font-size:10px;color:var(--text2);">Pesada</span>
-Nota: A Opção B é paliativa. A Opção A resolve a raiz do problema para todas
-as dimensões, mantendo a consistência com o modelo JDC/UWES usado no engine.
-
-Dimensões afetadas no banco de perguntas (escuta_engine.gs)
-demanda → afirmações sobre pressão/carga (escala invertida)
-vigor, dedicacao, absorcao → afirmações positivas UWES
-seguranca → afirmações NR-1
-Todas usam escala Discordo → Concordo — a Opção A resolve todas de uma vez.
-
-## Procedimento Obrigatório para Claude
-
-Claude deve:
-
-* Confirmar individualmente cada item corrigido.
-* Atualizar este arquivo conforme avanço das implementações.
-* Marcar como concluídos ([x]) os itens efetivamente resolvidos.
-* Remover observações obsoletas quando necessário.
-* Manter neste arquivo apenas pendências reais e status atualizados.
+```
+[ ] prompt()/confirm() — _raw separado, null-check antes do fallback
+[ ] GAS.* namespace — todos os ctrl_* têm binding
+[ ] CSS — zero classes usadas sem definição
+[ ] IDs de DOM — regex de sanitização idêntica
+[ ] FsmGuardian.transitar() — antes de toda atualizarStatus*()
+[ ] Modais — background:var(--surface) opaco; overlay ≥ rgba(0,0,0,.4)
+[ ] onclick em HTML — JSON.stringify(id) usa .replace(/"/g,"'")
+[ ] BtnGuard.auditar() — retorna "✅ todos protegidos"
+[ ] Console F12 — zero TypeError / undefined
+```

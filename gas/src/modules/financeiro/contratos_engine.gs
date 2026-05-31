@@ -534,6 +534,7 @@ var ContratosEngine = (function () {
     var novoItem = {
       id:           id,
       descricao:    String(item.descricao || '').trim(),
+      setor:        String(item.setor || '').trim(),
       qtd:          Number(item.qtd || 0),
       metrica:      item.metrica || item.tipo || 'UN',
       valorUnitario: Number(item.valorUnitario || item.valorUnit || 0),
@@ -956,6 +957,23 @@ var ContratosEngine = (function () {
     return ContratoRepository.migrarSheetParaJson(orgId || _orgId());
   }
 
+  function reordenarMetas(idContrato, ordemIds, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    if (!idContrato || !Array.isArray(ordemIds)) throw new Error('idContrato e ordemIds são obrigatórios.');
+    ContratoRepository.modificarContrato(orgId, idContrato, function(contrato) {
+      var metasMap = {};
+      (contrato.metas || []).forEach(function(m) { metasMap[m.id] = m; });
+      contrato.metas = ordemIds.map(function(id) { return metasMap[id]; }).filter(Boolean);
+      // preservar metas que não estejam na ordemIds (caso de inconsistência)
+      (contrato.metas_original || contrato.metas || []).forEach(function(m) {
+        if (!metasMap[m.id]) return;
+        if (ordemIds.indexOf(m.id) === -1) contrato.metas.push(m);
+      });
+      return contrato;
+    });
+    AuditoriaService.registrar('REORDENAR_METAS', 'financeiro', { contrato: idContrato, ordem: ordemIds }, emailOperador || getEmailSessao(), orgId);
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // API PÚBLICA
   // ──────────────────────────────────────────────────────────────────
@@ -1018,6 +1036,9 @@ var ContratosEngine = (function () {
     salvarVersaoContrato: salvarVersaoContrato,
     listarVersoes:        listarVersoes,
     obterVersao:          obterVersao,
+
+    // Reordenação de Metas (drag and drop)
+    reordenarMetas: reordenarMetas,
 
     // Migração
     migrarSheetParaJson: migrarSheetParaJson
