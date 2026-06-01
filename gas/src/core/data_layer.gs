@@ -137,6 +137,14 @@ function saveJSON(nome, data) {
 }
 
 /**
+ * Alias de readJSON — compatibilidade com módulos que usam lerJSON().
+ * @see readJSON
+ */
+function lerJSON(nome) {
+  return readJSON(nome);
+}
+
+/**
  * Invalida cache da pasta de dados (útil em testes ou após mudança de PropertiesService).
  */
 function invalidarCacheDataFolder() {

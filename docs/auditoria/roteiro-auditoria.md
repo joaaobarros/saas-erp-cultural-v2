@@ -100,7 +100,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 ### Módulo 04 — Pessoas / Colaboradores
 | Item | Status | Sessão |
 |---|---|---|
-| Lista de colaboradores | ❌ PES-01 (não carrega) | 2026-05-31 |
+| Lista de colaboradores | ✅ PES-01 CORRIGIDO (provável) — lerJSON alias adicionado | 2026-06-01 |
 | Formulário de colaborador | 🔲 bloqueado por PES-01 | — |
 
 ### Módulo 05 — Afastamentos e Ocorrências
@@ -206,7 +206,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Nº Esboço não é pré-preenchido automaticamente | ⚠️ CON-02 | 2026-06-01 |
 | Setor Solicitante é texto livre | ⚠️ CON-01 | 2026-06-01 |
 | Ação Vinculada é select (não texto livre) | ✅ | 2026-06-01 |
-| Salvar rascunho | ❌ CON-08 — "lerJSON is not defined" | 2026-05-31 s15 |
+| Salvar rascunho | ✅ CON-08 CORRIGIDO — lerJSON alias adicionado | 2026-06-01 |
 | FSM e painel de detalhe de uma solicitação | 🔲 bloqueado por CON-08 | — |
 | Contratação concluída atualiza "Executado" no Financeiro | 🔲 bloqueado por CON-08 | — |
 | Aba Fornecedores — spinner infinito, botões inoperantes | ⚠️ CON-05 | 2026-06-01 |
@@ -555,7 +555,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 
 ### Problemas confirmados ⚠️
 
-- **PES-01**: **ERRO CRÍTICO** — Base de colaboradores cadastrados não aparece na listagem. Cadastro/carregamento com erro — módulo principal está quebrado.
+- ~~**PES-01**~~ ✅ CORRIGIDO (provável) — causa raiz era `lerJSON` indefinida; alias adicionado em `data_layer.gs`. Confirmar no sistema.
 - **PES-02**: Email do colaborador não é puxado da base de usuários do sistema (campo texto livre). Risco de inconsistência.
 - **PES-03**: Setor não é puxado da base de setores cadastrados no Admin (campo não integrado).
 - **PES-04**: Cálculo de salário total **incorreto** — campo existe e atualiza, mas fórmula está errada.
@@ -1949,7 +1949,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ### Novos problemas confirmados ⚠️
 
-**CON-08** `🔴 Crítico` — **"Salvar Rascunho" falha com "lerJSON is not defined"** — erro JavaScript de referência: a função `lerJSON` é chamada no fluxo de salvamento mas não está definida no escopo de execução. Toda criação de contratação está bloqueada — módulo inutilizável para escrita. O mesmo padrão de falha silenciosa/com erro de outros módulos (ACV-01, CON-05, ESC-04) mas aqui com mensagem de erro explícita ao usuário.
+~~**CON-08**~~ ✅ CORRIGIDO — `lerJSON()` adicionada como alias de `readJSON()` em `data_layer.gs`. A função era usada em ~40 lugares mas nunca definida.
 
 **CON-09** `🔴 Alta` — **Campo "Atividade/Evento" nas parcelas é texto livre desvinculado** — as parcelas do cronograma têm campo de atividade como input livre (placeholder "Atividade"), sem conexão com as atividades reais do Plano de Trabalho do contrato (hierarquia Meta → Atividade → Rubrica no Financeiro). O sistema não consegue rastrear qual atividade do Plano de Trabalho cada parcela financia — rompendo o vínculo execução↔planejamento. Campo deveria ser select populado das atividades da meta/rubrica selecionada no Vínculo Financeiro.
 
@@ -2783,7 +2783,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 9 | TAR-05 | Tarefas | Sem alertas (email, notificação interna, agenda) para vencimento | 🟡 Média |
 | 10 | PFANTASMA | Admin | "Perfis Fantasma" (simular papel de usuário) solicitado mas não implementado | 🔴 Alta |
 | 11 | PREVIEW-01 | Admin | Preview de Primeiro Acesso solicitado mas comportamento/completude incertos | 🟡 Média |
-| 12 | PES-01 | Pessoas | **ERRO CRÍTICO** — Lista de colaboradores não carrega (módulo quebrado) | 🔴 Crítico |
+| ~~12~~ | ~~PES-01~~ | ~~Pessoas~~ | ~~Lista de colaboradores não carrega~~ | ✅ CORRIGIDO (provável) — causa raiz era `lerJSON` indefinida; alias adicionado em `data_layer.gs`. Confirmar no sistema. |
 | 13 | PES-02 | Pessoas | Email do colaborador não integrado com base de usuários | 🔴 Alta |
 | 14 | PES-03 | Pessoas | Setor não integrado com base de setores do Admin | 🟡 Média |
 | 15 | PES-04 | Pessoas | Cálculo de salário total incorreto | 🔴 Alta |
@@ -3035,7 +3035,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 271 | ACV-10 | Acervo — DS | Formulário com estilos 100% inline — todos os labels, inputs e selects usam `style="..."`, sem classes DS (`form-label`, `form-input`…). Pior que ACO-12 | 🟡 Média |
 | 272 | ACV-11 | Acervo — Arquitetura | **Campo "Ação vinculada" obrigatório inviabiliza conteúdo institucional** — sistema bloqueia salvamento sem acaoId; arquivos institucionais (fotos do espaço, docs históricos, materiais avulsos) não podem ser registrados. Campo deve ser opcional: com ação → vinculado à ação; sem ação → conteúdo institucional com categorização própria | 🔴 Alta |
 | 273 | AGN-01 | Agentes Culturais — Sincronização | **Estado de módulo no Admin não propaga para a aplicação** — Admin → Módulos registra "Agentes Culturais = Ativo" mas sidebar exibe badge "inativo" e bloqueia o acesso com toast. Mesmo conflito em Voluntários. O toggle de ativação/desativação de módulos não está aplicando o estado corretamente. Relacionado a ADM-10 (features também não propagam). | 🔴 Alta |
-| 274 | CON-08 | Contratações — Salvar | **"Salvar Rascunho" falha com "lerJSON is not defined"** — função `lerJSON` não está definida no escopo de execução do salvamento; toda criação de contratação está bloqueada; módulo inutilizável para escrita | 🔴 Crítico |
+| ~~274~~ | ~~CON-08~~ | ~~Contratações — Salvar~~ | ~~"Salvar Rascunho" falha com "lerJSON is not defined"~~ | ✅ CORRIGIDO — `lerJSON()` adicionada como alias de `readJSON()` em `data_layer.gs` |
 | 275 | CON-09 | Contratações — Parcelas | **Campo "Atividade/Evento" nas parcelas é texto livre desvinculado** — sem conexão com as atividades reais do Plano de Trabalho (Meta→Atividade→Rubrica); impede rastrear qual atividade cada parcela financia | 🔴 Alta |
 | 258 | FIN-19 | Financeiro — Rubricas / Modelo de Dados | **Campo Setor deve migrar da Memória de Cálculo para o nível da Rubrica.** Uma mesma rubrica dentro de uma mesma meta pode ser registrada mais de uma vez, cada entrada vinculada a um setor diferente. Exemplo: Rubrica "Transporte" na Meta A → R$5.000 Setor Ação Cultural + R$3.000 Setor Comunicação. O sistema deve consolidar duplamente: (a) **total global da rubrica** (R$8.000, sem decomposição — para comparação com o orçamento do contrato); (b) **total por setor** (R$5.000 Ação Cultural / R$3.000 Comunicação — para gestão interna de custo por setor). O campo Setor na Memória de Cálculo (FIN-01, corrigido) trata de um nível errado — a granularidade correta é rubrica × setor, não item-de-memória × setor | 🔴 Alta |
 | 153 | ADM-02 | Admin — Permissões | PERMISSÕES POR MÓDULO no modal de edição de usuário cobre apenas VER/EDITAR/EXCLUIR por módulo — sem granularidade por funcionalidade, setor ou recurso. V1 era mais completo. Confirmado pelo usuário | 🔴 Alta |
@@ -3166,7 +3166,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 
 | Data | Módulos cobertos | Descobertas principais |
 |---|---|---|
-| 2026-06-01 | **CORREÇÕES s16 Fases 1–4** | APR-04 (tab ativa Aprovações), SIS-09 parcial (BAL-17+ESC-06+ACO-05 BtnGuard), ACO-16 (overlay+stopPropagation), CON-05 (ContratadosUI renomeia namespace duplicado). Deploy @367. |
+| 2026-06-01 | **CORREÇÕES s16 Fases 1–5** | APR-04, SIS-09 parcial (BAL-17+ESC-06+ACO-05), ACO-16, CON-05 (ContratadosUI), CON-08+PES-01 (`lerJSON` alias em data_layer.gs — resolve ~40 chamadas sem definição). Deploy @369. |
 | 2026-05-31 | Estruturação inicial | Roteiro criado; análise de código mapeou 49 módulos/subáreas a auditar |
 | 2026-05-31 | Home + Sidebar | Home: informações admin-only (espaços/setores/módulos/status) + acessos rápidos fixos. Sidebar: muito extensa, sem agrupamento — dificulta navegação. |
 | 2026-05-31 | Sidebar (aprofundamento) + Tarefas | Sidebar: superadmin vê todos os itens (Reuniões, Ponto, Balcão, Dashboard). "Perfis Fantasma" e preview de Primeiro Acesso foram solicitados mas não implementados. Tarefas: email de responsável sem autocomplete, sem vínculos com módulos, sem gatilhos ou alertas. |
