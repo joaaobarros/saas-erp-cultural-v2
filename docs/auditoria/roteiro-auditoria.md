@@ -171,8 +171,8 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Kanban carrega, métricas, filtros | ✅ | 2026-05-31 |
 | Toggle Lista/Kanban | ✅ | 2026-05-31 |
 | Formulário Nova Ação (9 campos) | ✅ (com ACO-12, ACO-14, ACO-17 a ACO-20) | 2026-05-31 |
-| Modal Editar Ação | ✅ carrega dados (bug via ✕ — ACO-16) | 2026-05-31 |
-| Botão Editar (caminho direto) | ❌ ACO-05 spinner infinito | 2026-05-31 |
+| Modal Editar Ação | ✅ | 2026-05-31 |
+| Botão Editar (caminho direto) | ✅ ACO-05 CORRIGIDO — BtnGuard.liberar em fecharForm | 2026-06-01 |
 | Botão ✕ fecha painel | ✅ ACO-16 CORRIGIDO — stopPropagation + overlay guard | 2026-06-01 |
 
 ### Módulo 13/14 — Painel da Ação (abas internas)
@@ -902,7 +902,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 - **ACO-02**: Campo "Responsável" exibe "nm" — valor nulo não tratado exposto na UI; provavelmente email/nome não resolvido do usuário criador
 - **ACO-03**: Campo "Setor" vazio ("—") — não auto-preenchido nem obrigatório no cadastro
 - **ACO-04**: Sem histórico de atividades no detalhe — sem linha do tempo de edições, transições de status, tarefas concluídas, reservas feitas, contratos vinculados. Sem rastreabilidade do ciclo de vida da ação
-- **ACO-05**: **BUG CRÍTICO** — botão "Editar" carrega eternamente (spinner infinito, sem resposta). Impossível editar qualquer ação existente pelo caminho principal
+- ~~**ACO-05**~~ ✅ CORRIGIDO — `BtnGuard.liberar('painel-acao-editar-btn')` adicionado em `fecharForm()`
 - **ACO-06**: Sem possibilidade de retroceder na FSM — ação em "Em Execução" só pode Concluir ou Cancelar; sem botão para voltar a "Em Produção" em caso de erro ou imprevisto
 - **ACO-07** *(REVISADO — sessão 6)*: Aba "Contratações" **carrega corretamente** — estado vazio funcional ("Nenhuma contratação vinculada a esta ação.") ✅. O loading infinito anterior não se confirmou.
 - **ACO-08** *(REVISADO — sessão 6)*: Botão "+ Nova Contratação" **não funciona** — nenhuma resposta ao clicar. O problema é anterior ao de abrir em nova aba: o botão está completamente inoperante.
@@ -916,7 +916,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 - **ACO-13**: Sem campo de vínculo com contrato ou fonte de recurso na criação — associação a contratos só é possível depois, via aba interna do painel, sem feedback no fluxo de criação (o usuário não é orientado a vincular)
 - **ACO-14**: Campo "Responsável" é texto livre (email digitado) — mesmo anti-padrão de TAR-02, CHV-05, PES-02. Deveria ser select/autocomplete da lista de usuários do sistema para garantir consistência e evitar erros de digitação
 - **ACO-15**: Barra de filtros sem botão refresh — todas as demais views com `filter-bar` ou `toolbar` têm botão de atualização explícito (refresh); Ações não tem, forçando o usuário a navegar para atualizar os dados
-- **ACO-16**: **BUG DE NAVEGAÇÃO** — clicar em ✕ (fechar) no painel de visualização da ação abre o modal "Editar Ação" em vez de fechar o painel. Comportamento esperado: ✕ → `AcoesUI.fecharPainel()`. Comportamento real: ✕ → modal de edição abre com os dados da ação. Provável causa: event handler errado no botão ✕ ou event bubbling indevido atingindo o botão "Editar"
+- ~~**ACO-16**~~ ✅ CORRIGIDO — `stopPropagation()` no ✕ do painel + `if(event.target===this)` no overlay
 
 ### Comportamento confirmado ✅ — via screenshot (sessão 5)
 - Modal "Editar Ação" renderiza corretamente quando acionado (pelo caminho acidental via ✕ — bug ACO-16): todos os 9 campos visíveis e populados com os dados da ação ✅
@@ -1547,7 +1547,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ESC-05** `🔴 Alta` — **"object Object" nos Marcadores Metodológicos** — aba Gestão exibe literalmente o texto "object Object" como nome do marcador metodológico, ao lado do badge vermelho. É um objeto JavaScript sendo convertido para string sem serialização (`{}.toString() = "[object Object]"`). A renderização está chamando `.toString()` ou interpolando o objeto sem `JSON.stringify()` ou sem acessar a propriedade correta do objeto.
 
-**ESC-06** `🔴 Alta` — **BtnGuard preso em "+ Nova Pesquisa"** — ao clicar o botão, ele muda para "Abrindo..." e nunca volta ao estado normal, mesmo com o modal aberto e funcional. Instância confirmada de SIS-09 (BtnGuard não registra callback de liberação ao dispensar o modal).
+~~**ESC-06**~~ ✅ CORRIGIDO — `BtnGuard.liberar('btn-nova-pesquisa')` no Cancelar e overlay click.
 
 **ESC-07** `🟡 Média` — **Botões "Salvar Configurações" e "Salvar Perfil" com cor rosa/pink** — fora do padrão DS (`btn-primary` roxo). Terceira cor não prevista no design system. Consistente com o padrão incorreto detectado em BAL-13 ("Enviar Nova Versão" rosa/pink).
 
@@ -1761,7 +1761,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ### Novos problemas confirmados ⚠️
 
-**APR-04** `🔴 Alta` — **Tab ativa sem indicador visual** — módulo usa `.active` (inglês) no JS e no HTML; CSS do sistema define apenas `.tab-btn.ativa` e `.tab-btn.tab-ativa` (nunca `.tab-btn.active`). Resultado: nenhuma das 4 abas aparece visualmente destacada ao ser clicada — usuário não sabe qual aba está ativa. Correção: trocar `.active` → `.ativa` no JS de Aprovações (linha ≈ 12695) e no HTML (line 2179).
+~~**APR-04**~~ ✅ CORRIGIDO — `.active` → `.ativa` em `setTab()` e no HTML inicial de Aprovações.
 
 **~~APR-05~~** `CORRIGIDO s14` — ~~Aba Veículo exibe "Carregando..." sem resolver~~ — **carrega normalmente** em s14. Problema não reproduzível. Provavelmente era transiente (loading ainda em andamento quando o screenshot foi feito em s9).
 
@@ -2939,7 +2939,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 174 | CON-02 | Contratações — Formulário | Nº Esboço / Processo não é pré-preenchido automaticamente — campo inicia vazio; sistema deve gerar número interno de esboço automaticamente (ESB-AAAA-NNN), editável para receber numeração oficial (SEI, etc.) | 🟡 Média |
 | 175 | CON-03 | Contratações — Vínculo Financeiro | **META exibe IDs técnicos internos** (`meta_TIMESTAMP_HASH`) em vez dos nomes legíveis das metas — campo praticamente inutilizável; deve resolver o nome da meta a partir do ID | 🔴 Alta |
 | 176 | CON-04 | Contratações — Vínculo Financeiro | **RUBRICA não carrega** após selecionar a meta — dropdown permanece vazio; impossível vincular contratação a rubrica específica do Plano de Trabalho; elo Contratações↔Financeiro está inoperante | 🔴 Alta |
-| 177 | CON-05 | Contratações — Fornecedores | Aba "Fornecedores" exibe "Agentes Externos / Fornecedores" com spinner infinito ("Carregando...") — nunca resolve. Botão "+ Novo" e botão refresh inoperantes. Aba completamente inacessível. Mesmo padrão de ADM-01 (Acessos Pendentes) — bug de carregamento assíncrono sem timeout/fallback | 🔴 Alta |
+| ~~177~~ | ~~CON-05~~ | ~~Contratações — Fornecedores~~ | ~~Aba Fornecedores presa em "Carregando..." — namespace duplicado de AgentesUI (segunda definição sobrescrevia a primeira)~~ | ✅ CORRIGIDO — primeira definição renomeada para `ContratadosUI`; todos os callers atualizados |
 | 178 | CON-06 | Contratações — Habilitações | Aba "Habilitações" (Processos de Habilitação) deve ser **substituída** pela aba "Pregões Ativos / Atas de Registro de Preços" — o CCBJ não conduz pregões próprios; utiliza atas de preços pré-aprovadas por órgãos externos. Feature "Habilitação" não tem uso. Ver regra de negócio e CON-07 | 🔴 Alta |
 | 179 | CON-07 | Contratações — Pregões | **Sem cadastro de Pregões/Atas de Registro de Preços** — sistema não tem onde cadastrar pregões ativos com itens, preços, vigências e saldos. Sem esse cadastro, toda contratação por pregão exige preenchimento 100% manual mesmo quando item tem preço pré-negociado em ata vigente. Ver decisão arquitetural abaixo | 🔴 Alta |
 | 180 | REU-01 | Reuniões — View | 6 cards de métricas (stats-strip) quebram em 2 linhas — "Enc. Vencidos" fica isolado na 2ª linha. Solução: fundir em 5 cards ou ajustar grid | 🟡 Média |
@@ -3166,7 +3166,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 
 | Data | Módulos cobertos | Descobertas principais |
 |---|---|---|
-| 2026-06-01 | **CORREÇÕES s16** | Fases 1–3: APR-04 CORRIGIDO (`.active`→`.ativa` em Aprovações), SIS-09 parcial CORRIGIDO (BAL-17 Balcão + ESC-06 Escuta + ACO-05 Ações — `BtnGuard.liberar()` nos handlers de fecharForm), ACO-16 CORRIGIDO (`stopPropagation()` no ✕ + guard no overlay). Deploy @365. |
+| 2026-06-01 | **CORREÇÕES s16 Fases 1–4** | APR-04 (tab ativa Aprovações), SIS-09 parcial (BAL-17+ESC-06+ACO-05 BtnGuard), ACO-16 (overlay+stopPropagation), CON-05 (ContratadosUI renomeia namespace duplicado). Deploy @367. |
 | 2026-05-31 | Estruturação inicial | Roteiro criado; análise de código mapeou 49 módulos/subáreas a auditar |
 | 2026-05-31 | Home + Sidebar | Home: informações admin-only (espaços/setores/módulos/status) + acessos rápidos fixos. Sidebar: muito extensa, sem agrupamento — dificulta navegação. |
 | 2026-05-31 | Sidebar (aprofundamento) + Tarefas | Sidebar: superadmin vê todos os itens (Reuniões, Ponto, Balcão, Dashboard). "Perfis Fantasma" e preview de Primeiro Acesso foram solicitados mas não implementados. Tarefas: email de responsável sem autocomplete, sem vínculos com módulos, sem gatilhos ou alertas. |

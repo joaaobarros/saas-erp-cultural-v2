@@ -3004,12 +3004,12 @@ select.form-control { cursor: pointer; }
           <div class="card" id="ag-form-card" style="display:none">
             <div class="card-header">
               <div class="card-titulo"><span class="ms">badge</span> <span id="ag-form-titulo">Novo Agente Externo</span></div>
-              <button class="btn btn-ghost btn-sm" onclick="AgentesUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
+              <button class="btn btn-ghost btn-sm" onclick="ContratadosUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span> Cancelar</button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="form-group"><label class="form-label">Nome / Razão Social *</label><input id="ag-nome" class="form-input" type="text" placeholder="Nome completo ou razão social"></div>
               <div class="form-group"><label class="form-label">Tipo de Pessoa *</label>
-                <select id="ag-tipo" class="form-input" onchange="AgentesUI.toggleDocumento(this.value)">
+                <select id="ag-tipo" class="form-input" onchange="ContratadosUI.toggleDocumento(this.value)">
                   <option value="pf">Pessoa Física</option>
                   <option value="pj">Pessoa Jurídica</option>
                 </select>
@@ -3022,7 +3022,7 @@ select.form-control { cursor: pointer; }
             </div>
             <input type="hidden" id="ag-id">
             <div style="display:flex;gap:8px;margin-top:4px;">
-              <button class="btn btn-primario" id="btn-ag-salvar" onclick="AgentesUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
+              <button class="btn btn-primario" id="btn-ag-salvar" onclick="ContratadosUI.salvar()"><span class="ms ms-sm">save</span> Salvar</button>
             </div>
           </div>
           <!-- Listagem Agentes -->
@@ -3030,14 +3030,14 @@ select.form-control { cursor: pointer; }
             <div class="card-header">
               <div class="card-titulo"><span class="ms">badge</span> Agentes Externos / Fornecedores</div>
               <div style="display:flex;gap:8px;align-items:center;">
-                <select id="ag-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="AgentesUI.carregar()">
+                <select id="ag-filtro-status" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="ContratadosUI.carregar()">
                   <option value="">Todos</option>
                   <option value="cadastrado">Cadastrado</option>
                   <option value="habilitado" selected>Habilitado</option>
                   <option value="suspenso">Suspenso</option>
                 </select>
-                <button class="btn btn-ghost btn-sm" onclick="AgentesUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
-                <button class="btn btn-primario btn-sm" id="btn-ag-novo" onclick="AgentesUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
+                <button class="btn btn-ghost btn-sm" onclick="ContratadosUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="btn-ag-novo" onclick="ContratadosUI.abrirForm()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
               </div>
             </div>
             <div id="ag-lista"><div class="empty-state" style="min-height:100px;padding:20px;"><span class="ms" style="font-size:28px;color:var(--muted)">hourglass_empty</span><p style="font-size:13px;color:var(--muted)">Carregando…</p></div></div>
@@ -18295,7 +18295,7 @@ var ContratacoesTabs = (function() {
     if (!_carregados[tab]) {
       _carregados[tab] = true;
       if (tab === 'solicitacoes') SolicitacoesUI.carregar();
-      if (tab === 'agentes')      AgentesUI.carregar();
+      if (tab === 'agentes')      ContratadosUI.carregar();
       if (tab === 'habilitacoes') HabilitacoesUI.carregar();
     }
   }
@@ -19186,9 +19186,9 @@ var SolicitacoesUI = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
-// AGENTES EXTERNOS — Fase 3
+// CONTRATADOS (Agentes Externos) — Fase 3
 // ═══════════════════════════════════════════════════════════
-var AgentesUI = (function() {
+var ContratadosUI = (function() {
   var _STATUS_LABEL = { cadastrado:'Cadastrado', habilitado:'Habilitado', suspenso:'Suspenso', descredenciado:'Descred.' };
   var _STATUS_CLASS = { cadastrado:'badge-primary', habilitado:'badge-success', suspenso:'badge-warning', descredenciado:'badge-error' };
 
@@ -19214,8 +19214,8 @@ var AgentesUI = (function() {
             +'<td>'+escaparHtml((c.tiposAtuacao||[]).join(', ')||'—')+'</td>'
             +'<td>'+_badge(c.status)+'</td>'
             +'<td style="white-space:nowrap">'
-            +(c.status!=='habilitado'?'<button class="btn btn-success btn-sm" id="btn-ag-hab-'+c.id+'" onclick="AgentesUI.habilitar(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">verified</span>Habilitar</button>':'')
-            +(c.status==='habilitado'?'<button class="btn btn-warning btn-sm" id="btn-ag-sus-'+c.id+'" onclick="AgentesUI.suspender(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">pause</span>Suspender</button>':'')
+            +(c.status!=='habilitado'?'<button class="btn btn-success btn-sm" id="btn-ag-hab-'+c.id+'" onclick="ContratadosUI.habilitar(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">verified</span>Habilitar</button>':'')
+            +(c.status==='habilitado'?'<button class="btn btn-warning btn-sm" id="btn-ag-sus-'+c.id+'" onclick="ContratadosUI.suspender(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">pause</span>Suspender</button>':'')
             +'</td></tr>';
         }).join('')+'</tbody></table>';
     }, function(e){ Toast.erro('Erro: '+(e.message||e)); });
