@@ -359,7 +359,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Formulário "Nova Reserva" — campos mapeados | ✅ (com CAR-04, CAR-09, CAR-10, CAR-11) | 2026-05-31 s13 |
 | FSM — botões Concluir / Cancelar (card + modal) | ✅ | 2026-05-31 s13 |
 | Sidebar: "Reserva de Carro" vs "Reserva de Veículo" | ⚠️ CAR-02 | 2026-05-31 s13 |
-| Motorista — quem dirige? | 🔲 pergunta pendente | — |
+| Motorista — feature configurável, desativada por padrão | ✅ CAR-12 respondido | 2026-05-31 s13 |
 | Número de veículos na frota | 🔲 pergunta pendente | — |
 | Self-approval (admin aprovando a própria reserva) | 🔲 a confirmar | — |
 
@@ -2227,7 +2227,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 - Notificação por email (GmailApp) ao criar solicitação para todos os aprovadores infra
 - Campos do formulário: Data, Setor (select ✅), Hora Saída, Hora Chegada, Passageiros (texto livre), Vincular a Ação, Local Saída, Local Chegada, Observação
 - Botão "+" em cada célula da agenda para criação rápida por data
-- **Sem campo de motorista** — modelo de dados não registra quem conduz
+- **Motorista**: feature configurável — desativada por padrão; quando ativa, cadastro de N motoristas (nome + disponibilidade) + campo de seleção no formulário
 - **Sem campo de veículo** — sistema assume frota de 1 veículo único
 
 ### Estrutura visual confirmada — Vista Lista
@@ -2279,7 +2279,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 > **Datas no sistema**: todas as datas devem seguir o padrão pt-BR (DD/MM/AAAA) em toda a UI. Confirmado pelo usuário — SIS-14 sistêmico.
 
 ### Perguntas pendentes
-- **Motorista**: quem conduz o veículo? Existe motorista fixo de infraestrutura, ou o próprio solicitante dirige?
+- ~~**Motorista**: quem conduz o veículo?~~ **RESPONDIDO** — feature configurável, off por padrão. Quando ativada: CRUD de motoristas (nome + quantidade) + campo de seleção no formulário. Padrão: solicitante é o condutor.
 - **Frota**: quantos veículos o CCBJ tem? Sistema assume 1 único.
 - **Self-approval**: joao.barros (superadmin?) aprovou a própria reserva — intencional para papéis admin ou gap de governança?
 
@@ -2866,7 +2866,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 251 | CAR-09 | Reserva de Veículo — Passageiros | Campo PASSAGEIROS como texto livre sem distinção entre internos (deveriam ter picker da base de usuários com autocomplete) e externos (nome livre). Confirmado pelo usuário como gap funcional | 🔴 Alta |
 | 252 | CAR-10 | Reserva de Veículo — Rota | Sem paradas intermediárias — formulário tem apenas Local de Saída e Local de Chegada; viagens com múltiplas paradas (CCBJ → Secretaria → Prefeitura → CCBJ) não são representáveis. Confirmado pelo usuário | 🔴 Alta |
 | 253 | CAR-11 | Reserva de Veículo — Validação | Formulário não bloqueia datas ou horários passados no frontend — validação apenas no backend. Usuário confirmou: reservas em datas/horários passados não devem ser permitidas. Equivalente de ESP-17 para veículo | 🔴 Alta |
-| 254 | CAR-12 | Reserva de Veículo — Motorista | Sem campo de motorista no modelo de dados e no formulário — quem conduz o veículo não é registrado. Governança da frota incompleta: não é possível rastrear o condutor de cada viagem | 🔴 Alta |
+| 254 | CAR-12 | Reserva de Veículo — Motorista | **Feature de motorista configurável — desativada por padrão (decisão arquitetural confirmada).** Comportamento padrão: sem motorista — solicitante é o próprio condutor. Quando a organização ativa a feature em Configurações, é possível cadastrar N motoristas (nome + disponibilidade). O formulário de reserva exibe campo de seleção de motorista **somente quando a feature está ativa**. Implementação necessária: (a) toggle "Motoristas" no Admin/Config; (b) CRUD de motoristas com nome e disponibilidade; (c) campo condicional no formulário de reserva; (d) registro do motorista no modelo de dados e no modal de detalhes | 🔴 Alta |
 | 255 | CAR-13 | Reserva de Veículo — Voucher Uber | Sistema não suporta solicitação de voucher Uber — fluxo necessário: vínculo à rubrica de transporte do setor, aprovação do gestor responsável e/ou gestor financeiro, retorno com link do voucher por email e no sistema. Confirmado pelo usuário como funcionalidade esperada | 🔴 Alta |
 | 256 | SIS-14 | Sistema Global — Datas | **Datas em formato ISO (AAAA-MM-DD) em todo o sistema** em vez de padrão pt-BR (DD/MM/AAAA) — confirmado pelo usuário: todas as datas devem seguir pt-BR. Identificado em: cards e modal de Reserva de Veículo (2026-05-29). Auditoria sistêmica necessária em todos os módulos | 🔴 Alta |
 | 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** Instância específica do padrão geral FIN-20. O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com a flag `voucher_uber` ativa | 🔴 Alta |
@@ -3077,13 +3077,13 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
 
-O formulário não tem campo de motorista. Perguntar quem conduz o veículo e quantos veículos compõem a frota.
+Motorista respondido. Próxima: número de veículos na frota.
 
-> "O formulário de Reserva de Veículo não tem campo de motorista — quem dirige o carro? Existe um motorista fixo na equipe de Infraestrutura, ou o próprio solicitante conduz? E o CCBJ tem mais de um veículo?"
+> "O CCBJ tem mais de um veículo? O sistema atual assume frota única — se houver mais de um carro, é necessário um campo de seleção de veículo na reserva (com modelo, placa, disponibilidade)."
 
 ### Sequência após essa pergunta
 
-1. **Reserva de Veículo** — motorista e frota ← **PRÓXIMA**
+1. **Reserva de Veículo** — número de veículos na frota ← **PRÓXIMA**
 2. **Aprovações → aba Veículo** (APR-05 "Carregando...") — investigar após entender domínio
 3. **Acervo (mod-25)** — nunca testado
 4. **Agentes Culturais (mod-24)** — nunca testado
@@ -3102,6 +3102,6 @@ O formulário não tem campo de motorista. Perguntar quem conduz o veículo e qu
 7. **SIS-14** (datas ISO vs pt-BR) — sistêmico; auditar cada módulo ao revisitá-lo
 8. **CAR-13** (Voucher Uber) — novo fluxo confirmado; precisa análise de domínio completa
 9. **APR-05** (aba Veículo "Carregando...") — investigar após resposta sobre motorista/frota
-10. Perguntas abertas mod-34: motorista, número de veículos, self-approval (admin aprovando própria reserva)
+10. Perguntas abertas mod-34: ~~motorista (respondido — feature configurável, off por padrão)~~, número de veículos na frota, self-approval (admin aprovando própria reserva)
 11. **FIN-19** — Setor sai da Memória de Cálculo e vai para nível de Rubrica; consolidação dupla (global + por setor); FIN-01 corrigido no nível errado
 12. **FIN-20** — sistema de flags de operação configuráveis por rubrica (padrão geral): flags criadas dinamicamente no Admin, sem hardcode; casos confirmados: `voucher_uber`, `contratacao`, `compra_direta`, `pagamento`; FIN-18 é instância específica deste padrão
