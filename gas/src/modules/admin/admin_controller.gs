@@ -243,7 +243,10 @@ function ctrl_admin_listarModulos() {
 
 function ctrl_admin_toggleModulo(moduloId, ativo) {
   return GasResponse.wrap(function() {
-    return ConfigAdminService.toggleModulo(moduloId, ativo === true || ativo === 'true');
+    var resultado = ConfigAdminService.toggleModulo(moduloId, ativo === true || ativo === 'true');
+    // Invalida cache de bootstrap para todos os usuários ao mudar estado de módulo
+    try { CacheService.getScriptCache().removeAll(); } catch(_) {}
+    return resultado;
   }, 'ctrl_admin_toggleModulo');
 }
 

@@ -17652,6 +17652,7 @@ var ChavesUI = (function() {
 var AlmoxUI = (function() {
   var _itens = [];
   var _almoxDevPendente = null;
+  var _almoxCanPendente = null;
   var _STATUS_LABEL = {
     solicitado:'Solicitado', aprovado:'Aprovado', retirado:'Em uso',
     atrasado:'Atrasado', devolvido:'Devolvido', cancelado:'Cancelado'
@@ -17821,19 +17822,41 @@ var AlmoxUI = (function() {
   }
 
   function _cancelar(id, btnEl) {
-    var _rawMotivo = prompt('Motivo do cancelamento:');
-    if (_rawMotivo === null) return; // usuário cancelou
-    var motivo = _rawMotivo;
+    _almoxCanPendente = { id: id, btnEl: btnEl };
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Cancelar Empréstimo</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Motivo <span style="color:#dc2626">*</span></label>' +
+          '<textarea id="almox-can-motivo" class="form-input" rows="3" placeholder="Descreva o motivo do cancelamento" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-error" onclick="AlmoxUI._confirmarCanAlmox()">Cancelar Empréstimo</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Fechar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarCanAlmox() {
+    if (!_almoxCanPendente) return;
+    var id    = _almoxCanPendente.id;
+    var btnEl = _almoxCanPendente.btnEl;
+    var motivo = ((document.getElementById('almox-can-motivo')||{}).value || '').trim();
+    if (!motivo) { Toast.aviso('Motivo é obrigatório para cancelamento.'); return; }
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap(btnEl, 'Cancelando…', function(done) {
       GAS.almox.cancelar(id, motivo, function(resp) {
         done();
+        _almoxCanPendente = null;
         if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
         Toast.sucesso('Empréstimo cancelado.'); carregar();
-      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); _almoxCanPendente = null; Toast.erro('Erro: '+(err.message||err)); });
     });
   }
 
-  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, solicitar:solicitar, _confirmarDevAlmox:_confirmarDevAlmox };
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, solicitar:solicitar, _confirmarDevAlmox:_confirmarDevAlmox, _confirmarCanAlmox:_confirmarCanAlmox };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -18465,7 +18488,10 @@ var SolicitacoesUI = (function() {
   var _chipAtivo = '';
   var _detAtual = null; // solicitação no painel de detalhe
   var _docContextId = null; // ID da sol para modal de doc
-  var _solDevPendente = null;
+  var _solDevPendente  = null;
+  var _solAprGPendente = null;
+  var _solAprFPendente = null;
+  var _solRejPendente  = null;
 
   var _STATUS_LABEL = {
     rascunho:'Rascunho', submetida:'Aguard. Gestor', devolvida:'Devolvida',
@@ -18722,28 +18748,68 @@ var SolicitacoesUI = (function() {
   }
 
   function aprovarGestor(id) {
-    var _raw = prompt('Parecer de aprovação (gestor):');
-    if (_raw === null) return;
-    var parecer = _raw || '';
+    _solAprGPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Aprovação — Gestor</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Parecer <span style="color:#6b7280;font-weight:400">(opcional)</span></label>' +
+          '<textarea id="sol-apg-parecer" class="form-input" rows="3" placeholder="Observações da aprovação..." style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="SolicitacoesUI._confirmarAprGSol()">Aprovar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarAprGSol() {
+    var id = _solAprGPendente;
+    if (!id) return;
+    var parecer = ((document.getElementById('sol-apg-parecer')||{}).value || '').trim();
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-apg-'+id, 'Aprovando…', function(done){
       GAS.contratacoes.aprovarGestor(id, parecer, function(resp){
         done();
+        _solAprGPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Aprovado pelo gestor.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solAprGPendente = null; Toast.erro(e.message||e); });
     });
   }
 
   function aprovarFinanceiro(id) {
-    var _raw = prompt('Parecer de aprovação (financeiro):');
-    if (_raw === null) return;
-    var parecer = _raw || '';
+    _solAprFPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Aprovação — Financeiro</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Parecer <span style="color:#6b7280;font-weight:400">(opcional)</span></label>' +
+          '<textarea id="sol-apf-parecer" class="form-input" rows="3" placeholder="Observações da aprovação..." style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="SolicitacoesUI._confirmarAprFSol()">Aprovar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarAprFSol() {
+    var id = _solAprFPendente;
+    if (!id) return;
+    var parecer = ((document.getElementById('sol-apf-parecer')||{}).value || '').trim();
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-apf-'+id, 'Aprovando…', function(done){
       GAS.contratacoes.aprovarFinanceiro(id, parecer, function(resp){
         done();
+        _solAprFPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Aprovado pelo financeiro.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solAprFPendente = null; Toast.erro(e.message||e); });
     });
   }
 
@@ -18781,16 +18847,36 @@ var SolicitacoesUI = (function() {
   }
 
   function rejeitar(id) {
-    var _raw = prompt('Informe o motivo da rejeição (obrigatório):');
-    if (_raw === null) return;
-    var parecer = _raw || '';
-    if (!parecer){ Toast.erro('Motivo é obrigatório para rejeição.'); return; }
+    _solRejPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Rejeitar Solicitação</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Motivo <span style="color:#dc2626">*</span></label>' +
+          '<textarea id="sol-rej-motivo" class="form-input" rows="3" placeholder="Informe o motivo da rejeição" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-error" onclick="SolicitacoesUI._confirmarRejSol()">Rejeitar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarRejSol() {
+    var id = _solRejPendente;
+    if (!id) return;
+    var parecer = ((document.getElementById('sol-rej-motivo')||{}).value || '').trim();
+    if (!parecer) { Toast.erro('Motivo é obrigatório para rejeição.'); return; }
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-rej-'+id, 'Rejeitando…', function(done){
       GAS.contratacoes.rejeitar(id, parecer, function(resp){
         done();
+        _solRejPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Solicitação rejeitada.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solRejPendente = null; Toast.erro(e.message||e); });
     });
   }
 
@@ -19330,9 +19416,11 @@ var SolicitacoesUI = (function() {
     carregar: carregar, filtrar: filtrar, setChip: setChip,
     abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
     submeter: submeter, submeterItem: submeterItem,
-    aprovarGestor: aprovarGestor, aprovarFinanceiro: aprovarFinanceiro,
+    aprovarGestor: aprovarGestor, _confirmarAprGSol: _confirmarAprGSol,
+    aprovarFinanceiro: aprovarFinanceiro, _confirmarAprFSol: _confirmarAprFSol,
     instruir: instruir, iniciarExecucao: iniciarExecucao,
-    concluir: concluir, rejeitar: rejeitar, devolver: devolver, _confirmarDevSol: _confirmarDevSol, cancelar: cancelar,
+    concluir: concluir, rejeitar: rejeitar, _confirmarRejSol: _confirmarRejSol,
+    devolver: devolver, _confirmarDevSol: _confirmarDevSol, cancelar: cancelar,
     abrirDetalhe: abrirDetalhe, fecharDetalhe: fecharDetalhe, abrirDetTab: abrirDetTab,
     marcarPago: marcarPago,
     abrirModalDoc: abrirModalDoc, fecharModalDoc: fecharModalDoc, salvarDoc: salvarDoc, removerDoc: removerDoc,

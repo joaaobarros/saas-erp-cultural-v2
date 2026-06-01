@@ -239,8 +239,10 @@ var SistemaConfigService = (function () {
     if (Array.isArray(cfg.modulosAtivos) && cfg.modulosAtivos.length) {
       return cfg.modulosAtivos;
     }
-    // fallback: retorna todos (não bloqueia nada em ambiente de dev)
-    return ['ADMIN','TAREFAS','PESSOAS','FINANCEIRO','ACOES','ESPACOS','REUNIOES','COMUNICACAO','RELATORIOS'];
+    // fallback: todos os 20 módulos do catálogo atual
+    return ['ADMIN','DASHBOARD','TAREFAS','ESTRATEGIA','PESSOAS','PONTO','ESCUTA','VOLUNTARIOS',
+            'ACOES','AGENTES','PUBLICO','ACERVO','FINANCEIRO','PARCERIAS',
+            'ESPACOS','REUNIOES','COMUNICACAO','BALCAO','TASKHUB','AUDITORIA'];
   }
 
   /**
