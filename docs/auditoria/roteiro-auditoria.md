@@ -2358,7 +2358,7 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 
 ### Problemas confirmados ⚠️
 
-**ACV-01** `🔴 Alta` — **Galeria em "Carregando..." permanente** — `ctrl_acervo_listar` falha silenciosamente (`if(!r||!r.ok) return;` sem atualizar a UI); métricas permanecem em "—"; módulo completamente inutilizável para leitura. Mesmo padrão de ADM-01, CON-05, ESC-04.
+**~~ACV-01~~** ~~`🔴 Alta`~~ — ~~Galeria em "Carregando..." permanente~~ **CORRIGIDO s16 Fase 7**: adicionado error handler explícito em `AcervoUI.carregar()` — falha de backend agora exibe mensagem de erro no DOM em vez de silêncio. Causa raiz (backend) pode persistir — testar.
 
 **ACV-02** `🟡 Média` — **Botão "Cancelar" no modal com cor rosa/pink** — instância de ESC-07/BAL-13 (terceira cor de botão não prevista no DS; deveria ser `btn-secondary` cinza).
 
@@ -3023,7 +3023,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 256 | SIS-14 | Sistema Global — Datas | **Datas em formato ISO (AAAA-MM-DD) em todo o sistema** em vez de padrão pt-BR (DD/MM/AAAA) — confirmado pelo usuário: todas as datas devem seguir pt-BR. Identificado em: cards e modal de Reserva de Veículo (2026-05-29). Auditoria sistêmica necessária em todos os módulos | 🔴 Alta |
 | 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** Instância específica do padrão geral FIN-20. O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com a flag `voucher_uber` ativa | 🔴 Alta |
 | 259 | FIN-20 | Financeiro — Rubricas / Flags de Operação | **Sistema de flags de operação configuráveis por rubrica — padrão arquitetural geral.** Flags definem quais tipos de operação podem ser solicitadas contra uma rubrica específica. Devem ser criadas e gerenciadas dinamicamente (Admin → Config Financeiro ou similar) — não hardcoded. Cada rubrica pode ter zero ou mais flags. Ao iniciar qualquer solicitação no sistema, o seletor de rubrica filtra automaticamente pelas rubricas do setor do solicitante que possuem a flag correspondente ativa. Casos de uso confirmados: (1) `voucher_uber` — Voucher Uber (CAR-13 / FIN-18); (2) `contratacao` — Contratações; (3) `compra_direta` — Compras; (4) `pagamento` — Pagamentos avulsos. A lista de flags é aberta — novos tipos de operação criados no futuro não exigem alteração de código, apenas criação de nova flag e atribuição às rubricas elegíveis | 🔴 Alta |
-| 262 | ACV-01 | Acervo — View | **Galeria em "Carregando..." permanente** — `ctrl_acervo_listar` falha silenciosamente; métricas exibem "—"; módulo inutilizável para leitura. Mesmo padrão de ADM-01, CON-05, ESC-04 | 🔴 Alta |
+| 262 | ~~ACV-01~~ | Acervo — View | ~~Galeria permanente Carregando~~ **CORRIGIDO s16 Fase 7**: error handler explícito adicionado em `AcervoUI.carregar()`. | ~~🔴 Alta~~ |
 | 263 | ACV-07 | Acervo — Modal | **Select "Ação vinculada" vazio no modal** — populate de ações falha junto com o carregamento; como acaoId é obrigatório para salvar, módulo é inutilizável também para escrita | 🔴 Alta |
 | 264 | ACV-08 | Acervo — Formulário | **Sem campo nome/título do arquivo** — arquivo identificado apenas por tipo + descrição truncada; sem identificador textual próprio | 🔴 Alta |
 | 265 | ACV-02 | Acervo — DS | Botão "Cancelar" no modal com cor rosa/pink — instância de ESC-07/BAL-13; deveria ser `btn-secondary` cinza | 🟡 Média |

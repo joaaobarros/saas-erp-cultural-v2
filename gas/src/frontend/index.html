@@ -22148,11 +22148,18 @@ var AcervoUI = (function() {
 
   function carregar() {
     GAS.acervo.listar({}, function(r) {
-      if (!r||!r.ok) return;
+      if (!r||!r.ok) {
+        var el = document.getElementById('acv-galeria');
+        if (el) el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Erro ao carregar acervo. Tente novamente.</p>';
+        return;
+      }
       _lista = r.data || [];
       _carregado = true;
       _renderStats();
       _renderGaleria(_lista);
+    }, function(err) {
+      var el = document.getElementById('acv-galeria');
+      if (el) el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>';
     });
     // Popular select de ações
     GAS.acoes.listar({}, function(r) {
