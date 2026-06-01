@@ -173,7 +173,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Formulário Nova Ação (9 campos) | ✅ (com ACO-12, ACO-14, ACO-17 a ACO-20) | 2026-05-31 |
 | Modal Editar Ação | ✅ carrega dados (bug via ✕ — ACO-16) | 2026-05-31 |
 | Botão Editar (caminho direto) | ❌ ACO-05 spinner infinito | 2026-05-31 |
-| Botão ✕ fecha painel | ❌ ACO-16 abre modal edição | 2026-05-31 |
+| Botão ✕ fecha painel | ✅ ACO-16 CORRIGIDO — stopPropagation + overlay guard | 2026-06-01 |
 
 ### Módulo 13/14 — Painel da Ação (abas internas)
 | Item | Status | Sessão |
@@ -191,7 +191,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Mapa — abertura (sobreposição) | ❌ MAP-02 aba Contratações fica no fundo | 2026-06-01 |
 | Mapa — fechamento (navegação) | ❌ MAP-03 redireciona para Contratações em vez de voltar ao painel | 2026-06-01 |
 | Transições de status (painel) — Visão Geral | ✅ confirmado (ACO-06, ACO-27, ACO-28) | 2026-06-01 |
-| Botão Editar (caminho via botão no painel) | ❌ ACO-05 spinner infinito | 2026-05-31 |
+| Botão Editar (caminho via botão no painel) | ✅ ACO-05 CORRIGIDO — BtnGuard.liberar adicionado em fecharForm() | 2026-06-01 |
 
 ### Módulo 21 — Contratações
 | Item | Status | Sessão |
@@ -206,8 +206,9 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Nº Esboço não é pré-preenchido automaticamente | ⚠️ CON-02 | 2026-06-01 |
 | Setor Solicitante é texto livre | ⚠️ CON-01 | 2026-06-01 |
 | Ação Vinculada é select (não texto livre) | ✅ | 2026-06-01 |
-| FSM e painel de detalhe de uma solicitação | 🔲 pendente | — |
-| Contratação concluída atualiza "Executado" no Financeiro | 🔲 pendente | — |
+| Salvar rascunho | ❌ CON-08 — "lerJSON is not defined" | 2026-05-31 s15 |
+| FSM e painel de detalhe de uma solicitação | 🔲 bloqueado por CON-08 | — |
+| Contratação concluída atualiza "Executado" no Financeiro | 🔲 bloqueado por CON-08 | — |
 | Aba Fornecedores — spinner infinito, botões inoperantes | ⚠️ CON-05 | 2026-06-01 |
 | Aba Habilitações — estado vazio; propósito não claro para o usuário | ⚠️ CON-06 | 2026-06-01 |
 
@@ -343,11 +344,28 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Formulário "+ Nova Demanda" (aba Dados) | ✅ abre; campos mapeados (BAL-06 a BAL-12) | 2026-06-01 |
 | Formulário — aba Versões | ✅ abre; URL + Nota + Enviar Entrega (BAL-13 a BAL-15) | 2026-06-01 |
 | Formulário — aba Comentários | ✅ textarea + Enviar funcional | 2026-06-01 |
-| BtnGuard ao fechar sem salvar | ❌ BAL-17 spinner preso | 2026-06-01 |
+| BtnGuard ao fechar sem salvar | ✅ BAL-17 CORRIGIDO | 2026-06-01 |
 | Aprovação final do material entregue | ❌ BAL-16 ausente no FSM | 2026-06-01 |
 | Sem filtro de data | ⚠️ BAL-03 | 2026-06-01 |
 | Sem filtro por Ação Cultural | ⚠️ BAL-04 | 2026-06-01 |
 | Unidade visual completa (classes CSS) | 🔲 pendente | — |
+
+### Módulo 24 — Agentes Culturais
+| Item | Status | Sessão |
+|---|---|---|
+| View carrega | ❌ AGN-01 (módulo bloqueado — sync bug) | 2026-05-31 s15 |
+
+### Módulo 25 — Acervo Digital
+| Item | Status | Sessão |
+|---|---|---|
+| View carrega | ✅ | 2026-05-31 s14 |
+| Galeria — "Carregando..." sem resolver | ⚠️ ACV-01 | 2026-05-31 s14 |
+| Stats sem MetricsToggle | ⚠️ ACV-03 | 2026-05-31 s14 |
+| Filtros inline sem classe DS | ⚠️ ACV-05 | 2026-05-31 s14 |
+| Modal "Adicionar ao Acervo" — estrutura | ✅ abre | 2026-05-31 s14 |
+| Modal — Select Ação vinculada vazio | ⚠️ ACV-07 | 2026-05-31 s14 |
+| Modal — Botão Cancelar rosa/pink | ⚠️ ACV-02 | 2026-05-31 s14 |
+| Fluxo de salvamento | 🔲 bloqueado (ACV-01/07) | — |
 
 ### Módulo 34 — Reserva de Veículo
 | Item | Status | Sessão |
@@ -1654,7 +1672,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ADM-09** `🟡 Média` — **Categ.Itens deve migrar para Estoque/Almoxarifado** — categorias de itens (Equipamento Audiovisual, Informática, Mobiliário, Material Gráfico, Insumo, Outro) são específicas do catálogo de estoque, não configuração geral do sistema. A aba deve ser removida do Admin e incorporada como configuração interna do módulo Estoque. Confirmado pelo usuário.
 
-**ADM-10** `🔴 Alta` — **Toggles de Features inoperantes** — os toggles das feature flags (Assistente IA, Portal Público, RECE, etc.) aparecem visualmente como ON mas clicar não surte efeito nem persiste. O propósito da aba é exatamente ativar/desativar funcionalidades sem deploy — com toggles quebrados, a aba inteira não cumpre sua função. Confirmado pelo usuário.
+**ADM-10** `🔴 Alta` — **Toggles de Features inoperantes** — os toggles das feature flags (Assistente IA, Portal Público, RECE, etc.) não têm resposta visual ao clique: permanecem no mesmo estado antes e depois de clicar, sem animação, sem mudança de posição, sem feedback de estado. Não há nem atualização visual local — o toggle simplesmente não reage. O propósito da aba é exatamente ativar/desativar funcionalidades sem deploy — com toggles completamente inertes, a aba não cumpre função alguma. Confirmado pelo usuário (s15).
 
 **ADM-11** `🟡 Média` — **Wizard de Setup abre página vazia** — botão "Abrir Wizard de Setup" na aba Provisionamento abre uma página sem conteúdo. O Wizard é o guia de configuração inicial do sistema; mesmo que o provisionamento já esteja em 100%, o Wizard deveria funcionar para revisão e onboarding de novos administradores. Confirmado pelo usuário.
 
@@ -1745,7 +1763,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **APR-04** `🔴 Alta` — **Tab ativa sem indicador visual** — módulo usa `.active` (inglês) no JS e no HTML; CSS do sistema define apenas `.tab-btn.ativa` e `.tab-btn.tab-ativa` (nunca `.tab-btn.active`). Resultado: nenhuma das 4 abas aparece visualmente destacada ao ser clicada — usuário não sabe qual aba está ativa. Correção: trocar `.active` → `.ativa` no JS de Aprovações (linha ≈ 12695) e no HTML (line 2179).
 
-**APR-05** `🟡 Média` — **Aba Veículo exibe "Carregando..." sem resolver** — texto padrão de loading não é substituído após carregamento. Pode ser: (a) backend `carregarCarros()` falha silenciosamente; (b) screenshot capturado durante o carregamento (a confirmar com mais tempo de espera).
+**~~APR-05~~** `CORRIGIDO s14` — ~~Aba Veículo exibe "Carregando..." sem resolver~~ — **carrega normalmente** em s14. Problema não reproduzível. Provavelmente era transiente (loading ainda em andamento quando o screenshot foi feito em s9).
 
 **APR-06** `🟡 Média` — **Cabeçalho com padrão antigo** — `page-header` + `div.page-title` + `div.page-subtitle` enquanto o padrão atual é `view-header` + `h1.view-title` + `p.view-subtitle`. Mesmo anti-padrão de SIS-03.
 
@@ -1753,10 +1771,10 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 | Item | Status | Sessão |
 |---|---|---|
 | 4 abas visíveis para SuperAdmin | ✅ APR-02 NEGADO | 2026-05-31 s9 |
-| Tab ativa sem marcação visual | ⚠️ APR-04 | 2026-05-31 s9 |
+| Tab ativa sem marcação visual | ✅ APR-04 CORRIGIDO | 2026-06-01 |
 | Aba Reservas de Espaço — estado vazio | ✅ | 2026-05-31 s9 |
 | Aba Primeiros Acessos — estado vazio | ✅ | 2026-05-31 s9 |
-| Aba Veículo — "Carregando..." sem resolver | ⚠️ APR-05 | 2026-05-31 s9 |
+| Aba Veículo — carrega normalmente | ✅ APR-05 CORRIGIDO | 2026-05-31 s14 |
 | Aba Permissões — usuários ativos (sem pendentes) | ✅ (com APR-03) | 2026-05-31 s9 |
 | Fluxo de aprovação de reserva (com item real) | 🔲 pendente | — |
 
@@ -1914,8 +1932,29 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 > - Alerta de vencimento de ata (proximidade do prazo de vigência)
 > - Controle de saldo utilizado vs. disponível por item
 
+### Comportamento confirmado — Tentativa de salvar (s15)
+
+**Seção 5 — Vínculo Financeiro (confirmação visual):**
+- CONTRATO DE GESTÃO: selecionado ✅ ("Contrato de Gestão CCBJ - 005/2")
+- META: carregou com ID técnico "meta_1779864069321_40rkibz" — CON-03 reconfirmado ⚠️
+- RUBRICA: permanece em "— Selecione a Rubrica —" mesmo com meta selecionada — CON-04 reconfirmado ⚠️
+
+**Seção 6 — Parcelas:**
+- Linha de parcela tem campos: # | ATIVIDADE/EVENTO (texto livre) | VALOR (R$) | DATA PREVISTA
+- Campo "Atividade" não está vinculado às atividades do Plano de Trabalho do Financeiro — texto livre sem conexão com a hierarquia Meta → Atividade → Rubrica
+
+**Resultado ao clicar "Salvar Rascunho":**
+- Toast vermelho: **"Erro: lerJSON is not defined"**
+- Solicitação não é salva — módulo completamente inutilizável para escrita
+
+### Novos problemas confirmados ⚠️
+
+**CON-08** `🔴 Crítico` — **"Salvar Rascunho" falha com "lerJSON is not defined"** — erro JavaScript de referência: a função `lerJSON` é chamada no fluxo de salvamento mas não está definida no escopo de execução. Toda criação de contratação está bloqueada — módulo inutilizável para escrita. O mesmo padrão de falha silenciosa/com erro de outros módulos (ACV-01, CON-05, ESC-04) mas aqui com mensagem de erro explícita ao usuário.
+
+**CON-09** `🔴 Alta` — **Campo "Atividade/Evento" nas parcelas é texto livre desvinculado** — as parcelas do cronograma têm campo de atividade como input livre (placeholder "Atividade"), sem conexão com as atividades reais do Plano de Trabalho do contrato (hierarquia Meta → Atividade → Rubrica no Financeiro). O sistema não consegue rastrear qual atividade do Plano de Trabalho cada parcela financia — rompendo o vínculo execução↔planejamento. Campo deveria ser select populado das atividades da meta/rubrica selecionada no Vínculo Financeiro.
+
 ### Perguntas abertas
-*(FSM completo da solicitação; Portal LGPD no subtítulo; Contratação concluída → Financeiro após correção)*
+*(Portal LGPD no subtítulo; Contratação concluída → Financeiro — bloqueado por CON-08)*
 
 ---
 
@@ -2287,6 +2326,115 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ### Problemas confirmados ⚠️
 Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
+
+---
+
+<a name="mod-25"></a>
+## Módulo 25 — Acervo Digital
+**Status:** 🔍 EM ANÁLISE (s14)
+
+### O que o código diz
+- View `#view-acervo` — item da sidebar no grupo MEMÓRIA (`modulo:'ACOES'`, sem flag `inativo`)
+- Backend namespace: `GAS.acervo` — listar, listarPorAcao, checklist, metricas, registrar, atualizar, statusLGPD, excluir, exportarZip
+- Galeria em grid `auto-fill minmax(200px,1fr)` — sem modo lista
+- 7 tipos: Foto, Vídeo, Release, Poster, Folder, Ata, Outro
+- 4 status LGPD: não_verificado, autorizado, restrito, sem_pessoas
+- Formulário: Tipo, Ação vinculada* (obrigatório), URL Drive, Descrição, Tags, Status LGPD
+- Salvar exige `acaoId` presente — arquivo sem ação vinculada é bloqueado com Toast.aviso
+
+### Estrutura visual confirmada — View principal (s14)
+- `[view-header]` ícone 🖼️ + `h2.view-titulo` "Acervo Digital" — padrão misto (SIS-05)
+- Botão "+ Adicionar Arquivo" (`btn-primary`, roxo) ✅
+- **2 stat-cards** sem MetricsToggle: "—" Arquivos | "—" Pendentes LGPD (vermelho)
+- Filtros inline (sem classe DS): select "Todos os tipos" + select "Status LGPD" + input "Buscar..."
+- Galeria: **"Carregando..."** — nunca resolve ⚠️ ACV-01
+- Console: ▲5 avisos + 101 Issues (Warden) — sem TypeErrors ✅
+
+### Estrutura visual confirmada — Modal "Adicionar ao Acervo" (s14)
+- Overlay escuro ✅; caixa fundo branco opaco ✅
+- Campos: Tipo * (📷 Foto default), Ação vinculada * (vazio — "Selecione..."), URL (Drive), Descrição, Tags, Status LGPD (⚠️ Não verificado)
+- Botão Cancelar: **rosa/pink** ⚠️ ACV-02; Botão Salvar: roxo ✅
+- Sem campo de nome/título próprio do arquivo ⚠️ ACV-08
+
+### Problemas confirmados ⚠️
+
+**ACV-01** `🔴 Alta` — **Galeria em "Carregando..." permanente** — `ctrl_acervo_listar` falha silenciosamente (`if(!r||!r.ok) return;` sem atualizar a UI); métricas permanecem em "—"; módulo completamente inutilizável para leitura. Mesmo padrão de ADM-01, CON-05, ESC-04.
+
+**ACV-02** `🟡 Média` — **Botão "Cancelar" no modal com cor rosa/pink** — instância de ESC-07/BAL-13 (terceira cor de botão não prevista no DS; deveria ser `btn-secondary` cinza).
+
+**ACV-03** `🟡 Média` — **Stats-strip sem MetricsToggle** — 2 cards presentes mas sem o componente obrigatório de toggle/colapso. Instância de HUB-01.
+
+**ACV-04** `🟡 Média` — **Sem botão refresh nos filtros** — instância de ACO-15 (Ações tem o mesmo problema).
+
+**ACV-05** `🟡 Média` — **Filtros sem classe DS** — bloco de filtros usa apenas `style="display:flex;gap:8px;..."` inline; não usa `filter-bar` nem `toolbar`. Instância de SIS-06.
+
+**ACV-06** `🟡 Média` — **Cabeçalho usa padrão misto** — `h2.view-titulo` (13px, ícone colorido) em vez de `h1.view-title` — instância de SIS-05/ACO-11.
+
+**ACV-07** `🔴 Alta` — **Select "Ação vinculada" vazio no modal** — populate via `GAS.acoes.listar()` provavelmente afetado pela mesma falha de carregamento de ACV-01; usuário não consegue selecionar nenhuma ação; como `acaoId` é obrigatório para salvar, o módulo é inutilizável também para escrita.
+
+**ACV-08** `🔴 Alta` — **Arquivo sem campo de nome/título** — o formulário não tem campo "Nome" ou "Título" para identificar o arquivo. O card na galeria exibirá apenas tipo + descrição truncada — sem identificador textual próprio.
+
+**ACV-09** `🟡 Média` — **Emojis nos selects de tipo** — opções "📷 Foto", "🎬 Vídeo", etc. nos selects do filtro e do formulário. Padrão anti-DS (sem emojis em elementos de UI); usar labels simples ou Material Symbol fora do select.
+
+**ACV-10** `🟡 Média` — **Formulário com estilos 100% inline** — todos os labels, inputs e selects do modal usam `style="..."` direto, sem `form-label`, `form-input`, `form-control` ou qualquer classe DS. Pior que ACO-12 (que ao menos usava `class="input"`).
+
+### Regra de negócio capturada — Escopo do Acervo
+
+> **Acervo é geral — dois tipos de conteúdo:**
+> 1. **Ações finalísticas** — registros de ações culturais específicas (espetáculos, oficinas, eventos); devem poder ser vinculados a uma Ação Cultural
+> 2. **Ações institucionais** — material da organização sem vínculo com ação específica (fotos do espaço, documentos históricos, materiais de comunicação avulsos)
+>
+> **Gap crítico:** o código atual exige `acaoId` obrigatório para salvar — arquivos institucionais não podem ser registrados. O campo "Ação vinculada" deve ser **opcional** com campo substituto de categorização/coleção para conteúdo institucional.
+
+### Problemas adicionais confirmados
+
+**ACV-11** `🔴 Alta` — **Campo "Ação vinculada" obrigatório inviabiliza conteúdo institucional** — `acaoId` é validado na função `salvar()` com `Toast.aviso('Selecione uma ação.')` quando ausente. Arquivos institucionais (fotos do espaço, documentos históricos, materiais avulsos) não podem ser registrados no acervo. O campo deve ser opcional: quando preenchido → vínculo com ação; quando vazio → conteúdo institucional com campo alternativo de categorização.
+
+### Regra de negócio capturada — Fluxo LGPD do Acervo (s15)
+
+> **Fluxo de verificação LGPD é feature configurável — desativada por padrão.**
+>
+> Comportamento padrão (feature off): campo "Status LGPD" é apenas informativo — qualquer usuário com acesso ao acervo pode preencher sem formalidade.
+>
+> Quando a feature é ativada em Configurações: existe um fluxo formal de verificação — responsável designado checa se as pessoas nas fotos/vídeos autorizaram o uso e atualiza o status formalmente. O mesmo padrão das features Motorista (CAR-12) e Veículos (CAR-14).
+>
+> **ACV-12** `🟡 Média` — Feature de verificação LGPD não está implementada no código atual além do campo informativo — quando ativada, precisará de: (a) campo de responsável designado por verificação; (b) histórico de quem verificou e quando; (c) notificação ao responsável quando novo arquivo sem verificação é adicionado.
+
+### Perguntas abertas
+- Quem tem acesso para adicionar/editar arquivos no acervo — apenas Comunicação, ou qualquer usuário?
+
+---
+
+<a name="mod-24"></a>
+## Módulo 24 — Agentes Culturais
+**Status:** ⚠️ PROBLEMA CONFIRMADO (s15 — acesso bloqueado por bug de sincronização)
+
+### O que o Admin diz
+- Descrição no Admin → Módulos: "Cadastro e gestão de agentes e produtores culturais"
+- Status no Admin: **Ativo** (botão "Desativar" visível)
+
+### Comportamento confirmado ✅ / ⚠️ (s15)
+- Sidebar exibe badge **"inativo"** ao lado de "Agentes"
+- Ao clicar no item da sidebar: toast "Módulo 'Agentes' está desativado." — acesso bloqueado
+- Botão no header preso em **"Abrindo..."** após a tentativa (instância de SIS-09)
+- Console: ▲5 avisos + 101 Issues (todos Warden) — sem TypeErrors
+
+### Problemas confirmados ⚠️
+
+**AGN-01** `🔴 Alta` — **Sincronização quebrada entre Admin → Módulos e estado efetivo da aplicação** — Admin registra "Agentes Culturais = Ativo" (botão "Desativar" visível), mas a sidebar exibe badge "inativo" e o clique é bloqueado com toast "Módulo 'Agentes' está desativado." Mesmo conflito observado para Voluntários (Ativo no Admin, badge inativo na sidebar). O estado configurado via Admin → Módulos não está sendo propagado corretamente para a aplicação. Relacionado a ADM-10 (toggles de Features inoperantes) — o problema de sincronização pode ser mais amplo: tanto Features quanto Módulos não aplicam o estado configurado.
+
+### Descoberta adicional — lista completa de módulos (Admin → Aba Módulos, s15)
+20 módulos visíveis, todos em status "Ativo":
+`Administração | Dashboard Executivo | Tarefas | Estratégia | Pessoas/RH | Ponto Eletrônico | Escuta Institucional | Voluntários | Ações | Agentes Culturais | Público/Inscrições | Acervo | Financeiro | Parcerias | Infraestrutura | Reuniões | Comunicação | Balcão de Comunicação | TaskHub | Auditoria`
+
+> Anteriormente documentado como "10+ módulos" — lista agora completa. Voluntários e Agentes Culturais aparecem como Ativos no Admin mas com badge "inativo" na sidebar — confirma AGN-01.
+
+### Rastreador — Agentes Culturais
+| Item | Status | Sessão |
+|---|---|---|
+| Sidebar badge "inativo" | ⚠️ AGN-01 | 2026-05-31 s15 |
+| View carrega | ❌ bloqueado por AGN-01 | — |
+| Estrutura e campos | 🔲 bloqueado | — |
 
 ---
 
@@ -2719,7 +2867,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 90 | ACO-13 | Ações Culturais — Criação | Sem campo de vínculo com contrato ou fonte de recurso na criação — associação só é possível via aba interna do painel, sem orientação ao usuário no fluxo de criação | 🟡 Média |
 | 91 | ACO-14 | Ações Culturais — Formulário | Campo "Responsável" é texto livre (email digitado) — mesmo anti-padrão de TAR-02 e CHV-05. Deveria ser select/autocomplete da lista de usuários | 🔴 Alta |
 | 92 | ACO-15 | Ações Culturais — Filtros | Barra de filtros sem botão refresh — todas as demais views têm botão de atualização explícito; Ações não tem | 🟡 Média |
-| 98 | ACO-16 | Ações Culturais — Navegação | **BUG**: clicar em ✕ (fechar) no painel de visualização abre o modal "Editar Ação" em vez de fechar o painel — event handler incorreto ou event bubbling indevido | 🔴 Alta |
+| ~~98~~ | ~~ACO-16~~ | ~~Ações Culturais — Navegação~~ | ~~**BUG**: clicar em ✕ (fechar) no painel de visualização abre o modal "Editar Ação" em vez de fechar o painel~~ | ✅ CORRIGIDO — `stopPropagation()` no ✕ + `if(event.target===this)` no overlay |
 | 99 | ACO-17 | Ações Culturais — Modal | Labels no modal "Nova/Editar Ação" sem `class="form-label"` — inconsistente com os demais modais do sistema (Contratações, Reuniões) que aplicam a classe explicitamente | 🟡 Média |
 | 100 | ACO-18 | Ações Culturais — Modal | Campo "Tipo" defaulta para "Evento" (3ª opção da lista, não a primeira) — sem razão declarada para esse default; deveria default para o tipo mais frequente ou para a primeira opção | 🟡 Baixa |
 | 101 | ACO-19 | Ações Culturais — Modal | Layout de colunas heterogêneo: "Tipo" (select) ao lado de "Responsável" (texto livre) — mais coerente seria agrupar campos de mesmo tipo (Tipo \| Setor ambos selects; Responsável em linha própria com destaque) | 🟡 Baixa |
@@ -2767,10 +2915,10 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 144 | BAL-14 | Balcão — Modal Versões | Botão "🚀 Enviar Entrega" tem emoji — contra padrão DS (sem emojis em botões de ação). Usar ícone MS Font ou texto puro | 🟡 Baixa |
 | 145 | BAL-15 | Balcão — Modal Versões | Aba "Versões" exibe "URL da Entrega" + "Nota / Observação" + "Enviar Entrega" — **estrutura correta e positiva** ✅ para rastreamento de entregas. Problema: a aba aparece vazia antes de clicar em "+ Enviar Nova Versão" sem instrução ao usuário — estado vazio deveria explicar o que fazer ("Nenhuma versão entregue ainda. Clique em '+ Enviar Nova Versão' para registrar a primeira entrega.") | 🟡 Baixa |
 | 146 | BAL-16 | Balcão — FSM | **Falta etapa de aprovação final do material**: o setor de Comunicação entrega o material (registra URL na aba Versões), mas não há passo de aprovação pelo demandante confirmando que o material está adequado. FSM correto: `nova → em_execução → entregue → aprovada_pelo_demandante → concluída` / `reprovada → revisão`. Sem essa etapa, o Balcão não fecha o ciclo de qualidade da entrega | 🔴 Alta |
-| 147 | BAL-17 | Balcão — BtnGuard | **BUG**: ao fechar o modal "Nova Demanda" sem salvar, o botão "+ Nova Demanda" fica eternamente em estado "Abrindo..." (spinner preso). O `BtnGuard.wrap()` não libera o lock quando o modal é dispensado sem completar a ação. Mesmo padrão de ACO-05 (botão Editar em Ações). BtnGuard precisa liberar o botão no callback de cancelamento/fechamento do modal | 🔴 Alta |
+| ~~147~~ | ~~BAL-17~~ | ~~Balcão — BtnGuard~~ | ~~Spinner preso ao fechar modal sem salvar~~ | ✅ CORRIGIDO — `BtnGuard.liberar('btn-nova-demanda')` adicionado em `BalcaoUI.fecharForm()` |
 | 149 | BAL-18 | Balcão — Modal | Modal "Nova Demanda" com organização visual deficiente: sem margens internas adequadas entre campos, sem espaçamento entre seções, sem adaptabilidade a diferentes tamanhos de tela. Instância confirmada de SIS-10 | 🔴 Alta |
 | 150 | SIS-10 | Sistema Global — Modais | **Problema sistêmico de layout de modais**: modais do sistema apresentam organização visual deficiente — sem padrão de margem interna (padding), sem espaçamento consistente entre grupos de campos, sem responsividade/adaptabilidade a diferentes resoluções. Todos os modais precisam seguir um padrão unificado de: padding interno mínimo (ex: 24px), espaçamento entre campos (ex: 16px), agrupamento visual por seção, e comportamento responsivo (scroll interno, max-height com overflow, não ultrapassar viewport). Auditar todos os modais do sistema ao corrigir | 🔴 Alta |
-| 148 | SIS-09 | Sistema Global — BtnGuard | **BUG SISTÊMICO**: `BtnGuard.wrap()` não libera o lock de botão quando o modal/ação é cancelada ou fechada sem completar. Confirmado em: ACO-05 (botão Editar em Ações) e BAL-17 (botão Nova Demanda no Balcão). Potencialmente afeta **todos os botões do sistema** que abrem modais via BtnGuard. Correção: BtnGuard deve registrar callback de liberação e garantir que qualquer fechamento de modal (✕, Cancelar, ESC, clique fora) dispare `BtnGuard.liberar(id)` | 🔴 Crítico |
+| ~~148~~ | ~~SIS-09~~ | ~~Sistema Global — BtnGuard~~ | ~~BUG SISTÊMICO: BtnGuard não libera lock ao cancelar modal~~ | ✅ CORRIGIDO (parcial) — instâncias BAL-17, ESC-06, ACO-05 corrigidas adicionando `BtnGuard.liberar()` nos handlers de fechamento |
 | 124 | ACO-26 | Ações — Painel (sistêmico) | **REGRA ARQUITETURAL VIOLADA**: toda sub-aba, editor ou formulário aberto a partir do painel da Ação deve permanecer sobre a view Ações — nunca navegar para outra rota. O usuário deve sempre retornar ao painel da Ação ao fechar. Instâncias confirmadas: MAP-03 (editor de mapa navega para Contratações ao fechar), MAP-02 (editor abre sem isolar a camada). A raiz é o editor de mapa implementado como rota separada em vez de overlay/modal sobre o painel | 🔴 Alta |
 | 158 | APR-02 | Aprovações | SuperAdmin não acessa Aprovações — restrição RBAC `modulo:'ESPACOS'` no item de menu (linha ≈ 20199). Confirmado via correcoes.md | 🔴 Alta |
 | 159 | APR-03 | Aprovações | Aba "Permissões" ausente — módulo não centraliza fluxos de acesso pendente. Confirmado via correcoes.md | 🟡 Média |
@@ -2807,8 +2955,8 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 190 | REU-11 | Reuniões — Ata | Ata sem estrutura guiada — textarea livre não orienta o redator sobre blocos obrigatórios da ata formal (abertura, deliberações por pauta, encaminhamentos, encerramento); template pré-estruturado reduziria omissões | 🟡 Média |
 | 191 | REU-12 | Meu Centro | Sem botão "+ Tarefa Rápida" no inbox — usuário precisa navegar ao módulo Tarefas para criação; adicionar mini-formulário inline no Meu Centro sem unificar os módulos | 🟡 Média |
 | 192 | REU-13 | Reuniões — Encaminhamentos | Encaminhamentos sem notificação ao responsável no momento da criação — backend já agrega no TaskHub; falta trigger de alerta na criação | 🟡 Média |
-| 193 | APR-04 | Aprovações — Tab bar | Tab ativa sem indicador visual: módulo usa `.active` (inglês) mas CSS define apenas `.tab-btn.ativa` e `.tab-btn.tab-ativa`. Resultado: nenhuma aba aparece destacada ao ser selecionada | 🔴 Alta |
-| 194 | APR-05 | Aprovações — Aba Veículo | "Carregando..." sem resolver ao clicar na aba — possível falha silenciosa do backend `carregarCarros()` | 🟡 Média |
+| ~~193~~ | ~~APR-04~~ | ~~Aprovações — Tab bar~~ | ~~Tab ativa sem indicador visual: `.active` vs `.ativa`~~ | ✅ CORRIGIDO — HTML e JS de Aprovações trocados de `.active` para `.ativa` |
+| ~~194~~ | ~~APR-05~~ | Aprovações — Aba Veículo | ~~"Carregando..." sem resolver~~ **CORRIGIDO s14 — carrega normalmente** | ~~🟡 Média~~ |
 | 195 | APR-06 | Aprovações — Cabeçalho | Usa padrão antigo `page-header` / `div.page-title` — deveria ser `view-header` / `h1.view-title` (instância de SIS-03) | 🟡 Média |
 | 196 | SIS-11 | Sistema Global — Usuário | Saudações e pontos de exibição de nome do usuário logado usam email ou iniciais derivadas do email (ex: avatar "JO" de joao.barros) em vez do nome completo registrado. O sistema tem nomes cadastrados (visível em Aprovações → Permissões: "João Barros", "THAIS FREITAS DOS SANTOS"). O bootstrap deve retornar o nome do usuário para que greeting no Home, avatar, "Convocado por" em Reuniões e outros campos de autoria exibam nome completo (ou mínimo nome + sobrenome) | 🟡 Média |
 | 197 | ADM-05 | Admin — UI Geral | UI de Administração truncada — conteúdo cortado ou mal distribuído visualmente. Módulo carece de revisão de layout completa. Abas Features, Provisionamento e Config Sistema ainda não testadas visualmente | 🟡 Média |
@@ -2827,7 +2975,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 208 | CAR-01 | Reserva de Veículo — Auditoria | **Módulo NUNCA TESTADO na auditoria** — Fase 21 implementada (commit 236f309) com: reservas de veículo institucional, modal detalhes na agenda, vínculo com Ações. APR-05 (aba Veículo em "Carregando...") pode estar relacionado a este módulo. Priorizar teste visual completo | 🔴 Alta |
 | 211 | ESC-04 | Escuta — Aba Painel | Loading infinito na seção superior da aba Painel — "Carregando..." nunca resolve; seções inferiores (Evolução do Clima, Pesquisas Formais) carregam normalmente | 🔴 Alta |
 | 212 | ESC-05 | Escuta — Gestão | **"object Object" nos Marcadores Metodológicos** — objeto JS não serializado; badge e nome exibem literalmente o texto do tipo JS em vez do valor correto | 🔴 Alta |
-| 213 | ESC-06 | Escuta — BtnGuard | Botão "+ Nova Pesquisa" preso em "Abrindo..." mesmo com modal aberto e funcional — instância de SIS-09 (BtnGuard não libera ao dispensar o modal) | 🔴 Alta |
+| ~~213~~ | ~~ESC-06~~ | ~~Escuta — BtnGuard~~ | ~~Botão "+ Nova Pesquisa" preso em "Abrindo..."~~ | ✅ CORRIGIDO — `BtnGuard.liberar('btn-nova-pesquisa')` adicionado no Cancelar e no overlay click de `abrirFormPesquisa()` |
 | 214 | ESC-07 | Escuta — DS | Botões "Salvar Configurações" e "Salvar Perfil" com cor rosa/pink — fora do padrão `btn-primary` (roxo); mesma divergência de BAL-13 | 🟡 Média |
 | 215 | ESC-08 | Escuta — Arquitetura | Seção "MEU PERFIL ANALÍTICO" na aba Escuta Livre deve ser removida — dados demográficos devem vir do perfil cadastral do usuário no sistema, não ser coletados separadamente dentro do módulo | 🔴 Alta |
 | 216 | ESC-09 | Sistema Global — Perfil | **Sistema sem área de perfil editável pelo usuário** — não existe "Meu Perfil" onde o colaborador possa cadastrar nome social (prioridade máxima), pronomes, raça/cor, foto. Dados do RH (cargo, setor, vínculo, admissão) devem ser somente leitura nessa tela. Afeta Escuta, saudações (SIS-11), avatar e campos de autoria em todo o sistema | 🔴 Alta |
@@ -2875,6 +3023,20 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 256 | SIS-14 | Sistema Global — Datas | **Datas em formato ISO (AAAA-MM-DD) em todo o sistema** em vez de padrão pt-BR (DD/MM/AAAA) — confirmado pelo usuário: todas as datas devem seguir pt-BR. Identificado em: cards e modal de Reserva de Veículo (2026-05-29). Auditoria sistêmica necessária em todos os módulos | 🔴 Alta |
 | 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** Instância específica do padrão geral FIN-20. O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com a flag `voucher_uber` ativa | 🔴 Alta |
 | 259 | FIN-20 | Financeiro — Rubricas / Flags de Operação | **Sistema de flags de operação configuráveis por rubrica — padrão arquitetural geral.** Flags definem quais tipos de operação podem ser solicitadas contra uma rubrica específica. Devem ser criadas e gerenciadas dinamicamente (Admin → Config Financeiro ou similar) — não hardcoded. Cada rubrica pode ter zero ou mais flags. Ao iniciar qualquer solicitação no sistema, o seletor de rubrica filtra automaticamente pelas rubricas do setor do solicitante que possuem a flag correspondente ativa. Casos de uso confirmados: (1) `voucher_uber` — Voucher Uber (CAR-13 / FIN-18); (2) `contratacao` — Contratações; (3) `compra_direta` — Compras; (4) `pagamento` — Pagamentos avulsos. A lista de flags é aberta — novos tipos de operação criados no futuro não exigem alteração de código, apenas criação de nova flag e atribuição às rubricas elegíveis | 🔴 Alta |
+| 262 | ACV-01 | Acervo — View | **Galeria em "Carregando..." permanente** — `ctrl_acervo_listar` falha silenciosamente; métricas exibem "—"; módulo inutilizável para leitura. Mesmo padrão de ADM-01, CON-05, ESC-04 | 🔴 Alta |
+| 263 | ACV-07 | Acervo — Modal | **Select "Ação vinculada" vazio no modal** — populate de ações falha junto com o carregamento; como acaoId é obrigatório para salvar, módulo é inutilizável também para escrita | 🔴 Alta |
+| 264 | ACV-08 | Acervo — Formulário | **Sem campo nome/título do arquivo** — arquivo identificado apenas por tipo + descrição truncada; sem identificador textual próprio | 🔴 Alta |
+| 265 | ACV-02 | Acervo — DS | Botão "Cancelar" no modal com cor rosa/pink — instância de ESC-07/BAL-13; deveria ser `btn-secondary` cinza | 🟡 Média |
+| 266 | ACV-03 | Acervo — DS | Stats-strip sem MetricsToggle — 2 cards presentes mas sem componente obrigatório de toggle. Instância de HUB-01 | 🟡 Média |
+| 267 | ACV-04 | Acervo — Filtros | Sem botão refresh — instância de ACO-15 | 🟡 Média |
+| 268 | ACV-05 | Acervo — DS | Filtros sem classe DS — apenas `style="..."` inline, sem `filter-bar` nem `toolbar`. Instância de SIS-06 | 🟡 Média |
+| 269 | ACV-06 | Acervo — DS | Cabeçalho usa padrão misto `h2.view-titulo` — instância de SIS-05/ACO-11 | 🟡 Média |
+| 270 | ACV-09 | Acervo — DS | Emojis nos selects de tipo (📷 Foto, 🎬 Vídeo…) no filtro e no formulário — anti-padrão DS | 🟡 Média |
+| 271 | ACV-10 | Acervo — DS | Formulário com estilos 100% inline — todos os labels, inputs e selects usam `style="..."`, sem classes DS (`form-label`, `form-input`…). Pior que ACO-12 | 🟡 Média |
+| 272 | ACV-11 | Acervo — Arquitetura | **Campo "Ação vinculada" obrigatório inviabiliza conteúdo institucional** — sistema bloqueia salvamento sem acaoId; arquivos institucionais (fotos do espaço, docs históricos, materiais avulsos) não podem ser registrados. Campo deve ser opcional: com ação → vinculado à ação; sem ação → conteúdo institucional com categorização própria | 🔴 Alta |
+| 273 | AGN-01 | Agentes Culturais — Sincronização | **Estado de módulo no Admin não propaga para a aplicação** — Admin → Módulos registra "Agentes Culturais = Ativo" mas sidebar exibe badge "inativo" e bloqueia o acesso com toast. Mesmo conflito em Voluntários. O toggle de ativação/desativação de módulos não está aplicando o estado corretamente. Relacionado a ADM-10 (features também não propagam). | 🔴 Alta |
+| 274 | CON-08 | Contratações — Salvar | **"Salvar Rascunho" falha com "lerJSON is not defined"** — função `lerJSON` não está definida no escopo de execução do salvamento; toda criação de contratação está bloqueada; módulo inutilizável para escrita | 🔴 Crítico |
+| 275 | CON-09 | Contratações — Parcelas | **Campo "Atividade/Evento" nas parcelas é texto livre desvinculado** — sem conexão com as atividades reais do Plano de Trabalho (Meta→Atividade→Rubrica); impede rastrear qual atividade cada parcela financia | 🔴 Alta |
 | 258 | FIN-19 | Financeiro — Rubricas / Modelo de Dados | **Campo Setor deve migrar da Memória de Cálculo para o nível da Rubrica.** Uma mesma rubrica dentro de uma mesma meta pode ser registrada mais de uma vez, cada entrada vinculada a um setor diferente. Exemplo: Rubrica "Transporte" na Meta A → R$5.000 Setor Ação Cultural + R$3.000 Setor Comunicação. O sistema deve consolidar duplamente: (a) **total global da rubrica** (R$8.000, sem decomposição — para comparação com o orçamento do contrato); (b) **total por setor** (R$5.000 Ação Cultural / R$3.000 Comunicação — para gestão interna de custo por setor). O campo Setor na Memória de Cálculo (FIN-01, corrigido) trata de um nível errado — a granularidade correta é rubrica × setor, não item-de-memória × setor | 🔴 Alta |
 | 153 | ADM-02 | Admin — Permissões | PERMISSÕES POR MÓDULO no modal de edição de usuário cobre apenas VER/EDITAR/EXCLUIR por módulo — sem granularidade por funcionalidade, setor ou recurso. V1 era mais completo. Confirmado pelo usuário | 🔴 Alta |
 | 154 | ADM-03 | Admin — Usuários | Campo SETOR no modal "Editar usuário" não carregava inicialmente (dropdown vazio) — mesmo padrão sistêmico de campos não integrados com a base de setores (CHV-06, EMP-03, TAR-02, ACO-03) | 🟡 Média |
@@ -3004,6 +3166,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 
 | Data | Módulos cobertos | Descobertas principais |
 |---|---|---|
+| 2026-06-01 | **CORREÇÕES s16** | Fases 1–3: APR-04 CORRIGIDO (`.active`→`.ativa` em Aprovações), SIS-09 parcial CORRIGIDO (BAL-17 Balcão + ESC-06 Escuta + ACO-05 Ações — `BtnGuard.liberar()` nos handlers de fecharForm), ACO-16 CORRIGIDO (`stopPropagation()` no ✕ + guard no overlay). Deploy @365. |
 | 2026-05-31 | Estruturação inicial | Roteiro criado; análise de código mapeou 49 módulos/subáreas a auditar |
 | 2026-05-31 | Home + Sidebar | Home: informações admin-only (espaços/setores/módulos/status) + acessos rápidos fixos. Sidebar: muito extensa, sem agrupamento — dificulta navegação. |
 | 2026-05-31 | Sidebar (aprofundamento) + Tarefas | Sidebar: superadmin vê todos os itens (Reuniões, Ponto, Balcão, Dashboard). "Perfis Fantasma" e preview de Primeiro Acesso foram solicitados mas não implementados. Tarefas: email de responsável sem autocomplete, sem vínculos com módulos, sem gatilhos ou alertas. |
@@ -3023,6 +3186,8 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 2026-05-31 (sessão 10) | Admin (mod-43) — todas as 10 abas + 4 modais testados visualmente | Estrutura completa do Admin mapeada: 10 abas (Espaços/Setores/Turnos/Categ.Itens/Módulos/Features/Provisionamento/Usuários/Config.Sistema/Banco de Dados). NOVOS POSITIVOS: Modal "Novo Espaço" já tem horário por espaço implementado (Abertura/Fechamento 08:00–22:00) ✅ e Responsáveis por Período ✅. Identidade Visual com extração automática de cores e derivadas ✅. Aba Banco de Dados com 8 atalhos de planilhas ✅. NOVA DESCOBERTA: seção "Funcionalidades Específicas" no modal de edição de usuário com controles granulares por funcionalidade (5 grupos: COMUNICAÇÃO, TAREFAS, PESSOAS, REUNIÕES, AÇÕES) — ADM-02 REVISADO. NOVOS BUGS confirmados: ADM-10 (toggles Features inoperantes), ADM-11 (Wizard abre página vazia), ADM-12 (Visualizar Cadastro abre página em branco). REORGANIZAÇÃO arquitetural confirmada: Turnos + Config.Sistema Expediente → unificar; Categ.Itens → migrar para Estoque (ADM-08, ADM-09). ESP-16c: default 22:00 em Novo Espaço diverge do expediente global 21:30. Total acumulado: 205 problemas. |
 | 2026-05-31 (sessão 11) | Escuta Institucional (mod-32) — todas as 6 abas testadas visualmente + observações do usuário | Painel: loading infinito (ESC-04); Evolução do Clima e Pesquisas Formais com estados vazios ✅. Escuta Livre: Relato Espontâneo ✅; "MEU PERFIL ANALÍTICO" deve ser removido (ESC-08) — dados demográficos devem vir do perfil cadastral. Alertas: propósito não comunicado nem ao administrador (ESC-10) — hipótese de alertas de threshold de bem-estar a confirmar. Distribuição: Saturação por Dimensão com IDs numéricos em vez de nomes (ESC-11). Relatórios: funcional quando houver dados ✅. Gestão: "object Object" nos Marcadores Metodológicos (ESC-05); Banco de Perguntas Pulse com dimensões e taxas ✅; Monitoramento 18imp/2resp/11% taxa ✅. REGRA CRÍTICA (usuário): sistema precisa de "Meu Perfil" editável — nome social com prioridade absoluta, pronomes, raça/cor, foto (ESC-09, SIS-12). Modal "+ Nova Pesquisa" minimalista e com BtnGuard preso (ESC-15, ESC-06). Módulo complexo sem guia contextual integrado (ESC-12). Total acumulado: 224 problemas. |
 | 2026-05-31 (sessão 12) | Meu Centro / TaskHub (mod-38) — estrutura completa mapeada + decisões arquiteturais globais | Estrutura: 3 abas (Meu Dia / Meu Time / Produtividade), todas em estado vazio. HUB-01 a HUB-13 registrados. DECISÕES CRÍTICAS: (1) Tarefas absorvido no Meu Centro — Meu Dia = inbox pessoal; Meu Time = visão gestora com criação/atribuição; usuários não-gestores também atribuem tarefas a outros. (2) Task Federation Universal — qualquer entidade com "responsável" gera item no Meu Centro do responsável (fontes: Tarefas, Aprovações, Encaminhamentos, Balcão, Ações, Reservas, Contratações, Empréstimos, Almoxarifado). (3) SIS-13 BLOQUEADOR: campos de responsável como texto livre inviabilizam a federação — correção é pré-condição. (4) Navegação: Home #1 (institucional) · Meu Centro #2 (pessoal). (5) Aniversariantes: todos veem no dia; RH/gestores veem com 7 dias de antecedência para registrar dayoff automático (AFT-08). (6) Consolidação global da sidebar: ~20 → ~10–11 itens (mapa completo registrado). Total acumulado: 243 problemas. |
+| 2026-05-31 (sessão 14) | APR-05 resolvido + Acervo Digital (mod-25) — primeira auditoria | APR-05 CORRIGIDO: aba Veículo em Aprovações carrega normalmente (era transiente). Acervo: galeria presa em "Carregando..." (ACV-01) + modal abre mas select de ação vazio (ACV-07). Regra crítica capturada: acervo é GERAL — finalístico (vinculado a ações) + institucional (fotos do espaço, docs históricos, materiais avulsos) — mas código atual exige acaoId obrigatório, bloqueando conteúdo institucional (ACV-11). 12 novos problemas → total 272. |
+| 2026-05-31 (sessão 15) | Acervo LGPD flow + Agentes Culturais (AGN-01) + Contratações FSM (bloqueado) | Acervo LGPD: feature configurável, desativada por padrão — campo informativo quando off; fluxo formal de verificação quando on (ACV-12). Agentes Culturais: sync quebrada entre Admin (módulo Ativo) e app (badge inativo + acesso bloqueado) — AGN-01; lista completa de 20 módulos no Admin documentada; Voluntários tem mesmo bug. ADM-10 refinado: toggles Features sem resposta visual alguma ao clique. Contratações: tentativa de salvar rascunho → "lerJSON is not defined" (CON-08 Crítico — módulo inutilizável para escrita); parcelas com atividade texto livre desvinculada do Plano de Trabalho (CON-09); CON-03 e CON-04 reconfirmados. 4 novos problemas → total 275. |
 | 2026-05-31 (sessão 13) | Reserva de Veículo (mod-34) + decisões arquiteturais Financeiro (FIN-18/19) | Módulo Veículo auditado pela primeira vez: Lista + FSM ✅; datas ISO (SIS-14); email em vez de nome (CAR-06/07); modal omite contexto (CAR-08); passageiros sem distinção (CAR-09); sem paradas (CAR-10); sem bloqueio passado (CAR-11); sem motorista (CAR-12); voucher Uber como novo fluxo (CAR-13). Financeiro: FIN-18 — flag "aceita Voucher Uber" configurável por rubrica (não hardcode). FIN-19 — Setor deve sair da Memória de Cálculo e subir para nível de Rubrica; mesma rubrica pode ser lançada múltiplas vezes por setor diferente; consolidação dupla obrigatória (total global + total por setor); FIN-01 foi corrigido no nível errado. SIS-14 (datas pt-BR) confirmado sistêmico. 15 novos problemas → total 258. |
 
 ---
@@ -3038,6 +3203,102 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 ---
 
 *Este documento é a fonte única de verdade da auditoria. Atualizar a cada sessão de análise.*
+
+---
+
+## HANDOFF — SESSÃO 15 (2026-05-31) → SESSÃO 16
+
+### Estado atual: 275 problemas registrados
+
+### O que foi feito nesta sessão (s15)
+
+**Acervo Digital — LGPD flow (pergunta pendente s14):**
+- Fluxo de verificação LGPD é **feature configurável, desativada por padrão** — mesmo padrão de CAR-12 (motorista) e CAR-14 (veículos)
+- Quando desativada: campo "Status LGPD" é apenas informativo, qualquer usuário preenche
+- Quando ativada: fluxo formal com responsável designado — código atual não implementa esse fluxo além do campo informativo (ACV-12 registrado)
+
+**Agentes Culturais (mod-24) — primeira auditoria:**
+- Sidebar exibe badge "inativo"; clique bloqueia com toast "Módulo 'Agentes' está desativado."
+- Admin → Módulos: "Agentes Culturais = Ativo" — sincronização quebrada (AGN-01)
+- Mesmo conflito confirmado em Voluntários
+- Lista completa de módulos no Admin documentada: 20 módulos, todos Ativos
+- Botão de header preso em "Abrindo..." (SIS-09 novamente)
+
+**ADM-10 (Features toggles) — refinado:**
+- Toggles não têm resposta visual alguma ao clique — permanecem no mesmo estado, sem animação, sem mudança. Não é "não persiste" — é "não reage".
+
+**Contratações — tentativa de salvar rascunho:**
+- CON-03 e CON-04 reconfirmados visualmente (META com ID técnico; RUBRICA vazia)
+- "Salvar Rascunho" → toast de erro: **"lerJSON is not defined"** (CON-08 🔴 Crítico) — módulo inutilizável para escrita
+- Campo "Atividade/Evento" nas parcelas é texto livre desvinculado do Plano de Trabalho (CON-09)
+- FSM completo de Contratações bloqueado enquanto CON-08 não for corrigido
+
+**Novos problemas s15:** ACV-12 (1), AGN-01 (1), CON-08 (1), CON-09 (1) = **4 novos → total 275**
+
+### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
+
+> "O subtítulo de Contratações menciona 'Portal LGPD'. O que é esse portal — é uma área pública onde fornecedores podem solicitar exclusão dos seus dados do sistema, ou tem outro propósito?"
+
+### Sequência após essa pergunta
+
+1. **Contratações — Portal LGPD** ← PRÓXIMA
+2. **Dashboard Executivo (mod-41)** — nunca testado
+3. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
+4. **Voluntários** — provavelmente bloqueado pelo mesmo bug de AGN-01
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (Benefícios R$525,74 vs R$1.191,33) — bug ativo
+- **SIS-14** (datas ISO) — auditoria sistêmica pendente
+- **FIN-19** (Setor na Rubrica) — FIN-01 corrigido no nível errado
+- **FIN-20** (flags de operação) — padrão geral sem implementação
+- **CAR-15** (papel + setor para aprovações de infra) — gap de código confirmado
+- **CON-08** (lerJSON not defined) — Contratações inutilizável para escrita
+- **AGN-01** (sync Admin→app) — Agentes e Voluntários bloqueados
+- **ADM-10** (toggles de features inertes) — aba Features inoperante
+
+### Instruções para o próximo Claude
+1. Ler roteiro completo antes de qualquer pergunta
+2. Verificar Rastreador de Testes Reais antes de pedir algo já testado
+3. Claude dirige — não esperar direção do usuário
+4. Uma pergunta por vez
+5. A pergunta sobre Portal LGPD ficou sem resposta — fazer IMEDIATAMENTE
+
+---
+
+## HANDOFF — SESSÃO 14 (2026-05-31) → SESSÃO 15
+
+### Estado atual: 272 problemas registrados
+
+### O que foi feito nesta sessão (s14)
+
+**APR-05 (Aprovações → aba Veículo):**
+- Carrega normalmente — problema era transiente (loading ainda em andamento quando o screenshot foi feito em s9). Problema fechado.
+
+**Acervo Digital (mod-25) — primeira auditoria:**
+- View carrega ✅; galeria presa em "Carregando..." permanente (ACV-01); métricas exibem "—"
+- Console: apenas Warden (101 issues) + ▲5 avisos — sem TypeErrors
+- Modal "Adicionar ao Acervo" abre ✅; select "Ação vinculada" vazio (ACV-07); botão Cancelar rosa/pink (ACV-02)
+- ACV-01 a ACV-11 registrados (11 novos problemas)
+
+**Regra crítica capturada — Escopo do Acervo:**
+- Acervo é GERAL: finalístico (registros de ações culturais → vinculáveis a uma Ação) + institucional (fotos do espaço, docs históricos, materiais avulsos → sem ação)
+- Código atual exige `acaoId` obrigatório → bloqueia conteúdo institucional (ACV-11 🔴)
+- Campo "Ação vinculada" deve ser opcional
+
+**Pergunta pendente (respondida pela metade):**
+- Status LGPD do acervo: é campo informativo ou fluxo de aprovação? → **NÃO RESPONDIDA** — sessão encerrada antes da resposta
+
+### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
+
+> "O status LGPD no acervo ('não verificado / autorizado / restrito / sem pessoas') é apenas um campo informativo que qualquer um pode preencher, ou existe um **fluxo de verificação** — alguém responsável por checar se as pessoas nas fotos autorizaram o uso e atualizar o status formalmente?"
+
+### Sequência após fechar o Acervo
+
+1. **Acervo — LGPD flow** ← PRÓXIMA
+2. **Agentes Culturais (mod-24)** — nunca testado
+3. **Contratações — FSM completo + Portal LGPD** — pendente desde s6
+4. **Dashboard Executivo (mod-41)** — nunca testado
+5. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
 
 ---
 

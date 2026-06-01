@@ -2176,7 +2176,7 @@ select.form-control { cursor: pointer; }
         </div>
         <!-- Abas internas -->
         <div class="tab-bar" style="margin-bottom:16px;">
-          <button class="tab-btn active" id="aprov-tab-btn-reservas" onclick="AprovacaoReservaUI.setTab('reservas',this)">
+          <button class="tab-btn ativa" id="aprov-tab-btn-reservas" onclick="AprovacaoReservaUI.setTab('reservas',this)">
             <span class="ms ms-sm">meeting_room</span> Reservas de Espaço
           </button>
           <button class="tab-btn" id="aprov-tab-btn-acessos" onclick="AprovacaoReservaUI.setTab('acessos',this)">
@@ -5284,7 +5284,7 @@ select.form-control { cursor: pointer; }
                 onclick="BtnGuard.wrap('painel-acao-editar-btn','…',function(){ AcoesUI.abrirForm(AcoesUI.getPainelAcao()); })">
                 <span class="ms ms-sm">edit</span> Editar
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="AcoesUI.fecharPainel()" data-bg-skip="1" style="padding:6px 8px;">
+              <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();AcoesUI.fecharPainel();" data-bg-skip="1" style="padding:6px 8px;">
                 <span class="ms ms-sm">close</span>
               </button>
             </div>
@@ -5391,7 +5391,7 @@ select.form-control { cursor: pointer; }
       <div id="acao-painel-overlay" class="oculto" style="
         position:fixed;top:0;left:0;width:100%;height:100%;
         background:rgba(0,0,0,0.45);z-index:999;"
-        onclick="AcoesUI.fecharPainel()"></div>
+        onclick="if(event.target===this)AcoesUI.fecharPainel()"></div>
 
       <!-- Views de módulos — injetadas dinamicamente por cada módulo -->
 
@@ -8281,6 +8281,8 @@ var GAS = {
       excluir:        function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_excluir(id); },
       criarDeEspacos:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_espacos(p); },
       criarDeSelecao:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_selecao(p); },
+      criarDeCopia:         function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_criar_de_copia(p); },
+      listarTodos:          function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_listar_todos(); },
       espacosDisponiveis:   function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_espacos_disponiveis(); },
       reservarEspaco:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_reservar_espaco(p); }
     }
@@ -12690,8 +12692,8 @@ var AprovacaoReservaUI = (function() {
 
   function setTab(aba, btn) {
     _tabAtiva = aba;
-    document.querySelectorAll('#view-aprovacoes .tab-btn').forEach(function(b){ b.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
+    document.querySelectorAll('#view-aprovacoes .tab-btn').forEach(function(b){ b.classList.remove('ativa'); });
+    if (btn) btn.classList.add('ativa');
     document.getElementById('aprov-tab-reservas').style.display    = aba === 'reservas'    ? '' : 'none';
     document.getElementById('aprov-tab-acessos').style.display     = aba === 'acessos'     ? '' : 'none';
     document.getElementById('aprov-tab-carros').style.display      = aba === 'carros'      ? '' : 'none';
@@ -19651,6 +19653,7 @@ var AcoesUI = (function() {
     if (modal) modal.classList.add('oculto');
     BtnGuard.liberar('acao-salvar-btn');
     BtnGuard.liberar('acao-nova-btn');
+    BtnGuard.liberar('painel-acao-editar-btn');
   }
 
   function salvar() {
@@ -20083,6 +20086,10 @@ var MapaAcaoUI = (function() {
         var nL=(mapa.layers||[]).length, nE=(mapa.elementos||[]).length;
         var badge=mapa.tipoBase==='espacos'
           ?'<span style="font-size:10px;background:#e0e7ff;color:#4f46e5;padding:2px 7px;border-radius:10px;font-weight:600;">Espaços CCBJ</span>'
+          :mapa.tipoBase==='selecao'
+          ?'<span style="font-size:10px;background:#fef9c3;color:#a16207;padding:2px 7px;border-radius:10px;font-weight:600;">Seleção</span>'
+          :mapa.tipoBase==='copia'
+          ?'<span style="font-size:10px;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:10px;font-weight:600;">Cópia</span>'
           :'<span style="font-size:10px;background:#f1f5f9;color:#64748b;padding:2px 7px;border-radius:10px;">Novo</span>';
         html+='<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border,#e2e8f0);border-radius:10px;background:var(--surface,#fff);">' +
           '<span class="ms" style="font-size:28px;color:var(--color-primary,#4f46e5);flex-shrink:0;">map</span>' +
@@ -20114,9 +20121,12 @@ var MapaAcaoUI = (function() {
         '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;margin-bottom:8px;">' +
           '<input type="radio" name="nl-tipo" value="espacos" style="margin-top:2px;">' +
           '<div><strong style="font-size:13px;">Aproveitar mapa dos espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Importa todos os espaços posicionados do mapa CCBJ.</span></div></label>' +
-        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;">' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;margin-bottom:8px;">' +
           '<input type="radio" name="nl-tipo" value="selecionar" style="margin-top:2px;">' +
-          '<div><strong style="font-size:13px;">Selecionar espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Escolha quais espaços incluir e adicione espaços personalizados para este evento.</span></div></label></div>' +
+          '<div><strong style="font-size:13px;">Selecionar espaços</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Escolha quais espaços incluir e adicione espaços personalizados para este evento.</span></div></label>' +
+        '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid var(--border,#e2e8f0);border-radius:8px;cursor:pointer;">' +
+          '<input type="radio" name="nl-tipo" value="copia" style="margin-top:2px;">' +
+          '<div><strong style="font-size:13px;">Reutilizar mapa anterior</strong><br><span style="font-size:12px;color:var(--text2,#64748b);">Copia camadas e elementos de um mapa já criado em qualquer ação.</span></div></label></div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
         '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 16px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:13px;">Cancelar</button>' +
         '<button id="btn-criar-local" data-bg-skip="1" onclick="MapaAcaoUI._criarMapa()" style="padding:8px 20px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Criar</button>' +
@@ -20133,6 +20143,10 @@ var MapaAcaoUI = (function() {
     document.querySelectorAll('.modal-simples').forEach(function(m){m.remove();});
     if(tipo==='selecionar'){
       _abrirPickerEspacos(nome.trim(), desc.trim());
+      return;
+    }
+    if(tipo==='copia'){
+      _abrirPickerCopia(nome.trim(), desc.trim());
       return;
     }
     if(tipo==='espacos'){
@@ -20379,6 +20393,99 @@ var MapaAcaoUI = (function() {
     _pickerCustom.splice(idx, 1);
     _renderPickerCustom();
     _atualizarContadorPicker();
+  }
+
+  // ── Picker de reutilização de mapas ──────────────────────────
+  function _abrirPickerCopia(nome, desc) {
+    var html =
+      '<div style="border-radius:17px;overflow:hidden;">' +
+      '<div style="background:linear-gradient(135deg,rgba(22,163,74,.05) 0%,var(--surface) 60%);border-bottom:1px solid var(--border,#e2e8f0);padding:14px 20px;display:flex;align-items:center;gap:10px;">' +
+        '<span class="ms" style="color:#16a34a;font-size:20px;">content_copy</span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<strong style="font-size:14px;color:var(--text,#1e293b);">Reutilizar mapa anterior</strong>' +
+          '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(nome) + '</div>' +
+        '</div>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted,#94a3b8);font-size:20px;line-height:1;padding:0 0 0 8px;">&#x2715;</button>' +
+      '</div>' +
+      '<div id="nl-copia-corpo" style="padding:16px 20px;max-height:55vh;overflow-y:auto;">' +
+        '<div style="text-align:center;padding:24px;color:var(--muted,#94a3b8);">' +
+          '<span class="ms" style="font-size:22px;animation:spin 1s linear infinite;display:inline-block;">progress_activity</span>' +
+          '<p style="margin:6px 0 0;font-size:12px;">Carregando mapas…</p>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 20px;border-top:1px solid var(--border,#e2e8f0);display:flex;align-items:center;gap:8px;background:var(--surface,#fff);">' +
+        '<span style="flex:1;font-size:12px;color:var(--muted,#94a3b8);">Selecione um mapa para copiar</span>' +
+        '<button id="nl-copia-criar-btn" data-bg-skip="1" style="display:flex;align-items:center;gap:5px;padding:8px 18px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">' +
+          '<span class="ms ms-sm">content_copy</span> Criar cópia</button>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="padding:8px 14px;background:none;border:1px solid var(--border,#e2e8f0);border-radius:7px;cursor:pointer;font-size:13px;color:var(--text,#1e293b);">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+
+    _abrirModalSimples(html);
+    var box = document.querySelector('.modal-simples .modal-box-animar');
+    if (box) box.style.maxWidth = '640px';
+
+    GAS.acoes.mapaAcao.listarTodos(function(r) {
+      var corpo = document.getElementById('nl-copia-corpo');
+      if (!corpo) return;
+      var todos = r && r.ok ? (r.data || []) : [];
+      if (!todos.length) {
+        corpo.innerHTML = '<p style="text-align:center;color:var(--muted,#94a3b8);font-size:13px;padding:20px 0;">Nenhum mapa disponível para reutilizar.</p>';
+        return;
+      }
+      // Agrupar por ação
+      var grupos = {}, ordem = [];
+      todos.forEach(function(m) {
+        if (!grupos[m.acaoId]) { grupos[m.acaoId] = { nome: m.acaoNome, mapas: [] }; ordem.push(m.acaoId); }
+        grupos[m.acaoId].mapas.push(m);
+      });
+      var h = '';
+      ordem.forEach(function(acaoId) {
+        var g = grupos[acaoId];
+        var destaque = _acaoAtual && acaoId === _acaoAtual.id ? ' (esta ação)' : '';
+        h += '<div style="margin-bottom:12px;">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#94a3b8);padding:4px 0 6px;border-bottom:1px solid var(--border,#e2e8f0);margin-bottom:5px;">' +
+            escaparHtml(g.nome) + escaparHtml(destaque) +
+          '</div>';
+        g.mapas.forEach(function(m) {
+          var tipoLabel = m.tipoBase==='espacos'?'Espaços CCBJ':m.tipoBase==='selecao'?'Seleção':m.tipoBase==='copia'?'Cópia':'Novo';
+          h += '<label style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;border:1px solid transparent;" ' +
+            'onmouseover="this.style.background=\'var(--surface2,#f1f5f9)\'" onmouseout="this.style.background=\'\'">' +
+            '<input type="radio" name="nl-copia-sel" data-mid="' + escaparHtml(m.id) + '" style="flex-shrink:0;accent-color:var(--color-primary,#4f46e5);">' +
+            '<span class="ms" style="font-size:18px;color:var(--color-primary,#4f46e5);flex-shrink:0;">map</span>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-size:13px;font-weight:600;color:var(--text,#1e293b);">' + escaparHtml(m.nome) + '</div>' +
+              (m.descricao ? '<div style="font-size:11px;color:var(--muted,#94a3b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(m.descricao) + '</div>' : '') +
+            '</div>' +
+            '<span style="font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' + m.nLayers + ' camada(s) · ' + m.nElementos + ' el.</span>' +
+            '<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:#f1f5f9;color:#64748b;flex-shrink:0;">' + tipoLabel + '</span>' +
+          '</label>';
+        });
+        h += '</div>';
+      });
+      corpo.innerHTML = h;
+    }, function() {
+      var corpo = document.getElementById('nl-copia-corpo');
+      if (corpo) corpo.innerHTML = '<p style="color:var(--color-error,#ef4444);text-align:center;padding:20px;font-size:13px;">Erro ao carregar mapas.</p>';
+    });
+
+    var btnCriar = document.getElementById('nl-copia-criar-btn');
+    if (btnCriar) btnCriar.addEventListener('click', function() {
+      var radio = document.querySelector('#nl-copia-corpo input[name="nl-copia-sel"]:checked');
+      if (!radio) { Toast.aviso('Selecione um mapa para reutilizar.'); return; }
+      var mapaOrigemId = radio.getAttribute('data-mid');
+      BtnGuard.wrap(btnCriar, 'Copiando…', function(done) {
+        GAS.acoes.mapaAcao.criarDeCopia({
+          acaoId: _acaoAtual.id, nome: nome, descricao: desc || '',
+          mapaOrigemId: mapaOrigemId
+        }, function(r) {
+          done();
+          document.querySelectorAll('.modal-simples').forEach(function(m){ m.remove(); });
+          if (r && r.ok) { Toast.sucesso('Mapa copiado!'); _carregado = false; _carregarMapas(); }
+          else Toast.erro('Erro: ' + (r && r.error ? r.error.message : 'Tente novamente.'));
+        }, function() { done(); Toast.erro('Erro de comunicação.'); });
+      });
+    });
   }
 
   return{
@@ -23592,6 +23699,7 @@ var BalcaoUI = (function() {
   function fecharForm() {
     _idAtual = null;
     document.getElementById('bl-modal').classList.add('oculto');
+    BtnGuard.liberar('btn-nova-demanda');
   }
 
   function abrirDetalhe(id) { abrirForm(id); }
@@ -24811,13 +24919,13 @@ var EscutaUI = (function() {
         '<label style="font-size:13px;">Respostas anônimas</label>' +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-        '<button class="btn btn-secundario" onclick="document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '<button class="btn btn-secundario" onclick="BtnGuard.liberar(\'btn-nova-pesquisa\');document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
         '<button id="btn-salvar-escuta" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-salvar-escuta\',\'Salvando…\',EscutaUI.salvarPesquisa)">Salvar</button>' +
       '</div>';
     if (id) box.dataset.editId = id;
     ov.appendChild(box);
     document.body.appendChild(ov);
-    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    ov.addEventListener('click', function(e){ if(e.target===ov){ BtnGuard.liberar('btn-nova-pesquisa'); ov.remove(); } });
   }
 
   function salvarPesquisa(done) {
