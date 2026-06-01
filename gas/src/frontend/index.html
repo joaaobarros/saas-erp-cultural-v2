@@ -5382,8 +5382,8 @@ select.form-control { cursor: pointer; }
             <div id="painel-contratacoes-acao-lista"><p class="muted-text" style="font-size:13px;">Carregando…</p></div>
           </div>
           <!-- Aba Mapa do Evento -->
-          <div id="painel-tab-mapa" class="oculto" style="height:100%;min-height:480px;">
-            <div id="painel-mapa-container" style="height:100%;"></div>
+          <div id="painel-tab-mapa" class="oculto" style="height:100%;min-height:480px;overflow:hidden;position:relative;">
+            <div id="painel-mapa-container" style="position:absolute;inset:0;"></div>
           </div>
         </div>
       </div>
@@ -20180,7 +20180,12 @@ var MapaAcaoUI = (function() {
           else Toast.erro('Erro ao salvar: '+(r&&r.error?r.error.message:'Tente novamente.'));
         },function(){Toast.erro('Erro de comunicação ao salvar.');});
       },
-      function(){_renderizarLista();}
+      function(){
+        // Garantir que a view principal seja 'acoes' — o usuário pode ter navegado
+        // para Contratações via novaParaAcao enquanto o editor estava aberto
+        if (Router.getAtual && Router.getAtual() !== 'acoes') Router.navegar('acoes');
+        _renderizarLista();
+      }
     );
   }
 
