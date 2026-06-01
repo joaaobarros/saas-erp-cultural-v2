@@ -187,9 +187,9 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Financeiro | ✅ 3 cards R$ 0,00, barra 0% | 2026-06-01 |
 | Aba Contratações | ✅ estado vazio carrega; botão "+ Nova Contratação" | ❌ ACO-07r inoperante | 2026-06-01 |
 | Aba Mapa do Evento — lista | ✅ 2 mapas listados (Espaços CCBJ + Seleção), Abrir e excluir funcionam | 2026-06-01 |
-| Mapa — operação Mesclar | ❌ MAP-01 destrói contornos, gera quadrilátero | 2026-06-01 |
-| Mapa — abertura (sobreposição) | ❌ MAP-02 aba Contratações fica no fundo | 2026-06-01 |
-| Mapa — fechamento (navegação) | ❌ MAP-03 redireciona para Contratações em vez de voltar ao painel | 2026-06-01 |
+| Mapa — operação Mesclar | ✅ CORRIGIDO s16 Fase 9 | 2026-06-01 |
+| Mapa — abertura (sobreposição) | ✅ CORRIGIDO s16 Fase 10 | 2026-06-01 |
+| Mapa — fechamento (navegação) | ✅ CORRIGIDO s16 Fase 10 | 2026-06-01 |
 | Transições de status (painel) — Visão Geral | ✅ confirmado (ACO-06, ACO-27, ACO-28) | 2026-06-01 |
 | Botão Editar (caminho via botão no painel) | ✅ ACO-05 CORRIGIDO — BtnGuard.liberar adicionado em fecharForm() | 2026-06-01 |
 
@@ -200,8 +200,8 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Solicitações — filtros, busca, estado vazio | ✅ | 2026-06-01 |
 | Formulário "+ Nova" — 7 seções mapeadas | ✅ | 2026-06-01 |
 | Seção 5 "VÍNCULO FINANCEIRO" — cascata Contrato→Meta→Rubrica | ✅ estrutura confirmada | 2026-06-01 |
-| Vínculo Financeiro — META exibe ID técnico, não nome | ⚠️ CON-03 | 2026-06-01 |
-| Vínculo Financeiro — RUBRICA não lista após selecionar meta | ⚠️ CON-04 | 2026-06-01 |
+| Vínculo Financeiro — META exibe ID técnico, não nome | ✅ CORRIGIDO s16 Fase 8 | 2026-06-01 |
+| Vínculo Financeiro — RUBRICA não lista após selecionar meta | ✅ CORRIGIDO s16 Fase 8 | 2026-06-01 |
 | Seção 7 — documentos por fase | ✅ guia confirmado | 2026-06-01 |
 | Nº Esboço não é pré-preenchido automaticamente | ⚠️ CON-02 | 2026-06-01 |
 | Setor Solicitante é texto livre | ⚠️ CON-01 | 2026-06-01 |
@@ -239,7 +239,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Turnos — 3 turnos configurados | ✅ (Manhã 08–12, Tarde 12:01–17, Noite 17:01–21:30 · todos Seg-Sáb) | 2026-05-31 s10 |
 | Aba Categ. Itens — 6 categorias | ✅ (Equipamento Audiovisual, Equipamento de Informática, Mobiliário, Material Gráfico, Insumo, Outro) | 2026-05-31 s10 |
 | Aba Módulos — lista com toggle ativo/inativo | ✅ (Administração, Dashboard Executivo, Tarefas, Estratégia, Pessoas/RH, Ponto Eletrônico, Escuta Institucional, Voluntários, Ações, Agentes Culturais — todos Ativos) | 2026-05-31 s10 |
-| Aba Features — 3 features visíveis | ⚠️ ADM-10 (toggles inoperantes) | 2026-05-31 s10 |
+| Aba Features — 3 features visíveis | ✅ CORRIGIDO s16 Fase 6 | 2026-06-01 |
 | Aba Provisionamento — checklist 8/8 (100%) | ✅ mas ADM-11 (Wizard abre página vazia) | 2026-05-31 s10 |
 | Aba Usuários (tabela, modal editar) | ✅ (ADM-02, ADM-03) | sessão anterior |
 | Modal editar usuário — Funcionalidades Específicas | ✅ **NOVA DESCOBERTA** — seção existe com granularidade real (ADM-02 REVISADO) | 2026-05-31 s10 |
@@ -353,13 +353,13 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 ### Módulo 24 — Agentes Culturais
 | Item | Status | Sessão |
 |---|---|---|
-| View carrega | ❌ AGN-01 (módulo bloqueado — sync bug) | 2026-05-31 s15 |
+| View carrega | 🔲 pendente verificação (AGN-01 CORRIGIDO s16 Fase 6) | — |
 
 ### Módulo 25 — Acervo Digital
 | Item | Status | Sessão |
 |---|---|---|
 | View carrega | ✅ | 2026-05-31 s14 |
-| Galeria — "Carregando..." sem resolver | ⚠️ ACV-01 | 2026-05-31 s14 |
+| Galeria — "Carregando..." sem resolver | ✅ CORRIGIDO s16 Fase 7 | 2026-06-01 |
 | Stats sem MetricsToggle | ⚠️ ACV-03 | 2026-05-31 s14 |
 | Filtros inline sem classe DS | ⚠️ ACV-05 | 2026-05-31 s14 |
 | Modal "Adicionar ao Acervo" — estrutura | ✅ abre | 2026-05-31 s14 |
@@ -371,9 +371,9 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Item | Status | Sessão |
 |---|---|---|
 | View carrega (Lista + Agenda + MetricsToggle) | ✅ | 2026-05-31 s13 |
-| Modo Lista — card com reserva APROVADA e FSM | ✅ (com CAR-05, CAR-06) | 2026-05-31 s13 |
+| Modo Lista — card com reserva APROVADA e FSM | ✅ (CAR-05/SIS-14 CORRIGIDO s16 Fase 11; CAR-06 persiste) | 2026-06-01 |
 | Modo Agenda — grade mensal com reserva plotada | ✅ | 2026-05-31 s13 |
-| Modal de detalhes (agenda) | ✅ (com CAR-07, CAR-08) | 2026-05-31 s13 |
+| Modal de detalhes (agenda) | ✅ (CAR-07/SIS-14 CORRIGIDO s16 Fase 11; CAR-08 persiste) | 2026-06-01 |
 | Formulário "Nova Reserva" — campos mapeados | ✅ (com CAR-04, CAR-09, CAR-10, CAR-11) | 2026-05-31 s13 |
 | FSM — botões Concluir / Cancelar (card + modal) | ✅ | 2026-05-31 s13 |
 | Sidebar: "Reserva de Carro" vs "Reserva de Veículo" | ⚠️ CAR-02 | 2026-05-31 s13 |
@@ -2434,7 +2434,7 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 |---|---|---|
 | Sidebar badge "inativo" | ✅ AGN-01 CORRIGIDO s16 | 2026-06-01 |
 | View carrega | 🔲 pendente (AGN-01 corrigido — testar) | — |
-| Estrutura e campos | 🔲 bloqueado | — |
+| Estrutura e campos | 🔲 pendente | — |
 
 ---
 
@@ -3166,6 +3166,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 
 | Data | Módulos cobertos | Descobertas principais |
 |---|---|---|
+| 2026-06-01 | **CORREÇÕES s16 Fases 6–11** | AGN-01+ADM-10 (sync módulos/features — `_MODULOS_MENU` com chaves corretas + toggle com feedback visual imediato). ACV-01 (error handler em `carregar()`). CON-03+CON-04 (cascata Meta→Rubrica: `m.titulo` e `atividades[*].rubricas`). MAP-01 (merge preserva contornos `livre`, verifica sobreposição). MAP-02+MAP-03 (isolamento z-index + `cbVoltar` navega de volta para 'acoes'). SIS-14 (datas ISO→pt-BR em Reserva de Veículo via `fmtDataPtBR()`). Deploy @380. |
 | 2026-06-01 | **CORREÇÕES s16 Fases 1–5** | APR-04, SIS-09 parcial (BAL-17+ESC-06+ACO-05), ACO-16, CON-05 (ContratadosUI), CON-08+PES-01 (`lerJSON` alias em data_layer.gs — resolve ~40 chamadas sem definição). Deploy @369. |
 | 2026-05-31 | Estruturação inicial | Roteiro criado; análise de código mapeou 49 módulos/subáreas a auditar |
 | 2026-05-31 | Home + Sidebar | Home: informações admin-only (espaços/setores/módulos/status) + acessos rápidos fixos. Sidebar: muito extensa, sem agrupamento — dificulta navegação. |
@@ -3206,34 +3207,28 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
-## HANDOFF — SESSÃO 15 (2026-05-31) → SESSÃO 16
+## HANDOFF — SESSÃO 16 (2026-06-01) → SESSÃO 17
 
-### Estado atual: 275 problemas registrados
+### Estado atual: 275 problemas registrados · Deploy @380
 
-### O que foi feito nesta sessão (s15)
+### O que foi corrigido nesta sessão (s16 Fases 6–11)
 
-**Acervo Digital — LGPD flow (pergunta pendente s14):**
-- Fluxo de verificação LGPD é **feature configurável, desativada por padrão** — mesmo padrão de CAR-12 (motorista) e CAR-14 (veículos)
-- Quando desativada: campo "Status LGPD" é apenas informativo, qualquer usuário preenche
-- Quando ativada: fluxo formal com responsável designado — código atual não implementa esse fluxo além do campo informativo (ACV-12 registrado)
+| Fase | IDs | O que foi corrigido |
+|---|---|---|
+| 6 | AGN-01, ADM-10 | `_MODULOS_MENU` usava `modulo:'MASTER'` para Agentes/Voluntários (corrigido para `'AGENTES'`/`'VOLUNTARIOS'`); toggles de features atualizam visual imediatamente |
+| 7 | ACV-01 | `AcervoUI.carregar()` agora exibe erro no DOM em vez de falhar silenciosamente |
+| 8 | CON-03, CON-04 | Cascata Meta: `m.nome` → `m.titulo\|\|m.nome`; Rubrica: lê `atividades[*].rubricas` em vez de `meta.rubricas` (campo vazio) |
+| 9 | MAP-01 | Merge verifica sobreposição antes de mesclar; formas `livre` concatenam pts em coords absolutas em vez de criar bounding box |
+| 10 | MAP-02, MAP-03 | Container do mapa usa `position:absolute;inset:0`; `cbVoltar` navega de volta para `'acoes'` se view mudou durante o editor |
+| 11 | SIS-14↗ | Datas ISO→pt-BR via `fmtDataPtBR()` em cards e modal de Reserva de Veículo (fix parcial — sistêmico pendente) |
 
-**Agentes Culturais (mod-24) — primeira auditoria:**
-- Sidebar exibe badge "inativo"; clique bloqueia com toast "Módulo 'Agentes' está desativado."
-- Admin → Módulos: "Agentes Culturais = Ativo" — sincronização quebrada (AGN-01)
-- Mesmo conflito confirmado em Voluntários
-- Lista completa de módulos no Admin documentada: 20 módulos, todos Ativos
-- Botão de header preso em "Abrindo..." (SIS-09 novamente)
-
-**ADM-10 (Features toggles) — refinado:**
-- Toggles não têm resposta visual alguma ao clique — permanecem no mesmo estado, sem animação, sem mudança. Não é "não persiste" — é "não reage".
-
-**Contratações — tentativa de salvar rascunho:**
-- CON-03 e CON-04 reconfirmados visualmente (META com ID técnico; RUBRICA vazia)
-- "Salvar Rascunho" → toast de erro: **"lerJSON is not defined"** (CON-08 🔴 Crítico) — módulo inutilizável para escrita
-- Campo "Atividade/Evento" nas parcelas é texto livre desvinculado do Plano de Trabalho (CON-09)
-- FSM completo de Contratações bloqueado enquanto CON-08 não for corrigido
-
-**Novos problemas s15:** ACV-12 (1), AGN-01 (1), CON-08 (1), CON-09 (1) = **4 novos → total 275**
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (Benefícios R$525,74 vs R$1.191,33)
+- **SIS-14** (datas ISO) — auditoria sistêmica em demais módulos pendente
+- **FIN-19** (Setor na Rubrica — nível errado)
+- **FIN-20** (flags de operação configuráveis por rubrica)
+- **CAR-15** (papel + setor para aprovações de infra)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
 
 ### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
 
@@ -3242,26 +3237,17 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 ### Sequência após essa pergunta
 
 1. **Contratações — Portal LGPD** ← PRÓXIMA
-2. **Dashboard Executivo (mod-41)** — nunca testado
-3. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
-4. **Voluntários** — provavelmente bloqueado pelo mesmo bug de AGN-01
-
-### Bugs ativos importantes (não corrigidos)
-- **FIN-17** (Benefícios R$525,74 vs R$1.191,33) — bug ativo
-- **SIS-14** (datas ISO) — auditoria sistêmica pendente
-- **FIN-19** (Setor na Rubrica) — FIN-01 corrigido no nível errado
-- **FIN-20** (flags de operação) — padrão geral sem implementação
-- **CAR-15** (papel + setor para aprovações de infra) — gap de código confirmado
-- **CON-08** (lerJSON not defined) — Contratações inutilizável para escrita
-- **AGN-01** (sync Admin→app) — Agentes e Voluntários bloqueados
-- **ADM-10** (toggles de features inertes) — aba Features inoperante
+2. **Agentes Culturais** — AGN-01 corrigido; testar se view carrega agora
+3. **Dashboard Executivo (mod-41)** — nunca testado
+4. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
+5. **Voluntários** — verificar se AGN-01 fix também resolve Voluntários
 
 ### Instruções para o próximo Claude
 1. Ler roteiro completo antes de qualquer pergunta
 2. Verificar Rastreador de Testes Reais antes de pedir algo já testado
 3. Claude dirige — não esperar direção do usuário
 4. Uma pergunta por vez
-5. A pergunta sobre Portal LGPD ficou sem resposta — fazer IMEDIATAMENTE
+5. Deploy corrente: `@380`
 
 ---
 
