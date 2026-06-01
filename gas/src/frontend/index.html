@@ -3296,6 +3296,24 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
           </div>
+          <!-- Modal confirmação de transição de status do contrato (FIN-14) -->
+          <div id="modal-contrato-status" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.70);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+            <div style="background:var(--surface);border-radius:16px;width:min(460px,95vw);padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                <h3 id="mcs-titulo" style="margin:0;font-size:16px;"></h3>
+                <button onclick="ContratosUI.fecharModalStatus()" class="modal-close" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+              </div>
+              <p id="mcs-descricao" style="font-size:13px;color:var(--text2);margin-bottom:14px;"></p>
+              <div style="margin-bottom:14px;">
+                <label class="form-label">Motivo / Justificativa *</label>
+                <textarea id="mcs-motivo" class="form-control" rows="3" placeholder="Descreva o motivo desta operação…"></textarea>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button class="btn btn-secondary" onclick="ContratosUI.fecharModalStatus()" data-bg-skip="1">Cancelar</button>
+                <button id="btn-mcs-confirmar" class="btn btn-primary">Confirmar</button>
+              </div>
+            </div>
+          </div>
           <!-- Painel de Detalhe do Contrato — Fase 12: 5 tabs -->
           <div id="contrato-detalhe-card" class="card oculto" style="margin-top:12px;">
             <div class="card-header" style="flex-wrap:wrap;gap:8px;">
@@ -6399,22 +6417,37 @@ select.form-control { cursor: pointer; }
             </div>
             <form id="form-acervo" onsubmit="return false;">
               <input type="hidden" id="acv-id">
-              <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tipo *</label>
-                <select id="acv-form-tipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-                  <option value="foto">📷 Foto</option>
-                  <option value="video">🎬 Vídeo</option>
-                  <option value="release">📝 Release</option>
-                  <option value="poster">🖼️ Poster</option>
-                  <option value="folder">📄 Folder</option>
-                  <option value="ata">📋 Ata</option>
-                  <option value="outro">📦 Outro</option>
-                </select>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tipo *</label>
+                  <select id="acv-form-tipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <option value="foto">Foto</option>
+                    <option value="video">Vídeo</option>
+                    <option value="release">Release</option>
+                    <option value="poster">Poster</option>
+                    <option value="folder">Folder</option>
+                    <option value="ata">Ata</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Status LGPD</label>
+                  <select id="acv-form-lgpd" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+                    <option value="nao_verificado">Não verificado</option>
+                    <option value="sem_pessoas">Sem pessoas identificáveis</option>
+                    <option value="autorizado">Uso autorizado</option>
+                    <option value="restrito">Uso restrito</option>
+                  </select>
+                </div>
               </div>
               <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Ação vinculada *</label>
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Título / Nome do arquivo *</label>
+                <input type="text" id="acv-form-nome" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="Ex: Foto abertura — Oficina de Teatro 2026">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Ação vinculada <span style="color:var(--muted);font-weight:400;">(opcional)</span></label>
                 <select id="acv-form-acao" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-                  <option value="">Selecione uma ação…</option>
+                  <option value="">— Conteúdo institucional (sem vínculo) —</option>
                 </select>
               </div>
               <div style="margin-bottom:12px;">
@@ -6428,15 +6461,6 @@ select.form-control { cursor: pointer; }
               <div style="margin-bottom:12px;">
                 <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Tags (separar por vírgula)</label>
                 <input type="text" id="acv-form-tags" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="apresentação, 2025, estreia…">
-              </div>
-              <div style="margin-bottom:12px;">
-                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Status LGPD</label>
-                <select id="acv-form-lgpd" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
-                  <option value="nao_verificado">⚠️ Não verificado</option>
-                  <option value="sem_pessoas">👤 Sem pessoas identificáveis</option>
-                  <option value="autorizado">✅ Uso autorizado</option>
-                  <option value="restrito">🚫 Uso restrito</option>
-                </select>
               </div>
               <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
                 <button type="button" class="btn btn-secondary" onclick="AcervoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
@@ -9340,10 +9364,17 @@ var ContratosUI = (function() {
         ? '<button class="btn btn-ghost btn-sm btn-editar-contrato" data-id="'+escaparHtml(c.id)+'" title="Editar">'
           +'<span class="ms ms-sm">edit</span></button>'
         : '';
-      var btnGerenciar = '<button class="btn btn-ghost btn-sm btn-gerenciar-contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" title="Metas, Rubricas, Indicadores"><span class="ms ms-sm">manage_accounts</span></button>';
+      var btnGerenciar = '<button class="btn btn-ghost btn-sm btn-gerenciar-contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" title="Metas, Rubricas, Indicadores"><span class="ms ms-sm">description</span></button>';
+      var st = (c.status||'Ativo').toLowerCase();
+      var btnSuspender = (_podeEditar && st === 'ativo')
+        ? '<button class="btn btn-ghost btn-sm" title="Suspender contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="suspender"><span class="ms ms-sm">pause_circle</span></button>'
+        : '';
+      var btnEncerrar = (_podeEditar && (st === 'ativo' || st === 'suspenso'))
+        ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" title="Encerrar contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="encerrar"><span class="ms ms-sm">stop_circle</span></button>'
+        : '';
       var vigencia = c.vigenciaInicio && c.vigenciaFim
-        ? escaparHtml(c.vigenciaInicio)+' → '+escaparHtml(c.vigenciaFim)
-        : c.vigenciaFim ? 'até '+escaparHtml(c.vigenciaFim) : '—';
+        ? fmtDataPtBR(c.vigenciaInicio)+' → '+fmtDataPtBR(c.vigenciaFim)
+        : c.vigenciaFim ? 'até '+fmtDataPtBR(c.vigenciaFim) : '—';
       return '<div class="pendente-item">'
         +'<div class="pendente-info">'
         +'<div class="pendente-nome">'+escaparHtml(c.nome||'(sem nome)')+'</div>'
@@ -9356,6 +9387,8 @@ var ContratosUI = (function() {
         + _badgeStatus(c.status||'Ativo')
         + btnEditar
         + btnGerenciar
+        + btnSuspender
+        + btnEncerrar
         +'</div></div>';
     }).join('');
     Array.prototype.slice.call(el.querySelectorAll('.btn-editar-contrato')).forEach(function(btn) {
@@ -9366,6 +9399,50 @@ var ContratosUI = (function() {
         ContratosDetailUI.abrir(this.getAttribute('data-id'), this.getAttribute('data-nome'));
       });
     });
+    Array.prototype.slice.call(el.querySelectorAll('[data-acao="suspender"],[data-acao="encerrar"]')).forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        abrirModalStatus(this.getAttribute('data-id'), this.getAttribute('data-nome'), this.getAttribute('data-acao'));
+      });
+    });
+  }
+
+  function abrirModalStatus(id, nome, acao) {
+    var isEncerrar = acao === 'encerrar';
+    var titulo = isEncerrar ? 'Encerrar Contrato' : 'Suspender Contrato';
+    var descricao = isEncerrar
+      ? 'Esta operação encerrará permanentemente o contrato "' + (nome||id) + '". O motivo será registrado na auditoria.'
+      : 'O contrato "' + (nome||id) + '" será suspenso. Informe o motivo para registro.';
+    var btnEl = document.getElementById('btn-mcs-confirmar');
+    document.getElementById('mcs-titulo').textContent     = titulo;
+    document.getElementById('mcs-descricao').textContent  = descricao;
+    document.getElementById('mcs-motivo').value           = '';
+    btnEl.textContent = isEncerrar ? 'Encerrar' : 'Suspender';
+    btnEl.style.background = isEncerrar ? 'var(--danger)' : 'var(--warning)';
+    btnEl.style.color      = '#fff';
+    btnEl.style.border     = 'none';
+    btnEl.onclick = function() {
+      var motivo = (document.getElementById('mcs-motivo').value||'').trim();
+      if (!motivo) { Toast.aviso('Informe o motivo antes de confirmar.'); return; }
+      var novoStatus = isEncerrar ? 'Encerrado' : 'Suspenso';
+      btnEl.disabled = true;
+      btnEl.textContent = 'Aguarde…';
+      GAS.contratos.mudarStatus(id, novoStatus, function(r) {
+        btnEl.disabled = false;
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao alterar status.'); btnEl.textContent = isEncerrar?'Encerrar':'Suspender'; return; }
+        Toast.sucesso('Contrato ' + (isEncerrar?'encerrado':'suspenso') + ' com sucesso.');
+        fecharModalStatus();
+        _carregado = false; carregar();
+      }, function(e) {
+        btnEl.disabled = false;
+        Toast.erro((e&&e.message)||'Erro.'); btnEl.textContent = isEncerrar?'Encerrar':'Suspender';
+      });
+    };
+    document.getElementById('modal-contrato-status').style.display = 'flex';
+    document.getElementById('mcs-motivo').focus();
+  }
+
+  function fecharModalStatus() {
+    document.getElementById('modal-contrato-status').style.display = 'none';
   }
 
   function _editarPorId(id) {
@@ -9468,7 +9545,8 @@ var ContratosUI = (function() {
     if(!_carregado) carregar();
   }
 
-  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+           abrirModalStatus:abrirModalStatus, fecharModalStatus:fecharModalStatus };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -10470,7 +10548,9 @@ var ContratosDetailUI = (function() {
       if (!versoes.length) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhuma versão salva.</p>'; return; }
       el.innerHTML = '<table class="tabela"><thead><tr><th>Versão</th><th>Salvo por</th><th>Data</th></tr></thead><tbody>'
         + versoes.map(function(v) {
-            return '<tr><td>v'+escaparHtml(v.versao)+'</td><td>'+escaparHtml(v.criadoPor||'—')+'</td><td>'+escaparHtml((v.criadoEm||'').slice(0,16))+'</td></tr>';
+            var dtISO = (v.criadoEm||'').slice(0,16);
+            var dtFmt = dtISO ? fmtDataPtBR(dtISO.slice(0,10)) + (dtISO.length>10 ? ' ' + dtISO.slice(11,16) : '') : '—';
+            return '<tr><td>v'+escaparHtml(v.versao)+'</td><td>'+escaparHtml(v.criadoPor||'—')+'</td><td>'+escaparHtml(dtFmt)+'</td></tr>';
           }).join('')
         + '</tbody></table>';
     });
@@ -10828,7 +10908,7 @@ var FontesUI = (function() {
           '<td>'+escaparHtml(tipo)+'</td>'+
           '<td>'+escaparHtml(f.orgaoFinanciador||'—')+'</td>'+
           '<td>'+_fmt(f.valorTotal)+'</td>'+
-          '<td>'+(f.vigenciaFim?f.vigenciaFim:'—')+'</td>'+
+          '<td>'+(f.vigenciaFim?fmtDataPtBR(f.vigenciaFim):'—')+'</td>'+
           '<td><span class="badge '+badge+'">'+escaparHtml(f.status||'—')+'</span></td>';
         if (_podeEditar) {
           html += '<td style="white-space:nowrap">';
@@ -21111,7 +21191,7 @@ var ReceUI = (function() {
         '<td><code>' + escaparHtml(r.id) + '</code></td>' +
         '<td>' + escaparHtml(r.titulo) + '</td>' +
         '<td>' + escaparHtml(r.artistaGrupo || '—') + '</td>' +
-        '<td>' + escaparHtml(r.dataInicio || '—') + (r.dataTermino && r.dataTermino !== r.dataInicio ? ' → ' + r.dataTermino : '') + '</td>' +
+        '<td>' + fmtDataPtBR(r.dataInicio || '') + (r.dataTermino && r.dataTermino !== r.dataInicio ? ' → ' + fmtDataPtBR(r.dataTermino) : '') + '</td>' +
         '<td>' + escaparHtml(r.espacoNome || '—') + '</td>' +
         '<td><span class="badge ' + badge[0] + '">' + badge[1] + '</span></td>' +
         '<td style="white-space:nowrap;">' +
@@ -22159,8 +22239,9 @@ var AcervoUI = (function() {
 
   function carregar() {
     GAS.acervo.listar({}, function(r) {
+      var el = document.getElementById('acv-galeria');
       if (!r||!r.ok) {
-        var el = document.getElementById('acv-galeria');
+        _carregado = true;
         if (el) el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Erro ao carregar acervo. Tente novamente.</p>';
         return;
       }
@@ -22169,15 +22250,24 @@ var AcervoUI = (function() {
       _renderStats();
       _renderGaleria(_lista);
     }, function(err) {
+      _carregado = true;
       var el = document.getElementById('acv-galeria');
       if (el) el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Erro: ' + escaparHtml((err||{}).message||'desconhecido') + '</p>';
     });
-    // Popular select de ações
+    // Popular select de ações (ACV-07)
     GAS.acoes.listar({}, function(r) {
-      if (!r||!r.ok) return;
       var sel = document.getElementById('acv-form-acao');
-      sel.innerHTML = '<option value="">Selecione…</option>' +
+      if (!sel) return;
+      var base = '<option value="">— Conteúdo institucional (sem vínculo) —</option>';
+      if (!r||!r.ok||!(r.data||[]).length) {
+        sel.innerHTML = base + '<option value="" disabled>Nenhuma ação disponível</option>';
+        return;
+      }
+      sel.innerHTML = base +
         (r.data||[]).map(function(a) { return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome) + '</option>'; }).join('');
+    }, function() {
+      var sel = document.getElementById('acv-form-acao');
+      if (sel) sel.innerHTML = '<option value="">— Conteúdo institucional (sem vínculo) —</option>';
     });
   }
 
@@ -22205,17 +22295,21 @@ var AcervoUI = (function() {
     var el = document.getElementById('acv-galeria');
     if (!lista.length) { el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;text-align:center;padding:24px;">Nenhum arquivo no acervo.</p>'; return; }
     el.innerHTML = lista.map(function(a) {
-      var icone = _TIPO_ICONE[a.tipo] || '📦';
+      var tipoLabel = { foto:'Foto', video:'Vídeo', release:'Release', poster:'Poster', folder:'Folder', ata:'Ata', outro:'Outro' }[a.tipo] || a.tipo;
       var lgpdCor = _LGPD_COR[a.statusLGPD] || '#aaa';
       var lgpdLabel = _LGPD_LABEL[a.statusLGPD] || a.statusLGPD;
+      var idS = JSON.stringify(a.id).replace(/"/g,"'");
       return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;">' +
-        '<div style="font-size:28px;text-align:center;">' + icone + '</div>' +
-        '<div style="font-size:13px;font-weight:600;text-align:center;">' + escaparHtml(a.tipo) + '</div>' +
-        '<div style="font-size:12px;color:var(--text-muted);flex:1;">' + escaparHtml((a.descricao||'').slice(0,60)) + '</div>' +
-        '<div style="font-size:11px;font-weight:600;color:' + lgpdCor + ';">' + lgpdLabel + '</div>' +
-        (a.urlDrive ? '<a href="' + escaparHtml(a.urlDrive) + '" target="_blank" style="font-size:11px;color:#2563eb;">🔗 Abrir</a>' : '') +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<span class="ms" style="font-size:18px;color:var(--primary);">insert_drive_file</span>' +
+          '<span style="font-size:11px;color:var(--muted);text-transform:uppercase;">' + escaparHtml(tipoLabel) + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:600;line-height:1.3;">' + escaparHtml(a.nome || a.descricao || tipoLabel) + '</div>' +
+        (a.descricao ? '<div style="font-size:12px;color:var(--text2);flex:1;">' + escaparHtml(a.descricao.slice(0,60)) + '</div>' : '') +
+        '<div style="font-size:11px;font-weight:600;color:' + lgpdCor + ';">' + escaparHtml(lgpdLabel) + '</div>' +
+        (a.urlDrive ? '<a href="' + escaparHtml(a.urlDrive) + '" target="_blank" style="font-size:11px;color:var(--primary);"><span class="ms ms-sm">open_in_new</span> Abrir</a>' : '') +
         '<div style="display:flex;gap:4px;margin-top:4px;">' +
-          '<button class="btn btn-secondary" style="flex:1;padding:4px;font-size:11px;" onclick="AcervoUI.abrirForm(' + JSON.stringify(a.id).replace(/"/g,"'") + ')" data-bg-skip="1">✏️</button>' +
+          '<button class="btn btn-secondary" style="flex:1;padding:4px;font-size:11px;" onclick="AcervoUI.abrirForm(' + idS + ')" data-bg-skip="1"><span class="ms ms-sm">edit</span></button>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -22226,6 +22320,7 @@ var AcervoUI = (function() {
     document.getElementById('acv-id').value = id || '';
     if (!id) {
       document.getElementById('acv-form-tipo').value = 'foto';
+      document.getElementById('acv-form-nome').value = '';
       document.getElementById('acv-form-acao').value = '';
       document.getElementById('acv-form-url').value  = '';
       document.getElementById('acv-form-desc').value = '';
@@ -22235,6 +22330,7 @@ var AcervoUI = (function() {
       var item = _lista.find(function(a){ return a.id === id; });
       if (item) {
         document.getElementById('acv-form-tipo').value = item.tipo || 'outro';
+        document.getElementById('acv-form-nome').value = item.nome || '';
         document.getElementById('acv-form-acao').value = item.acaoId || '';
         document.getElementById('acv-form-url').value  = item.urlDrive || '';
         document.getElementById('acv-form-desc').value = item.descricao || '';
@@ -22242,23 +22338,26 @@ var AcervoUI = (function() {
         document.getElementById('acv-form-lgpd').value = item.statusLGPD || 'nao_verificado';
       }
     }
+    document.getElementById('acv-form-nome').focus();
   }
 
   function fecharForm() { document.getElementById('modal-acervo').style.display = 'none'; }
 
   function salvar() {
     var id  = document.getElementById('acv-id').value;
+    var nome = (document.getElementById('acv-form-nome').value||'').trim();
+    if (!nome) { Toast.aviso('Informe o título do arquivo.'); BtnGuard.liberar('btn-salvar-acervo'); return; }
     var acaoSel = document.getElementById('acv-form-acao');
     var dados = {
+      nome:      nome,
       tipo:      document.getElementById('acv-form-tipo').value,
-      acaoId:    acaoSel.value,
-      acaoNome:  acaoSel.options[acaoSel.selectedIndex] ? acaoSel.options[acaoSel.selectedIndex].text : '',
+      acaoId:    acaoSel.value || '',
+      acaoNome:  acaoSel.value && acaoSel.options[acaoSel.selectedIndex] ? acaoSel.options[acaoSel.selectedIndex].text : '',
       urlDrive:  document.getElementById('acv-form-url').value.trim(),
       descricao: document.getElementById('acv-form-desc').value.trim(),
       tags:      (document.getElementById('acv-form-tags').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean),
       statusLGPD:document.getElementById('acv-form-lgpd').value
     };
-    if (!dados.acaoId) { Toast.aviso('Selecione uma ação.'); BtnGuard.liberar('btn-salvar-acervo'); return; }
     var fn = id ? function(cb, err) { GAS.acervo.atualizar(Object.assign({id:id},dados), cb, err); }
                 : function(cb, err) { GAS.acervo.registrar(dados, cb, err); };
     fn(function(r) {
@@ -24001,13 +24100,20 @@ var EscutaUI = (function() {
       if (r && r.ok && r.data) {
         var d = r.data;
         _renderStats(d.metricas);
+        _renderPainelDimensoes(d.governanca);
         if (d.alertasAtivos > 0) {
           var badge = document.getElementById('escuta-badge-alertas');
           if (badge) { badge.style.display = 'inline'; badge.textContent = d.alertasAtivos; }
         }
+      } else {
+        var elDim = document.getElementById('escuta-painel-dimensoes');
+        if (elDim) elDim.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de clima disponíveis.</p>';
       }
       if (done) done();
-    }, function(){});
+    }, function(){
+      var elDim = document.getElementById('escuta-painel-dimensoes');
+      if (elDim) elDim.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de clima disponíveis.</p>';
+    });
     // Pesquisas formais
     GAS.escuta.listar({}, function(r) {
       _carregado = true;
@@ -24018,6 +24124,9 @@ var EscutaUI = (function() {
       setTab('painel', document.querySelector('#view-escuta .tab-btn'));
     }, function(e) {
       _carregado = true;
+      var elDim = document.getElementById('escuta-painel-dimensoes');
+      if (elDim && elDim.querySelector('.muted-text') && elDim.innerHTML.indexOf('Carregando') !== -1)
+        elDim.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de clima disponíveis.</p>';
       if (el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>';
     });
   }
@@ -24054,6 +24163,38 @@ var EscutaUI = (function() {
     if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('escuta-stats');
   }
 
+  // ── painel dimensões (ESC-04) ─────────────────────────────────────────────
+  function _renderPainelDimensoes(gov) {
+    var el = document.getElementById('escuta-painel-dimensoes');
+    if (!el) return;
+    if (!gov) {
+      el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de clima disponíveis. Crie e encerre uma pesquisa para ver indicadores.</p>';
+      return;
+    }
+    var qual   = gov.qualidadeMetodologica || {};
+    var pontos = qual.pontos || 0;
+    var nivel  = { excelente:'Alta qualidade', bom:'Qualidade boa', regular:'Qualidade moderada', baixo:'Qualidade baixa — revisar' }[qual.nivel] || 'Sem dados';
+    var qCor   = pontos >= 70 ? 'var(--success)' : pontos >= 40 ? 'var(--warning)' : 'var(--danger)';
+    var detalhes = qual.detalhes || [];
+    var _MAX = { confianca:35, cobertura:25, saturacao:20, espontanea:20 };
+    var detHtml = detalhes.map(function(d) {
+      var max = _MAX[d.fator] || 20;
+      return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
+        '<span style="color:var(--text2);">' + _esc(d.msg) + '</span>' +
+        '<span style="font-weight:700;color:' + (d.pts>=max*0.7?'var(--success)':'var(--warning)') + '">' + d.pts + '/' + max + '</span>' +
+      '</div>';
+    }).join('');
+    el.innerHTML =
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;">' +
+        '<h4 style="margin:0 0 10px;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Qualidade Metodológica</h4>' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+          '<div style="width:44px;height:44px;border-radius:50%;background:' + qCor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0;">' + pontos + '</div>' +
+          '<div><p style="margin:0;font-size:13px;font-weight:600;">' + _esc(nivel) + '</p></div>' +
+        '</div>' +
+        (detHtml || '<p style="font-size:11px;color:var(--muted)">Encerre uma pesquisa para ver os indicadores de qualidade.</p>') +
+      '</div>';
+  }
+
   // ── lista de pesquisas ───────────────────────────────────────────────────
   function filtrarLista() {
     var f   = (document.getElementById('escuta-filtro-status')||{}).value || '';
@@ -24081,7 +24222,7 @@ var EscutaUI = (function() {
             '<strong style="font-size:13px;">' + _esc(p.titulo) + '</strong>' +
           '</div>' +
           '<div style="font-size:12px;color:var(--text2);margin-top:3px;">Rodada ' + (p.rodada||'—') +
-            ' · ' + (p.dataInicio||'') + ' → ' + (p.dataFim||'') +
+            ' · ' + (p.dataInicio ? _esc(fmtDataPtBR(p.dataInicio)) : '') + (p.dataFim ? ' → ' + _esc(fmtDataPtBR(p.dataFim)) : '') +
             (p.status === 'ativa' ? ' · <strong>' + (p.totalRespostas||0) + ' resp. (' + pct + '%)</strong>' : '') +
           '</div>' +
         '</div>' +
@@ -24504,36 +24645,41 @@ var EscutaUI = (function() {
     GAS.escuta.governanca({}, function(r) {
       if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados.</p>'; return; }
       var g = r.data;
-      var q = g.qualidadeMetodologica || 0;
-      var qCor = q >= 70 ? 'var(--success)' : q >= 40 ? 'var(--warning)' : 'var(--danger)';
-      var fatores = g.fatores || [];
-      var motor   = g.motorMetodologico || {};
-      var avisos  = motor.avisos || [];
+      // qualidadeMetodologica é { pontos, nivel, detalhes } — não um número
+      var qual    = g.qualidadeMetodologica || {};
+      var q       = qual.pontos || 0;
+      var qCor    = q >= 70 ? 'var(--success)' : q >= 40 ? 'var(--warning)' : 'var(--danger)';
+      var fatores = qual.detalhes || [];
+      // motor é um array de { tipo, severidade, msg, acao }
+      var motorArr = Array.isArray(g.motor) ? g.motor : [];
 
+      var _MAX = { confianca:35, cobertura:25, saturacao:20, espontanea:20 };
       var fatHtml = fatores.map(function(f) {
+        var max = _MAX[f.fator] || 20;
         return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
-          '<span>' + _esc(f.nome) + '</span>' +
-          '<span style="font-weight:700;color:' + (f.pontos>=f.max*0.7?'var(--success)':'var(--warning)') + '">' + f.pontos + '/' + f.max + '</span>' +
+          '<span>' + _esc(f.msg) + '</span>' +
+          '<span style="font-weight:700;color:' + (f.pts>=max*0.7?'var(--success)':'var(--warning)') + '">' + f.pts + '/' + max + '</span>' +
         '</div>';
       }).join('');
 
-      var avisosHtml = avisos.length
+      var avisosHtml = motorArr.length
         ? '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">' +
             '<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin:0 0 6px;">Motor Metodológico</p>' +
-            avisos.map(function(a) {
+            motorArr.map(function(a) {
               return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:11px;">' +
-                '<span style="color:var(--warning);">⚠</span><span>' + _esc(a) + '</span>' +
+                '<span style="color:var(--warning);">⚠</span><span>' + _esc(a.msg||a) + '</span>' +
               '</div>';
             }).join('') +
           '</div>'
         : '<p style="font-size:11px;color:var(--success);margin-top:8px;">✅ Motor metodológico sem avisos.</p>';
 
+      var nivelLabel = { excelente:'Alta qualidade', bom:'Qualidade boa', regular:'Qualidade moderada', baixo:'Qualidade baixa — revisar' }[qual.nivel] || 'Sem dados';
       el.innerHTML =
         '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
           '<div style="width:56px;height:56px;border-radius:50%;background:' + qCor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800;">' + q + '</div>' +
           '<div>' +
             '<p style="margin:0;font-size:14px;font-weight:700;">Qualidade Metodológica</p>' +
-            '<p style="margin:0;font-size:11px;color:var(--text2);">' + (q>=70?'Alta qualidade':q>=40?'Qualidade moderada':'Qualidade baixa — revisar') + '</p>' +
+            '<p style="margin:0;font-size:11px;color:var(--text2);">' + _esc(nivelLabel) + '</p>' +
           '</div>' +
         '</div>' +
         fatHtml + avisosHtml;

@@ -49,6 +49,7 @@ var AcervoEngine = (function () {
     var item = {
       id:           gerarId('ACR'),
       orgId:        orgId,
+      nome:         dados.nome     || '',
       acaoId:       dados.acaoId   || '',
       acaoNome:     dados.acaoNome || '',
       tipo:         dados.tipo     || 'outro',
@@ -82,8 +83,13 @@ var AcervoEngine = (function () {
     var item = AcervoRepository.buscarPorId(orgId, id);
     if (!item) throw new Error('Arquivo não encontrado: ' + id);
 
+    item.nome       = dados.nome       !== undefined ? dados.nome : (item.nome || '');
     item.tipo       = dados.tipo       || item.tipo;
-    item.descricao  = dados.descricao  || item.descricao;
+    item.acaoId     = dados.acaoId     !== undefined ? dados.acaoId : (item.acaoId || '');
+    item.acaoNome   = dados.acaoNome   !== undefined ? dados.acaoNome : (item.acaoNome || '');
+    item.urlDrive   = dados.urlDrive   !== undefined ? dados.urlDrive : (item.urlDrive || '');
+    item.statusLGPD = dados.statusLGPD || item.statusLGPD;
+    item.descricao  = dados.descricao  !== undefined ? dados.descricao : (item.descricao || '');
     item.tags       = dados.tags       || item.tags;
 
     AuditoriaService.registrar('acervo_atualizado', 'acervo', {
@@ -164,10 +170,11 @@ var AcervoEngine = (function () {
   // ─── Utilitários privados ─────────────────────────────────────────────────
 
   function _validar(dados) {
+    if (!dados.nome || !String(dados.nome).trim()) throw new Error('Título/nome do arquivo é obrigatório.');
     if (!dados.tipo || AcervoRepository.TIPOS_VALIDOS.indexOf(dados.tipo) === -1) {
       throw new Error('Tipo inválido. Use: ' + AcervoRepository.TIPOS_VALIDOS.join(', '));
     }
-    if (!dados.acaoId) throw new Error('acaoId obrigatório.');
+    // acaoId é opcional — quando vazio indica conteúdo institucional
   }
 
   function _uploadDrive(orgId, acaoId, nomeArquivo, base64Data, mimeType) {

@@ -411,14 +411,15 @@ var ContratosEngine = (function () {
 
     // V — Benefícios
     var valeTransporte       = Number(item.valeTransporte       || 0);
-    var descontoVT           = totalSalario * 0.06;
+    // Desconto VT é limitado ao valor do VT (lei: até 6% do salário bruto, nunca superior ao VT)
+    var descontoVT           = Math.min(totalSalario * 0.06, valeTransporte);
     var alimentacao          = Number(item.alimentacao          || 0);
     var descontoAlimentacao  = Number(item.descontoAlimentacao  || 0);
     var planoSaude           = Number(item.planoSaude           || 0) * qtd;
-    var descontoPlano        = planoSaude * 0.30;
 
     var vtLiq  = valeTransporte - descontoVT;
-    var totalBeneficios = vtLiq + (alimentacao - descontoAlimentacao) + (planoSaude - descontoPlano);
+    // Plano de saúde é custo integral do empregador; somente o desconto declarado de VA é deduzido
+    var totalBeneficios = vtLiq + (alimentacao - descontoAlimentacao) + planoSaude;
 
     // VI — Provisões
     var base13Ferias  = totalSalario + totalEncargos;
@@ -444,7 +445,6 @@ var ContratosEngine = (function () {
       alimentacao:       +alimentacao.toFixed(2),
       descontoAlimentacao: +descontoAlimentacao.toFixed(2),
       planoSaude:        +planoSaude.toFixed(2),
-      descontoPlano:     +descontoPlano.toFixed(2),
       totalBeneficios:   +totalBeneficios.toFixed(2),
       ferias:            +ferias.toFixed(2),
       decimoTerceiro:    +decimoTerceiro.toFixed(2),

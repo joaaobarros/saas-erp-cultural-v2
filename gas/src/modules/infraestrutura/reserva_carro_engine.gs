@@ -37,15 +37,27 @@ var ReservaCarroEngine = (function() {
 
   function _getOrgId() { return getOrgConfig().orgId; }
 
-  function _getPapel(email) {
+  function _getRegistro(email) {
     try {
       var a = AcessoService.verificar(email);
-      return (a && a.registro && a.registro.papel) ? a.registro.papel : 'colaborador';
-    } catch(_) { return 'colaborador'; }
+      return (a && a.registro) ? a.registro : {};
+    } catch(_) { return {}; }
   }
 
+  function _getPapel(email) {
+    return _getRegistro(email).papel || 'colaborador';
+  }
+
+  // superadmin e infraestrutura aprovam sempre; gestor/admin apenas se vinculados ao setor Infraestrutura
   function _podAprovar(email) {
-    return PAPEIS_APROVACAO.indexOf(_getPapel(email)) >= 0;
+    var reg   = _getRegistro(email);
+    var papel = (reg.papel || '').toLowerCase();
+    if (papel === 'superadmin' || papel === 'infraestrutura') return true;
+    if (papel === 'gestor' || papel === 'admin') {
+      var setor = (reg.setor || '').toLowerCase();
+      return setor === 'infraestrutura';
+    }
+    return false;
   }
 
   function _horaParaMin(hora) {
