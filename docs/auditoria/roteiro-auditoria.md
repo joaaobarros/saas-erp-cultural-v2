@@ -3089,8 +3089,7 @@ mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações pr
 
 1. **Aprovações → aba Veículo** (APR-05) ← **PRÓXIMA**
 2. **Acervo (mod-25)** — nunca testado
-3. **Acervo (mod-25)** — nunca testado
-4. **Agentes Culturais (mod-24)** — nunca testado
+3. **Agentes Culturais (mod-24)** — nunca testado
 5. **Contratações**: FSM completo + Portal LGPD
 6. **Dashboard Executivo (mod-41)**
 7. **Estratégia — Objetivos e KPIs (mod-30/31)**
