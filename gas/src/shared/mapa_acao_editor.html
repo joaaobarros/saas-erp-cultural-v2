@@ -19,6 +19,8 @@ var MapaAcaoEditorUI = (function() {
   var _vb            = { x:0, y:0, w:900, h:660 }; // viewBox
   var _edSvg         = null;
   var _activeLayerId = null;   // camada ativa para novos elementos
+  var _mergeMode     = false;  // aguardando 2º elemento para mesclar
+  var _mergeSource   = null;   // id do 1º elemento no merge
 
   // ── Categorias de objetos ────────────────────────────────
   var _CATEGORIAS = [
@@ -842,6 +844,45 @@ var MapaAcaoEditorUI = (function() {
             'style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" ' +
             'onchange="MapaAcaoEditorUI._propPosChange()"></div>' +
       '</div>' +
+      // ── Seção Geometria ──────────────────────────────────
+      (function() {
+        var cfg = el.mapaConfig || {};
+        var isCircle = cfg.forma==='circle'||cfg.forma==='ellipse';
+        var dispW = Math.round(isCircle?(cfg.r||40)*2:(cfg.w||80));
+        var dispH = Math.round(isCircle?(cfg.r||40)*2:(cfg.h||60));
+        var formaOpts = [
+          {v:'rect',l:'Retângulo'},{v:'square',l:'Quadrado'},{v:'circle',l:'Círculo'},
+          {v:'ellipse',l:'Elipse'},{v:'tri',l:'Triângulo'},{v:'hex',l:'Hexágono'},
+          {v:'trap',l:'Trapézio'},{v:'diamond',l:'Losango'},{v:'pent',l:'Pentágono'},
+          {v:'livre',l:'Livre (polígono)'}
+        ];
+        return '<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:8px;margin:8px 0 6px;">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:7px;letter-spacing:.06em;">Geometria</div>' +
+          '<div style="margin-bottom:6px;">' +
+            '<label style="font-size:11px;color:var(--text2,#64748b);">Forma</label>' +
+            '<select id="mae-prop-forma" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propFormaChange()">' +
+              formaOpts.map(function(f){return '<option value="'+f.v+'"'+(cfg.forma===f.v?' selected':'')+'>'+f.l+'</option>';}).join('') +
+            '</select>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px;">' +
+            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Larg.</label>' +
+              '<input id="mae-prop-w" type="number" min="20" value="'+dispW+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propDimChange()"></div>' +
+            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Alt.</label>' +
+              '<input id="mae-prop-h" type="number" min="20" value="'+dispH+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propDimChange()"></div>' +
+          '</div>' +
+          '<div style="margin-bottom:7px;">' +
+            '<label style="font-size:11px;color:var(--text2,#64748b);">Rotação (°)</label>' +
+            '<input id="mae-prop-rot" type="number" min="0" max="359" value="'+Math.round(cfg.rotacao||0)+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propRotChange()">' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:3px;">' +
+            '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._espelharH()" style="padding:5px 4px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;" title="Espelhar horizontal"><span class="ms ms-sm">flip</span>Esp. H</button>' +
+            '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._espelharV()" style="padding:5px 4px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;" title="Espelhar vertical"><span class="ms ms-sm">flip</span>Esp. V</button>' +
+            '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._adicionarVertice()" style="padding:5px 4px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;" title="Adicionar vértice ao polígono"><span class="ms ms-sm">add_location_alt</span>+Vértice</button>' +
+            '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._iniciarMerge()" style="padding:5px 4px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;" title="Mesclar com outro elemento"><span class="ms ms-sm">merge_type</span>Mesclar</button>' +
+          '</div>' +
+        '</div>';
+      })() +
+      // ────────────────────────────────────────────────────
       '<div style="margin-bottom:8px;">' +
         '<label style="font-size:11px;color:var(--text2,#64748b);">Notas</label>' +
         '<textarea id="mae-prop-notas" rows="2" ' +
@@ -969,6 +1010,9 @@ var MapaAcaoEditorUI = (function() {
       if (!layerOculta && el.id === _selId) {
         var hw = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
         var hh = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
+        if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) {
+          var _bb = _bboxPts(cfg.pts); hw = _bb.hw; hh = _bb.hh;
+        }
         var sel = document.createElementNS(_NS, 'rect');
         sel.setAttribute('x', -hw - 4); sel.setAttribute('y', -hh - 4);
         sel.setAttribute('width', hw * 2 + 8); sel.setAttribute('height', hh * 2 + 8);
@@ -978,13 +1022,72 @@ var MapaAcaoEditorUI = (function() {
         sel.style.pointerEvents = 'none';
         g2.insertBefore(sel, g2.firstChild);
 
-        var rh = document.createElementNS(_NS, 'circle');
-        rh.setAttribute('cx', hw + 4); rh.setAttribute('cy', hh + 4);
-        rh.setAttribute('r', '6');
-        rh.setAttribute('fill', '#fff'); rh.setAttribute('stroke', cor); rh.setAttribute('stroke-width', '2');
-        rh.style.cursor = 'se-resize';
-        rh.addEventListener('mousedown', function(e) { e.stopPropagation(); _startResize(e, el.id, hw, hh); });
-        g2.appendChild(rh);
+        // 8 alças de resize
+        var _HLIST = [
+          { id:'nw', dx:-(hw+4), dy:-(hh+4), cur:'nwse-resize' },
+          { id:'n',  dx:0,       dy:-(hh+4), cur:'ns-resize'   },
+          { id:'ne', dx: hw+4,   dy:-(hh+4), cur:'nesw-resize' },
+          { id:'w',  dx:-(hw+4), dy:0,       cur:'ew-resize'   },
+          { id:'e',  dx: hw+4,   dy:0,       cur:'ew-resize'   },
+          { id:'sw', dx:-(hw+4), dy: hh+4,   cur:'nesw-resize' },
+          { id:'s',  dx:0,       dy: hh+4,   cur:'ns-resize'   },
+          { id:'se', dx: hw+4,   dy: hh+4,   cur:'nwse-resize' }
+        ];
+        _HLIST.forEach(function(h) {
+          var rh = document.createElementNS(_NS, 'circle');
+          rh.setAttribute('cx', h.dx); rh.setAttribute('cy', h.dy);
+          rh.setAttribute('r', '5');
+          rh.setAttribute('fill', '#fff'); rh.setAttribute('stroke', cor); rh.setAttribute('stroke-width', '2');
+          rh.style.cursor = h.cur;
+          (function(hid) {
+            rh.addEventListener('mousedown', function(e) { e.stopPropagation(); _startResize(e, el.id, hid); });
+          })(h.id);
+          g2.appendChild(rh);
+        });
+
+        // Alça de rotação (acima do centro)
+        var rotOffset = hh + 22;
+        var rotLine = document.createElementNS(_NS, 'line');
+        rotLine.setAttribute('x1','0'); rotLine.setAttribute('y1', -(hh+5));
+        rotLine.setAttribute('x2','0'); rotLine.setAttribute('y2', -(hh+16));
+        rotLine.setAttribute('stroke', cor); rotLine.setAttribute('stroke-width','1.5');
+        rotLine.setAttribute('stroke-dasharray','3,2');
+        rotLine.style.pointerEvents = 'none';
+        g2.appendChild(rotLine);
+        var rotH = document.createElementNS(_NS, 'circle');
+        rotH.setAttribute('cx','0'); rotH.setAttribute('cy', -rotOffset);
+        rotH.setAttribute('r','6'); rotH.setAttribute('fill', cor);
+        rotH.setAttribute('stroke','#fff'); rotH.setAttribute('stroke-width','2');
+        rotH.style.cursor = 'crosshair';
+        (function(eid_, cfg_) {
+          rotH.addEventListener('mousedown', function(e) {
+            e.stopPropagation();
+            var sp_ = _svgPt(e);
+            _drag = { type:'rotate', elId:eid_,
+              startAngle: Math.atan2(sp_.y-(cfg_.cy||0), sp_.x-(cfg_.cx||0)) * 180/Math.PI,
+              origRot: cfg_.rotacao || 0 };
+          });
+        })(el.id, cfg);
+        g2.appendChild(rotH);
+
+        // Alças de vértice (só para forma 'livre')
+        if (cfg.forma === 'livre' && cfg.pts) {
+          cfg.pts.forEach(function(vp, vi) {
+            var vh = document.createElementNS(_NS, 'circle');
+            vh.setAttribute('cx', vp.x); vh.setAttribute('cy', vp.y);
+            vh.setAttribute('r','5'); vh.setAttribute('fill','#fbbf24');
+            vh.setAttribute('stroke','#fff'); vh.setAttribute('stroke-width','2');
+            vh.style.cursor = 'crosshair';
+            (function(idx_) {
+              vh.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+                var sp_ = _svgPt(e);
+                _drag = { type:'vertex', elId:el.id, vtxIdx:idx_, startX:sp_.x, startY:sp_.y };
+              });
+            })(vi);
+            g2.appendChild(vh);
+          });
+        }
       }
 
       if (!layerOculta) {
@@ -1012,6 +1115,9 @@ var MapaAcaoEditorUI = (function() {
       el.setAttribute('x', -hw); el.setAttribute('y', -hh);
       el.setAttribute('width', cfg.w || 80); el.setAttribute('height', cfg.h || 60);
       el.setAttribute('rx', '4');
+    } else if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length > 1) {
+      el = document.createElementNS(_NS, 'polygon');
+      el.setAttribute('points', cfg.pts.map(function(p){return p.x+','+p.y;}).join(' '));
     } else {
       el = document.createElementNS(_NS, 'polygon');
       el.setAttribute('points', _pontosPoligono(cfg, hw, hh));
@@ -1024,6 +1130,9 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _pontosPoligono(cfg, hw, hh) {
+    if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length > 1) {
+      return cfg.pts.map(function(p){return p.x+','+p.y;}).join(' ');
+    }
     switch (cfg.forma) {
       case 'tri':     return '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh;
       case 'hex':     return _polyPts(6, hw, hh, -30);
@@ -1134,6 +1243,11 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _startDragEl(e, elId) {
+    if (_mergeMode && elId !== _mergeSource) {
+      e.stopPropagation();
+      _completarMerge(elId);
+      return;
+    }
     e.stopPropagation();
     _selecionarEl(elId);
     var pt  = _svgPt(e);
@@ -1142,12 +1256,19 @@ var MapaAcaoEditorUI = (function() {
     _drag = { type: 'move', elId: elId, startX: pt.x, startY: pt.y, origCX: cfg.cx || 0, origCY: cfg.cy || 0 };
   }
 
-  function _startResize(e, elId, hw, hh) {
+  function _startResize(e, elId, handleId) {
     e.stopPropagation();
     var pt  = _svgPt(e);
     var el  = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
     var cfg = el ? (el.mapaConfig || {}) : {};
-    _drag = { type: 'resize', elId: elId, startX: pt.x, startY: pt.y, origW: cfg.w || hw*2, origH: cfg.h || hh*2, origR: cfg.r || hw };
+    var hw  = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
+    _drag = {
+      type: 'resize', handle: handleId, elId: elId,
+      startX: pt.x, startY: pt.y,
+      origW: cfg.w || hw * 2, origH: cfg.h || 60,
+      origR: cfg.r || hw,
+      origPts: cfg.pts ? JSON.parse(JSON.stringify(cfg.pts)) : null
+    };
   }
 
   function _onMouseMove(e) {
@@ -1171,14 +1292,36 @@ var MapaAcaoEditorUI = (function() {
       el.mapaConfig.cx   = _drag.origCX + (pt.x - _drag.startX);
       el.mapaConfig.cy   = _drag.origCY + (pt.y - _drag.startY);
     } else if (_drag.type === 'resize') {
-      var dw = (pt.x - _drag.startX) * 2;
-      var dh = (pt.y - _drag.startY) * 2;
+      var dx_ = pt.x - _drag.startX, dy_ = pt.y - _drag.startY;
+      var h_  = _drag.handle;
       el.mapaConfig = el.mapaConfig || {};
-      if (el.mapaConfig.forma === 'circle') {
-        el.mapaConfig.r = Math.max(10, _drag.origR + (dw + dh) / 4);
+      var c_ = el.mapaConfig;
+      if (c_.forma === 'circle') {
+        var dist_ = Math.sqrt(Math.pow(pt.x-(c_.cx||0),2) + Math.pow(pt.y-(c_.cy||0),2));
+        c_.r = Math.max(10, dist_);
       } else {
-        el.mapaConfig.w = Math.max(20, _drag.origW + dw);
-        el.mapaConfig.h = Math.max(20, _drag.origH + dh);
+        var nW = _drag.origW, nH = _drag.origH;
+        if (h_==='e'||h_==='ne'||h_==='se')  nW = Math.max(20, _drag.origW + dx_*2);
+        if (h_==='w'||h_==='nw'||h_==='sw')  nW = Math.max(20, _drag.origW - dx_*2);
+        if (h_==='s'||h_==='se'||h_==='sw')  nH = Math.max(20, _drag.origH + dy_*2);
+        if (h_==='n'||h_==='ne'||h_==='nw')  nH = Math.max(20, _drag.origH - dy_*2);
+        if (c_.forma==='livre' && c_.pts && _drag.origPts && _drag.origW>0 && _drag.origH>0) {
+          var sx_=nW/_drag.origW, sy_=nH/_drag.origH;
+          c_.pts = _drag.origPts.map(function(p_){return{x:p_.x*sx_,y:p_.y*sy_};});
+        }
+        c_.w = nW; c_.h = nH;
+      }
+    } else if (_drag.type === 'rotate') {
+      el.mapaConfig = el.mapaConfig || {};
+      var curAng_ = Math.atan2(pt.y-(el.mapaConfig.cy||0), pt.x-(el.mapaConfig.cx||0)) * 180/Math.PI;
+      el.mapaConfig.rotacao = (((_drag.origRot + curAng_ - _drag.startAngle) % 360) + 360) % 360;
+    } else if (_drag.type === 'vertex') {
+      el.mapaConfig = el.mapaConfig || {};
+      if (el.mapaConfig.pts && _drag.vtxIdx < el.mapaConfig.pts.length) {
+        var lp_ = _localPt(e, el.mapaConfig);
+        el.mapaConfig.pts[_drag.vtxIdx] = { x: Math.round(lp_.x*10)/10, y: Math.round(lp_.y*10)/10 };
+        var bb_ = _bboxPts(el.mapaConfig.pts);
+        el.mapaConfig.w = bb_.hw*2; el.mapaConfig.h = bb_.hh*2;
       }
     }
 
@@ -1313,6 +1456,167 @@ var MapaAcaoEditorUI = (function() {
     _renderProps();
     _renderPalette();
     _setStatus('Elemento removido.');
+  }
+
+  // ── Helpers geométricos ──────────────────────────────────
+
+  function _localPt(e, cfg) {
+    var sp = _svgPt(e);
+    var dx = sp.x - (cfg.cx || 0), dy = sp.y - (cfg.cy || 0);
+    var rad = -((cfg.rotacao || 0) * Math.PI / 180);
+    return { x: dx*Math.cos(rad) - dy*Math.sin(rad), y: dx*Math.sin(rad) + dy*Math.cos(rad) };
+  }
+
+  function _bboxPts(pts) {
+    if (!pts || !pts.length) return { hw: 40, hh: 30 };
+    var xs = pts.map(function(p){return p.x;}), ys = pts.map(function(p){return p.y;});
+    return { hw: (Math.max.apply(null,xs)-Math.min.apply(null,xs))/2,
+             hh: (Math.max.apply(null,ys)-Math.min.apply(null,ys))/2 };
+  }
+
+  function _formaParaPts(cfg) {
+    var hw = cfg.forma==='circle'?(cfg.r||40):(cfg.w||80)/2;
+    var hh = cfg.forma==='circle'?(cfg.r||40):(cfg.h||60)/2;
+    var str = _pontosPoligono(cfg, hw, hh);
+    return str.split(' ').map(function(s){
+      var p=s.split(','); return {x:parseFloat(p[0]),y:parseFloat(p[1])};
+    });
+  }
+
+  function _garantirLivre(cfg) {
+    if (cfg.forma==='livre') return;
+    cfg.pts = _formaParaPts(cfg);
+    cfg.forma = 'livre';
+  }
+
+  function _getSelEl() {
+    if (!_selId) return null;
+    return (_mapa.elementos||[]).filter(function(e){return e.id===_selId;})[0]||null;
+  }
+
+  // ── Espelhar ─────────────────────────────────────────────
+
+  function _espelharH() {
+    var el = _getSelEl(); if (!el) return;
+    var cfg = el.mapaConfig || {};
+    if (['rect','square','circle','ellipse'].indexOf(cfg.forma)!==-1) {
+      Toast.aviso('Forma simétrica — espelhar horizontal não tem efeito visual.'); return;
+    }
+    _garantirLivre(cfg);
+    cfg.pts = cfg.pts.map(function(p){return{x:-p.x,y:p.y};});
+    el.mapaConfig = cfg;
+    _renderElementos(); _renderProps(); _setStatus('Espelhado horizontalmente.');
+  }
+
+  function _espelharV() {
+    var el = _getSelEl(); if (!el) return;
+    var cfg = el.mapaConfig || {};
+    if (['rect','square','circle','ellipse'].indexOf(cfg.forma)!==-1) {
+      Toast.aviso('Forma simétrica — espelhar vertical não tem efeito visual.'); return;
+    }
+    _garantirLivre(cfg);
+    cfg.pts = cfg.pts.map(function(p){return{x:p.x,y:-p.y};});
+    el.mapaConfig = cfg;
+    _renderElementos(); _renderProps(); _setStatus('Espelhado verticalmente.');
+  }
+
+  // ── Adicionar vértice ────────────────────────────────────
+
+  function _adicionarVertice() {
+    var el = _getSelEl(); if (!el) return;
+    var cfg = el.mapaConfig || {};
+    if (['circle','ellipse'].indexOf(cfg.forma)!==-1) {
+      Toast.aviso('Converta para "Livre" antes de adicionar vértices.'); return;
+    }
+    _garantirLivre(cfg);
+    el.mapaConfig = cfg;
+    if (!cfg.pts || cfg.pts.length < 2) { Toast.aviso('Forma inválida para vértice.'); return; }
+    // Insere ponto médio entre o par de vértices mais distantes
+    var bestDist = -1, bestIdx = 0;
+    for (var i = 0; i < cfg.pts.length; i++) {
+      var p0 = cfg.pts[i], p1 = cfg.pts[(i+1)%cfg.pts.length];
+      var d = Math.sqrt(Math.pow(p1.x-p0.x,2)+Math.pow(p1.y-p0.y,2));
+      if (d > bestDist) { bestDist = d; bestIdx = i; }
+    }
+    var a = cfg.pts[bestIdx], b = cfg.pts[(bestIdx+1)%cfg.pts.length];
+    cfg.pts.splice(bestIdx+1, 0, {x:(a.x+b.x)/2, y:(a.y+b.y)/2});
+    _renderElementos(); _renderProps(); _setStatus('Vértice adicionado — arraste para posicionar.');
+  }
+
+  // ── Mesclar formas ───────────────────────────────────────
+
+  function _iniciarMerge() {
+    var el = _getSelEl();
+    if (!el) { Toast.aviso('Selecione um elemento para mesclar.'); return; }
+    _mergeMode = true; _mergeSource = _selId;
+    _setStatus('Clique no 2º elemento para mesclar com "'+el.nome+'".');
+    Toast.aviso('Clique no segundo elemento para mesclar.');
+  }
+
+  function _completarMerge(elId2) {
+    var el1 = (_mapa.elementos||[]).filter(function(e){return e.id===_mergeSource;})[0];
+    var el2 = (_mapa.elementos||[]).filter(function(e){return e.id===elId2;})[0];
+    _mergeMode = false; _mergeSource = null;
+    if (!el1 || !el2 || el1.id===el2.id) return;
+    function _bb2(el) {
+      var c=el.mapaConfig||{}, hw=c.forma==='circle'?(c.r||40):(c.w||80)/2, hh=c.forma==='circle'?(c.r||40):(c.h||60)/2;
+      return {x1:(c.cx||0)-hw,y1:(c.cy||0)-hh,x2:(c.cx||0)+hw,y2:(c.cy||0)+hh};
+    }
+    var b1=_bb2(el1),b2=_bb2(el2);
+    var minX=Math.min(b1.x1,b2.x1),minY=Math.min(b1.y1,b2.y1);
+    var maxX=Math.max(b1.x2,b2.x2),maxY=Math.max(b1.y2,b2.y2);
+    var merged = JSON.parse(JSON.stringify(el1));
+    merged.id   = 'el_'+new Date().getTime()+'_mg';
+    merged.nome = el1.nome+' + '+el2.nome;
+    merged.mapaConfig = {forma:'rect',cx:(minX+maxX)/2,cy:(minY+maxY)/2,
+                          w:maxX-minX,h:maxY-minY,r:0,rotacao:0};
+    _mapa.elementos = (_mapa.elementos||[]).filter(function(e){return e.id!==el1.id&&e.id!==el2.id;});
+    _mapa.elementos.push(merged);
+    _selecionarEl(merged.id);
+    _renderCanvas(); _renderProps();
+    _setStatus('Elementos mesclados em "'+merged.nome+'".');
+  }
+
+  // ── Mudar forma / dimensões / rotação ────────────────────
+
+  function _propFormaChange() {
+    var el=_getSelEl(); if(!el) return;
+    var sel=document.getElementById('mae-prop-forma'); if(!sel) return;
+    var novaForma=sel.value, cfg=el.mapaConfig||{};
+    if (novaForma==='livre' && cfg.forma!=='livre') {
+      cfg.pts = _formaParaPts(cfg);
+    } else if (novaForma!=='livre') {
+      delete cfg.pts;
+    }
+    cfg.forma = novaForma;
+    if (novaForma==='circle'&&!cfg.r) cfg.r=Math.min(cfg.w||80,cfg.h||60)/2;
+    el.mapaConfig=cfg;
+    _renderElementos(); _renderProps(); _setStatus('Forma alterada para '+novaForma+'.');
+  }
+
+  function _propRotChange() {
+    var el=_getSelEl(); if(!el) return;
+    var inp=document.getElementById('mae-prop-rot'); if(!inp) return;
+    el.mapaConfig=el.mapaConfig||{};
+    el.mapaConfig.rotacao=((parseFloat(inp.value)||0)%360+360)%360;
+    _renderElementos(); _setStatus('Rotação atualizada.');
+  }
+
+  function _propDimChange() {
+    var el=_getSelEl(); if(!el) return;
+    var cfg=el.mapaConfig||{};
+    var wV=parseFloat((document.getElementById('mae-prop-w')||{}).value)||0;
+    var hV=parseFloat((document.getElementById('mae-prop-h')||{}).value)||0;
+    if(wV>0) cfg.w=Math.max(20,wV);
+    if(hV>0) cfg.h=Math.max(20,hV);
+    if(cfg.forma==='circle') cfg.r=Math.min(cfg.w,cfg.h)/2;
+    if(cfg.forma==='livre'&&cfg.pts&&cfg.pts.length) {
+      var bb0=_bboxPts(cfg.pts);
+      if(wV>0&&bb0.hw>0){var sx=cfg.w/(bb0.hw*2);cfg.pts=cfg.pts.map(function(p){return{x:p.x*sx,y:p.y};});}
+      if(hV>0&&bb0.hh>0){var sy=cfg.h/(bb0.hh*2);cfg.pts=cfg.pts.map(function(p){return{x:p.x,y:p.y*sy};});}
+    }
+    el.mapaConfig=cfg;
+    _renderElementos(); _setStatus('Dimensões atualizadas.');
   }
 
   // ── Layers ──────────────────────────────────────────────
@@ -1620,7 +1924,14 @@ var MapaAcaoEditorUI = (function() {
     _imprimirMapa:      _imprimirMapa,
     _abrirModalReserva: _abrirModalReserva,
     _confirmarReserva:  _confirmarReserva,
-    _toggleSecao:       _toggleSecao
+    _toggleSecao:       _toggleSecao,
+    _espelharH:         _espelharH,
+    _espelharV:         _espelharV,
+    _adicionarVertice:  _adicionarVertice,
+    _iniciarMerge:      _iniciarMerge,
+    _propFormaChange:   _propFormaChange,
+    _propRotChange:     _propRotChange,
+    _propDimChange:     _propDimChange
   };
 
 })();

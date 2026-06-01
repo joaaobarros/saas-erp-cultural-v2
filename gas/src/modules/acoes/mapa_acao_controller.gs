@@ -119,6 +119,54 @@ function ctrl_mapa_acao_criar_de_selecao(params) {
 }
 
 /**
+ * Lista todos os mapas da org com o nome da ação vinculada.
+ * Usado pelo picker de reutilização de mapas.
+ */
+function ctrl_mapa_acao_listar_todos() {
+  return GasResponse.wrap(function() {
+    AcessoService.verificar();
+    var orgId   = getOrgConfig().orgId;
+    var mapas   = MapaAcaoRepository.listar(orgId, {});
+    var acoes   = AcaoRepository.listar(orgId, {});
+    var acaoMap = {};
+    acoes.forEach(function(a) { acaoMap[a.id] = a.nome || 'Ação sem nome'; });
+    return mapas.map(function(m) {
+      return {
+        id:         m.id,
+        nome:       m.nome,
+        descricao:  m.descricao || '',
+        acaoId:     m.acaoId,
+        acaoNome:   acaoMap[m.acaoId] || m.acaoId,
+        tipoBase:   m.tipoBase || 'novo',
+        nLayers:    (m.layers    || []).length,
+        nElementos: (m.elementos || []).length
+      };
+    });
+  }, 'ctrl_mapa_acao_listar_todos');
+}
+
+/**
+ * Cria um mapa copiando layers e elementos de um mapa já existente.
+ * @param {Object} params — { acaoId*, nome*, descricao?, mapaOrigemId* }
+ */
+function ctrl_mapa_acao_criar_de_copia(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    if (!params.acaoId)       throw new Error('acaoId obrigatório.');
+    if (!params.nome)         throw new Error('nome do local obrigatório.');
+    if (!params.mapaOrigemId) throw new Error('mapaOrigemId obrigatório.');
+
+    var email     = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = MapaAcaoEngine.criarDeCopia(params, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao criar cópia do mapa.');
+    return resultado;
+  }, 'ctrl_mapa_acao_criar_de_copia');
+}
+
+/**
  * Lista os espaços disponíveis para uso no picker de seleção.
  * Requer apenas usuário autenticado (sem restrição de papel).
  * Retorna campos suficientes para exibir o picker, sem dados sensíveis.

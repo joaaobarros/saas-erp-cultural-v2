@@ -20532,9 +20532,9 @@ var App = (function() {
     { id:'balcao',      label:'Balcão',           icone:'support_agent',           modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
     { secao:'MEMÓRIA' },
-    { id:'agentes',     label:'Agentes',         icone:'record_voice_over',       modulo:'MASTER' },
+    { id:'agentes',     label:'Agentes',         icone:'record_voice_over',       modulo:'AGENTES' },
     { id:'acervo',      label:'Acervo',          icone:'photo_library',           modulo:'ACOES' },
-    { id:'voluntarios', label:'Voluntários',     icone:'volunteer_activism',      modulo:'MASTER' },
+    { id:'voluntarios', label:'Voluntários',     icone:'volunteer_activism',      modulo:'VOLUNTARIOS' },
     { id:'parcerias',   label:'Parcerias',       icone:'handshake',               modulo:'ACOES' },
     { secao:'SISTEMA', superadmin:true },
     { id:'admin',            label:'Administração',   icone:'admin_panel_settings', modulo:'ADMIN', superadmin:true },
@@ -22886,12 +22886,19 @@ var FeatureFlagsUI = (function() {
   }
 
   function toggle(flagId, ativo, cb) {
+    // Atualiza visual imediatamente (inline styles estáticos não reagem ao :checked)
+    if (cb && cb.parentElement) {
+      var outerSpan = cb.nextElementSibling;
+      var innerSpan = outerSpan && outerSpan.firstElementChild;
+      if (outerSpan) outerSpan.style.background = ativo ? 'var(--primary,#7c3aed)' : '#e2e8f0';
+      if (innerSpan) innerSpan.style.left = ativo ? '22px' : '2px';
+    }
     GAS.admin.setFeatureFlag(flagId, ativo, function(r) {
       var ok = r && r.ok;
-      Toast.mostrar(ok ? '✅ Feature "' + flagId + '" ' + (ativo ? 'ativada' : 'desativada') : '❌ Erro ao alterar flag', ok ? 'sucesso' : 'erro');
-      if (!ok) { setTimeout(function() { carregar(); }, 500); } // revert UI
+      Toast.mostrar(ok ? 'Feature "' + flagId + '" ' + (ativo ? 'ativada' : 'desativada') : 'Erro ao alterar flag', ok ? 'sucesso' : 'erro');
+      if (!ok) { setTimeout(function() { carregar(); }, 500); } // revert UI on error
     }, function(e) {
-      Toast.mostrar('❌ Erro: ' + e.message, 'erro');
+      Toast.mostrar('Erro: ' + e.message, 'erro');
       setTimeout(function() { carregar(); }, 500);
     });
   }

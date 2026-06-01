@@ -2432,8 +2432,8 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 ### Rastreador — Agentes Culturais
 | Item | Status | Sessão |
 |---|---|---|
-| Sidebar badge "inativo" | ⚠️ AGN-01 | 2026-05-31 s15 |
-| View carrega | ❌ bloqueado por AGN-01 | — |
+| Sidebar badge "inativo" | ✅ AGN-01 CORRIGIDO s16 | 2026-06-01 |
+| View carrega | 🔲 pendente (AGN-01 corrigido — testar) | — |
 | Estrutura e campos | 🔲 bloqueado | — |
 
 ---
@@ -2964,7 +2964,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 199 | ADM-07 | Admin — Tab bar | Barra de 10 abas sem sinalização de scroll — tab bar "Cadastros Base" com Espaços/Setores/Turnos/Categ.Itens/Módulos/Features/Provisionamento/Usuários/Config.Sistema/Banco de Dados não cabe na tela sem scroll horizontal; nenhum indicador visual (chevron, fade, badge) avisa que há mais abas à direita | 🟡 Média |
 | 200 | ADM-08 | Admin — Arquitetura de config | Turnos e Config.Sistema (Expediente & Horários) configuram a mesma dimensão temporal e devem ser unificados numa seção "Horários & Turnos". Confirmado pelo usuário | 🟡 Média |
 | 201 | ADM-09 | Admin — Arquitetura de config | Categ.Itens não pertence ao escopo de configurações gerais do sistema — deve ser removida do Admin e incorporada ao módulo Estoque/Almoxarifado como configuração interna. Confirmado pelo usuário | 🟡 Média |
-| 202 | ADM-10 | Admin — Features | **Toggles de feature flags inoperantes** — os toggles (Assistente IA, Portal Público, RECE…) aparecem visualmente como ON mas clicar não surte efeito nem persiste. A aba inteira não cumpre sua função. Confirmado pelo usuário | 🔴 Alta |
+| 202 | ~~ADM-10~~ | Admin — Features | ~~Toggles inoperantes~~ **CORRIGIDO s16 Fase 6**: `FeatureFlagsUI.toggle()` agora atualiza inline styles dos spans imediatamente; emojis removidos do toast. | ~~🔴 Alta~~ |
 | 203 | ADM-11 | Admin — Provisionamento | Botão "Abrir Wizard de Setup" abre página em branco — Wizard deveria funcionar como revisão/onboarding mesmo com provisionamento 100% concluído. Confirmado pelo usuário | 🟡 Média |
 | 204 | ADM-12 | Admin — Acessos Pendentes | Botão "Visualizar Cadastro" leva para página externa em branco — endpoint de cadastro público não implementado ou URL GAS malformada. Confirmado pelo usuário | 🟡 Média |
 | 205 | ESP-16c | Infraestrutura — Novo Espaço | Default "Abertura/Fechamento" no modal "Novo Espaço" é 08:00–**22:00** enquanto Config.Sistema registra expediente global 08:00–**21:30** — discrepância de 30 min. Ao criar um espaço, o default deve ser pré-preenchido com o valor do expediente global cadastrado | 🟡 Média |
@@ -3034,7 +3034,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 270 | ACV-09 | Acervo — DS | Emojis nos selects de tipo (📷 Foto, 🎬 Vídeo…) no filtro e no formulário — anti-padrão DS | 🟡 Média |
 | 271 | ACV-10 | Acervo — DS | Formulário com estilos 100% inline — todos os labels, inputs e selects usam `style="..."`, sem classes DS (`form-label`, `form-input`…). Pior que ACO-12 | 🟡 Média |
 | 272 | ACV-11 | Acervo — Arquitetura | **Campo "Ação vinculada" obrigatório inviabiliza conteúdo institucional** — sistema bloqueia salvamento sem acaoId; arquivos institucionais (fotos do espaço, docs históricos, materiais avulsos) não podem ser registrados. Campo deve ser opcional: com ação → vinculado à ação; sem ação → conteúdo institucional com categorização própria | 🔴 Alta |
-| 273 | AGN-01 | Agentes Culturais — Sincronização | **Estado de módulo no Admin não propaga para a aplicação** — Admin → Módulos registra "Agentes Culturais = Ativo" mas sidebar exibe badge "inativo" e bloqueia o acesso com toast. Mesmo conflito em Voluntários. O toggle de ativação/desativação de módulos não está aplicando o estado corretamente. Relacionado a ADM-10 (features também não propagam). | 🔴 Alta |
+| 273 | ~~AGN-01~~ | Agentes Culturais — Sincronização | ~~Sync quebrada Admin→sidebar~~ **CORRIGIDO s16 Fase 6**: `_MODULOS_MENU` usava `modulo:'MASTER'` para Agentes e Voluntários; corrigido para `modulo:'AGENTES'` e `modulo:'VOLUNTARIOS'` respectivamente. | ~~🔴 Alta~~ |
 | ~~274~~ | ~~CON-08~~ | ~~Contratações — Salvar~~ | ~~"Salvar Rascunho" falha com "lerJSON is not defined"~~ | ✅ CORRIGIDO — `lerJSON()` adicionada como alias de `readJSON()` em `data_layer.gs` |
 | 275 | CON-09 | Contratações — Parcelas | **Campo "Atividade/Evento" nas parcelas é texto livre desvinculado** — sem conexão com as atividades reais do Plano de Trabalho (Meta→Atividade→Rubrica); impede rastrear qual atividade cada parcela financia | 🔴 Alta |
 | 258 | FIN-19 | Financeiro — Rubricas / Modelo de Dados | **Campo Setor deve migrar da Memória de Cálculo para o nível da Rubrica.** Uma mesma rubrica dentro de uma mesma meta pode ser registrada mais de uma vez, cada entrada vinculada a um setor diferente. Exemplo: Rubrica "Transporte" na Meta A → R$5.000 Setor Ação Cultural + R$3.000 Setor Comunicação. O sistema deve consolidar duplamente: (a) **total global da rubrica** (R$8.000, sem decomposição — para comparação com o orçamento do contrato); (b) **total por setor** (R$5.000 Ação Cultural / R$3.000 Comunicação — para gestão interna de custo por setor). O campo Setor na Memória de Cálculo (FIN-01, corrigido) trata de um nível errado — a granularidade correta é rubrica × setor, não item-de-memória × setor | 🔴 Alta |

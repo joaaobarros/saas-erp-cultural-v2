@@ -370,12 +370,87 @@ var MapaAcaoEngine = (function () {
     }
   }
 
+  // ─── Criar a partir de mapa existente ────────────────────────────────────
+
+  /**
+   * Cria um MapaAcao copiando layers e elementos de um mapa já existente.
+   * Gera novos IDs para layers e elementos e remapeia as referências.
+   *
+   * @param {Object} params — { acaoId*, nome*, descricao?, mapaOrigemId* }
+   * @param {string} email
+   * @param {string} orgId
+   */
+  function criarDeCopia(params, email, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      params = params || {};
+      if (!params.acaoId)       throw new Error('acaoId é obrigatório.');
+      if (!params.nome || !String(params.nome).trim()) throw new Error('Nome do local é obrigatório.');
+      if (!params.mapaOrigemId) throw new Error('mapaOrigemId é obrigatório.');
+
+      var origem = MapaAcaoRepository.buscarPorId(orgId, params.mapaOrigemId);
+      if (!origem) throw new Error('Mapa de origem não encontrado: ' + params.mapaOrigemId);
+
+      var ts       = new Date().getTime();
+      var layerMap = {};
+
+      var novasLayers = (origem.layers || []).map(function(l, i) {
+        var novoId = 'layer_' + ts + '_' + i;
+        layerMap[l.id] = novoId;
+        return {
+          id:        novoId,
+          nome:      l.nome,
+          descricao: l.descricao || '',
+          cor:       l.cor,
+          icone:     l.icone || '',
+          visivel:   l.visivel !== false
+        };
+      });
+
+      var novosElementos = (origem.elementos || []).map(function(el, i) {
+        var copia = JSON.parse(JSON.stringify(el));
+        copia.id = 'el_' + ts + '_cp' + i;
+        if (el.layerId && layerMap[el.layerId]) copia.layerId = layerMap[el.layerId];
+        return copia;
+      });
+
+      var mapasSiblings = MapaAcaoRepository.buscarPorAcao(orgId, params.acaoId);
+      var novo = {
+        id:        'mapaacao_' + ts + '_' + Math.random().toString(36).slice(2, 6),
+        acaoId:    params.acaoId,
+        orgId:     orgId,
+        nome:      String(params.nome).trim(),
+        descricao: (params.descricao || '').trim() || 'Copiado de: ' + origem.nome,
+        tipoBase:  'copia',
+        copiaDe:   params.mapaOrigemId,
+        ordem:     mapasSiblings.length,
+        layers:    novasLayers,
+        elementos: novosElementos,
+        terreno:   origem.terreno ? JSON.parse(JSON.stringify(origem.terreno)) : null,
+        criadoPor: email,
+        criadoEm:  new Date().toISOString()
+      };
+
+      MapaAcaoRepository.salvar(orgId, novo);
+      _auditoria('MAPA_ACAO_CRIADO', novo.id, email, {
+        nome: novo.nome, acaoId: params.acaoId, tipoBase: 'copia',
+        copiaDe: params.mapaOrigemId, elementosCopiados: novosElementos.length
+      });
+      return { ok: true, id: novo.id, elementosCopiados: novosElementos.length };
+
+    } catch(e) {
+      Logger.error('mapa_acao_engine', 'criarDeCopia', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
   // ─── API pública ──────────────────────────────────────────────────────────
 
   return {
     salvar:                salvar,
     criarDeEspacos:        criarDeEspacos,
     criarDeSelecao:        criarDeSelecao,
+    criarDeCopia:          criarDeCopia,
     excluir:               excluir,
     reservarEspacoOriginal: reservarEspacoOriginal
   };
