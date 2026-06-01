@@ -361,7 +361,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Sidebar: "Reserva de Carro" vs "Reserva de Veículo" | ⚠️ CAR-02 | 2026-05-31 s13 |
 | Motorista — feature configurável, desativada por padrão | ✅ CAR-12 respondido | 2026-05-31 s13 |
 | Veículos — feature configurável, desativada por padrão | ✅ CAR-14 respondido | 2026-05-31 s13 |
-| Self-approval (admin aprovando a própria reserva) | 🔲 a confirmar | — |
+| Self-approval superadmin | ✅ INTENCIONAL — superadmin aprova qualquer coisa | 2026-05-31 s13 |
 
 ---
 
@@ -2281,6 +2281,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ### Perguntas pendentes
 - ~~**Motorista**: quem conduz o veículo?~~ **RESPONDIDO** — feature configurável, off por padrão. Quando ativada: CRUD de motoristas (nome + quantidade) + campo de seleção no formulário. Padrão: solicitante é o condutor.
+- ~~**Self-approval e aprovadores**~~ **RESPONDIDO** — Superadmin aprova qualquer coisa (incluindo próprias solicitações) = comportamento intencional ✅. Veículo e demais solicitações de infraestrutura são aprovadas pela equipe de infraestrutura.
 - **Frota**: quantos veículos o CCBJ tem? Sistema assume 1 único.
 - **Self-approval**: joao.barros (superadmin?) aprovou a própria reserva — intencional para papéis admin ou gap de governança?
 
@@ -2868,6 +2869,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 252 | CAR-10 | Reserva de Veículo — Rota | Sem paradas intermediárias — formulário tem apenas Local de Saída e Local de Chegada; viagens com múltiplas paradas (CCBJ → Secretaria → Prefeitura → CCBJ) não são representáveis. Confirmado pelo usuário | 🔴 Alta |
 | 253 | CAR-11 | Reserva de Veículo — Validação | Formulário não bloqueia datas ou horários passados no frontend — validação apenas no backend. Usuário confirmou: reservas em datas/horários passados não devem ser permitidas. Equivalente de ESP-17 para veículo | 🔴 Alta |
 | 254 | CAR-12 | Reserva de Veículo — Motorista | **Feature de motorista configurável — desativada por padrão (decisão arquitetural confirmada).** Comportamento padrão: sem motorista — solicitante é o próprio condutor. Quando a organização ativa a feature em Configurações, é possível cadastrar N motoristas (nome + disponibilidade). O formulário de reserva exibe campo de seleção de motorista **somente quando a feature está ativa**. Implementação necessária: (a) toggle "Motoristas" no Admin/Config; (b) CRUD de motoristas com nome e disponibilidade; (c) campo condicional no formulário de reserva; (d) registro do motorista no modelo de dados e no modal de detalhes | 🔴 Alta |
+| 261 | CAR-15 | Reserva de Veículo — Papéis de Aprovação | **Código permite papéis genéricos (`gestor`, `admin`) aprovarem reservas de veículo — regra de negócio diz que deveria ser equipe de infraestrutura (+ superadmin).** `PAPEIS_APROVACAO = ['infraestrutura', 'gestor', 'admin', 'superadmin']` inclui `gestor` e `admin` sem distinção de setor: um gestor de Ação Cultural tecnicamente pode aprovar uma reserva de veículo, o que viola a governança. Correção: para reservas de veículo e demais solicitações de infraestrutura, o papel `gestor` só deveria ter poder de aprovação se pertencer ao setor de Infraestrutura; `admin` idem. Superadmin mantém aprovação universal. | 🟡 Média |
 | 260 | CAR-14 | Reserva de Veículo — Frota | **Feature de veículos configurável — desativada por padrão (decisão arquitetural confirmada).** Comportamento padrão: sem registro de veículo — frota não especificada. Quando ativada em Configurações, é possível cadastrar N veículos com suas informações (modelo, placa, capacidade, demais dados). O formulário de reserva exibe campo de seleção de veículo **somente quando a feature está ativa**. Quando ativa, o sistema pode checar disponibilidade por veículo (conflito de datas/horas). Padrão idêntico ao CAR-12 (motorista). Implementação necessária: (a) toggle "Veículos" no Admin/Config; (b) CRUD de veículos com modelo, placa e informações; (c) campo condicional no formulário de reserva; (d) verificação de conflito por veículo ao checar disponibilidade | 🔴 Alta |
 | 255 | CAR-13 | Reserva de Veículo — Voucher Uber | Sistema não suporta solicitação de voucher Uber — fluxo necessário: vínculo à rubrica de transporte do setor, aprovação do gestor responsável e/ou gestor financeiro, retorno com link do voucher por email e no sistema. Confirmado pelo usuário como funcionalidade esperada | 🔴 Alta |
 | 256 | SIS-14 | Sistema Global — Datas | **Datas em formato ISO (AAAA-MM-DD) em todo o sistema** em vez de padrão pt-BR (DD/MM/AAAA) — confirmado pelo usuário: todas as datas devem seguir pt-BR. Identificado em: cards e modal de Reserva de Veículo (2026-05-29). Auditoria sistêmica necessária em todos os módulos | 🔴 Alta |
@@ -3041,7 +3043,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ## HANDOFF — SESSÃO 13 (2026-05-31) → SESSÃO 14
 
-### Estado atual: 260 problemas registrados
+### Estado atual: 261 problemas registrados
 
 ### O que foi feito nesta sessão (s13)
 
@@ -3065,7 +3067,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 5. **SIS-14 (sistêmico)** — todas as datas do sistema devem exibir padrão pt-BR (DD/MM/AAAA), não ISO (AAAA-MM-DD). Confirmado pelo usuário. Auditoria sistêmica necessária em todos os módulos
 
-**Novos problemas s13:** CAR-02 a CAR-14 (13), SIS-14 (1), FIN-18 (1), FIN-19 (1), FIN-20 (1) = **17 novos → total 260**
+**Novos problemas s13:** CAR-02 a CAR-15 (14), SIS-14 (1), FIN-18 (1), FIN-19 (1), FIN-20 (1) = **18 novos → total 261**
 
 ### DECISÕES ARQUITETURAIS ACUMULADAS (manter neste handoff)
 
@@ -3079,14 +3081,14 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
 
-Motorista e veículos respondidos. Última pergunta pendente do mod-34: self-approval.
+mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações presa em "Carregando...").
 
-> "Você mesmo aprovou sua própria reserva de veículo (joao.barros como solicitante e aprovador). Isso é intencional para papéis admin/superadmin, ou a aprovação deveria sempre exigir um aprovador diferente do solicitante?"
+> "Acesse o módulo **Aprovações** e clique na aba **Veículo** — ainda aparece 'Carregando...' ou o problema mudou desde a última vez que você testou?"
 
 ### Sequência após essa pergunta
 
-1. **Reserva de Veículo** — self-approval ← **PRÓXIMA**
-2. **Aprovações → aba Veículo** (APR-05 "Carregando...") — investigar após entender domínio
+1. **Aprovações → aba Veículo** (APR-05) ← **PRÓXIMA**
+2. **Acervo (mod-25)** — nunca testado
 3. **Acervo (mod-25)** — nunca testado
 4. **Agentes Culturais (mod-24)** — nunca testado
 5. **Contratações**: FSM completo + Portal LGPD
@@ -3104,6 +3106,6 @@ Motorista e veículos respondidos. Última pergunta pendente do mod-34: self-app
 7. **SIS-14** (datas ISO vs pt-BR) — sistêmico; auditar cada módulo ao revisitá-lo
 8. **CAR-13** (Voucher Uber) — novo fluxo confirmado; precisa análise de domínio completa
 9. **APR-05** (aba Veículo "Carregando...") — investigar após resposta sobre motorista/frota
-10. Perguntas abertas mod-34: ~~motorista (respondido — feature configurável, off por padrão)~~, ~~veículos (respondido — feature configurável, off por padrão)~~, self-approval (admin aprovando própria reserva)
+10. mod-34 FECHADO — todas as perguntas respondidas: ~~motorista~~, ~~veículos~~, ~~self-approval~~ (superadmin aprova tudo = intencional; CAR-15 registrado para papéis gestor/admin genéricos)
 11. **FIN-19** — Setor sai da Memória de Cálculo e vai para nível de Rubrica; consolidação dupla (global + por setor); FIN-01 corrigido no nível errado
 12. **FIN-20** — sistema de flags de operação configuráveis por rubrica (padrão geral): flags criadas dinamicamente no Admin, sem hardcode; casos confirmados: `voucher_uber`, `contratacao`, `compra_direta`, `pagamento`; FIN-18 é instância específica deste padrão
