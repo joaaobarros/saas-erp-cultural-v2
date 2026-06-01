@@ -8264,7 +8264,8 @@ var GAS = {
     bloquear:                function(p,ds,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_bloquear(p,ds); },
     cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); },
     disponibilidadeItens:    function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_disponibilidadeItens(p||{}); },
-    registrarPosEvento:      function(id,d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_registrarPosEvento(id,d||{}); }
+    registrarPosEvento:      function(id,d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_registrarPosEvento(id,d||{}); },
+    concluirAtrasadas:       function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir_atrasadas(); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -15800,17 +15801,20 @@ var ReservasUI = (function() {
     }
 
     function _executar(done) {
-      GAS.reservas.metricas(function(respM) {
-        if (respM && respM.ok) _renderMetricas(respM.data);
-        GAS.reservas.listar(filtros, function(resp) {
-          if (done) done();
-          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
-          _listaCacheTotal = resp.data || [];
-          if (_modo === 'lista')    _renderLista(_listaCacheTotal);
-          if (_modo === 'diagrama') _renderDiagrama();
-          if (_modo === 'agenda')   _renderAgenda();
-        }, function(err) { if (done) done(); Toast.erro('Erro: '+(err.message||err)); });
-      }, function(err) { if (done) done(); });
+      function _carregar() {
+        GAS.reservas.metricas(function(respM) {
+          if (respM && respM.ok) _renderMetricas(respM.data);
+          GAS.reservas.listar(filtros, function(resp) {
+            if (done) done();
+            if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
+            _listaCacheTotal = resp.data || [];
+            if (_modo === 'lista')    _renderLista(_listaCacheTotal);
+            if (_modo === 'diagrama') _renderDiagrama();
+            if (_modo === 'agenda')   _renderAgenda();
+          }, function(err) { if (done) done(); Toast.erro('Erro: '+(err.message||err)); });
+        }, function(err) { if (done) done(); });
+      }
+      GAS.reservas.concluirAtrasadas(function() { _carregar(); }, function() { _carregar(); });
     }
 
     if (_modo === 'lista') {
@@ -16411,7 +16415,7 @@ var ReservasUI = (function() {
       });
 
       html += '<div class="rdg-row" style="height:' + _ROW_H_RDG + 'px;">';
-      html += '<div class="rdg-sala-label" style="width:' + _SALA_W_RDG + 'px;background:' + corSala + ';" title="' + escaparHtml(nomeSala) + '">' + escaparHtml(nomeSala) + '</div>';
+      html += '<div class="rdg-sala-label" style="width:' + _SALA_W_RDG + 'px;background:' + corSala + ';position:sticky;left:0;z-index:2;" title="' + escaparHtml(nomeSala) + '">' + escaparHtml(nomeSala) + '</div>';
       html += '<div class="rdg-grid-area" style="width:' + _TOTAL_PX_RDG + 'px;flex-shrink:0;position:relative;">';
 
       // Linhas verticais de hora
@@ -17647,6 +17651,7 @@ var ChavesUI = (function() {
 // ═══════════════════════════════════════════════════════════
 var AlmoxUI = (function() {
   var _itens = [];
+  var _almoxDevPendente = null;
   var _STATUS_LABEL = {
     solicitado:'Solicitado', aprovado:'Aprovado', retirado:'Em uso',
     atrasado:'Atrasado', devolvido:'Devolvido', cancelado:'Cancelado'
@@ -17782,17 +17787,39 @@ var AlmoxUI = (function() {
     });
   }
   function _devolver(id, btnEl) {
-    var _rawObs = prompt('Observações da devolução (opcional):');
-    if (_rawObs === null) return; // usuário cancelou
-    var obs = _rawObs;
+    _almoxDevPendente = { id: id, btnEl: btnEl };
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Registrar Devolução</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Observações</label>' +
+          '<textarea id="alm-dev-obs" class="form-input" rows="3" placeholder="Observações sobre o estado do item (opcional)" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="alm-dev-ok" class="btn btn-primary" onclick="AlmoxUI._confirmarDevAlmox()">Confirmar devolução</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarDevAlmox() {
+    if (!_almoxDevPendente) return;
+    var id    = _almoxDevPendente.id;
+    var btnEl = _almoxDevPendente.btnEl;
+    var obs   = (document.getElementById('alm-dev-obs')||{}).value || '';
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
       GAS.almox.devolver(id, obs, function(resp) {
         done();
+        _almoxDevPendente = null;
         if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
         Toast.sucesso('Devolução registrada.'); carregar();
-      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); _almoxDevPendente = null; Toast.erro('Erro: '+(err.message||err)); });
     });
   }
+
   function _cancelar(id, btnEl) {
     var _rawMotivo = prompt('Motivo do cancelamento:');
     if (_rawMotivo === null) return; // usuário cancelou
@@ -17806,7 +17833,7 @@ var AlmoxUI = (function() {
     });
   }
 
-  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, solicitar:solicitar };
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, solicitar:solicitar, _confirmarDevAlmox:_confirmarDevAlmox };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -18438,6 +18465,7 @@ var SolicitacoesUI = (function() {
   var _chipAtivo = '';
   var _detAtual = null; // solicitação no painel de detalhe
   var _docContextId = null; // ID da sol para modal de doc
+  var _solDevPendente = null;
 
   var _STATUS_LABEL = {
     rascunho:'Rascunho', submetida:'Aguard. Gestor', devolvida:'Devolvida',
@@ -18767,16 +18795,36 @@ var SolicitacoesUI = (function() {
   }
 
   function devolver(id) {
-    var _raw = prompt('Observação para devolução (obrigatório):');
-    if (_raw === null) return;
-    var obs = _raw || '';
-    if (!obs){ Toast.erro('Observação é obrigatória para devolução.'); return; }
-    BtnGuard.wrap('btn-sol-dev-'+id, 'Devolvendo…', function(done){
-      GAS.contratacoes.devolver(id, obs, function(resp){
+    _solDevPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Devolver para Ajuste</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Observação <span style="color:#dc2626">*</span></label>' +
+          '<textarea id="sol-dev-obs" class="form-input" rows="3" placeholder="Descreva o motivo da devolução" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="sol-dev-ok" class="btn btn-primary" onclick="SolicitacoesUI._confirmarDevSol()">Devolver</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarDevSol() {
+    var id  = _solDevPendente;
+    if (!id) return;
+    var obs = ((document.getElementById('sol-dev-obs')||{}).value || '').trim();
+    if (!obs) { Toast.erro('Observação é obrigatória para devolução.'); return; }
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
+    BtnGuard.wrap('btn-sol-dev-' + id, 'Devolvendo…', function(done) {
+      GAS.contratacoes.devolver(id, obs, function(resp) {
         done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+        _solDevPendente = null;
+        if (!resp||!resp.ok) { Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Solicitação devolvida para ajuste.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e) { done(); _solDevPendente = null; Toast.erro(e.message||e); });
     });
   }
 
@@ -19284,7 +19332,7 @@ var SolicitacoesUI = (function() {
     submeter: submeter, submeterItem: submeterItem,
     aprovarGestor: aprovarGestor, aprovarFinanceiro: aprovarFinanceiro,
     instruir: instruir, iniciarExecucao: iniciarExecucao,
-    concluir: concluir, rejeitar: rejeitar, devolver: devolver, cancelar: cancelar,
+    concluir: concluir, rejeitar: rejeitar, devolver: devolver, _confirmarDevSol: _confirmarDevSol, cancelar: cancelar,
     abrirDetalhe: abrirDetalhe, fecharDetalhe: fecharDetalhe, abrirDetTab: abrirDetTab,
     marcarPago: marcarPago,
     abrirModalDoc: abrirModalDoc, fecharModalDoc: fecharModalDoc, salvarDoc: salvarDoc, removerDoc: removerDoc,
@@ -25590,17 +25638,21 @@ var RhUI = (function() {
   }
 
   function _carregarMetricas() {
-    GAS.pessoas.metricas(function(resp) {
-      if (!resp||!resp.ok) return;
-      var d = resp.data;
+    function _render(d) {
       var el = document.getElementById('rh-stats');
       if (!el) return;
-      el.innerHTML =
-        '<div class="stat-card"><div class="stat-label">Colaboradores</div><div class="stat-value">'+(d.total||0)+'</div></div>'+
-        '<div class="stat-card"><div class="stat-label">Ativos</div><div class="stat-value stat-success">'+(d.ativos||0)+'</div></div>'+
-        '<div class="stat-card"><div class="stat-label">Em Férias</div><div class="stat-value stat-info">'+(d.ferias||0)+'</div></div>'+
-        '<div class="stat-card"><div class="stat-label">Afastados</div><div class="stat-value stat-warning">'+(d.afastados||0)+'</div></div>';
-    }, function(){});
+      el.innerHTML = [
+        { valor: d.ativos    || 0, label: 'Colaboradores ativos', icone: 'group',        classe: 'primary' },
+        { valor: d.afastados || 0, label: 'Afastados',            icone: 'sick',         classe: 'warning' },
+        { valor: d.ferias    || 0, label: 'Em férias',            icone: 'beach_access', classe: 'success' },
+        { valor: d.inativos  || 0, label: 'Inativos',             icone: 'person_off',   classe: 'error'   }
+      ].map(function(s) {
+        return '<div class="stat-card"><div class="stat-icon ' + s.classe + '"><span class="ms ms-lg">' + s.icone + '</span></div>'
+          + '<div class="stat-info"><div class="stat-valor">' + s.valor + '</div>'
+          + '<div class="stat-label">' + s.label + '</div></div></div>';
+      }).join('');
+    }
+    GAS.pessoas.metricas(function(resp) { _render((resp && resp.ok) ? resp.data : {}); }, function() { _render({}); });
   }
 
   function _popularAnoSelect() {

@@ -341,3 +341,28 @@ function ctrl_reservas_registrarPosEvento(id, dados) {
     return ReservaEngine.registrarPosEvento(id, dados || {}, ctx.email, ctx.orgId);
   }, 'ctrl_reservas_registrarPosEvento');
 }
+
+/**
+ * Conclui silenciosamente reservas 'em_uso' cujo horário de término passou
+ * há mais de 15 minutos. Chamado pelo frontend ao carregar a lista.
+ */
+function ctrl_reservas_concluir_atrasadas() {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    var lista = ReservaRepository.listar({ status: 'em_uso' }, ctx.orgId);
+    var agora = new Date();
+    var concluidas = 0;
+    lista.forEach(function(r) {
+      if (!r.data || !r.horaTermino) return;
+      try {
+        var fim = new Date(r.data + 'T' + r.horaTermino + ':00');
+        fim.setMinutes(fim.getMinutes() + 15);
+        if (agora > fim) {
+          ReservaEngine.mudarStatus(r.id, 'concluido', 'sistema', ctx.orgId, 'Auto-conclusão: horário encerrado.');
+          concluidas++;
+        }
+      } catch (_e) {}
+    });
+    return { concluidas: concluidas };
+  }, 'ctrl_reservas_concluir_atrasadas');
+}
