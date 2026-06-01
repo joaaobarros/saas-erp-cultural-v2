@@ -15661,16 +15661,14 @@ var ReservasUI = (function() {
     _garantirEspacosPorId();
     var el = document.getElementById('reservas-lista');
 
-    // Inicializar datepicker com hoje se ainda não tiver valor
     var dpEl = document.getElementById('res-filtro-data');
-    if (dpEl && !dpEl.value) dpEl.value = new Date().toISOString().slice(0, 10);
-    var dataMin = (dpEl && dpEl.value) || new Date().toISOString().slice(0, 10);
+    var dataMin = (dpEl && dpEl.value) || '';
 
     var sort = (document.getElementById('res-sort')||{}).value || 'data-hora';
 
-    // Filtrar: apenas registros a partir de dataMin
+    // Filtrar: a partir de dataMin quando preenchido; sem filtro de data quando vazio
     var exibir = (lista || []).filter(function(r) {
-      return (r.data || '') >= dataMin;
+      return !dataMin || (r.data || '') >= dataMin;
     });
 
     // Ordenar
@@ -17495,6 +17493,7 @@ var ReservasUI = (function() {
 var ChavesUI = (function() {
   var _STATUS_LABEL = { aberto:'Aberto', atrasado:'Atrasado', devolvido:'Devolvido' };
   var _STATUS_CLASS = { aberto:'badge-primary', atrasado:'badge-error', devolvido:'badge-success' };
+  var _devolverPendente = null;
 
   function _badge(s) {
     return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
@@ -17597,19 +17596,50 @@ var ChavesUI = (function() {
   }
 
   function _devolver(id, btnEl) {
-    var _rawObs = prompt('Observações da devolução (opcional):');
-    if (_rawObs === null) return; // usuário cancelou
-    var obs = _rawObs;
+    _devolverPendente = { id: id, btnEl: btnEl };
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Registrar Devolução</h3>' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Condição da chave</label>' +
+          '<select id="chv-dev-cond" class="form-input">' +
+            '<option value="bom_estado">Bom estado</option>' +
+            '<option value="avariada">Avariada</option>' +
+            '<option value="perdida">Perdida</option>' +
+          '</select>' +
+        '</div>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Observações</label>' +
+          '<textarea id="chv-dev-obs" class="form-input" rows="3" placeholder="Observações (opcional)" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="chv-dev-ok" class="btn btn-primary" onclick="ChavesUI._confirmarDevolucao()">Confirmar devolução</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarDevolucao() {
+    if (!_devolverPendente) return;
+    var id    = _devolverPendente.id;
+    var btnEl = _devolverPendente.btnEl;
+    var cond  = (document.getElementById('chv-dev-cond')||{}).value || 'bom_estado';
+    var obs   = (document.getElementById('chv-dev-obs')||{}).value || '';
+    var obsCompleta = cond !== 'bom_estado' ? '['+cond+'] ' + obs : obs;
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
-      GAS.chaves.devolver(id, obs, function(resp) {
+      GAS.chaves.devolver(id, obsCompleta, function(resp) {
         done();
+        _devolverPendente = null;
         if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
         Toast.sucesso('Devolução registrada.'); carregar();
-      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      }, function(err) { done(); _devolverPendente = null; Toast.erro('Erro: '+(err.message||err)); });
     });
   }
 
-  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
+  return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, _confirmarDevolucao:_confirmarDevolucao };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -19650,7 +19680,7 @@ var AcoesUI = (function() {
           '</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' +
             '<span style="font-size:10.5px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:4px;padding:1px 6px;color:var(--text2,#64748b);">'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</span>' +
-            (a.responsavel ? '<span style="font-size:10.5px;color:var(--text2,#64748b);">'+escaparHtml(a.responsavel.split('@')[0])+'</span>' : '') +
+            (a.responsavel && a.responsavel.indexOf('@')>=0 ? '<span style="font-size:10.5px;color:var(--text2,#64748b);">'+escaparHtml(a.responsavel.split('@')[0])+'</span>' : '') +
           '</div>' +
           (periodo ? '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-top:5px;display:flex;align-items:center;gap:3px;"><span class="ms" style="font-size:13px;">calendar_today</span>'+escaparHtml(periodo)+'</div>' : '') +
           (a.publicoPrevisto ? '<div style="font-size:11px;color:var(--muted,#94a3b8);margin-top:3px;display:flex;align-items:center;gap:3px;"><span class="ms" style="font-size:13px;">groups</span>'+a.publicoPrevisto+' pessoas</div>' : '') +
@@ -19667,7 +19697,7 @@ var AcoesUI = (function() {
         '<td><strong>'+escaparHtml(a.nome||'')+'</strong></td>' +
         '<td>'+escaparHtml(_TIPO_LABEL[a.tipo]||a.tipo||'')+'</td>' +
         '<td>'+_badgeStatus(a.status)+'</td>' +
-        '<td>'+escaparHtml((a.responsavel||'').split('@')[0])+'</td>' +
+        '<td>'+escaparHtml((a.responsavel&&a.responsavel.indexOf('@')>=0)?a.responsavel.split('@')[0]:'—')+'</td>' +
         '<td>'+(a.dataInicio ? escaparHtml(fmtDataPtBR(a.dataInicio)) + (a.dataFim?' → '+escaparHtml(fmtDataPtBR(a.dataFim)):'') : '—')+'</td>' +
         '<td>'+(a.publicoPrevisto||0)+'</td>' +
         '<td class="acoes-col">' +
@@ -19712,15 +19742,16 @@ var AcoesUI = (function() {
     document.getElementById('acao-descricao').value    = (acao && acao.descricao)    || '';
     document.getElementById('acao-descricao-pub').value= (acao && acao.descricaoPublica) || '';
 
-    // Popular select de setores (do boot)
+    // Popular select de setores (do boot) — pré-seleciona setor do usuário em nova ação
     var selSetor = document.getElementById('acao-setor');
     if (selSetor && window._boot && window._boot.setores) {
       var setores = window._boot.setores || [];
+      var setorPadrao = acao ? (acao.setor || '') : ((_boot.usuarioSetor) || '');
       selSetor.innerHTML = '<option value="">Selecionar setor…</option>' +
         setores.map(function(s) {
           var id    = s.id || s;
           var label = s.nome || s.label || s;
-          return '<option value="'+escaparHtml(id)+'"'+(acao&&acao.setor===id?' selected':'')+'>'+escaparHtml(label)+'</option>';
+          return '<option value="'+escaparHtml(id)+'"'+(setorPadrao===id?' selected':'')+'>'+escaparHtml(label)+'</option>';
         }).join('');
     } else if (selSetor && acao && acao.setor) {
       selSetor.innerHTML = '<option value="'+escaparHtml(acao.setor)+'" selected>'+escaparHtml(acao.setor)+'</option>';

@@ -104,6 +104,7 @@ var BootService = (function () {
       orgConfig:          orgConfig,
       usuarioEmail:       email,
       usuarioPapel:       usuarioPapel,
+      usuarioSetor:       (acesso && acesso.registro && acesso.registro.setor) || '',
       permissoesModulos:  permissoesModulos,
       papeisAtribuiveis:  papeisAtribuiveis,
       featuresAtivas:     featuresAtivas,

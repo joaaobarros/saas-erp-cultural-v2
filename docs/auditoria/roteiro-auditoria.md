@@ -145,6 +145,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | FSM completo (Pendente→Confirmada→Habilitada→Em uso→Concluída) | ✅ | 2026-05-31 |
 | Config → Espaços, Itens, Horários, Mapa | ✅ | 2026-05-31 |
 | Seção "ITENS SOLICITADOS" no formulário (catálogo vazio) | ✅ (com ESP-09a) | 2026-05-31 |
+| Filtro data default = hoje (lista parecia vazia) | ✅ ESP-02 CORRIGIDO s16 @387 — inicia sem valor, todas as datas visíveis | 2026-06-01 |
 
 ### Módulo 09 — Infraestrutura / Aprovações
 | Item | Status | Sessão |
@@ -157,7 +158,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 |---|---|---|
 | View carrega, métricas, lista de protocolos | ✅ | 2026-05-31 |
 | Formulário Nova Retirada (painel inline) | ✅ (com CHV-04 a CHV-08) | 2026-05-31 |
-| Devolução usa prompt() nativo | ⚠️ CHV-03 | 2026-05-31 |
+| Devolução — modal inline (condição + obs + confirmar) | ✅ CHV-03 CORRIGIDO s16 @387 | 2026-06-01 |
 
 ### Módulo 09 — Infraestrutura / Empréstimos
 | Item | Status | Sessão |
@@ -174,6 +175,8 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Modal Editar Ação | ✅ | 2026-05-31 |
 | Botão Editar (caminho direto) | ✅ ACO-05 CORRIGIDO — BtnGuard.liberar em fecharForm | 2026-06-01 |
 | Botão ✕ fecha painel | ✅ ACO-16 CORRIGIDO — stopPropagation + overlay guard | 2026-06-01 |
+| Card/lista exibe "nm" quando responsável sem @ | ✅ ACO-02 CORRIGIDO s16 @387 — guard `indexOf('@')>=0` | 2026-06-01 |
+| Setor não auto-preenchido em Nova Ação | ✅ ACO-03 CORRIGIDO s16 @387 — `_boot.usuarioSetor` via bootstrap | 2026-06-01 |
 
 ### Módulo 13/14 — Painel da Ação (abas internas)
 | Item | Status | Sessão |
@@ -899,8 +902,8 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 ### Problemas confirmados ⚠️
 
 - **ACO-01**: Kanban sem drag and drop — movimentação de cards entre colunas não funciona; transição de status só é possível pelo detalhe da ação
-- **ACO-02**: Campo "Responsável" exibe "nm" — valor nulo não tratado exposto na UI; provavelmente email/nome não resolvido do usuário criador
-- **ACO-03**: Campo "Setor" vazio ("—") — não auto-preenchido nem obrigatório no cadastro
+- ~~**ACO-02**~~ ✅ CORRIGIDO s16 Fase 19 — card e lista agora só exibem `responsavel.split('@')[0]` quando o valor contém `@`; valores sem `@` (como "nm") não são renderizados. Deploy @387.
+- ~~**ACO-03**~~ ✅ CORRIGIDO s16 Fase 20 — `boot_service.gs` passa `usuarioSetor` no bootstrap; form Nova Ação pré-seleciona o setor do usuário logado via `_boot.usuarioSetor`. Deploy @387.
 - **ACO-04**: Sem histórico de atividades no detalhe — sem linha do tempo de edições, transições de status, tarefas concluídas, reservas feitas, contratos vinculados. Sem rastreabilidade do ciclo de vida da ação
 - ~~**ACO-05**~~ ✅ CORRIGIDO — `BtnGuard.liberar('painel-acao-editar-btn')` adicionado em `fecharForm()`
 - **ACO-06**: Sem possibilidade de retroceder na FSM — ação em "Em Execução" só pode Concluir ou Cancelar; sem botão para voltar a "Em Produção" em caso de erro ou imprevisto
@@ -2816,7 +2819,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 42 | ESTR-02 | Sistema | Layout de abas inconsistente entre módulos: Infraestrutura usa linha única (5 abas); RH/DP usa 3 linhas que quebram (11 abas) — sem padrão uniforme | 🟡 Média |
 | 43 | RH-01 | RH / Depto. Pessoal | MÉTRICAS tem toggle mas **não expande conteúdo** — seta muda de direção mas nenhum card de métrica aparece; container provavelmente vazio (ctrl_rh_metricas não popula o DOM) | 🔴 Alta |
 | 44 | ESP-01 | Infraestrutura — Diagrama | Coluna de nomes dos espaços (label lateral) **não é sticky** — ao rolar horizontalmente para horários mais tardios, a coluna some e o usuário perde a referência de qual linha é qual espaço | 🔴 Alta |
-| 45 | ESP-02 | Infraestrutura — Lista | Filtro de data padrão = hoje — lista aparece vazia mesmo com reservas cadastradas em outras datas; sem opção de "todas as datas" ou intervalo de datas. Cria falsa impressão de módulo vazio ao abrir | 🟡 Média |
+| ~~45~~ | ~~ESP-02~~ | ~~Infraestrutura — Lista~~ | ~~Filtro de data padrão = hoje~~ | ✅ CORRIGIDO s16 Fase 22 — filtro inicia vazio; lista mostra todas as datas quando campo vazio. Deploy @387. |
 | 46 | ESP-03 | Infraestrutura — Lista | Filtros inconsistentes entre modos: Diagrama tem filtro de espaço + campo de busca; Lista não tem filtro de espaço nem busca por nome — usuário não consegue filtrar por sala no modo Lista | 🟡 Média |
 | 47 | ESP-04 | Infraestrutura — Nova Reserva | Botão "Lote" posicionado na barra de ações (junto de Cancelar/Salvar) — deveria ficar próximo ao campo "Data", pois o lote é sobre repetição de datas; posição atual é confusa e esconde a funcionalidade | 🟡 Média |
 | 48 | ESP-05 | Infraestrutura — Nova Reserva | Formulário **não permite vínculo com Ação Cultural** — toda reserva fica solta, sem integração com métricas, relatórios, acompanhamento de tarefas e ações. Deveria ter campo opcional "Vincular a uma Ação" (select de ações existentes) ou permitir reserva solta como alternativa explícita | 🔴 Alta |
@@ -2837,7 +2840,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 62 | ESP-19 | Infraestrutura — Espaços | **Três conjuntos divergentes**: 36 espaços no Mapa, 17 no select de Nova Reserva, 9 no Diagrama — critério de exibição de cada visualização não está claro; espaços "Não reservável" aparecem no select (ESP-10), espaços externos ausentes do Diagrama (ESP-11) | 🔴 Alta |
 | 63 | ADM-01 | Administração | "Acessos Pendentes" exibe "Carregando solicitações..." sem concluir — possível bug de carregamento ou lentidão no backend | 🟡 Média |
 | 73 | APR-01 | Aprovações | Módulo carrega com 4 abas (Reservas de Espaço, Primeiros Acessos, Veículo, Permissões) mas **não indica qual aba tem itens pendentes** — quando há solicitações, o usuário precisa clicar em cada aba para descobrir onde estão. Comportamento esperado: badge de contador por aba (ex: "Primeiros Acessos ③") e destaque visual na aba com pendência | 🔴 Alta |
-| 75 | CHV-03 | Chaves — Devolver | "Devolver" usa `prompt()` nativo do browser para coletar observações — quebra identidade visual (URL do GAS exposta no título). Deve ser modal programado com campos: observações (textarea), condição da chave (bom estado / avariada / perdida), confirmação | 🔴 Alta |
+| ~~75~~ | ~~CHV-03~~ | ~~Chaves — Devolver~~ | ~~`prompt()` nativo~~ | ✅ CORRIGIDO s16 Fase 21 — substituído por modal inline com select Condição (bom estado/avariada/perdida) + textarea Observações + Confirmar/Cancelar. Deploy @387. |
 | 76 | CHV-04 | Chaves — Nova Retirada | Campo "Sala/Espaço" é texto livre — deve ser dropdown com apenas os espaços que possuem chaves cadastradas | 🔴 Alta |
 | 77 | CHV-05 | Chaves — Nova Retirada | Campo "Nome do Responsável" é texto livre — deve ser seleção de usuário do sistema com email puxado da base de usuários (autocomplete ou select) | 🔴 Alta |
 | 78 | CHV-06 | Chaves — Nova Retirada | Campo "Setor" é texto livre — deve ser dropdown com setores cadastrados | 🟡 Média |
@@ -3166,6 +3169,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 
 | Data | Módulos cobertos | Descobertas principais |
 |---|---|---|
+| 2026-06-01 | **CORREÇÕES s16 Fases 19–22** | ACO-02 (responsável sem @ não renderizado — guard `indexOf('@')>=0`). ACO-03 (`usuarioSetor` no bootstrap → setor pré-selecionado em Nova Ação). CHV-03 (devolução: `prompt()` → modal inline com select condição + textarea obs). ESP-02 (filtro data reservas: default hoje removido → lista mostra tudo quando campo vazio). APR-04 já estava corrigido desde s16 Fase 1. Deploy @387. |
 | 2026-06-01 | **CORREÇÕES s16 Fases 6–11** | AGN-01+ADM-10 (sync módulos/features — `_MODULOS_MENU` com chaves corretas + toggle com feedback visual imediato). ACV-01 (error handler em `carregar()`). CON-03+CON-04 (cascata Meta→Rubrica: `m.titulo` e `atividades[*].rubricas`). MAP-01 (merge preserva contornos `livre`, verifica sobreposição). MAP-02+MAP-03 (isolamento z-index + `cbVoltar` navega de volta para 'acoes'). SIS-14 (datas ISO→pt-BR em Reserva de Veículo via `fmtDataPtBR()`). Deploy @380. |
 | 2026-06-01 | **CORREÇÕES s16 Fases 12–17** | F12/FIN-17: `calcularCustoPessoal` — `descontoVT=Math.min(sal*0.06,vt)` (elimina vtLiq negativo quando VT=0) + remoção de `descontoPlano` (30% indevido). F13/ESC-04+ESC-05: `_renderPainelDimensoes(gov)` criada; `_carregarGovernanca` corrigida (campos corretos: `qual.pontos`, `qual.detalhes`, `g.motor`). F14/ACV-07+08+11: select ações com error handler; campo `nome` adicionado; `acaoId` opcional (frontend+backend). F15/SIS-14: `fmtDataPtBR()` aplicada em vigências contratos/fontes, datas RECE, histórico de versões, datas pesquisas Escuta. F16/CAR-15: `_podAprovar()` verifica `papel+setor` para gestor/admin. F17/FIN-14: botões Suspender/Encerrar no card do contrato + modal de confirmação com motivo obrigatório. Deploy @383. |
 | 2026-06-01 | **CORREÇÕES s16 Fases 1–5** | APR-04, SIS-09 parcial (BAL-17+ESC-06+ACO-05), ACO-16, CON-05 (ContratadosUI), CON-08+PES-01 (`lerJSON` alias em data_layer.gs — resolve ~40 chamadas sem definição). Deploy @369. |
