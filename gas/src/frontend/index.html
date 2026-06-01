@@ -19028,7 +19028,7 @@ var SolicitacoesUI = (function() {
     GAS.contratos.obter(contratoId, function(resp){
       var metas = resp&&resp.ok&&resp.data&&resp.data.metas||[];
       sel.innerHTML = '<option value="">— Selecione a Meta —</option>'
-        + metas.map(function(m){ return '<option value="'+m.id+'">'+escaparHtml(m.nome||m.id)+'</option>'; }).join('');
+        + metas.map(function(m,i){ return '<option value="'+m.id+'">'+escaparHtml(m.titulo||m.nome||('Meta '+(i+1)))+'</option>'; }).join('');
       sel.disabled = false;
       selR.innerHTML = '<option value="">— Selecione a Meta primeiro —</option>';
     }, function(){ sel.innerHTML = '<option value="">Erro ao carregar</option>'; });
@@ -19043,10 +19043,16 @@ var SolicitacoesUI = (function() {
     GAS.contratos.obter(contratoId, function(resp){
       var metas = resp&&resp.ok&&resp.data&&resp.data.metas||[];
       var meta = metas.filter(function(m){ return m.id===metaId; })[0];
-      var rubricas = meta&&meta.rubricas||[];
+      // Coletar rubricas de todas as atividades (estrutura normal) + rubricas diretas (backward compat)
+      var rubricas = [];
+      if (meta) {
+        (meta.atividades||[]).forEach(function(atv){ (atv.rubricas||[]).forEach(function(r){ rubricas.push(r); }); });
+        (meta.rubricas||[]).forEach(function(r){ rubricas.push(r); });
+      }
       selR.innerHTML = '<option value="">— Selecione a Rubrica —</option>'
         + rubricas.map(function(r){ return '<option value="'+r.id+'">'+escaparHtml(r.nome||r.id)+'</option>'; }).join('');
-      selR.disabled = false;
+      selR.disabled = !rubricas.length;
+      if (!rubricas.length) selR.innerHTML = '<option value="">Nenhuma rubrica cadastrada nesta meta</option>';
     }, function(){});
   }
 
