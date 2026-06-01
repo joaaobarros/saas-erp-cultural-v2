@@ -1558,18 +1558,50 @@ var MapaAcaoEditorUI = (function() {
     var el2 = (_mapa.elementos||[]).filter(function(e){return e.id===elId2;})[0];
     _mergeMode = false; _mergeSource = null;
     if (!el1 || !el2 || el1.id===el2.id) return;
+
+    // Bounding box de um elemento (coordenadas absolutas no canvas)
     function _bb2(el) {
-      var c=el.mapaConfig||{}, hw=c.forma==='circle'?(c.r||40):(c.w||80)/2, hh=c.forma==='circle'?(c.r||40):(c.h||60)/2;
-      return {x1:(c.cx||0)-hw,y1:(c.cy||0)-hh,x2:(c.cx||0)+hw,y2:(c.cy||0)+hh};
+      var c = el.mapaConfig||{};
+      var hw, hh;
+      if (c.forma === 'circle') { hw = hh = c.r||40; }
+      else if (c.forma === 'livre' && c.pts && c.pts.length) {
+        var bb = _bboxPts(c.pts); hw = bb.hw; hh = bb.hh;
+      } else { hw = (c.w||80)/2; hh = (c.h||60)/2; }
+      return {x1:(c.cx||0)-hw, y1:(c.cy||0)-hh, x2:(c.cx||0)+hw, y2:(c.cy||0)+hh};
     }
-    var b1=_bb2(el1),b2=_bb2(el2);
-    var minX=Math.min(b1.x1,b2.x1),minY=Math.min(b1.y1,b2.y1);
-    var maxX=Math.max(b1.x2,b2.x2),maxY=Math.max(b1.y2,b2.y2);
+
+    var b1=_bb2(el1), b2=_bb2(el2);
+    // Checar sobreposição ou contato: caixas devem se tocar
+    var overlap = b1.x2 >= b2.x1 && b2.x2 >= b1.x1 && b1.y2 >= b2.y1 && b2.y2 >= b1.y1;
+    if (!overlap) {
+      Toast.aviso('As formas não se tocam. Aproxime-as antes de mesclar.');
+      _setStatus('Mesclar cancelado — formas não se tocam.');
+      return;
+    }
+
+    var minX=Math.min(b1.x1,b2.x1), minY=Math.min(b1.y1,b2.y1);
+    var maxX=Math.max(b1.x2,b2.x2), maxY=Math.max(b1.y2,b2.y2);
     var merged = JSON.parse(JSON.stringify(el1));
     merged.id   = 'el_'+new Date().getTime()+'_mg';
     merged.nome = el1.nome+' + '+el2.nome;
-    merged.mapaConfig = {forma:'rect',cx:(minX+maxX)/2,cy:(minY+maxY)/2,
-                          w:maxX-minX,h:maxY-minY,r:0,rotacao:0};
+
+    // Para formas livre (polígono): converter pts para coords absolutas, concatenar e recentrar
+    var ambosLivre = (el1.mapaConfig||{}).forma==='livre' && (el2.mapaConfig||{}).forma==='livre';
+    if (ambosLivre) {
+      var cx1=(el1.mapaConfig.cx||0), cy1=(el1.mapaConfig.cy||0);
+      var cx2=(el2.mapaConfig.cx||0), cy2=(el2.mapaConfig.cy||0);
+      var abs1=(el1.mapaConfig.pts||[]).map(function(p){return {x:p.x+cx1,y:p.y+cy1};});
+      var abs2=(el2.mapaConfig.pts||[]).map(function(p){return {x:p.x+cx2,y:p.y+cy2};});
+      var allAbs = abs1.concat(abs2);
+      var newCx = (minX+maxX)/2, newCy = (minY+maxY)/2;
+      var relPts = allAbs.map(function(p){return {x:parseFloat((p.x-newCx).toFixed(1)),y:parseFloat((p.y-newCy).toFixed(1))};});
+      merged.mapaConfig = {forma:'livre', cx:newCx, cy:newCy, pts:relPts, rotacao:0};
+    } else {
+      // Para rect/circle ou formas mistas: usar bounding box como retângulo
+      merged.mapaConfig = {forma:'rect', cx:(minX+maxX)/2, cy:(minY+maxY)/2,
+                            w:maxX-minX, h:maxY-minY, r:0, rotacao:0};
+    }
+
     _mapa.elementos = (_mapa.elementos||[]).filter(function(e){return e.id!==el1.id&&e.id!==el2.id;});
     _mapa.elementos.push(merged);
     _selecionarEl(merged.id);
