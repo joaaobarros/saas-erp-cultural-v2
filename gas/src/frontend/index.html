@@ -4614,7 +4614,7 @@ select.form-control { cursor: pointer; }
           <!-- MODAL: Manutenção de Espaço -->
           <div id="modal-manutencao-espaco" class="modal-overlay oculto"
                onclick="if(event.target===this)ReservasUI._fecharModalManutencao()">
-            <div class="modal-box" style="max-width:440px;background:var(--surface);">
+            <div class="modal-box" style="max-width:480px;background:var(--surface);">
               <div class="modal-header">
                 <h3 style="display:flex;align-items:center;gap:8px;">
                   <span class="ms" style="color:#d97706;">build</span>
@@ -4622,23 +4622,39 @@ select.form-control { cursor: pointer; }
                 </h3>
                 <button class="modal-close" onclick="ReservasUI._fecharModalManutencao()" data-bg-skip="1">✕</button>
               </div>
-              <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
-                <div class="form-group" style="margin:0;">
-                  <label class="form-label">Espaço</label>
-                  <select id="manut-espaco-select" class="form-input"
-                          onchange="ReservasUI._atualizarBadgeManutencao()">
-                    <option value="">Selecione…</option>
-                  </select>
+              <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:20px;">
+
+                <!-- Seção: espaços em manutenção agora -->
+                <div id="manut-em-manutencao-secao" style="display:none;">
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#d97706;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                    <span class="ms" style="font-size:14px;">build</span>Em Manutenção Agora
+                  </div>
+                  <div id="manut-lista-em-manut" style="display:flex;flex-direction:column;gap:6px;"></div>
                 </div>
-                <div id="manut-status-badge" style="min-height:24px;"></div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
-                  <button class="btn btn-ghost" onclick="ReservasUI._fecharModalManutencao()" data-bg-skip="1">Cancelar</button>
-                  <button class="btn btn-primario" id="btn-manut-confirmar"
-                          onclick="ReservasUI._confirmarManutencao()">
-                    <span class="ms ms-sm">build</span>
-                    <span id="btn-manut-label">Enviar para Manutenção</span>
-                  </button>
+
+                <!-- Divisor (só aparece se houver espaços em manutenção) -->
+                <div id="manut-divisor" style="display:none;border-top:1px solid var(--border);"></div>
+
+                <!-- Seção: enviar para manutenção -->
+                <div>
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">
+                    Enviar para Manutenção
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label class="form-label">Espaço disponível</label>
+                    <select id="manut-espaco-select" class="form-input">
+                      <option value="">Selecione…</option>
+                    </select>
+                  </div>
+                  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                    <button class="btn btn-ghost" onclick="ReservasUI._fecharModalManutencao()" data-bg-skip="1">Cancelar</button>
+                    <button class="btn btn-primario" id="btn-manut-confirmar"
+                            onclick="ReservasUI._confirmarManutencao()">
+                      <span class="ms ms-sm">build</span> Enviar para Manutenção
+                    </button>
+                  </div>
                 </div>
+
               </div>
             </div>
           </div><!-- /modal-manutencao-espaco -->
@@ -16857,23 +16873,61 @@ var ReservasUI = (function() {
   // ── Manutenção de Espaço ─────────────────────────────
   var _espacosManutencao = [];
 
+  function _renderModalManutencao() {
+    var emManut  = _espacosManutencao.filter(function(e){ return e.emManutencao; });
+    var disponiveis = _espacosManutencao.filter(function(e){ return !e.emManutencao && e.ativo !== false; });
+
+    // Seção "Em manutenção agora"
+    var secao  = document.getElementById('manut-em-manutencao-secao');
+    var lista  = document.getElementById('manut-lista-em-manut');
+    var divisor = document.getElementById('manut-divisor');
+    if (secao && lista) {
+      if (emManut.length) {
+        lista.innerHTML = emManut.map(function(e) {
+          var btnId = 'btn-manut-lib-' + e.id;
+          return '<div style="display:flex;align-items:center;justify-content:space-between;' +
+                 'padding:8px 12px;background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span class="ms" style="color:#d97706;font-size:16px;">build</span>' +
+              '<span style="font-size:14px;font-weight:600;color:#92400e;">' + escaparHtml(e.nome) + '</span>' +
+            '</div>' +
+            '<button id="' + btnId + '" class="btn btn-sm" ' +
+              'style="background:#16a34a;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;" ' +
+              'onclick="ReservasUI._liberarEspacoDireto(' + JSON.stringify(e.id).replace(/"/g,"'") + ')">' +
+              '<span class="ms ms-sm">check_circle</span> Liberar' +
+            '</button>' +
+          '</div>';
+        }).join('');
+        secao.style.display = '';
+        if (divisor) divisor.style.display = '';
+      } else {
+        secao.style.display = 'none';
+        if (divisor) divisor.style.display = 'none';
+      }
+    }
+
+    // Select: apenas espaços disponíveis (não em manutenção)
+    var sel = document.getElementById('manut-espaco-select');
+    if (sel) {
+      if (disponiveis.length) {
+        sel.innerHTML = '<option value="">Selecione…</option>' +
+          disponiveis.map(function(e) {
+            return '<option value="' + e.id + '">' + escaparHtml(e.nome) + '</option>';
+          }).join('');
+        sel.disabled = false;
+      } else {
+        sel.innerHTML = '<option value="">Nenhum espaço disponível</option>';
+        sel.disabled = true;
+      }
+    }
+  }
+
   function abrirModalManutencao() {
     var modal = document.getElementById('modal-manutencao-espaco');
     if (!modal) return;
     GAS.admin.listarEspacos(function(r) {
       _espacosManutencao = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      var sel = document.getElementById('manut-espaco-select');
-      if (sel) {
-        sel.innerHTML = '<option value="">Selecione…</option>' +
-          _espacosManutencao.map(function(e) {
-            return '<option value="' + escaparHtml(e.id) + '">'
-              + escaparHtml(e.nome) + (e.emManutencao ? ' [Em manutenção]' : '') + '</option>';
-          }).join('');
-      }
-      var badge = document.getElementById('manut-status-badge');
-      if (badge) badge.innerHTML = '';
-      var lbl = document.getElementById('btn-manut-label');
-      if (lbl) lbl.textContent = 'Enviar para Manutenção';
+      _renderModalManutencao();
       modal.classList.remove('oculto');
     }, function() { Toast.erro('Erro ao carregar espaços.'); });
   }
@@ -16883,22 +16937,22 @@ var ReservasUI = (function() {
     if (modal) modal.classList.add('oculto');
   }
 
-  function _atualizarBadgeManutencao() {
-    var sel = document.getElementById('manut-espaco-select');
-    var id  = sel ? sel.value : '';
-    var badge = document.getElementById('manut-status-badge');
-    var lbl   = document.getElementById('btn-manut-label');
-    if (!id) {
-      if (badge) badge.innerHTML = '';
-      if (lbl)   lbl.textContent = 'Enviar para Manutenção';
-      return;
-    }
-    var esp = _espacosManutencao.filter(function(e){ return e.id === id; })[0];
-    var emManut = esp && esp.emManutencao;
-    if (badge) badge.innerHTML = emManut
-      ? '<span class="badge badge-warning">Em Manutenção</span>'
-      : '<span class="badge badge-success">Disponível</span>';
-    if (lbl) lbl.textContent = emManut ? 'Liberar Espaço' : 'Enviar para Manutenção';
+  function _liberarEspacoDireto(id) {
+    var btnId = 'btn-manut-lib-' + id;
+    BtnGuard.wrap(btnId, 'Liberando…', function(done) {
+      GAS.admin.alternarManutencao(id, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        Toast.sucesso('Espaço liberado da manutenção.');
+        // Atualiza lista local e re-renderiza sem fechar o modal
+        _espacosManutencao = _espacosManutencao.map(function(e) {
+          return e.id === id ? Object.assign({}, e, { emManutencao: false }) : e;
+        });
+        _renderModalManutencao();
+        carregar();
+        if (typeof MapaUI !== 'undefined' && MapaUI.carregar) MapaUI.carregar();
+      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+    });
   }
 
   function _confirmarManutencao() {
@@ -16909,9 +16963,12 @@ var ReservasUI = (function() {
       GAS.admin.alternarManutencao(id, function(resp) {
         done();
         if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
-        var novoStatus = resp.data && resp.data.emManutencao;
-        Toast.sucesso(novoStatus ? 'Espaço enviado para manutenção.' : 'Espaço liberado da manutenção.');
-        _fecharModalManutencao();
+        Toast.sucesso('Espaço enviado para manutenção.');
+        // Atualiza lista local e re-renderiza sem fechar o modal
+        _espacosManutencao = _espacosManutencao.map(function(e) {
+          return e.id === id ? Object.assign({}, e, { emManutencao: true }) : e;
+        });
+        _renderModalManutencao();
         carregar();
         if (typeof MapaUI !== 'undefined' && MapaUI.carregar) MapaUI.carregar();
       }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
@@ -16976,10 +17033,10 @@ var ReservasUI = (function() {
     _removerItemChip:              _removerItemChip,
     _carregarDisponibilidadeItens: _carregarDisponibilidadeItens,
     // Manutenção
-    abrirModalManutencao:   abrirModalManutencao,
-    _fecharModalManutencao: _fecharModalManutencao,
-    _atualizarBadgeManutencao: _atualizarBadgeManutencao,
-    _confirmarManutencao:   _confirmarManutencao,
+    abrirModalManutencao:    abrirModalManutencao,
+    _fecharModalManutencao:  _fecharModalManutencao,
+    _confirmarManutencao:    _confirmarManutencao,
+    _liberarEspacoDireto:    _liberarEspacoDireto,
     // Pré-evento
     _atualizarTempoAtividade: _atualizarTempoAtividade,
     // Pós-evento
