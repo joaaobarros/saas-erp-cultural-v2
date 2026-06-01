@@ -309,7 +309,8 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Modal "Editar Pessoal" — campos mapeados | ✅ confirmado via screenshot | 2026-05-31 s10 |
 | FIN-01 (Setor não persiste) | ✅ CORRIGIDO commit 0e9317f — mas ver FIN-19: correção no nível errado | — |
 | Setor na Rubrica (nível correto) + consolidação dupla | ⚠️ FIN-19 — decisão arquitetural s13 | 2026-05-31 s13 |
-| Flag "aceita Voucher Uber" por rubrica | ⚠️ FIN-18 — decisão arquitetural s13 | 2026-05-31 s13 |
+| Flags de operação configuráveis por rubrica (padrão geral) | ⚠️ FIN-20 — decisão arquitetural s13 | 2026-05-31 s13 |
+| Flag específica `voucher_uber` por rubrica | ⚠️ FIN-18 — instância de FIN-20 | 2026-05-31 s13 |
 | FIN-02 (colapso pós-save incorreto) | ✅ CORRIGIDO commit 0e9317f | — |
 | FIN-04 (tipo Serviço ausente) | ✅ CORRIGIDO commit 0e9317f | — |
 | FIN-05 (drag-and-drop de metas) | ✅ CORRIGIDO commit 0e9317f | — |
@@ -2868,7 +2869,8 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 254 | CAR-12 | Reserva de Veículo — Motorista | Sem campo de motorista no modelo de dados e no formulário — quem conduz o veículo não é registrado. Governança da frota incompleta: não é possível rastrear o condutor de cada viagem | 🔴 Alta |
 | 255 | CAR-13 | Reserva de Veículo — Voucher Uber | Sistema não suporta solicitação de voucher Uber — fluxo necessário: vínculo à rubrica de transporte do setor, aprovação do gestor responsável e/ou gestor financeiro, retorno com link do voucher por email e no sistema. Confirmado pelo usuário como funcionalidade esperada | 🔴 Alta |
 | 256 | SIS-14 | Sistema Global — Datas | **Datas em formato ISO (AAAA-MM-DD) em todo o sistema** em vez de padrão pt-BR (DD/MM/AAAA) — confirmado pelo usuário: todas as datas devem seguir pt-BR. Identificado em: cards e modal de Reserva de Veículo (2026-05-29). Auditoria sistêmica necessária em todos os módulos | 🔴 Alta |
-| 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** No formulário de criação/edição de rubrica, deve existir um toggle "Esta rubrica aceita solicitações de Voucher Uber". O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com essa flag ativa. Usar hardcode de rubrica por nome ou ID cria fragilidade de manutenção e impede customização por contrato/org | 🔴 Alta |
+| 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** Instância específica do padrão geral FIN-20. O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com a flag `voucher_uber` ativa | 🔴 Alta |
+| 259 | FIN-20 | Financeiro — Rubricas / Flags de Operação | **Sistema de flags de operação configuráveis por rubrica — padrão arquitetural geral.** Flags definem quais tipos de operação podem ser solicitadas contra uma rubrica específica. Devem ser criadas e gerenciadas dinamicamente (Admin → Config Financeiro ou similar) — não hardcoded. Cada rubrica pode ter zero ou mais flags. Ao iniciar qualquer solicitação no sistema, o seletor de rubrica filtra automaticamente pelas rubricas do setor do solicitante que possuem a flag correspondente ativa. Casos de uso confirmados: (1) `voucher_uber` — Voucher Uber (CAR-13 / FIN-18); (2) `contratacao` — Contratações; (3) `compra_direta` — Compras; (4) `pagamento` — Pagamentos avulsos. A lista de flags é aberta — novos tipos de operação criados no futuro não exigem alteração de código, apenas criação de nova flag e atribuição às rubricas elegíveis | 🔴 Alta |
 | 258 | FIN-19 | Financeiro — Rubricas / Modelo de Dados | **Campo Setor deve migrar da Memória de Cálculo para o nível da Rubrica.** Uma mesma rubrica dentro de uma mesma meta pode ser registrada mais de uma vez, cada entrada vinculada a um setor diferente. Exemplo: Rubrica "Transporte" na Meta A → R$5.000 Setor Ação Cultural + R$3.000 Setor Comunicação. O sistema deve consolidar duplamente: (a) **total global da rubrica** (R$8.000, sem decomposição — para comparação com o orçamento do contrato); (b) **total por setor** (R$5.000 Ação Cultural / R$3.000 Comunicação — para gestão interna de custo por setor). O campo Setor na Memória de Cálculo (FIN-01, corrigido) trata de um nível errado — a granularidade correta é rubrica × setor, não item-de-memória × setor | 🔴 Alta |
 | 153 | ADM-02 | Admin — Permissões | PERMISSÕES POR MÓDULO no modal de edição de usuário cobre apenas VER/EDITAR/EXCLUIR por módulo — sem granularidade por funcionalidade, setor ou recurso. V1 era mais completo. Confirmado pelo usuário | 🔴 Alta |
 | 154 | ADM-03 | Admin — Usuários | Campo SETOR no modal "Editar usuário" não carregava inicialmente (dropdown vazio) — mesmo padrão sistêmico de campos não integrados com a base de setores (CHV-06, EMP-03, TAR-02, ACO-03) | 🟡 Média |
@@ -3037,7 +3039,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ## HANDOFF — SESSÃO 13 (2026-05-31) → SESSÃO 14
 
-### Estado atual: 258 problemas registrados
+### Estado atual: 259 problemas registrados
 
 ### O que foi feito nesta sessão (s13)
 
@@ -3061,7 +3063,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 5. **SIS-14 (sistêmico)** — todas as datas do sistema devem exibir padrão pt-BR (DD/MM/AAAA), não ISO (AAAA-MM-DD). Confirmado pelo usuário. Auditoria sistêmica necessária em todos os módulos
 
-**Novos problemas s13:** CAR-02 a CAR-13 (12), SIS-14 (1), FIN-18 (1), FIN-19 (1) = **15 novos → total 258**
+**Novos problemas s13:** CAR-02 a CAR-13 (12), SIS-14 (1), FIN-18 (1), FIN-19 (1), FIN-20 (1) = **16 novos → total 259**
 
 ### DECISÕES ARQUITETURAIS ACUMULADAS (manter neste handoff)
 
@@ -3102,4 +3104,4 @@ O formulário não tem campo de motorista. Perguntar quem conduz o veículo e qu
 9. **APR-05** (aba Veículo "Carregando...") — investigar após resposta sobre motorista/frota
 10. Perguntas abertas mod-34: motorista, número de veículos, self-approval (admin aprovando própria reserva)
 11. **FIN-19** — Setor sai da Memória de Cálculo e vai para nível de Rubrica; consolidação dupla (global + por setor); FIN-01 corrigido no nível errado
-12. **FIN-18** — flag "aceita Voucher Uber" configurável por rubrica; CAR-13 depende desse campo
+12. **FIN-20** — sistema de flags de operação configuráveis por rubrica (padrão geral): flags criadas dinamicamente no Admin, sem hardcode; casos confirmados: `voucher_uber`, `contratacao`, `compra_direta`, `pagamento`; FIN-18 é instância específica deste padrão
