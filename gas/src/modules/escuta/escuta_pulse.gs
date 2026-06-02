@@ -20,10 +20,12 @@ var EscutaPulseEngine = (function() {
 
   // ─── Sistema de turnos ──────────────────────────────────────────────────────
 
+  // Turnos baseados nos turnos institucionais configurados no Admin
+  // (Manhã 08:00–12:00 · Tarde 12:01–17:00 · Noite 17:01–21:30)
   var TURNOS = [
-    { nome: 'manha', inicio: 7,  fim: 14 },
-    { nome: 'tarde', inicio: 14, fim: 18 },
-    { nome: 'noite', inicio: 18, fim: 23 }
+    { nome: 'manha', inicio: 8,    fim: 12   },
+    { nome: 'tarde', inicio: 12,   fim: 17   },
+    { nome: 'noite', inicio: 17,   fim: 21.5 }
   ];
 
   // ─── Configurações padrão ───────────────────────────────────────────────────
@@ -61,7 +63,7 @@ var EscutaPulseEngine = (function() {
       tipo: 'escala', tipoTempo: 'final',       peso: 1.0, ativa: true },
     // ABSORÇÃO (UWES)
     { id: 'AB01', dimensao: 'absorcao', texto: 'Você conseguiu se concentrar bem nas tarefas hoje?',
-      tipo: 'escala', tipoTempo: 'acumulativa', peso: 1.0, ativa: true },
+      tipo: 'escala', tipoTempo: 'final',       peso: 1.0, ativa: true },
     { id: 'AB02', dimensao: 'absorcao', texto: 'O tempo passou rápido enquanto você trabalhava?',
       tipo: 'emoji',  tipoTempo: 'acumulativa', peso: 0.9, ativa: true },
     { id: 'AB03', dimensao: 'absorcao', texto: 'Você ficou tão envolvido(a) no trabalho que perdeu a noção do tempo?',
@@ -104,6 +106,21 @@ var EscutaPulseEngine = (function() {
   ];
 
   var DIMENSOES_INVERTIDAS = ['demanda'];
+
+  // ─── Config da organização ──────────────────────────────────────────────────
+
+  function _lerConfigPulse() {
+    try {
+      var cfg = getOrgConfig();
+      var ec  = (cfg && cfg.escutaConfig) ? cfg.escutaConfig : {};
+      return {
+        limiteDia:     (ec.limiteDia     > 0) ? ec.limiteDia     : DEFAULTS.LIMITE_DIA,
+        antiSpamHoras: (ec.antiSpamHoras > 0) ? ec.antiSpamHoras : DEFAULTS.ANTI_SPAM_HORAS
+      };
+    } catch(e) {
+      return { limiteDia: DEFAULTS.LIMITE_DIA, antiSpamHoras: DEFAULTS.ANTI_SPAM_HORAS };
+    }
+  }
 
   // ─── Sistema temporal ───────────────────────────────────────────────────────
 
@@ -200,6 +217,8 @@ var EscutaPulseEngine = (function() {
       var periodo = _periodoAtual();
       var agora   = new Date();
 
+      var cfgPulse = _lerConfigPulse();
+
       var todasRespostas  = EscutaRepository.listarPulseRespostas(orgId, periodo);
       var respostasColab  = todasRespostas.filter(function(r) {
         return r.colaboradorId === colaboradorId;
@@ -208,18 +227,18 @@ var EscutaPulseEngine = (function() {
         return (r.criadoEm || '').startsWith(hoje);
       });
 
-      // Limite diário
-      if (respostasHoje.length >= DEFAULTS.LIMITE_DIA) {
+      // Limite diário (usa config da org)
+      if (respostasHoje.length >= cfgPulse.limiteDia) {
         return { ok: true, pergunta: null, motivo: 'limite_dia' };
       }
 
-      // Anti-spam
+      // Anti-spam (usa config da org)
       if (respostasHoje.length > 0) {
         var ultima = respostasHoje.slice().sort(function(a, b) {
           return new Date(b.criadoEm) - new Date(a.criadoEm);
         })[0];
         var diffH = (agora - new Date(ultima.criadoEm)) / 3600000;
-        if (diffH < DEFAULTS.ANTI_SPAM_HORAS) {
+        if (diffH < cfgPulse.antiSpamHoras) {
           return { ok: true, pergunta: null, motivo: 'anti_spam' };
         }
       }
@@ -297,7 +316,9 @@ var EscutaPulseEngine = (function() {
 
     var registro = {
       orgId:         orgId,
-      colaboradorId: anonima ? null : colaboradorId,
+      // colaboradorId sempre armazenado para anti-spam e monitoramento operacional;
+      // o flag anonima controla apenas a exibição nos relatórios de gestão
+      colaboradorId: colaboradorId,
       perguntaId:    dados.perguntaId,
       dimensao:      pergunta.dimensao,
       resposta:      Number(dados.resposta),

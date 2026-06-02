@@ -545,21 +545,21 @@ function ctrl_escuta_pulse_monitoramento(params) {
       return p.impressoes > 0 && p.respostas === 0;
     });
 
-    // Colaboradores sem atividade (baseado em respostas não-anônimas do período)
+    // Pulse é sempre anônimo — contamos participantes por colaboradorId mas
+    // nunca expomos nomes de quem não respondeu (apenas a contagem)
     var idsComAtividade = {};
     respostas.forEach(function(r) {
-      if (r.colaboradorId) idsComAtividade[r.colaboradorId] = r.criadoEm;
+      if (r.colaboradorId) idsComAtividade[r.colaboradorId] = true;
     });
 
-    var totalAtivos  = 0;
-    var semAtividade = [];
+    var totalAtivos        = 0;
+    var totalSemAtividade  = 0;
     try {
       var colaboradores = ColaboradorRepository.listar(ctx.orgId)
         .filter(function(c) { return c.status === 'ativo'; });
-      totalAtivos  = colaboradores.length;
-      semAtividade = colaboradores
-        .filter(function(c) { return !idsComAtividade[c.email]; })
-        .map(function(c) { return { nome: c.nome || c.email, email: c.email }; });
+      totalAtivos       = colaboradores.length;
+      totalSemAtividade = colaboradores
+        .filter(function(c) { return !idsComAtividade[c.email]; }).length;
     } catch(e) { /* não crítico */ }
 
     return {
@@ -571,9 +571,10 @@ function ctrl_escuta_pulse_monitoramento(params) {
       porPergunta:     porPergunta,
       semResposta:     semResposta,
       colaboradores: {
-        total:        totalAtivos,
-        comAtividade: Object.keys(idsComAtividade).length,
-        semAtividade: semAtividade
+        total:           totalAtivos,
+        comAtividade:    Object.keys(idsComAtividade).length,
+        semAtividade:    totalSemAtividade
+        // nomes omitidos intencionalmente: Pulse é anônimo por design
       }
     };
   }, 'ctrl_escuta_pulse_monitoramento');

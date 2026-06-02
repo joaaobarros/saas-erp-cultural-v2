@@ -269,6 +269,10 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 |---|---|---|
 | Pulse FAB — aparece e exibe pergunta | ✅ | sessão anterior |
 | Pulse FAB — submissão da resposta | ✅ **CORRIGIDO CONFIRMADO** | 2026-05-31 s11 |
+| Pulse FAB — anti-spam respeitado (não aparece a cada refresh) | ⚠️ PUL-03 CORRIGIDO s17 @426 | 2026-06-02 |
+| Pulse — pergunta temporal correta por turno | ⚠️ PUL-04 CORRIGIDO s17 @424 | 2026-06-02 |
+| Pulse — monitoramento: colaborador aparecia como "sem atividade" | ⚠️ PUL-05 CORRIGIDO s17 @424 | 2026-06-02 |
+| Pulse — monitoramento exibe nome de quem não respondeu | ⚠️ PUL-06 CORRIGIDO s17 @426 — só exibe contagem | 2026-06-02 |
 | View de gestão Escuta (estrutura) | ✅ | sessão anterior |
 | Aba Painel — carrega (loading infinito parcial) | ✅ ESC-04 CORRIGIDO s16 F13 | 2026-06-01 |
 | Aba Painel — EVOLUÇÃO DO CLIMA (estado vazio) | ✅ | 2026-05-31 s11 |
@@ -3046,6 +3050,11 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 155 | ADM-04 | Admin — Banco de Dados | Aba "Banco de Dados" visível para Admin mas inacessível — exibe erro "Permissão insuficiente: Apenas Admin ou Superadmin podem executar esta operação". Aba deveria ser oculta para não-SuperAdmin | 🟡 Média |
 | 156 | ~~PUL-01~~ | Pulse — FAB | ~~Pulse FAB não completa submissão~~ **CORRIGIDO** (commits e20ba60 + b6d8098): submissão funciona; design v1 restaurado (card branco, gradiente primary); pergunta e dimensão extraídas corretamente; feedback imediato ao clicar; tela de agradecimento com auto-close 2.5s; guard anti-duplo-clique. **Testar novamente para confirmar no browser.** | ~~🔴 Alta~~ |
 | 157 | ~~PUL-02~~ | Pulse — Linguagem | ~~Terminologia técnica exposta~~ **CORRIGIDO** (commit e20ba60): sem termos técnicos — "Uma pergunta rápida" / "Suas respostas são anônimas". | ~~🟡 Média~~ |
+| ~~276~~ | ~~PUL-03~~ | Pulse — Anti-spam | ~~Pulse aparece em todo refresh de página~~ **CORRIGIDO s17 @426**: `registrarRespostaPulse` salvava `colaboradorId: null` quando anônimo, tornando o filtro `r.colaboradorId === email` ineficaz. Fix: `colaboradorId` sempre persiste; `anonima` só controla exibição em relatórios. | ~~🔴 Alta~~ |
+| ~~277~~ | ~~PUL-04~~ | Pulse — Turnos temporais | ~~TURNOS hardcoded 7-14/14-18/18-23 não batem com turnos institucionais~~ **CORRIGIDO s17 @424**: `TURNOS` atualizados para 8-12/12-17/17-21.5 (Manhã/Tarde/Noite CCBJ). AB01 `tipoTempo` corrigido de `acumulativa` → `final` — "Você conseguiu se concentrar bem nas tarefas hoje?" só aparece em ≥75% do turno. Config `antiSpamHoras` e `limiteDia` agora lidos de `getOrgConfig().escutaConfig` via `_lerConfigPulse()`. | ~~🔴 Alta~~ |
+| ~~278~~ | ~~PUL-05~~ | Pulse — Monitoramento | ~~Colaborador com respostas aparecia como "sem atividade pulse no período"~~ **CORRIGIDO s17 @424**: mesma raiz do PUL-03 (colaboradorId null). Com o fix do PUL-03, `idsComAtividade` passa a encontrar as respostas corretamente. | ~~🔴 Alta~~ |
+| ~~279~~ | ~~PUL-06~~ | Pulse — Privacidade | ~~Monitoramento exibia lista de nomes de quem não respondeu ao Pulse~~ **CORRIGIDO s17 @426**: backend retorna apenas contagem numérica (`totalSemAtividade`); frontend exibe "N de X colaboradores sem atividade" sem nomes. Nota explicativa "Os nomes não são exibidos — o Pulse é anônimo por design" adicionada. | ~~🔴 Alta~~ |
+| 280 | ESC-17 | Escuta — Pesquisas formais | **Modal "Nova Pesquisa" sem indicação do significado do anonimato** CORRIGIDO s17 @426 — melhorado com painel explicativo; modal de preenchimento agora exibe badge "ANÔNIMA"/"IDENTIFICADA" + aviso colorido ao colaborador sobre o tipo de pesquisa. Pendente: pesquisas não-anônimas ainda permitem o respondente marcar como anônimo; definir se o campo `anonima` da pesquisa é mandatório (força todos) ou apenas default. | 🟡 Média |
 | 151 | ACO-27 | Ações — FSM / DS | Botões da seção "TRANSIÇÕES DE STATUS" (Concluir: verde, Cancelar: vermelho/pink) usam cores hardcoded ou classes próprias — divergem do padrão DS (`btn-primary` roxo / `btn-secondary` cinza). Cria terceiro padrão de estilo de botão de ação no sistema | 🟡 Média |
 | 152 | ACO-28 | Ações — FSM | Sem formulário de encerramento ao clicar "Concluir" — o equivalente de ESP-28 (pós-evento em Reservas) não existe para Ações: ao concluir uma ação, nenhum dado de resultado é coletado (público atingido, realizações, observações finais, comprovações). Toda ação concluída fica sem registro de execução real | 🔴 Alta |
 | 93 | SIS-03 | Sistema Global — DS | Dois classes de botão primário coexistindo: `btn-primario` (~40 usos, views antigas) e `btn-primary` (~25 usos, views novas). Visualmente idênticos; fragmentação de manutenção — um deve ser deprecado | 🟡 Média |
@@ -3209,6 +3218,46 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 ---
 
 *Este documento é a fonte única de verdade da auditoria. Atualizar a cada sessão de análise.*
+
+---
+
+## HANDOFF — SESSÃO 17 (2026-06-02) → SESSÃO 18
+
+### Estado atual: 280 problemas registrados · Deploy @426
+
+### O que foi corrigido nesta sessão (s17)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @424 | PUL-03, PUL-04, PUL-05 | **Anti-spam quebrado**: `registrarRespostaPulse` salvava `colaboradorId: null`, tornando todos os filtros de anti-spam/monitoramento cegos. Fix: `colaboradorId` sempre persistido; `anonima` flag controla apenas exibição. TURNOS atualizados para 8-12/12-17/17-21.5. AB01 `tipoTempo` `acumulativa`→`final`. `_lerConfigPulse()` lê `antiSpamHoras`/`limiteDia` do `config_org.json`. |
+| @426 | PUL-06, ESC-17 | Monitoramento não expõe mais nomes de quem não respondeu — apenas contagem. Modal "Nova Pesquisa" com painel explicativo de anonimato. View de resposta com badge ANÔNIMA/IDENTIFICADA + aviso colorido ao respondente. |
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **SIS-14** (datas ISO em módulos ainda não auditados)
+- **FIN-19** (Setor na Rubrica — nível errado)
+- **FIN-20** (flags de operação configuráveis por rubrica)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+- **ESC-17** (pesquisas não-anônimas ainda permitem override pelo respondente — decisão arquitetural pendente)
+
+### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
+
+> "O subtítulo de Contratações menciona 'Portal LGPD'. O que é esse portal — é uma área pública onde fornecedores podem solicitar exclusão dos seus dados do sistema, ou tem outro propósito?"
+
+### Sequência após essa pergunta
+
+1. **Contratações — Portal LGPD** ← PRÓXIMA
+2. **Agentes Culturais** — AGN-01 corrigido; testar se view carrega agora
+3. **Dashboard Executivo (mod-41)** — nunca testado
+4. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
+5. **Voluntários** — verificar se AGN-01 fix também resolve Voluntários
+
+### Instruções para o próximo Claude
+1. Ler roteiro completo antes de qualquer pergunta
+2. Verificar Rastreador de Testes Reais antes de pedir algo já testado
+3. Claude dirige — não esperar direção do usuário
+4. Uma pergunta por vez
+5. Deploy corrente: `@426`
 
 ---
 

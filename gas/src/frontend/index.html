@@ -24837,8 +24837,17 @@ var EscutaUI = (function() {
     GAS.escuta.catalogo(function(r) {
       if (!r || !r.ok) { el.innerHTML = '<p class="muted-text">Erro ao carregar questionário.</p>'; return; }
       var dims = r.data || [];
-      var html = '<h4 style="margin:0 0 2px;font-size:14px;">' + _esc(p.titulo) + '</h4>' +
-        '<p style="font-size:12px;color:var(--text2);margin:0 0 12px;">Prazo: ' + (p.dataFim||'—') + (p.anonima ? ' · Anônima' : '') + '</p>';
+      var _badgeAnonima = p.anonima !== false
+        ? '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.3px;">ANÔNIMA</span>'
+        : '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.3px;">IDENTIFICADA</span>';
+      var _avisoAnonima = p.anonima !== false
+        ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#166534;">Suas respostas <strong>não serão vinculadas</strong> ao seu nome. Os resultados são analisados de forma agregada.</div>'
+        : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#991b1b;">Esta pesquisa <strong>não é anônima</strong>. Suas respostas serão registradas com seu nome e identificação.</div>';
+      var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+        '<h4 style="margin:0;font-size:14px;">' + _esc(p.titulo) + '</h4>' + _badgeAnonima +
+        '</div>' +
+        '<p style="font-size:12px;color:var(--text2);margin:0 0 10px;">Prazo: ' + (p.dataFim||'—') + '</p>' +
+        _avisoAnonima;
       dims.forEach(function(d) {
         html += '<div style="margin-bottom:12px;padding:10px 12px;background:var(--surface1,var(--bg));border:1px solid var(--border);border-radius:8px;">' +
           '<p style="font-size:12px;font-weight:600;margin:0 0 4px;">' + _esc(d.label) + ' <span style="font-weight:400;color:var(--text2);">(' + d.grupo + ')</span></p>' +
@@ -25340,26 +25349,23 @@ var EscutaUI = (function() {
         '</div>';
       }
 
-      // Colaboradores sem atividade
+      // Colaboradores sem atividade — exibe apenas contagem (Pulse é anônimo)
       var colab = d.colaboradores;
       var colabHtml = '';
       if (colab && colab.total > 0) {
-        var semAct = colab.semAtividade || [];
-        var corColab = semAct.length === 0 ? 'var(--success)' : semAct.length < colab.total * 0.3 ? 'var(--warning)' : 'var(--danger)';
+        var nSem    = typeof colab.semAtividade === 'number' ? colab.semAtividade : (colab.semAtividade || []).length;
+        var corColab = nSem === 0 ? 'var(--success)' : nSem < colab.total * 0.3 ? 'var(--warning)' : 'var(--danger)';
         colabHtml = '<div style="border-top:1px solid var(--border);padding-top:12px;">' +
           '<p style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;">Colaboradores sem atividade pulse no período</p>' +
-          '<p style="font-size:12px;margin:0 0 8px;">' +
-            '<span style="font-weight:700;color:' + corColab + ';">' + semAct.length + '</span>' +
+          '<p style="font-size:12px;margin:0 0 4px;">' +
+            '<span style="font-weight:700;color:' + corColab + ';">' + nSem + '</span>' +
             ' de <strong>' + colab.total + '</strong> colaboradores ativos não tiveram respostas pulse' +
             (colab.comAtividade > 0 ? ' <span style="color:var(--text2);font-size:11px;">(' + colab.comAtividade + ' com atividade)</span>' : '') +
           '</p>' +
-          (semAct.length > 0
-            ? '<div style="max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px 8px;">' +
-                semAct.map(function(c) {
-                  return '<div style="font-size:11px;padding:2px 0;color:var(--text2);">' + _esc(c.nome || c.email) + '</div>';
-                }).join('') +
-              '</div>'
-            : '<p style="font-size:11px;color:var(--success);margin:0;">Todos os colaboradores tiveram atividade no período.</p>') +
+          '<p style="font-size:10px;color:var(--text2);margin:0;font-style:italic;">Os nomes não são exibidos — o Pulse é anônimo por design.</p>' +
+          (nSem === 0
+            ? '<p style="font-size:11px;color:var(--success);margin:4px 0 0;">Todos os colaboradores tiveram atividade no período.</p>'
+            : '') +
         '</div>';
       }
 
@@ -25629,9 +25635,15 @@ var EscutaUI = (function() {
         '<div class="form-group"><label class="form-label">Início</label><input type="date" id="esc-f-inicio" class="form-control" value="' + _esc(item?item.dataInicio:'') + '"></div>' +
         '<div class="form-group"><label class="form-label">Fim</label><input type="date" id="esc-f-fim" class="form-control" value="' + _esc(item?item.dataFim:'') + '"></div>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">' +
-        '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '>' +
-        '<label style="font-size:13px;">Respostas anônimas</label>' +
+      '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+          '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '>' +
+          '<label for="esc-f-anonima" style="font-size:13px;font-weight:600;cursor:pointer;">Pesquisa anônima</label>' +
+        '</div>' +
+        '<p style="font-size:11px;color:var(--text2);margin:0;">' +
+          '<strong>Marcado:</strong> as respostas não serão vinculadas ao nome do participante — apenas agregadas por dimensão. ' +
+          '<strong>Desmarcado:</strong> o participante será identificado nas respostas e poderá ver essa informação ao preencher.' +
+        '</p>' +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
         '<button class="btn btn-secundario" onclick="BtnGuard.liberar(\'btn-nova-pesquisa\');document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
