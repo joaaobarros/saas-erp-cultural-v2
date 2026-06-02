@@ -2170,9 +2170,11 @@ select.form-control { cursor: pointer; }
 
       <!-- VIEW: Aprovações (Solicitações de Reserva) -->
       <div id="view-aprovacoes" class="view">
-        <div class="page-header">
-          <div class="page-title">Aprovações</div>
-          <div class="page-subtitle">Reservas e acessos aguardando avaliação</div>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Aprovações</h1>
+            <p class="view-subtitle">Reservas e acessos aguardando avaliação</p>
+          </div>
         </div>
         <!-- Abas internas -->
         <div class="tab-bar" style="margin-bottom:16px;">
@@ -6074,7 +6076,7 @@ select.form-control { cursor: pointer; }
       <div id="view-taskhub" class="view">
         <div class="view-header">
           <div>
-            <h1 class="view-title">TaskHub — Meu Centro de Controle</h1>
+            <h1 class="view-title">Meu Centro de Controle</h1>
             <p class="view-subtitle">Todas as suas pendências em um só lugar, priorizadas por urgência</p>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="TaskHubUI.carregar()" data-bg-skip="1">
@@ -6219,8 +6221,9 @@ select.form-control { cursor: pointer; }
                   <span class="ms ms-sm">upload</span> Enviar Entrega
                 </button>
               </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="bl-ver-toggle-btn"
-                onclick="BalcaoUI.toggleFormVersao()" data-bg-skip="1">+ Enviar Nova Versão</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="bl-ver-toggle-btn"
+                onclick="BalcaoUI.toggleFormVersao()" data-bg-skip="1">
+                <span class="ms ms-sm">upload</span> Enviar Nova Versão</button>
             </div>
             <!-- Tab Comentários -->
             <div id="bl-mtab-comentarios" class="oculto">
@@ -6405,7 +6408,7 @@ select.form-control { cursor: pointer; }
         </div>
 
         <!-- Stats -->
-        <div class="stats-strip" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="stats-strip" id="acv-stats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
           <div class="stat-card"><span class="stat-valor" id="acv-total">–</span><span class="stat-label">Arquivos</span></div>
           <div class="stat-card" style="border-color:#dc2626;"><span class="stat-valor" id="acv-lgpd-pend" style="color:#dc2626;">–</span><span class="stat-label">Pendentes LGPD</span></div>
         </div>
@@ -6495,7 +6498,7 @@ select.form-control { cursor: pointer; }
                 <input type="text" id="acv-form-tags" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" placeholder="apresentação, 2025, estreia…">
               </div>
               <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                <button type="button" class="btn btn-secondary" onclick="AcervoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button type="button" class="btn btn-ghost" onclick="AcervoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="btn-salvar-acervo"
                         onclick="BtnGuard.wrap('btn-salvar-acervo','Salvando…',AcervoUI.salvar)">Salvar</button>
               </div>
@@ -13227,10 +13230,12 @@ var ReservasCarroUI = (function() {
     var el = document.getElementById('carro-metricas');
     if (!el) return;
     el.innerHTML =
-      '<div class="stat-item"><div class="stat-value">' + (m.pendentes||0)  + '</div><div class="stat-label">Pendentes</div></div>' +
-      '<div class="stat-item"><div class="stat-value">' + (m.aprovadas||0)  + '</div><div class="stat-label">Aprovadas</div></div>' +
-      '<div class="stat-item"><div class="stat-value">' + (m.concluidas||0) + '</div><div class="stat-label">Concluídas</div></div>' +
-      '<div class="stat-item"><div class="stat-value">' + (m.total||0)      + '</div><div class="stat-label">Total</div></div>';
+      '<div class="stat-card"><div class="stat-value">' + (m.pendentes||0)  + '</div><div class="stat-label">Pendentes</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (m.aprovadas||0)  + '</div><div class="stat-label">Aprovadas</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (m.concluidas||0) + '</div><div class="stat-label">Concluídas</div></div>' +
+      '<div class="stat-card"><div class="stat-value" style="color:var(--color-error);">' + (m.recusadas||0)  + '</div><div class="stat-label">Recusadas</div></div>' +
+      '<div class="stat-card"><div class="stat-value" style="color:var(--muted);">'       + (m.canceladas||0) + '</div><div class="stat-label">Canceladas</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (m.total||0)      + '</div><div class="stat-label">Total</div></div>';
     _atualizarBadge(m.pendentes || 0);
   }
 
@@ -13439,7 +13444,12 @@ var ReservasCarroUI = (function() {
     var selAcao = document.getElementById('carro-f-acao');
     if (selAcao) {
       selAcao.innerHTML = '<option value="">— Carregando ações… —</option>';
+      var _acaoLoaded = false;
+      var _acaoFallback = setTimeout(function() {
+        if (!_acaoLoaded) selAcao.innerHTML = '<option value="">— Nenhuma —</option>';
+      }, 6000);
       GAS.acoes.listar({}, function(r) {
+        _acaoLoaded = true; clearTimeout(_acaoFallback);
         var acoes = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
         var ativas = acoes.filter(function(a) {
           return a.status !== 'cancelada' && a.status !== 'arquivada';
@@ -13450,6 +13460,7 @@ var ReservasCarroUI = (function() {
               escaparHtml(a.nome || a.id) + '</option>';
           }).join('');
       }, function() {
+        _acaoLoaded = true; clearTimeout(_acaoFallback);
         selAcao.innerHTML = '<option value="">— Nenhuma —</option>';
       });
     }
@@ -21126,7 +21137,7 @@ var App = (function() {
     { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
     { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
     { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes' },
-    { id:'reservas-carro', label:'Reserva de Carro', icone:'directions_car', badge:'badgeReservasCarro', modulo:'ESPACOS' },
+    { id:'reservas-carro', label:'Reserva de Veículo', icone:'directions_car', badge:'badgeReservasCarro', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
     { id:'rh',            label:'RH / Depto. Pessoal', icone:'badge',              modulo:'PESSOAS' },
     { id:'pessoas',       label:'Pessoas',         icone:'group',                   modulo:'PESSOAS' },
@@ -24168,7 +24179,7 @@ var TaskHubUI = (function() {
   function _renderCaixa(dados) {
     var el    = document.getElementById('th-caixa-container');
     var itens = dados.itens || [];
-    if (!itens.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span style="font-size:48px;">🎉</span><br><p style="margin-top:12px;font-size:16px;font-weight:600;">Tudo em dia!</p><p style="font-size:13px;">Nenhuma pendência no momento.</p></div>'; return; }
+    if (!itens.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span class="ms" style="font-size:48px;display:block;">celebration</span><p style="margin-top:12px;font-size:16px;font-weight:600;">Tudo em dia!</p><p style="font-size:13px;">Nenhuma pendência no momento.</p></div>'; return; }
 
     var urgentes = itens.filter(function(i) { return i.vencido || i.urgencia==='critica'||i.urgencia==='alta'; });
     var hoje     = itens.filter(function(i) { return !i.vencido && i.grupoHoje; });
@@ -24176,10 +24187,10 @@ var TaskHubUI = (function() {
     var depois   = itens.filter(function(i) { return !i.vencido && !i.grupoHoje && !i.grupoSemana; });
 
     var html = '';
-    if (urgentes.length) html += '<div class="th-grupo-label">🔴 URGENTE / VENCIDO (' + urgentes.length + ')</div>' + urgentes.map(_renderItem).join('');
-    if (hoje.length)     html += '<div class="th-grupo-label">📅 HOJE (' + hoje.length + ')</div>'     + hoje.map(_renderItem).join('');
-    if (semana.length)   html += '<div class="th-grupo-label">📆 ESTA SEMANA (' + semana.length + ')</div>' + semana.map(_renderItem).join('');
-    if (depois.length)   html += '<div class="th-grupo-label">🗓️ MAIS TARDE (' + depois.length + ')</div>' + depois.map(_renderItem).join('');
+    if (urgentes.length) html += '<div class="th-grupo-label"><span class="ms ms-sm" style="vertical-align:-2px;color:var(--color-error);">error</span> URGENTE / VENCIDO (' + urgentes.length + ')</div>' + urgentes.map(_renderItem).join('');
+    if (hoje.length)     html += '<div class="th-grupo-label"><span class="ms ms-sm" style="vertical-align:-2px;">today</span> HOJE (' + hoje.length + ')</div>'     + hoje.map(_renderItem).join('');
+    if (semana.length)   html += '<div class="th-grupo-label"><span class="ms ms-sm" style="vertical-align:-2px;">calendar_view_week</span> ESTA SEMANA (' + semana.length + ')</div>' + semana.map(_renderItem).join('');
+    if (depois.length)   html += '<div class="th-grupo-label"><span class="ms ms-sm" style="vertical-align:-2px;">schedule</span> MAIS TARDE (' + depois.length + ')</div>' + depois.map(_renderItem).join('');
     el.innerHTML = html;
   }
 
@@ -24209,7 +24220,7 @@ var TaskHubUI = (function() {
     GAS.taskhub.meuTime({}, function(resp) {
       if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ou sem permissão.</p>'; return; }
       var pessoas = (resp.data && resp.data.pessoas) || [];
-      if (!pessoas.length) { el.innerHTML = '<p class="muted-text">Nenhuma pessoa com tarefas ativas.</p>'; return; }
+      if (!pessoas.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span class="ms" style="font-size:48px;display:block;">group</span><p style="margin-top:12px;font-size:16px;font-weight:600;">Sua equipe está em dia</p><p style="font-size:13px;">Nenhum membro do seu setor tem tarefas ativas no momento.</p></div>'; return; }
       el.innerHTML = '<table class="tabela-lista" style="width:100%;"><thead><tr><th>Pessoa</th><th>Tarefas</th><th>Demandas</th><th>Encaminhamentos</th><th>Atrasados</th></tr></thead><tbody>' +
         pessoas.map(function(p) {
           return '<tr><td>' + escaparHtml(p.email) + '</td><td>' + p.tarefas + '</td><td>' + p.demandas + '</td><td>' + p.encaminhamentos + '</td>' +
@@ -24225,18 +24236,19 @@ var TaskHubUI = (function() {
     GAS.taskhub.produtividade({ dias: parseInt(dias) }, function(resp) {
       if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro.</p>'; return; }
       var d = resp.data;
-      el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;">' +
-        _prodCard(d.concluidas,  'Concluídas') +
-        _prodCard(d.noPrazo,     'No Prazo') +
+      el.innerHTML = '<div class="stats-strip" id="th-prod-stats">' +
+        _prodCard(d.concluidas,        'Concluídas') +
+        _prodCard(d.noPrazo,           'No Prazo') +
         _prodCard(d.taxaNoPrazo + '%', 'Taxa On-Time') +
         _prodCard(d.mediaHoras + 'h',  'Tempo Médio') +
-        _prodCard(d.mediaDias + 'd',   'Dias Médios') +
+        _prodCard(d.mediaDias  + 'd',  'Dias Médios') +
       '</div>';
+      if (typeof MetricsToggle !== 'undefined') MetricsToggle.wrap(document.getElementById('th-prod-stats'));
     }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
   }
 
   function _prodCard(valor, label) {
-    return '<div class="th-prod-card"><div class="th-prod-valor">' + escaparHtml(String(valor)) + '</div><div class="th-prod-label">' + escaparHtml(label) + '</div></div>';
+    return '<div class="stat-card"><div class="stat-value">' + escaparHtml(String(valor)) + '</div><div class="stat-label">' + escaparHtml(label) + '</div></div>';
   }
 
   function _fmtData(d) {
@@ -24458,7 +24470,7 @@ var BalcaoUI = (function() {
     ['bl-titulo','bl-descricao','bl-executor','bl-setor','bl-acao-id','bl-ver-url','bl-ver-nota','bl-coment-input'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('bl-versoes-lista').innerHTML   = '';
+    document.getElementById('bl-versoes-lista').innerHTML   = '<p class="muted-text" style="font-size:12px;">Nenhuma versão enviada. Clique em "Enviar Nova Versão" para registrar a primeira entrega.</p>';
     document.getElementById('bl-coment-lista').innerHTML    = '';
     document.getElementById('bl-versao-form').style.display = 'none';
     document.getElementById('bl-ver-toggle-btn').style.display = 'block';

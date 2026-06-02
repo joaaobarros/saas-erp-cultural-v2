@@ -1772,7 +1772,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **~~APR-05~~** `CORRIGIDO s14` — ~~Aba Veículo exibe "Carregando..." sem resolver~~ — **carrega normalmente** em s14. Problema não reproduzível. Provavelmente era transiente (loading ainda em andamento quando o screenshot foi feito em s9).
 
-**APR-06** `🟡 Média` — **Cabeçalho com padrão antigo** — `page-header` + `div.page-title` + `div.page-subtitle` enquanto o padrão atual é `view-header` + `h1.view-title` + `p.view-subtitle`. Mesmo anti-padrão de SIS-03.
+~~**APR-06**~~ ✅ CORRIGIDO s17 Fase 43 — **Cabeçalho com padrão antigo** — `page-header` + `div.page-title` + `div.page-subtitle` enquanto o padrão atual é `view-header` + `h1.view-title` + `p.view-subtitle`. Mesmo anti-padrão de SIS-03.
 
 ### Rastreador de testes — Aprovações (atualizado sessão 9)
 | Item | Status | Sessão |
@@ -2219,17 +2219,17 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ### Problemas confirmados ⚠️
 
-**HUB-01** `🟡 Média` — Aba Produtividade sem MetricsToggle — único módulo com cards numéricos múltiplos fora do padrão obrigatório.
+~~**HUB-01**~~ ✅ CORRIGIDO s17 Fase 41 — Aba Produtividade sem MetricsToggle — único módulo com cards numéricos múltiplos fora do padrão obrigatório.
 
-**HUB-02** `🟡 Média` — Estado vazio do Meu Dia usa emoji 🎉 — violação do padrão DS. Usar Material Symbol.
+~~**HUB-02**~~ ✅ CORRIGIDO s17 Fase 41 — Estado vazio do Meu Dia usa emoji 🎉 — violação do padrão DS. Usar Material Symbol.
 
 **HUB-03** `🔴 Alta` — Meu Dia não agrega pendências — propósito declarado ("todas as suas pendências em um só lugar") não cumprido. Nenhuma das fontes planejadas está integrada.
 
-**HUB-04** `🟡 Média` — Aba Meu Time com estado vazio textual simples — sem ícone, sem explicação do propósito. Padrão: ícone + título + subtítulo orientador.
+~~**HUB-04**~~ ✅ CORRIGIDO s17 Fase 41 — Aba Meu Time com estado vazio textual simples — sem ícone, sem explicação do propósito. Padrão: ícone + título + subtítulo orientador.
 
 **HUB-05** `🔵 Baixa` — Cards de Produtividade com unidades embutidas no valor ("0h", "0d") — inconsistência com padrão do sistema.
 
-**HUB-06** `🟡 Média` — "TaskHub" exposto na UI — nome interno de desenvolvimento vaza. Rótulo público: "Meu Centro de Controle" (ou apenas "Meu Centro").
+~~**HUB-06**~~ ✅ CORRIGIDO s17 Fase 41 — "TaskHub" exposto na UI — nome interno de desenvolvimento vaza. Rótulo público: "Meu Centro de Controle" (ou apenas "Meu Centro").
 
 **HUB-07** `🔴 Alta` — Integração de fontes não implementada — TaskHubService agrega dados no backend mas as views não exibem os itens.
 
@@ -2237,7 +2237,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **HUB-09** `🔴 Alta` — Aba Meu Time subutilizada — deveria mostrar colaboradores do setor com suas tarefas agrupadas, status por pessoa e indicador de sobrecarga.
 
-**HUB-10** `🟡 Média` — Cards de Produtividade com formato divergente do stats-strip padrão (borda visível, sem toggle).
+~~**HUB-10**~~ ✅ CORRIGIDO s17 Fase 41 — Cards de Produtividade com formato divergente do stats-strip padrão (borda visível, sem toggle).
 
 **HUB-11** `🔴 Alta` — Modelo de dados heterogêneo necessário — cada item do Meu Dia precisa carregar: tipo de origem, ID da entidade, ação requerida, prazo, prioridade derivada. Clicar deve navegar diretamente à entidade no módulo de origem.
 
@@ -2367,9 +2367,9 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 
 **~~ACV-01~~** ~~`🔴 Alta`~~ — ~~Galeria em "Carregando..." permanente~~ **CORRIGIDO s16 Fase 7**: adicionado error handler explícito em `AcervoUI.carregar()` — falha de backend agora exibe mensagem de erro no DOM em vez de silêncio. Causa raiz (backend) pode persistir — testar.
 
-**ACV-02** `🟡 Média` — **Botão "Cancelar" no modal com cor rosa/pink** — instância de ESC-07/BAL-13 (terceira cor de botão não prevista no DS; deveria ser `btn-secondary` cinza).
+~~**ACV-02**~~ ✅ CORRIGIDO s17 Fase 43 — **Botão "Cancelar" no modal com cor rosa/pink** — instância de ESC-07/BAL-13 (terceira cor de botão não prevista no DS; deveria ser `btn-secondary` cinza).
 
-**ACV-03** `🟡 Média` — **Stats-strip sem MetricsToggle** — 2 cards presentes mas sem o componente obrigatório de toggle/colapso. Instância de HUB-01.
+~~**ACV-03**~~ ✅ CORRIGIDO s17 Fase 43 — **Stats-strip sem MetricsToggle** — 2 cards presentes mas sem o componente obrigatório de toggle/colapso. Instância de HUB-01.
 
 **ACV-04** `🟡 Média` — **Sem botão refresh nos filtros** — instância de ACO-15 (Ações tem o mesmo problema).
 
@@ -2918,9 +2918,9 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 140 | BAL-10 | Balcão — Modal Dados | Campo "Release" ausente — quando ação vinculada, o release vem automaticamente da ação (dados do evento para a Comunicação). Sem ação, campo editável manualmente | 🔴 Alta |
 | 141 | BAL-11 | Balcão — Modal Dados | Campo "Descrição" não diferenciado de "Release": **Descrição** = o que se pede/espera do setor de Comunicação (orientado à demanda); **Release** = informações sobre a ação/evento (orientado ao conteúdo). São campos distintos com propósitos diferentes — devem ser separados e rotulados claramente | 🔴 Alta |
 | ~~142~~ | ~~BAL-12~~ | Balcão — Modal Dados | ~~"⏱ SLA: 72h (3 dias) após submissão" com jargão técnico~~ **CORRIGIDO s16 F40**: label `bl-sla-label` exibe "Prazo estimado: X dia(s) após o envio" com lógica condicional (< 24h exibe horas, senão dias). Dashboard: "com SLA vencido" → "com prazo vencido". | ~~🟡 Média~~ |
-| 143 | BAL-13 | Balcão — Modal Versões | Botão "+ Enviar Nova Versão" usa cor rosa/pink — diferente do padrão `btn-primary` (roxo) e `btn-secondary` (cinza) do sistema. Terceira cor de botão não prevista no DS | 🟡 Média |
+| 143 | BAL-13 | Balcão — Modal Versões | Botão "+ Enviar Nova Versão" usa cor rosa/pink — diferente do padrão `btn-primary` (roxo) e `btn-secondary` (cinza) do sistema. Terceira cor de botão não prevista no DS | ~~🟡 Média~~ |
 | ~~144~~ | ~~BAL-14~~ | ~~Balcão — Modal Versões~~ | ~~Botão "🚀 Enviar Entrega" tem emoji~~ **CORRIGIDO s16 F39**: emoji `📤` substituído por `<span class="ms ms-sm">upload</span>`. | ~~🟡 Baixa~~ |
-| 145 | BAL-15 | Balcão — Modal Versões | Aba "Versões" exibe "URL da Entrega" + "Nota / Observação" + "Enviar Entrega" — **estrutura correta e positiva** ✅ para rastreamento de entregas. Problema: a aba aparece vazia antes de clicar em "+ Enviar Nova Versão" sem instrução ao usuário — estado vazio deveria explicar o que fazer ("Nenhuma versão entregue ainda. Clique em '+ Enviar Nova Versão' para registrar a primeira entrega.") | 🟡 Baixa |
+| 145 | BAL-15 | Balcão — Modal Versões | Aba "Versões" exibe "URL da Entrega" + "Nota / Observação" + "Enviar Entrega" — **estrutura correta e positiva** ✅ para rastreamento de entregas. Problema: a aba aparece vazia antes de clicar em "+ Enviar Nova Versão" sem instrução ao usuário — estado vazio deveria explicar o que fazer ("Nenhuma versão entregue ainda. Clique em '+ Enviar Nova Versão' para registrar a primeira entrega.") | ~~🟡 Baixa~~ |
 | 146 | BAL-16 | Balcão — FSM | **Falta etapa de aprovação final do material**: o setor de Comunicação entrega o material (registra URL na aba Versões), mas não há passo de aprovação pelo demandante confirmando que o material está adequado. FSM correto: `nova → em_execução → entregue → aprovada_pelo_demandante → concluída` / `reprovada → revisão`. Sem essa etapa, o Balcão não fecha o ciclo de qualidade da entrega | 🔴 Alta |
 | ~~147~~ | ~~BAL-17~~ | ~~Balcão — BtnGuard~~ | ~~Spinner preso ao fechar modal sem salvar~~ | ✅ CORRIGIDO — `BtnGuard.liberar('btn-nova-demanda')` adicionado em `BalcaoUI.fecharForm()` |
 | 149 | BAL-18 | Balcão — Modal | Modal "Nova Demanda" com organização visual deficiente: sem margens internas adequadas entre campos, sem espaçamento entre seções, sem adaptabilidade a diferentes tamanhos de tela. Instância confirmada de SIS-10 | 🔴 Alta |
@@ -2964,7 +2964,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 192 | REU-13 | Reuniões — Encaminhamentos | Encaminhamentos sem notificação ao responsável no momento da criação — backend já agrega no TaskHub; falta trigger de alerta na criação | 🟡 Média |
 | ~~193~~ | ~~APR-04~~ | ~~Aprovações — Tab bar~~ | ~~Tab ativa sem indicador visual: `.active` vs `.ativa`~~ | ✅ CORRIGIDO — HTML e JS de Aprovações trocados de `.active` para `.ativa` |
 | ~~194~~ | ~~APR-05~~ | Aprovações — Aba Veículo | ~~"Carregando..." sem resolver~~ **CORRIGIDO s14 — carrega normalmente** | ~~🟡 Média~~ |
-| 195 | APR-06 | Aprovações — Cabeçalho | Usa padrão antigo `page-header` / `div.page-title` — deveria ser `view-header` / `h1.view-title` (instância de SIS-03) | 🟡 Média |
+| 195 | APR-06 | Aprovações — Cabeçalho | Usa padrão antigo `page-header` / `div.page-title` — deveria ser `view-header` / `h1.view-title` (instância de SIS-03) | ~~🟡 Média~~ |
 | 196 | SIS-11 | Sistema Global — Usuário | Saudações e pontos de exibição de nome do usuário logado usam email ou iniciais derivadas do email (ex: avatar "JO" de joao.barros) em vez do nome completo registrado. O sistema tem nomes cadastrados (visível em Aprovações → Permissões: "João Barros", "THAIS FREITAS DOS SANTOS"). O bootstrap deve retornar o nome do usuário para que greeting no Home, avatar, "Convocado por" em Reuniões e outros campos de autoria exibam nome completo (ou mínimo nome + sobrenome) | 🟡 Média |
 | 197 | ADM-05 | Admin — UI Geral | UI de Administração truncada — conteúdo cortado ou mal distribuído visualmente. Módulo carece de revisão de layout completa. Abas Features, Provisionamento e Config Sistema ainda não testadas visualmente | 🟡 Média |
 | 198 | ADM-06 | Admin — Inconsistência visual | Aba Permissões em Aprovações (design novo: badge chips coloridos por papel, status badge "Ativo" verde, tabela limpa) é visualmente superior à aba Usuários em Admin (design mais antigo, tabela densa). As duas interfaces exibem dados de usuários mas usam componentes e padrões visuais diferentes — deveriam compartilhar o mesmo componente de exibição de usuário | 🟡 Média |
@@ -2994,16 +2994,16 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 222 | ESC-15 | Escuta — Nova Pesquisa | Modal "Nova Pesquisa" extremamente minimalista (4 campos) — sem seleção de metodologia, sem banco de questões, sem configuração de participantes, sem periodicidade; não permite criar pesquisa utilizável | 🔴 Alta |
 | ~~223~~ | ~~ESC-16~~ | Escuta — Modal | ~~Título "Editar Pesquisa" ao criar nova pesquisa~~ **JÁ ESTAVA CORRIGIDO**: `abrirFormPesquisa()` usa `(id?'Editar':'Nova') + ' Pesquisa'` — quando chamada sem id, título é "Nova Pesquisa". | ~~🟡 Baixa~~ |
 | 224 | SIS-12 | Sistema Global — Nome Social | Sistema não implementa prioridade de nome social — todas as exibições de nome usam email ou iniciais; nome social (quando cadastrado) deve ter prioridade absoluta sobre nome registrado em: saudações, avatar, campos de autoria, listas, relatórios | 🔴 Alta |
-| 225 | HUB-01 | Meu Centro — Produtividade | Aba Produtividade tem 5 cards de métricas sem MetricsToggle — único módulo com múltiplos cards numéricos fora do padrão obrigatório | 🟡 Média |
-| 226 | HUB-02 | Meu Centro — Meu Dia | Estado vazio usa emoji 🎉 — violação do padrão DS (sem emojis; usar Material Symbol) | 🟡 Média |
+| 225 | HUB-01 | Meu Centro — Produtividade | Aba Produtividade tem 5 cards de métricas sem MetricsToggle — único módulo com múltiplos cards numéricos fora do padrão obrigatório | ~~🟡 Média~~ |
+| 226 | HUB-02 | Meu Centro — Meu Dia | Estado vazio usa emoji 🎉 — violação do padrão DS (sem emojis; usar Material Symbol) | ~~🟡 Média~~ |
 | 227 | HUB-03 | Meu Centro — Meu Dia | Meu Dia não agrega pendências dos módulos — propósito prometido ("todas as suas pendências em um só lugar") não cumprido; tarefas atribuídas, aprovações, encaminhamentos não aparecem | 🔴 Alta |
-| 228 | HUB-04 | Meu Centro — Meu Time | Aba Meu Time com estado vazio textual simples sem ícone nem orientação do propósito da aba | 🟡 Média |
+| 228 | HUB-04 | Meu Centro — Meu Time | Aba Meu Time com estado vazio textual simples sem ícone nem orientação do propósito da aba | ~~🟡 Média~~ |
 | 229 | HUB-05 | Meu Centro — Produtividade | Cards com unidades embutidas no valor ("0h", "0d") — inconsistência com padrão do sistema que separa valor numérico de unidade | 🔵 Baixa |
-| 230 | HUB-06 | Meu Centro | Título exibe "TaskHub" na UI — nome interno de desenvolvimento vaza para o usuário final; rótulo público deve ser apenas "Meu Centro de Controle" | 🟡 Média |
+| 230 | HUB-06 | Meu Centro | Título exibe "TaskHub" na UI — nome interno de desenvolvimento vaza para o usuário final; rótulo público deve ser apenas "Meu Centro de Controle" | ~~🟡 Média~~ |
 | 231 | HUB-07 | Meu Centro | Integração de fontes não implementada — tarefas, aprovações e encaminhamentos existentes no sistema não aparecem no Meu Dia | 🔴 Alta |
 | 232 | HUB-08 | Meu Centro | Sem botão de criação de tarefa — com módulo Tarefas absorvido no Meu Centro, header atual só tem "Atualizar"; necessário "+ Nova Tarefa" com picker de responsável | 🔴 Alta |
 | 233 | HUB-09 | Meu Centro — Meu Time | Aba Meu Time subutilizada — exibe apenas estado vazio sem mostrar colaboradores do setor com tarefas agrupadas por pessoa | 🔴 Alta |
-| 234 | HUB-10 | Meu Centro — Produtividade | Cards de Produtividade com bordas e formato diferente do stats-strip padrão do sistema — inconsistência estrutural | 🟡 Média |
+| 234 | HUB-10 | Meu Centro — Produtividade | Cards de Produtividade com bordas e formato diferente do stats-strip padrão do sistema — inconsistência estrutural | ~~🟡 Média~~ |
 | 235 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário — cada item do Meu Dia precisa carregar: tipo de origem, ID da entidade, ação requerida, prazo, prioridade; clicar deve navegar ao módulo de origem | 🔴 Alta |
 | 236 | HUB-12 | Meu Centro — Aniversariantes | Sem seção de aniversariantes — todos devem ver aniversariantes do dia; RH/gestores devem ver com 7 dias de antecedência para registrar dayoff automático | 🔴 Alta |
 | 237 | HUB-13 | Meu Centro — Dayoff | Sem workflow de dayoff de aniversário — dayoff é benefício automático garantido; falta: tipo "Dayoff de Aniversário" em Afastamentos, pré-preenchimento com data de nascimento, geração de ausência justificada no Ponto | 🔴 Alta |
@@ -3013,9 +3013,9 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 241 | HOME-04 | Home | Home sem widget de Meu Centro — deveria exibir mini-resumo "X tarefas · Y aprovações · Z encaminhamentos" para orientar o usuário ao entrar no sistema | 🟡 Média |
 | 242 | AFT-08 | Afastamentos | Sem tipo "Dayoff de Aniversário" em Afastamentos — falta: tipo específico, pré-preenchimento com data de nascimento, geração automática de ausência justificada no Ponto | 🟡 Média |
 | 243 | PES-16 | Pessoas | Campo "data de nascimento" não confirmado no formulário de colaborador — necessário para funcionalidade de aniversariantes no Meu Centro (HUB-12) | 🔴 Alta |
-| 244 | CAR-02 | Reserva de Veículo — Sidebar | Nomenclatura inconsistente: sidebar exibe "Reserva de Carro" enquanto a view exibe "Reserva de Veículo" — dois nomes distintos para o mesmo módulo | 🟡 Média |
-| 245 | CAR-03 | Reserva de Veículo — Métricas | Métricas incompletas — 4 cards (Pendentes, Aprovadas, Concluídas, Total) sem "Recusadas" e "Canceladas"; gestor não visualiza rapidamente o resultado das solicitações rejeitadas | 🟡 Média |
-| 246 | CAR-04 | Reserva de Veículo — Formulário | Select "Vincular a uma Ação" persiste em "— Carregando ações... —" sem timeout — possível loading infinito quando não há ações; deveria exibir "Nenhuma ação disponível" | 🟡 Média |
+| 244 | CAR-02 | Reserva de Veículo — Sidebar | Nomenclatura inconsistente: sidebar exibe "Reserva de Carro" enquanto a view exibe "Reserva de Veículo" — dois nomes distintos para o mesmo módulo | ~~🟡 Média~~ |
+| 245 | CAR-03 | Reserva de Veículo — Métricas | Métricas incompletas — 4 cards (Pendentes, Aprovadas, Concluídas, Total) sem "Recusadas" e "Canceladas"; gestor não visualiza rapidamente o resultado das solicitações rejeitadas | ~~🟡 Média~~ |
+| 246 | CAR-04 | Reserva de Veículo — Formulário | Select "Vincular a uma Ação" persiste em "— Carregando ações... —" sem timeout — possível loading infinito quando não há ações; deveria exibir "Nenhuma ação disponível" | ~~🟡 Média~~ |
 | 247 | CAR-05 | Reserva de Veículo — Datas | Datas exibidas em formato ISO (2026-05-29) no card e no modal de detalhes em vez de pt-BR (29/05/2026) — instância de SIS-14 | 🟡 Média |
 | 248 | CAR-06 | Reserva de Veículo — Identidade | Card na lista exibe email do solicitante (joao.barros@idm.org.br) em vez do nome completo — instância de SIS-11 | 🟡 Média |
 | 249 | CAR-07 | Reserva de Veículo — Identidade | "Aprov: joao.barros" no card — abreviatura + email em vez de "Aprovado por: João Barros" com nome completo — instância de SIS-11 | 🟡 Média |
@@ -3033,8 +3033,8 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 262 | ~~ACV-01~~ | Acervo — View | ~~Galeria permanente Carregando~~ **CORRIGIDO s16 Fase 7**: error handler explícito adicionado em `AcervoUI.carregar()`. | ~~🔴 Alta~~ |
 | ~~263~~ | ~~ACV-07~~ | Acervo — Modal | **CORRIGIDO s16 F14** — populate de ações agora tem error handler explícito; select mostra "Nenhuma ação disponível" quando falha; opção padrão "Conteúdo institucional" sempre presente | ~~🔴 Alta~~ |
 | ~~264~~ | ~~ACV-08~~ | Acervo — Formulário | **CORRIGIDO s16 F14** — campo "Título / Nome do arquivo *" adicionado como primeiro campo do formulário; validação obrigatória no frontend e backend; exibido no card da galeria | ~~🔴 Alta~~ |
-| 265 | ACV-02 | Acervo — DS | Botão "Cancelar" no modal com cor rosa/pink — instância de ESC-07/BAL-13; deveria ser `btn-secondary` cinza | 🟡 Média |
-| 266 | ACV-03 | Acervo — DS | Stats-strip sem MetricsToggle — 2 cards presentes mas sem componente obrigatório de toggle. Instância de HUB-01 | 🟡 Média |
+| 265 | ACV-02 | Acervo — DS | Botão "Cancelar" no modal com cor rosa/pink — instância de ESC-07/BAL-13; deveria ser `btn-secondary` cinza | ~~🟡 Média~~ |
+| 266 | ACV-03 | Acervo — DS | Stats-strip sem MetricsToggle — 2 cards presentes mas sem componente obrigatório de toggle. Instância de HUB-01 | ~~🟡 Média~~ |
 | ~~267~~ | ~~ACV-04~~ | Acervo — Filtros | ~~Sem botão refresh~~ **CORRIGIDO s16 F40**: botão com ícone MS `refresh` adicionado na filter-bar; chama `AcervoUI.carregar()`. | ~~🟡 Média~~ |
 | 268 | ACV-05 | Acervo — DS | Filtros sem classe DS — apenas `style="..."` inline, sem `filter-bar` nem `toolbar`. Instância de SIS-06 | 🟡 Média |
 | 269 | ACV-06 | Acervo — DS | Cabeçalho usa padrão misto `h2.view-titulo` — instância de SIS-05/ACO-11 | 🟡 Média |
