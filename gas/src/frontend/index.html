@@ -9943,8 +9943,18 @@ var ContratosDetailUI = (function() {
     });
   }
 
+  var _pendExcMeta = null;
   function _excluirMeta(id) {
-    if (!confirm('Excluir esta meta? Todas as atividades, rubricas e indicadores vinculados serão removidos.')) return;
+    _pendExcMeta = id;
+    _abrirModalConfirmar({titulo:'Excluir Meta',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir esta meta? Todas as atividades, rubricas e indicadores vinculados serão removidos.',
+      labelConfirmar:'Excluir',idBtn:'btn-confirmar-exc-meta',
+      onConfirm:'ContratosDetailUI._confirmarExcluirMeta()'
+    });
+  }
+  function _confirmarExcluirMeta() {
+    var id = _pendExcMeta; _pendExcMeta = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
     GAS.contratos.excluirMeta(_cid, id, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir meta.'); return; }
       Toast.sucesso('Meta excluída.'); _carregarContrato(_renderPT);
@@ -9992,9 +10002,19 @@ var ContratosDetailUI = (function() {
     });
   }
 
+  var _pendExcAtv = null;
   function _excluirAtv(metaId, atvId) {
-    if (!confirm('Excluir esta atividade e todos os seus itens de despesa?')) return;
-    GAS.contratos.excluirAtividade(_cid, metaId, atvId, function(resp) {
+    _pendExcAtv = {metaId:metaId, atvId:atvId};
+    _abrirModalConfirmar({titulo:'Excluir Atividade',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir esta atividade e todos os seus itens de despesa?',
+      labelConfirmar:'Excluir',idBtn:'btn-confirmar-exc-atv',
+      onConfirm:'ContratosDetailUI._confirmarExcluirAtv()'
+    });
+  }
+  function _confirmarExcluirAtv() {
+    var p = _pendExcAtv; _pendExcAtv = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.contratos.excluirAtividade(_cid, p.metaId, p.atvId, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir atividade.'); return; }
       Toast.sucesso('Atividade excluída.'); _carregarContrato(_renderPT);
     });
@@ -10177,9 +10197,19 @@ var ContratosDetailUI = (function() {
     });
   }
 
+  var _pendExcRub = null;
   function _excluirRub(metaId, atvId, rubId) {
-    if (!confirm('Excluir este item de despesa?')) return;
-    GAS.contratos.excluirRubrica(_cid, metaId, atvId, rubId, function(resp) {
+    _pendExcRub = {metaId:metaId, atvId:atvId, rubId:rubId};
+    _abrirModalConfirmar({titulo:'Excluir Item de Despesa',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir este item de despesa?',
+      labelConfirmar:'Excluir',idBtn:'btn-confirmar-exc-rub',
+      onConfirm:'ContratosDetailUI._confirmarExcluirRub()'
+    });
+  }
+  function _confirmarExcluirRub() {
+    var p = _pendExcRub; _pendExcRub = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.contratos.excluirRubrica(_cid, p.metaId, p.atvId, p.rubId, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir item.'); return; }
       Toast.sucesso('Item excluído.'); _carregarContrato(_renderPT);
     });
@@ -10329,9 +10359,19 @@ var ContratosDetailUI = (function() {
     });
   }
 
+  var _pendExcPes = null;
   function _excluirPes(metaId, pesId) {
-    if (!confirm('Excluir este item de pessoal?')) return;
-    GAS.contratos.excluirPessoal(_cid, metaId, pesId, function(resp) {
+    _pendExcPes = {metaId:metaId, pesId:pesId};
+    _abrirModalConfirmar({titulo:'Excluir Pessoal',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir este item de pessoal?',
+      labelConfirmar:'Excluir',idBtn:'btn-confirmar-exc-pes',
+      onConfirm:'ContratosDetailUI._confirmarExcluirPes()'
+    });
+  }
+  function _confirmarExcluirPes() {
+    var p = _pendExcPes; _pendExcPes = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.contratos.excluirPessoal(_cid, p.metaId, p.pesId, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir.'); return; }
       Toast.sucesso('Excluído.'); _carregarContrato(_renderPessoal);
     });
@@ -10515,9 +10555,19 @@ var ContratosDetailUI = (function() {
     });
   }
 
+  var _pendExcIndG = null;
   function _excluirIndG(indId) {
-    if (!confirm('Excluir este indicador de gestão?')) return;
-    GAS.contratos.excluirIndicadorGestao(_cid, indId, function(resp) {
+    _pendExcIndG = indId;
+    _abrirModalConfirmar({titulo:'Excluir Indicador',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir este indicador de gestão?',
+      labelConfirmar:'Excluir',idBtn:'btn-confirmar-exc-indg',
+      onConfirm:'ContratosDetailUI._confirmarExcluirIndG()'
+    });
+  }
+  function _confirmarExcluirIndG() {
+    var id = _pendExcIndG; _pendExcIndG = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.contratos.excluirIndicadorGestao(_cid, id, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir.'); return; }
       Toast.sucesso('Excluído.'); _carregarContrato(function() { abrirSubInd('gestao'); });
     });
@@ -10602,6 +10652,8 @@ var ContratosDetailUI = (function() {
     _recalcMetaMeses: _recalcMetaMeses,
     _captureExpandState: _captureExpandState,
     _restoreExpandState: _restoreExpandState,
+    _confirmarExcluirMeta: _confirmarExcluirMeta,
+    _confirmarExcluirAtv: _confirmarExcluirAtv,
     _dndStart: _dndStart,
     _dndOver: _dndOver,
     _dndEnd: _dndEnd,
@@ -10613,7 +10665,7 @@ var ContratosDetailUI = (function() {
     onSelecionarCatalogo: onSelecionarCatalogo,
     addLinhaMemoria: addLinhaMemoria,
     salvarRubrica: salvarRubrica,
-    _excluirRub: _excluirRub,
+    _excluirRub: _excluirRub, _confirmarExcluirRub: _confirmarExcluirRub,
     _updLinha: _updLinha,
     _delLinha: _delLinha,
     // Pessoal
@@ -10622,7 +10674,7 @@ var ContratosDetailUI = (function() {
     calcularPessoal: calcularPessoal,
     salvarPessoal: salvarPessoal,
     _editarPes: _editarPes,
-    _excluirPes: _excluirPes,
+    _excluirPes: _excluirPes, _confirmarExcluirPes: _confirmarExcluirPes,
     // Indicadores
     abrirSubInd: abrirSubInd,
     abrirIndrModal: abrirIndrModal,
@@ -10632,7 +10684,7 @@ var ContratosDetailUI = (function() {
     abrirIndgModal: abrirIndgModal,
     fecharIndgModal: fecharIndgModal,
     salvarIndicadorG: salvarIndicadorG,
-    _excluirIndG: _excluirIndG,
+    _excluirIndG: _excluirIndG, _confirmarExcluirIndG: _confirmarExcluirIndG,
     _updGestao: _updGestao,
     // Plano de Contas
     carregarPlanoContas: carregarPlanoContas,
@@ -10990,9 +11042,19 @@ var FontesUI = (function() {
     });
   }
 
+  var _pendMudarStatus = null;
   function mudarStatus(id, novoStatus) {
-    if (!confirm('Confirmar mudança de status para "' + novoStatus + '"?')) return;
-    GAS.fontesRecurso.status(id, novoStatus, function(r) {
+    _pendMudarStatus = {id:id, novoStatus:novoStatus};
+    _abrirModalConfirmar({titulo:'Confirmar Mudança de Status',icone:'sync',corIcone:'#6366f1',
+      mensagem:'Confirmar mudança de status para "'+escaparHtml(novoStatus)+'"?',
+      labelConfirmar:'Confirmar',idBtn:'btn-confirmar-status-fonte',
+      onConfirm:'FontesRecursoUI._confirmarMudarStatus()'
+    });
+  }
+  function _confirmarMudarStatus() {
+    var p = _pendMudarStatus; _pendMudarStatus = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.fontesRecurso.status(p.id, p.novoStatus, function(r) {
       if (r && r.ok) { Toast.sucesso('Status atualizado.'); carregar(); }
       else Toast.erro((r && r.mensagem) || 'Erro.');
     });
@@ -11008,7 +11070,7 @@ var FontesUI = (function() {
     });
   }
 
-  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, mudarStatus:mudarStatus };
+  return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, mudarStatus:mudarStatus, _confirmarMudarStatus:_confirmarMudarStatus };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -11170,10 +11232,20 @@ var RemanejamentosUI = (function() {
     });
   }
 
+  var _pendEfetivarRem = null;
   function efetivar(btn, id) {
-    if (!confirm('Confirmar efetivação? Esta ação ajustará os saldos em contratos.json e é irreversível.')) return;
-    BtnGuard.wrap(btn, 'Efetivando…', function(liberar) {
-      GAS.remanejamentos.efetivar(id, function(r) {
+    _pendEfetivarRem = {btn:btn, id:id};
+    _abrirModalConfirmar({titulo:'Confirmar Efetivação',icone:'warning',corIcone:'#f59e0b',
+      mensagem:'Confirmar efetivação? Esta ação ajustará os saldos em contratos.json e é irreversível.',
+      labelConfirmar:'Efetivar',idBtn:'btn-confirmar-efetivar-rem',
+      onConfirm:'RemanejamentosUI._confirmarEfetivar()'
+    });
+  }
+  function _confirmarEfetivar() {
+    var p = _pendEfetivarRem; _pendEfetivarRem = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    BtnGuard.wrap(p.btn, 'Efetivando…', function(liberar) {
+      GAS.remanejamentos.efetivar(p.id, function(r) {
         liberar();
         if (r && r.ok) { Toast.sucesso('Remanejamento efetivado!'); carregar(); }
         else Toast.erro((r && r.mensagem) || 'Erro.');
@@ -11193,7 +11265,7 @@ var RemanejamentosUI = (function() {
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
     salvar:salvar, submeter:submeter, aprovarFin:aprovarFin, aprovarDir:aprovarDir,
-    rejeitar:rejeitar, efetivar:efetivar };
+    rejeitar:rejeitar, efetivar:efetivar, _confirmarEfetivar:_confirmarEfetivar };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -11341,10 +11413,20 @@ var AditivosUI = (function() {
     });
   }
 
+  var _pendSubFundador = null;
   function submeterFundador(btn, id) {
-    if (!confirm('Confirmar submissão ao fundador? Verifique se o documento URL está preenchido.')) return;
-    BtnGuard.wrap(btn, 'Submetendo…', function(liberar) {
-      GAS.aditivos.submeterFundador(id, function(r) {
+    _pendSubFundador = {btn:btn, id:id};
+    _abrirModalConfirmar({titulo:'Submeter ao Fundador',icone:'send',corIcone:'#6366f1',
+      mensagem:'Confirmar submissão ao fundador? Verifique se o documento URL está preenchido.',
+      labelConfirmar:'Submeter',idBtn:'btn-confirmar-sub-fundador',
+      onConfirm:'AditivosUI._confirmarSubmeterFundador()'
+    });
+  }
+  function _confirmarSubmeterFundador() {
+    var p = _pendSubFundador; _pendSubFundador = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    BtnGuard.wrap(p.btn, 'Submetendo…', function(liberar) {
+      GAS.aditivos.submeterFundador(p.id, function(r) {
         liberar();
         if (r && r.ok) { Toast.sucesso('Submetido ao fundador.'); carregar(); }
         else Toast.erro((r && r.mensagem) || 'Erro.');
@@ -11377,10 +11459,20 @@ var AditivosUI = (function() {
     });
   }
 
+  var _pendEfetivarAdit = null;
   function efetivar(btn, id) {
-    if (!confirm('Confirmar efetivação? O contrato será atualizado com os novos valores/prazos.')) return;
-    BtnGuard.wrap(btn, 'Efetivando…', function(liberar) {
-      GAS.aditivos.efetivar(id, function(r) {
+    _pendEfetivarAdit = {btn:btn, id:id};
+    _abrirModalConfirmar({titulo:'Confirmar Efetivação',icone:'warning',corIcone:'#f59e0b',
+      mensagem:'Confirmar efetivação? O contrato será atualizado com os novos valores/prazos.',
+      labelConfirmar:'Efetivar',idBtn:'btn-confirmar-efetivar-adit',
+      onConfirm:'AditivosUI._confirmarEfetivar()'
+    });
+  }
+  function _confirmarEfetivar() {
+    var p = _pendEfetivarAdit; _pendEfetivarAdit = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    BtnGuard.wrap(p.btn, 'Efetivando…', function(liberar) {
+      GAS.aditivos.efetivar(p.id, function(r) {
         liberar();
         if (r && r.ok) { Toast.sucesso('Aditivo efetivado! Contrato atualizado.'); carregar(); }
         else Toast.erro((r && r.mensagem) || 'Erro.');
@@ -11401,8 +11493,9 @@ var AditivosUI = (function() {
 
   return { carregar:carregar, aoAbrir:aoAbrir, abrirForm:abrirForm, fecharForm:fecharForm,
     salvar:salvar, submeterInterno:submeterInterno, aprovarInterno:aprovarInterno,
-    submeterFundador:submeterFundador, aprovarFundador:aprovarFundador,
-    rejeitar:rejeitar, efetivar:efetivar};
+    submeterFundador:submeterFundador, _confirmarSubmeterFundador:_confirmarSubmeterFundador,
+    aprovarFundador:aprovarFundador,
+    rejeitar:rejeitar, efetivar:efetivar, _confirmarEfetivar:_confirmarEfetivar};
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -15341,6 +15434,7 @@ var InfraConfigMapaUI = (function() {
   }
 
   // ── Restaurar TODOS os espaços para a geometria do mapa base ──
+  var _pendRestaurarTodos = null;
   function _restaurarTodosPadrao() {
     var candidatos = [];
     _espacos.forEach(function(esp) {
@@ -15353,11 +15447,17 @@ var InfraConfigMapaUI = (function() {
       return;
     }
 
-    // Confirmar com o usuário — ação destrutiva que sobrescreve posições existentes
-    var confirmMsg = 'Restaurar padrão do mapa?\n\n' +
-      candidatos.length + ' espaço(s) serão posicionados conforme o mapa base.\n' +
-      'Posições personalizadas serão sobrescritas.\n\nEsta ação pode ser desfeita com "Desfazer".';
-    if (!confirm(confirmMsg)) return;
+    _pendRestaurarTodos = candidatos;
+    _abrirModalConfirmar({titulo:'Restaurar Padrão do Mapa',icone:'restore',corIcone:'#f59e0b',
+      mensagem:candidatos.length+' espaço(s) serão posicionados conforme o mapa base. Posições personalizadas serão sobrescritas. Esta ação pode ser desfeita com "Desfazer".',
+      labelConfirmar:'Restaurar',idBtn:'btn-confirmar-restaurar-todos',
+      onConfirm:'InfraConfigMapaUI._confirmarRestaurarTodos()'
+    });
+  }
+  function _confirmarRestaurarTodos() {
+    var candidatos = _pendRestaurarTodos; _pendRestaurarTodos = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    if (!candidatos || !candidatos.length) return;
 
     // Salvar histórico ANTES
     _pushHistorico('Restaurar padrão (' + candidatos.length + ' espaços)',
@@ -15616,6 +15716,7 @@ var InfraConfigMapaUI = (function() {
     _desfazer:              _desfazer,
     _restaurarPadrao:       _restaurarPadrao,
     _restaurarTodosPadrao:  _restaurarTodosPadrao,
+    _confirmarRestaurarTodos: _confirmarRestaurarTodos,
     _iniciarNovoEspaco:     _iniciarNovoEspaco,
     _cancelarNovoEspaco:    _cancelarNovoEspaco,
     _confirmarNovoEspaco:   _confirmarNovoEspaco
@@ -17149,7 +17250,7 @@ var ReservasUI = (function() {
 
   function _adicionarManual() {
     var el = document.getElementById('ccbj-manual-data');
-    if (!el||!el.value) { alert('Selecione uma data.'); return; }
+    if (!el||!el.value) { Toast.aviso('Selecione uma data.'); return; }
     _adicionarDatas([el.value]); el.value='';
   }
 
@@ -17160,11 +17261,11 @@ var ReservasUI = (function() {
     if (tipo==='semanal') {
       var dias = Array.from(document.querySelectorAll('#ccbj-painel-semanal .ccbj-dia-check:checked'))
                    .map(function(c){ return Number(c.value); });
-      if (!dias.length) { alert('Selecione pelo menos um dia da semana.'); return; }
+      if (!dias.length) { Toast.aviso('Selecione pelo menos um dia da semana.'); return; }
       var ini = _parseDate(document.getElementById('ccbj-sem-ini').value);
       var fim = _parseDate(document.getElementById('ccbj-sem-fim').value);
-      if (!ini||!fim) { alert('Preencha as datas de início e fim.'); return; }
-      if (fim<ini)    { alert('A data fim deve ser posterior ao início.'); return; }
+      if (!ini||!fim) { Toast.aviso('Preencha as datas de início e fim.'); return; }
+      if (fim<ini)    { Toast.aviso('A data fim deve ser posterior ao início.'); return; }
       var cur = new Date(ini);
       while (cur<=fim) { if (cur>=hoje && dias.indexOf(cur.getDay())!==-1) datas.push(_fmtISO(cur)); cur.setDate(cur.getDate()+1); }
     }
@@ -17175,7 +17276,7 @@ var ReservasUI = (function() {
       var fimStr = document.getElementById('ccbj-int-fim').value;
       var fim = fimStr ? _parseDate(fimStr) : null;
       var qtd = parseInt(document.getElementById('ccbj-int-qtd').value)||4;
-      if (!ini) { alert('Informe a data de início.'); return; }
+      if (!ini) { Toast.aviso('Informe a data de início.'); return; }
       var cur = new Date(ini); var ct=0; var max=fim?3650:qtd;
       while (ct<max) {
         if (fim&&cur>fim) break;
@@ -17190,7 +17291,7 @@ var ReservasUI = (function() {
         var dia = parseInt(document.getElementById('ccbj-men-dia').value)||1;
         var qtd = parseInt(document.getElementById('ccbj-men-qtd').value)||3;
         var ini = _parseDate(document.getElementById('ccbj-men-ini').value);
-        if (!ini) { alert('Informe o mês inicial.'); return; }
+        if (!ini) { Toast.aviso('Informe o mês inicial.'); return; }
         var ano=ini.getFullYear(), mes=ini.getMonth();
         for (var i=0;i<qtd;i++) {
           var d=new Date(ano,mes+i,dia);
@@ -17201,7 +17302,7 @@ var ReservasUI = (function() {
         var nU  = parseInt(document.getElementById('ccbj-men-nutil').value)||1;
         var qtd = parseInt(document.getElementById('ccbj-men-util-qtd').value)||3;
         var ini = _parseDate(document.getElementById('ccbj-men-util-ini').value);
-        if (!ini) { alert('Informe o mês inicial.'); return; }
+        if (!ini) { Toast.aviso('Informe o mês inicial.'); return; }
         var ano=ini.getFullYear(), mes=ini.getMonth();
         for (var i=0;i<qtd;i++) {
           var cur=new Date(ano,mes+i,1); var mesAlvo=cur.getMonth(); var ct=0;
@@ -17215,7 +17316,7 @@ var ReservasUI = (function() {
         var diaSem = parseInt(document.getElementById('ccbj-men-diasem').value);
         var qtd    = parseInt(document.getElementById('ccbj-men-sem-qtd').value)||3;
         var ini    = _parseDate(document.getElementById('ccbj-men-sem-ini').value);
-        if (!ini) { alert('Informe o mês inicial.'); return; }
+        if (!ini) { Toast.aviso('Informe o mês inicial.'); return; }
         var ano=ini.getFullYear(), mes=ini.getMonth();
         for (var i=0;i<qtd;i++) {
           var mA=(mes+i)%12; var aA=ano+Math.floor((mes+i)/12); var res=null;
@@ -17230,19 +17331,19 @@ var ReservasUI = (function() {
       }
     }
 
-    if (!datas.length) { alert('Nenhuma data gerada. Verifique os parâmetros (datas passadas são ignoradas).'); return; }
+    if (!datas.length) { Toast.aviso('Nenhuma data gerada. Verifique os parâmetros (datas passadas são ignoradas).'); return; }
     _adicionarDatas(datas);
   }
 
   function _confirmar() {
     var datas = Object.keys(_datasSet).sort();
-    if (!datas.length) { alert('Selecione pelo menos uma data para bloquear.'); return; }
+    if (!datas.length) { Toast.aviso('Selecione pelo menos uma data para bloquear.'); return; }
     var turno  = document.getElementById('ccbj-turno').value  || 'integral';
     var motivo = (document.getElementById('ccbj-motivo').value||'').trim() || 'CCBJ Fechado';
     var ht     = _TURNOS[turno] || _TURNOS.integral;
     var boot   = App.getBoot ? App.getBoot() : null;
     var espacos = (boot && boot.espacos) || [];
-    if (!espacos.length) { alert('Nenhum espaço cadastrado.'); return; }
+    if (!espacos.length) { Toast.aviso('Nenhum espaço cadastrado.'); return; }
 
     fechar();
     var total=espacos.length*datas.length, processados=0, erros=0, todosIds=[];
@@ -17283,21 +17384,31 @@ var ReservasUI = (function() {
         showConfirmButton:true, confirmButtonText:'OK',
         showDenyButton:todosIds.length>0, denyButtonText:'↩ Desfazer', denyButtonColor:'#6b7280'
       }).then(function(r){ if (r.isDenied) _desfazer(); });
-    } else { alert(msg); }
+    } else { Toast.sucesso(msg); }
   }
 
   function _desfazer() {
     var d=window._ultimosBloqueiosCCBJ;
-    if (!d||!d.ids||!d.ids.length) { alert('Nenhum bloqueio recente para desfazer.'); return; }
-    if (!confirm('Desfazer bloqueios das datas: '+d.datas.map(_fmtPTBR).join(', ')+'?')) return;
+    if (!d||!d.ids||!d.ids.length) { Toast.aviso('Nenhum bloqueio recente para desfazer.'); return; }
+    _abrirModalConfirmar({titulo:'Desfazer Bloqueios',icone:'undo',corIcone:'#f59e0b',
+      mensagem:'Desfazer bloqueios das datas: '+d.datas.map(_fmtPTBR).join(', ')+'?',
+      labelConfirmar:'Desfazer',idBtn:'btn-confirmar-desfazer-bloq',
+      onConfirm:'window._BloqueioUI._confirmarDesfazer()'
+    });
+  }
+  function _confirmarDesfazer() {
+    var d=window._ultimosBloqueiosCCBJ;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    if (!d||!d.ids||!d.ids.length) return;
     showLoader(true);
     GAS.reservas.cancelarBloqueios(d.ids,
       function() {
         showLoader(false); window._ultimosBloqueiosCCBJ=null;
         if (typeof ReservasUI!=='undefined'&&ReservasUI.carregar) ReservasUI.carregar();
         if (typeof Swal!=='undefined') Swal.fire('Feito','Bloqueios desfeitos com sucesso.','success');
+        else Toast.sucesso('Bloqueios desfeitos com sucesso.');
       },
-      function(err) { showLoader(false); alert('Erro ao desfazer: '+(err&&err.message?err.message:err)); }
+      function(err) { showLoader(false); Toast.erro('Erro ao desfazer: '+(err&&err.message?err.message:err)); }
     );
   }
 
@@ -17310,9 +17421,10 @@ var ReservasUI = (function() {
     adicionarManual:_adicionarManual,
     removerData:    function(iso){ delete _datasSet[iso]; _renderChips(); },
     limparDatas:    function(){ _datasSet={}; _renderChips(); },
-    gerarDatas:     _gerarDatas,
-    confirmar:      _confirmar,
-    desfazer:       _desfazer
+    gerarDatas:        _gerarDatas,
+    confirmar:         _confirmar,
+    desfazer:          _desfazer,
+    _confirmarDesfazer: _confirmarDesfazer
   };
 })();
 
@@ -18141,12 +18253,29 @@ var AtivosUI = (function() {
     });
   }
 
+  var _pendManutencao = null;
   function _enviarManutencao(id, btnEl) {
     if(!id) return;
-    var descr = prompt('Descreva o problema ou motivo da manutenção:');
-    if(descr === null) return;
-    BtnGuard.wrap(btnEl, 'Registrando…', function(done) {
-      GAS.ativos.manutencao(id, descr, function(resp) {
+    _pendManutencao = {id:id, btnEl:btnEl};
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Registrar Manutenção</h3>' +
+        '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Descrição do problema / motivo <span style="color:#ef4444">*</span></label>' +
+        '<textarea id="atv-man-descr" class="form-input" rows="3" placeholder="Descreva o problema ou motivo..." style="resize:vertical;width:100%;margin-bottom:16px;"></textarea>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="AtivosUI._confirmarManutencao()">Confirmar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+  function _confirmarManutencao() {
+    var descr = (document.getElementById('atv-man-descr')||{}).value || '';
+    if (!descr.trim()) { Toast.aviso('Descrição é obrigatória.'); return; }
+    var p = _pendManutencao; _pendManutencao = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    BtnGuard.wrap(p.btnEl, 'Registrando…', function(done) {
+      GAS.ativos.manutencao(p.id, descr, function(resp) {
         done();
         if(!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao enviar para manutenção.'); return; }
         Toast.sucesso('Ativo enviado para manutenção.');
@@ -18173,7 +18302,7 @@ var AtivosUI = (function() {
     });
   }
 
-  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, aoAbrir: aoAbrir };
+  return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, aoAbrir: aoAbrir, _confirmarManutencao: _confirmarManutencao };
 })();
 
 
@@ -18802,8 +18931,18 @@ var SolicitacoesUI = (function() {
     submeterItem(id);
   }
 
+  var _pendSubmeterSol2 = null;
   function submeterItem(id) {
-    if (!confirm('Submeter solicitação para aprovação? Se houver rubrica vinculada, o saldo será verificado.')) return;
+    _pendSubmeterSol2 = id;
+    _abrirModalConfirmar({titulo:'Submeter Solicitação',icone:'send',corIcone:'#6366f1',
+      mensagem:'Submeter solicitação para aprovação? Se houver rubrica vinculada, o saldo será verificado.',
+      labelConfirmar:'Submeter',idBtn:'btn-confirmar-submeter-sol2',
+      onConfirm:'SolicitacoesUI._confirmarSubmeterSol2()'
+    });
+  }
+  function _confirmarSubmeterSol2() {
+    var id = _pendSubmeterSol2; _pendSubmeterSol2 = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
     BtnGuard.wrap('btn-sol-sub-'+id, 'Submetendo…', function(done){
       GAS.contratacoes.submeter(id, function(resp){
         done();
@@ -19286,9 +19425,20 @@ var SolicitacoesUI = (function() {
     });
   }
 
+  var _pendRemoverDoc = null;
   function removerDoc(docId) {
     if (!_detAtual){ return; }
-    if (!confirm('Remover este documento?')) return;
+    _pendRemoverDoc = docId;
+    _abrirModalConfirmar({titulo:'Remover Documento',icone:'delete',corIcone:'#ef4444',
+      mensagem:'Remover este documento?',
+      labelConfirmar:'Remover',idBtn:'btn-confirmar-rem-doc',
+      onConfirm:'SolicitacoesUI._confirmarRemoverDoc()'
+    });
+  }
+  function _confirmarRemoverDoc() {
+    var docId = _pendRemoverDoc; _pendRemoverDoc = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    if (!_detAtual) return;
     GAS.contratacoes.removerDocumento(_detAtual.id, docId, function(resp){
       if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
       Toast.sucesso('Documento removido.'); abrirDetalhe(_detAtual.id);
@@ -19297,8 +19447,18 @@ var SolicitacoesUI = (function() {
 
   // ── Gerar Token Portal ────────────────────────────────────
 
+  var _pendGerarToken = null;
   function gerarToken(id) {
-    if (!confirm('Gerar novo link de acompanhamento para o contratado? O link anterior ficará inválido.')) return;
+    _pendGerarToken = id;
+    _abrirModalConfirmar({titulo:'Gerar Novo Link',icone:'link',corIcone:'#6366f1',
+      mensagem:'Gerar novo link de acompanhamento para o contratado? O link anterior ficará inválido.',
+      labelConfirmar:'Gerar',idBtn:'btn-confirmar-gerar-token',
+      onConfirm:'SolicitacoesUI._confirmarGerarToken()'
+    });
+  }
+  function _confirmarGerarToken() {
+    var id = _pendGerarToken; _pendGerarToken = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
     GAS.contratacoes.gerarToken(id, function(resp){
       if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
       Toast.sucesso('Link gerado e enviado ao contratado por e-mail.');
@@ -19561,7 +19721,7 @@ var SolicitacoesUI = (function() {
   return {
     carregar: carregar, filtrar: filtrar, setChip: setChip,
     abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
-    submeter: submeter, submeterItem: submeterItem,
+    submeter: submeter,
     aprovarGestor: aprovarGestor, _confirmarAprGSol: _confirmarAprGSol,
     aprovarFinanceiro: aprovarFinanceiro, _confirmarAprFSol: _confirmarAprFSol,
     instruir: instruir, _confirmarInsSol: _confirmarInsSol,
@@ -19572,8 +19732,10 @@ var SolicitacoesUI = (function() {
     cancelar: cancelar, _confirmarCanSol: _confirmarCanSol,
     abrirDetalhe: abrirDetalhe, fecharDetalhe: fecharDetalhe, abrirDetTab: abrirDetTab,
     marcarPago: marcarPago,
-    abrirModalDoc: abrirModalDoc, fecharModalDoc: fecharModalDoc, salvarDoc: salvarDoc, removerDoc: removerDoc,
-    gerarToken: gerarToken,
+    submeterItem: submeterItem, _confirmarSubmeterSol2: _confirmarSubmeterSol2,
+    abrirModalDoc: abrirModalDoc, fecharModalDoc: fecharModalDoc, salvarDoc: salvarDoc,
+    removerDoc: removerDoc, _confirmarRemoverDoc: _confirmarRemoverDoc,
+    gerarToken: gerarToken, _confirmarGerarToken: _confirmarGerarToken,
     adicionarCotacao: adicionarCotacao,
     mascaraDocumento: mascaraDocumento, buscarFornecedor: buscarFornecedor,
     selecionarFornecedor: selecionarFornecedor, cadastrarFornecedorRapido: cadastrarFornecedorRapido,
@@ -19677,8 +19839,18 @@ var ContratadosUI = (function() {
     });
   }
 
+  var _pendHabilitar = null;
   function habilitar(id) {
-    if (!confirm('Habilitar este agente?')) return;
+    _pendHabilitar = id;
+    _abrirModalConfirmar({titulo:'Habilitar Agente',icone:'check_circle',corIcone:'#22c55e',
+      mensagem:'Habilitar este agente?',
+      labelConfirmar:'Habilitar',idBtn:'btn-confirmar-hab-agente',
+      onConfirm:'ContratadosUI._confirmarHabilitar()'
+    });
+  }
+  function _confirmarHabilitar() {
+    var id = _pendHabilitar; _pendHabilitar = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
     BtnGuard.wrap('btn-ag-hab-'+id, 'Habilitando…', function(done){
       GAS.contratados.mudarStatus(id, 'habilitado', function(resp){
         done();
@@ -19701,7 +19873,8 @@ var ContratadosUI = (function() {
   }
 
   return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
-    habilitar: habilitar, suspender: suspender, toggleDocumento: toggleDocumento };
+    habilitar: habilitar, _confirmarHabilitar: _confirmarHabilitar,
+    suspender: suspender, toggleDocumento: toggleDocumento };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -21910,8 +22083,18 @@ var PublicoUI = (function() {
     }).join('');
   }
 
+  var _pendConfirmarInsc = null;
   function confirmar(id) {
-    if (!confirm('Confirmar esta inscrição?')) return;
+    _pendConfirmarInsc = id;
+    _abrirModalConfirmar({titulo:'Confirmar Inscrição',icone:'check_circle',corIcone:'#22c55e',
+      mensagem:'Confirmar esta inscrição?',
+      labelConfirmar:'Confirmar',idBtn:'btn-confirmar-inscricao',
+      onConfirm:'PublicoUI._confirmarInscricao()'
+    });
+  }
+  function _confirmarInscricao() {
+    var id = _pendConfirmarInsc; _pendConfirmarInsc = null;
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
     GAS.publico.confirmarInscricao(id, function(resp) {
       if (resp && resp.ok) { Toast.sucesso('Inscrição confirmada.'); _carregado = false; carregar(); }
       else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao confirmar.');
@@ -22104,7 +22287,7 @@ var PublicoUI = (function() {
     aoAbrir:            aoAbrir,
     abrirTab:           abrirTab,
     filtrarInscricoes:  filtrarInscricoes,
-    confirmar:          confirmar,
+    confirmar:          confirmar, _confirmarInscricao: _confirmarInscricao,
     cancelar:           cancelar,
     exportarCSV:        exportarCSV,
     exportarCODIP:      exportarCODIP,
@@ -24502,8 +24685,9 @@ var EscutaUI = (function() {
     var _MAX = { confianca:35, cobertura:25, saturacao:20, espontanea:20 };
     var detHtml = detalhes.map(function(d) {
       var max = _MAX[d.fator] || 20;
+      var msgTxt = d && typeof d.msg === 'string' ? d.msg : (d && d.msg != null ? String(d.msg) : '');
       return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
-        '<span style="color:var(--text2);">' + _esc(d.msg) + '</span>' +
+        '<span style="color:var(--text2);">' + _esc(msgTxt) + '</span>' +
         '<span style="font-weight:700;color:' + (d.pts>=max*0.7?'var(--success)':'var(--warning)') + '">' + d.pts + '/' + max + '</span>' +
       '</div>';
     }).join('');
@@ -24979,8 +25163,9 @@ var EscutaUI = (function() {
       var _MAX = { confianca:35, cobertura:25, saturacao:20, espontanea:20 };
       var fatHtml = fatores.map(function(f) {
         var max = _MAX[f.fator] || 20;
+        var msgTxt = f && typeof f.msg === 'string' ? f.msg : (f && f.msg != null ? String(f.msg) : '');
         return '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
-          '<span>' + _esc(f.msg) + '</span>' +
+          '<span>' + _esc(msgTxt) + '</span>' +
           '<span style="font-weight:700;color:' + (f.pts>=max*0.7?'var(--success)':'var(--warning)') + '">' + f.pts + '/' + max + '</span>' +
         '</div>';
       }).join('');
@@ -24989,8 +25174,11 @@ var EscutaUI = (function() {
         ? '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">' +
             '<p style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);margin:0 0 6px;">Motor Metodológico</p>' +
             motorArr.map(function(a) {
+              var avisoTxt = a && typeof a.msg === 'string' ? a.msg
+                           : (a && a.msg != null) ? String(a.msg)
+                           : (typeof a === 'string' ? a : '');
               return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:11px;">' +
-                '<span style="color:var(--warning);">⚠</span><span>' + _esc(a.msg||a) + '</span>' +
+                '<span style="color:var(--warning);">⚠</span><span>' + _esc(avisoTxt) + '</span>' +
               '</div>';
             }).join('') +
           '</div>'
@@ -28005,8 +28193,18 @@ var EncargosUI = (function() {
     );
   }
 
+  var _pendRestaurarEnc = null;
   function _restaurar(chave) {
-    if (!confirm('Restaurar "' + (_CHAVE_LABEL[chave]||chave) + '" para o valor oficial? O override manual será removido.')) return;
+    _pendRestaurarEnc = chave;
+    _abrirModalSimples(
+      'Restaurar Valor Oficial',
+      '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">Restaurar "<strong>'+_esc(_CHAVE_LABEL[chave]||chave)+'</strong>" para o valor oficial?<br>O override manual será removido.</p>',
+      'EncargosUI._confirmarRestaurar'
+    );
+  }
+  function _confirmarRestaurar() {
+    var chave = _pendRestaurarEnc; _pendRestaurarEnc = null;
+    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
     GAS.encargos.restaurarOficial({ chave: chave }, function(resp) {
       if (resp && resp.ok) { Toast.sucesso('Valor oficial restaurado.'); _carregado = false; carregar(); }
       else Toast.erro('Erro ao restaurar.');
@@ -28081,7 +28279,14 @@ var EncargosUI = (function() {
   }
 
   function _restaurarSalMin() {
-    if (!confirm('Restaurar Salário Mínimo para o valor oficial? O override manual será removido.')) return;
+    _abrirModalSimples(
+      'Restaurar Salário Mínimo',
+      '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">Restaurar Salário Mínimo para o valor oficial?<br>O override manual será removido.</p>',
+      'EncargosUI._confirmarRestaurarSalMin'
+    );
+  }
+  function _confirmarRestaurarSalMin() {
+    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
     GAS.encargos.restaurarOficial({chave:'salarioMinimo'}, function(resp){
       if (resp&&resp.ok){ Toast.sucesso('Restaurado.'); _carregado=false; carregar(); }
       else Toast.erro('Erro.');
@@ -28254,9 +28459,19 @@ var EncargosUI = (function() {
     });
   }
 
+  var _pendAplicarAno = null;
   function aplicarOficial() {
     var ano = parseInt((document.getElementById('enc-sel-ano')||{}).value||new Date().getFullYear());
-    if (!confirm('Aplicar a tabela oficial de ' + ano + '? Campos editados manualmente NÃO serão alterados.')) return;
+    _pendAplicarAno = ano;
+    _abrirModalSimples(
+      'Aplicar Tabela Oficial',
+      '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">Aplicar a tabela oficial de <strong>'+ano+'</strong>?<br>Campos editados manualmente <strong>NÃO</strong> serão alterados.</p>',
+      'EncargosUI._confirmarAplicarOficial'
+    );
+  }
+  function _confirmarAplicarOficial() {
+    var ano = _pendAplicarAno; _pendAplicarAno = null;
+    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
     GAS.encargos.aplicarOficial(ano, function(resp) {
       if (resp && resp.ok) {
         Toast.sucesso('Tabela ' + ano + ' aplicada. ' + (resp.data.itensAtualizados||0) + ' itens atualizados.');
@@ -28323,12 +28538,13 @@ var EncargosUI = (function() {
     abrirModalTabelaIRRF:   abrirModalTabelaIRRF,
     _editarAliquota:        _editarAliquota,
     _confirmarEditarAliquota: _confirmarEditarAliquota,
-    _restaurar:             _restaurar,
+    _restaurar:             _restaurar, _confirmarRestaurar: _confirmarRestaurar,
     _editarSalMin:          _editarSalMin,
     _confirmarSalMin:       _confirmarSalMin,
-    _restaurarSalMin:       _restaurarSalMin,
+    _restaurarSalMin:       _restaurarSalMin, _confirmarRestaurarSalMin: _confirmarRestaurarSalMin,
     _addLinhaModal:         _addLinhaModal,
-    _confirmarModalTabela:  _confirmarModalTabela
+    _confirmarModalTabela:  _confirmarModalTabela,
+    _confirmarAplicarOficial: _confirmarAplicarOficial
   };
 })();
 
