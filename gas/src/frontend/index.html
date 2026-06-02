@@ -633,7 +633,23 @@ body {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .tab-bar {
   display: flex; gap: 0; border-bottom: 2px solid var(--border);
-  overflow-x: auto;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+/* Wrapper para tab bars com muitas abas (ADM-07, ACO-09) */
+.tab-bar-nav-wrap { position: relative; }
+.tab-bar-nav-wrap .tab-bar-nav-btn {
+  position: absolute; top: 0; bottom: 0; z-index: 4;
+  border: none; cursor: pointer; padding: 0 6px;
+  display: flex; align-items: center;
+  color: var(--color-primary); font-size: 16px;
+  transition: opacity .15s;
+}
+.tab-bar-nav-wrap .tab-bar-nav-btn[data-dir="prev"] {
+  left: 0; background: linear-gradient(to right, var(--surface) 60%, transparent);
+}
+.tab-bar-nav-wrap .tab-bar-nav-btn[data-dir="next"] {
+  right: 0; background: linear-gradient(to left, var(--surface) 60%, transparent);
 }
 .tab-btn {
   background: none; border: none; border-bottom: 2px solid transparent;
@@ -4135,6 +4151,11 @@ select.form-control { cursor: pointer; }
                   <option value="data-hora-desc">↓ Data/Hora</option>
                   <option value="espaco">↑ Espaço</option>
                 </select>
+                <button class="btn btn-ghost btn-sm" id="btn-res-limpar" data-bg-skip="1"
+                  title="Limpar todos os filtros"
+                  onclick="ReservasUI._limparFiltros()">
+                  <span class="ms ms-sm">filter_alt_off</span>
+                </button>
                 <button class="btn btn-ghost btn-sm" id="btn-res-recarregar" onclick="ReservasUI.carregar()">
                   <span class="ms ms-sm">refresh</span>
                 </button>
@@ -5996,9 +6017,9 @@ select.form-control { cursor: pointer; }
                     <option value="workshop">Workshop</option>
                   </select>
                 </div>
+                <div class="form-group"><label>Local</label><input type="text" id="run-local" class="form-control" placeholder="Sala / Online"></div>
                 <div class="form-group"><label>Data e Hora *</label><input type="datetime-local" id="run-data-hora" class="form-control" required></div>
                 <div class="form-group"><label>Duração (min)</label><input type="number" id="run-duracao" class="form-control" min="15" value="60"></div>
-                <div class="form-group"><label>Local</label><input type="text" id="run-local" class="form-control" placeholder="Sala / Online"></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Convocado por (email)</label><input type="email" id="run-convocador" class="form-control"></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (ID opcional)</label><input type="text" id="run-acao-id" class="form-control" placeholder="ACAO-001"></div>
               </div>
@@ -6024,9 +6045,17 @@ select.form-control { cursor: pointer; }
             </div>
             <!-- Tab Ata -->
             <div id="run-mtab-ata" class="oculto">
-              <div id="run-ata-status-info" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
-              <textarea id="run-ata-texto" class="form-control" rows="10"
-                placeholder="Redigir ata da reunião…" style="width:100%;font-family:inherit;resize:vertical;"></textarea>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div id="run-ata-status-info" style="font-size:12px;color:var(--muted);"></div>
+                <button type="button" class="btn btn-ghost btn-sm" data-bg-skip="1"
+                  title="Insere um template de ata formal com os blocos obrigatórios"
+                  onclick="ReunioesUI._usarTemplateAta()">
+                  <span class="ms ms-sm">article</span> Usar Template
+                </button>
+              </div>
+              <textarea id="run-ata-texto" class="form-control" rows="12"
+                placeholder="Redigir ata da reunião… (ou clique em &quot;Usar Template&quot; para inserir a estrutura formal)"
+                style="width:100%;font-family:monospace;font-size:13px;resize:vertical;line-height:1.6;"></textarea>
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <button type="button" class="btn btn-secondary btn-sm"
                   id="run-ata-salvar-btn"
@@ -8583,6 +8612,37 @@ var GAS = {
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
 
+// Inicializa navegação por setas em tab bars com overflow (ADM-07, ACO-09)
+function _initTabBarNav(bar) {
+  if (!bar || bar.dataset.navInit) return;
+  bar.dataset.navInit = '1';
+  var wrap = document.createElement('div');
+  wrap.className = 'tab-bar-nav-wrap';
+  bar.parentNode.insertBefore(wrap, bar);
+  wrap.appendChild(bar);
+  function mkBtn(dir, icon) {
+    var b = document.createElement('button');
+    b.className = 'tab-bar-nav-btn'; b.dataset.dir = dir; b.setAttribute('data-bg-skip','1');
+    b.innerHTML = '<span class="ms">' + icon + '</span>';
+    b.onclick = function() { bar.scrollBy({ left: dir === 'prev' ? -150 : 150, behavior: 'smooth' }); };
+    return b;
+  }
+  var prev = mkBtn('prev', 'chevron_left');
+  var next = mkBtn('next', 'chevron_right');
+  wrap.appendChild(prev); wrap.appendChild(next);
+  function sync() {
+    var sl = bar.scrollLeft, sw = bar.scrollWidth, cw = bar.clientWidth;
+    prev.style.opacity = sl > 4 ? '1' : '0';
+    prev.style.pointerEvents = sl > 4 ? '' : 'none';
+    next.style.opacity = sl + cw < sw - 4 ? '1' : '0';
+    next.style.pointerEvents = sl + cw < sw - 4 ? '' : 'none';
+  }
+  bar.addEventListener('scroll', sync);
+  // also re-sync on window resize
+  window.addEventListener('resize', sync);
+  sync();
+}
+
 function escaparHtml(valor) {
   return String(valor == null ? '' : valor)
     .replace(/&/g, '&amp;')
@@ -10154,7 +10214,7 @@ var ContratosDetailUI = (function() {
           +'<td><select class="form-input" style="padding:3px 4px;font-size:11px;" onchange="ContratosDetailUI._updLinha('+i+',\'metrica\',this.value)">'+tiposHtml+'</select></td>'
           +'<td><input type="number" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:58px;" value="'+(l.qtd||1)+'" min="0" oninput="ContratosDetailUI._updLinha('+i+',\'qtd\',this.value)"></td>'
           +'<td><input type="text" inputmode="decimal" class="form-input" style="padding:3px 6px;font-size:12px;text-align:right;width:90px;" value="'+fmtMoeda(l.valorUnitario||0)+'" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI._updLinha('+i+',\'valorUnitario\',parseMoeda(this.value))"></td>'
-          +'<td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:600;">'+_R(l.subtotal)+'</td>'
+          +'<td style="padding:6px 8px;text-align:right;font-size:12px;font-weight:600;white-space:nowrap;min-width:90px;">'+_R(l.subtotal)+'</td>'
           +'<td style="text-align:center;"><button class="btn btn-ghost" style="padding:0 4px;color:var(--color-error);" onclick="ContratosDetailUI._delLinha('+i+')" data-bg-skip="1">✕</button></td>'
           +'</tr>';
       }).join('');
@@ -10241,13 +10301,14 @@ var ContratosDetailUI = (function() {
   function _renderPessoal() {
     var metas = (_obj && _obj.metas) || [];
     // Resumo agregado
-    var totSalario=0, totEncargos=0, totBeneficios=0, totProvisoes=0, totGeral=0;
+    var totSalario=0, totEncargos=0, totBeneficios=0, totProvisoes=0, totMensal=0, totGeral=0;
     metas.forEach(function(m) {
       (m.pessoal||[]).forEach(function(p) {
         totSalario    += Number(p.totalSalario||0);
         totEncargos   += Number(p.totalEncargos||0);
         totBeneficios += Number(p.totalBeneficios||0);
         totProvisoes  += Number(p.totalProvisoes||0);
+        totMensal     += Number(p.custoMensal||0);
         totGeral      += Number(p.custoTotal||0);
       });
     });
@@ -10256,6 +10317,7 @@ var ContratosDetailUI = (function() {
       {l:'Encargos',       v:_R(totEncargos),   c:'accent'},
       {l:'Benefícios',     v:_R(totBeneficios), c:'info'},
       {l:'Provisões',      v:_R(totProvisoes),  c:'warning'},
+      {l:'Custo Mensal',   v:_R(totMensal),    c:'primary'},
       {l:'Custo Total ('+(((_obj&&_obj.qtdMeses)||24)+' meses)'), v:_R(totGeral), c:'success'}
     ];
     document.getElementById('cd-pes-resumo').innerHTML = resumo.map(function(s) {
@@ -12702,7 +12764,10 @@ var AdminCadastrosUI = (function() {
     _abrirModalSimples(html);
   }
 
-  function aoAbrir() { abrirTab('espacos'); }
+  function aoAbrir() {
+    _initTabBarNav(document.getElementById('admin-cadastros-tabs'));
+    abrirTab('espacos');
+  }
 
   return {
     abrirTab: abrirTab, aoAbrir: aoAbrir,
@@ -16026,10 +16091,12 @@ var ReservasUI = (function() {
     document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';
     document.getElementById('res-nome-acao').value = dados && dados.nomeAcao || '';
     document.getElementById('res-tipo-acao').value = dados && dados.tipoAcao || '';
-    var _valorSetor = (dados && dados.setor) || '';
+    var _bootData = App.getBoot ? App.getBoot() : null;
+    // Para nova reserva, pré-seleciona o setor do usuário logado (ESP-08)
+    var _valorSetor = (dados && dados.setor) ||
+                      ((!dados || !dados.id) ? ((_bootData && _bootData.usuarioSetor) || '') : '');
     var _selSetor = document.getElementById('res-setor');
     if (_selSetor) {
-      var _bootData = App.getBoot ? App.getBoot() : null;
       var _setoresLista = (_bootData && _bootData.setores) || [];
       _selSetor.innerHTML = '<option value="">Selecione o setor…</option>' +
         _setoresLista.map(function(s) {
@@ -17181,7 +17248,17 @@ var ReservasUI = (function() {
     _onPosRealizadoChange: _onPosRealizadoChange,
     _adicionarComprovacao: _adicionarComprovacao,
     _removerComprovacao:   _removerComprovacao,
-    _salvarPosEvento:      _salvarPosEvento
+    _salvarPosEvento:      _salvarPosEvento,
+    // ESP-21: limpar todos os filtros da lista de reservas
+    _limparFiltros: function() {
+      var st = document.getElementById('res-filtro-status');
+      var dt = document.getElementById('res-filtro-data');
+      var so = document.getElementById('res-sort');
+      if (st) st.value = '';
+      if (dt) dt.value = '';
+      if (so) so.value = 'data-hora';
+      ReservasUI.carregar();
+    }
   };
 })();
 
@@ -20378,6 +20455,10 @@ var AcoesUI = (function() {
     var overlay = el('acao-painel-overlay');
     if (painel)  painel.classList.remove('oculto');
     if (overlay) overlay.classList.remove('oculto');
+
+    // Scroll indicator nas 8 abas do painel (ACO-09)
+    var painelTabBar = painel ? painel.querySelector('.tab-bar') : null;
+    if (painelTabBar) _initTabBarNav(painelTabBar);
 
     // Ativar tab Geral
     _abrirTab('geral', painel ? painel.querySelector('[data-tab="geral"]') : null);
@@ -24139,10 +24220,52 @@ var ReunioesUI = (function() {
     try { var p=String(d).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; } catch(_){ return d; }
   }
 
+  function _usarTemplateAta() {
+    var el = document.getElementById('run-ata-texto');
+    if (!el) return;
+    if (el.value.trim() && !confirm('Substituir o texto atual pelo template?')) return;
+    // Coleta dados disponíveis para pré-preencher
+    var titulo   = (document.getElementById('run-titulo')     || {}).value || '___';
+    var local    = (document.getElementById('run-local')      || {}).value || '___';
+    var convocou = (document.getElementById('run-convocador') || {}).value || '___';
+    var dtHora   = (document.getElementById('run-data-hora')  || {}).value || '';
+    var dtFmt = dtHora ? dtHora.replace('T',' às ').replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1') : '___';
+    // Itens de pauta para pré-preencher as deliberações
+    var pautaItems = [];
+    document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
+      var t = li.querySelector('span') ? li.querySelector('span').textContent : li.textContent;
+      if (t.trim()) pautaItems.push(t.trim());
+    });
+    var deliberacoes = pautaItems.length
+      ? pautaItems.map(function(p, i) {
+          return 'Item ' + (i+1) + ' — ' + p + ':\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
+        }).join('\n\n')
+      : 'Item 1 — [Título do item]:\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
+    el.value =
+      '1. ABERTURA\n' +
+      'Reunião: ' + titulo + '\n' +
+      'Data e Hora: ' + dtFmt + '\n' +
+      'Local: ' + local + '\n' +
+      'Convocado por: ' + convocou + '\n\n' +
+      '2. PARTICIPANTES\n' +
+      'Presentes: \n' +
+      'Ausentes justificados: \n\n' +
+      '3. PAUTA\n' +
+      (pautaItems.length ? pautaItems.map(function(p,i){ return (i+1)+'. '+p; }).join('\n') : '1. \n2. ') + '\n\n' +
+      '4. DELIBERAÇÕES\n' +
+      deliberacoes + '\n\n' +
+      '5. ENCAMINHAMENTOS GERAIS\n' +
+      '1.  | Responsável:  | Prazo: \n\n' +
+      '6. ENCERRAMENTO\n' +
+      'Hora de encerramento: \n' +
+      'Próxima reunião: (se definida)\n';
+    el.focus();
+  }
+
   return { aoAbrir, carregar, setTab, _filtrar, abrirForm, fecharForm,
            setModalTab, salvar, mudarStatus, salvarAta, submeterAta, aprovarAta,
            adicionarEncaminhamento, concluirEnc, abrirDetalhe,
-           _addPauta, _addPresente, _addAusenteJust };
+           _addPauta, _addPresente, _addAusenteJust, _usarTemplateAta };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 
