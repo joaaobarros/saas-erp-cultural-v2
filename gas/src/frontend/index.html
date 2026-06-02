@@ -5156,6 +5156,11 @@ select.form-control { cursor: pointer; }
             <option value="atividade_territorial">Atividade Territorial</option>
             <option value="outro">Outro</option>
           </select>
+          <button class="btn btn-ghost btn-sm" id="acao-refresh-btn"
+            onclick="BtnGuard.wrap('acao-refresh-btn','Atualizando…',function(done){ AcoesUI._recarregar(done); })"
+            title="Atualizar">
+            <span class="ms ms-sm">refresh</span>
+          </button>
         </div>
 
         <!-- Kanban View -->
@@ -5926,8 +5931,12 @@ select.form-control { cursor: pointer; }
           <div class="stat-card"><div class="stat-value" id="run-agendada" style="color:var(--info)">—</div><div class="stat-label">Agendadas</div></div>
           <div class="stat-card"><div class="stat-value" id="run-andamento" style="color:var(--warning)">—</div><div class="stat-label">Em Andamento</div></div>
           <div class="stat-card"><div class="stat-value" id="run-encerrada" style="color:var(--success)">—</div><div class="stat-label">Encerradas</div></div>
-          <div class="stat-card"><div class="stat-value" id="run-enc-pend" style="color:var(--warning)">—</div><div class="stat-label">Enc. Pendentes</div></div>
-          <div class="stat-card"><div class="stat-value" id="run-enc-venc" style="color:var(--danger)">—</div><div class="stat-label">Enc. Vencidos</div></div>
+          <div class="stat-card">
+            <div class="stat-value" id="run-enc-combinado" style="color:var(--warning)">—</div>
+            <div class="stat-label">Encaminhamentos</div>
+            <span id="run-enc-pend" style="display:none">—</span>
+            <span id="run-enc-venc" style="display:none">—</span>
+          </div>
         </div>
         <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:16px;">
@@ -5998,7 +6007,9 @@ select.form-control { cursor: pointer; }
                 <input type="text" id="run-pauta-input" class="form-control" placeholder="Item da pauta…" style="flex:1">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="ReunioesUI._addPauta()" data-bg-skip="1">+ Adicionar</button>
               </div>
-              <ul id="run-pauta-lista" style="list-style:none;padding:0;margin:0;"></ul>
+              <ul id="run-pauta-lista" style="list-style:none;padding:0;margin:0;">
+                <li id="run-pauta-empty" style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</li>
+              </ul>
             </div>
             <!-- Tab Presença -->
             <div id="run-mtab-presentes" class="oculto">
@@ -6203,7 +6214,7 @@ select.form-control { cursor: pointer; }
                 <button type="button" class="btn btn-primary btn-sm"
                   id="bl-ver-enviar-btn"
                   onclick="BtnGuard.wrap('bl-ver-enviar-btn','Enviando…',BalcaoUI.enviarVersao)">
-                  📤 Enviar Entrega
+                  <span class="ms ms-sm">upload</span> Enviar Entrega
                 </button>
               </div>
               <button type="button" class="btn btn-secondary btn-sm" id="bl-ver-toggle-btn"
@@ -11290,7 +11301,7 @@ var AditivosUI = (function() {
     valor:'Valor', prazo:'Prazo', escopo:'Escopo', metas:'Metas', rubricas:'Rubricas', misto:'Misto'
   };
 
-  function _fmt(v){ return v ? 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'; }
+  function _fmt(v){ return (v != null) ? 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'; }
 
   function carregar() {
     GAS.aditivos.metricas(function(r) {
@@ -20051,6 +20062,12 @@ var AcoesUI = (function() {
     });
   }
 
+  function _recarregar(done) {
+    _carregado = false;
+    carregar();
+    if (done) done();
+  }
+
   // ────────────────────────────────────────────────────────
   // Renderização
   // ────────────────────────────────────────────────────────
@@ -20614,6 +20631,7 @@ var AcoesUI = (function() {
     abrirPainel:           abrirPainel,
     fecharPainel:          fecharPainel,
     _filtrar:              _filtrar,
+    _recarregar:           _recarregar,
     _abrirTab:             _abrirTab,
     _confirmarMudarStatus: _confirmarMudarStatus,
     _executarMudarStatus:  _executarMudarStatus,
@@ -23800,6 +23818,13 @@ var ReunioesUI = (function() {
       document.getElementById('run-encerrada').textContent = m.encerrada;
       document.getElementById('run-enc-pend').textContent  = m.encaminhamentosPendentes;
       document.getElementById('run-enc-venc').textContent  = m.encaminhamentosVencidos;
+      var pend = m.encaminhamentosPendentes || 0;
+      var venc = m.encaminhamentosVencidos  || 0;
+      var comb = document.getElementById('run-enc-combinado');
+      if (comb) {
+        comb.textContent = pend + (venc > 0 ? ' / ' + venc + ' ⚠' : '');
+        comb.style.color = venc > 0 ? 'var(--danger)' : (pend > 0 ? 'var(--warning)' : 'var(--text)');
+      }
     }, function(){});
 
     var el = document.getElementById('run-lista');
@@ -24015,10 +24040,13 @@ var ReunioesUI = (function() {
   }
 
   function _addPautaItem(texto) {
-    var ul = document.getElementById('run-pauta-lista');
+    var ul    = document.getElementById('run-pauta-lista');
+    var empty = document.getElementById('run-pauta-empty');
+    if (empty) empty.style.display = 'none';
     var li = document.createElement('li');
     li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:13px;';
-    li.innerHTML = '<span style="flex:1;">' + escaparHtml(texto) + '</span><button type="button" onclick="this.closest(\'li\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
+    li.innerHTML = '<span style="flex:1;">' + escaparHtml(texto) + '</span>' +
+      '<button type="button" onclick="var ul=this.closest(\'ul\');this.closest(\'li\').remove();var items=ul.querySelectorAll(\'li:not(#run-pauta-empty)\');var ep=document.getElementById(\'run-pauta-empty\');if(ep)ep.style.display=items.length?\'none\':\'\';" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
     ul.appendChild(li);
   }
 
@@ -24078,7 +24106,7 @@ var ReunioesUI = (function() {
     ['run-titulo','run-local','run-convocador','run-acao-id','run-ata-texto','run-pauta-input','run-presente-input'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('run-pauta-lista').innerHTML     = '';
+    document.getElementById('run-pauta-lista').innerHTML     = '<li id="run-pauta-empty" style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</li>';
     document.getElementById('run-presentes-lista').innerHTML = '';
     document.getElementById('run-enc-form-lista').innerHTML  = '';
     document.getElementById('run-ata-status-info').textContent = '';
@@ -24879,7 +24907,7 @@ var EscutaUI = (function() {
           '<select id="pf-tempo" class="select-sm"><option value="">—</option>' + opts(['Menos de 1 ano','1–3 anos','3–5 anos','Mais de 5 anos'], p.tempoDeCasa) + '</select></div>' +
       '</div>' +
       '<p style="font-size:11px;color:var(--text2);margin:8px 0;">Dados voluntários e protegidos pela LGPD.</p>' +
-      '<button id="btn-salvar-perfil" class="btn btn-secundario btn-sm" onclick="BtnGuard.wrap(\'btn-salvar-perfil\',\'Salvando…\',EscutaUI.salvarPerfil)">Salvar Perfil</button>';
+      '<button id="btn-salvar-perfil" class="btn btn-primario btn-sm" onclick="BtnGuard.wrap(\'btn-salvar-perfil\',\'Salvando…\',EscutaUI.salvarPerfil)">Salvar Perfil</button>';
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não foi possível carregar o perfil.</p>'; });
   }
 
@@ -24983,17 +25011,17 @@ var EscutaUI = (function() {
     GAS.escuta.saturacao({ periodo: _periodoAtual() }, function(r) {
       if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados.</p>'; return; }
       var d = r.data;
-      var dims = d.dimensoes || {};
+      var dims = Array.isArray(d.dimensoes) ? d.dimensoes : (d.dimensoes ? Object.values(d.dimensoes) : []);
       var html = '';
-      Object.keys(dims).forEach(function(dim) {
-        var s   = dims[dim];
+      dims.forEach(function(s) {
         var col = s.coletados || 0;
         var met = s.meta || 10;
         var pct = Math.min(100, Math.round((col/met)*100));
         var cor = pct >= 100 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)';
+        var nome = s.label || s.id || '';
         html += '<div style="margin-bottom:8px;">' +
           '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">' +
-            '<span style="text-transform:capitalize;">' + dim + '</span>' +
+            '<span style="text-transform:capitalize;">' + nome + '</span>' +
             '<span style="font-weight:700;">' + col + '/' + met + '</span>' +
           '</div>' +
           '<div style="background:var(--border);border-radius:4px;height:6px;">' +
@@ -25380,7 +25408,7 @@ var EscutaUI = (function() {
           '<div class="form-group"><label class="form-label" style="font-size:11px;">Grupo Mínimo (subgrupos)</label>' +
             '<input type="number" id="cfg-grupo-min" class="form-control" value="' + (c.grupoMinimo||5) + '" min="3" max="20" style="font-size:12px;"></div>' +
         '</div>' +
-        '<button id="btn-salvar-config-escuta" class="btn btn-secundario btn-sm" style="margin-top:8px;" onclick="BtnGuard.wrap(\'btn-salvar-config-escuta\',\'Salvando…\',EscutaUI.salvarConfig)">Salvar Configurações</button>';
+        '<button id="btn-salvar-config-escuta" class="btn btn-primario btn-sm" style="margin-top:8px;" onclick="BtnGuard.wrap(\'btn-salvar-config-escuta\',\'Salvando…\',EscutaUI.salvarConfig)">Salvar Configurações</button>';
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
   }
 
