@@ -27,10 +27,10 @@ function ctrl_agentes_listar(filtros) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
     var ck = _CK_AGT_LISTA + '_' + JSON.stringify(filtros);
-    var cached = CacheService.get(ck);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
     var lista = AgenteCulturalRepository.listar(orgId, filtros);
-    CacheService.set(ck, JSON.stringify(lista), 120);
+    AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_agentes_listar');
 }
@@ -50,10 +50,10 @@ function ctrl_agentes_metricas() {
   return GasResponse.wrap(function() {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var cached = CacheService.get(_CK_AGT_METRICAS);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(_CK_AGT_METRICAS);
+    if (cached) return cached;
     var m = AgenteCulturalRepository.metricas(orgId);
-    CacheService.set(_CK_AGT_METRICAS, JSON.stringify(m), 120);
+    AppCache.set(_CK_AGT_METRICAS, m, 120);
     return m;
   }, 'ctrl_agentes_metricas');
 }
@@ -66,8 +66,8 @@ function ctrl_agentes_salvar(dados) {
     var orgId  = getOrgConfig().orgId;
     var email  = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var agente = AgenteCulturalEngine.salvar(orgId, dados, email);
-    CacheService.invalidar(_CK_AGT_LISTA);
-    CacheService.invalidar(_CK_AGT_METRICAS);
+    AppCache.remove(_CK_AGT_LISTA);
+    AppCache.remove(_CK_AGT_METRICAS);
     return agente;
   }, 'ctrl_agentes_salvar');
 }
@@ -100,8 +100,8 @@ function ctrl_agentes_mudarStatus(params) {
       default:
         throw new Error('Status inválido: ' + params.status);
     }
-    CacheService.invalidar(_CK_AGT_LISTA);
-    CacheService.invalidar(_CK_AGT_METRICAS);
+    AppCache.remove(_CK_AGT_LISTA);
+    AppCache.remove(_CK_AGT_METRICAS);
     return agente;
   }, 'ctrl_agentes_mudarStatus');
 }
@@ -113,7 +113,7 @@ function ctrl_agentes_salvarRider(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var agente = AgenteCulturalEngine.salvarRider(orgId, params.id, params.rider || {}, email);
-    CacheService.invalidar(_CK_AGT_LISTA);
+    AppCache.remove(_CK_AGT_LISTA);
     return agente;
   }, 'ctrl_agentes_salvarRider');
 }
@@ -127,8 +127,8 @@ function ctrl_agentes_excluir(id) {
     if (!agente) throw new Error('Agente não encontrado.');
     if (agente.status === 'ativo') throw new Error('Não é possível excluir agente ativo. Descredencie primeiro.');
     AgenteCulturalRepository.excluir(orgId, id);
-    CacheService.invalidar(_CK_AGT_LISTA);
-    CacheService.invalidar(_CK_AGT_METRICAS);
+    AppCache.remove(_CK_AGT_LISTA);
+    AppCache.remove(_CK_AGT_METRICAS);
     return { excluido: id };
   }, 'ctrl_agentes_excluir');
 }

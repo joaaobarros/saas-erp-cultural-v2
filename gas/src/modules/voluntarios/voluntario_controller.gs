@@ -28,10 +28,10 @@ function ctrl_voluntarios_listar(filtros) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
     var ck = _CK_VOL_LISTA + '_' + JSON.stringify(filtros);
-    var cached = CacheService.get(ck);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
     var lista = VoluntarioRepository.Voluntarios.listar(orgId, filtros);
-    CacheService.set(ck, JSON.stringify(lista), 120);
+    AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_voluntarios_listar');
 }
@@ -51,10 +51,10 @@ function ctrl_voluntarios_metricas() {
   return GasResponse.wrap(function() {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var cached = CacheService.get(_CK_VOL_METRICAS);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(_CK_VOL_METRICAS);
+    if (cached) return cached;
     var m = VoluntarioRepository.Voluntarios.metricas(orgId);
-    CacheService.set(_CK_VOL_METRICAS, JSON.stringify(m), 120);
+    AppCache.set(_CK_VOL_METRICAS, m, 120);
     return m;
   }, 'ctrl_voluntarios_metricas');
 }
@@ -65,8 +65,8 @@ function ctrl_voluntarios_salvar(dados) {
     var orgId  = getOrgConfig().orgId;
     var email  = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var vol    = VoluntarioEngine.salvar(orgId, dados, email);
-    CacheService.invalidar(_CK_VOL_LISTA);
-    CacheService.invalidar(_CK_VOL_METRICAS);
+    AppCache.remove(_CK_VOL_LISTA);
+    AppCache.remove(_CK_VOL_METRICAS);
     return vol;
   }, 'ctrl_voluntarios_salvar');
 }
@@ -78,8 +78,8 @@ function ctrl_voluntarios_mudarStatus(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['gestor','admin','superadmin']);
     var vol   = VoluntarioEngine.mudarStatus(orgId, params.id, params.status, email, params.motivo);
-    CacheService.invalidar(_CK_VOL_LISTA);
-    CacheService.invalidar(_CK_VOL_METRICAS);
+    AppCache.remove(_CK_VOL_LISTA);
+    AppCache.remove(_CK_VOL_METRICAS);
     return vol;
   }, 'ctrl_voluntarios_mudarStatus');
 }
@@ -90,8 +90,8 @@ function ctrl_voluntarios_excluir(id) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['admin','superadmin']);
     VoluntarioRepository.Voluntarios.excluir(orgId, id);
-    CacheService.invalidar(_CK_VOL_LISTA);
-    CacheService.invalidar(_CK_VOL_METRICAS);
+    AppCache.remove(_CK_VOL_LISTA);
+    AppCache.remove(_CK_VOL_METRICAS);
     return { excluido: id };
   }, 'ctrl_voluntarios_excluir');
 }
@@ -104,10 +104,10 @@ function ctrl_voluntarios_listarAlocacoes(filtros) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
     var ck = _CK_VOL_ALOC + '_' + JSON.stringify(filtros);
-    var cached = CacheService.get(ck);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
     var lista = VoluntarioRepository.Alocacoes.listar(orgId, filtros);
-    CacheService.set(ck, JSON.stringify(lista), 120);
+    AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_voluntarios_listarAlocacoes');
 }
@@ -122,7 +122,7 @@ function ctrl_voluntarios_alocar(params) {
       orgId, params.voluntarioId, params.acaoId,
       params.acaoNome||'', params.funcao||'', params.horario||'', email
     );
-    CacheService.invalidar(_CK_VOL_ALOC);
+    AppCache.remove(_CK_VOL_ALOC);
     return aloc;
   }, 'ctrl_voluntarios_alocar');
 }
@@ -143,8 +143,8 @@ function ctrl_voluntarios_registrarPresenca(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var aloc  = VoluntarioEngine.registrarPresenca(orgId, params.alocacaoId, params.horas||0, email);
-    CacheService.invalidar(_CK_VOL_ALOC);
-    CacheService.invalidar(_CK_VOL_LISTA);
+    AppCache.remove(_CK_VOL_ALOC);
+    AppCache.remove(_CK_VOL_LISTA);
     return aloc;
   }, 'ctrl_voluntarios_registrarPresenca');
 }
@@ -155,7 +155,7 @@ function ctrl_voluntarios_concluirAlocacao(alocacaoId) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var aloc  = VoluntarioEngine.concluirAlocacao(orgId, alocacaoId, email);
-    CacheService.invalidar(_CK_VOL_ALOC);
+    AppCache.remove(_CK_VOL_ALOC);
     return aloc;
   }, 'ctrl_voluntarios_concluirAlocacao');
 }
@@ -167,7 +167,7 @@ function ctrl_voluntarios_cancelarAlocacao(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var aloc  = VoluntarioEngine.cancelarAlocacao(orgId, params.id, params.motivo||'', email);
-    CacheService.invalidar(_CK_VOL_ALOC);
+    AppCache.remove(_CK_VOL_ALOC);
     return aloc;
   }, 'ctrl_voluntarios_cancelarAlocacao');
 }

@@ -9215,16 +9215,25 @@ var PessoasUI = (function() {
   function carregar() {
     var status = (document.getElementById('pf-filtro-status')||{}).value || '';
     var filtros = status ? {status:status} : {};
+    var elLista = document.getElementById('pessoas-lista');
     BtnGuard.wrap('btn-pessoas-recarregar','Atualizando…',function(done){
+      // Métricas e lista em paralelo — lista não depende de métricas
       GAS.pessoas.metricas(function(respM){
         if(respM&&respM.ok) _renderMetricas(respM.data);
-        GAS.pessoas.listar(filtros, function(resp){
-          done();
-          if(!resp||!resp.ok){Toast.erro('Erro ao carregar colaboradores.');return;}
-          _renderLista(resp.data||[]);
-          _carregado = true;
-        },function(err){done();Toast.erro('Erro: '+(err.message||err));});
-      },function(err){done();Toast.erro('Erro métricas: '+(err.message||err));});
+      }, function(){});
+      GAS.pessoas.listar(filtros, function(resp){
+        done();
+        if(!resp||!resp.ok){
+          if(elLista) elLista.innerHTML = '<div class="empty-state" style="min-height:120px;padding:20px;"><span class="ms" style="font-size:32px;color:var(--muted)">group_off</span><p style="font-size:13px;color:var(--muted)">Erro ao carregar colaboradores. Tente novamente.</p></div>';
+          return;
+        }
+        _renderLista(resp.data||[]);
+        _carregado = true;
+      }, function(err){
+        done();
+        if(elLista) elLista.innerHTML = '<div class="empty-state" style="min-height:120px;padding:20px;"><span class="ms" style="font-size:32px;color:var(--muted)">group_off</span><p style="font-size:13px;color:var(--muted)">Erro ao carregar colaboradores.</p></div>';
+        Toast.erro('Erro: '+(err&&err.message||err));
+      });
     });
   }
 
@@ -18870,36 +18879,94 @@ var SolicitacoesUI = (function() {
     });
   }
 
+  var _solInsPendente = null;
+  var _solExePendente = null;
+  var _solConPendente = null;
+
   function instruir(id) {
-    if (!confirm('Marcar processo como em instrução? Os documentos obrigatórios da etapa serão verificados.')) return;
+    _solInsPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;font-weight:700;color:var(--text);">Iniciar Instrução</h3>' +
+        '<p style="font-size:14px;color:var(--text-muted,var(--muted));margin:0 0 16px;">Os documentos obrigatórios da etapa serão verificados. Deseja marcar o processo como em instrução?</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="SolicitacoesUI._confirmarInsSol()">Confirmar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarInsSol() {
+    var id = _solInsPendente;
+    if (!id) return;
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-ins-'+id, 'Instruindo…', function(done){
       GAS.contratacoes.instruir(id, function(resp){
         done();
+        _solInsPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Processo em instrução!'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solInsPendente = null; Toast.erro(e.message||e); });
     });
   }
 
   function iniciarExecucao(id) {
-    if (!confirm('Marcar como em execução? Um link de acompanhamento será enviado ao contratado.')) return;
+    _solExePendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;font-weight:700;color:var(--text);">Iniciar Execução</h3>' +
+        '<p style="font-size:14px;color:var(--text-muted,var(--muted));margin:0 0 16px;">Um link de acompanhamento será enviado ao contratado. Deseja marcar como em execução?</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="SolicitacoesUI._confirmarExeSol()">Confirmar</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarExeSol() {
+    var id = _solExePendente;
+    if (!id) return;
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-exe-'+id, 'Iniciando…', function(done){
       GAS.contratacoes.iniciarExecucao(id, {}, function(resp){
         done();
+        _solExePendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Execução iniciada. Link de acompanhamento enviado ao contratado.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solExePendente = null; Toast.erro(e.message||e); });
     });
   }
 
   function concluir(id) {
-    if (!confirm('Marcar solicitação como concluída? O processo ficará somente-leitura.')) return;
+    _solConPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 12px;font-size:15px;font-weight:700;color:var(--text);">Concluir Solicitação</h3>' +
+        '<p style="font-size:14px;color:var(--text-muted,var(--muted));margin:0 0 16px;">O processo ficará somente-leitura após a conclusão. Deseja confirmar?</p>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primary" onclick="SolicitacoesUI._confirmarConSol()">Concluir</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarConSol() {
+    var id = _solConPendente;
+    if (!id) return;
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-con-'+id, 'Concluindo…', function(done){
       GAS.contratacoes.concluir(id, {}, function(resp){
         done();
+        _solConPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Solicitação concluída!'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solConPendente = null; Toast.erro(e.message||e); });
     });
   }
 
@@ -18971,16 +19038,38 @@ var SolicitacoesUI = (function() {
     });
   }
 
+  var _solCanPendente = null;
+
   function cancelar(id) {
-    var _raw = prompt('Motivo do cancelamento:');
-    if (_raw === null) return;
-    var motivo = _raw || '';
+    _solCanPendente = id;
+    var html =
+      '<div style="padding:20px;">' +
+        '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Cancelar Solicitação</h3>' +
+        '<div style="margin-bottom:16px;">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Motivo</label>' +
+          '<textarea id="sol-can-motivo" class="form-input" rows="3" placeholder="Informe o motivo do cancelamento (opcional)" style="resize:vertical;width:100%;"></textarea>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-error" onclick="SolicitacoesUI._confirmarCanSol()">Cancelar Solicitação</button>' +
+          '<button class="btn btn-secondary" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Voltar</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _confirmarCanSol() {
+    var id = _solCanPendente;
+    if (!id) return;
+    var motivo = ((document.getElementById('sol-can-motivo')||{}).value || '').trim();
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
     BtnGuard.wrap('btn-sol-can-'+id, 'Cancelando…', function(done){
       GAS.contratacoes.cancelar(id, motivo, function(resp){
         done();
+        _solCanPendente = null;
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Solicitação cancelada.'); carregar(); fecharDetalhe();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+      }, function(e){ done(); _solCanPendente = null; Toast.erro(e.message||e); });
     });
   }
 
@@ -19475,9 +19564,12 @@ var SolicitacoesUI = (function() {
     submeter: submeter, submeterItem: submeterItem,
     aprovarGestor: aprovarGestor, _confirmarAprGSol: _confirmarAprGSol,
     aprovarFinanceiro: aprovarFinanceiro, _confirmarAprFSol: _confirmarAprFSol,
-    instruir: instruir, iniciarExecucao: iniciarExecucao,
-    concluir: concluir, rejeitar: rejeitar, _confirmarRejSol: _confirmarRejSol,
-    devolver: devolver, _confirmarDevSol: _confirmarDevSol, cancelar: cancelar,
+    instruir: instruir, _confirmarInsSol: _confirmarInsSol,
+    iniciarExecucao: iniciarExecucao, _confirmarExeSol: _confirmarExeSol,
+    concluir: concluir, _confirmarConSol: _confirmarConSol,
+    rejeitar: rejeitar, _confirmarRejSol: _confirmarRejSol,
+    devolver: devolver, _confirmarDevSol: _confirmarDevSol,
+    cancelar: cancelar, _confirmarCanSol: _confirmarCanSol,
     abrirDetalhe: abrirDetalhe, fecharDetalhe: fecharDetalhe, abrirDetTab: abrirDetTab,
     marcarPago: marcarPago,
     abrirModalDoc: abrirModalDoc, fecharModalDoc: fecharModalDoc, salvarDoc: salvarDoc, removerDoc: removerDoc,
@@ -19506,11 +19598,15 @@ var ContratadosUI = (function() {
   function carregar() {
     var status = document.getElementById('ag-filtro-status') ? document.getElementById('ag-filtro-status').value : '';
     var filtros = status ? { status: status } : {};
+    var el = document.getElementById('ag-lista');
     GAS.contratados.listar(filtros, function(resp) {
-      var lista = (resp&&resp.ok)?resp.data:[];
-      var el = document.getElementById('ag-lista');
       if (!el) return;
-      if (!lista || !lista.length) {
+      if (!resp || !resp.ok) {
+        el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">badge</span><p style="font-size:13px;color:var(--muted)">Erro ao carregar. Tente novamente.</p></div>';
+        return;
+      }
+      var lista = resp.data || [];
+      if (!lista.length) {
         el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">badge</span><p style="font-size:13px;color:var(--muted)">Nenhum agente externo cadastrado.</p></div>';
         return;
       }
@@ -19527,7 +19623,10 @@ var ContratadosUI = (function() {
             +(c.status==='habilitado'?'<button class="btn btn-warning btn-sm" id="btn-ag-sus-'+c.id+'" onclick="ContratadosUI.suspender(\''+c.id+'\')" style="margin-right:4px"><span class="ms ms-sm">pause</span>Suspender</button>':'')
             +'</td></tr>';
         }).join('')+'</tbody></table>';
-    }, function(e){ Toast.erro('Erro: '+(e.message||e)); });
+    }, function(e){
+      if (el) el.innerHTML = '<div class="empty-state" style="padding:20px"><span class="ms" style="font-size:28px;color:var(--muted)">badge</span><p style="font-size:13px;color:var(--muted)">Erro ao carregar fornecedores.</p></div>';
+      Toast.erro('Erro: '+(e&&e.message||e));
+    });
   }
 
   function toggleDocumento(tipo) {

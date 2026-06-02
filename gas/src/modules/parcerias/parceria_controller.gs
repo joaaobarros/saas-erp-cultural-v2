@@ -24,10 +24,10 @@ function ctrl_parcerias_listar(filtros) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
     var ck = _CK_PAR_LISTA + '_' + JSON.stringify(filtros);
-    var cached = CacheService.get(ck);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
     var lista = ParceriaRepository.listar(orgId, filtros);
-    CacheService.set(ck, JSON.stringify(lista), 120);
+    AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_parcerias_listar');
 }
@@ -47,10 +47,10 @@ function ctrl_parcerias_metricas() {
   return GasResponse.wrap(function() {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var cached = CacheService.get(_CK_PAR_METRICAS);
-    if (cached) return JSON.parse(cached);
+    var cached = AppCache.get(_CK_PAR_METRICAS);
+    if (cached) return cached;
     var m = ParceriaRepository.metricas(orgId);
-    CacheService.set(_CK_PAR_METRICAS, JSON.stringify(m), 120);
+    AppCache.set(_CK_PAR_METRICAS, m, 120);
     return m;
   }, 'ctrl_parcerias_metricas');
 }
@@ -70,8 +70,8 @@ function ctrl_parcerias_salvar(dados) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var p     = ParceriaEngine.salvar(orgId, dados, email);
-    CacheService.invalidar(_CK_PAR_LISTA);
-    CacheService.invalidar(_CK_PAR_METRICAS);
+    AppCache.remove(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_METRICAS);
     return p;
   }, 'ctrl_parcerias_salvar');
 }
@@ -83,8 +83,8 @@ function ctrl_parcerias_mudarStatus(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['gestor','admin','superadmin']);
     var p     = ParceriaEngine.mudarStatus(orgId, params.id, params.status, email, params.motivo);
-    CacheService.invalidar(_CK_PAR_LISTA);
-    CacheService.invalidar(_CK_PAR_METRICAS);
+    AppCache.remove(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_METRICAS);
     return p;
   }, 'ctrl_parcerias_mudarStatus');
 }
@@ -99,7 +99,7 @@ function ctrl_parcerias_vincularAcao(params) {
       orgId, params.id, params.acaoId, params.acaoNome||'',
       params.papelParceiro||'', params.papelInstituicao||''
     );
-    CacheService.invalidar(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_vincularAcao');
 }
@@ -111,7 +111,7 @@ function ctrl_parcerias_desvincularAcao(params) {
     var orgId = getOrgConfig().orgId;
     AcessoService.verificar(['gestor','admin','superadmin']);
     var p = ParceriaEngine.desvincularAcao(orgId, params.id, params.acaoId);
-    CacheService.invalidar(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_desvincularAcao');
 }
@@ -123,7 +123,7 @@ function ctrl_parcerias_salvarEntrega(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
     var p = ParceriaEngine.salvarEntrega(orgId, params.parceiaId, params.entrega||{}, email);
-    CacheService.invalidar(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_salvarEntrega');
 }
@@ -135,7 +135,7 @@ function ctrl_parcerias_avaliar(params) {
     var orgId = getOrgConfig().orgId;
     var email = AcessoService.verificar(['gestor','admin','superadmin']);
     var p = ParceriaEngine.avaliar(orgId, params.id, params.avaliacao, email);
-    CacheService.invalidar(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_avaliar');
 }
@@ -149,8 +149,8 @@ function ctrl_parcerias_excluir(id) {
     if (!p) throw new Error('Parceria não encontrada.');
     if (p.status === 'ativa') throw new Error('Cancele a parceria antes de excluir.');
     ParceriaRepository.excluir(orgId, id);
-    CacheService.invalidar(_CK_PAR_LISTA);
-    CacheService.invalidar(_CK_PAR_METRICAS);
+    AppCache.remove(_CK_PAR_LISTA);
+    AppCache.remove(_CK_PAR_METRICAS);
     return { excluido: id };
   }, 'ctrl_parcerias_excluir');
 }
