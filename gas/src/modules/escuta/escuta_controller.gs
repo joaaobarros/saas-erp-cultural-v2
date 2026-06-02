@@ -547,9 +547,10 @@ function ctrl_escuta_pulse_monitoramento(params) {
 
     // Pulse é sempre anônimo — contamos participantes por colaboradorId mas
     // nunca expomos nomes de quem não respondeu (apenas a contagem)
+    // Normaliza para lowercase para evitar mismatch de case entre login e cadastro
     var idsComAtividade = {};
     respostas.forEach(function(r) {
-      if (r.colaboradorId) idsComAtividade[r.colaboradorId] = true;
+      if (r.colaboradorId) idsComAtividade[String(r.colaboradorId).toLowerCase().trim()] = true;
     });
 
     var totalAtivos        = 0;
@@ -558,8 +559,13 @@ function ctrl_escuta_pulse_monitoramento(params) {
       var colaboradores = ColaboradorRepository.listar(ctx.orgId)
         .filter(function(c) { return c.status === 'ativo'; });
       totalAtivos       = colaboradores.length;
+      // Colaboradores têm emailInstitucional e/ou emailPessoal (sem campo "email" direto)
       totalSemAtividade = colaboradores
-        .filter(function(c) { return !idsComAtividade[c.email]; }).length;
+        .filter(function(c) {
+          var eInst = String(c.emailInstitucional || '').toLowerCase().trim();
+          var ePess = String(c.emailPessoal       || '').toLowerCase().trim();
+          return (!eInst || !idsComAtividade[eInst]) && (!ePess || !idsComAtividade[ePess]);
+        }).length;
     } catch(e) { /* não crítico */ }
 
     return {
@@ -578,6 +584,20 @@ function ctrl_escuta_pulse_monitoramento(params) {
       }
     };
   }, 'ctrl_escuta_pulse_monitoramento');
+}
+
+/**
+ * Retorna pesquisas obrigatórias ativas que o usuário atual ainda não respondeu.
+ * Qualquer colaborador ativo pode chamar. Usado pelo gate de bloqueio pós-login.
+ */
+function ctrl_escuta_pendentes_obrigatorias() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxEscuta();
+    var pendentes = EscutaEngine.listarPendentesObrigatorias(ctx.orgId, ctx.email);
+    return pendentes.map(function(p) {
+      return { id: p.id, titulo: p.titulo, descricao: p.descricao, anonima: p.anonima !== false };
+    });
+  }, 'ctrl_escuta_pendentes_obrigatorias');
 }
 
 /**

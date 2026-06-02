@@ -4794,7 +4794,7 @@ select.form-control { cursor: pointer; }
                 <span class="ms ms-sm" style="color:var(--color-primary)">calendar_today</span>
                 <input type="date" id="mapa-data" onchange="MapaUI.carregar()"
                   style="border:1px solid var(--border);border-radius:var(--r-sm);
-                         padding:5px 8px;font-size:12px;background:var(--surface);
+                         padding:5px 8px;font-size:12px;font-family:inherit;background:var(--surface);
                          color:var(--text);outline:none;cursor:pointer;">
               </label>
               <select id="mapa-filtro-tipo" onchange="MapaUI.setFiltro('tipo',this.value)"
@@ -8559,7 +8559,8 @@ var GAS = {
     participacao:        function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_participacao({}); },
     bancoPerguntas:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_banco_perguntas({}); },
     pulseMonitoramento:  function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_monitoramento(p||{}); },
-    suprimirEmails:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_suprimir_emails({}); }
+    suprimirEmails:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_suprimir_emails({}); },
+    pendentesObrigatorias: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pendentes_obrigatorias(); }
   },
   // ── Fase 11.3: Dashboard Unificado ────────────────────────────────────────
   dashboard: {
@@ -21265,11 +21266,17 @@ var App = (function() {
     // Textos
     var nome = _boot.orgConfig.nomeInstituicao || _boot.orgConfig.nome || 'Sistema';
     var email = _boot.usuarioEmail || '';
-    var iniciais = email.replace(/@.*$/,'').slice(0,2).toUpperCase() || '?';
+    var nomeUsuario = _boot.usuarioNome || '';
+    var nomeDisplay = nomeUsuario || email.split('@')[0];
+    var partesNome  = nomeUsuario ? nomeUsuario.trim().split(/\s+/) : [];
+    var iniciais = partesNome.length >= 2
+      ? (partesNome[0][0] + partesNome[partesNome.length - 1][0]).toUpperCase()
+      : nomeUsuario ? nomeUsuario.slice(0,2).toUpperCase()
+      : email.replace(/@.*$/,'').slice(0,2).toUpperCase() || '?';
 
     document.getElementById('org-nome-sidebar').textContent = nome;
-    document.getElementById('topbar-email').textContent     = email;
-    document.getElementById('sidebar-user-name').textContent = email.split('@')[0];
+    document.getElementById('topbar-email').textContent     = nomeDisplay;
+    document.getElementById('sidebar-user-name').textContent = nomeDisplay;
     document.getElementById('topbar-avatar').textContent    = iniciais;
     document.getElementById('sidebar-avatar').textContent   = iniciais;
     document.title = 'TRAMAR — ' + nome;
@@ -21298,7 +21305,118 @@ var App = (function() {
         EscutaUI.tentarMostrarPulse();
       }
     }, 4000);
+
+    // Gate de pesquisas obrigatórias — verifica após boot, bloqueia se pendente
+    setTimeout(_verificarGatePesquisaObrigatoria, 1500);
   }
+
+  // ── Gate de pesquisas obrigatórias ──────────────────────────────────────────
+
+  function _verificarGatePesquisaObrigatoria() {
+    GAS.escuta.pendentesObrigatorias(function(r) {
+      if (!r || !r.ok || !r.data || !r.data.length) return;
+      _exibirGatePesquisaObrigatoria(r.data, 0);
+    });
+  }
+
+  function _exibirGatePesquisaObrigatoria(fila, idx) {
+    if (idx >= fila.length) {
+      var ov = document.getElementById('gate-pesquisa-obrigatoria');
+      if (ov) ov.remove();
+      return;
+    }
+    var pesquisa = fila[idx];
+
+    var ov = document.getElementById('gate-pesquisa-obrigatoria');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'gate-pesquisa-obrigatoria';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);';
+      document.body.appendChild(ov);
+    }
+
+    var badgeAnonima = pesquisa.anonima !== false
+      ? '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.3px;">ANÔNIMA</span>'
+      : '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.3px;">IDENTIFICADA</span>';
+
+    var avisoAnonima = pesquisa.anonima !== false
+      ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#166534;">Suas respostas <strong>não serão vinculadas</strong> ao seu nome.</div>'
+      : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#991b1b;">Esta pesquisa <strong>não é anônima</strong>. Suas respostas serão registradas com sua identificação.</div>';
+
+    var contador = fila.length > 1
+      ? '<span style="font-size:11px;color:var(--text2);">Pesquisa ' + (idx+1) + ' de ' + fila.length + '</span>'
+      : '';
+
+    ov.innerHTML =
+      '<div style="background:var(--surface);border-radius:16px;padding:24px 28px;width:92%;max-width:540px;max-height:88vh;overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.3);">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
+          '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;letter-spacing:.4px;text-transform:uppercase;">Obrigatória</span>' +
+          badgeAnonima +
+          '<span style="flex:1;"></span>' +
+          contador +
+        '</div>' +
+        '<h3 style="margin:0 0 6px;font-size:17px;">' + _esc(pesquisa.titulo) + '</h3>' +
+        (pesquisa.descricao ? '<p style="font-size:13px;color:var(--text2);margin:0 0 14px;">' + _esc(pesquisa.descricao) + '</p>' : '') +
+        '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:#92400e;">' +
+          'Esta pesquisa é <strong>obrigatória</strong>. Preencha abaixo para continuar usando o sistema.' +
+        '</div>' +
+        avisoAnonima +
+        '<div id="gate-pesquisa-dims">⏳ Carregando questionário…</div>' +
+        '<div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+          '<label style="font-size:12px;display:flex;align-items:center;gap:5px;">' +
+            '<input type="checkbox" id="gate-anonima"' + (pesquisa.anonima !== false ? ' checked' : '') + '> Resposta anônima' +
+          '</label>' +
+          '<button id="btn-gate-enviar" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-gate-enviar\',\'Enviando…\',function(done){App._enviarRespostaGate(\'' + pesquisa.id + '\',' + idx + ',done)})">' +
+            'Responder e continuar' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    GAS.escuta.catalogo(function(r) {
+      var el = document.getElementById('gate-pesquisa-dims');
+      if (!el) return;
+      if (!r || !r.ok) { el.innerHTML = '<p style="color:var(--danger);font-size:12px;">Erro ao carregar questionário.</p>'; return; }
+      var html = '';
+      (r.data || []).forEach(function(d) {
+        html += '<div style="margin-bottom:10px;padding:10px 12px;background:var(--surface1,var(--bg));border:1px solid var(--border);border-radius:8px;">' +
+          '<p style="font-size:12px;font-weight:600;margin:0 0 4px;">' + _esc(d.label) + ' <span style="font-weight:400;color:var(--text2);">(' + d.grupo + ')</span></p>' +
+          '<p style="font-size:11px;color:var(--text2);margin:0 0 8px;">' + _esc(d.descricao) + '</p>' +
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            [1,2,3,4,5].map(function(n){
+              return '<label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:700;">' +
+                '<input type="radio" name="gate-dim-' + d.id + '" value="' + n + '" style="width:16px;height:16px;"> ' + n + '</label>';
+            }).join('') +
+            '<span style="font-size:10px;color:var(--text2);margin-left:6px;">1=Discordo · 5=Concordo</span>' +
+          '</div>' +
+        '</div>';
+      });
+      el.innerHTML = html;
+    });
+  }
+
+  function _enviarRespostaGate(pesquisaId, idxAtual, done) {
+    var respostas = {};
+    document.querySelectorAll('#gate-pesquisa-dims input[type=radio]:checked').forEach(function(inp) {
+      respostas[inp.name.replace('gate-dim-','')] = Number(inp.value);
+    });
+    if (!Object.keys(respostas).length) { Toast.aviso('Responda ao menos uma dimensão.'); if(done) done(); return; }
+    var anonima = !!(document.getElementById('gate-anonima')||{}).checked;
+    GAS.escuta.registrarResposta({ pesquisaId: pesquisaId, respostas: respostas, anonima: anonima }, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao enviar.'); return; }
+      Toast.sucesso('Resposta enviada!');
+      GAS.escuta.pendentesObrigatorias(function(r2) {
+        var fila = (r2 && r2.ok && r2.data) ? r2.data : [];
+        if (!fila.length) {
+          var ovEl = document.getElementById('gate-pesquisa-obrigatoria');
+          if (ovEl) ovEl.remove();
+        } else {
+          _exibirGatePesquisaObrigatoria(fila, 0);
+        }
+      });
+    }, function(e) { if (done) done(); Toast.erro((e&&e.message)||'Erro ao enviar.'); });
+  }
+
 
   function _popularSelectTipos(selectId, tipos) {
     var sel = document.getElementById(selectId);
@@ -21420,11 +21538,13 @@ var App = (function() {
 
   function _renderizarHome() {
     var email = _boot.usuarioEmail || '';
-    var nome  = email.split('@')[0];
+    var nomeCompleto = _boot.usuarioNome || '';
+    var partesNome   = nomeCompleto ? nomeCompleto.trim().split(/\s+/) : [];
+    var nomeBreve    = partesNome.length ? partesNome[0] : email.split('@')[0];
     var hora  = new Date().getHours();
     var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
 
-    document.getElementById('home-titulo').textContent = saudacao + ', ' + nome + '!';
+    document.getElementById('home-titulo').textContent = saudacao + ', ' + nomeBreve + '!';
     var nomeExib = _boot.orgConfig.nomeInstituicao || _boot.orgConfig.nome;
     document.getElementById('home-subtitulo').textContent =
       nomeExib + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
@@ -21622,6 +21742,7 @@ var App = (function() {
     getBoot: function(){ return _boot; },
     reconstruirMenu: function(){ _reconstruirMenu(false); },
     atualizarBadgeEscuta: atualizarBadgeEscuta,
+    _enviarRespostaGate: _enviarRespostaGate,
     Toast, BtnGuard, Router
   };
 })();
@@ -24894,6 +25015,7 @@ var EscutaUI = (function() {
         '<div style="min-width:0;">' +
           '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
             '<span class="badge-' + bCl + '" style="font-size:11px;padding:2px 8px;border-radius:20px;">' + _esc(p.status) + '</span>' +
+            (p.obrigatoria ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;letter-spacing:.3px;">OBRIGATÓRIA</span>' : '') +
             '<strong style="font-size:13px;">' + _esc(p.titulo) + '</strong>' +
           '</div>' +
           '<div style="font-size:12px;color:var(--text2);margin-top:3px;">Rodada ' + (p.rodada||'—') +
@@ -25443,7 +25565,7 @@ var EscutaUI = (function() {
       var tabelaLinhas = d.porPergunta.filter(function(p) { return p.impressoes > 0; }).map(function(p) {
         var taxa = p.taxaEngajamento !== null ? Math.round(p.taxaEngajamento * 100) + '%' : '—';
         var corL = p.taxaEngajamento === null ? 'var(--text2)' : p.taxaEngajamento >= 0.5 ? 'var(--success)' : p.taxaEngajamento >= 0.2 ? 'var(--warning)' : 'var(--danger)';
-        var ult  = p.ultimaUsadaEm ? p.ultimaUsadaEm.slice(0, 10) : '—';
+        var ult  = p.ultimaUsadaEm ? fmtDataPtBR(p.ultimaUsadaEm.slice(0, 10)) : '—';
         return '<tr>' +
           '<td style="padding:5px 8px;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _esc(p.texto) + '">' + _esc(p.texto) + '</td>' +
           '<td style="padding:5px 8px;font-size:10px;text-align:center;"><span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensao) + '</span></td>' +
@@ -25770,7 +25892,7 @@ var EscutaUI = (function() {
         '<div class="form-group"><label class="form-label">Início</label><input type="date" id="esc-f-inicio" class="form-control" value="' + _esc(item?item.dataInicio:'') + '"></div>' +
         '<div class="form-group"><label class="form-label">Fim</label><input type="date" id="esc-f-fim" class="form-control" value="' + _esc(item?item.dataFim:'') + '"></div>' +
       '</div>' +
-      '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;">' +
+      '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
           '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '>' +
           '<label for="esc-f-anonima" style="font-size:13px;font-weight:600;cursor:pointer;">Pesquisa anônima</label>' +
@@ -25778,6 +25900,16 @@ var EscutaUI = (function() {
         '<p style="font-size:11px;color:var(--text2);margin:0;">' +
           '<strong>Marcado:</strong> as respostas não serão vinculadas ao nome do participante — apenas agregadas por dimensão. ' +
           '<strong>Desmarcado:</strong> o participante será identificado nas respostas e poderá ver essa informação ao preencher.' +
+        '</p>' +
+      '</div>' +
+      '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:16px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+          '<input type="checkbox" id="esc-f-obrigatoria"' + (item&&item.obrigatoria?' checked':'') + '>' +
+          '<label for="esc-f-obrigatoria" style="font-size:13px;font-weight:600;cursor:pointer;color:#92400e;">Pesquisa obrigatória</label>' +
+        '</div>' +
+        '<p style="font-size:11px;color:#92400e;margin:0;">' +
+          'Quando ativada, todos os colaboradores serão convidados e <strong>não poderão usar o sistema</strong> até responderem. ' +
+          'Use apenas para pesquisas críticas (ex.: NR-1, compliance).' +
         '</p>' +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
@@ -25796,11 +25928,12 @@ var EscutaUI = (function() {
     var titulo = ((document.getElementById('esc-f-titulo')||{}).value||'').trim();
     if (!titulo) { Toast.aviso('Título obrigatório.'); if(done) done(); return; }
     var dados = {
-      titulo:    titulo,
-      descricao: (document.getElementById('esc-f-desc')||{}).value||'',
-      dataInicio:(document.getElementById('esc-f-inicio')||{}).value||'',
-      dataFim:   (document.getElementById('esc-f-fim')||{}).value||'',
-      anonima:   !!(document.getElementById('esc-f-anonima')||{}).checked
+      titulo:      titulo,
+      descricao:   (document.getElementById('esc-f-desc')||{}).value||'',
+      dataInicio:  (document.getElementById('esc-f-inicio')||{}).value||'',
+      dataFim:     (document.getElementById('esc-f-fim')||{}).value||'',
+      anonima:     !!(document.getElementById('esc-f-anonima')||{}).checked,
+      obrigatoria: !!(document.getElementById('esc-f-obrigatoria')||{}).checked
     };
     if (editId) dados.id = editId;
     GAS.escuta.salvar(dados, function(r) {

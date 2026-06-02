@@ -129,6 +129,7 @@ var EscutaEngine = (function() {
       rodada:      dados.rodada   || _proximaRodada(orgId),
       dimensoes:   dados.dimensoes || DIMENSOES.map(function(d) { return d.id; }),
       anonima:     dados.anonima !== false,   // default true
+      obrigatoria: dados.obrigatoria === true, // default false
       dataInicio:  dados.dataInicio || new Date().toISOString().split('T')[0],
       dataFim:     dados.dataFim    || _dataFimPadrao(),
       status:      'rascunho',
@@ -145,15 +146,34 @@ var EscutaEngine = (function() {
     if (!pesquisa) throw new Error('Pesquisa não encontrada');
     FsmGuardian.transitar('escuta', pesquisa.status, 'ativa', { pesquisaId: pesquisaId });
 
-    var convidados = _selecionarConvidadosFairness(orgId, pesquisa.dimensoes);
+    // Pesquisa obrigatória convida todos os colaboradores ativos (sem fairness sampling)
+    var convidados = pesquisa.obrigatoria
+      ? _todosColaboradoresAtivos(orgId)
+      : _selecionarConvidadosFairness(orgId, pesquisa.dimensoes);
     pesquisa.status       = 'ativa';
     pesquisa.convidados   = convidados;
     pesquisa.dataAtivacao = new Date().toISOString();
     EscutaRepository.salvarPesquisa(orgId, pesquisa);
 
     _enviarConvites(orgId, pesquisaId, convidados, pesquisa);
-    AuditoriaService.registrar('ESCUTA_ATIVADA', 'escuta', { id: pesquisaId, totalConvidados: convidados.length }, emailAdmin);
+    AuditoriaService.registrar('ESCUTA_ATIVADA', 'escuta', { id: pesquisaId, totalConvidados: convidados.length, obrigatoria: !!pesquisa.obrigatoria }, emailAdmin);
     return { ok: true, totalConvidados: convidados.length };
+  }
+
+  /**
+   * Retorna pesquisas obrigatórias ativas que o colaborador (email) ainda não respondeu.
+   * Usado pelo gate de bloqueio pós-login.
+   */
+  function listarPendentesObrigatorias(orgId, email) {
+    var emailNorm = String(email || '').toLowerCase().trim();
+    if (!emailNorm) return [];
+    return EscutaRepository.listarPesquisas(orgId).filter(function(p) {
+      if (!p.obrigatoria || p.status !== 'ativa') return false;
+      var jaRespondeu = EscutaRepository.listarRespostas(orgId, p.id).some(function(r) {
+        return r.colaboradorId && String(r.colaboradorId).toLowerCase().trim() === emailNorm;
+      });
+      return !jaRespondeu;
+    });
   }
 
   function encerrarPesquisa(orgId, pesquisaId, emailAdmin) {
@@ -193,7 +213,8 @@ var EscutaEngine = (function() {
 
     var registro = {
       pesquisaId:    pesquisaId,
-      colaboradorId: anonima ? null : colaboradorId,
+      // Pesquisas obrigatórias sempre persistem colaboradorId para verificação do gate
+      colaboradorId: (!anonima || pesquisa.obrigatoria) ? colaboradorId : null,
       respostas:     respostas,
       anonima:       anonima !== false
     };
@@ -882,6 +903,14 @@ var EscutaEngine = (function() {
     return ordenados.map(function(c) { return c.id; });
   }
 
+  function _todosColaboradoresAtivos(orgId) {
+    try {
+      return ColaboradorRepository.listar(orgId)
+        .filter(function(c) { return c.status === 'ativo'; })
+        .map(function(c) { return c.id; });
+    } catch(e) { return []; }
+  }
+
   function _totalColaboradores(orgId) {
     try {
       var lista = ColaboradorRepository.listar(orgId)
@@ -1208,6 +1237,7 @@ var EscutaEngine = (function() {
     ativarPesquisa:             ativarPesquisa,
     encerrarPesquisa:           encerrarPesquisa,
     registrarResposta:          registrarResposta,
+    listarPendentesObrigatorias: listarPendentesObrigatorias,
     // Análise
     calcularResultados:         calcularResultados,
     cruzarClimaComPessoas:      cruzarClimaComPessoas,
