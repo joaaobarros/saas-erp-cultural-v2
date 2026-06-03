@@ -3,18 +3,15 @@
  * @layer modules/contratacoes
  * @description Repositório de Pregões / Atas de Registro de Preços.
  *
- * Cada pregão contém itens com preço pré-negociado e saldo disponível,
- * permitindo que contratações referenciem esses valores sem digitação manual.
- *
  * @depends repositories/i_repository.gs (modifyJSON, lerJSON)
- *          core/utils.gs (ABA_PARA_MODULO)
+ *          core/utils.gs (ABA_PARA_MODULO, _getSheet)
  *          core/config.gs (getOrgConfig)
  */
 
 var PregaoRepository = (function () {
 
+  var _SHEET_KEY = 'SHEET_ID_FINANCEIRO';
   var _FONTE     = 'pregoes.json';
-  var _PLANILHA  = 'FINANCEIRO';
   var _ABA       = 'Pregoes';
   var _COLUNAS   = [
     'id','numero','orgao','objeto','tipo','vigenciaInicio','vigenciaFim',
@@ -22,6 +19,14 @@ var PregaoRepository = (function () {
   ];
 
   function _orgId() { return getOrgConfig().orgId; }
+
+  function _getAba() {
+    var props   = PropertiesService.getScriptProperties();
+    var sheetId = props.getProperty(_SHEET_KEY);
+    if (!sheetId) throw new Error('Planilha não configurada: ' + _SHEET_KEY);
+    var ss  = SpreadsheetApp.openById(sheetId);
+    return ss.getSheetByName(_ABA) || ss.insertSheet(_ABA);
+  }
 
   // ── CRUD JSON ──────────────────────────────────────────────────────────────
 
@@ -43,7 +48,7 @@ var PregaoRepository = (function () {
       lista.push(pregao);
       return lista;
     });
-    _sincronizarSheet(pregao, oid);
+    _sincronizarSheet(pregao);
     return pregao;
   }
 
@@ -60,7 +65,7 @@ var PregaoRepository = (function () {
       }
       return lista;
     });
-    if (atualizado) _sincronizarSheet(atualizado, oid);
+    if (atualizado) _sincronizarSheet(atualizado);
     return atualizado;
   }
 
@@ -73,21 +78,25 @@ var PregaoRepository = (function () {
 
   // ── Índice em planilha ─────────────────────────────────────────────────────
 
-  function prepararIndice(orgId) {
-    var oid = orgId || _orgId();
-    var aba = garantirAba(_PLANILHA, _ABA, oid);
-    if (aba.getLastRow() === 0 || aba.getRange(1,1).getValue() !== 'id') {
-      aba.getRange(1, 1, 1, _COLUNAS.length).setValues([_COLUNAS])
-        .setFontWeight('bold').setBackground('#f0f4ff');
+  function prepararIndice() {
+    try {
+      var aba = _getAba();
+      var primeira = aba.getRange(1, 1, 1, 1).getValue();
+      if (!primeira || primeira !== 'id') {
+        aba.getRange(1, 1, 1, _COLUNAS.length).setValues([_COLUNAS])
+          .setFontWeight('bold').setBackground('#f0f4ff');
+        aba.setFrozenRows(1);
+      }
+      return { ok: true, aba: 'FINANCEIRO.' + _ABA };
+    } catch (e) {
+      return { ok: false, motivo: e.message };
     }
-    return { ok: true, aba: _PLANILHA + '.' + _ABA };
   }
 
-  function _sincronizarSheet(pregao, orgId) {
+  function _sincronizarSheet(pregao) {
     try {
-      var aba = garantirAba(_PLANILHA, _ABA, orgId);
+      var aba   = _getAba();
       var dados = aba.getDataRange().getValues();
-      var headers = dados.length ? dados[0] : _COLUNAS;
       var rowIdx = -1;
       for (var r = 1; r < dados.length; r++) {
         if (dados[r][0] === pregao.id) { rowIdx = r + 1; break; }
