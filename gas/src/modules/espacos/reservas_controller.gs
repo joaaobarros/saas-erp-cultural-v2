@@ -51,10 +51,13 @@ function _nivelReservas(email) {
 var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'infraestrutura', 'habilitador'];
 var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
-// Papéis que podem confirmar a qualquer momento (sem gate de tempo)
-var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
-// Dias de espera para escalação ao habilitador
-var _DIAS_ESCALACAO_HABILITADOR = 2;
+// Papéis soberanos: confirmam a qualquer momento, independente de responsável
+var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor'];
+// Papéis com escalonamento: confirmam imediatamente se forem responsáveis do slot;
+// caso contrário, aguardam _DIAS_ESCALACAO dias sem resposta
+var _NIVEL_ESCALACAO = ['infraestrutura', 'habilitador'];
+// Dias de espera para escalonamento (sem resposta do responsável do slot)
+var _DIAS_ESCALACAO = 2;
 
 /**
  * Retorna quantos dias uma reserva pendente está aguardando confirmação.
@@ -106,16 +109,17 @@ function _ehResponsavelSlot(email, r) {
 /**
  * Retorna true se o usuário (nivel + email) pode confirmar a reserva r.
  * Regras:
- *   - admin/superadmin/gestor/infraestrutura → sempre (se precisaAprovacao)
- *   - responsável do slot → sempre
- *   - habilitador → apenas após _DIAS_ESCALACAO_HABILITADOR dias pendente
+ *   - admin / superadmin / gestor → sempre (soberanos)
+ *   - responsável cadastrado no slot → sempre
+ *   - infraestrutura / habilitador → imediato se for responsável do slot;
+ *     caso contrário, apenas após _DIAS_ESCALACAO dias sem resposta
  */
 function _podeConfirmarReserva(nivel, email, r) {
   if (!r.precisaAprovacao) return false;
   if ((r.status || '') !== 'pendente') return false;
   if (_NIVEL_CONFIRMAR_SEMPRE.indexOf(nivel) >= 0) return true;
   if (_ehResponsavelSlot(email, r)) return true;
-  if (nivel === 'habilitador' && _diasPendente(r) >= _DIAS_ESCALACAO_HABILITADOR) return true;
+  if (_NIVEL_ESCALACAO.indexOf(nivel) >= 0 && _diasPendente(r) >= _DIAS_ESCALACAO) return true;
   return false;
 }
 
@@ -156,9 +160,9 @@ function ctrl_reservas_listar(filtros) {
         // Dias aguardando confirmação (0 se não for pendente ou criadoEm ausente)
         r.diasPendente = _diasPendente(r);
 
-        // Sinaliza ao frontend quando a escalação ao habilitador já está ativa
+        // Sinaliza ao frontend quando escalação (infraestrutura + habilitador) está ativa
         r.escalonadoParaHabilitador = r.precisaAprovacao &&
-          r.diasPendente >= _DIAS_ESCALACAO_HABILITADOR;
+          r.diasPendente >= _DIAS_ESCALACAO;
 
         // Permissão de confirmação para o usuário atual (evita lógica duplicada no frontend)
         r.podeConfirmar = _podeConfirmarReserva(nivel, ctx.email, r);
@@ -281,9 +285,10 @@ function ctrl_reservas_cancelar(id, motivo) {
  * Confirma uma reserva (pendente → confirmado).
  *
  * Quem pode confirmar:
- *   • admin / superadmin / gestor / infraestrutura — a qualquer momento
+ *   • admin / superadmin / gestor — soberanos, a qualquer momento
  *   • responsável cadastrado no espaço/slot — a qualquer momento
- *   • habilitador — apenas após _DIAS_ESCALACAO_HABILITADOR dias aguardando
+ *   • infraestrutura / habilitador — imediato se for responsável do slot;
+ *     caso contrário, apenas após _DIAS_ESCALACAO dias sem resposta
  *
  * @param {string} id
  */
@@ -311,11 +316,11 @@ function ctrl_reservas_confirmar(id) {
 
     if (!_podeConfirmarReserva(nivel, ctx.email, r)) {
       var _dias = r.diasPendente;
-      var _restam = Math.max(0, _DIAS_ESCALACAO_HABILITADOR - _dias);
-      if (nivel === 'habilitador' && _restam > 0) {
+      var _restam = Math.max(0, _DIAS_ESCALACAO - _dias);
+      if (_NIVEL_ESCALACAO.indexOf(nivel) >= 0 && _restam > 0) {
         throw new Error(
           'Escalação disponível em ' + _restam + ' dia(s). ' +
-          'O habilitador pode confirmar após ' + _DIAS_ESCALACAO_HABILITADOR +
+          'Infraestrutura e habilitador podem confirmar após ' + _DIAS_ESCALACAO +
           ' dias sem resposta dos responsáveis.'
         );
       }
