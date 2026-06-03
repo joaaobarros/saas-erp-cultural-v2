@@ -155,9 +155,10 @@ var AcaoEngine = (function () {
    * @param {string} emailUsuario
    * @param {string} [motivo]
    * @param {string} [orgId]
+   * @param {Object} [encerramento] — dados de resultado ao concluir (publicoAtingido, realizacoes, observacoes, comprovacoes)
    * @returns {{ ok: boolean, erro?: string }}
    */
-  function mudarStatus(id, novoStatus, emailUsuario, motivo, orgId) {
+  function mudarStatus(id, novoStatus, emailUsuario, motivo, orgId, encerramento) {
     orgId = orgId || getOrgConfig().orgId;
     try {
       var acao = AcaoRepository.buscarPorId(orgId, id);
@@ -174,6 +175,10 @@ var AcaoEngine = (function () {
       acao.atualizadoEm = new Date().toISOString();
       acao.versao       = (acao.versao || 1) + 1;
       if (motivo) acao.ultimoMotivo = motivo;
+      if (novoStatus === ESTADOS.CONCLUIDA && encerramento) {
+        encerramento.registradoEm = new Date().toISOString();
+        acao.encerramento = encerramento;
+      }
 
       AcaoRepository.salvar(orgId, acao);
 

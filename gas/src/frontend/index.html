@@ -345,8 +345,9 @@ body {
 }
 
 .page-header { margin-bottom: 24px; }
-.page-title { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
-.page-subtitle { font-size: 14px; color: var(--text2); margin-top: 4px; }
+/* .page-title e .view-title são o mesmo estilo — unificados aqui */
+.page-title, .view-title { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
+.page-subtitle, .view-subtitle { font-size: 14px; color: var(--text2); margin-top: 4px; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    CARDS
@@ -470,17 +471,7 @@ body {
   transition: background var(--fast), box-shadow var(--fast), opacity var(--fast);
 }
 .btn:disabled { opacity: .48; cursor: not-allowed; }
-.btn-primario {
-  background: var(--color-primary); color: #fff;
-}
-.btn-primario:hover:not(:disabled) {
-  background: var(--color-primary-dk);
-  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb),.35);
-}
-.btn-secundario {
-  background: var(--color-primary-lt); color: var(--color-primary);
-}
-.btn-secundario:hover:not(:disabled) { background: #c7d2fe; }
+/* .btn-primario / .btn-secundario → aliases PT; ver seção ALIASES abaixo */
 .btn-ghost {
   background: transparent; color: var(--text2);
   border: 1.5px solid var(--border);
@@ -1185,11 +1176,11 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ALIASES UTILITÁRIOS (compatibilidade com Fase 5+)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-/* Aliases de botões em inglês */
-.btn-primary   { background: var(--color-primary); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--color-primary-dk); box-shadow: 0 4px 14px rgba(var(--color-primary-rgb),.35); }
-.btn-secondary { background: var(--color-primary-lt); color: var(--color-primary); }
-.btn-secondary:hover:not(:disabled) { background: #c7d2fe; }
+/* Aliases de botões — inglês (btn-primary) e português (btn-primario) unificados */
+.btn-primary, .btn-primario   { background: var(--color-primary); color: #fff; }
+.btn-primary:hover:not(:disabled), .btn-primario:hover:not(:disabled) { background: var(--color-primary-dk); box-shadow: 0 4px 14px rgba(var(--color-primary-rgb),.35); }
+.btn-secondary, .btn-secundario { background: var(--color-primary-lt); color: var(--color-primary); }
+.btn-secondary:hover:not(:disabled), .btn-secundario:hover:not(:disabled) { background: #c7d2fe; }
 /* Alias de input genérico */
 .input {
   width: 100%; padding: 9px 12px;
@@ -1604,8 +1595,8 @@ textarea.input { resize: vertical; }
 textarea.form-control { resize: vertical; }
 select.form-control { cursor: pointer; }
 
-/* .tab-btn.tab-ativa — alias de .tab-btn.ativa (Fase 11+) */
-.tab-btn.tab-ativa {
+/* .tab-btn.tab-ativa / .tab-btn.active — aliases de .tab-btn.ativa */
+.tab-btn.tab-ativa, .tab-btn.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
   font-weight: 600;
@@ -1642,9 +1633,7 @@ select.form-control { cursor: pointer; }
 }
 .item-card:hover { box-shadow: var(--sh-md); }
 
-/* .view-title / .view-subtitle — aliases inglês de page-header */
-.view-title   { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; }
-.view-subtitle { font-size: 14px; color: var(--text2); margin-top: 4px; }
+/* .view-title / .view-subtitle — definidos junto de page-title/page-subtitle acima */
 
 /* .stat-value — alias inglês de .stat-valor (Fase 9+) */
 .stat-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
@@ -20883,6 +20872,46 @@ var AcoesUI = (function() {
       }, function(e) { Toast.erro(e.message || e); });
     };
 
+    if (novoStatus === 'concluida') {
+      // ACO-28 — formulário de encerramento com dados de resultado
+      var html = '<div style="padding:20px;width:440px;max-width:95vw;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+          '<h3 style="font-size:1rem;font-weight:700;margin:0;color:var(--color-success,#10b981);">' +
+            '<span class="ms" style="vertical-align:middle;margin-right:6px;">task_alt</span>Concluir Ação</h3>' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2);">✕</button>' +
+        '</div>' +
+        '<p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Registre os dados de resultado desta ação. Os campos são opcionais mas importantes para prestação de contas.</p>' +
+        '<div class="form-group">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Público atingido</label>' +
+          '<input type="number" id="aco-enc-publico" class="form-control" placeholder="Ex: 150" min="0" style="max-width:160px;">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Realizações principais</label>' +
+          '<textarea id="aco-enc-realizacoes" rows="3" class="form-control" placeholder="Descreva os principais resultados alcançados…"></textarea>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Observações finais</label>' +
+          '<textarea id="aco-enc-obs" rows="2" class="form-control" placeholder="Dificuldades, lições aprendidas…"></textarea>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">Comprovações</label>' +
+          '<div id="aco-enc-comps-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>' +
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<input type="url" id="aco-enc-comp-url" class="form-control" placeholder="URL (foto, relatório, vídeo…)" style="flex:2;">' +
+            '<input type="text" id="aco-enc-comp-desc" class="form-control" placeholder="Descrição" style="flex:1;">' +
+            '<button data-bg-skip="1" onclick="AcoesUI._addComprovacaoEnc()" style="padding:7px 10px;background:var(--color-primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0;">+ Add</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" class="btn btn-ghost">Cancelar</button>' +
+          '<button id="btn-aco-enc-confirmar" data-bg-skip="1" onclick="AcoesUI._confirmarEncerramento(\'' + acaoId + '\')" class="btn btn-success">' +
+            '<span class="ms ms-sm">check_circle</span> Concluir Ação</button>' +
+        '</div>' +
+      '</div>';
+      _abrirModalSimples(html);
+      return;
+    }
+
     if (novoStatus === 'cancelada') {
       // Cancelamento exige motivo — usar modal inline
       var html = '<div style="padding:20px;min-width:340px;">' +
@@ -20914,16 +20943,54 @@ var AcoesUI = (function() {
     });
   }
 
-  function _executarMudarStatus(acaoId, novoStatus, motivo) {
+  function _executarMudarStatus(acaoId, novoStatus, motivo, encerramento) {
     var labels = { em_producao:'Em Produção', em_execucao:'Em Execução',
       concluida:'Concluída', arquivada:'Arquivada', cancelada:'Cancelada', planejada:'Planejada' };
-    GAS.acoes.mudarStatus({ id: acaoId, novoStatus: novoStatus, motivo: motivo || '' }, function(r) {
+    GAS.acoes.mudarStatus({ id: acaoId, novoStatus: novoStatus, motivo: motivo || '', encerramento: encerramento || null }, function(r) {
       if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao mudar status.'); return; }
       Toast.sucesso('Status atualizado: ' + (labels[novoStatus] || novoStatus));
       fecharPainel();
       _carregado = false;
       carregar();
     }, function(e) { Toast.erro(e.message || e); });
+  }
+
+  function _addComprovacaoEnc() {
+    var urlEl  = document.getElementById('aco-enc-comp-url');
+    var descEl = document.getElementById('aco-enc-comp-desc');
+    var url    = (urlEl && urlEl.value.trim()) || '';
+    if (!url) { Toast.aviso('Informe a URL da comprovação.'); return; }
+    var desc   = (descEl && descEl.value.trim()) || '';
+    var lista  = document.getElementById('aco-enc-comps-lista');
+    if (!lista) return;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:6px;padding:6px 8px;font-size:12px;';
+    row.setAttribute('data-comp-url', url);
+    row.setAttribute('data-comp-desc', desc);
+    row.innerHTML = '<span class="ms ms-sm" style="color:var(--color-primary);">link</span>' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escaparHtml(url)+'">'+escaparHtml(desc||url)+'</span>' +
+      '<button data-bg-skip="1" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--danger,#ef4444);font-size:14px;line-height:1;">✕</button>';
+    lista.appendChild(row);
+    if (urlEl)  urlEl.value  = '';
+    if (descEl) descEl.value = '';
+  }
+
+  function _confirmarEncerramento(acaoId) {
+    var lista = document.getElementById('aco-enc-comps-lista');
+    var comps = [];
+    if (lista) {
+      lista.querySelectorAll('[data-comp-url]').forEach(function(row) {
+        comps.push({ url: row.getAttribute('data-comp-url'), descricao: row.getAttribute('data-comp-desc') || '' });
+      });
+    }
+    var encerramento = {
+      publicoAtingido: parseInt((document.getElementById('aco-enc-publico') || {}).value || 0, 10) || 0,
+      realizacoes:     ((document.getElementById('aco-enc-realizacoes') || {}).value || '').trim(),
+      observacoes:     ((document.getElementById('aco-enc-obs') || {}).value || '').trim(),
+      comprovacoes:    comps
+    };
+    document.querySelectorAll('.modal-simples').forEach(function(e) { e.remove(); });
+    _executarMudarStatus(acaoId, 'concluida', '', encerramento);
   }
 
   // ────────────────────────────────────────────────────────
@@ -20960,6 +21027,8 @@ var AcoesUI = (function() {
     _abrirTab:             _abrirTab,
     _confirmarMudarStatus: _confirmarMudarStatus,
     _executarMudarStatus:  _executarMudarStatus,
+    _addComprovacaoEnc:    _addComprovacaoEnc,
+    _confirmarEncerramento: _confirmarEncerramento,
     getPainelAcao:         function() { return _painelAcao; }
   };
 

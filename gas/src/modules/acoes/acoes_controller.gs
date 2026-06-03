@@ -119,7 +119,7 @@ function ctrl_acoes_mudar_status(params) {
 
     var orgId     = getOrgConfig().orgId;
     var resultado = AcaoEngine.mudarStatus(
-      params.id, params.novoStatus, email, params.motivo || '', orgId
+      params.id, params.novoStatus, email, params.motivo || '', orgId, params.encerramento || null
     );
     if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao mudar status.');
 
