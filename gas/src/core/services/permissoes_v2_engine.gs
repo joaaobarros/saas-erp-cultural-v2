@@ -32,9 +32,12 @@ var PermissoesV2Engine = (function () {
   ];
 
   // Papéis válidos do sistema — sincronizado com PAPEIS_VALIDOS em acesso_service.gs
+  // Hierarquia: superadmin > admin > gestor > coordenador > {financeiro,rh,comunicacao,habilitador} > colaborador
+  // habilitador = equipe de infraestrutura: habilita espaços, confirma reservas, aprova veículos
+  // coordenador = coordenação de projetos/ações, nível abaixo de gestor
   var _PAPEIS_VALIDOS = [
     'colaborador', 'habilitador', 'rh', 'financeiro',
-    'comunicacao', 'gestor', 'admin', 'superadmin'
+    'comunicacao', 'coordenador', 'gestor', 'admin', 'superadmin'
   ];
 
   // ── Helper compacto ───────────────────────────────────────────────────────
@@ -44,16 +47,6 @@ var PermissoesV2Engine = (function () {
   //
   //  Adaptado da matriz v1 (mod_permissoes_v2.gs) para os módulos e papéis do v2.
   //  Leia cada linha como: "o papel X pode [visualizar|editar|excluir] o módulo Y?"
-  //
-  //  v1 → v2 mapeamento de papéis:
-  //    superadmin   → superadmin  (igual)
-  //    admin        → admin       (igual)
-  //    gestor       → gestor      (adicionado ao v2)
-  //    tecnico      → habilitador (mais próximo: pode aprovar espaços/ações)
-  //    rh           → rh          (igual)
-  //    comunicacao  → comunicacao (igual)
-  //    (novo)       → financeiro  (módulo financeiro completo)
-  //    visitante_controlado → colaborador (acesso básico)
   //
   var _MATRIZ = {
 
@@ -110,13 +103,23 @@ var PermissoesV2Engine = (function () {
       MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0)
     },
 
+    coordenador: {
+      // Coordenação de projetos/ações — abaixo de gestor.
+      // Cria e edita ações, reúniões, agentes, voluntários, parcerias, acervo.
+      // Lê financeiro e pessoas para acompanhamento. Sem admin/master.
+      ACOES:       _p(1,1,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(1,0,0),
+      FINANCEIRO:  _p(1,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
+      REUNIOES:    _p(1,1,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
+      MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0)
+    },
+
     habilitador: {
-      // Pode aprovar solicitações em espaços e ações. Vê pessoas (leitura)
-      // para contexto. Sem financeiro, admin, master, relatórios.
-      ACOES:       _p(1,1,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(1,0,0),
-      FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
+      // Equipe de infraestrutura: habilita espaços, confirma reservas sem dono,
+      // aprova veículos. Sem financeiro, pessoas (privacidade), admin, master.
+      ACOES:       _p(1,0,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(0,0,0),
+      FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(0,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(1,0,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0)
     },
 
     colaborador: {
@@ -134,7 +137,7 @@ var PermissoesV2Engine = (function () {
 
   // Papéis que admin (não superadmin) pode atribuir/revogar
   var _PAPEIS_EDITAVEIS_POR_ADMIN = [
-    'colaborador', 'habilitador', 'rh', 'financeiro', 'comunicacao', 'gestor'
+    'colaborador', 'habilitador', 'rh', 'financeiro', 'comunicacao', 'coordenador', 'gestor'
   ];
 
   // ── API ──────────────────────────────────────────────────────────────────
@@ -242,17 +245,17 @@ var PermissoesV2Engine = (function () {
   // Campos: id (único dentro do módulo), label (exibição), papeis (padrão com acesso).
   var _FEATURES = {
     ACOES: [
-      { id: 'publicar_agenda',       label: 'Publicar na agenda pública',          papeis: ['admin','superadmin','comunicacao','gestor'] },
-      { id: 'aprovar_acao',          label: 'Aprovar / recusar ação',              papeis: ['admin','superadmin','gestor','habilitador'] },
-      { id: 'editar_mapa_acao',      label: 'Editar mapa de ação',                 papeis: ['admin','superadmin','gestor','habilitador'] }
+      { id: 'publicar_agenda',       label: 'Publicar na agenda pública',          papeis: ['admin','superadmin','comunicacao','coordenador','gestor'] },
+      { id: 'aprovar_acao',          label: 'Aprovar / recusar ação',              papeis: ['admin','superadmin','gestor','coordenador'] },
+      { id: 'editar_mapa_acao',      label: 'Editar mapa de ação',                 papeis: ['admin','superadmin','gestor','coordenador'] }
     ],
     ESPACOS: [
-      { id: 'reservar_espaco',       label: 'Fazer reserva de espaço',             papeis: ['colaborador','habilitador','rh','financeiro','comunicacao','gestor','admin','superadmin'] },
+      { id: 'reservar_espaco',       label: 'Fazer reserva de espaço',             papeis: ['colaborador','habilitador','rh','financeiro','comunicacao','coordenador','gestor','admin','superadmin'] },
       { id: 'aprovar_reserva',       label: 'Aprovar reservas de espaço',          papeis: ['admin','superadmin','gestor','habilitador'] },
-      { id: 'gerenciar_espacos',     label: 'Criar / editar / desativar espaços',  papeis: ['admin','superadmin'] },
+      { id: 'gerenciar_espacos',     label: 'Criar / editar / desativar espaços',  papeis: ['admin','superadmin','habilitador'] },
       { id: 'gerenciar_chaves',      label: 'Gerenciar chaves de espaços',         papeis: ['admin','superadmin','habilitador'] },
       { id: 'gerenciar_ativos',      label: 'Gerenciar ativos e inventário',       papeis: ['admin','superadmin','habilitador'] },
-      { id: 'reservar_carro',        label: 'Reservar carro institucional',        papeis: ['colaborador','habilitador','rh','financeiro','comunicacao','gestor','admin','superadmin'] },
+      { id: 'reservar_carro',        label: 'Reservar carro institucional',        papeis: ['colaborador','habilitador','rh','financeiro','comunicacao','coordenador','gestor','admin','superadmin'] },
       { id: 'aprovar_reserva_carro', label: 'Aprovar reserva de carro',            papeis: ['admin','superadmin','gestor','habilitador'] }
     ],
     PESSOAS: [
@@ -260,7 +263,8 @@ var PermissoesV2Engine = (function () {
       { id: 'aprovar_remanejamento', label: 'Aprovar remanejamento',               papeis: ['admin','superadmin','rh','gestor'] },
       { id: 'ver_salario',           label: 'Ver dados salariais',                 papeis: ['admin','superadmin','rh','financeiro'] },
       { id: 'gerar_holerite',        label: 'Gerar / cancelar holerites',          papeis: ['admin','superadmin','rh'] },
-      { id: 'lancar_ponto_outros',   label: 'Lançar / editar ponto de outros',     papeis: ['admin','superadmin','rh'] }
+      { id: 'lancar_ponto_outros',   label: 'Lançar / editar ponto de outros',     papeis: ['admin','superadmin','rh'] },
+      { id: 'gerir_escuta',          label: 'Gerir pesquisas de escuta (Escuta)',  papeis: ['admin','superadmin','rh','comunicacao','coordenador','gestor'] }
     ],
     FINANCEIRO: [
       { id: 'aprovar_contrato',      label: 'Aprovar contratos / aditivos',        papeis: ['admin','superadmin','financeiro','gestor'] },
@@ -268,17 +272,17 @@ var PermissoesV2Engine = (function () {
       { id: 'ver_relatorio_completo',label: 'Ver relatório financeiro completo',   papeis: ['admin','superadmin','financeiro','gestor'] }
     ],
     COMUNICACAO: [
-      { id: 'publicar_escuta',       label: 'Publicar pesquisa (Escuta)',          papeis: ['admin','superadmin','comunicacao','gestor'] },
+      { id: 'publicar_escuta',       label: 'Publicar pesquisa (Escuta)',          papeis: ['admin','superadmin','comunicacao','coordenador','gestor'] },
       { id: 'enviar_comunicado',     label: 'Enviar comunicado / e-mail em massa', papeis: ['admin','superadmin','comunicacao'] },
-      { id: 'gerir_balcao',          label: 'Gerir fila do Balcão',                papeis: ['admin','superadmin','comunicacao','habilitador'] }
+      { id: 'gerir_balcao',          label: 'Gerir fila do Balcão',                papeis: ['admin','superadmin','comunicacao','coordenador'] }
     ],
     TAREFAS: [
-      { id: 'ver_tarefas_equipe',    label: 'Ver tarefas de toda a equipe',        papeis: ['admin','superadmin','gestor','rh'] },
-      { id: 'atribuir_tarefas',      label: 'Criar e atribuir tarefas para outros',papeis: ['admin','superadmin','gestor','habilitador','comunicacao'] }
+      { id: 'ver_tarefas_equipe',    label: 'Ver tarefas de toda a equipe',        papeis: ['admin','superadmin','gestor','coordenador','rh'] },
+      { id: 'atribuir_tarefas',      label: 'Criar e atribuir tarefas para outros',papeis: ['admin','superadmin','gestor','coordenador','comunicacao'] }
     ],
     REUNIOES: [
-      { id: 'criar_pauta',           label: 'Criar / editar pautas',               papeis: ['admin','superadmin','gestor','habilitador'] },
-      { id: 'fechar_reuniao',        label: 'Finalizar / arquivar reunião',        papeis: ['admin','superadmin','gestor'] }
+      { id: 'criar_pauta',           label: 'Criar / editar pautas',               papeis: ['admin','superadmin','gestor','coordenador'] },
+      { id: 'fechar_reuniao',        label: 'Finalizar / arquivar reunião',        papeis: ['admin','superadmin','gestor','coordenador'] }
     ],
     ADMIN: [
       { id: 'gerenciar_usuarios',    label: 'Gerenciar usuários e acessos',        papeis: ['admin','superadmin'] },

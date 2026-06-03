@@ -12548,9 +12548,9 @@ var AdminCadastrosUI = (function() {
         '<div><label>Capacidade</label><input id="esp-cap" type="number" class="form-input" value="' + (espaco.capacidade||0) + '"></div>' +
         '<div><label><input type="checkbox" id="esp-chaves"' + (espaco.possuiChaves?' checked':'') + '> Possui Chaves</label></div>' +
         '<div><label><input type="checkbox" id="esp-reserva"' + (espaco.aceitaReserva !== false?' checked':'') + '> Aceita Reservas</label></div>' +
-        '<div class="full-width"><label>Abertura / Fechamento</label>' +
-          '<input id="esp-abertura" class="form-input" placeholder="08:00" value="' + ((espaco.horarioFuncionamento||{}).abertura||'08:00') + '" style="width:100px;display:inline-block;margin-right:8px;">' +
-          '<input id="esp-fechamento" class="form-input" placeholder="22:00" value="' + ((espaco.horarioFuncionamento||{}).fechamento||'22:00') + '" style="width:100px;display:inline-block;">' +
+        '<div class="full-width"><label>Abertura / Fechamento <span id="esp-horario-hint" style="font-weight:400;color:var(--muted);font-size:11px;"></span></label>' +
+          '<input id="esp-abertura" type="time" class="form-input" placeholder="08:00" value="' + ((espaco.horarioFuncionamento||{}).abertura||'') + '" style="width:110px;display:inline-block;margin-right:8px;">' +
+          '<input id="esp-fechamento" type="time" class="form-input" placeholder="22:00" value="' + ((espaco.horarioFuncionamento||{}).fechamento||'') + '" style="width:110px;display:inline-block;">' +
         '</div>' +
       '</div>' +
 
@@ -12597,6 +12597,20 @@ var AdminCadastrosUI = (function() {
       // Lista de responsáveis
       var container = document.getElementById('esp-responsaveis-lista');
       if (container) _respRenderizar(container, respInicial);
+      // Hint com os limites do horário global
+      GAS.admin.obterConfigExpediente(function(r) {
+        var hint = document.getElementById('esp-horario-hint');
+        if (!hint || !r || !r.ok) return;
+        var exp = r.data || {};
+        var ini = exp.reservaHoraInicio || exp.inicio || exp.abertura || '';
+        var fim = exp.reservaHoraFim    || exp.fim    || exp.fechamento || '';
+        if (ini && fim) hint.textContent = '(global: ' + ini + '–' + fim + ')';
+        // Preencher campos vazios com o horário global como padrão
+        var abEl = document.getElementById('esp-abertura');
+        var feEl = document.getElementById('esp-fechamento');
+        if (abEl && !abEl.value && ini) abEl.value = ini;
+        if (feEl && !feEl.value && fim) feEl.value = fim;
+      });
     });
   }
 
@@ -12630,6 +12644,14 @@ var AdminCadastrosUI = (function() {
       ? _pendingResponsaveis
       : _respLerEstado();
 
+    var _aberturaVal  = document.getElementById('esp-abertura').value.trim();
+    var _fechamentoVal = document.getElementById('esp-fechamento').value.trim();
+    // Validação client-side: abertura < fechamento
+    if (_aberturaVal && _fechamentoVal && _aberturaVal >= _fechamentoVal) {
+      Toast.aviso('O fechamento deve ser posterior à abertura.');
+      return;
+    }
+
     var dados = {
       id:            id || undefined,
       nome:          document.getElementById('esp-nome').value.trim(),
@@ -12639,8 +12661,8 @@ var AdminCadastrosUI = (function() {
       possuiChaves:  document.getElementById('esp-chaves').checked,
       aceitaReserva: document.getElementById('esp-reserva').checked,
       horarioFuncionamento: {
-        abertura:   document.getElementById('esp-abertura').value.trim() || '08:00',
-        fechamento: document.getElementById('esp-fechamento').value.trim() || '22:00'
+        abertura:   _aberturaVal  || '08:00',
+        fechamento: _fechamentoVal || '22:00'
       },
       responsaveis: responsaveis,
       mapaConfig:   _pendingMapaConfig !== undefined ? _pendingMapaConfig : (espaco.mapaConfig || null)
@@ -15867,7 +15889,10 @@ var ReservasUI = (function() {
       var turnoLabel = _LABEL_TURNO_LISTA[r.turno] || r.turno || '';
       var btns = '';
       if (r.status === 'pendente') {
-        btns += '<button class="btn btn-ghost btn-sm btn-res-confirmar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">check</span> Confirmar</button>';
+        // "Confirmar" só aparece quando o espaço/slot tem responsáveis configurados
+        if (r.precisaAprovacao) {
+          btns += '<button class="btn btn-ghost btn-sm btn-res-confirmar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">check</span> Confirmar</button>';
+        }
         btns += '<button class="btn btn-ghost btn-sm btn-res-cancelar" data-id="'+escaparHtml(r.id)+'" data-data="'+escaparHtml(r.data||'')+'"><span class="ms ms-sm">cancel</span> Cancelar</button>';
       }
       if (r.status === 'confirmado') {
@@ -16820,8 +16845,11 @@ var ReservasUI = (function() {
 
     var btnsHtml = '';
     if (r.status==='pendente') {
-      btnsHtml += '<button id="det-confirmar" class="btn btn-primario">Confirmar</button>'
-        + '<button id="det-cancelar" class="btn btn-ghost" data-bg-skip="1">Cancelar reserva</button>';
+      // "Confirmar" só aparece quando o espaço/slot tem responsáveis configurados
+      if (r.precisaAprovacao) {
+        btnsHtml += '<button id="det-confirmar" class="btn btn-primario">Confirmar</button>';
+      }
+      btnsHtml += '<button id="det-cancelar" class="btn btn-ghost" data-bg-skip="1">Cancelar reserva</button>';
     } else if (r.status==='confirmado') {
       btnsHtml += '<button id="det-iniciar" class="btn btn-primario">Iniciar uso</button>'
         + '<button id="det-cancelar" class="btn btn-ghost" data-bg-skip="1">Cancelar reserva</button>';

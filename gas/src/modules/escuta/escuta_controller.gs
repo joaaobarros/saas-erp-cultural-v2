@@ -20,7 +20,7 @@ function _ctxEscuta() {
   };
 }
 
-var _PAPEIS_GESTAO_ESCUTA = ['rh','coordenador','admin','superadmin'];
+var _PAPEIS_GESTAO_ESCUTA = ['rh','coordenador','comunicacao','gestor','admin','superadmin'];
 
 function _assertGestaoEscuta(papel) {
   if (_PAPEIS_GESTAO_ESCUTA.indexOf(papel) < 0)

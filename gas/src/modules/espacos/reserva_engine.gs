@@ -153,20 +153,81 @@ var ReservaEngine = (function () {
 
   /**
    * Valida se o horário está dentro do funcionamento configurado.
-   * Lê abertura/fechamento de ConfigService.getReservaHorario() — sem hardcode.
+   * Usa horário local do espaço (horarioFuncionamento) como limite primário.
+   * Cai para horário global (ConfigService.getReservaHorario) se não houver local.
+   *
+   * @param {string} horaInicio — "HH:MM"
+   * @param {string} horaTermino — "HH:MM"
+   * @param {string} [espacoId] — ID do espaço para ler horário local
    */
-  function assertHorarioFuncionamento(horaInicio, horaTermino) {
+  function assertHorarioFuncionamento(horaInicio, horaTermino, espacoId) {
     var iniMin = _horaParaMin(horaInicio);
     var fimMin = _horaParaMin(horaTermino);
-    var hor = ConfigService.getReservaHorario();
-    var ABERTURA   = _horaParaMin(hor.inicio);
-    var FECHAMENTO = _horaParaMin(hor.fim);
+
+    // Horário efetivo: local do espaço (se configurado) ou global
+    var horGlobal = ConfigService.getReservaHorario();
+    var abertura  = horGlobal.inicio;
+    var fechamento = horGlobal.fim;
+
+    if (espacoId) {
+      try {
+        var esp = SistemaConfigService.getEspaco ? SistemaConfigService.getEspaco(espacoId) : null;
+        if (esp && esp.horarioFuncionamento) {
+          if (esp.horarioFuncionamento.abertura)  abertura  = esp.horarioFuncionamento.abertura;
+          if (esp.horarioFuncionamento.fechamento) fechamento = esp.horarioFuncionamento.fechamento;
+        }
+      } catch (_) {}
+    }
+
+    var ABERTURA   = _horaParaMin(abertura);
+    var FECHAMENTO = _horaParaMin(fechamento);
 
     if (iniMin < ABERTURA) {
-      throw new Error('Horário de início (' + horaInicio + ') anterior à abertura (' + hor.inicio + ').');
+      throw new Error('Horário de início (' + horaInicio + ') anterior à abertura deste espaço (' + abertura + ').');
     }
     if (fimMin > FECHAMENTO) {
-      throw new Error('Horário de término (' + horaTermino + ') posterior ao fechamento (' + hor.fim + ').');
+      throw new Error('Horário de término (' + horaTermino + ') posterior ao fechamento deste espaço (' + fechamento + ').');
+    }
+  }
+
+  // ── precisaAprovacao — verifica se a reserva exige confirmação ─────
+
+  /**
+   * Verifica se uma reserva neste espaço/slot precisa de aprovação manual.
+   * Retorna false (auto-confirmar) se:
+   *   • o espaço não tem responsáveis para este slot, OU
+   *   • o solicitante é admin/superadmin, OU
+   *   • o setor do solicitante coincide com o setor responsável do slot.
+   *
+   * @param {string} espacoId
+   * @param {string} data      — YYYY-MM-DD
+   * @param {string} horaInicio
+   * @param {string} horaTermino
+   * @param {string} setor     — setor do solicitante (pode ser '')
+   * @param {string} email     — email do solicitante
+   * @returns {boolean}
+   */
+  function _precisaAprovacao(espacoId, data, horaInicio, horaTermino, setor, email) {
+    try {
+      // Admin é soberano — nunca precisa de aprovação
+      if (typeof SolicitacaoReservaEngine !== 'undefined') {
+        var resultado = SolicitacaoReservaEngine.verificarPrioridadeSetor(
+          espacoId, data, horaInicio, horaTermino, setor || '', email
+        );
+        return resultado.exigeSolicitacao === true;
+      }
+      // Fallback: verificar diretamente via SistemaConfigService
+      var diaNum = 0;
+      try { diaNum = new Date(String(data) + 'T12:00:00').getDay(); } catch(_) {}
+      var turnoId = _inferirTurno(horaInicio, horaTermino);
+      var resp = SistemaConfigService.resolverResponsaveis
+        ? SistemaConfigService.resolverResponsaveis(espacoId, diaNum, turnoId)
+        : null;
+      if (!resp || !resp.emails || !resp.emails.length) return false;
+      if (resp.setorId && setor && String(resp.setorId).trim() === String(setor).trim()) return false;
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -230,7 +291,13 @@ var ReservaEngine = (function () {
       }
     }
 
-    assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino);
+    assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino, dados.sala);
+
+    // Determinar status inicial: auto-confirmar se não precisar de aprovação
+    var _statusInicial = _precisaAprovacao(
+      dados.sala, dados.data, dados.horaInicio, dados.horaTermino,
+      dados.setor || '', autor
+    ) ? STATUS_RESERVA.PENDENTE : STATUS_RESERVA.CONFIRMADO;
 
     var lock = LockService.getScriptLock();
     lock.waitLock(10000);
@@ -254,7 +321,7 @@ var ReservaEngine = (function () {
         coResponsavel: dados.coResponsavel || '',
         release:       dados.release || '',
         itensVolantes: dados.itensVolantes || '',
-        status:        STATUS_RESERVA.PENDENTE,
+        status:        _statusInicial,
         motivoCancelamento: '',
         observacoes:   dados.observacoes || '',
         acaoId:        dados.acaoId || '',
@@ -309,7 +376,7 @@ var ReservaEngine = (function () {
       throw new Error('Informe ao menos uma data para o agendamento em lote.');
     }
 
-    assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino);
+    assertHorarioFuncionamento(dados.horaInicio, dados.horaTermino, dados.sala);
 
     // Verificar datas duplicadas
     var setDatas = {};
@@ -352,6 +419,17 @@ var ReservaEngine = (function () {
     try {
 
       var agr  = agora ? agora() : new Date().toISOString();
+      // Status inicial: auto-confirmar quando o slot não exige aprovação
+      // (verificado com a primeira data do lote; todas usam o mesmo horário)
+      var _loteStatusBase = _precisaAprovacao(
+        dados.sala,
+        datasParaCriar[0] || datas[0] || '',
+        dados.horaInicio,
+        dados.horaTermino,
+        dados.setor || '',
+        autor
+      ) ? STATUS_RESERVA.PENDENTE : STATUS_RESERVA.CONFIRMADO;
+
       var reservas = datasParaCriar.map(function (data) {
         return {
           orgId:         orgId,
@@ -367,7 +445,7 @@ var ReservaEngine = (function () {
           coResponsavel: dados.coResponsavel || '',
           release:       dados.release || '',
           itensVolantes: dados.itensVolantes || '',
-          status:        STATUS_RESERVA.PENDENTE,
+          status:        _loteStatusBase,
           motivoCancelamento: '',
           observacoes:   dados.observacoes || '',
           acaoId:        dados.acaoId || '',
@@ -835,6 +913,9 @@ var ReservaEngine = (function () {
     // Guarda de conflito (exposta para testes)
     assertSemConflito:          assertSemConflito,
     assertHorarioFuncionamento: assertHorarioFuncionamento,
+
+    // Verificação de necessidade de aprovação (exposta para controller anotar listagem)
+    precisaAprovacao: _precisaAprovacao,
 
     // Constantes
     STATUS: STATUS_RESERVA

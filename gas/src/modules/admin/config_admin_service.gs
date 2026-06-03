@@ -93,6 +93,43 @@ var ConfigAdminService = (function () {
       })
       .filter(function(r) { return r.emails.length > 0; });
 
+    // Validar horário local do espaço contra horário global de funcionamento
+    var _horLocal = espaco.horarioFuncionamento || { abertura: '08:00', fechamento: '22:00' };
+    (function() {
+      function _hMin(s) {
+        if (!s) return -1;
+        var p = String(s).split(':');
+        if (p.length < 2) return -1;
+        var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+        return (isNaN(h) || isNaN(m)) ? -1 : h * 60 + m;
+      }
+      try {
+        var _horGlobal = ConfigService.getReservaHorario ? ConfigService.getReservaHorario() : { inicio: '08:00', fim: '22:00' };
+        var _gIni = _hMin(_horGlobal.inicio || _horGlobal.abertura);
+        var _gFim = _hMin(_horGlobal.fim    || _horGlobal.fechamento);
+        var _lIni = _hMin(_horLocal.abertura);
+        var _lFim = _hMin(_horLocal.fechamento);
+        if (_gIni >= 0 && _lIni >= 0 && _lIni < _gIni) {
+          throw new Error(
+            'Abertura do espaço (' + _horLocal.abertura +
+            ') não pode ser anterior ao horário global de funcionamento (' + (_horGlobal.inicio || _horGlobal.abertura) + ').'
+          );
+        }
+        if (_gFim >= 0 && _lFim >= 0 && _lFim > _gFim) {
+          throw new Error(
+            'Fechamento do espaço (' + _horLocal.fechamento +
+            ') não pode ser posterior ao horário global de funcionamento (' + (_horGlobal.fim || _horGlobal.fechamento) + ').'
+          );
+        }
+        if (_lIni >= 0 && _lFim >= 0 && _lFim <= _lIni) {
+          throw new Error('Fechamento do espaço deve ser posterior à abertura.');
+        }
+      } catch(e) {
+        if (e.message && (e.message.indexOf('não pode') >= 0 || e.message.indexOf('deve ser') >= 0)) throw e;
+        // Falha ao ler config global: deixa passar sem bloquear
+      }
+    })();
+
     var registro = {
       id:                     id,
       orgId:                  orgId,
@@ -104,7 +141,7 @@ var ConfigAdminService = (function () {
       capacidade:             Number(espaco.capacidade) || 0,
       possuiChaves:           espaco.possuiChaves === true,
       aceitaReserva:          espaco.aceitaReserva !== false,
-      horarioFuncionamento:   espaco.horarioFuncionamento || { abertura: '08:00', fechamento: '22:00' },
+      horarioFuncionamento:   _horLocal,
       responsaveis:           responsaveis,
       itensFixos:             espaco.itensFixos || {},
       equipamentosVinculados: espaco.equipamentosVinculados || [],

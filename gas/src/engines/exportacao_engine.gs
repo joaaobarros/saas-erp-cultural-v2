@@ -828,7 +828,9 @@ function ctrl_exportacao_codip(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin', 'superadmin']);
+    var _cEmail = getEmailSessao(); var _cA = AcessoService.verificar(_cEmail);
+    if (!_cA || _cA.status !== 'ativo') throw new Error('Acesso negado.');
+    if (['admin','superadmin'].indexOf((_cA.registro&&_cA.registro.papel)||'') === -1) throw new Error('Sem permissão.');
 
     var mes  = params.mes  ? parseInt(params.mes)  : (new Date().getMonth() + 1);
     var ano  = params.ano  ? parseInt(params.ano)  : new Date().getFullYear();
@@ -849,7 +851,9 @@ function ctrl_exportacao_salic(params) {
     var id = params.contratoId || params.projetoId;
     if (!id) throw new Error('contratoId obrigatório.');
     var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin', 'gestor', 'financeiro', 'superadmin']);
+    var _sEmail = getEmailSessao(); var _sA = AcessoService.verificar(_sEmail);
+    if (!_sA || _sA.status !== 'ativo') throw new Error('Acesso negado.');
+    if (['admin','gestor','financeiro','superadmin'].indexOf((_sA.registro&&_sA.registro.papel)||'') === -1) throw new Error('Sem permissão.');
     var xml = ExportacaoEngine.gerarSALIC(orgId, id);
     var nomeArq = 'SALIC_' + String(id).replace(/[^a-zA-Z0-9_-]/g, '_') + '.xml';
     return { xml: xml, nomeArquivo: nomeArq };
@@ -864,7 +868,9 @@ function ctrl_exportacao_sniic(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin', 'superadmin']);
+    var _nEmail = getEmailSessao(); var _nA = AcessoService.verificar(_nEmail);
+    if (!_nA || _nA.status !== 'ativo') throw new Error('Acesso negado.');
+    if (['admin','superadmin'].indexOf((_nA.registro&&_nA.registro.papel)||'') === -1) throw new Error('Sem permissão.');
     var ano = params.ano ? parseInt(params.ano) : new Date().getFullYear();
     return ExportacaoEngine.gerarSNIIC(orgId, ano);
   }, 'ctrl_exportacao_sniic');
@@ -878,7 +884,9 @@ function ctrl_exportacao_pnab(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var orgId      = getOrgConfig().orgId;
-    AcessoService.verificar(['admin', 'gestor', 'financeiro', 'superadmin']);
+    var _bEmail = getEmailSessao(); var _bA = AcessoService.verificar(_bEmail);
+    if (!_bA || _bA.status !== 'ativo') throw new Error('Acesso negado.');
+    if (['admin','gestor','financeiro','superadmin'].indexOf((_bA.registro&&_bA.registro.papel)||'') === -1) throw new Error('Sem permissão.');
     var ano        = params.ano        ? parseInt(params.ano) : null;
     var contratoId = params.contratoId || null;
     return ExportacaoEngine.gerarPNAB(orgId, ano, contratoId);
@@ -893,7 +901,12 @@ function ctrl_exportacao_inscricoes_csv(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var _expEmail  = getEmailSessao();
+    var _expAcesso = AcessoService.verificar(_expEmail);
+    if (!_expAcesso || _expAcesso.status !== 'ativo') throw new Error('Acesso negado.');
+    var _expPapel  = (_expAcesso.registro && _expAcesso.registro.papel) || 'colaborador';
+    if (['coordenador','gestor','admin','superadmin'].indexOf(_expPapel) === -1)
+      throw new Error('Sem permissão para exportar inscrições.');
     var lista = PublicoRepository.Inscricoes.listar(orgId, { acaoId: params.acaoId });
     var colunas = ['id','nome','email','telefone','status','criadoEm'];
     return { csv: ExportacaoEngine.gerarCSV(lista, colunas), total: lista.length };

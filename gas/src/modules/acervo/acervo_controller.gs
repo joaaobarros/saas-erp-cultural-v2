@@ -29,7 +29,7 @@ function _ctxAcervo(papeis) {
 function ctrl_acervo_listar(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var ctx = _ctxAcervo(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxAcervo(['colaborador','habilitador','gestor','admin','superadmin']);
     var ck = _CK_ACERVO_LISTA + '_' + JSON.stringify(filtros);
     var cached = AppCache.get(ck);
     if (cached) return cached;
@@ -42,7 +42,7 @@ function ctrl_acervo_listar(filtros) {
 function ctrl_acervo_listarPorAcao(acaoId) {
   return GasResponse.wrap(function() {
     if (!acaoId) throw new Error('acaoId obrigatório.');
-    var ctx = _ctxAcervo(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxAcervo(['colaborador','habilitador','gestor','admin','superadmin']);
     return AcervoRepository.listarPorAcao(ctx.orgId, acaoId);
   }, 'ctrl_acervo_listarPorAcao');
 }
@@ -50,7 +50,7 @@ function ctrl_acervo_listarPorAcao(acaoId) {
 function ctrl_acervo_checklist(acaoId) {
   return GasResponse.wrap(function() {
     if (!acaoId) throw new Error('acaoId obrigatório.');
-    var ctx = _ctxAcervo(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxAcervo(['colaborador','habilitador','gestor','admin','superadmin']);
     return AcervoEngine.checklistEvidencias(ctx.orgId, acaoId);
   }, 'ctrl_acervo_checklist');
 }

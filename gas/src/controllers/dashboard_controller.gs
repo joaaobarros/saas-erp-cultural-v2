@@ -283,8 +283,8 @@ function ctrl_dashboard_relatorio_ia(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var ctx = _ctxDash();
-    if (['admin','superadmin','coordenador'].indexOf(ctx.papel) < 0)
-      throw new Error('Acesso negado — papel coordenador+ necessário.');
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel admin+ necessário.');
 
     var orgId    = ctx.orgId;
     var periodo  = params.periodo || 'trimestral';

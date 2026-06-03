@@ -486,7 +486,7 @@ function ctrl_acesso_editarPapel(params) {
 
     var PAPEIS_VALIDOS = [
       'colaborador', 'habilitador', 'rh', 'financeiro',
-      'comunicacao', 'gestor', 'admin', 'superadmin'
+      'comunicacao', 'coordenador', 'gestor', 'admin', 'superadmin'
     ];
     if (params.papel && PAPEIS_VALIDOS.indexOf(params.papel) === -1)
       throw new Error('Papel inválido: ' + params.papel + '. Válidos: ' + PAPEIS_VALIDOS.join(', '));

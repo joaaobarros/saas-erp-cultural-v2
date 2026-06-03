@@ -57,6 +57,10 @@ var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
 /**
  * Lista reservas com filtros opcionais.
+ * Cada item retorna o campo `precisaAprovacao` (boolean) indicando se o
+ * espaço/slot ainda exige confirmação manual — usado pelo frontend para
+ * exibir (ou não) o botão "Confirmar".
+ *
  * @param {Object} filtros — { status, sala, data, responsavel, dateRange:{de,ate} }
  */
 function ctrl_reservas_listar(filtros) {
@@ -66,7 +70,24 @@ function ctrl_reservas_listar(filtros) {
     // colaborador vê apenas suas próprias reservas; gestão vê tudo
     var nivel = _nivelReservas(ctx.email);
     if (nivel === 'colaborador') f.responsavel = ctx.email;
-    return ReservaEngine.listar(f, ctx.orgId);
+
+    var lista = ReservaEngine.listar(f, ctx.orgId);
+
+    // Anotar cada reserva com flag de necessidade de aprovação
+    if (Array.isArray(lista)) {
+      lista.forEach(function(r) {
+        try {
+          r.precisaAprovacao = ReservaEngine.precisaAprovacao(
+            r.sala, r.data, r.horaInicio, r.horaTermino,
+            r.setor || '', r.responsavel || ''
+          );
+        } catch(_) {
+          r.precisaAprovacao = false;
+        }
+      });
+    }
+
+    return lista;
   }, 'ctrl_reservas_listar');
 }
 
@@ -180,7 +201,8 @@ function ctrl_reservas_cancelar(id, motivo) {
 
 /**
  * Confirma uma reserva (pendente → confirmado).
- * Restrito a: infraestrutura, gestor, admin, superadmin.
+ * Permitido para: infraestrutura, gestor, admin, superadmin, habilitador
+ * OU qualquer usuário cadastrado como responsável pelo espaço/slot da reserva.
  * @param {string} id
  */
 function ctrl_reservas_confirmar(id) {
@@ -188,9 +210,46 @@ function ctrl_reservas_confirmar(id) {
     var ctx = _ctxReservas();
     if (!id) throw new Error('ID da reserva é obrigatório.');
     var nivel = _nivelReservas(ctx.email);
-    if (_NIVEL_GESTAO.indexOf(nivel) === -1) {
-      throw new Error('Sem permissão para confirmar reservas.');
+
+    // Gestão passa sempre
+    if (_NIVEL_GESTAO.indexOf(nivel) >= 0) {
+      return ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
     }
+
+    // Verificar se o usuário logado é responsável pelo espaço/slot desta reserva
+    var reserva = ReservaEngine.listar({ id: id }, ctx.orgId);
+    // listar pode não suportar filtro por id — buscar e filtrar
+    var lista = ReservaEngine.listar({}, ctx.orgId);
+    var r = null;
+    for (var i = 0; i < lista.length; i++) {
+      if (lista[i].id === id) { r = lista[i]; break; }
+    }
+    if (!r) throw new Error('Reserva não encontrada.');
+
+    var ehResponsavel = false;
+    try {
+      var diaNum = new Date(String(r.data) + 'T12:00:00').getDay();
+      var turnoId = '';
+      // Derivar turnoId via helper público do SolicitacaoReservaEngine se disponível
+      if (typeof SolicitacaoReservaEngine !== 'undefined' &&
+          typeof SolicitacaoReservaEngine._inferirTurnoLocal === 'function') {
+        turnoId = SolicitacaoReservaEngine._inferirTurnoLocal(r.horaInicio, r.horaTermino);
+      }
+      var resp = SistemaConfigService.resolverResponsaveis
+        ? SistemaConfigService.resolverResponsaveis(r.sala, diaNum, turnoId)
+        : null;
+      if (resp && Array.isArray(resp.emails)) {
+        var emailNorm = String(ctx.email).toLowerCase().trim();
+        ehResponsavel = resp.emails.some(function(e) {
+          return String(e).toLowerCase().trim() === emailNorm;
+        });
+      }
+    } catch(_) {}
+
+    if (!ehResponsavel) {
+      throw new Error('Sem permissão para confirmar reservas. Apenas responsáveis pelo espaço/período ou gestores podem confirmar.');
+    }
+
     return ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
   }, 'ctrl_reservas_confirmar');
 }

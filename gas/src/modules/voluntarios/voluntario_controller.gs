@@ -5,9 +5,9 @@
  *
  * RBAC:
  *   Leitura:               colaborador+
- *   Criar/Editar voluntário: coordenador+
- *   Alocar / Presença:     coordenador, gestor, admin, superadmin
- *   Concluir / Cancelar:   coordenador, gestor, admin, superadmin
+ *   Criar/Editar voluntário: habilitador+
+ *   Alocar / Presença:     habilitador, gestor, admin, superadmin
+ *   Concluir / Cancelar:   habilitador, gestor, admin, superadmin
  *   Mudar status voluntário: gestor, admin, superadmin
  *   Excluir:               admin, superadmin
  *
@@ -20,17 +20,25 @@ var _CK_VOL_LISTA    = 'ctrl_vol_lista';
 var _CK_VOL_ALOC     = 'ctrl_vol_alocacoes';
 var _CK_VOL_METRICAS = 'ctrl_vol_metricas';
 
+function _ctxVoluntarios(papeis) {
+  var email  = getEmailSessao();
+  var acesso = AcessoService.verificar(email);
+  if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
+  var papel  = (acesso.registro && acesso.registro.papel) || 'colaborador';
+  if (papeis && papeis.indexOf(papel) === -1) throw new Error('Sem permissão.');
+  return { email: email, papel: papel, orgId: getOrgConfig().orgId };
+}
+
 // ─── Voluntários ──────────────────────────────────────────────────────────────
 
 function ctrl_voluntarios_listar(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxVoluntarios(null);
     var ck = _CK_VOL_LISTA + '_' + JSON.stringify(filtros);
     var cached = AppCache.get(ck);
     if (cached) return cached;
-    var lista = VoluntarioRepository.Voluntarios.listar(orgId, filtros);
+    var lista = VoluntarioRepository.Voluntarios.listar(ctx.orgId, filtros);
     AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_voluntarios_listar');
@@ -39,9 +47,8 @@ function ctrl_voluntarios_listar(filtros) {
 function ctrl_voluntarios_obter(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
-    var vol = VoluntarioRepository.Voluntarios.buscarPorId(orgId, id);
+    var ctx = _ctxVoluntarios(null);
+    var vol = VoluntarioRepository.Voluntarios.buscarPorId(ctx.orgId, id);
     if (!vol) throw new Error('Voluntário não encontrado.');
     return vol;
   }, 'ctrl_voluntarios_obter');
@@ -49,11 +56,10 @@ function ctrl_voluntarios_obter(id) {
 
 function ctrl_voluntarios_metricas() {
   return GasResponse.wrap(function() {
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
     var cached = AppCache.get(_CK_VOL_METRICAS);
     if (cached) return cached;
-    var m = VoluntarioRepository.Voluntarios.metricas(orgId);
+    var m = VoluntarioRepository.Voluntarios.metricas(ctx.orgId);
     AppCache.set(_CK_VOL_METRICAS, m, 120);
     return m;
   }, 'ctrl_voluntarios_metricas');
@@ -62,9 +68,8 @@ function ctrl_voluntarios_metricas() {
 function ctrl_voluntarios_salvar(dados) {
   return GasResponse.wrap(function() {
     if (!dados) throw new Error('dados obrigatórios.');
-    var orgId  = getOrgConfig().orgId;
-    var email  = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var vol    = VoluntarioEngine.salvar(orgId, dados, email);
+    var ctx = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
+    var vol = VoluntarioEngine.salvar(ctx.orgId, dados, ctx.email);
     AppCache.remove(_CK_VOL_LISTA);
     AppCache.remove(_CK_VOL_METRICAS);
     return vol;
@@ -75,9 +80,8 @@ function ctrl_voluntarios_mudarStatus(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id || !params.status) throw new Error('id e status obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['gestor','admin','superadmin']);
-    var vol   = VoluntarioEngine.mudarStatus(orgId, params.id, params.status, email, params.motivo);
+    var ctx = _ctxVoluntarios(['gestor','admin','superadmin']);
+    var vol = VoluntarioEngine.mudarStatus(ctx.orgId, params.id, params.status, ctx.email, params.motivo);
     AppCache.remove(_CK_VOL_LISTA);
     AppCache.remove(_CK_VOL_METRICAS);
     return vol;
@@ -87,9 +91,8 @@ function ctrl_voluntarios_mudarStatus(params) {
 function ctrl_voluntarios_excluir(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin','superadmin']);
-    VoluntarioRepository.Voluntarios.excluir(orgId, id);
+    var ctx = _ctxVoluntarios(['admin','superadmin']);
+    VoluntarioRepository.Voluntarios.excluir(ctx.orgId, id);
     AppCache.remove(_CK_VOL_LISTA);
     AppCache.remove(_CK_VOL_METRICAS);
     return { excluido: id };
@@ -101,12 +104,11 @@ function ctrl_voluntarios_excluir(id) {
 function ctrl_voluntarios_listarAlocacoes(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxVoluntarios(null);
     var ck = _CK_VOL_ALOC + '_' + JSON.stringify(filtros);
     var cached = AppCache.get(ck);
     if (cached) return cached;
-    var lista = VoluntarioRepository.Alocacoes.listar(orgId, filtros);
+    var lista = VoluntarioRepository.Alocacoes.listar(ctx.orgId, filtros);
     AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_voluntarios_listarAlocacoes');
@@ -116,11 +118,10 @@ function ctrl_voluntarios_alocar(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.voluntarioId || !params.acaoId) throw new Error('voluntarioId e acaoId obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var aloc  = VoluntarioEngine.alocar(
-      orgId, params.voluntarioId, params.acaoId,
-      params.acaoNome||'', params.funcao||'', params.horario||'', email
+    var ctx  = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
+    var aloc = VoluntarioEngine.alocar(
+      ctx.orgId, params.voluntarioId, params.acaoId,
+      params.acaoNome||'', params.funcao||'', params.horario||'', ctx.email
     );
     AppCache.remove(_CK_VOL_ALOC);
     return aloc;
@@ -140,9 +141,8 @@ function ctrl_voluntarios_registrarPresenca(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.alocacaoId) throw new Error('alocacaoId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var aloc  = VoluntarioEngine.registrarPresenca(orgId, params.alocacaoId, params.horas||0, email);
+    var ctx  = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
+    var aloc = VoluntarioEngine.registrarPresenca(ctx.orgId, params.alocacaoId, params.horas||0, ctx.email);
     AppCache.remove(_CK_VOL_ALOC);
     AppCache.remove(_CK_VOL_LISTA);
     return aloc;
@@ -152,9 +152,8 @@ function ctrl_voluntarios_registrarPresenca(params) {
 function ctrl_voluntarios_concluirAlocacao(alocacaoId) {
   return GasResponse.wrap(function() {
     if (!alocacaoId) throw new Error('alocacaoId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var aloc  = VoluntarioEngine.concluirAlocacao(orgId, alocacaoId, email);
+    var ctx  = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
+    var aloc = VoluntarioEngine.concluirAlocacao(ctx.orgId, alocacaoId, ctx.email);
     AppCache.remove(_CK_VOL_ALOC);
     return aloc;
   }, 'ctrl_voluntarios_concluirAlocacao');
@@ -164,9 +163,8 @@ function ctrl_voluntarios_cancelarAlocacao(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var aloc  = VoluntarioEngine.cancelarAlocacao(orgId, params.id, params.motivo||'', email);
+    var ctx  = _ctxVoluntarios(['coordenador','gestor','admin','superadmin']);
+    var aloc = VoluntarioEngine.cancelarAlocacao(ctx.orgId, params.id, params.motivo||'', ctx.email);
     AppCache.remove(_CK_VOL_ALOC);
     return aloc;
   }, 'ctrl_voluntarios_cancelarAlocacao');

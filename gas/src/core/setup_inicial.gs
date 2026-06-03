@@ -79,7 +79,7 @@ function setupInicialCCBJ() {
     console.warn('[setup] verificarTodasAbas() falhou: ' + e.message);
   }
 
-  console.log('[setup] ✅ Setup inicial concluído. Próximo passo: deployar como Web App.');
+  console.log('[setup] ✅ Setup inicial concluído.');
 }
 
 /**

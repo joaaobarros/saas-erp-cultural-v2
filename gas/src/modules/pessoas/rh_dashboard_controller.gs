@@ -16,7 +16,12 @@
    ───────────────────────────────────────────────────────────── */
 function ctrl_rh_dashboard_folha(params) {
   return GasResponse.wrap(function () {
-    AcessoService.verificar(['gestor','coordenador','financeiro','admin','superadmin']);
+    var _rhEmail  = getEmailSessao();
+    var _rhAcesso = AcessoService.verificar(_rhEmail);
+    if (!_rhAcesso || _rhAcesso.status !== 'ativo') throw new Error('Acesso negado.');
+    var _rhPapel  = (_rhAcesso.registro && _rhAcesso.registro.papel) || 'colaborador';
+    if (['gestor','coordenador','financeiro','admin','superadmin'].indexOf(_rhPapel) === -1)
+      throw new Error('Sem permissão.');
     var orgId = getOrgConfig().orgId;
     params = params || {};
 
@@ -135,7 +140,11 @@ function ctrl_rh_dashboard_folha(params) {
    ───────────────────────────────────────────────────────────── */
 function ctrl_rh_dashboard_ponto(params) {
   return GasResponse.wrap(function () {
-    AcessoService.verificar(['gestor','rh','admin','superadmin']);
+    var _pEmail  = getEmailSessao();
+    var _pAcesso = AcessoService.verificar(_pEmail);
+    if (!_pAcesso || _pAcesso.status !== 'ativo') throw new Error('Acesso negado.');
+    var _pPapel  = (_pAcesso.registro && _pAcesso.registro.papel) || 'colaborador';
+    if (['gestor','rh','admin','superadmin'].indexOf(_pPapel) === -1) throw new Error('Sem permissão.');
     var orgId = getOrgConfig().orgId;
     params = params || {};
     var modo  = params.modo || 'heatmap';
@@ -225,7 +234,11 @@ function ctrl_rh_dashboard_ponto(params) {
    ───────────────────────────────────────────────────────────── */
 function ctrl_rh_dashboard_turnover(params) {
   return GasResponse.wrap(function () {
-    AcessoService.verificar(['gestor','rh','admin','superadmin']);
+    var _tEmail  = getEmailSessao();
+    var _tAcesso = AcessoService.verificar(_tEmail);
+    if (!_tAcesso || _tAcesso.status !== 'ativo') throw new Error('Acesso negado.');
+    var _tPapel  = (_tAcesso.registro && _tAcesso.registro.papel) || 'colaborador';
+    if (['gestor','rh','admin','superadmin'].indexOf(_tPapel) === -1) throw new Error('Sem permissão.');
     var orgId = getOrgConfig().orgId;
     params = params || {};
 

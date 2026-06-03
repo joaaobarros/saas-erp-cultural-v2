@@ -5,7 +5,7 @@
  *
  * RBAC:
  *   Leitura:         colaborador+
- *   Criar/Editar:    coordenador, gestor, admin, superadmin
+ *   Criar/Editar:    habilitador, gestor, admin, superadmin
  *   Mudar status:    gestor, admin, superadmin
  *   Avaliar:         gestor, admin, superadmin
  *   Excluir:         admin, superadmin
@@ -18,15 +18,23 @@
 var _CK_PAR_LISTA    = 'ctrl_parcerias_lista';
 var _CK_PAR_METRICAS = 'ctrl_parcerias_metricas';
 
+function _ctxParcerias(papeis) {
+  var email  = getEmailSessao();
+  var acesso = AcessoService.verificar(email);
+  if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
+  var papel  = (acesso.registro && acesso.registro.papel) || 'colaborador';
+  if (papeis && papeis.indexOf(papel) === -1) throw new Error('Sem permissão.');
+  return { email: email, papel: papel, orgId: getOrgConfig().orgId };
+}
+
 function ctrl_parcerias_listar(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxParcerias(null);
     var ck = _CK_PAR_LISTA + '_' + JSON.stringify(filtros);
     var cached = AppCache.get(ck);
     if (cached) return cached;
-    var lista = ParceriaRepository.listar(orgId, filtros);
+    var lista = ParceriaRepository.listar(ctx.orgId, filtros);
     AppCache.set(ck, lista, 120);
     return lista;
   }, 'ctrl_parcerias_listar');
@@ -35,9 +43,8 @@ function ctrl_parcerias_listar(filtros) {
 function ctrl_parcerias_obter(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
-    var p = ParceriaRepository.buscarPorId(orgId, id);
+    var ctx = _ctxParcerias(null);
+    var p = ParceriaRepository.buscarPorId(ctx.orgId, id);
     if (!p) throw new Error('Parceria não encontrada.');
     return p;
   }, 'ctrl_parcerias_obter');
@@ -45,11 +52,10 @@ function ctrl_parcerias_obter(id) {
 
 function ctrl_parcerias_metricas() {
   return GasResponse.wrap(function() {
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxParcerias(['coordenador','gestor','admin','superadmin']);
     var cached = AppCache.get(_CK_PAR_METRICAS);
     if (cached) return cached;
-    var m = ParceriaRepository.metricas(orgId);
+    var m = ParceriaRepository.metricas(ctx.orgId);
     AppCache.set(_CK_PAR_METRICAS, m, 120);
     return m;
   }, 'ctrl_parcerias_metricas');
@@ -58,18 +64,16 @@ function ctrl_parcerias_metricas() {
 function ctrl_parcerias_listarPorAcao(acaoId) {
   return GasResponse.wrap(function() {
     if (!acaoId) throw new Error('acaoId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
-    return ParceriaRepository.listarPorAcao(orgId, acaoId);
+    var ctx = _ctxParcerias(null);
+    return ParceriaRepository.listarPorAcao(ctx.orgId, acaoId);
   }, 'ctrl_parcerias_listarPorAcao');
 }
 
 function ctrl_parcerias_salvar(dados) {
   return GasResponse.wrap(function() {
     if (!dados) throw new Error('dados obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var p     = ParceriaEngine.salvar(orgId, dados, email);
+    var ctx = _ctxParcerias(['coordenador','gestor','admin','superadmin']);
+    var p   = ParceriaEngine.salvar(ctx.orgId, dados, ctx.email);
     AppCache.remove(_CK_PAR_LISTA);
     AppCache.remove(_CK_PAR_METRICAS);
     return p;
@@ -80,9 +84,8 @@ function ctrl_parcerias_mudarStatus(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id || !params.status) throw new Error('id e status obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['gestor','admin','superadmin']);
-    var p     = ParceriaEngine.mudarStatus(orgId, params.id, params.status, email, params.motivo);
+    var ctx = _ctxParcerias(['gestor','admin','superadmin']);
+    var p   = ParceriaEngine.mudarStatus(ctx.orgId, params.id, params.status, ctx.email, params.motivo);
     AppCache.remove(_CK_PAR_LISTA);
     AppCache.remove(_CK_PAR_METRICAS);
     return p;
@@ -93,10 +96,9 @@ function ctrl_parcerias_vincularAcao(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id || !params.acaoId) throw new Error('id e acaoId obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxParcerias(['coordenador','gestor','admin','superadmin']);
     var p = ParceriaEngine.vincularAcao(
-      orgId, params.id, params.acaoId, params.acaoNome||'',
+      ctx.orgId, params.id, params.acaoId, params.acaoNome||'',
       params.papelParceiro||'', params.papelInstituicao||''
     );
     AppCache.remove(_CK_PAR_LISTA);
@@ -108,9 +110,8 @@ function ctrl_parcerias_desvincularAcao(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id || !params.acaoId) throw new Error('id e acaoId obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['gestor','admin','superadmin']);
-    var p = ParceriaEngine.desvincularAcao(orgId, params.id, params.acaoId);
+    var ctx = _ctxParcerias(['gestor','admin','superadmin']);
+    var p = ParceriaEngine.desvincularAcao(ctx.orgId, params.id, params.acaoId);
     AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_desvincularAcao');
@@ -120,9 +121,8 @@ function ctrl_parcerias_salvarEntrega(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.parceiaId) throw new Error('parceiaId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var p = ParceriaEngine.salvarEntrega(orgId, params.parceiaId, params.entrega||{}, email);
+    var ctx = _ctxParcerias(['coordenador','gestor','admin','superadmin']);
+    var p = ParceriaEngine.salvarEntrega(ctx.orgId, params.parceiaId, params.entrega||{}, ctx.email);
     AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_salvarEntrega');
@@ -132,9 +132,8 @@ function ctrl_parcerias_avaliar(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     if (!params.id || !params.avaliacao) throw new Error('id e avaliacao obrigatórios.');
-    var orgId = getOrgConfig().orgId;
-    var email = AcessoService.verificar(['gestor','admin','superadmin']);
-    var p = ParceriaEngine.avaliar(orgId, params.id, params.avaliacao, email);
+    var ctx = _ctxParcerias(['gestor','admin','superadmin']);
+    var p = ParceriaEngine.avaliar(ctx.orgId, params.id, params.avaliacao, ctx.email);
     AppCache.remove(_CK_PAR_LISTA);
     return p;
   }, 'ctrl_parcerias_avaliar');
@@ -143,12 +142,11 @@ function ctrl_parcerias_avaliar(params) {
 function ctrl_parcerias_excluir(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin','superadmin']);
-    var p = ParceriaRepository.buscarPorId(orgId, id);
+    var ctx = _ctxParcerias(['admin','superadmin']);
+    var p = ParceriaRepository.buscarPorId(ctx.orgId, id);
     if (!p) throw new Error('Parceria não encontrada.');
     if (p.status === 'ativa') throw new Error('Cancele a parceria antes de excluir.');
-    ParceriaRepository.excluir(orgId, id);
+    ParceriaRepository.excluir(ctx.orgId, id);
     AppCache.remove(_CK_PAR_LISTA);
     AppCache.remove(_CK_PAR_METRICAS);
     return { excluido: id };

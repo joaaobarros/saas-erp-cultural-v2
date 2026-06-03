@@ -4,10 +4,10 @@
  * @description Controller interno de Público (view admin autenticada).
  *
  * RBAC:
- *   - Leitura:   coordenador, gestor, admin, superadmin
- *   - Confirmar/Cancelar: coordenador+
- *   - Presença:  colaborador+
- *   - Certificado: admin+
+ *   - Leitura:              habilitador, gestor, admin, superadmin
+ *   - Confirmar/Cancelar:   habilitador+
+ *   - Presença:             colaborador+
+ *   - Certificado:          admin+
  *
  * CQRS: leitura com cache, escrita invalida cache.
  *
@@ -19,6 +19,15 @@
 var _CACHE_KEY_PUBLICO_LISTA    = 'ctrl_publico_inscricoes';
 var _CACHE_KEY_PUBLICO_METRICAS = 'ctrl_publico_metricas';
 
+function _ctxPublico(papeis) {
+  var email  = getEmailSessao();
+  var acesso = AcessoService.verificar(email);
+  if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
+  var papel  = (acesso.registro && acesso.registro.papel) || 'colaborador';
+  if (papeis && papeis.indexOf(papel) === -1) throw new Error('Sem permissão.');
+  return { email: email, papel: papel, orgId: getOrgConfig().orgId };
+}
+
 // ─── Inscrições ──────────────────────────────────────────────────────────────
 
 /**
@@ -28,12 +37,11 @@ var _CACHE_KEY_PUBLICO_METRICAS = 'ctrl_publico_metricas';
 function ctrl_publico_listarInscricoes(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
     var cacheKey = _CACHE_KEY_PUBLICO_LISTA + '_' + JSON.stringify(filtros);
     var cached = CacheService.get(cacheKey);
     if (cached) return JSON.parse(cached);
-    var lista = PublicoRepository.Inscricoes.listar(orgId, filtros);
+    var lista = PublicoRepository.Inscricoes.listar(ctx.orgId, filtros);
     CacheService.set(cacheKey, JSON.stringify(lista), 120);
     return lista;
   }, 'ctrl_publico_listarInscricoes');
@@ -44,11 +52,10 @@ function ctrl_publico_listarInscricoes(filtros) {
  */
 function ctrl_publico_metricas() {
   return GasResponse.wrap(function() {
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
     var cached = CacheService.get(_CACHE_KEY_PUBLICO_METRICAS);
     if (cached) return JSON.parse(cached);
-    var metricas = PublicoEngine.obterMetricas(orgId);
+    var metricas = PublicoEngine.obterMetricas(ctx.orgId);
     CacheService.set(_CACHE_KEY_PUBLICO_METRICAS, JSON.stringify(metricas), 120);
     return metricas;
   }, 'ctrl_publico_metricas');
@@ -61,9 +68,8 @@ function ctrl_publico_metricas() {
 function ctrl_publico_capacidade(acaoId) {
   return GasResponse.wrap(function() {
     if (!acaoId) throw new Error('acaoId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    return PublicoEngine.obterCapacidade(acaoId, orgId);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
+    return PublicoEngine.obterCapacidade(acaoId, ctx.orgId);
   }, 'ctrl_publico_capacidade');
 }
 
@@ -74,9 +80,8 @@ function ctrl_publico_capacidade(acaoId) {
 function ctrl_publico_confirmarInscricao(id) {
   return GasResponse.wrap(function() {
     if (!id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    var resultado = PublicoEngine.confirmarInscricao(id, orgId);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
+    var resultado = PublicoEngine.confirmarInscricao(id, ctx.orgId);
     CacheService.invalidar(_CACHE_KEY_PUBLICO_LISTA);
     CacheService.invalidar(_CACHE_KEY_PUBLICO_METRICAS);
     return resultado;
@@ -91,9 +96,8 @@ function ctrl_publico_cancelarInscricao(dados) {
   return GasResponse.wrap(function() {
     dados = dados || {};
     if (!dados.id) throw new Error('id obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    PublicoEngine.cancelarInscricao(dados.id, orgId, dados.motivo || '');
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
+    PublicoEngine.cancelarInscricao(dados.id, ctx.orgId, dados.motivo || '');
     CacheService.invalidar(_CACHE_KEY_PUBLICO_LISTA);
     CacheService.invalidar(_CACHE_KEY_PUBLICO_METRICAS);
     return { cancelado: true };
@@ -109,9 +113,8 @@ function ctrl_publico_cancelarInscricao(dados) {
 function ctrl_publico_listarPresencas(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
-    return PublicoRepository.Presencas.listar(orgId, filtros);
+    var ctx = _ctxPublico(null);
+    return PublicoRepository.Presencas.listar(ctx.orgId, filtros);
   }, 'ctrl_publico_listarPresencas');
 }
 
@@ -123,8 +126,7 @@ function ctrl_publico_registrarPresencaBatch(dados) {
   return GasResponse.wrap(function() {
     dados = dados || {};
     if (!dados.acaoId) throw new Error('acaoId obrigatório.');
-    var orgId  = getOrgConfig().orgId;
-    var userId = AcessoService.verificar(['colaborador','coordenador','gestor','admin','superadmin']);
+    var ctx = _ctxPublico(null);
     var registros = dados.registros || [];
     var erros = [];
     var ok    = 0;
@@ -137,7 +139,7 @@ function ctrl_publico_registrarPresencaBatch(dados) {
           sessaoId:  dados.sessaoId   || 'sessao-unica',
           sessaoNome: dados.sessaoNome || 'Sessão Única',
           presente:  r.presente !== false
-        }, orgId, userId);
+        }, ctx.orgId, ctx.email);
         ok++;
       } catch(e) {
         erros.push({ inscricaoId: r.inscricaoId, erro: e.message });
@@ -158,9 +160,8 @@ function ctrl_publico_registrarPresencaBatch(dados) {
 function ctrl_publico_listarPesquisas(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    return PublicoRepository.Pesquisas.listar(orgId, filtros);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
+    return PublicoRepository.Pesquisas.listar(ctx.orgId, filtros);
   }, 'ctrl_publico_listarPesquisas');
 }
 
@@ -173,9 +174,8 @@ function ctrl_publico_listarPesquisas(filtros) {
 function ctrl_publico_listarCertificados(filtros) {
   return GasResponse.wrap(function() {
     filtros = filtros || {};
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['coordenador','gestor','admin','superadmin']);
-    return PublicoRepository.Certificados.listar(orgId, filtros);
+    var ctx = _ctxPublico(['coordenador','gestor','admin','superadmin']);
+    return PublicoRepository.Certificados.listar(ctx.orgId, filtros);
   }, 'ctrl_publico_listarCertificados');
 }
 
@@ -187,10 +187,9 @@ function ctrl_publico_gerarCertificado(dados) {
   return GasResponse.wrap(function() {
     dados = dados || {};
     if (!dados.inscricaoId) throw new Error('inscricaoId obrigatório.');
-    var orgId = getOrgConfig().orgId;
-    AcessoService.verificar(['admin','superadmin']);
+    var ctx = _ctxPublico(['admin','superadmin']);
     var resultado = PublicoEngine.gerarCertificado(
-      dados.inscricaoId, orgId, dados.totalSessoes || 1
+      dados.inscricaoId, ctx.orgId, dados.totalSessoes || 1
     );
     CacheService.invalidar(_CACHE_KEY_PUBLICO_LISTA);
     CacheService.invalidar(_CACHE_KEY_PUBLICO_METRICAS);
