@@ -6898,10 +6898,10 @@ select.form-control { cursor: pointer; }
         <div class="view-header">
           <div>
             <h1 class="view-title">Escuta Institucional</h1>
-            <p class="view-subtitle">Clima organizacional · UWES · JDC · CVF · NR-1</p>
+            <p class="view-subtitle">Bem-estar, engajamento e clima organizacional</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button id="btn-escuta-refresh" class="btn btn-secundario btn-sm"
+            <button id="btn-escuta-refresh" class="btn btn-ghost btn-sm"
                     onclick="BtnGuard.wrap('btn-escuta-refresh','Atualizando…',EscutaUI.carregar)" data-bg-skip="1">
               <span class="ms ms-sm">refresh</span>
             </button>
@@ -7039,10 +7039,10 @@ select.form-control { cursor: pointer; }
             <select id="escuta-sel-resultado" class="select-sm" onchange="EscutaUI.carregarResultado()">
               <option value="">— selecionar —</option>
             </select>
-            <button class="btn btn-secundario btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">
+            <button class="btn btn-ghost btn-sm" onclick="EscutaUI.carregarCruzamento()" data-bg-skip="1">
               <span class="ms ms-sm">analytics</span> Cruzamento
             </button>
-            <button id="btn-gerar-relatorio" class="btn btn-secundario btn-sm"
+            <button id="btn-gerar-relatorio" class="btn btn-ghost btn-sm"
                     onclick="BtnGuard.wrap('btn-gerar-relatorio','Gerando…',EscutaUI.gerarRelatorio)">
               <span class="ms ms-sm">description</span> Relatório
             </button>
@@ -9467,7 +9467,7 @@ var ContratosUI = (function() {
       {valor:m.total||0,          label:'Total de contratos',  icone:'folder_open',            classe:'primary'},
       {valor:m.ativos||0,         label:'Ativos',              icone:'check_circle',            classe:'success'},
       {valor:m.suspensos||0,      label:'Suspensos',           icone:'pause_circle',            classe:'accent'},
-      {valor:_fmtMoeda(m.valorAtivos), label:'Valor em aberto', icone:'account_balance_wallet', classe:'info'}
+      {valor:_fmtMoeda(m.valorAtivos), label:'Total Previsto Ativo', icone:'account_balance_wallet', classe:'info'}
     ].map(function(s){
       return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
         +'<div class="stat-info"><div class="stat-valor" style="font-size:'+(typeof s.valor==='string'?'16px':'28px')+'">'+escaparHtml(s.valor)+'</div>'
@@ -11390,7 +11390,7 @@ var AditivosUI = (function() {
     valor:'Valor', prazo:'Prazo', escopo:'Escopo', metas:'Metas', rubricas:'Rubricas', misto:'Misto'
   };
 
-  function _fmt(v){ return (v != null) ? 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'; }
+  function _fmt(v){ return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); }
 
   function carregar() {
     GAS.aditivos.metricas(function(r) {
@@ -25483,8 +25483,8 @@ var EscutaUI = (function() {
         '<div style="display:flex;gap:6px;flex-shrink:0;">' +
           (_ehGestaoEsc && p.status==='rascunho' ? '<button class="btn btn-sm" style="background:var(--success);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-ativar-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Ativando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'ativa\')})">Ativar</button>' : '') +
           (_ehGestaoEsc && p.status==='ativa'    ? '<button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" id="btn-enc-esc-' + p.id + '" onclick="BtnGuard.wrap(' + idS + ',\'Encerrando…\',function(){EscutaUI.mudarStatus(' + idS + ',\'encerrada\')})">Encerrar</button>' : '') +
-          '<button class="btn btn-sm btn-secundario" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.verResultados(' + idS + ')" data-bg-skip="1">Resultados</button>' +
-          (_ehGestaoEsc && p.status==='rascunho' ? '<button class="btn btn-sm btn-secundario" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.abrirFormPesquisa(' + idS + ')" data-bg-skip="1">Editar</button>' : '') +
+          '<button class="btn btn-sm btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.verResultados(' + idS + ')" data-bg-skip="1">Resultados</button>' +
+          (_ehGestaoEsc && p.status==='rascunho' ? '<button class="btn btn-sm btn-ghost" style="font-size:12px;padding:4px 10px;" onclick="EscutaUI.abrirFormPesquisa(' + idS + ')" data-bg-skip="1">Editar</button>' : '') +
         '</div>' +
       '</div>';
     }).join('');
@@ -25634,7 +25634,7 @@ var EscutaUI = (function() {
             '<p style="font-size:10px;color:var(--text2);margin:2px 0 0;">' + (a.criadoEm||'').substring(0,10) + '</p>' +
           '</div>' +
           (a.status === 'ativo' ?
-            '<button id="btn-res-alerta-' + a.id + '" class="btn btn-sm btn-secundario" style="font-size:11px;white-space:nowrap;" onclick="EscutaUI.resolverAlerta(' + idS + ')">Resolver</button>' : '') +
+            '<button id="btn-res-alerta-' + a.id + '" class="btn btn-sm btn-ghost" style="font-size:11px;white-space:nowrap;" onclick="EscutaUI.resolverAlerta(' + idS + ')">Resolver</button>' : '') +
         '</div>';
       }).join('');
     }, function(e){ el.innerHTML = '<p class="muted-text">Erro: ' + _esc(e.message||e) + '</p>'; });
@@ -25663,18 +25663,22 @@ var EscutaUI = (function() {
     if (!el) return;
     el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Carregando…</p>';
     var per = (document.getElementById('escuta-periodo-pulse')||{}).value || _periodoAtual();
+    var NOMES_DIM = { vigor:'Vigor', dedicacao:'Dedicação', absorcao:'Absorção', demanda:'Demanda/Carga', controle:'Controle/Autonomia', colaboracao:'Colaboração', inovacao:'Inovação', seguranca:'Segurança Psicológica' };
     GAS.escuta.pulseDashboard({ periodo: per }, function(r) {
       if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados pulse no período.</p>'; return; }
       var d = r.data;
-      var medias = d.mediaPorDimensao || {};
+      var indicadores = d.indicadores || {};
       var html = '';
-      Object.keys(medias).forEach(function(dim) {
-        var v   = medias[dim];
+      Object.keys(indicadores).forEach(function(dim) {
+        if (dim === '_climaGeral') return;
+        var entry = indicadores[dim];
+        var v   = entry ? entry.media : null;
         var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
         var cor = _cor(pct);
+        var nome = NOMES_DIM[dim] || dim;
         html += '<div style="margin-bottom:10px;">' +
           '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
-            '<span style="text-transform:capitalize;">' + dim + '</span>' +
+            '<span>' + nome + '</span>' +
             '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'N/D') + '</span>' +
           '</div>' +
           '<div style="background:var(--border);border-radius:4px;height:7px;">' +
@@ -25683,7 +25687,7 @@ var EscutaUI = (function() {
       });
       el.innerHTML = (html || '<p class="muted-text" style="font-size:12px;">Sem respostas pulse neste período.</p>') +
         '<p style="font-size:10px;color:var(--text2);margin-top:6px;">' +
-          'Total respostas: ' + (d.totalRespostas||0) + ' · Meta saturação: ' + (d.metaSaturacao||'—') +
+          'Total participantes: ' + (d.totalParticipantes||0) +
         '</p>';
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
   }
@@ -25919,8 +25923,8 @@ var EscutaUI = (function() {
       var cab = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">' +
         '<p style="font-size:11px;color:var(--text2);margin:0;">Perguntas do Pulse contínuo — controle quais entram na rotação automática.</p>' +
         '<div style="display:flex;gap:6px;">' +
-          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(true)" data-bg-skip="1">Habilitar todas</button>' +
-          '<button class="btn btn-sm btn-secundario" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(false)" data-bg-skip="1">Desabilitar todas</button>' +
+          '<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(true)" data-bg-skip="1">Habilitar todas</button>' +
+          '<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px;" onclick="EscutaUI.toggleTodasPerguntas(false)" data-bg-skip="1">Desabilitar todas</button>' +
         '</div>' +
       '</div>';
       el.innerHTML = cab + (_listaBancoPerguntas.map(function(p) {
@@ -26400,7 +26404,7 @@ var EscutaUI = (function() {
         '</p>' +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-        '<button class="btn btn-secundario" onclick="BtnGuard.liberar(\'btn-nova-pesquisa\');document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '<button class="btn btn-ghost" onclick="BtnGuard.liberar(\'btn-nova-pesquisa\');document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
         '<button id="btn-salvar-escuta" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-salvar-escuta\',\'Salvando…\',EscutaUI.salvarPesquisa)">Salvar</button>' +
       '</div>';
     if (id) box.dataset.editId = id;

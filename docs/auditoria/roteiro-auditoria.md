@@ -1413,7 +1413,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **~~FIN-03~~** `NEGADO` — ~~Sem view read-only da Memória de Cálculo~~ — View **existe**: ícone 👁 em cada rubrica abre modal com tabela de linhas da memória. Modal com fundo opaco ✅. A hipótese estava incorreta.
 
-**FIN-07** `🟡 Média` — CONFIRMADO — Card "Valor em aberto" exibe R$ 1.671.669,07 — esse valor coincide com o valor total contratual. "Valor em aberto" sugere "ainda a pagar", mas aparenta ser o valor contratual total ativo. Label ambíguo — pode induzir à interpretação de que nada foi executado quando na verdade é o valor previsto total.
+~~**FIN-07**~~ ✅ CORRIGIDO s17 Fase 62 @480 — Card "Valor em aberto" → renomeado para "Total Previsto Ativo"; label não implicava dívida, era valor total dos contratos ativos.
 
 ### Novos problemas identificados ⚠️
 
@@ -1425,7 +1425,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **FIN-12** `🔴 Alta` — **Histórico de versões apenas com metadados** — a aba Histórico lista versões com número, usuário e timestamp, mas não mostra o conteúdo de nenhuma versão. Problemas: (a) impossível saber o que mudou entre v15 e v16; (b) sem diff comparativo entre versões; (c) sem possibilidade de reversão para versão anterior; (d) com 19 versões em poucos dias de uso, o histórico será inutilizável como ferramenta de auditoria sem acesso ao conteúdo
 
-**FIN-13** `🟡 Média` — **Card "Valor Aditivado" exibe "—" na aba Aditivos** — os demais cards da aba (Total, Pendentes, Efetivados) exibem "0". O card financeiro exibe "—" em vez de "R$ 0,00" — inconsistência de formatação/renderização entre cards da mesma view
+~~**FIN-13**~~ ✅ CORRIGIDO s17 Fase 62 @480 — `_fmt(v)` em AditivosUI: `(v != null) ? ... : '—'` → `Number(v||0).toLocaleString(...)` — exibe "R$ 0,00" quando sem aditivos efetivados.
 
 ### Perguntas abertas
 *(próxima rodada: execução financeira, FSM do contrato, ícone de pessoas no card)*
@@ -1556,7 +1556,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ~~**ESC-06**~~ ✅ CORRIGIDO — `BtnGuard.liberar('btn-nova-pesquisa')` no Cancelar e overlay click.
 
-**ESC-07** `🟡 Média` — **Botões "Salvar Configurações" e "Salvar Perfil" com cor rosa/pink** — fora do padrão DS (`btn-primary` roxo). Terceira cor não prevista no design system. Consistente com o padrão incorreto detectado em BAL-13 ("Enviar Nova Versão" rosa/pink).
+~~**ESC-07**~~ ✅ CORRIGIDO s17 Fase 62 @480 — "Salvar Configurações" já era `btn-primario`; "Salvar Perfil" removido em ESC-08; 7 `btn-secundario` restantes (refresh, Cruzamento, Relatório, Resultados, Editar, Resolver, Habilitar/Desabilitar, Cancelar) → `btn-ghost`.
 
 **ESC-08** `🔴 Alta` — **Seção "MEU PERFIL ANALÍTICO" na aba Escuta Livre deve ser removida** — dados de equidade (gênero, raça/cor, vínculo, nível, faixa salarial, tempo de casa) não devem ser coletados dentro do módulo Escuta como formulário independente. Devem vir automaticamente do perfil cadastral do usuário no sistema (confirmado pelo usuário). A coleta fragmentada cria duplicidade, inconsistência de dados e interface desnecessariamente complexa para o colaborador.
 
@@ -1564,17 +1564,17 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ESC-10** `🟡 Média` — **Aba "Alertas" sem estado vazio orientador** — propósito confirmado pelo usuário: alertas automáticos de bem-estar baseados em thresholds (ex: "vigor médio abaixo de X por N semanas → notificar gestor"). O problema é que a aba exibe apenas "Nenhum alerta ativo" sem nenhuma explicação do que são alertas, como são configurados ou o que os dispara. Enquanto não há dados suficientes para gerar alertas, a aba parece vazia e sem função. Necessário: (a) estado vazio orientador explicando o propósito ("Alertas são gerados automaticamente quando indicadores de bem-estar atingem limiares de atenção. Configure os limiares na aba Gestão."); (b) link/botão para configurar thresholds; (c) na aba Gestão, seção de configuração de thresholds por dimensão (valor mínimo, período de observação, destinatário da notificação).
 
-**ESC-11** `🟡 Média` — **Saturação por Dimensão exibe IDs numéricos** — as barras de progresso na aba Distribuição estão rotuladas "0", "1", "2"… "7" em vez dos nomes das dimensões (vigor, dedicação, absorção, demanda, colaboração, inovação, segurança, psicológica). IDs internos expostos na interface — instância de SIS-08 e do mesmo padrão de CON-03 (IDs técnicos em vez de nomes legíveis).
+~~**ESC-11**~~ ✅ CORRIGIDO s17 Fase 62 @480 — `carregarPulseDash()`: campo `d.mediaPorDimensao` (inexistente) → `d.indicadores`; dicionário `NOMES_DIM` adicionado com nomes legíveis (Vigor, Dedicação, Absorção…); valor acessa `entry.media` (não o objeto inteiro).
 
 **ESC-12** `🔴 Alta` — **Módulo Escuta sem documentação ou guia contextual integrado** — o módulo é metodologicamente complexo (UWES, JDC, CVF, NR-1, saturação, ciclo de feedback, marcadores metodológicos) e mesmo o administrador do sistema não compreende todas as abas. Precisa de: (a) tour guiado na primeira abertura; (b) tooltips explicativos por seção com linguagem simples; (c) glossário contextual acessível por hover/clique nas siglas e termos técnicos; (d) manual operacional in-app ("Como usar o módulo Escuta") acessível pelo botão ❓ do header.
 
-**ESC-13** `🟡 Média` — **Subtítulo com siglas técnicas sem explicação** — "Clima organizacional · UWES · JDC · CVF · NR-1" no header do módulo usa siglas que a maioria dos usuários não conhece. Instância de SIS-08. As siglas devem ter tooltip ou ser substituídas por linguagem orientada ao benefício: "Bem-estar, engajamento e clima organizacional".
+~~**ESC-13**~~ ✅ CORRIGIDO s17 Fase 62 @480 — Subtítulo da view Escuta: "Clima organizacional · UWES · JDC · CVF · NR-1" → "Bem-estar, engajamento e clima organizacional".
 
 **ESC-14** `🟡 Média` — **Contradição na aba Gestão** — seção "MARCADORES METODOLÓGICOS" exibe ao mesmo tempo "Qualidade baixa — revisar" (problema) e "✅ Motor metodológico sem avisos." (tudo ok). As duas mensagens são contraditórias e geram confusão — uma avalia a qualidade dos dados coletados, a outra avalia o funcionamento do motor. Devem estar em sub-seções distintas com contexto claro.
 
 **ESC-15** `🔴 Alta` — **Modal "Nova Pesquisa" extremamente minimalista** — apenas 4 campos (título, descrição, período, anonimato). Criar uma pesquisa formal de clima organizacional exige: (a) seleção de metodologia (UWES, JDC, CVF, NR-1 ou personalizada); (b) seleção ou edição do banco de questões; (c) configuração de participantes (quem receberá); (d) canal de notificação; (e) definição de periodicidade (única, mensal, trimestral). O formulário atual não permite criar uma pesquisa utilizável. Gap crítico para a funcionalidade central do módulo.
 
-**ESC-16** `🟡 Média` — **Título do modal "Editar Pesquisa" na criação** — ao clicar "+ Nova Pesquisa", o modal exibe "Editar Pesquisa" como título. Deveria exibir "Nova Pesquisa" — o mesmo problema de nomenclatura inconsistente detectado em outros modais do sistema.
+~~**ESC-16**~~ FALSO POSITIVO — Código `(id?'Editar':'Nova') + ' Pesquisa'` já era correto; ao clicar "+ Nova Pesquisa", `id` é `undefined`, título exibe "Nova Pesquisa".
 
 ---
 
