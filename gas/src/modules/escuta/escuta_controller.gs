@@ -517,12 +517,13 @@ function ctrl_escuta_pulse_monitoramento(params) {
     var respostas  = EscutaRepository.listarPulseRespostas(ctx.orgId, periodo);
     var catalogo   = EscutaPulseEngine.obterCatalogoPerguntas(ctx.orgId);
 
-    // Agrega por pergunta
+    // Agrega por pergunta (contadores + soma de notas para calcular média qualitativa)
     var porId = {};
     catalogo.forEach(function(p) {
       porId[p.id] = {
         id: p.id, dimensao: p.dimensao, texto: p.texto,
-        impressoes: 0, respostas: 0, ultimaUsadaEm: null, taxaEngajamento: null
+        impressoes: 0, respostas: 0, ultimaUsadaEm: null, taxaEngajamento: null,
+        _somaNotas: 0, _contNotas: 0, distribuicao: [0,0,0,0,0]
       };
     });
     impressoes.forEach(function(i) {
@@ -533,13 +534,27 @@ function ctrl_escuta_pulse_monitoramento(params) {
       porId[r.perguntaId].respostas++;
       if (!porId[r.perguntaId].ultimaUsadaEm || r.criadoEm > porId[r.perguntaId].ultimaUsadaEm)
         porId[r.perguntaId].ultimaUsadaEm = r.criadoEm;
+      var val = Number(r.resposta);
+      if (!isNaN(val) && val >= 1 && val <= 5) {
+        porId[r.perguntaId]._somaNotas += val;
+        porId[r.perguntaId]._contNotas++;
+        porId[r.perguntaId].distribuicao[val - 1]++;
+      }
     });
 
     var porPergunta = Object.keys(porId).map(function(id) {
       var p = porId[id];
       p.taxaEngajamento = p.impressoes > 0 ? parseFloat((p.respostas / p.impressoes).toFixed(3)) : null;
+      p.mediaNota = p._contNotas > 0 ? Math.round((p._somaNotas / p._contNotas) * 10) / 10 : null;
+      delete p._somaNotas; delete p._contNotas;
       return p;
     }).sort(function(a, b) { return b.impressoes - a.impressoes; });
+
+    // Indicadores de clima por dimensão (mesmo algoritmo do Painel Pulse)
+    var dashPulse = EscutaPulseEngine.obterDashboardPulse(ctx.orgId, periodo);
+    var indicadores = dashPulse.ok ? dashPulse.indicadores : null;
+    var bloqueado   = dashPulse.ok ? dashPulse.bloqueado : false;
+    var confianca   = dashPulse.ok ? dashPulse.confianca : null;
 
     var semResposta = porPergunta.filter(function(p) {
       return p.impressoes > 0 && p.respostas === 0;
@@ -576,6 +591,9 @@ function ctrl_escuta_pulse_monitoramento(params) {
         ? parseFloat((respostas.length / impressoes.length).toFixed(3)) : null,
       porPergunta:     porPergunta,
       semResposta:     semResposta,
+      indicadores:     bloqueado ? null : indicadores,
+      confianca:       confianca,
+      bloqueado:       bloqueado,
       colaboradores: {
         total:           totalAtivos,
         comAtividade:    Object.keys(idsComAtividade).length,

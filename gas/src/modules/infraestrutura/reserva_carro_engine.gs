@@ -31,7 +31,7 @@ var ReservaCarroEngine = (function() {
     'CONCLUIDA': []
   };
 
-  var PAPEIS_APROVACAO = ['infraestrutura', 'gestor', 'admin', 'superadmin'];
+  var PAPEIS_APROVACAO = ['infraestrutura', 'habilitador', 'gestor', 'admin', 'superadmin'];
 
   FsmGuardian.registrar('reservas_carro', _TRANSICOES);
 

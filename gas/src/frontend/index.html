@@ -2885,7 +2885,7 @@ select.form-control { cursor: pointer; }
             <div class="sol-section-sep">3 · Objeto e Setor</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="form-group" style="grid-column:span 2"><label class="form-label">Objeto da Contratação *</label><input id="sol-objeto" class="form-input" type="text" placeholder="Descreva o serviço, compra ou bolsa a ser contratada"></div>
-              <div class="form-group"><label class="form-label">Setor Solicitante *</label><input id="sol-setor" class="form-input" type="text" placeholder="Ex: Produção"></div>
+              <div class="form-group"><label class="form-label">Setor Solicitante *</label><select id="sol-setor" class="form-input"><option value="">Selecione o setor…</option></select></div>
               <div class="form-group"><label class="form-label">Justificativa</label><input id="sol-justificativa" class="form-input" type="text" placeholder="Motivo resumido"></div>
             </div>
 
@@ -6021,7 +6021,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label>Data e Hora *</label><input type="datetime-local" id="run-data-hora" class="form-control" required></div>
                 <div class="form-group"><label>Duração (min)</label><input type="number" id="run-duracao" class="form-control" min="15" value="60"></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Convocado por (email)</label><input type="email" id="run-convocador" class="form-control"></div>
-                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (ID opcional)</label><input type="text" id="run-acao-id" class="form-control" placeholder="ACAO-001"></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (opcional)</label><select id="run-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
               </div>
             </div>
             <!-- Tab Pauta -->
@@ -6234,7 +6234,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group" style="grid-column:1/-1"><label>Descrição</label><textarea id="bl-descricao" class="form-control" rows="3"></textarea></div>
                 <div class="form-group"><label>Executor (email)</label><input type="email" id="bl-executor" class="form-control" placeholder="responsavel@ccbj.org.br"></div>
                 <div class="form-group"><label>Setor demandante</label><input type="text" id="bl-setor" class="form-control" placeholder="Ex: NArTE"></div>
-                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (ID)</label><input type="text" id="bl-acao-id" class="form-control" placeholder="ACAO-001"></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (opcional)</label><select id="bl-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
               </div>
               <p id="bl-sla-label" style="font-size:12px;color:var(--muted);margin-top:4px;"></p>
             </div>
@@ -18894,8 +18894,30 @@ var SolicitacoesUI = (function() {
 
   // ── Formulário ────────────────────────────────────────────
 
+  function _popularSelectSetor(valorAtual) {
+    var sel = document.getElementById('sol-setor');
+    if (!sel) return;
+    var boot = App.getBoot ? App.getBoot() : null;
+    var setores = (boot && boot.setores) || [];
+    sel.innerHTML = '<option value="">Selecione o setor…</option>'
+      + setores.map(function(s) {
+          var id = s.id || s;
+          var nome = s.nome || s.label || s;
+          return '<option value="' + escaparHtml(id) + '"' + (valorAtual === id ? ' selected' : '') + '>' + escaparHtml(nome) + '</option>';
+        }).join('');
+  }
+
   function abrirForm(preenchimento) {
     _limparForm();
+    var boot = App.getBoot ? App.getBoot() : null;
+    _popularSelectSetor((boot && boot.usuarioSetor) || '');
+    // CON-02 — gera Nº Esboço automático para nova solicitação
+    var esboco = document.getElementById('sol-n-esboco');
+    if (esboco && !esboco.value) {
+      var ano = new Date().getFullYear();
+      var sufixo = String(Math.floor(Date.now() / 1000) % 10000).padStart(4, '0');
+      esboco.value = 'ESB-' + ano + '-' + sufixo;
+    }
     if (preenchimento) {
       if (preenchimento.acaoId) {
         var sel = document.getElementById('sol-acao-id');
@@ -24127,10 +24149,24 @@ var ReunioesUI = (function() {
 
   function _filtrar() { _renderLista(); }
 
+  function _carregarSelectAcoesRun(valorAtual) {
+    var sel = document.getElementById('run-acao-id');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Nenhuma —</option><option value="" disabled>Carregando…</option>';
+    GAS.acoes.listar({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      var ativos = lista.filter(function(a){ return a.status !== 'cancelada' && a.status !== 'concluida'; });
+      sel.innerHTML = '<option value="">— Nenhuma —</option>'
+        + ativos.map(function(a){ return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
+      if (valorAtual) sel.value = valorAtual;
+    }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+  }
+
   function abrirForm(id) {
     _idAtual = id || null;
     document.getElementById('run-modal-titulo').textContent = id ? 'Editar Reunião' : 'Nova Reunião';
     _resetForm();
+    _carregarSelectAcoesRun('');
     if (id) {
       GAS.reunioes.obter(id, function(resp) {
         if (!resp || !resp.ok) return;
@@ -24141,7 +24177,7 @@ var ReunioesUI = (function() {
         document.getElementById('run-duracao').value     = r.duracao || 60;
         document.getElementById('run-local').value       = r.local || '';
         document.getElementById('run-convocador').value  = r.convocadoPor || '';
-        document.getElementById('run-acao-id').value     = r.acaoVinculadaId || '';
+        _carregarSelectAcoesRun(r.acaoVinculadaId || '');
         // Pauta
         (r.pauta || []).forEach(function(p) { _addPautaItem(p); });
         // Presentes
@@ -24584,10 +24620,24 @@ var BalcaoUI = (function() {
 
   function _filtrar() { _renderLista(); }
 
+  function _carregarSelectAcoesBal(valorAtual) {
+    var sel = document.getElementById('bl-acao-id');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Nenhuma —</option><option value="" disabled>Carregando…</option>';
+    GAS.acoes.listar({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      var ativos = lista.filter(function(a){ return a.status !== 'cancelada' && a.status !== 'concluida'; });
+      sel.innerHTML = '<option value="">— Nenhuma —</option>'
+        + ativos.map(function(a){ return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
+      if (valorAtual) sel.value = valorAtual;
+    }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+  }
+
   function abrirForm(id) {
     _idAtual = id || null;
     document.getElementById('bl-modal-titulo').textContent = id ? 'Editar Demanda' : 'Nova Demanda';
     _resetForm();
+    _carregarSelectAcoesBal('');
     if (id) {
       GAS.balcao.obter(id, function(resp) {
         if (!resp || !resp.ok) return;
@@ -24598,7 +24648,7 @@ var BalcaoUI = (function() {
         document.getElementById('bl-descricao').value = d.descricao || '';
         document.getElementById('bl-executor').value  = d.executor || '';
         document.getElementById('bl-setor').value     = d.demandanteSetor || '';
-        document.getElementById('bl-acao-id').value   = d.acaoVinculadaId || '';
+        _carregarSelectAcoesBal(d.acaoVinculadaId || '');
         _atualizarSlaLabel();
         // Versões
         _renderVersoes(d.versoes || [], d.status);
@@ -25552,47 +25602,121 @@ var EscutaUI = (function() {
       var taxaPct = d.taxaGeral !== null ? Math.round(d.taxaGeral * 100) + '%' : '—';
       var corTaxa = d.taxaGeral === null ? 'var(--text2)' : d.taxaGeral >= 0.5 ? 'var(--success)' : d.taxaGeral >= 0.2 ? 'var(--warning)' : 'var(--danger)';
 
-      // Resumo geral
+      // ── Resumo de engajamento ─────────────────────────────────────────────
       var resumo =
-        '<div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">' +
+        '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">' +
           _monCard('Impressões', d.totalImpressoes, 'var(--primary)') +
           _monCard('Respostas', d.totalRespostas, 'var(--success)') +
           _monCard('Taxa geral', taxaPct, corTaxa) +
           _monCard('Sem resposta', d.semResposta.length, d.semResposta.length > 0 ? 'var(--warning)' : 'var(--success)') +
         '</div>';
 
-      // Tabela por pergunta
+      // ── Scores de clima por dimensão ──────────────────────────────────────
+      var COR_NIVEL = { excelente:'var(--success)', bom:'#22c55e', regular:'var(--warning)',
+        baixo:'var(--danger)', critico:'#dc2626', sem_dados:'var(--text2)' };
+      var LABEL_DIM = { vigor:'Vigor', dedicacao:'Dedicação', absorcao:'Absorção',
+        demanda:'Demanda', controle:'Controle', colaboracao:'Colaboração',
+        inovacao:'Inovação', seguranca:'Segurança' };
+      var climaHtml = '';
+      if (d.bloqueado) {
+        var conf = d.confianca;
+        climaHtml = '<div style="background:rgba(234,179,8,.07);border:1px solid rgba(234,179,8,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">' +
+          '<span class="ms" style="color:var(--warning);font-size:18px;">lock</span>' +
+          '<div><p style="margin:0;font-size:12px;font-weight:700;color:var(--warning);">Amostra insuficiente para exibir scores de clima</p>' +
+          '<p style="margin:2px 0 0;font-size:11px;color:var(--text2);">Atual: ' + (conf ? conf.percentual : 0) + '% · mínimo 15% dos colaboradores ativos. Scores aparecem com mais respostas.</p></div>' +
+        '</div>';
+      } else if (d.indicadores) {
+        var ind = d.indicadores;
+        var geral = ind._climaGeral;
+        var geralHtml = '';
+        if (geral && geral.media !== null) {
+          var corG = COR_NIVEL[geral.nivel] || 'var(--text2)';
+          geralHtml = '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:10px;margin-bottom:10px;">' +
+            '<div style="width:48px;height:48px;border-radius:50%;background:' + corG + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+              '<span style="font-size:17px;font-weight:900;color:#fff;">' + geral.media.toFixed(1) + '</span>' +
+            '</div>' +
+            '<div><p style="margin:0;font-size:13px;font-weight:800;">Clima Geral — ' + _monNivelLabel(geral.nivel) + '</p>' +
+            '<p style="margin:2px 0 0;font-size:11px;color:var(--text2);">Média das 7 dimensões positivas · escala 1–5</p></div>' +
+          '</div>';
+        }
+        var dimsDef = ['vigor','dedicacao','absorcao','demanda','controle','colaboracao','inovacao','seguranca'];
+        var dimsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px;">' +
+          dimsDef.map(function(k) {
+            var entry = ind[k];
+            if (!entry || entry.media === null) return '';
+            var cor = COR_NIVEL[entry.nivel] || 'var(--text2)';
+            var pct = Math.round(((entry.media - 1) / 4) * 100);
+            return '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:8px 10px;">' +
+              '<p style="margin:0 0 3px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.3px;">' + (LABEL_DIM[k] || k) + '</p>' +
+              '<p style="margin:0 0 5px;font-size:15px;font-weight:800;color:' + cor + ';">' + entry.media.toFixed(1) + '<span style="font-size:10px;font-weight:400;color:var(--text2);"> /5</span></p>' +
+              '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">' +
+                '<div style="height:100%;width:' + pct + '%;background:' + cor + ';border-radius:2px;"></div>' +
+              '</div>' +
+              '<p style="margin:3px 0 0;font-size:9px;color:' + cor + ';font-weight:600;">' + _monNivelLabel(entry.nivel) + ' · ' + entry.n + 'n</p>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+        climaHtml = '<div style="margin-bottom:4px;">' +
+          '<p style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;">Scores de Clima</p>' +
+          geralHtml + dimsHtml + '</div>';
+      }
+
+      // ── Tabela por pergunta (com coluna MÉDIA e distribuição) ─────────────
+      var CORES_DIST = ['#dc2626','#f97316','#eab308','#22c55e','#16a34a'];
       var tabelaLinhas = d.porPergunta.filter(function(p) { return p.impressoes > 0; }).map(function(p) {
         var taxa = p.taxaEngajamento !== null ? Math.round(p.taxaEngajamento * 100) + '%' : '—';
         var corL = p.taxaEngajamento === null ? 'var(--text2)' : p.taxaEngajamento >= 0.5 ? 'var(--success)' : p.taxaEngajamento >= 0.2 ? 'var(--warning)' : 'var(--danger)';
         var ult  = p.ultimaUsadaEm ? fmtDataPtBR(p.ultimaUsadaEm.slice(0, 10)) : '—';
-        return '<tr>' +
-          '<td style="padding:5px 8px;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _esc(p.texto) + '">' + _esc(p.texto) + '</td>' +
+        var mediaCell = '<span style="color:var(--text2);">—</span>';
+        if (!d.bloqueado && p.mediaNota !== null) {
+          var pctM = Math.round(((p.mediaNota - 1) / 4) * 100);
+          var corM = p.mediaNota >= 4 ? 'var(--success)' : p.mediaNota >= 3 ? 'var(--warning)' : 'var(--danger)';
+          mediaCell = '<div style="display:flex;align-items:center;gap:5px;">' +
+            '<span style="font-weight:700;color:' + corM + ';font-size:11px;min-width:24px;">' + p.mediaNota.toFixed(1) + '</span>' +
+            '<div style="flex:1;height:5px;background:var(--border);border-radius:3px;min-width:32px;">' +
+              '<div style="height:100%;width:' + pctM + '%;background:' + corM + ';border-radius:3px;"></div>' +
+            '</div></div>';
+        }
+        var distCell = '<span style="color:var(--text2);">—</span>';
+        if (!d.bloqueado && p.distribuicao && p.distribuicao.some(function(v){return v>0;})) {
+          var totD = p.distribuicao.reduce(function(s,v){return s+v;},0);
+          distCell = '<div style="display:flex;gap:1px;align-items:flex-end;height:16px;">' +
+            p.distribuicao.map(function(v,i) {
+              var h = totD > 0 ? Math.max(2, Math.round((v/totD)*14)) : 2;
+              return '<div title="Nota '+(i+1)+': '+v+'x" style="width:7px;height:'+h+'px;background:'+CORES_DIST[i]+';border-radius:1px;"></div>';
+            }).join('') + '</div>';
+        }
+        return '<tr style="border-bottom:1px solid var(--border);">' +
+          '<td style="padding:5px 8px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _esc(p.texto) + '">' + _esc(p.texto) + '</td>' +
           '<td style="padding:5px 8px;font-size:10px;text-align:center;"><span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensao) + '</span></td>' +
           '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.impressoes + '</td>' +
           '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.respostas + '</td>' +
           '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700;color:' + corL + ';">' + taxa + '</td>' +
+          '<td style="padding:5px 8px;min-width:90px;">' + mediaCell + '</td>' +
+          '<td style="padding:5px 8px;" title="Distribuição 1→5">' + distCell + '</td>' +
           '<td style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);">' + ult + '</td>' +
         '</tr>';
       }).join('');
 
       var tabela = tabelaLinhas
-        ? '<div style="overflow-x:auto;margin-bottom:14px;">' +
-            '<table style="width:100%;border-collapse:collapse;">' +
-              '<thead><tr style="border-bottom:1px solid var(--border);">' +
+        ? '<div style="margin-bottom:14px;">' +
+            '<p style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;">Por Pergunta</p>' +
+            '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
+              '<thead><tr style="border-bottom:2px solid var(--border);">' +
                 '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;">Pergunta</th>' +
-                '<th style="padding:5px 8px;font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;">Dimensão</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:center;color:var(--text2);font-weight:600;text-transform:uppercase;">Dim.</th>' +
                 '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Imp.</th>' +
                 '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Resp.</th>' +
                 '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Taxa</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;">Média</th>' +
+                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;" title="Distribuição de notas 1-5">Dist.</th>' +
                 '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Última</th>' +
               '</tr></thead>' +
               '<tbody>' + tabelaLinhas + '</tbody>' +
-            '</table>' +
-          '</div>'
+            '</table></div></div>'
         : '<p class="muted-text" style="font-size:12px;margin-bottom:14px;">Nenhuma impressão registrada no período.</p>';
 
-      // Perguntas problemáticas (impressões mas 0 respostas)
+      // ── Perguntas sem resposta ─────────────────────────────────────────────
       var probHtml = '';
       if (d.semResposta.length) {
         probHtml = '<div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">' +
@@ -25600,13 +25724,11 @@ var EscutaUI = (function() {
           d.semResposta.map(function(p) {
             return '<div style="font-size:11px;padding:2px 0;display:flex;gap:6px;align-items:center;">' +
               '<span class="badge-secondary" style="font-size:9px;padding:1px 5px;border-radius:10px;flex-shrink:0;">' + _esc(p.dimensao) + '</span>' +
-              _esc(p.texto) + ' <span style="color:var(--text2);margin-left:auto;flex-shrink:0;">' + p.impressoes + ' imp.</span>' +
-            '</div>';
-          }).join('') +
-        '</div>';
+              _esc(p.texto) + ' <span style="color:var(--text2);margin-left:auto;flex-shrink:0;">' + p.impressoes + ' imp.</span></div>';
+          }).join('') + '</div>';
       }
 
-      // Colaboradores sem atividade — exibe apenas contagem (Pulse é anônimo)
+      // ── Colaboradores sem atividade ────────────────────────────────────────
       var colab = d.colaboradores;
       var colabHtml = '';
       if (colab && colab.total > 0) {
@@ -25620,13 +25742,11 @@ var EscutaUI = (function() {
             (colab.comAtividade > 0 ? ' <span style="color:var(--text2);font-size:11px;">(' + colab.comAtividade + ' com atividade)</span>' : '') +
           '</p>' +
           '<p style="font-size:10px;color:var(--text2);margin:0;font-style:italic;">Os nomes não são exibidos — o Pulse é anônimo por design.</p>' +
-          (nSem === 0
-            ? '<p style="font-size:11px;color:var(--success);margin:4px 0 0;">Todos os colaboradores tiveram atividade no período.</p>'
-            : '') +
+          (nSem === 0 ? '<p style="font-size:11px;color:var(--success);margin:4px 0 0;">Todos os colaboradores tiveram atividade no período.</p>' : '') +
         '</div>';
       }
 
-      el.innerHTML = resumo + tabela + probHtml + colabHtml;
+      el.innerHTML = resumo + climaHtml + tabela + probHtml + colabHtml;
     }, function() {
       el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>';
     });
@@ -25637,6 +25757,10 @@ var EscutaUI = (function() {
       '<p style="margin:0;font-size:18px;font-weight:800;color:' + cor + ';">' + valor + '</p>' +
       '<p style="margin:2px 0 0;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;">' + label + '</p>' +
     '</div>';
+  }
+
+  function _monNivelLabel(nivel) {
+    return { excelente:'Excelente', bom:'Bom', regular:'Regular', baixo:'Baixo', critico:'Crítico', sem_dados:'Sem dados' }[nivel] || nivel;
   }
 
   function togglePergunta(perguntaId, ativo) {

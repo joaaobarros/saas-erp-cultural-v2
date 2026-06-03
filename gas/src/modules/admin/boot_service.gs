@@ -103,6 +103,7 @@ var BootService = (function () {
       orgId:              orgId,
       orgConfig:          orgConfig,
       usuarioEmail:       email,
+      usuarioNome:        (acesso && acesso.registro && acesso.registro.nome) || '',
       usuarioPapel:       usuarioPapel,
       usuarioSetor:       (acesso && acesso.registro && acesso.registro.setor) || '',
       permissoesModulos:  permissoesModulos,

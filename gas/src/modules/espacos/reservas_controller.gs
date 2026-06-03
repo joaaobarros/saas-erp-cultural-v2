@@ -40,6 +40,7 @@ function _nivelReservas(email) {
       if (p === 'admin')          return 'admin';
       if (p === 'gestor')         return 'gestor';
       if (p === 'infraestrutura') return 'infraestrutura';
+      if (p === 'habilitador')    return 'habilitador';
       if (p === 'financeiro')     return 'financeiro';
       if (p === 'comunicacao')    return 'comunicacao';
     }
@@ -47,7 +48,7 @@ function _nivelReservas(email) {
   return 'colaborador';
 }
 
-var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
+var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'infraestrutura', 'habilitador'];
 var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
 // ═══════════════════════════════════════════════════════════════
