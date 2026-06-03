@@ -98,6 +98,22 @@ Todo modal criado no sistema (estático no HTML ou gerado dinamicamente via JS) 
 > box.style.cssText = 'background:var(--surface);border-radius:12px;...;box-shadow:0 20px 60px rgba(0,0,0,.25);';
 > ```
 
+### G. Revisão de Datas — formato pt-BR obrigatório em toda UI
+
+Toda data exibida ao usuário **deve** usar o formato pt-BR (`DD/MM/AAAA`). **Nunca** exibir ISO cru (`AAAA-MM-DD`) em texto visível.
+
+**Frontend (index.html):**
+- Usar `fmtDataPtBR(valor)` — converte `YYYY-MM-DD` → `DD/MM/YYYY` (definida em `index.html:8722`)
+- Para data + hora: `fmtDataPtBR(d.slice(0,10)) + ' ' + d.slice(11,16)`
+- `toLocaleDateString` sempre com locale explícito `'pt-BR'` — nunca sem argumento ou com `'pt'`
+
+**Backend (GAS):**
+- Usar `formatarData(iso)` de `core/utils.gs` — retorna `dd/MM/yyyy HH:mm` via `Utilities.formatDate`
+- `Utilities.formatDate(d, getOrgConfig().timezone, 'dd/MM/yyyy')` — **nunca** timezone hardcoded `'America/Fortaleza'`
+- Campos de persistência/comparação interna continuam em ISO (`YYYY-MM-DD`) — a regra vale apenas para **output de UI**
+
+> **Anti-padrão proibido**: `escaparHtml(obj.data||'—')` quando `obj.data` é ISO. Sempre passar por `fmtDataPtBR()` antes de renderizar.
+
 ### Checklist de auditoria (executar antes de cada deploy)
 
 ```
@@ -110,6 +126,7 @@ Todo modal criado no sistema (estático no HTML ou gerado dinamicamente via JS) 
 [ ] onclick em HTML — JSON.stringify(id) usa .replace(/"/g,"'") para IDs string
 [ ] BtnGuard.auditar() — retorna "✅ todos protegidos"
 [ ] Console F12 — zero TypeError / undefined
+[ ] Datas — toda data visível ao usuário passa por fmtDataPtBR() ou formatarData(); sem ISO cru; sem timezone hardcoded
 ```
 
 ---
@@ -194,12 +211,14 @@ BtnGuard.auditar()  // deve retornar "✅ todos protegidos"
 - Toda transição de status → `FsmGuardian` + `SystemEvents.emit()`
 - Toda nova fase → `fase1_*_prepararIndice()` global executável no GAS Editor
 - `setup.gs / inicializarSistema()` → incluir chamada ao `prepararIndice()` de cada novo repositório
+- **Datas em output de UI** → `formatarData(iso)` (`core/utils.gs`) ou `Utilities.formatDate(d, getOrgConfig().timezone, 'dd/MM/yyyy')`; **nunca** `'America/Fortaleza'` hardcoded
 
 #### Frontend (index.html)
 - Toda chamada GAS → via namespace `GAS.*` (nunca `google.script.run` direto)
 - Todo módulo → `var NomeUI = (function() { ... return { aoAbrir, carregar, ... }; })();`
 - Toda rota → `Router.registrar(id, label, fn)` + `App._MODULOS_MENU`
 - `aoAbrir()` → carregar dados apenas na primeira vez (`if (!_carregado) carregar()`)
+- **Datas em output de UI** → sempre `fmtDataPtBR(valor)` (definida em `index.html:8722`); `toLocaleDateString` sempre com `'pt-BR'`; nunca ISO cru em texto visível
 
 #### Documentação
 - Toda nova entidade → documentar schema em `docs/architecture/domain_model.md`
