@@ -66,7 +66,7 @@ var IAService = (function () {
     var d = new Date();
     d.setHours(parts[0]);
     d.setMinutes((parts[1] || 0) + 60);
-    return Utilities.formatDate(d, 'America/Fortaleza', 'HH:mm');
+    return Utilities.formatDate(d, getOrgConfig().timezone, 'HH:mm');
   }
 
   function _horariosDosTurnos() {
@@ -303,7 +303,7 @@ var IAService = (function () {
         '- Nunca coloque texto após o bloco JSON.\n' +
         '- Se não for criar reserva, não inclua JSON.\n\n' +
         'CONTEXTO DO SISTEMA:\n' +
-        '- Data de hoje: ' + Utilities.formatDate(new Date(), 'America/Fortaleza', 'dd/MM/yyyy') + '\n' +
+        '- Data de hoje: ' + Utilities.formatDate(new Date(), getOrgConfig().timezone, 'dd/MM/yyyy') + '\n' +
         '- Email do usuário: ' + emailAtivo + '\n\n' +
         'HISTÓRICO / MENSAGEM:\n' + perguntaFinal + '\n\n' +
         'SALAS DISPONÍVEIS:\n' + JSON.stringify(salas) + '\n\n' +
@@ -386,7 +386,7 @@ var IAService = (function () {
           } catch(e) { return false; }
         });
 
-      var hoje_str = Utilities.formatDate(hoje, 'America/Fortaleza', 'dd/MM/yyyy');
+      var hoje_str = Utilities.formatDate(hoje, getOrgConfig().timezone, 'dd/MM/yyyy');
 
       var _org2 = getOrgConfig();
       var prompt =

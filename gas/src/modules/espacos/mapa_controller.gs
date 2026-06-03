@@ -96,7 +96,7 @@ function ctrl_mapa_statusEspacos(params) {
     var ctx = _ctxMapa();
     var p   = params || {};
 
-    var hoje = Utilities.formatDate(new Date(), 'America/Fortaleza', 'yyyy-MM-dd');
+    var hoje = Utilities.formatDate(new Date(), getOrgConfig().timezone, 'yyyy-MM-dd');
     var data = p.data || hoje;
     var hora = p.horaInicio || null;
 
@@ -157,11 +157,12 @@ function ctrl_mapa_reservasEspaco(params) {
     var p   = params || {};
     if (!p.espacoId) throw new Error('espacoId é obrigatório.');
 
-    var hoje = Utilities.formatDate(new Date(), 'America/Fortaleza', 'yyyy-MM-dd');
+    var _tz  = getOrgConfig().timezone;
+    var hoje = Utilities.formatDate(new Date(), _tz, 'yyyy-MM-dd');
     var de   = p.de  || hoje;
     var d    = new Date(de + 'T12:00:00');
     d.setDate(d.getDate() + 6);
-    var ate  = p.ate || Utilities.formatDate(d, 'America/Fortaleza', 'yyyy-MM-dd');
+    var ate  = p.ate || Utilities.formatDate(d, _tz, 'yyyy-MM-dd');
 
     var reservas = ReservaRepository.listar(
       { sala: p.espacoId, dateRange: { de: de, ate: ate } },

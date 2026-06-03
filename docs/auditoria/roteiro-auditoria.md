@@ -3016,7 +3016,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 244 | CAR-02 | Reserva de Veículo — Sidebar | Nomenclatura inconsistente: sidebar exibe "Reserva de Carro" enquanto a view exibe "Reserva de Veículo" — dois nomes distintos para o mesmo módulo | ~~🟡 Média~~ |
 | 245 | CAR-03 | Reserva de Veículo — Métricas | Métricas incompletas — 4 cards (Pendentes, Aprovadas, Concluídas, Total) sem "Recusadas" e "Canceladas"; gestor não visualiza rapidamente o resultado das solicitações rejeitadas | ~~🟡 Média~~ |
 | 246 | CAR-04 | Reserva de Veículo — Formulário | Select "Vincular a uma Ação" persiste em "— Carregando ações... —" sem timeout — possível loading infinito quando não há ações; deveria exibir "Nenhuma ação disponível" | ~~🟡 Média~~ |
-| 247 | CAR-05 | Reserva de Veículo — Datas | Datas exibidas em formato ISO (2026-05-29) no card e no modal de detalhes em vez de pt-BR (29/05/2026) — instância de SIS-14 | 🟡 Média |
+| ~~247~~ | ~~CAR-05~~ | Reserva de Veículo — Datas | **CORRIGIDO 2026-06-03** — aba Aprovações > Veículo: `carregarCarros()` exibia `rc.data` cru sem formatação (`escaparHtml(rc.data\|\|'—')`); corrigido para `escaparHtml(fmtDataPtBR(rc.data)\|\|'—')` — index.html:13084 | ~~🟡 Média~~ |
 | 248 | CAR-06 | Reserva de Veículo — Identidade | Card na lista exibe email do solicitante (joao.barros@idm.org.br) em vez do nome completo — instância de SIS-11 | 🟡 Média |
 | 249 | CAR-07 | Reserva de Veículo — Identidade | "Aprov: joao.barros" no card — abreviatura + email em vez de "Aprovado por: João Barros" com nome completo — instância de SIS-11 | 🟡 Média |
 | 250 | CAR-08 | Reserva de Veículo — Modal Detalhes | Modal de detalhes omite setor, passageiros, observação e ação vinculada — o contexto completo da viagem fica invisível; usuário vê apenas data, horário, rota e aprovador | 🔴 Alta |
@@ -3027,7 +3027,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | ~~261~~ | ~~CAR-15~~ | Reserva de Veículo — Papéis de Aprovação | **CORRIGIDO s16 F16** — `_podAprovar()` em `reserva_carro_engine.gs` reescrita: `superadmin` e `infraestrutura` aprovam sempre; `gestor`/`admin` apenas se `setor === 'infraestrutura'` (verifica `_getRegistro(email).setor`). Gestor de outra área não pode mais aprovar | ~~🟡 Média~~ |
 | 260 | CAR-14 | Reserva de Veículo — Frota | **Feature de veículos configurável — desativada por padrão (decisão arquitetural confirmada).** Comportamento padrão: sem registro de veículo — frota não especificada. Quando ativada em Configurações, é possível cadastrar N veículos com suas informações (modelo, placa, capacidade, demais dados). O formulário de reserva exibe campo de seleção de veículo **somente quando a feature está ativa**. Quando ativa, o sistema pode checar disponibilidade por veículo (conflito de datas/horas). Padrão idêntico ao CAR-12 (motorista). Implementação necessária: (a) toggle "Veículos" no Admin/Config; (b) CRUD de veículos com modelo, placa e informações; (c) campo condicional no formulário de reserva; (d) verificação de conflito por veículo ao checar disponibilidade | 🔴 Alta |
 | 255 | CAR-13 | Reserva de Veículo — Voucher Uber | Sistema não suporta solicitação de voucher Uber — fluxo necessário: vínculo à rubrica de transporte do setor, aprovação do gestor responsável e/ou gestor financeiro, retorno com link do voucher por email e no sistema. Confirmado pelo usuário como funcionalidade esperada | 🔴 Alta |
-| ~~256~~ | ~~SIS-14~~ | Sistema Global — Datas | **CORRIGIDO s16 F11+F15** — F11: Reserva de Veículo (cards + modal). F15: Financeiro (vigência contratos + vigência fontes + histórico de versões), RECE (datas da tabela), Escuta (datas das pesquisas). `fmtDataPtBR()` aplicada sistematicamente. Demais módulos já usavam `_fmtData()` local (ISO→pt-BR) | ~~🟡 Média~~ |
+| ~~256~~ | ~~SIS-14~~ | Sistema Global — Datas | **CORRIGIDO s16 F11+F15 + auditoria sistêmica 2026-06-03** — F11: Reserva de Veículo (cards + modal). F15: Financeiro (vigências + histórico), RECE (tabela), Escuta (pesquisas). `fmtDataPtBR()` aplicada sistematicamente. Auditoria 2026-06-03: (1) Aprovações > Veículo — `carregarCarros()` corrigido (CAR-05); (2) `ia_service.gs:69,306,389` + `mapa_controller.gs:99,160,164` — timezone `'America/Fortaleza'` substituído por `getOrgConfig().timezone` para seguir config da org. Varredura completa de todos os 153 arquivos: nenhuma outra ocorrência de data sem pt-BR em output de UI. | ~~🟡 Média~~ |
 | 257 | FIN-18 | Financeiro — Rubricas / Voucher Uber | **Vínculo rubrica ↔ Voucher Uber deve ser flag configurável por rubrica — não hardcode.** Instância específica do padrão geral FIN-20. O fluxo CAR-13 (solicitação de voucher) exibe apenas rubricas do setor do solicitante com a flag `voucher_uber` ativa | 🔴 Alta |
 | 259 | FIN-20 | Financeiro — Rubricas / Flags de Operação | **Sistema de flags de operação configuráveis por rubrica — padrão arquitetural geral.** Flags definem quais tipos de operação podem ser solicitadas contra uma rubrica específica. Devem ser criadas e gerenciadas dinamicamente (Admin → Config Financeiro ou similar) — não hardcoded. Cada rubrica pode ter zero ou mais flags. Ao iniciar qualquer solicitação no sistema, o seletor de rubrica filtra automaticamente pelas rubricas do setor do solicitante que possuem a flag correspondente ativa. Casos de uso confirmados: (1) `voucher_uber` — Voucher Uber (CAR-13 / FIN-18); (2) `contratacao` — Contratações; (3) `compra_direta` — Compras; (4) `pagamento` — Pagamentos avulsos. A lista de flags é aberta — novos tipos de operação criados no futuro não exigem alteração de código, apenas criação de nova flag e atribuição às rubricas elegíveis | 🔴 Alta |
 | 262 | ~~ACV-01~~ | Acervo — View | ~~Galeria permanente Carregando~~ **CORRIGIDO s16 Fase 7**: error handler explícito adicionado em `AcervoUI.carregar()`. | ~~🔴 Alta~~ |
@@ -3234,7 +3234,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-17** (cálculo de benefícios incorreto)
-- **SIS-14** (datas ISO em módulos ainda não auditados)
+- ~~**SIS-14**~~ (datas ISO) — **RESOLVIDO** 2026-06-03: auditoria sistêmica completa; único ponto remanescente era Aprovações > Veículo — corrigido
 - **FIN-19** (Setor na Rubrica — nível errado)
 - **FIN-20** (flags de operação configuráveis por rubrica)
 - **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
@@ -3278,7 +3278,7 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-17** (Benefícios R$525,74 vs R$1.191,33)
-- **SIS-14** (datas ISO) — auditoria sistêmica em demais módulos pendente
+- ~~**SIS-14**~~ (datas ISO) — **RESOLVIDO** 2026-06-03: auditoria sistêmica completa (153 arquivos)
 - **FIN-19** (Setor na Rubrica — nível errado)
 - **FIN-20** (flags de operação configuráveis por rubrica)
 - **CAR-15** (papel + setor para aprovações de infra)
