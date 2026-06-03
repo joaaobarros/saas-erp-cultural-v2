@@ -4882,7 +4882,9 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Setor</label>
-                <input type="text" id="chv-setor" class="form-input">
+                <select id="chv-setor" class="form-control">
+                  <option value="">Selecione o setor…</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Turno</label>
@@ -4972,7 +4974,9 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Setor</label>
-                <input type="text" id="almox-setor" class="form-input">
+                <select id="almox-setor" class="form-control">
+                  <option value="">Selecione o setor…</option>
+                </select>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Observações</label>
@@ -5289,14 +5293,14 @@ select.form-control { cursor: pointer; }
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Responsável *</label>
-                <input type="text" id="acao-responsavel" class="form-control" placeholder="email@org.br">
-              </div>
-              <div class="form-group">
                 <label class="form-label">Setor</label>
                 <select id="acao-setor" class="form-control">
                   <option value="">Selecionar setor…</option>
                 </select>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label class="form-label">Responsável *</label>
+                <input type="text" id="acao-responsavel" class="form-control" placeholder="email@org.br">
               </div>
               <div class="form-group">
                 <label class="form-label">Data Início</label>
@@ -17890,15 +17894,28 @@ var ChavesUI = (function() {
     });
   }
 
+  function _popularSetorChv(valorAtual) {
+    var sel = document.getElementById('chv-setor');
+    if (!sel) return;
+    var boot = App.getBoot ? App.getBoot() : null;
+    var setores = (boot && boot.setores) || [];
+    sel.innerHTML = '<option value="">Selecione o setor…</option>'
+      + setores.map(function(s) {
+          var id = s.id || s; var nome = s.nome || s.label || s;
+          return '<option value="' + escaparHtml(id) + '"' + (valorAtual === id ? ' selected' : '') + '>' + escaparHtml(nome) + '</option>';
+        }).join('');
+  }
+
   function abrirForm() {
     document.getElementById('chv-sala').value     = '';
     document.getElementById('chv-nome-resp').value= '';
-    document.getElementById('chv-setor').value    = '';
     document.getElementById('chv-obs').value      = '';
     document.getElementById('chv-data-dev').value = '';
     var now = new Date();
     var hora = now.getHours();
     document.getElementById('chv-turno').value = hora < 12 ? 'manha' : hora < 18 ? 'tarde' : 'noite';
+    var boot = App.getBoot ? App.getBoot() : null;
+    _popularSetorChv((boot && boot.usuarioSetor) || '');
     document.getElementById('chaves-form-card').style.display = '';
     document.getElementById('chaves-form-card').scrollIntoView({behavior:'smooth',block:'start'});
   }
@@ -18054,6 +18071,18 @@ var AlmoxUI = (function() {
     });
   }
 
+  function _popularSetorAlmox(valorAtual) {
+    var sel = document.getElementById('almox-setor');
+    if (!sel) return;
+    var boot = App.getBoot ? App.getBoot() : null;
+    var setores = (boot && boot.setores) || [];
+    sel.innerHTML = '<option value="">Selecione o setor…</option>'
+      + setores.map(function(s) {
+          var id = s.id || s; var nome = s.nome || s.label || s;
+          return '<option value="' + escaparHtml(id) + '"' + (valorAtual === id ? ' selected' : '') + '>' + escaparHtml(nome) + '</option>';
+        }).join('');
+  }
+
   function abrirForm() {
     // Carregar catálogo de itens
     GAS.almox.listarItens({}, function(resp) {
@@ -18065,8 +18094,9 @@ var AlmoxUI = (function() {
     document.getElementById('almox-qtd').value = '1';
     document.getElementById('almox-data-ret').value = '';
     document.getElementById('almox-data-dev').value = '';
-    document.getElementById('almox-setor').value = '';
     document.getElementById('almox-obs').value = '';
+    var boot = App.getBoot ? App.getBoot() : null;
+    _popularSetorAlmox((boot && boot.usuarioSetor) || '');
     document.getElementById('almox-form-card').style.display = '';
     document.getElementById('almox-form-card').scrollIntoView({behavior:'smooth',block:'start'});
   }
@@ -20574,7 +20604,7 @@ var AcoesUI = (function() {
 
     document.getElementById('acao-id').value           = (acao && acao.id)           || '';
     document.getElementById('acao-nome').value         = (acao && acao.nome)         || '';
-    document.getElementById('acao-tipo').value         = (acao && acao.tipo)         || 'evento';
+    document.getElementById('acao-tipo').value         = (acao && acao.tipo)         || 'curso';
     document.getElementById('acao-responsavel').value  = (acao && acao.responsavel)  || '';
     document.getElementById('acao-data-inicio').value  = (acao && acao.dataInicio)   || '';
     document.getElementById('acao-data-fim').value     = (acao && acao.dataFim)      || '';

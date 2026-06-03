@@ -347,7 +347,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | View carrega (título, subtítulo, filtros, estado vazio) | ✅ | 2026-06-01 |
 | MÉTRICAS (6 cards: Total/Em Execução/Em Revisão/Concluídas/Atrasadas + % No Prazo) | ✅ estrutura; todos 0 | 2026-06-01 |
 | Estado vazio "Nenhuma demanda encontrada." | ✅ | 2026-06-01 |
-| Cor do botão "+ Nova Demanda" vs padrão sistema | ⚠️ BAL-02 (verificar) | 2026-06-01 |
+| Cor do botão "+ Nova Demanda" vs padrão sistema | ✅ BAL-02 CORRIGIDO s17 F58 — `btn btn-primary` já correto desde SIS-03 | 2026-06-03 |
 | Formulário "+ Nova Demanda" (aba Dados) | ✅ abre; campos mapeados (BAL-06 a BAL-12) | 2026-06-01 |
 | Formulário — aba Versões | ✅ abre; URL + Nota + Enviar Entrega (BAL-13 a BAL-15) | 2026-06-01 |
 | Formulário — aba Comentários | ✅ textarea + Enviar funcional | 2026-06-01 |
@@ -2847,12 +2847,12 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | ~~75~~ | ~~CHV-03~~ | ~~Chaves — Devolver~~ | ~~`prompt()` nativo~~ | ✅ CORRIGIDO s16 Fase 21 — substituído por modal inline com select Condição (bom estado/avariada/perdida) + textarea Observações + Confirmar/Cancelar. Deploy @387. |
 | 76 | CHV-04 | Chaves — Nova Retirada | Campo "Sala/Espaço" é texto livre — deve ser dropdown com apenas os espaços que possuem chaves cadastradas | 🔴 Alta |
 | 77 | CHV-05 | Chaves — Nova Retirada | Campo "Nome do Responsável" é texto livre — deve ser seleção de usuário do sistema com email puxado da base de usuários (autocomplete ou select) | 🔴 Alta |
-| 78 | CHV-06 | Chaves — Nova Retirada | Campo "Setor" é texto livre — deve ser dropdown com setores cadastrados | 🟡 Média |
+| ~~78~~ | ~~CHV-06~~ | Chaves — Nova Retirada | ~~Campo "Setor" é texto livre~~ **CORRIGIDO s17 F58 @474**: `<input type="text" id="chv-setor">` substituído por `<select>` com helper `_popularSetorChv(valorAtual)` que popula via `App.getBoot().setores`; `abrirForm()` pré-seleciona `usuarioSetor` do boot. | ~~🟡 Média~~ |
 | 79 | CHV-07 | Chaves — Nova Retirada | "Previsão de Devolução" é apenas data — deve ter campo de hora opcional ativável pelo solicitante | 🟡 Média |
 | 80 | CHV-08 | Chaves — Nova Retirada | Sem lógica de auto-preenchimento por papel: se solicitante for externo à Infraestrutura → "Responsável" e "Setor" preenchidos automaticamente com dados do usuário logado; se for da Infraestrutura → permitir registrar para si OU selecionar outro usuário | 🔴 Alta |
 | 81 | EMP-01 | Empréstimos | Módulo está desvinculado do fluxo de reserva — deveria ser integrado: ao criar reserva, os itens solicitados geram automaticamente um empréstimo vinculado à reserva. Empréstimos autônomos devem existir apenas para solicitações externas (parceiros) | 🔴 Alta |
 | 82 | EMP-02 | Empréstimos — Externo | Sem suporte a empréstimos externos (parceiros) — não há: cadastro prévio do solicitante externo, geração de termo de empréstimo, submissão de documento assinado, histórico por solicitante | 🔴 Alta |
-| 83 | EMP-03 | Empréstimos — Formulário | Campo "Setor" é texto livre — deve ser dropdown com setores cadastrados | 🟡 Média |
+| ~~83~~ | ~~EMP-03~~ | Empréstimos — Formulário | ~~Campo "Setor" é texto livre~~ **CORRIGIDO s17 F58 @474**: `<input type="text" id="almox-setor">` substituído por `<select>` com helper `_popularSetorAlmox(valorAtual)` que popula via `App.getBoot().setores`; `abrirForm()` pré-seleciona `usuarioSetor` do boot. | ~~🟡 Média~~ |
 | 84 | EMP-04 | Empréstimos — Externo | Sem campo de CPF do responsável pelo empréstimo externo — CPF é obrigatório para identificar o solicitante e rastrear histórico | 🔴 Alta |
 | 85 | EMP-05 | Empréstimos — Externo | Sem geração de termo de empréstimo — sistema deve: (1) preencher modelo de termo com dados do solicitante e do empréstimo; (2) permitir baixar para assinatura; (3) aceitar upload do documento assinado como comprovante | 🔴 Alta |
 | 86 | EMP-06 | Empréstimos — Externo | Sem cadastro prévio de solicitante externo — deve incluir: nome, CPF, organização, contato; visualização restrita por papel (LGPD) | 🔴 Alta |
@@ -2877,9 +2877,9 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | ~~92~~ | ~~ACO-15~~ | ~~Ações Culturais — Filtros~~ | ~~Barra de filtros sem botão refresh~~ **CORRIGIDO s16 F39**: botão `refresh` adicionado à filter-bar + método `_recarregar()` no AcoesUI. | ~~🟡 Média~~ |
 | ~~98~~ | ~~ACO-16~~ | ~~Ações Culturais — Navegação~~ | ~~**BUG**: clicar em ✕ (fechar) no painel de visualização abre o modal "Editar Ação" em vez de fechar o painel~~ | ✅ CORRIGIDO — `stopPropagation()` no ✕ + `if(event.target===this)` no overlay |
 | ~~99~~ | ~~ACO-17~~ | ~~Ações Culturais — Modal~~ | ~~Labels no modal sem `class="form-label"`~~ **CORRIGIDO s17 F57 @466** junto com ACO-12. | ~~🟡 Média~~ |
-| 100 | ACO-18 | Ações Culturais — Modal | Campo "Tipo" defaulta para "Evento" (3ª opção da lista, não a primeira) — sem razão declarada para esse default; deveria default para o tipo mais frequente ou para a primeira opção | 🟡 Baixa |
-| 101 | ACO-19 | Ações Culturais — Modal | Layout de colunas heterogêneo: "Tipo" (select) ao lado de "Responsável" (texto livre) — mais coerente seria agrupar campos de mesmo tipo (Tipo \| Setor ambos selects; Responsável em linha própria com destaque) | 🟡 Baixa |
-| 102 | ACO-20 | Ações Culturais — Modal | Checkbox "Visível no portal público" ocupa uma linha inteira sozinho — desproporcional ao seu peso; deveria ser compactado junto a outro campo de baixo peso (ex: Público Previsto) | 🟡 Baixa |
+| ~~100~~ | ~~ACO-18~~ | Ações Culturais — Modal | ~~Campo "Tipo" defaulta para "Evento" (3ª opção)~~ **CORRIGIDO s17 F59 @474**: `AcoesUI.abrirForm()` linha `|| 'evento'` → `|| 'curso'` — nova ação abre com primeira opção "Curso" por padrão. | ~~🟡 Baixa~~ |
+| ~~101~~ | ~~ACO-19~~ | Ações Culturais — Modal | ~~Layout heterogêneo: Tipo ao lado de Responsável~~ **CORRIGIDO s17 F59 @474**: Tipo|Setor (mesma linha, ambos selects), Responsável (grid-column:1/-1, linha própria), Data Início|Data Fim, Público Previsto|Visível. | ~~🟡 Baixa~~ |
+| ~~102~~ | ~~ACO-20~~ | Ações Culturais — Modal | ~~Checkbox "Visível" ocupa linha inteira~~ **CORRIGIDO s17 F59 @474** junto com ACO-19: reordenação posicionou "Público Previsto" (col 1) e "Visível" (col 2) na mesma linha — sem espaço desperdiçado. | ~~🟡 Baixa~~ |
 | ~~103~~ | ~~ACO-21~~ | Ações × Reuniões | ~~Campo `run-acao-id` texto livre~~ **CORRIGIDO s17 F48**: substituído por `<select>` com `_carregarSelectAcoesRun(valorAtual)` — opções de ações ativas (não canceladas/concluídas) carregadas via GAS; preseleciona ao editar reunião existente. | ~~🔴 Alta~~ |
 | ~~104~~ | ~~ACO-22~~ | Ações × Balcão | ~~Campo `bl-acao-id` texto livre~~ **CORRIGIDO s17 F48**: substituído por `<select>` com `_carregarSelectAcoesBal(valorAtual)` — mesmo padrão de ACO-21. | ~~🔴 Alta~~ |
 | 105 | ACO-23 | Ações × RECE | **Sem vínculo algum** entre Ações Culturais e a Agenda RECE — eventos submetidos à rede regional não são rastreados no ERP. Modelo confirmado: entidades separadas, publicação no RECE é ato editorial deliberado via botão, com auditoria obrigatória pelo setor de Comunicação e IA para revisão textual. Decisão arquitetural completa registrada no módulo RECE (abaixo) | 🔴 Alta |
@@ -2907,7 +2907,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 128 | SIDEBAR-02 | Sidebar | "Comunicação" e "Balcão" são itens separados no menu (grupo OPERACIONAL) — devem ser unificados como "Comunicação" com abas internas (RECE + Balcão) | 🔴 Alta |
 | 129 | SIDEBAR-03 | Sidebar | Módulos inativos (Relatórios, Agentes, Voluntários) visíveis no menu com badge `inativo` — podem confundir o usuário; ocultar ou desabilitar visivelmente com tooltip "em breve" | 🟡 Média |
 | 130 | BAL-01 | Balcão — Arquitetura | Balcão é item separado no menu em vez de aba dentro de "Comunicação" — ver SIDEBAR-02 e ACO-25 | 🔴 Alta |
-| 131 | BAL-02 | Balcão — DS | Botão "+ Nova Demanda" aparenta cor diferente (verde-escuro) dos demais botões `btn-primary` do sistema (roxo) — possível classe ou variável CSS distinta; verificar no código | 🟡 Média |
+| ~~131~~ | ~~BAL-02~~ | Balcão — DS | ~~Botão "+ Nova Demanda" aparenta cor diferente (verde-escuro)~~ **CONFIRMADO CORRIGIDO s17 F58 @474**: botão tem `class="btn btn-primary"` desde SIS-03 — sem código a alterar. | ~~🟡 Média~~ |
 | 132 | BAL-03 | Balcão — Filtros | Sem filtro de data no filter bar — impossível buscar demandas por período de criação ou prazo | 🟡 Média |
 | 133 | BAL-04 | Balcão — Filtros | Sem filtro por "Ação Cultural" vinculada — não é possível ver todas as demandas de comunicação de uma ação específica a partir do Balcão | 🔴 Alta |
 | ~~134~~ | ~~BAL-05~~ | Balcão — Linguagem | ~~Subtítulo com jargão técnico (SLA, versionamento, rastreabilidade)~~ **CORRIGIDO s16 F40**: substituído por "Solicite materiais e acompanhe o atendimento pelo setor de Comunicação". | ~~🟡 Média~~ |
