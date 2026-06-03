@@ -368,7 +368,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | View carrega | ✅ | 2026-05-31 s14 |
 | Galeria — "Carregando..." sem resolver | ✅ CORRIGIDO s16 Fase 7 | 2026-06-01 |
 | Stats sem MetricsToggle | ⚠️ ACV-03 | 2026-05-31 s14 |
-| Filtros inline sem classe DS | ⚠️ ACV-05 | 2026-05-31 s14 |
+| Filtros inline sem classe DS | ✅ ACV-05 CORRIGIDO s17 Fases 60+61 @476 | 2026-06-03 |
 | Modal "Adicionar ao Acervo" — estrutura | ✅ abre | 2026-05-31 s14 |
 | Modal — Select Ação vinculada vazio + campo nome + acaoId obrigatório | ✅ ACV-07 + ACV-08 + ACV-11 CORRIGIDOS s16 F14 | 2026-06-01 |
 | Modal — Botão Cancelar rosa/pink | ⚠️ ACV-02 | 2026-05-31 s14 |
@@ -2373,7 +2373,7 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 
 **ACV-04** `🟡 Média` — **Sem botão refresh nos filtros** — instância de ACO-15 (Ações tem o mesmo problema).
 
-**ACV-05** `🟡 Média` — **Filtros sem classe DS** — bloco de filtros usa apenas `style="display:flex;gap:8px;..."` inline; não usa `filter-bar` nem `toolbar`. Instância de SIS-06.
+~~**ACV-05**~~ ✅ CORRIGIDO s17 Fases 60+61 @476 — **Filtros sem classe DS** — bloco de filtros usa apenas `style="display:flex;gap:8px;..."` inline; não usa `filter-bar` nem `toolbar`. Instância de SIS-06.
 
 **ACV-06** `🟡 Média` — **Cabeçalho usa padrão misto** — `h2.view-titulo` (13px, ícone colorido) em vez de `h1.view-title` — instância de SIS-05/ACO-11.
 
@@ -2383,7 +2383,7 @@ Ver CAR-02 a CAR-13 e SIS-14 na tabela de problemas.
 
 **ACV-09** `🟡 Média` — **Emojis nos selects de tipo** — opções "📷 Foto", "🎬 Vídeo", etc. nos selects do filtro e do formulário. Padrão anti-DS (sem emojis em elementos de UI); usar labels simples ou Material Symbol fora do select.
 
-**ACV-10** `🟡 Média` — **Formulário com estilos 100% inline** — todos os labels, inputs e selects do modal usam `style="..."` direto, sem `form-label`, `form-input`, `form-control` ou qualquer classe DS. Pior que ACO-12 (que ao menos usava `class="input"`).
+~~**ACV-10**~~ ✅ CORRIGIDO s17 Fases 60+61 @476 — **Formulário com estilos 100% inline** — todos os labels, inputs e selects do modal usam `style="..."` direto, sem `form-label`, `form-input`, `form-control` ou qualquer classe DS. Pior que ACO-12 (que ao menos usava `class="input"`).
 
 ### Regra de negócio capturada — Escopo do Acervo
 
@@ -2845,8 +2845,8 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 63 | ADM-01 | Administração | "Acessos Pendentes" exibe "Carregando solicitações..." sem concluir — possível bug de carregamento ou lentidão no backend | 🟡 Média |
 | 73 | APR-01 | Aprovações | Módulo carrega com 4 abas (Reservas de Espaço, Primeiros Acessos, Veículo, Permissões) mas **não indica qual aba tem itens pendentes** — quando há solicitações, o usuário precisa clicar em cada aba para descobrir onde estão. Comportamento esperado: badge de contador por aba (ex: "Primeiros Acessos ③") e destaque visual na aba com pendência | 🔴 Alta |
 | ~~75~~ | ~~CHV-03~~ | ~~Chaves — Devolver~~ | ~~`prompt()` nativo~~ | ✅ CORRIGIDO s16 Fase 21 — substituído por modal inline com select Condição (bom estado/avariada/perdida) + textarea Observações + Confirmar/Cancelar. Deploy @387. |
-| 76 | CHV-04 | Chaves — Nova Retirada | Campo "Sala/Espaço" é texto livre — deve ser dropdown com apenas os espaços que possuem chaves cadastradas | 🔴 Alta |
-| 77 | CHV-05 | Chaves — Nova Retirada | Campo "Nome do Responsável" é texto livre — deve ser seleção de usuário do sistema com email puxado da base de usuários (autocomplete ou select) | 🔴 Alta |
+| ~~76~~ | ~~CHV-04~~ | Chaves — Nova Retirada | ~~Campo "Sala/Espaço" é texto livre~~ **CORRIGIDO s17 Fases 60+61 @476**: `<input type="text" id="chv-sala">` substituído por `<select class="form-control">` com helper `_popularEspacoChv()` que popula via `App.getBoot().espacos` (nome como value); `abrirForm()` chama o helper. | ~~🔴 Alta~~ |
+| ~~77~~ | ~~CHV-05~~ | Chaves — Nova Retirada | ~~Campo "Nome do Responsável" é texto livre~~ **CORRIGIDO s17 Fases 60+61 @476**: `<input type="text" id="chv-nome-resp">` substituído por `<select class="form-control">` via `_carregarSelectUsuariosHelper`; pré-seleciona `boot.usuarioEmail`; `salvar()` extrai `responsavel` (email/value) e `nomeResponsavel` (texto da opção selecionada). | ~~🔴 Alta~~ |
 | ~~78~~ | ~~CHV-06~~ | Chaves — Nova Retirada | ~~Campo "Setor" é texto livre~~ **CORRIGIDO s17 F58 @474**: `<input type="text" id="chv-setor">` substituído por `<select>` com helper `_popularSetorChv(valorAtual)` que popula via `App.getBoot().setores`; `abrirForm()` pré-seleciona `usuarioSetor` do boot. | ~~🟡 Média~~ |
 | 79 | CHV-07 | Chaves — Nova Retirada | "Previsão de Devolução" é apenas data — deve ter campo de hora opcional ativável pelo solicitante | 🟡 Média |
 | 80 | CHV-08 | Chaves — Nova Retirada | Sem lógica de auto-preenchimento por papel: se solicitante for externo à Infraestrutura → "Responsável" e "Setor" preenchidos automaticamente com dados do usuário logado; se for da Infraestrutura → permitir registrar para si OU selecionar outro usuário | 🔴 Alta |
