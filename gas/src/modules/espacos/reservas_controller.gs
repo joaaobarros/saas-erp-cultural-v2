@@ -90,19 +90,41 @@ function _inferirTurnoCtrl(horaInicio, horaTermino) {
 }
 
 /**
- * Verifica se o e-mail é responsável pelo slot de uma reserva.
- * @returns {boolean}
+ * Resolve responsáveis do slot de uma reserva.
+ * Retorna { emails, setorId } ou null.
  */
-function _ehResponsavelSlot(email, r) {
+function _resolverRespSlot(r) {
   try {
     var diaNum = new Date(String(r.data) + 'T12:00:00').getDay();
     var turnoId = _inferirTurnoCtrl(r.horaInicio, r.horaTermino);
-    var resp = SistemaConfigService.resolverResponsaveis
+    return SistemaConfigService.resolverResponsaveis
       ? SistemaConfigService.resolverResponsaveis(r.sala, diaNum, turnoId)
       : null;
-    if (!resp || !Array.isArray(resp.emails)) return false;
-    var emailNorm = String(email).toLowerCase().trim();
-    return resp.emails.some(function(e) { return String(e).toLowerCase().trim() === emailNorm; });
+  } catch(_) { return null; }
+}
+
+/**
+ * Verifica se o e-mail é responsável pelo slot de uma reserva.
+ */
+function _ehResponsavelSlot(email, r) {
+  var resp = _resolverRespSlot(r);
+  if (!resp || !Array.isArray(resp.emails)) return false;
+  var emailNorm = String(email).toLowerCase().trim();
+  return resp.emails.some(function(e) { return String(e).toLowerCase().trim() === emailNorm; });
+}
+
+/**
+ * Verifica se o usuário pertence ao mesmo setor que o responsável do slot.
+ * Lê registro.setor via AcessoService.
+ */
+function _ehMesmoSetorDoResponsavel(email, r) {
+  try {
+    var resp = _resolverRespSlot(r);
+    if (!resp || !resp.setorId) return false;
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || !acesso.registro) return false;
+    var setorUsuario = String(acesso.registro.setor || '').trim();
+    return setorUsuario && setorUsuario === String(resp.setorId).trim();
   } catch(_) { return false; }
 }
 
@@ -111,14 +133,15 @@ function _ehResponsavelSlot(email, r) {
  * Regras:
  *   - admin / superadmin / gestor → sempre (soberanos)
  *   - responsável cadastrado no slot → sempre
- *   - infraestrutura / habilitador → imediato se for responsável do slot;
- *     caso contrário, apenas após _DIAS_ESCALACAO dias sem resposta
+ *   - mesmo setor do responsável do slot → sempre (em todos os papéis)
+ *   - infraestrutura / habilitador → após _DIAS_ESCALACAO dias sem resposta
  */
 function _podeConfirmarReserva(nivel, email, r) {
   if (!r.precisaAprovacao) return false;
   if ((r.status || '') !== 'pendente') return false;
   if (_NIVEL_CONFIRMAR_SEMPRE.indexOf(nivel) >= 0) return true;
   if (_ehResponsavelSlot(email, r)) return true;
+  if (_ehMesmoSetorDoResponsavel(email, r)) return true;
   if (_NIVEL_ESCALACAO.indexOf(nivel) >= 0 && _diasPendente(r) >= _DIAS_ESCALACAO) return true;
   return false;
 }
