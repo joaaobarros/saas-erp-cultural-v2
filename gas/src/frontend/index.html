@@ -6981,12 +6981,6 @@ select.form-control { cursor: pointer; }
               </button>
             </div>
           </div>
-          <!-- Perfil analítico (voluntário) -->
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
-            <h4 style="margin:0 0 4px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">Meu Perfil Analítico</h4>
-            <p style="font-size:12px;color:var(--text2);margin:0 0 12px;">Informações demográficas voluntárias para análise de equidade. Dados protegidos pela LGPD.</p>
-            <div id="escuta-form-perfil"><p class="muted-text" style="font-size:12px;">⏳ Carregando…</p></div>
-          </div>
         </div>
 
         <!-- ── Aba: Alertas ───────────────────────────────────────── -->
@@ -8564,9 +8558,6 @@ var GAS = {
     configObter:         function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_config_obter({}); },
     configSalvar:        function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_config_salvar(d); },
     perguntaToggle:      function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pergunta_toggle(d); },
-    // [F20] Perfil analítico
-    perfilObter:         function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_perfil_obter(p||{}); },
-    perfilSalvar:        function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_perfil_salvar(d); },
     // [F20] Análises e relatórios
     relatorio:           function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_relatorio(p||{}); },
     governanca:          function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_governanca(p||{}); },
@@ -11829,8 +11820,8 @@ var AdminCadastrosUI = (function() {
 
   var _LABEL_PAPEL = {
     colaborador:'Colaborador', habilitador:'Habilitador', rh:'RH',
-    financeiro:'Financeiro',   comunicacao:'Comunicação', gestor:'Gestor',
-    admin:'Admin',             superadmin:'SuperAdmin'
+    financeiro:'Financeiro',   comunicacao:'Comunicação', coordenador:'Coordenador',
+    gestor:'Gestor',           admin:'Admin',             superadmin:'SuperAdmin'
   };
 
   function carregarUsuarios() {
@@ -11924,7 +11915,7 @@ var AdminCadastrosUI = (function() {
       // fallback por papel local se boot ainda não carregou
       var papel = (_b && _b.usuarioPapel) || '';
       if (papel === 'superadmin') permitidos = todos.map(function(p){ return p[0]; });
-      else if (papel === 'admin') permitidos = ['colaborador','habilitador','rh','financeiro','comunicacao','gestor'];
+      else if (papel === 'admin') permitidos = ['colaborador','habilitador','rh','financeiro','comunicacao','coordenador','gestor'];
       else permitidos = [];
     }
     return todos
@@ -11934,7 +11925,7 @@ var AdminCadastrosUI = (function() {
   }
   // Alias estático para locais que não precisam de filtragem (ex: exibição pura)
   var _PAPEIS_OPTIONS = (function(){
-    return ['colaborador','habilitador','rh','financeiro','comunicacao','gestor','admin','superadmin']
+    return ['colaborador','habilitador','rh','financeiro','comunicacao','coordenador','gestor','admin','superadmin']
       .map(function(v){ return '<option value="'+v+'">'+(_LABEL_PAPEL[v]||v)+'</option>'; }).join('');
   })();
 
@@ -13032,7 +13023,7 @@ var AprovacaoReservaUI = (function() {
   }
 
   function aprovarAcesso(email, btn) {
-    var _raw = prompt('Papel a atribuir (colaborador, habilitador, rh, financeiro, comunicacao, gestor, admin):');
+    var _raw = prompt('Papel a atribuir (colaborador, habilitador, rh, financeiro, comunicacao, coordenador, gestor, admin):');
     if (_raw === null) return;
     var papel = (_raw.trim() || 'colaborador').toLowerCase();
     BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
@@ -13270,7 +13261,8 @@ var ReservasCarroUI = (function() {
   function _renderLista(itens) {
     var el = document.getElementById('carro-lista');
     if (!el) return;
-    var ehAprovador = ['habilitador','gestor','admin','superadmin'].indexOf(_papel) >= 0;
+    var _ftCarro = ((App.getBoot&&App.getBoot()&&App.getBoot().featuresAtivas)||{}).ESPACOS||{};
+    var ehAprovador = !!_ftCarro.aprovar_reserva_carro;
 
     if (!itens.length) {
       el.innerHTML = '<div class="empty-state" style="padding:40px 20px;">' +
@@ -13668,7 +13660,8 @@ var ReservasCarroUI = (function() {
     // Botões de ação
     var elAcoes = document.getElementById('carro-det-acoes');
     if (elAcoes) {
-      var ehAprovador = ['habilitador','gestor','admin','superadmin'].indexOf(_papel) >= 0;
+      var _ftCarroDet = ((App.getBoot&&App.getBoot()&&App.getBoot().featuresAtivas)||{}).ESPACOS||{};
+      var ehAprovador = !!_ftCarroDet.aprovar_reserva_carro;
       var sid = JSON.stringify(id).replace(/"/g, "'");
       var btns = '';
       if (ehAprovador && r.status === 'PENDENTE') {
@@ -14095,20 +14088,16 @@ var EspacosUI = (function() {
     }
   }
 
-  var _PAPEIS_CONFIG = ['superadmin', 'admin', 'gestor', 'habilitador'];
-
   function _verificarAcessoConfig() {
     var boot = App.getBoot ? App.getBoot() : null;
-    var papel = (boot && boot.usuarioPapel) || 'colaborador';
+    var permEspacos = ((boot && boot.permissoesModulos) || {}).ESPACOS || {};
+    var temAcesso = !!permEspacos.editar;
     var btnConfig = document.getElementById('btn-esp-tab-config');
     if (btnConfig) {
-      if (_PAPEIS_CONFIG.indexOf(papel) !== -1) {
-        btnConfig.classList.remove('oculto');
-      } else {
-        btnConfig.classList.add('oculto');
-      }
+      if (temAcesso) btnConfig.classList.remove('oculto');
+      else           btnConfig.classList.add('oculto');
     }
-    return _PAPEIS_CONFIG.indexOf(papel) !== -1;
+    return temAcesso;
   }
 
   function aoAbrir() {
@@ -14148,12 +14137,10 @@ var InfraConfigUI = (function() {
   var _listaEspacos  = [];  // cache local para injetar no AdminCadastrosUI
   var _listaCatItens = [];  // idem para categorias de item
 
-  var _PAPEIS = ['superadmin', 'admin', 'gestor', 'habilitador'];
-
   function _podeContinuar() {
     var boot = App.getBoot ? App.getBoot() : null;
-    var papel = (boot && boot.usuarioPapel) || 'colaborador';
-    return _PAPEIS.indexOf(papel) !== -1;
+    var permEspacos = ((boot && boot.permissoesModulos) || {}).ESPACOS || {};
+    return !!permEspacos.editar;
   }
 
   function abrirTab(tab) {
@@ -15800,7 +15787,10 @@ var ReservasUI = (function() {
   var _meuNivel        = 'colaborador';
   var _nivelCarregado  = false;
 
-  var _NIVEL_GESTAO_RES = ['superadmin', 'admin', 'gestor', 'habilitador'];
+  function _podeAprovarReserva() {
+    var ft = ((App.getBoot&&App.getBoot()&&App.getBoot().featuresAtivas)||{}).ESPACOS||{};
+    return !!ft.aprovar_reserva;
+  }
 
   function _badge(s) {
     return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
@@ -15970,7 +15960,7 @@ var ReservasUI = (function() {
       GAS.pessoas.meuNivel(function(r){
         if (r&&r.ok&&r.data) _meuNivel = r.data.nivel||'colaborador';
         var toolbar = document.getElementById('res-admin-toolbar');
-        if (toolbar) toolbar.style.display = _NIVEL_GESTAO_RES.indexOf(_meuNivel)!==-1?'flex':'none';
+        if (toolbar) toolbar.style.display = _podeAprovarReserva()?'flex':'none';
       }, function(){});
     }
     var filtroStatus = (document.getElementById('res-filtro-status')||{}).value || '';
@@ -16803,7 +16793,7 @@ var ReservasUI = (function() {
     if (!r) { Toast.aviso('Reserva não encontrada. Recarregue.'); return; }
     _garantirEspacosPorId();
     var salaNome = _espacosPorId[r.sala] || r.sala || '—';
-    var _podeHabilitar = _NIVEL_GESTAO_RES.indexOf(_meuNivel) !== -1;
+    var _podeHabilitar = _podeAprovarReserva();
     var _estiloHab = 'font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;';
     var habBadge = r.status==='confirmado'
       ? '<span style="'+_estiloHab+'background:#059669;color:#fff;">✓ HAB</span>'
@@ -25363,7 +25353,8 @@ var EscutaUI = (function() {
       el.innerHTML = '<div class="empty-state"><p>Nenhuma pesquisa encontrada.</p></div>';
       return;
     }
-    var _ehGestaoEsc = ['rh','habilitador','comunicacao','gestor','admin','superadmin'].indexOf(_papel) >= 0;
+    var _ftEsc = ((App.getBoot&&App.getBoot()&&App.getBoot().featuresAtivas)||{}).PESSOAS||{};
+    var _ehGestaoEsc = !!_ftEsc.gerir_escuta;
     el.innerHTML = lista.map(function(p) {
       var pct  = p.totalConvidados ? Math.round((p.totalRespostas||0)/p.totalConvidados*100) : 0;
       var bCl  = _badgeCl(p.status);
@@ -25435,7 +25426,6 @@ var EscutaUI = (function() {
   // ── Aba: Livre ───────────────────────────────────────────────────────────
   function _carregarAbaLivre() {
     _carregarFormResponder();
-    _carregarFormPerfil();
   }
 
   function _carregarFormResponder() {
@@ -25509,49 +25499,6 @@ var EscutaUI = (function() {
       Toast.sucesso('Relato enviado! Obrigado.');
       var t = document.getElementById('escuta-txt-espontanea');
       if (t) t.value = '';
-    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
-  }
-
-  function _carregarFormPerfil() {
-    var el = document.getElementById('escuta-form-perfil');
-    if (!el) return;
-    GAS.escuta.perfilObter({}, function(r) {
-      var p = (r && r.ok && r.data) ? r.data : {};
-      var opts = function(arr, val) {
-        return arr.map(function(o){ return '<option value="' + o + '"' + (val===o?' selected':'') + '>' + o + '</option>'; }).join('');
-      };
-      el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Gênero</label>' +
-          '<select id="pf-genero" class="select-sm"><option value="">—</option>' + opts(['Mulher','Homem','Não-binário','Outro','Prefiro não dizer'], p.genero) + '</select></div>' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Raça/Cor</label>' +
-          '<select id="pf-raca" class="select-sm"><option value="">—</option>' + opts(['Branca','Preta','Parda','Amarela','Indígena','Prefiro não dizer'], p.raca) + '</select></div>' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Vínculo</label>' +
-          '<select id="pf-vinculo" class="select-sm"><option value="">—</option>' + opts(['CLT','PJ','Voluntário','Estagiário','Outro'], p.vinculo) + '</select></div>' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Nível</label>' +
-          '<select id="pf-nivel" class="select-sm"><option value="">—</option>' + opts(['Operacional','Técnico','Analista','Coordenador','Gestão'], p.nivel) + '</select></div>' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Faixa Salarial</label>' +
-          '<select id="pf-faixa" class="select-sm"><option value="">—</option>' + opts(['Até 2 SM','2–4 SM','4–8 SM','Acima de 8 SM'], p.faixaSalarial) + '</select></div>' +
-        '<div class="form-group"><label class="form-label" style="font-size:11px;">Tempo de Casa</label>' +
-          '<select id="pf-tempo" class="select-sm"><option value="">—</option>' + opts(['Menos de 1 ano','1–3 anos','3–5 anos','Mais de 5 anos'], p.tempoDeCasa) + '</select></div>' +
-      '</div>' +
-      '<p style="font-size:11px;color:var(--text2);margin:8px 0;">Dados voluntários e protegidos pela LGPD.</p>' +
-      '<button id="btn-salvar-perfil" class="btn btn-primario btn-sm" onclick="BtnGuard.wrap(\'btn-salvar-perfil\',\'Salvando…\',EscutaUI.salvarPerfil)">Salvar Perfil</button>';
-    }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não foi possível carregar o perfil.</p>'; });
-  }
-
-  function salvarPerfil(done) {
-    var dados = {
-      genero:       (document.getElementById('pf-genero')||{}).value  || undefined,
-      raca:         (document.getElementById('pf-raca')||{}).value    || undefined,
-      vinculo:      (document.getElementById('pf-vinculo')||{}).value || undefined,
-      nivel:        (document.getElementById('pf-nivel')||{}).value   || undefined,
-      faixaSalarial:(document.getElementById('pf-faixa')||{}).value   || undefined,
-      tempoDeCasa:  (document.getElementById('pf-tempo')||{}).value   || undefined
-    };
-    GAS.escuta.perfilSalvar(dados, function(r) {
-      if (done) done();
-      if (!r || !r.ok) { Toast.erro('Erro ao salvar perfil.'); return; }
-      Toast.sucesso('Perfil analítico salvo!');
     }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
   }
 
@@ -26394,7 +26341,7 @@ var EscutaUI = (function() {
     // Relatórios
     carregarResultado, carregarCruzamento, gerarRelatorio,
     // Escuta livre
-    enviarResposta, enviarEspontanea, salvarPerfil,
+    enviarResposta, enviarEspontanea,
     // Alertas
     carregarAlertas, resolverAlerta,
     // Distribuição
