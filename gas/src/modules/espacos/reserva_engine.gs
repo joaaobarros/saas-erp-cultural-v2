@@ -165,7 +165,7 @@ var ReservaEngine = (function () {
     var fimMin = _horaParaMin(horaTermino);
 
     // Horário efetivo: local do espaço (se configurado) ou global
-    var horGlobal = ConfigService.getReservaHorario();
+    var horGlobal = SistemaConfigService.getReservaHorario();
     var abertura  = horGlobal.inicio;
     var fechamento = horGlobal.fim;
 

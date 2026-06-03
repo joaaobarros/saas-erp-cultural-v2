@@ -550,6 +550,10 @@ var Wizard = (function() {
   // ── Navegação ──────────────────────────────────────────────────────────────
 
   function irPara(num) {
+    // ADM-11: _calcularPassoAtual retorna checks.length+1 quando tudo está completo.
+    // Com 8 checks aprovados → retorna 9, mas só existem passos 1-7 → tela em branco.
+    // Capamos em 7 (tela de sucesso) para orgs totalmente provisionadas.
+    if (num > 7) num = 7;
     _estado.passoAtual = num;
     document.querySelectorAll('.wz-passo').forEach(function(el) { el.classList.remove('ativo'); });
     var el = document.getElementById('passo-' + num);

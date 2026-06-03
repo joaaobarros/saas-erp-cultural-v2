@@ -243,12 +243,12 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Categ. Itens — 6 categorias | ✅ (Equipamento Audiovisual, Equipamento de Informática, Mobiliário, Material Gráfico, Insumo, Outro) | 2026-05-31 s10 |
 | Aba Módulos — lista com toggle ativo/inativo | ✅ (Administração, Dashboard Executivo, Tarefas, Estratégia, Pessoas/RH, Ponto Eletrônico, Escuta Institucional, Voluntários, Ações, Agentes Culturais — todos Ativos) | 2026-05-31 s10 |
 | Aba Features — 3 features visíveis | ✅ CORRIGIDO s16 Fase 6 | 2026-06-01 |
-| Aba Provisionamento — checklist 8/8 (100%) | ✅ mas ADM-11 (Wizard abre página vazia) | 2026-05-31 s10 |
+| Aba Provisionamento — checklist 8/8 (100%) | ✅ ADM-11 CORRIGIDO s17 F63 @490 — wizard não abre mais em branco | 2026-06-03 |
 | Aba Usuários (tabela, modal editar) | ✅ (ADM-02, ADM-03) | sessão anterior |
 | Modal editar usuário — Funcionalidades Específicas | ✅ **NOVA DESCOBERTA** — seção existe com granularidade real (ADM-02 REVISADO) | 2026-05-31 s10 |
 | ~~Aba Config. Sistema~~ — **REMOVIDA** | ✅ **CORRIGIDO** s17 @446 — Expediente & Horários → Infraestrutura; Identidade Visual → aba própria em Cadastros Base | 2026-06-03 |
 | Aba Identidade Visual (novo, substituiu Config. Sistema) | ✅ mesmo conteúdo, agora aba direta em Cadastros Base | 2026-06-03 |
-| Aba Banco de Dados | ✅ (ADM-04) + 8 planilhas + botões Drive ✅ | 2026-05-31 s10 |
+| Aba Banco de Dados | ✅ ADM-04 CORRIGIDO s17 F63 @490 — oculta para não-SuperAdmin | 2026-06-03 |
 | Botão "Visualizar Cadastro" em Acessos Pendentes | ❌ ADM-12 — página externa em branco | 2026-05-31 s10 |
 | Tab bar com 10 abas — scroll sinalizado? | ⚠️ ADM-07 — scroll oculto sem indicação visual | 2026-05-31 s10 |
 | Modal "Novo Espaço" — campos | ✅ (horário por espaço e responsáveis por período já implementados) | 2026-05-31 s10 |
@@ -1562,7 +1562,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ESC-09** `🔴 Alta` — **Sistema sem área de perfil editável pelo próprio usuário** — não existe no sistema uma tela/modal "Meu Perfil" onde o colaborador possa cadastrar ou atualizar suas informações pessoais. Campos esperados: nome social (prioridade máxima em toda exibição), pronomes, autodeclaração raça/cor, foto. Dados vindos do RH (cargo, setor, vínculo, admissão, faixa salarial) devem ser somente leitura nessa tela. A falta desse perfil afeta: Escuta (dados demográficos), saudações (SIS-11), avatar, campos de autoria em todo o sistema.
 
-**ESC-10** `🟡 Média` — **Aba "Alertas" sem estado vazio orientador** — propósito confirmado pelo usuário: alertas automáticos de bem-estar baseados em thresholds (ex: "vigor médio abaixo de X por N semanas → notificar gestor"). O problema é que a aba exibe apenas "Nenhum alerta ativo" sem nenhuma explicação do que são alertas, como são configurados ou o que os dispara. Enquanto não há dados suficientes para gerar alertas, a aba parece vazia e sem função. Necessário: (a) estado vazio orientador explicando o propósito ("Alertas são gerados automaticamente quando indicadores de bem-estar atingem limiares de atenção. Configure os limiares na aba Gestão."); (b) link/botão para configurar thresholds; (c) na aba Gestão, seção de configuração de thresholds por dimensão (valor mínimo, período de observação, destinatário da notificação).
+~~**ESC-10**~~ ✅ CORRIGIDO s17 Fase 63 @490 (parcial a+b) — Empty state da aba "Alertas" substituído por card explicativo: ícone `notifications_off`, descrição do propósito (alertas automáticos por threshold), instrução para configurar limiares na aba Gestão, botão "Ir para Gestão →". Pendente: (c) seção de configuração de thresholds por dimensão na aba Gestão — item arquitetural maior, separar em nova issue.
 
 ~~**ESC-11**~~ ✅ CORRIGIDO s17 Fase 62 @480 — `carregarPulseDash()`: campo `d.mediaPorDimensao` (inexistente) → `d.indicadores`; dicionário `NOMES_DIM` adicionado com nomes legíveis (Vigor, Dedicação, Absorção…); valor acessa `entry.media` (não o objeto inteiro).
 
@@ -1667,7 +1667,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ADM-03** `🟡 Média` — Campo SETOR no modal "Editar usuário" não carregava inicialmente (dropdown mostrava apenas "— Sem setor —"), confirmando o padrão de campos não integrados com a base de setores (mesmo anti-padrão de TAR-02, CHV-06, EMP-03). Aparentemente corrigido na sessão — mas o padrão sistêmico permanece (SIS-01 adjacente).
 
-**ADM-04** `🟡 Média` — Aba Banco de Dados visível para usuário Admin mas inacessível — exibe erro de permissão ao tentar executar operações. A aba deveria ser ocultada ou desabilitada para usuários não-SuperAdmin para evitar confusão operacional.
+~~**ADM-04**~~ ✅ CORRIGIDO s17 Fase 63 @490 — Aba "Banco de Dados" agora oculta para não-SuperAdmin: botão da tab invisível em `aoAbrir()` + guard em `abrirTab('dados')` bloqueia carga com mensagem explicativa.
 
 **ADM-05** `🟡 Média` — **UI de Administração truncada** — conteúdo visualmente cortado ou mal distribuído. O módulo precisa de revisão de layout completa. (Confirmado pelo usuário — sem screenshot; abas Features, Provisionamento e Config Sistema ainda a testar.)
 
@@ -1679,9 +1679,9 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ADM-09** `🟡 Média` — **Categ.Itens deve migrar para Estoque/Almoxarifado** — categorias de itens (Equipamento Audiovisual, Informática, Mobiliário, Material Gráfico, Insumo, Outro) são específicas do catálogo de estoque, não configuração geral do sistema. A aba deve ser removida do Admin e incorporada como configuração interna do módulo Estoque. Confirmado pelo usuário.
 
-**ADM-10** `🔴 Alta` — **Toggles de Features inoperantes** — os toggles das feature flags (Assistente IA, Portal Público, RECE, etc.) não têm resposta visual ao clique: permanecem no mesmo estado antes e depois de clicar, sem animação, sem mudança de posição, sem feedback de estado. Não há nem atualização visual local — o toggle simplesmente não reage. O propósito da aba é exatamente ativar/desativar funcionalidades sem deploy — com toggles completamente inertes, a aba não cumpre função alguma. Confirmado pelo usuário (s15).
+~~**ADM-10**~~ ✅ CORRIGIDO s16 Fase 6 (confirmado s17 Fase 63) — Código de toggle visual (`outerSpan.style.background` + `innerSpan.style.left`) presente em `FeatureFlagsUI.toggle()` desde s16; checkbox hidden na label dispara `onchange` corretamente; feedback visual imediato antes do GAS call; reversão automática em caso de erro.
 
-**ADM-11** `🟡 Média` — **Wizard de Setup abre página vazia** — botão "Abrir Wizard de Setup" na aba Provisionamento abre uma página sem conteúdo. O Wizard é o guia de configuração inicial do sistema; mesmo que o provisionamento já esteja em 100%, o Wizard deveria funcionar para revisão e onboarding de novos administradores. Confirmado pelo usuário.
+~~**ADM-11**~~ ✅ CORRIGIDO s17 Fase 63 @490 — `irPara()` em `wizard_setup.html` agora caps em 7: `if (num > 7) num = 7`. Causa raiz: `_calcularPassoAtual` retornava `checks.length+1` (=9 para 8 checks aprovados), mas o wizard só tem passos 1–7 → `getElementById('passo-9')` = null → nenhum passo visível → tela em branco. Com o cap, org totalmente provisionada vê o passo 7 (tela de sucesso).
 
 **ADM-12** `🟡 Média` — **Botão "Visualizar Cadastro" leva para página externa em branco** — o botão na seção "Acessos Pendentes" abre uma URL externa que não exibe conteúdo. Possível endpoint de cadastro público não implementado ou URL do GAS malformada. Confirmado pelo usuário.
 

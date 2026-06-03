@@ -22,7 +22,7 @@ var EscutaPulseEngine = (function() {
 
   function _getTurnosNumericos() {
     try {
-      var ts = ConfigService.getTurnos();
+      var ts = SistemaConfigService.getTurnos();
       if (Array.isArray(ts) && ts.length) {
         return ts.map(function(t) {
           var ip = (t.ini || t.inicio || '08:00').split(':').map(Number);
@@ -60,11 +60,11 @@ var EscutaPulseEngine = (function() {
 
   var BANCO_PERGUNTAS = [
     // VIGOR (UWES)
-    { id: 'V01', dimensao: 'vigor', texto: 'Como está seu nível de energia hoje?',
+    { id: 'V01', dimensao: 'vigor', texto: 'Meu nível de energia está elevado agora.',
       tipo: 'escala', tipoTempo: 'instantanea', peso: 1.0, ativa: true },
     { id: 'V02', dimensao: 'vigor', texto: 'Você se sente revigorado(a) para as atividades?',
       tipo: 'emoji',  tipoTempo: 'acumulativa', peso: 0.9, ativa: true },
-    { id: 'V03', dimensao: 'vigor', texto: 'Ao fim do expediente, como está seu nível de energia?',
+    { id: 'V03', dimensao: 'vigor', texto: 'Chego ao final do expediente ainda com energia.',
       tipo: 'escala', tipoTempo: 'final',       peso: 1.1, ativa: true },
     // DEDICAÇÃO (UWES)
     { id: 'D01', dimensao: 'dedicacao', texto: 'Você se sente entusiasmado(a) com seu trabalho?',
@@ -81,11 +81,11 @@ var EscutaPulseEngine = (function() {
     { id: 'AB03', dimensao: 'absorcao', texto: 'Você ficou tão envolvido(a) no trabalho que perdeu a noção do tempo?',
       tipo: 'escala', tipoTempo: 'final',       peso: 1.0, ativa: true },
     // DEMANDA — invertida (nota alta = mais pressão = pior)
-    { id: 'DM01', dimensao: 'demanda', texto: 'Como você avalia sua carga de trabalho agora?',
+    { id: 'DM01', dimensao: 'demanda', texto: 'Minha carga de trabalho está pesada neste momento.',
       tipo: 'escala', tipoTempo: 'instantanea', peso: 1.0, ativa: true },
     { id: 'DM02', dimensao: 'demanda', texto: 'Você está conseguindo concluir suas tarefas no tempo disponível?',
       tipo: 'emoji',  tipoTempo: 'acumulativa', peso: 0.9, ativa: true },
-    { id: 'DM03', dimensao: 'demanda', texto: 'Como foi a carga de trabalho hoje, no geral?',
+    { id: 'DM03', dimensao: 'demanda', texto: 'A carga de trabalho hoje foi pesada, no geral.',
       tipo: 'escala', tipoTempo: 'final',       peso: 1.1, ativa: true },
     // CONTROLE (JDC)
     { id: 'CT01', dimensao: 'controle', texto: 'Você tem autonomia para organizar suas tarefas hoje?',
@@ -99,7 +99,7 @@ var EscutaPulseEngine = (function() {
       tipo: 'escala', tipoTempo: 'instantanea', peso: 1.0, ativa: true },
     { id: 'CL02', dimensao: 'colaboracao', texto: 'Quando precisou de ajuda, conseguiu obtê-la?',
       tipo: 'emoji',  tipoTempo: 'acumulativa', peso: 0.9, ativa: true },
-    { id: 'CL03', dimensao: 'colaboracao', texto: 'Como foi o clima de cooperação na sua equipe hoje?',
+    { id: 'CL03', dimensao: 'colaboracao', texto: 'O clima de cooperação na minha equipe foi bom hoje.',
       tipo: 'escala', tipoTempo: 'final',       peso: 1.1, ativa: true },
     // INOVAÇÃO (CVF)
     { id: 'IN01', dimensao: 'inovacao', texto: 'Você se sentiu livre para propor novas ideias hoje?',
@@ -111,7 +111,7 @@ var EscutaPulseEngine = (function() {
     // SEGURANÇA PSICOLÓGICA (NR-1) — peso maior: compliance regulatório
     { id: 'SP01', dimensao: 'seguranca', texto: 'Você se sente seguro(a) para expressar sua opinião no trabalho?',
       tipo: 'escala', tipoTempo: 'acumulativa', peso: 1.5, ativa: true },
-    { id: 'SP02', dimensao: 'seguranca', texto: 'Situações no trabalho estão afetando seu bem-estar emocional?',
+    { id: 'SP02', dimensao: 'seguranca', texto: 'Me sinto emocionalmente bem no ambiente de trabalho.',
       tipo: 'escala', tipoTempo: 'acumulativa', peso: 1.5, ativa: true },
     { id: 'SP03', dimensao: 'seguranca', texto: 'Você se sente psicologicamente seguro(a) no ambiente de trabalho?',
       tipo: 'escala', tipoTempo: 'final',       peso: 1.3, ativa: true }
