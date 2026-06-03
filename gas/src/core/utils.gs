@@ -69,7 +69,8 @@ var ABA_PARA_MODULO = {
     Orcamentos:     'Orcamentos',
     Remanejamentos: 'Remanejamentos',
     Aditivos:       'Aditivos',
-    FontesRecurso:  'FontesRecurso'
+    FontesRecurso:  'FontesRecurso',
+    Pregoes:        'Pregoes'
   },
   RELATORIOS: {
     CODIP:        'CODIP',

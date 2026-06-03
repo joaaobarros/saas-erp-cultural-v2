@@ -235,6 +235,14 @@ function inicializarSistema() {
     }
   }
 
+  // Fase 52 — Pregões / Atas de Registro de Preços: garante aba FINANCEIRO.Pregoes
+  if (typeof PregaoRepository !== 'undefined' &&
+      typeof PregaoRepository.prepararIndice === 'function') {
+    try { PregaoRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'PregaoRepository.prepararIndice: ' + e.message);
+    }
+  }
+
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }

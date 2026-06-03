@@ -417,6 +417,76 @@ function fase3_contratados_prepararIndice() {
   }, 'fase3_contratados_prepararIndice');
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// PREGÕES / ATAS DE REGISTRO DE PREÇOS — Fase 52
+// ═══════════════════════════════════════════════════════════════════
+
+function _gerarIdPregao() {
+  return 'PRE-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5);
+}
+
+function ctrl_pregao_listar(filtros) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    return PregaoRepository.listar(filtros || {}, ctx.orgId);
+  }, 'ctrl_pregao_listar');
+}
+
+function ctrl_pregao_obter(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    if (!id) throw new Error('ID obrigatório.');
+    var p = PregaoRepository.buscarPorId(id, ctx.orgId);
+    if (!p) throw new Error('Pregão não encontrado: ' + id);
+    return p;
+  }, 'ctrl_pregao_obter');
+}
+
+function ctrl_pregao_salvar(dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (['admin','superadmin','financeiro','gestor'].indexOf(nivel) === -1)
+      throw new Error('Acesso negado para cadastrar pregões.');
+    if (!dados || !dados.numero) throw new Error('Número do pregão é obrigatório.');
+    if (!dados.orgao) throw new Error('Órgão responsável é obrigatório.');
+    var agr = new Date().toISOString();
+    if (dados.id) {
+      dados.atualizadoEm = agr;
+      return PregaoRepository.atualizar(dados.id, dados, ctx.orgId);
+    }
+    dados.id = _gerarIdPregao();
+    dados.status = dados.status || 'ativo';
+    dados.itens = dados.itens || [];
+    dados.criadoPor = ctx.email;
+    dados.criadoEm = agr;
+    dados.atualizadoEm = agr;
+    AuditoriaService.registrar('PREGAO_CRIADO', 'contratacoes',
+      { id: dados.id, numero: dados.numero, orgao: dados.orgao, autor: ctx.email, orgId: ctx.orgId });
+    return PregaoRepository.inserir(dados, ctx.orgId);
+  }, 'ctrl_pregao_salvar');
+}
+
+function ctrl_pregao_excluir(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxContratacoes();
+    var nivel = _nivelContratacoes(ctx.email);
+    if (['admin','superadmin'].indexOf(nivel) === -1)
+      throw new Error('Apenas administradores podem excluir pregões.');
+    if (!id) throw new Error('ID obrigatório.');
+    PregaoRepository.excluir(id, ctx.orgId);
+    AuditoriaService.registrar('PREGAO_EXCLUIDO', 'contratacoes',
+      { id: id, autor: ctx.email, orgId: ctx.orgId });
+    return { ok: true };
+  }, 'ctrl_pregao_excluir');
+}
+
+function fase52_pregoes_prepararIndice() {
+  return GasResponse.wrap(function () {
+    return PregaoRepository.prepararIndice();
+  }, 'fase52_pregoes_prepararIndice');
+}
+
 function fase3_contratacoes_prepararIndice() {
   return GasResponse.wrap(function () {
     return SolicitacaoRepository.garantirIndice();

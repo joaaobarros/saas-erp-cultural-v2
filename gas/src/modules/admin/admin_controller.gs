@@ -541,6 +541,21 @@ function _assertAdmin() {
   if (!ehAdmin) throw new Error('Acesso negado: operação restrita a administradores.');
 }
 
+// ─── Usuários ativos (para selects de executor/convocador) ─────────────────
+
+/**
+ * Lista usuários ativos (status !== 'pendente') para popular selects no frontend.
+ * Retorna apenas email e nome — sem dados sensíveis.
+ */
+function ctrl_admin_listarUsuariosAtivos() {
+  return GasResponse.wrap(function() {
+    AcessoService.verificar(getEmailSessao(), ['colaborador','coordenador','gestor','admin','superadmin','habilitador']);
+    return AcessoService.listarUsuarios()
+      .filter(function(u) { return u.status !== 'pendente'; })
+      .map(function(u) { return { email: u.email, nome: u.nome || u.email }; });
+  }, 'ctrl_admin_listarUsuariosAtivos');
+}
+
 // ─── Fase 9: Feature Flags ─────────────────────────────────────────────────
 
 /**
