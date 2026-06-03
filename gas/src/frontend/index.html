@@ -15892,8 +15892,16 @@ var ReservasUI = (function() {
       var turnoLabel = _LABEL_TURNO_LISTA[r.turno] || r.turno || '';
       var btns = '';
       if (r.status === 'pendente') {
-        // "Confirmar" só aparece quando o espaço/slot tem responsáveis configurados
-        if (r.precisaAprovacao) {
+        // Badge de atraso — visível quando aguarda resposta dos responsáveis
+        if (r.precisaAprovacao && r.diasPendente >= 1) {
+          var _corAtraso = r.diasPendente >= 2 ? '#dc2626' : '#f59e0b';
+          btns += '<span style="font-size:10px;font-weight:700;color:'+_corAtraso+';background:'+(_corAtraso==='#dc2626'?'#fee2e2':'#fef3c7')+';border-radius:99px;padding:2px 8px;white-space:nowrap;">'
+            + '<span class="ms ms-sm" style="font-size:10px;vertical-align:middle;">schedule</span> '
+            + escaparHtml(String(r.diasPendente)) + 'd sem resposta'
+            + '</span>';
+        }
+        // "Confirmar" baseado na permissão calculada pelo backend
+        if (r.podeConfirmar) {
           btns += '<button class="btn btn-ghost btn-sm btn-res-confirmar" data-id="'+escaparHtml(r.id)+'"><span class="ms ms-sm">check</span> Confirmar</button>';
         }
         btns += '<button class="btn btn-ghost btn-sm btn-res-cancelar" data-id="'+escaparHtml(r.id)+'" data-data="'+escaparHtml(r.data||'')+'"><span class="ms ms-sm">cancel</span> Cancelar</button>';
@@ -15916,12 +15924,23 @@ var ReservasUI = (function() {
       var posPassado = (r.data || '') <= hoje && r.status !== 'cancelado';
       var temPos = posPassado && r.posEvento && r.posEvento.registradoEm;
 
+      // Dia da semana a partir de r.data (YYYY-MM-DD)
+      var _DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      var _diaSemanaLabel = '';
+      if (r.data) {
+        try {
+          var _d = new Date(r.data + 'T12:00:00');
+          _diaSemanaLabel = _DIAS_SEMANA[_d.getDay()] || '';
+        } catch(_) {}
+      }
+
       var linhas = '';
       linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;">';
       linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">location_on</span> '+escaparHtml(nomeEspaco)+'</span>';
-      // Data + botão pós-evento inline
+      // Data + dia da semana + botão pós-evento inline
       linhas += '<span style="display:inline-flex;align-items:center;gap:4px;">'
         + '<span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">event</span> '
+        + (_diaSemanaLabel ? '<span style="font-weight:600;color:var(--muted);font-size:11px;">'+escaparHtml(_diaSemanaLabel)+'</span> ' : '')
         + escaparHtml(_fmtDataPtBR(r.data))
         + (posPassado
             ? ' <button class="btn btn-ghost btn-sm btn-res-pos-evento" data-id="'+escaparHtml(r.id)+'" title="'+(temPos?'Execução registrada':'Registrar execução')+'" style="padding:0 3px;color:'+(temPos?'var(--color-success)':'var(--muted)')+';">'
@@ -16848,8 +16867,16 @@ var ReservasUI = (function() {
 
     var btnsHtml = '';
     if (r.status==='pendente') {
-      // "Confirmar" só aparece quando o espaço/slot tem responsáveis configurados
-      if (r.precisaAprovacao) {
+      // Badge de atraso no overlay
+      if (r.precisaAprovacao && r.diasPendente >= 1) {
+        btnsHtml += '<div style="font-size:11px;font-weight:600;color:'+(r.diasPendente>=2?'#dc2626':'#92400e')+';background:'+(r.diasPendente>=2?'#fee2e2':'#fef3c7')+';border-radius:8px;padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">'
+          + '<span class="ms ms-sm">schedule</span>'
+          + 'Aguardando confirmação há <strong>' + r.diasPendente + ' dia(s)</strong>'
+          + (r.escalonadoParaHabilitador ? ' — escalado ao habilitador' : '')
+          + '</div>';
+      }
+      // "Confirmar" baseado na permissão calculada pelo backend
+      if (r.podeConfirmar) {
         btnsHtml += '<button id="det-confirmar" class="btn btn-primario">Confirmar</button>';
       }
       btnsHtml += '<button id="det-cancelar" class="btn btn-ghost" data-bg-skip="1">Cancelar reserva</button>';

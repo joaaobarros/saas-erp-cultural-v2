@@ -51,6 +51,74 @@ function _nivelReservas(email) {
 var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'infraestrutura', 'habilitador'];
 var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
+// Papéis que podem confirmar a qualquer momento (sem gate de tempo)
+var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor', 'infraestrutura'];
+// Dias de espera para escalação ao habilitador
+var _DIAS_ESCALACAO_HABILITADOR = 2;
+
+/**
+ * Retorna quantos dias uma reserva pendente está aguardando confirmação.
+ * Baseia-se em criadoEm; retorna 0 se não houver dado ou status não for pendente.
+ */
+function _diasPendente(r) {
+  if ((r.status || '') !== 'pendente' || !r.criadoEm) return 0;
+  var criado = new Date(r.criadoEm);
+  if (isNaN(criado.getTime())) return 0;
+  return Math.floor((new Date() - criado) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Deriva turnoId a partir de horaInicio/horaTermino (local — não depende do engine).
+ */
+function _inferirTurnoCtrl(horaInicio, horaTermino) {
+  function _m(h) {
+    if (!h) return -1;
+    var p = String(h).split(':');
+    return p.length < 2 ? -1 : parseInt(p[0],10)*60 + parseInt(p[1]||0,10);
+  }
+  var ini = _m(horaInicio), fim = _m(horaTermino);
+  if (ini < 0) return '';
+  if (fim <= 0) { return ini < 720 ? 'manha' : ini < 1080 ? 'tarde' : 'noite'; }
+  var cobM = ini < 720 && fim > 480, cobT = ini < 1080 && fim > 720, cobN = ini < 1320 && fim > 1080;
+  if (cobM && cobT && cobN) return 'integral';
+  if (cobT && cobN) return 'tarde_noite';
+  if (cobM && cobT) return 'manha_tarde';
+  return cobN ? 'noite' : cobT ? 'tarde' : 'manha';
+}
+
+/**
+ * Verifica se o e-mail é responsável pelo slot de uma reserva.
+ * @returns {boolean}
+ */
+function _ehResponsavelSlot(email, r) {
+  try {
+    var diaNum = new Date(String(r.data) + 'T12:00:00').getDay();
+    var turnoId = _inferirTurnoCtrl(r.horaInicio, r.horaTermino);
+    var resp = SistemaConfigService.resolverResponsaveis
+      ? SistemaConfigService.resolverResponsaveis(r.sala, diaNum, turnoId)
+      : null;
+    if (!resp || !Array.isArray(resp.emails)) return false;
+    var emailNorm = String(email).toLowerCase().trim();
+    return resp.emails.some(function(e) { return String(e).toLowerCase().trim() === emailNorm; });
+  } catch(_) { return false; }
+}
+
+/**
+ * Retorna true se o usuário (nivel + email) pode confirmar a reserva r.
+ * Regras:
+ *   - admin/superadmin/gestor/infraestrutura → sempre (se precisaAprovacao)
+ *   - responsável do slot → sempre
+ *   - habilitador → apenas após _DIAS_ESCALACAO_HABILITADOR dias pendente
+ */
+function _podeConfirmarReserva(nivel, email, r) {
+  if (!r.precisaAprovacao) return false;
+  if ((r.status || '') !== 'pendente') return false;
+  if (_NIVEL_CONFIRMAR_SEMPRE.indexOf(nivel) >= 0) return true;
+  if (_ehResponsavelSlot(email, r)) return true;
+  if (nivel === 'habilitador' && _diasPendente(r) >= _DIAS_ESCALACAO_HABILITADOR) return true;
+  return false;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // RESERVAS — LEITURA
 // ═══════════════════════════════════════════════════════════════
@@ -73,7 +141,7 @@ function ctrl_reservas_listar(filtros) {
 
     var lista = ReservaEngine.listar(f, ctx.orgId);
 
-    // Anotar cada reserva com flag de necessidade de aprovação
+    // Anotar cada reserva com campos de aprovação e escalação
     if (Array.isArray(lista)) {
       lista.forEach(function(r) {
         try {
@@ -84,6 +152,16 @@ function ctrl_reservas_listar(filtros) {
         } catch(_) {
           r.precisaAprovacao = false;
         }
+
+        // Dias aguardando confirmação (0 se não for pendente ou criadoEm ausente)
+        r.diasPendente = _diasPendente(r);
+
+        // Sinaliza ao frontend quando a escalação ao habilitador já está ativa
+        r.escalonadoParaHabilitador = r.precisaAprovacao &&
+          r.diasPendente >= _DIAS_ESCALACAO_HABILITADOR;
+
+        // Permissão de confirmação para o usuário atual (evita lógica duplicada no frontend)
+        r.podeConfirmar = _podeConfirmarReserva(nivel, ctx.email, r);
       });
     }
 
@@ -201,8 +279,12 @@ function ctrl_reservas_cancelar(id, motivo) {
 
 /**
  * Confirma uma reserva (pendente → confirmado).
- * Permitido para: infraestrutura, gestor, admin, superadmin, habilitador
- * OU qualquer usuário cadastrado como responsável pelo espaço/slot da reserva.
+ *
+ * Quem pode confirmar:
+ *   • admin / superadmin / gestor / infraestrutura — a qualquer momento
+ *   • responsável cadastrado no espaço/slot — a qualquer momento
+ *   • habilitador — apenas após _DIAS_ESCALACAO_HABILITADOR dias aguardando
+ *
  * @param {string} id
  */
 function ctrl_reservas_confirmar(id) {
@@ -211,14 +293,7 @@ function ctrl_reservas_confirmar(id) {
     if (!id) throw new Error('ID da reserva é obrigatório.');
     var nivel = _nivelReservas(ctx.email);
 
-    // Gestão passa sempre
-    if (_NIVEL_GESTAO.indexOf(nivel) >= 0) {
-      return ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
-    }
-
-    // Verificar se o usuário logado é responsável pelo espaço/slot desta reserva
-    var reserva = ReservaEngine.listar({ id: id }, ctx.orgId);
-    // listar pode não suportar filtro por id — buscar e filtrar
+    // Buscar a reserva para avaliação de permissão
     var lista = ReservaEngine.listar({}, ctx.orgId);
     var r = null;
     for (var i = 0; i < lista.length; i++) {
@@ -226,28 +301,28 @@ function ctrl_reservas_confirmar(id) {
     }
     if (!r) throw new Error('Reserva não encontrada.');
 
-    var ehResponsavel = false;
+    // Anotar precisaAprovacao e diasPendente para usar nos helpers
     try {
-      var diaNum = new Date(String(r.data) + 'T12:00:00').getDay();
-      var turnoId = '';
-      // Derivar turnoId via helper público do SolicitacaoReservaEngine se disponível
-      if (typeof SolicitacaoReservaEngine !== 'undefined' &&
-          typeof SolicitacaoReservaEngine._inferirTurnoLocal === 'function') {
-        turnoId = SolicitacaoReservaEngine._inferirTurnoLocal(r.horaInicio, r.horaTermino);
-      }
-      var resp = SistemaConfigService.resolverResponsaveis
-        ? SistemaConfigService.resolverResponsaveis(r.sala, diaNum, turnoId)
-        : null;
-      if (resp && Array.isArray(resp.emails)) {
-        var emailNorm = String(ctx.email).toLowerCase().trim();
-        ehResponsavel = resp.emails.some(function(e) {
-          return String(e).toLowerCase().trim() === emailNorm;
-        });
-      }
-    } catch(_) {}
+      r.precisaAprovacao = ReservaEngine.precisaAprovacao(
+        r.sala, r.data, r.horaInicio, r.horaTermino, r.setor || '', r.responsavel || ''
+      );
+    } catch(_) { r.precisaAprovacao = true; } // conservador: exige aprovação em caso de dúvida
+    r.diasPendente = _diasPendente(r);
 
-    if (!ehResponsavel) {
-      throw new Error('Sem permissão para confirmar reservas. Apenas responsáveis pelo espaço/período ou gestores podem confirmar.');
+    if (!_podeConfirmarReserva(nivel, ctx.email, r)) {
+      var _dias = r.diasPendente;
+      var _restam = Math.max(0, _DIAS_ESCALACAO_HABILITADOR - _dias);
+      if (nivel === 'habilitador' && _restam > 0) {
+        throw new Error(
+          'Escalação disponível em ' + _restam + ' dia(s). ' +
+          'O habilitador pode confirmar após ' + _DIAS_ESCALACAO_HABILITADOR +
+          ' dias sem resposta dos responsáveis.'
+        );
+      }
+      throw new Error(
+        'Sem permissão para confirmar esta reserva. ' +
+        'Apenas responsáveis pelo espaço/período ou gestores podem confirmar.'
+      );
     }
 
     return ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
