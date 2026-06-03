@@ -153,19 +153,20 @@ var ReservaEngine = (function () {
 
   /**
    * Valida se o horário está dentro do funcionamento configurado.
-   * Por padrão: 07:00–23:00. Pode ser expandido via SistemaConfigService.
+   * Lê abertura/fechamento de ConfigService.getReservaHorario() — sem hardcode.
    */
   function assertHorarioFuncionamento(horaInicio, horaTermino) {
     var iniMin = _horaParaMin(horaInicio);
     var fimMin = _horaParaMin(horaTermino);
-    var ABERTURA = 7 * 60;  // 07:00
-    var FECHAMENTO = 23 * 60; // 23:00
+    var hor = ConfigService.getReservaHorario();
+    var ABERTURA   = _horaParaMin(hor.inicio);
+    var FECHAMENTO = _horaParaMin(hor.fim);
 
     if (iniMin < ABERTURA) {
-      throw new Error('Horário de início (' + horaInicio + ') anterior à abertura (07:00).');
+      throw new Error('Horário de início (' + horaInicio + ') anterior à abertura (' + hor.inicio + ').');
     }
     if (fimMin > FECHAMENTO) {
-      throw new Error('Horário de término (' + horaTermino + ') posterior ao fechamento (23:00).');
+      throw new Error('Horário de término (' + horaTermino + ') posterior ao fechamento (' + hor.fim + ').');
     }
   }
 
@@ -317,17 +318,41 @@ var ReservaEngine = (function () {
       setDatas[d] = true;
     });
 
+    // Coletar conflitos sem lançar erro imediatamente
+    var datasComConflito = [];
+    var datasLivres = [];
+    datas.forEach(function(data) {
+      try {
+        assertSemConflito(dados.sala, data, dados.horaInicio, dados.horaTermino, orgId);
+        datasLivres.push(data);
+      } catch(e) {
+        datasComConflito.push({ data: data, motivo: e.message });
+      }
+    });
+
+    // Sem a flag criarApenasValidas: retorna info para o frontend pedir confirmação
+    if (datasComConflito.length > 0 && !dados.criarApenasValidas) {
+      return {
+        pendente: true,
+        conflitos: datasComConflito,
+        datasValidas: datasLivres,
+        total: 0
+      };
+    }
+
+    // Com a flag ou sem conflitos: usa apenas as datas válidas
+    var datasParaCriar = datasLivres;
+    if (!datasParaCriar.length) {
+      throw new Error('Todas as datas selecionadas têm conflito de horário. Não há datas disponíveis para criar.');
+    }
+
     var lock = LockService.getScriptLock();
     lock.waitLock(15000);
 
     try {
-      // Verificar TODOS os conflitos antes de inserir qualquer registro
-      datas.forEach(function (data) {
-        assertSemConflito(dados.sala, data, dados.horaInicio, dados.horaTermino, orgId);
-      });
 
       var agr  = agora ? agora() : new Date().toISOString();
-      var reservas = datas.map(function (data) {
+      var reservas = datasParaCriar.map(function (data) {
         return {
           orgId:         orgId,
           data:          data,
@@ -362,7 +387,7 @@ var ReservaEngine = (function () {
       });
 
       Logger.info('reserva_engine', 'criarLote', salvas.length + ' reservas em lote criadas.');
-      return { total: salvas.length, idLote: salvas[0] && salvas[0].idLote, reservas: salvas };
+      return { total: salvas.length, idLote: salvas[0] && salvas[0].idLote, reservas: salvas, conflitosIgnorados: datasComConflito.length };
 
     } finally {
       lock.releaseLock();

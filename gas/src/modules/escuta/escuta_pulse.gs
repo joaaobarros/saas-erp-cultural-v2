@@ -20,13 +20,25 @@ var EscutaPulseEngine = (function() {
 
   // ─── Sistema de turnos ──────────────────────────────────────────────────────
 
-  // Turnos baseados nos turnos institucionais configurados no Admin
-  // (Manhã 08:00–12:00 · Tarde 12:01–17:00 · Noite 17:01–21:30)
-  var TURNOS = [
-    { nome: 'manha', inicio: 8,    fim: 12   },
-    { nome: 'tarde', inicio: 12,   fim: 17   },
-    { nome: 'noite', inicio: 17,   fim: 21.5 }
-  ];
+  function _getTurnosNumericos() {
+    try {
+      var ts = ConfigService.getTurnos();
+      if (Array.isArray(ts) && ts.length) {
+        return ts.map(function(t) {
+          var ip = (t.ini || t.inicio || '08:00').split(':').map(Number);
+          var fp = (t.fim || '12:00').split(':').map(Number);
+          return { nome: t.id || t.label || 'turno',
+                   inicio: ip[0] + (ip[1] || 0) / 60,
+                   fim:    fp[0] + (fp[1] || 0) / 60 };
+        });
+      }
+    } catch(e) {}
+    return [
+      { nome: 'manha', inicio: 8, fim: 12 },
+      { nome: 'tarde', inicio: 12, fim: 17 },
+      { nome: 'noite', inicio: 17, fim: 21.5 }
+    ];
+  }
 
   // ─── Configurações padrão ───────────────────────────────────────────────────
 
@@ -125,19 +137,20 @@ var EscutaPulseEngine = (function() {
   // ─── Sistema temporal ───────────────────────────────────────────────────────
 
   function _turnoAtual() {
-    var agora = new Date();
-    var hora  = agora.getHours() + agora.getMinutes() / 60;
-    for (var i = 0; i < TURNOS.length; i++) {
-      var t = TURNOS[i];
+    var agora  = new Date();
+    var hora   = agora.getHours() + agora.getMinutes() / 60;
+    var turnos = _getTurnosNumericos();
+    for (var i = 0; i < turnos.length; i++) {
+      var t = turnos[i];
       if (hora >= t.inicio && hora < t.fim) return t;
     }
-    return TURNOS[0]; // fallback: manhã
+    return turnos[0]; // fallback: primeiro turno
   }
 
   function _progressoTurno() {
-    var agora = new Date();
-    var hora  = agora.getHours() + agora.getMinutes() / 60;
-    var turno = _turnoAtual();
+    var agora  = new Date();
+    var hora   = agora.getHours() + agora.getMinutes() / 60;
+    var turno  = _turnoAtual();
     var prog  = (hora - turno.inicio) / (turno.fim - turno.inicio);
     return Math.max(0, Math.min(1, prog));
   }

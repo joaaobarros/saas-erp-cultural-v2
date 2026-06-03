@@ -69,8 +69,23 @@ var IAService = (function () {
     return Utilities.formatDate(d, 'America/Fortaleza', 'HH:mm');
   }
 
+  function _horariosDosTurnos() {
+    try {
+      var ts = ConfigService.getTurnos();
+      if (Array.isArray(ts) && ts.length) {
+        var h = [];
+        ts.forEach(function(t) {
+          var ini = t.ini || t.inicio;
+          if (ini) h.push(ini);
+        });
+        if (h.length) return h;
+      }
+    } catch(e) {}
+    return ['08:00', '10:00', '14:00', '16:00', '18:00'];
+  }
+
   function _encontrarMelhorAgenda(dados, salas, reservas) {
-    var horarios = ['08:00', '10:00', '14:00', '16:00', '18:00'];
+    var horarios = _horariosDosTurnos();
     var resultados = [];
     var datas = (dados.datasLote && dados.datasLote.length) ? dados.datasLote : [dados.data];
     salas.forEach(function(sala) {
@@ -246,6 +261,12 @@ var IAService = (function () {
       var emailAtivo = obterEmailUsuario('');
 
       var _org = getOrgConfig();
+      var _hor = ConfigService.getReservaHorario();
+      var _turnosTexto = (function() {
+        var ts = ConfigService.getTurnos();
+        if (!Array.isArray(ts) || !ts.length) return '"manhã" = abertura–meio-dia | "tarde" = meio-dia–fim tarde | "noite" = fim tarde–encerramento';
+        return ts.map(function(t) { return '"' + (t.label||t.id) + '" = ' + (t.ini||t.inicio||'?') + '–' + (t.fim||'?'); }).join(' | ');
+      })();
       var prompt =
         'Você é ' + _org.nomeAssistente + ', assistente de gestão de espaços de ' + _org.nomeCompleto + '.\n\n' +
         'REGRA ABSOLUTA — APRESENTAÇÃO:\n' +
@@ -263,9 +284,9 @@ var IAService = (function () {
         '- Nunca usar ID de sala na resposta textual — use sempre o nome real.\n' +
         '- Nunca sugerir horários já ocupados. Verifique os conflitos antes de sugerir.\n' +
         '- Se houver conflito, sugira alternativa de sala ou horário imediatamente.\n' +
-        '- Horários permitidos: 08:00 às 21:30.\n\n' +
+        '- Horários permitidos: ' + _hor.inicio + ' às ' + _hor.fim + '.\n\n' +
         'INTERPRETAÇÃO DE TERMOS:\n' +
-        '- "manhã" = 08:00–12:00 | "tarde" = 12:00–18:00 | "noite" = 18:00–21:30\n' +
+        '- ' + _turnosTexto + '\n' +
         '- "qualquer dia" = primeiro disponível a partir de hoje\n' +
         '- "semana" = próximos 7 dias\n' +
         '- reunião → público estimado: 5–15 | oficina → 15–40 | evento → 40+\n\n' +
