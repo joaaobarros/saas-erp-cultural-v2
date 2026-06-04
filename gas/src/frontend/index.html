@@ -4128,22 +4128,27 @@ select.form-control { cursor: pointer; }
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Sala / Espaço *</label>
-                <select id="res-sala" class="form-input" onchange="ReservasUI.aoSelecionarEspaco(this)">
+                <select id="res-sala" class="form-input" onchange="ReservasUI.aoSelecionarEspaco(this);ReservasUI._checarConflito();">
                   <option value="">Selecione o espaço…</option>
                 </select>
                 <small id="res-sala-hint" class="muted-text"></small>
               </div>
               <div class="form-group">
-                <label class="form-label">Data *</label>
-                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens()">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <label class="form-label" style="margin:0;">Data *</label>
+                  <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1" style="height:22px;padding:0 8px;font-size:11px;gap:3px;">
+                    <span class="ms ms-sm" style="font-size:13px;">date_range</span> Lote
+                  </button>
+                </div>
+                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._checarConflito();">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora início *</label>
-                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();">
+                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora término *</label>
-                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();">
+                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Nome da Ação / Evento *</label>
@@ -4151,7 +4156,22 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Tipo de ação</label>
-                <input type="text" id="res-tipo-acao" class="form-input" placeholder="Ex: Oficina, Espetáculo…">
+                <select id="res-tipo-acao" class="form-input">
+                  <option value="">Selecione…</option>
+                  <option value="oficina">Oficina / Formação</option>
+                  <option value="espetaculo">Espetáculo</option>
+                  <option value="exposicao">Exposição</option>
+                  <option value="show">Show / Concerto</option>
+                  <option value="sarau">Sarau / Poesia</option>
+                  <option value="festival">Festival</option>
+                  <option value="conferencia">Conferência / Palestra</option>
+                  <option value="debate">Debate / Mesa-redonda</option>
+                  <option value="lancamento">Lançamento</option>
+                  <option value="ensaio">Ensaio / Preparação</option>
+                  <option value="cinema">Cinema / Audiovisual</option>
+                  <option value="reuniao">Reunião / Encontro</option>
+                  <option value="outro">Outro</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Setor</label>
@@ -4202,12 +4222,6 @@ select.form-control { cursor: pointer; }
             </div>
             <input type="hidden" id="res-id">
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;">
-              <button class="btn btn-ghost btn-sm" id="btn-res-checar" onclick="ReservasUI.verificarDisponibilidade()">
-                <span class="ms ms-sm">search</span> Checar disponibilidade
-              </button>
-              <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1">
-                <span class="ms ms-sm">calendar_month</span> Lote
-              </button>
               <button class="btn btn-ghost" onclick="ReservasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
               <button class="btn btn-primario" id="btn-res-salvar" onclick="ReservasUI.salvar()">
                 <span class="ms ms-sm">save</span> Salvar
@@ -4497,23 +4511,19 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="modal-body" style="display:flex;flex-direction:column;gap:16px;">
 
-                <!-- Campos da reserva: apenas Espaço e Horários (Nome/Tipo/Setor/Obs vêm do formulário principal) -->
+                <!-- Campos exclusivos do lote: apenas horários. Espaço, nome, tipo, setor e obs vêm do formulário principal. -->
                 <div style="background:var(--surface2);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
                   <span class="ms ms-sm" style="font-size:16px;">info</span>
-                  Nome, tipo, setor e observações serão herdados do formulário acima.
+                  Espaço, nome, tipo, setor e observações são herdados do formulário. Ajuste os horários abaixo se necessário — eles também atualizam o formulário.
                 </div>
-                <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;">
-                  <div class="form-group" style="margin:0;">
-                    <label class="form-label">Espaço</label>
-                    <select id="lote-sala" class="form-input"><option value="">Selecione…</option></select>
-                  </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                   <div class="form-group" style="margin:0;">
                     <label class="form-label">Hora início</label>
-                    <input type="time" id="lote-hora-ini" class="form-input">
+                    <input type="time" id="lote-hora-ini" class="form-input" onchange="ReservasUI._loteSyncHorasAoForm();">
                   </div>
                   <div class="form-group" style="margin:0;">
                     <label class="form-label">Hora término</label>
-                    <input type="time" id="lote-hora-fim" class="form-input">
+                    <input type="time" id="lote-hora-fim" class="form-input" onchange="ReservasUI._loteSyncHorasAoForm();">
                   </div>
                 </div>
 
@@ -16243,29 +16253,60 @@ var ReservasUI = (function() {
     if (f) f.style.display = 'none';
   }
 
+  // Checagem de conflito client-side em tempo real (sem botão, sem chamada de backend)
+  function _checarConflito() {
+    var sala = (document.getElementById('res-sala').value||'').trim();
+    var data = (document.getElementById('res-data').value||'').trim();
+    var ini  = (document.getElementById('res-hora-ini').value||'').trim();
+    var fim  = (document.getElementById('res-hora-fim').value||'').trim();
+    var divRes = document.getElementById('res-disp-resultado');
+    if (!divRes) return;
+    if (!sala || !data || !ini || !fim) { divRes.style.display = 'none'; return; }
+    var editId = (document.getElementById('res-id').value||'').trim();
+    var toMin  = function(t) { var p=t.split(':'); return parseInt(p[0],10)*60+parseInt(p[1]||0,10); };
+    var iIni = toMin(ini), iFim = toMin(fim);
+    if (iFim <= iIni) { divRes.style.display = 'none'; return; }
+    var conflitos = (_listaCacheTotal||[]).filter(function(r) {
+      if (r.id === editId) return false;
+      if (r.sala !== sala || r.data !== data) return false;
+      if (['cancelado','concluido'].indexOf((r.status||'').toLowerCase()) !== -1) return false;
+      var rIni = toMin(r.horaInicio||'00:00');
+      var rFim = toMin(r.horaTermino||'00:00');
+      return iIni < rFim && iFim > rIni;
+    });
+    divRes.style.display = '';
+    if (conflitos.length) {
+      var nomes = conflitos.slice(0,3).map(function(c){ return escaparHtml(c.nomeAcao||c.sala||c.id); }).join(', ');
+      divRes.innerHTML = '<div style="padding:8px 12px;background:#fee2e2;border-radius:var(--r-sm);border-left:3px solid var(--color-error);font-size:12px;">'
+        +'<span class="ms ms-sm" style="font-size:13px;vertical-align:middle;color:var(--color-error);">event_busy</span> '
+        +'<strong>Conflito:</strong> '+nomes+(conflitos.length>3?' e mais '+(conflitos.length-3)+'…':'')+' neste horário.</div>';
+    } else {
+      divRes.innerHTML = '<div style="padding:8px 12px;background:#dcfce7;border-radius:var(--r-sm);border-left:3px solid var(--color-success);font-size:12px;">'
+        +'<span class="ms ms-sm" style="font-size:13px;vertical-align:middle;color:var(--color-success);">check_circle</span> '
+        +'Horário disponível neste espaço.</div>';
+    }
+  }
+
   function verificarDisponibilidade() {
     var sala = (document.getElementById('res-sala').value||'').trim();
     var data = (document.getElementById('res-data').value||'').trim();
     var ini  = (document.getElementById('res-hora-ini').value||'').trim();
     var fim  = (document.getElementById('res-hora-fim').value||'').trim();
     if (!sala||!data||!ini||!fim) { Toast.aviso('Preencha sala, data e horários para verificar.'); return; }
-    BtnGuard.wrap('btn-res-checar', 'Verificando…', function(done) {
-      GAS.reservas.verificarDisponibilidade({sala:sala,data:data,horaInicio:ini,horaTermino:fim}, function(resp) {
-        done();
-        var divRes = document.getElementById('res-disp-resultado');
-        divRes.style.display = '';
-        if (!resp || !resp.ok) { divRes.innerHTML='<div class="alert alert-error">Erro ao verificar disponibilidade.</div>'; return; }
-        var d = resp.data || {};
-        if (d.temConflito) {
-          var conf = d.conflitos.map(function(c){ return escaparHtml(c.nome)+' ('+escaparHtml(c.horaInicio)+'-'+escaparHtml(c.horaTermino)+')'; }).join('; ');
-          divRes.innerHTML = '<div style="padding:10px 14px;background:var(--color-error)10;border-radius:var(--r-sm);border-left:3px solid var(--color-error);font-size:13px;">'
-            +'<strong>⚠️ Conflito detectado</strong><br>'+conf+'</div>';
-        } else {
-          divRes.innerHTML = '<div style="padding:10px 14px;background:var(--color-success)10;border-radius:var(--r-sm);border-left:3px solid var(--color-success);font-size:13px;">'
-            +'✅ Horário disponível</div>';
-        }
-      }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
-    });
+    GAS.reservas.verificarDisponibilidade({sala:sala,data:data,horaInicio:ini,horaTermino:fim}, function(resp) {
+      var divRes = document.getElementById('res-disp-resultado');
+      divRes.style.display = '';
+      if (!resp || !resp.ok) { divRes.innerHTML='<div class="alert alert-error">Erro ao verificar disponibilidade.</div>'; return; }
+      var d = resp.data || {};
+      if (d.temConflito) {
+        var conf = d.conflitos.map(function(c){ return escaparHtml(c.nome)+' ('+escaparHtml(c.horaInicio)+'-'+escaparHtml(c.horaTermino)+')'; }).join('; ');
+        divRes.innerHTML = '<div style="padding:10px 14px;background:#fee2e2;border-radius:var(--r-sm);border-left:3px solid var(--color-error);font-size:13px;">'
+          +'<strong>Conflito detectado</strong><br>'+conf+'</div>';
+      } else {
+        divRes.innerHTML = '<div style="padding:10px 14px;background:#dcfce7;border-radius:var(--r-sm);border-left:3px solid var(--color-success);font-size:13px;">'
+          +'Horário disponível</div>';
+      }
+    }, function(err) { Toast.erro('Erro: '+(err.message||err)); });
   }
 
   function salvar() {
@@ -17278,6 +17319,7 @@ var ReservasUI = (function() {
   }
 
   return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
+    _checarConflito:         _checarConflito,
     verificarDisponibilidade:verificarDisponibilidade,
     popularSelectEspacos:popularSelectEspacos, aoSelecionarEspaco:aoSelecionarEspaco,
     setModo:setModo, _aplicarFiltroLista:_aplicarFiltroLista,
@@ -17320,6 +17362,7 @@ var ReservasUI = (function() {
     _loteLimparDatas:       function()   { window._LoteUI && window._LoteUI.limparDatas(); },
     _loteGerarDatas:        function(t)  { window._LoteUI && window._LoteUI.gerarDatas(t); },
     _loteConfirmar:         function()   { window._LoteUI && window._LoteUI.confirmar(); },
+    _loteSyncHorasAoForm:   function()   { window._LoteUI && window._LoteUI.syncHorasAoForm(); },
     // CCBJ Fechado — delega para _BloqueioUI (inicializado logo abaixo)
     bloquearCCBJ:       function()   { window._BloqueioUI && window._BloqueioUI.abrir(); },
     _ccbjFecharModal:   function()   { window._BloqueioUI && window._BloqueioUI.fechar(); },
@@ -17661,25 +17704,16 @@ var ReservasUI = (function() {
       if (el && !el.value) el.value = hoje;
       if (el) el.min = hoje;
     });
-    // Herdar hora e espaço do formulário principal
-    var formSala    = document.getElementById('res-sala');
-    var formSalaVal = formSala ? formSala.value : '';
+    // Herdar hora do formulário principal (ESP-04/ESP-13: espaço não é campo do modal)
     var formHoraIni = (document.getElementById('res-hora-ini')||{}).value || '';
     var formHoraFim = (document.getElementById('res-hora-fim')||{}).value || '';
     var elHoraIni = document.getElementById('lote-hora-ini');
     var elHoraFim = document.getElementById('lote-hora-fim');
     if (elHoraIni) elHoraIni.value = formHoraIni;
     if (elHoraFim) elHoraFim.value = formHoraFim;
-    // Popular select de espaço
-    var sel = document.getElementById('lote-sala');
-    if (sel) {
-      GAS.admin.listarEspacosPublicos(function(r) {
-        var esp = (r && r.ok && Array.isArray(r.data)) ? r.data.filter(function(e){ return e.aceitaReserva !== false; }) : [];
-        sel.innerHTML = '<option value="">Selecione o espaço…</option>' +
-          esp.map(function(e){ return '<option value="'+escaparHtml(e.id)+'">'+escaparHtml(e.nome)+' (cap. '+(e.capacidade||'?')+')</option>'; }).join('');
-        if (formSalaVal) sel.value = formSalaVal;
-      }, function(){});
-    }
+    // Pré-adicionar data do formulário principal ao lote (se preenchida e não passada)
+    var formData = (document.getElementById('res-data')||{}).value || '';
+    if (formData && formData >= hoje) _datasSet[formData] = true;
     _renderChips();
     _selecionarModo('manual');
     document.getElementById('lote-modal').classList.remove('oculto');
@@ -17731,6 +17765,20 @@ var ReservasUI = (function() {
         +'</span>';
     }).join('');
     if (contador) contador.textContent = datas.length+(datas.length===1?' data':' datas');
+  }
+
+  // Sync horários lote → formulário principal (bidirecional)
+  function _syncHorasAoForm() {
+    var ini = (document.getElementById('lote-hora-ini')||{}).value || '';
+    var fim = (document.getElementById('lote-hora-fim')||{}).value || '';
+    var elIni = document.getElementById('res-hora-ini');
+    var elFim = document.getElementById('res-hora-fim');
+    if (elIni && ini) elIni.value = ini;
+    if (elFim && fim) elFim.value = fim;
+    // Disparar checagem em tempo real no formulário
+    if ((ini || fim) && typeof ReservasUI !== 'undefined' && ReservasUI._checarConflito) {
+      ReservasUI._checarConflito();
+    }
   }
 
   function _adicionarManual() {
@@ -17821,12 +17869,12 @@ var ReservasUI = (function() {
   function confirmar() {
     var datas = Object.keys(_datasSet).sort();
     if (!datas.length) { Toast.aviso('Selecione pelo menos uma data.'); return; }
-    var sala    = (document.getElementById('lote-sala').value||'').trim();
+    // Espaço, nome, tipo, setor e obs vêm do formulário principal (ESP-13/ESP-04)
+    var sala    = ((document.getElementById('res-sala')||{}).value||'').trim();
     var horaIni = (document.getElementById('lote-hora-ini').value||'').trim();
     var horaFim = (document.getElementById('lote-hora-fim').value||'').trim();
-    // Nome, tipo, setor e obs vêm do formulário principal (ESP-13)
     var nome    = ((document.getElementById('res-nome-acao')||{}).value||'').trim();
-    if (!sala)    { Toast.aviso('Selecione o espaço.'); return; }
+    if (!sala)    { Toast.aviso('Selecione o espaço no formulário principal antes de criar em lote.'); return; }
     if (!horaIni||!horaFim) { Toast.aviso('Preencha os horários de início e término.'); return; }
     if (!nome)    { Toast.aviso('Preencha o campo "Nome do Evento" no formulário antes de criar em lote.'); return; }
     if (datas.length > 60) { Toast.aviso('Máximo de 60 datas por lote.'); return; }
@@ -17902,7 +17950,8 @@ var ReservasUI = (function() {
     removerData:    function(iso){ delete _datasSet[iso]; _renderChips(); },
     limparDatas:    function(){ _datasSet={}; _renderChips(); },
     gerarDatas:     _gerarDatas,
-    confirmar:      confirmar
+    confirmar:      confirmar,
+    syncHorasAoForm:_syncHorasAoForm
   };
 })();
 
