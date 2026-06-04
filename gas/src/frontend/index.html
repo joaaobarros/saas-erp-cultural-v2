@@ -14415,6 +14415,7 @@ var InfraConfigMapaUI = (function() {
   var _carregado = false;
   var _terreno   = null;   // { pontos: [], svgPath: 'M ...' } salvo no config_org.json
   var _zoom = 1, _panX = 0, _panY = 0;
+  var _mergeMode = false, _mergeSource = null;
   var _NS = 'http://www.w3.org/2000/svg';
 
   // ── Histórico para Desfazer (máx 10 ações) ───────────────
@@ -14654,6 +14655,18 @@ var InfraConfigMapaUI = (function() {
         el.setAttribute('cx', '0'); el.setAttribute('cy', '0');
         el.setAttribute('rx', hw); el.setAttribute('ry', hh);
         return el;
+      case 'livre':
+        if (cfg.pts && cfg.pts.length >= 3) {
+          el = document.createElementNS(_NS, 'polygon');
+          el.setAttribute('points', cfg.pts.map(function(p){return p.x+','+p.y;}).join(' '));
+          return el;
+        }
+        // fallthrough to rect if pts missing
+        el = document.createElementNS(_NS, 'rect');
+        el.setAttribute('x', -hw); el.setAttribute('y', -hh);
+        el.setAttribute('width', cfg.w||100); el.setAttribute('height', cfg.h||80);
+        el.setAttribute('rx', '3');
+        return el;
       default:
         var pontosMap = {
           tri:     '0,' + (-hh) + ' ' + hw + ',' + hh + ' ' + (-hw) + ',' + hh,
@@ -14671,7 +14684,37 @@ var InfraConfigMapaUI = (function() {
   // ── Helpers de edição inline ─────────────────────────────
   function _bboxHW(cfg) {
     if (cfg.forma === 'circle') { var r = cfg.r || 40; return { hw: r, hh: r }; }
+    if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) {
+      var xs = cfg.pts.map(function(p){return p.x;}), ys = cfg.pts.map(function(p){return p.y;});
+      return { hw: (Math.max.apply(null,xs)-Math.min.apply(null,xs))/2,
+               hh: (Math.max.apply(null,ys)-Math.min.apply(null,ys))/2 };
+    }
     return { hw: (cfg.w || 100) / 2, hh: (cfg.h || 80) / 2 };
+  }
+
+  function _pontosParaLivre(cfg) {
+    var hw = cfg.forma==='circle'?(cfg.r||40):(cfg.w||100)/2;
+    var hh = cfg.forma==='circle'?(cfg.r||40):(cfg.h||80)/2;
+    var formasPts = {
+      tri:     [[0,-hh],[hw,hh],[-hw,hh]],
+      hex:     (function(){var a=[];for(var i=0;i<6;i++){var ang=(-30+i*60)*Math.PI/180;a.push([hw*Math.cos(ang),hh*Math.sin(ang)]);}return a;})(),
+      trap:    [[-hw*0.7,-hh],[hw*0.7,-hh],[hw,hh],[-hw,hh]],
+      diamond: [[0,-hh],[hw,0],[0,hh],[-hw,0]],
+      pent:    (function(){var a=[];for(var i=0;i<5;i++){var ang=(-90+i*72)*Math.PI/180;a.push([hw*Math.cos(ang),hh*Math.sin(ang)]);}return a;})()
+    };
+    var raw = formasPts[cfg.forma];
+    if (!raw) raw = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]]; // rect fallback
+    if (cfg.forma === 'circle' || cfg.forma === 'ellipse') {
+      raw = [];
+      for (var i=0;i<12;i++){var a=(i/12)*2*Math.PI;raw.push([hw*Math.cos(a),hh*Math.sin(a)]);}
+    }
+    return raw.map(function(p){return{x:parseFloat(p[0].toFixed(1)),y:parseFloat(p[1].toFixed(1))};});
+  }
+
+  function _garantirLivreInfra(cfg) {
+    if (cfg.forma === 'livre') return;
+    cfg.pts   = _pontosParaLivre(cfg);
+    cfg.forma = 'livre';
   }
 
   function _svgIconeInline(f) {
@@ -14752,7 +14795,7 @@ var InfraConfigMapaUI = (function() {
     // Criar SVG
     var svgEl = document.createElementNS(_NS, 'svg');
     svgEl.setAttribute('id', 'cfg-mapa-svg');
-    svgEl.setAttribute('viewBox', '0 0 900 660');
+    svgEl.setAttribute('viewBox', '0 -30 900 690');
     svgEl.style.cssText = 'width:100%;height:100%;display:block;transform-origin:top left;';
     svgEl.innerHTML = _buildBgSvgContent();
 
@@ -14977,24 +15020,39 @@ var InfraConfigMapaUI = (function() {
     lbl.textContent = _modoEdicao.nome.substring(0, 12);
     g.appendChild(lbl);
 
-    // Handles de resize (8 pontos cardeais)
-    var HANDLES = [
-      { id:'nw', x:-hw, y:-hh }, { id:'n',  x:0,   y:-hh }, { id:'ne', x:hw,  y:-hh },
-      { id:'w',  x:-hw, y:0   },                              { id:'e',  x:hw,  y:0   },
-      { id:'sw', x:-hw, y:hh  }, { id:'s',  x:0,   y:hh  }, { id:'se', x:hw,  y:hh  }
-    ];
-    HANDLES.forEach(function(h) {
-      var c = document.createElementNS(_NS, 'circle');
-      c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
-      c.setAttribute('r', '6');
-      c.setAttribute('fill', '#fff');
-      c.setAttribute('stroke', '#4f46e5');
-      c.setAttribute('stroke-width', '2');
-      c.style.cursor = (h.id === 'n' || h.id === 's') ? 'ns-resize'
-                     : (h.id === 'e' || h.id === 'w') ? 'ew-resize' : 'nwse-resize';
-      c.setAttribute('data-ed-handle', h.id);
-      g.appendChild(c);
-    });
+    if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length >= 3) {
+      // Vértices arrastáveis para forma livre
+      cfg.pts.forEach(function(pt, idx) {
+        var vc = document.createElementNS(_NS, 'circle');
+        vc.setAttribute('cx', pt.x); vc.setAttribute('cy', pt.y);
+        vc.setAttribute('r', '6');
+        vc.setAttribute('fill', '#4f46e5');
+        vc.setAttribute('stroke', '#fff');
+        vc.setAttribute('stroke-width', '2');
+        vc.style.cursor = 'move';
+        vc.setAttribute('data-ed-vtx', String(idx));
+        g.appendChild(vc);
+      });
+    } else {
+      // Handles de resize (8 pontos cardeais)
+      var HANDLES = [
+        { id:'nw', x:-hw, y:-hh }, { id:'n',  x:0,   y:-hh }, { id:'ne', x:hw,  y:-hh },
+        { id:'w',  x:-hw, y:0   },                              { id:'e',  x:hw,  y:0   },
+        { id:'sw', x:-hw, y:hh  }, { id:'s',  x:0,   y:hh  }, { id:'se', x:hw,  y:hh  }
+      ];
+      HANDLES.forEach(function(h) {
+        var c = document.createElementNS(_NS, 'circle');
+        c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
+        c.setAttribute('r', '6');
+        c.setAttribute('fill', '#fff');
+        c.setAttribute('stroke', '#4f46e5');
+        c.setAttribute('stroke-width', '2');
+        c.style.cursor = (h.id === 'n' || h.id === 's') ? 'ns-resize'
+                       : (h.id === 'e' || h.id === 'w') ? 'ew-resize' : 'nwse-resize';
+        c.setAttribute('data-ed-handle', h.id);
+        g.appendChild(c);
+      });
+    }
 
     // Handle de rotação (acima do centro)
     var rotOffset = hh + 24;
@@ -15155,7 +15213,21 @@ var InfraConfigMapaUI = (function() {
           _inputInline('cfged-h',   'Altura') +
           _inputInline('cfged-rot', 'Rotação °') +
         '</div>' +
-        '<div style="padding:4px 8px 4px;display:flex;gap:5px;">' +
+        '<div style="padding:4px 8px 4px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
+          '<button onclick="InfraConfigMapaUI._espelharH()" data-bg-skip="1" ' +
+            'style="padding:5px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;" title="Espelhar horizontal">' +
+            '<span class="ms ms-sm">flip</span>Esp. H</button>' +
+          '<button onclick="InfraConfigMapaUI._espelharV()" data-bg-skip="1" ' +
+            'style="padding:5px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;" title="Espelhar vertical">' +
+            '<span class="ms ms-sm">flip</span>Esp. V</button>' +
+          '<button onclick="InfraConfigMapaUI._adicionarVertice()" data-bg-skip="1" ' +
+            'style="padding:5px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;" title="Adicionar vértice ao polígono">' +
+            '<span class="ms ms-sm">add_location_alt</span>+Vértice</button>' +
+          '<button onclick="InfraConfigMapaUI._iniciarMerge()" data-bg-skip="1" ' +
+            'style="padding:5px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;" title="Mesclar com outro espaço">' +
+            '<span class="ms ms-sm">merge_type</span>Mesclar</button>' +
+        '</div>' +
+        '<div style="padding:0 8px 4px;display:flex;gap:5px;">' +
           '<button onclick="InfraConfigMapaUI._restaurarPadrao()" data-bg-skip="1" ' +
             'style="flex:1;padding:5px 6px;background:none;border:1px solid #ca8a04;color:#854d0e;border-radius:5px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;box-sizing:border-box;">' +
             '<span class="ms ms-sm" style="font-size:14px;">restart_alt</span>Padrão</button>' +
@@ -15207,8 +15279,10 @@ var InfraConfigMapaUI = (function() {
     var h   = Math.max(20, getV('cfged-h')   || 60);
     var rot = getV('cfged-rot');
     cfg.cx = cx; cfg.cy = cy;
-    if (cfg.forma === 'circle') { cfg.r = Math.min(w, h) / 2; cfg.w = w; cfg.h = h; }
-    else { cfg.w = w; cfg.h = h; }
+    if (cfg.forma !== 'livre') {
+      if (cfg.forma === 'circle') { cfg.r = Math.min(w, h) / 2; cfg.w = w; cfg.h = h; }
+      else { cfg.w = w; cfg.h = h; }
+    }
     cfg.rotacao = ((rot % 360) + 360) % 360;
     _atualizarHandles();
   }
@@ -15529,6 +15603,7 @@ var InfraConfigMapaUI = (function() {
 
   // ── Editar posição (entra no modo inline) ────────────────
   function _editarPosicao(id) {
+    if (_mergeMode) { _completarMerge(id); return; }
     var espaco = _espacos.filter(function(e) { return e.id === id; })[0];
     if (!espaco) return;
     var temCfg = !!espaco.mapaConfig;
@@ -15736,6 +15811,98 @@ var InfraConfigMapaUI = (function() {
     });
   }
 
+  // ── Ferramentas de edição: Esp. H / Esp. V / +Vértice / Mesclar ──
+  function _espelharH() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg = _modoEdicao.cfg;
+    if (['rect','square','circle','ellipse'].indexOf(cfg.forma) !== -1) {
+      Toast.aviso('Forma simétrica — espelhar horizontal não tem efeito visual.'); return;
+    }
+    _garantirLivreInfra(cfg);
+    cfg.pts = cfg.pts.map(function(p){ return { x: -p.x, y: p.y }; });
+    _renderSidebarEdicao(); _atualizarHandles();
+    Toast.info('Espelhado horizontalmente.');
+  }
+
+  function _espelharV() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg = _modoEdicao.cfg;
+    if (['rect','square','circle','ellipse'].indexOf(cfg.forma) !== -1) {
+      Toast.aviso('Forma simétrica — espelhar vertical não tem efeito visual.'); return;
+    }
+    _garantirLivreInfra(cfg);
+    cfg.pts = cfg.pts.map(function(p){ return { x: p.x, y: -p.y }; });
+    _renderSidebarEdicao(); _atualizarHandles();
+    Toast.info('Espelhado verticalmente.');
+  }
+
+  function _adicionarVertice() {
+    if (!_modoEdicao || !_modoEdicao.cfg) return;
+    var cfg = _modoEdicao.cfg;
+    if (['circle','ellipse'].indexOf(cfg.forma) !== -1) {
+      Toast.aviso('Converta para outra forma antes de adicionar vértices.'); return;
+    }
+    _garantirLivreInfra(cfg);
+    if (!cfg.pts || cfg.pts.length < 2) { Toast.aviso('Forma inválida para vértice.'); return; }
+    var bestDist = -1, bestIdx = 0;
+    for (var i = 0; i < cfg.pts.length; i++) {
+      var p0 = cfg.pts[i], p1 = cfg.pts[(i+1) % cfg.pts.length];
+      var d = Math.sqrt(Math.pow(p1.x-p0.x,2) + Math.pow(p1.y-p0.y,2));
+      if (d > bestDist) { bestDist = d; bestIdx = i; }
+    }
+    var a = cfg.pts[bestIdx], b = cfg.pts[(bestIdx+1) % cfg.pts.length];
+    cfg.pts.splice(bestIdx+1, 0, { x: parseFloat(((a.x+b.x)/2).toFixed(1)), y: parseFloat(((a.y+b.y)/2).toFixed(1)) });
+    _renderSidebarEdicao(); _atualizarHandles();
+    Toast.info('Vértice adicionado — arraste para posicionar.');
+  }
+
+  function _iniciarMerge() {
+    if (!_modoEdicao) { Toast.aviso('Selecione um espaço para mesclar.'); return; }
+    _mergeMode    = true;
+    _mergeSource  = _modoEdicao.id;
+    _cancelarEdicao();
+    Toast.aviso('Clique no segundo espaço para mesclar.');
+  }
+
+  function _completarMerge(idAlvo) {
+    var idFonte = _mergeSource;
+    _mergeMode = false; _mergeSource = null;
+    if (!idFonte || idFonte === idAlvo) { _renderMapa(); return; }
+    var esp1 = _espacos.filter(function(e){return e.id===idFonte;})[0];
+    var esp2 = _espacos.filter(function(e){return e.id===idAlvo;})[0];
+    if (!esp1 || !esp2 || !esp1.mapaConfig || !esp2.mapaConfig) {
+      Toast.aviso('Ambos os espaços precisam estar posicionados no mapa.'); _renderMapa(); return;
+    }
+    function _absPts(esp) {
+      var c = esp.mapaConfig, cx = c.cx||0, cy = c.cy||0;
+      if (c.forma === 'livre' && c.pts) return c.pts.map(function(p){return{x:p.x+cx,y:p.y+cy};});
+      var pts = _pontosParaLivre(c);
+      return pts.map(function(p){return{x:p.x+cx,y:p.y+cy};});
+    }
+    var allAbs = _absPts(esp1).concat(_absPts(esp2));
+    var newCx = allAbs.reduce(function(s,p){return s+p.x;},0)/allAbs.length;
+    var newCy = allAbs.reduce(function(s,p){return s+p.y;},0)/allAbs.length;
+    var relPts = allAbs.map(function(p){return{x:parseFloat((p.x-newCx).toFixed(1)),y:parseFloat((p.y-newCy).toFixed(1))};});
+    var novaCfg = { forma:'livre', cx: parseFloat(newCx.toFixed(1)), cy: parseFloat(newCy.toFixed(1)), pts: relPts, rotacao: 0 };
+
+    // Atualizar cache local
+    var idx1 = _espacos.findIndex(function(e){return e.id===idFonte;});
+    var idx2 = _espacos.findIndex(function(e){return e.id===idAlvo;});
+    if (idx1 >= 0) _espacos[idx1] = Object.assign({}, _espacos[idx1], { mapaConfig: novaCfg });
+    if (idx2 >= 0) _espacos[idx2] = Object.assign({}, _espacos[idx2], { mapaConfig: null });
+    _renderMapa(); _renderSidebar();
+    Toast.info('Mesclando "' + esp1.nome + '" + "' + esp2.nome + '"… salvando.');
+
+    // Persistir
+    GAS.admin.salvarMapaEspaco({ id: idFonte, mapaConfig: novaCfg }, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao salvar forma mesclada.'); return; }
+      GAS.admin.salvarMapaEspaco({ id: idAlvo, mapaConfig: null }, function(r2) {
+        if (!r2 || !r2.ok) Toast.aviso('Forma salva mas erro ao limpar posição de "' + esp2.nome + '".');
+        else Toast.sucesso('"' + esp1.nome + '" e "' + esp2.nome + '" mesclados. "' + esp2.nome + '" ficou sem posição.');
+      });
+    }, function(err) { Toast.erro('Erro: ' + (err && err.message||'')); });
+  }
+
   // ── Zoom / pan ───────────────────────────────────────────
   function zoom(d) {
     _zoom = Math.max(0.4, Math.min(5, _zoom + d * 0.2));
@@ -15773,6 +15940,12 @@ var InfraConfigMapaUI = (function() {
       }
       // ── Modo edição inline ──
       if (_modoEdicao && _modoEdicao.cfg) {
+        var vtxIdx = e.target && e.target.getAttribute && e.target.getAttribute('data-ed-vtx');
+        if (vtxIdx !== null && vtxIdx !== undefined && vtxIdx !== '') {
+          e.stopPropagation(); e.preventDefault();
+          _modoEdicao.drag = { type: 'vtx', vtxIdx: parseInt(vtxIdx, 10) };
+          return;
+        }
         var handle = e.target && e.target.getAttribute && e.target.getAttribute('data-ed-handle');
         if (handle) {
           e.stopPropagation(); e.preventDefault();
@@ -15813,6 +15986,17 @@ var InfraConfigMapaUI = (function() {
         e.preventDefault();
         var drag = _modoEdicao.drag;
         var cfg  = _modoEdicao.cfg;
+        if (drag.type === 'vtx') {
+          var lp = _localEdPt(e);
+          if (cfg.pts && cfg.pts[drag.vtxIdx]) {
+            cfg.pts[drag.vtxIdx] = { x: parseFloat(lp.x.toFixed(1)), y: parseFloat(lp.y.toFixed(1)) };
+            var vg = document.getElementById('cfg-ed-shape-g');
+            if (vg) { var sh2 = vg.querySelector('polygon'); if (sh2) sh2.setAttribute('points', cfg.pts.map(function(p){return p.x+','+p.y;}).join(' ')); }
+            var vc = vg && vg.querySelector('[data-ed-vtx="'+drag.vtxIdx+'"]');
+            if (vc) { vc.setAttribute('cx', lp.x.toFixed(1)); vc.setAttribute('cy', lp.y.toFixed(1)); }
+          }
+          return;
+        }
         if (drag.type === 'body') {
           var svgP = _svgPt(e);
           cfg.cx = drag.origCX + (svgP.x - drag.startX);
@@ -15876,6 +16060,10 @@ var InfraConfigMapaUI = (function() {
     _removerDoMapaInline:  _removerDoMapaInline,
     _onInputInlineChange:  _onInputInlineChange,
     _onNomeChange:         _onNomeChange,
+    _espelharH:            _espelharH,
+    _espelharV:            _espelharV,
+    _adicionarVertice:     _adicionarVertice,
+    _iniciarMerge:         _iniciarMerge,
     _importarTodosDoMapa:   _importarTodosDoMapa,
     _desfazer:              _desfazer,
     _restaurarPadrao:       _restaurarPadrao,

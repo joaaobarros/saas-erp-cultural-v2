@@ -94,7 +94,13 @@ var ConfigAdminService = (function () {
       .filter(function(r) { return r.emails.length > 0; });
 
     // Validar horário local do espaço contra horário global de funcionamento
-    var _horLocal = espaco.horarioFuncionamento || { abertura: '08:00', fechamento: '22:00' };
+    // Se não fornecido, herdar do config global para não falhar a validação
+    var _horLocal = espaco.horarioFuncionamento || (function() {
+      try {
+        var _g = SistemaConfigService.getReservaHorario();
+        return { abertura: _g.inicio || _g.abertura || '08:00', fechamento: _g.fim || _g.fechamento || '22:00' };
+      } catch(e) { return { abertura: '08:00', fechamento: '22:00' }; }
+    })();
     (function() {
       function _hMin(s) {
         if (!s) return -1;
