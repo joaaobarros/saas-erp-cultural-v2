@@ -47,6 +47,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 3. clasp deploy (deploymentId fixo)
 4. Smoke test → atualizar PROGRESS.md + roteiro-auditoria.md
 5. git add docs PROGRESS.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
+6. git push                                                          ← SEMPRE ao final
 ```
 
 ---

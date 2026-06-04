@@ -19,6 +19,7 @@
 4. Smoke test no browser
 5. Atualizar PROGRESS.md + roteiro-auditoria.md
 6. git add PROGRESS.md docs/auditoria/roteiro-auditoria.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
+7. git push                                                          ← SEMPRE ao final
 ```
 
 ---

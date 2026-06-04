@@ -240,6 +240,7 @@ BtnGuard.auditar()  // deve retornar "✅ todos protegidos"
    - Atualizar "⚡ RETOMANDO AGORA?" com número do deploy e resumo
    - Marcar bugs como CORRIGIDO nas 3 seções do roteiro
 6. git add PROGRESS.md docs/auditoria/roteiro-auditoria.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
+7. git push                                                          ← SEMPRE ao final
 ```
 
 ---
