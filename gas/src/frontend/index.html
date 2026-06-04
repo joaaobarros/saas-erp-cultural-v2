@@ -4140,15 +4140,15 @@ select.form-control { cursor: pointer; }
                     <span class="ms ms-sm" style="font-size:13px;">date_range</span> Lote
                   </button>
                 </div>
-                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._checarConflito();">
+                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._checarConflito();">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora início *</label>
-                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
+                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora término *</label>
-                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
+                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Nome da Ação / Evento *</label>
@@ -17318,8 +17318,65 @@ var ReservasUI = (function() {
     });
   }
 
+  function _atualizarDisponibilidadeSalas() {
+    var sel = document.getElementById('res-sala');
+    if (!sel || !_espacosCatalogo.length) return;
+    var data = (document.getElementById('res-data').value||'').trim();
+    var ini  = (document.getElementById('res-hora-ini').value||'').trim();
+    var fim  = (document.getElementById('res-hora-fim').value||'').trim();
+    var editId = (document.getElementById('res-id').value||'').trim();
+    var valorAtual = sel.value;
+
+    if (!data || !ini || !fim) {
+      sel.innerHTML = '<option value="">Selecione o espaço…</option>' +
+        _espacosCatalogo.map(function(e) {
+          return '<option value="' + escaparHtml(e.id) + '"' + (e.id === valorAtual ? ' selected' : '') + '>'
+            + escaparHtml(e.nome) + ' (cap. ' + (e.capacidade||'?') + ')</option>';
+        }).join('');
+      return;
+    }
+
+    var toMin = function(t) { var p = t.split(':'); return parseInt(p[0],10)*60 + parseInt(p[1]||0,10); };
+    var iIni = toMin(ini), iFim = toMin(fim);
+    var livres = [], ocupados = [];
+    _espacosCatalogo.forEach(function(e) {
+      var conflito = (_listaCacheTotal||[]).some(function(r) {
+        if (r.id === editId) return false;
+        if (r.sala !== e.id || r.data !== data) return false;
+        if (['cancelado','concluido'].indexOf((r.status||'').toLowerCase()) !== -1) return false;
+        var rIni = toMin(r.horaInicio||'00:00'), rFim = toMin(r.horaTermino||'00:00');
+        return iIni < rFim && iFim > rIni;
+      });
+      (conflito ? ocupados : livres).push(e);
+    });
+
+    var mkOpt = function(e) {
+      return '<option value="' + escaparHtml(e.id) + '"' + (e.id === valorAtual ? ' selected' : '') + '>'
+        + escaparHtml(e.nome) + ' (cap. ' + (e.capacidade||'?') + ')</option>';
+    };
+    var html = '<option value="">Selecione o espaço…</option>';
+    if (livres.length)   html += '<optgroup label="Disponíveis">'          + livres.map(mkOpt).join('')   + '</optgroup>';
+    if (ocupados.length) html += '<optgroup label="Ocupados neste horário">' + ocupados.map(mkOpt).join('') + '</optgroup>';
+    sel.innerHTML = html;
+  }
+
+  function _loteSincronizarForm(primeiraData, horaIni, horaFim) {
+    var elData = document.getElementById('res-data');
+    var elIni  = document.getElementById('res-hora-ini');
+    var elFim  = document.getElementById('res-hora-fim');
+    if (elData && primeiraData) elData.value = primeiraData;
+    if (elIni  && horaIni)     elIni.value  = horaIni;
+    if (elFim  && horaFim)     elFim.value  = horaFim;
+    _atualizarDisponibilidadeSalas();
+    _checarConflito();
+    _carregarDisponibilidadeItens();
+    _atualizarTempoAtividade();
+  }
+
   return { carregar:carregar, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
     _checarConflito:         _checarConflito,
+    _atualizarDisponibilidadeSalas: _atualizarDisponibilidadeSalas,
+    _loteSincronizarForm:    _loteSincronizarForm,
     verificarDisponibilidade:verificarDisponibilidade,
     popularSelectEspacos:popularSelectEspacos, aoSelecionarEspaco:aoSelecionarEspaco,
     setModo:setModo, _aplicarFiltroLista:_aplicarFiltroLista,
@@ -17917,6 +17974,7 @@ var ReservasUI = (function() {
               if (!r2||!r2.ok) { Toast.erro((r2&&r2.error&&r2.error.message)||'Erro.'); return; }
               var tot = (r2.data && r2.data.total) || nVal;
               Toast.sucesso(tot+' reserva(s) criada(s). '+nConf+' data(s) ignorada(s) por conflito.');
+              if (typeof ReservasUI !== 'undefined' && ReservasUI._loteSincronizarForm) ReservasUI._loteSincronizarForm(datasFinais[0], dadosParc.horaInicio, dadosParc.horaTermino);
               if (typeof ReservasUI !== 'undefined' && ReservasUI.carregar) ReservasUI.carregar();
             }, function(err) { showLoader(false); Toast.erro('Erro: '+(err.message||err)); });
           };
@@ -17934,6 +17992,7 @@ var ReservasUI = (function() {
         var msg = total+' reserva(s) criada(s) em lote com sucesso.';
         if (d.conflitosIgnorados) msg += ' ('+d.conflitosIgnorados+' data(s) ignorada(s) por conflito.)';
         Toast.sucesso(msg);
+        if (typeof ReservasUI !== 'undefined' && ReservasUI._loteSincronizarForm) ReservasUI._loteSincronizarForm(datasFinais[0], dados.horaInicio, dados.horaTermino);
         if (typeof ReservasUI !== 'undefined' && ReservasUI.carregar) ReservasUI.carregar();
       }, function(err) { showLoader(false); Toast.erro('Erro: '+(err.message||err)); });
     }
