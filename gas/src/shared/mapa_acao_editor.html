@@ -13,7 +13,13 @@ var MapaAcaoEditorUI = (function() {
   var _container     = null;   // elemento DOM onde o editor é montado
   var _cbSalvar      = null;   // callback(mapaAtualizado)
   var _cbVoltar      = null;   // callback()
-  var _selId         = null;   // id do elemento selecionado
+  var _selId         = null;   // id do elemento principal selecionado
+  var _selIds        = [];     // todos os ids selecionados (multi-select)
+  var _clipboard     = null;   // [{...}] copiado via Ctrl+C
+  var _rubberBand    = null;   // estado de seleção por borracha (drag no fundo)
+  var _spaceDown     = false;  // Space pressionado = modo pan
+  var _kbHandler     = null;   // referência keydown para cleanup
+  var _kbUpHandler   = null;   // referência keyup para cleanup
   var _drag          = null;   // estado de drag { type, startX, startY, ... }
   var _pan           = null;   // estado de pan do canvas
   var _vb            = { x:0, y:0, w:900, h:660 }; // viewBox
@@ -102,6 +108,131 @@ var MapaAcaoEditorUI = (function() {
     { id:'outros',     label:'Outros',           icone:'category',        cats:['outro'],                                                                                    abertaDefault:false }
   ];
   var _paletteSecState = {};
+
+  // ── Helpers multi-select ─────────────────────────────────
+  function _isInputFocused() {
+    var tag = document.activeElement && document.activeElement.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+
+  function _deselecionarTudo() {
+    _selId  = null;
+    _selIds = [];
+    _renderElementos();
+    _renderProps();
+  }
+
+  function _bboxSelecao() {
+    var ids = _selIds.length > 0 ? _selIds : (_selId ? [_selId] : []);
+    if (ids.length === 0) return null;
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    ids.forEach(function(id) {
+      var el = (_mapa.elementos || []).filter(function(e) { return e.id === id; })[0];
+      if (!el) return;
+      var cfg = el.mapaConfig || {};
+      var hw = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
+      var hh = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
+      if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) { var bb = _bboxPts(cfg.pts); hw = bb.hw; hh = bb.hh; }
+      var cx = cfg.cx || 0, cy = cfg.cy || 0;
+      if (cx - hw < minX) minX = cx - hw;
+      if (cy - hh < minY) minY = cy - hh;
+      if (cx + hw > maxX) maxX = cx + hw;
+      if (cy + hh > maxY) maxY = cy + hh;
+    });
+    if (!isFinite(minX)) return null;
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
+  }
+
+  // ── Copy / Paste / Delete múltiplo ──────────────────────
+  function _copySelected() {
+    var ids = _selIds.length > 0 ? _selIds : (_selId ? [_selId] : []);
+    if (ids.length === 0) return;
+    _clipboard = ids.map(function(id) {
+      var el = (_mapa.elementos || []).filter(function(e) { return e.id === id; })[0];
+      return el ? JSON.parse(JSON.stringify(el)) : null;
+    }).filter(Boolean);
+    _setStatus(_clipboard.length + ' elemento(s) copiado(s) — Ctrl+V para colar.');
+  }
+
+  function _pasteClipboard() {
+    if (!_clipboard || _clipboard.length === 0) { _setStatus('Nada copiado para colar.'); return; }
+    var ts = new Date().getTime();
+    var novos = _clipboard.map(function(src, i) {
+      var novo = JSON.parse(JSON.stringify(src));
+      novo.id = 'el_' + (ts + i) + '_cp';
+      if (novo.mapaConfig) { novo.mapaConfig.cx = (novo.mapaConfig.cx || 0) + 30; novo.mapaConfig.cy = (novo.mapaConfig.cy || 0) + 30; }
+      return novo;
+    });
+    _mapa.elementos = (_mapa.elementos || []).concat(novos);
+    _selIds = novos.map(function(e) { return e.id; });
+    _selId  = _selIds[_selIds.length - 1] || null;
+    _renderCanvas();
+    _renderProps();
+    _renderPalette();
+    _setStatus(novos.length + ' elemento(s) colado(s).');
+  }
+
+  function _excluirSelecionados() {
+    var ids = _selIds.length > 0 ? _selIds : (_selId ? [_selId] : []);
+    if (ids.length === 0) return;
+    _mapa.elementos = (_mapa.elementos || []).filter(function(e) { return ids.indexOf(e.id) === -1; });
+    _selId  = null;
+    _selIds = [];
+    _renderElementos();
+    _renderProps();
+    _renderPalette();
+    _setStatus(ids.length > 1 ? ids.length + ' elementos removidos.' : 'Elemento removido.');
+  }
+
+  function _selTodos() {
+    var visiveis = (_mapa.elementos || []).filter(function(el) { return _layerVisivel(el.layerId); });
+    _selIds = visiveis.map(function(e) { return e.id; });
+    _selId  = _selIds.length > 0 ? _selIds[_selIds.length - 1] : null;
+    _renderElementos();
+    _renderProps();
+    _setStatus(_selIds.length + ' elementos selecionados.');
+  }
+
+  // ── Multi-select drag/resize/rotate inicialização ────────
+  function _startMultiMove(e) {
+    var pt = _svgPt(e);
+    var origPos = {};
+    _selIds.forEach(function(id) {
+      var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+      if (el2 && el2.mapaConfig) origPos[id] = { cx: el2.mapaConfig.cx || 0, cy: el2.mapaConfig.cy || 0 };
+    });
+    _drag = { type: 'multi-move', startX: pt.x, startY: pt.y, origPositions: origPos };
+  }
+
+  function _startMultiResize(e, handleId, bbox) {
+    e.stopPropagation();
+    var pt = _svgPt(e);
+    var origPos = {}, origSz = {}, origPts = {};
+    _selIds.forEach(function(id) {
+      var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+      if (!el2 || !el2.mapaConfig) return;
+      var cfg = el2.mapaConfig;
+      origPos[id] = { cx: cfg.cx || 0, cy: cfg.cy || 0 };
+      origSz[id]  = { w: cfg.w || 80, h: cfg.h || 60, r: cfg.r || 40 };
+      if (cfg.pts) origPts[id] = JSON.parse(JSON.stringify(cfg.pts));
+    });
+    _drag = { type: 'multi-resize', handle: handleId, startX: pt.x, startY: pt.y,
+              bbox: JSON.parse(JSON.stringify(bbox)), origPositions: origPos, origSizes: origSz, origPtsMaps: origPts };
+  }
+
+  function _startMultiRotate(e, bbox) {
+    e.stopPropagation();
+    var pt = _svgPt(e);
+    var origPos = {}, origRot = {};
+    _selIds.forEach(function(id) {
+      var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+      if (!el2 || !el2.mapaConfig) return;
+      origPos[id] = { cx: el2.mapaConfig.cx || 0, cy: el2.mapaConfig.cy || 0 };
+      origRot[id] = el2.mapaConfig.rotacao || 0;
+    });
+    _drag = { type: 'multi-rotate', startAngle: Math.atan2(pt.y - bbox.cy, pt.x - bbox.cx) * 180 / Math.PI,
+              bbox: JSON.parse(JSON.stringify(bbox)), origPositions: origPos, origRotations: origRot };
+  }
 
   // SVG ícones para palette (viewBox "-15 -15 30 30")
   function _iconeCategoria(catId, cor) {
@@ -478,6 +609,10 @@ var MapaAcaoEditorUI = (function() {
     _cbSalvar      = cbSalvar;
     _cbVoltar      = cbVoltar;
     _selId         = null;
+    _selIds        = [];
+    _clipboard     = null;
+    _rubberBand    = null;
+    _spaceDown     = false;
     _drag          = null;
     _pan           = null;
     _activeLayerId  = null;
@@ -792,7 +927,35 @@ var MapaAcaoEditorUI = (function() {
     var panel = document.getElementById('mae-props-panel');
     if (!panel) return;
 
-    if (!_selId) { panel.innerHTML = '<p style="font-size:12px;color:var(--muted,#94a3b8);">Clique em um elemento para editar.</p>'; return; }
+    // Multi-seleção
+    if (_selIds.length > 1) {
+      panel.innerHTML =
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);margin-bottom:10px;letter-spacing:.06em;">Seleção múltipla</div>' +
+        '<div style="padding:10px;background:var(--surface2,#f8fafc);border-radius:8px;margin-bottom:12px;">' +
+          '<div style="font-size:14px;font-weight:700;color:var(--color-primary,#4f46e5);text-align:center;margin-bottom:4px;">' + _selIds.length + '</div>' +
+          '<div style="font-size:11px;color:var(--text2,#64748b);text-align:center;">elementos selecionados</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">' +
+          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._copySelected()" style="padding:6px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;">' +
+            '<span class="ms ms-sm">content_copy</span> Copiar seleção <span style="font-size:10px;color:var(--muted,#94a3b8);">(Ctrl+C)</span>' +
+          '</button>' +
+          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._pasteClipboard()" style="padding:6px;background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;">' +
+            '<span class="ms ms-sm">content_paste</span> Colar <span style="font-size:10px;color:var(--muted,#94a3b8);">(Ctrl+V)</span>' +
+          '</button>' +
+          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._excluirSelecionados()" style="padding:6px;background:none;border:1px solid var(--color-error,#ef4444);color:var(--color-error,#ef4444);border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px;">' +
+            '<span class="ms ms-sm">delete</span> Excluir selecionados <span style="font-size:10px;">(Del)</span>' +
+          '</button>' +
+        '</div>' +
+        '<div style="padding:8px;background:#f0fdf4;border-radius:6px;font-size:10px;color:#166534;line-height:2;">' +
+          '<b>Arrastar grupo</b> → mover todos<br>' +
+          '<b>Alças da caixa</b> → redimensionar grupo<br>' +
+          '<b>⊙ acima</b> → girar grupo<br>' +
+          '<b>Escape</b> → desselecionar' +
+        '</div>';
+      return;
+    }
+
+    if (!_selId) { panel.innerHTML = '<p style="font-size:12px;color:var(--muted,#94a3b8);">Clique em um elemento para editar.<br><br><span style="font-size:10px;color:var(--muted,#94a3b8);">Shift+clique → multi-select<br>Arrastar fundo → rubber-band<br>Ctrl+A → selecionar todos<br>Ctrl+C/V → copiar/colar<br>Del → excluir</span></p>'; return; }
 
     var el = (_mapa.elementos || []).filter(function(e) { return e.id === _selId; })[0];
     if (!el) { panel.innerHTML = ''; return; }
@@ -1045,7 +1208,7 @@ var MapaAcaoEditorUI = (function() {
       }
 
       // Forma
-      var shape = _criarForma(cfg, cor, !layerOculta && el.id === _selId, fillOpacity, strokeOpacity);
+      var shape = _criarForma(cfg, cor, !layerOculta && _selIds.indexOf(el.id) !== -1, fillOpacity, strokeOpacity);
       g2.appendChild(shape);
 
       // Ícone de objeto sobreposto
@@ -1090,8 +1253,27 @@ var MapaAcaoEditorUI = (function() {
         g2.appendChild(dimTxt);
       }
 
-      // Alças de seleção (só quando visível e selecionado)
-      if (!layerOculta && el.id === _selId) {
+      // Alças de seleção / outline multi-select
+      var _isSelPrimary = !layerOculta && el.id === _selId;
+      var _isInSel      = !layerOculta && _selIds.indexOf(el.id) !== -1;
+      var _soloSelect   = _isSelPrimary && _selIds.length === 1;
+
+      // Outline leve para elementos em multi-seleção que não são o primário
+      if (_isInSel && !_isSelPrimary) {
+        var _hwSel = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
+        var _hhSel = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
+        if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) { var _bbS = _bboxPts(cfg.pts); _hwSel = _bbS.hw; _hhSel = _bbS.hh; }
+        var _selOutline = document.createElementNS(_NS, 'rect');
+        _selOutline.setAttribute('x', -_hwSel - 3); _selOutline.setAttribute('y', -_hhSel - 3);
+        _selOutline.setAttribute('width', _hwSel * 2 + 6); _selOutline.setAttribute('height', _hhSel * 2 + 6);
+        _selOutline.setAttribute('fill', 'none'); _selOutline.setAttribute('stroke', '#6366f1');
+        _selOutline.setAttribute('stroke-width', '1.5'); _selOutline.setAttribute('stroke-dasharray', '5,3');
+        _selOutline.setAttribute('rx', '4'); _selOutline.style.pointerEvents = 'none';
+        g2.insertBefore(_selOutline, g2.firstChild);
+      }
+
+      // Alças de seleção completas (só para seleção simples)
+      if (_soloSelect) {
         var hw = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.w || 80) / 2;
         var hh = cfg.forma === 'circle' ? (cfg.r || 40) : (cfg.h || 60) / 2;
         if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) {
@@ -1179,6 +1361,92 @@ var MapaAcaoEditorUI = (function() {
       }
       g.appendChild(g2);
     });
+
+    _renderMultiSelectBox();
+  }
+
+  function _renderMultiSelectBox() {
+    var old = document.getElementById('mae-multi-box');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    if (!_edSvg || _selIds.length <= 1) return;
+
+    var bbox = _bboxSelecao();
+    if (!bbox || bbox.w <= 0 || bbox.h <= 0) return;
+
+    var pad = 10;
+    var bx = bbox.x - pad, by = bbox.y - pad, bw = bbox.w + pad*2, bh = bbox.h + pad*2;
+
+    var g = document.createElementNS(_NS, 'g');
+    g.setAttribute('id', 'mae-multi-box');
+
+    // Rect transparente de fundo para drag
+    var moveR = document.createElementNS(_NS, 'rect');
+    moveR.setAttribute('x', bx); moveR.setAttribute('y', by);
+    moveR.setAttribute('width', bw); moveR.setAttribute('height', bh);
+    moveR.setAttribute('fill', 'rgba(99,102,241,0.04)'); moveR.style.cursor = 'move';
+    moveR.addEventListener('mousedown', function(e) { e.stopPropagation(); _startMultiMove(e); });
+    g.appendChild(moveR);
+
+    // Borda tracejada
+    var border = document.createElementNS(_NS, 'rect');
+    border.setAttribute('x', bx); border.setAttribute('y', by);
+    border.setAttribute('width', bw); border.setAttribute('height', bh);
+    border.setAttribute('fill', 'none'); border.setAttribute('stroke', '#6366f1');
+    border.setAttribute('stroke-width', '1.5'); border.setAttribute('stroke-dasharray', '6,3');
+    border.setAttribute('rx', '4'); border.style.pointerEvents = 'none';
+    g.appendChild(border);
+
+    // 8 alças de resize
+    var MHLIST = [
+      {id:'nw',x:bx,      y:by,      cur:'nwse-resize'},
+      {id:'n', x:bx+bw/2, y:by,      cur:'ns-resize'  },
+      {id:'ne',x:bx+bw,   y:by,      cur:'nesw-resize' },
+      {id:'w', x:bx,      y:by+bh/2, cur:'ew-resize'   },
+      {id:'e', x:bx+bw,   y:by+bh/2, cur:'ew-resize'   },
+      {id:'sw',x:bx,      y:by+bh,   cur:'nesw-resize' },
+      {id:'s', x:bx+bw/2, y:by+bh,   cur:'ns-resize'  },
+      {id:'se',x:bx+bw,   y:by+bh,   cur:'nwse-resize' }
+    ];
+    MHLIST.forEach(function(h) {
+      var c = document.createElementNS(_NS, 'circle');
+      c.setAttribute('cx', h.x); c.setAttribute('cy', h.y); c.setAttribute('r', '5');
+      c.setAttribute('fill', '#fff'); c.setAttribute('stroke', '#6366f1'); c.setAttribute('stroke-width', '2');
+      c.style.cursor = h.cur;
+      (function(hid_, bbox_) {
+        c.addEventListener('mousedown', function(e) { _startMultiResize(e, hid_, bbox_); });
+      })(h.id, bbox);
+      g.appendChild(c);
+    });
+
+    // Linha e alça de rotação
+    var rotY = by - 22;
+    var rotLine = document.createElementNS(_NS, 'line');
+    rotLine.setAttribute('x1', bx+bw/2); rotLine.setAttribute('y1', by);
+    rotLine.setAttribute('x2', bx+bw/2); rotLine.setAttribute('y2', rotY + 6);
+    rotLine.setAttribute('stroke', '#6366f1'); rotLine.setAttribute('stroke-width', '1.5');
+    rotLine.setAttribute('stroke-dasharray', '3,2'); rotLine.style.pointerEvents = 'none';
+    g.appendChild(rotLine);
+
+    var rotH = document.createElementNS(_NS, 'circle');
+    rotH.setAttribute('cx', bx+bw/2); rotH.setAttribute('cy', rotY);
+    rotH.setAttribute('r', '6'); rotH.setAttribute('fill', '#6366f1');
+    rotH.setAttribute('stroke', '#fff'); rotH.setAttribute('stroke-width', '2');
+    rotH.style.cursor = 'crosshair';
+    (function(bbox_) {
+      rotH.addEventListener('mousedown', function(e) { _startMultiRotate(e, bbox_); });
+    })(bbox);
+    g.appendChild(rotH);
+
+    // Badge com contagem
+    var badge = document.createElementNS(_NS, 'text');
+    badge.setAttribute('x', bx + bw - 2); badge.setAttribute('y', by - 2);
+    badge.setAttribute('text-anchor', 'end'); badge.setAttribute('font-size', '9');
+    badge.setAttribute('fill', '#6366f1'); badge.setAttribute('font-weight', '700');
+    badge.style.pointerEvents = 'none';
+    badge.textContent = _selIds.length + ' selecionados';
+    g.appendChild(badge);
+
+    _edSvg.appendChild(g);
   }
 
   function _criarForma(cfg, cor, selecionado, fillOpacity, strokeOpacity) {
@@ -1263,22 +1531,33 @@ var MapaAcaoEditorUI = (function() {
     _updateViewBox();
   }
 
-  // ── IO — drag, pan, seleção ──────────────────────────────
+  // ── IO — drag, pan, seleção, keyboard ───────────────────
+  function _isFundoSvg(e) {
+    return e.target === wrap || e.target === _edSvg ||
+      e.target.id === 'mae-elems-g' ||
+      (e.target.tagName === 'rect' && e.target.getAttribute('fill') === '#f8fafc') ||
+      (e.target.tagName === 'rect' && e.target.getAttribute('fill') && e.target.getAttribute('fill').indexOf('url') === 0);
+  }
+
+  var wrap; // declarado aqui para _isFundoSvg
+
   function _initIO() {
-    var wrap = document.getElementById('mae-canvas-wrap');
+    wrap = document.getElementById('mae-canvas-wrap');
     if (!wrap) return;
 
     wrap.addEventListener('mousedown', function(e) {
-      if (e.target === wrap || e.target === _edSvg ||
-          e.target.id === 'mae-elems-g' ||
-          (e.target.tagName === 'rect' && e.target.getAttribute('fill') === '#f8fafc') ||
-          (e.target.tagName === 'rect' && e.target.getAttribute('fill') && e.target.getAttribute('fill').indexOf('url') === 0)) {
-        _selId = null;
-        _renderElementos();
-        _renderProps();
-        _startPan(e);
+      if (_isFundoSvg(e)) {
+        if (_spaceDown) {
+          _startPan(e);
+        } else {
+          var svgP = _svgPt(e);
+          _rubberBand = { startClientX: e.clientX, startClientY: e.clientY,
+                          svgX: svgP.x, svgY: svgP.y, active: false, svgRect: null,
+                          curSvgX: svgP.x, curSvgY: svgP.y };
+        }
       }
     });
+
     wrap.addEventListener('wheel', function(e) {
       e.preventDefault();
       _zoom(e.deltaY < 0 ? 1 : -1);
@@ -1295,6 +1574,34 @@ var MapaAcaoEditorUI = (function() {
         menu.style.display = 'none';
       }
     });
+
+    // Keyboard
+    _kbHandler = function(e) {
+      if (_isInputFocused()) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (_selId || _selIds.length > 0) { _excluirSelecionados(); e.preventDefault(); }
+      } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        _copySelected(); e.preventDefault();
+      } else if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        _pasteClipboard(); e.preventDefault();
+      } else if (e.ctrlKey && (e.key === 'a' || e.key === 'A')) {
+        _selTodos(); e.preventDefault();
+      } else if (e.key === 'Escape') {
+        _deselecionarTudo();
+      } else if (e.code === 'Space' && !_spaceDown) {
+        _spaceDown = true;
+        if (wrap) wrap.style.cursor = 'grab';
+        e.preventDefault();
+      }
+    };
+    _kbUpHandler = function(e) {
+      if (e.code === 'Space') {
+        _spaceDown = false;
+        if (wrap && !_pan) wrap.style.cursor = 'default';
+      }
+    };
+    document.addEventListener('keydown', _kbHandler);
+    document.addEventListener('keyup',   _kbUpHandler);
   }
 
   // ── CORRIGIDO: conversão de coordenadas usando API nativa SVG ──────────
@@ -1333,11 +1640,29 @@ var MapaAcaoEditorUI = (function() {
       return;
     }
     e.stopPropagation();
-    _selecionarEl(elId);
-    var pt  = _svgPt(e);
-    var el  = (_mapa.elementos || []).filter(function(el) { return el.id === elId; })[0];
+
+    // Shift+click: toggle na multi-seleção sem iniciar drag
+    if (e.shiftKey) {
+      _selecionarEl(elId, true);
+      return;
+    }
+
+    var pt = _svgPt(e);
+
+    // Clicou num elemento já na multi-seleção → multi-drag
+    if (_selIds.length > 1 && _selIds.indexOf(elId) !== -1) {
+      _startMultiMove(e);
+      return;
+    }
+
+    // Seleção simples + drag
+    _selId  = elId;
+    _selIds = [elId];
+    var el  = (_mapa.elementos || []).filter(function(x) { return x.id === elId; })[0];
     var cfg = el ? (el.mapaConfig || {}) : {};
-    _drag = { type: 'move', elId: elId, startX: pt.x, startY: pt.y, origCX: cfg.cx || 0, origCY: cfg.cy || 0 };
+    _drag   = { type: 'move', elId: elId, startX: pt.x, startY: pt.y, origCX: cfg.cx || 0, origCY: cfg.cy || 0 };
+    _renderElementos();
+    _renderProps();
   }
 
   function _startResize(e, elId, handleId) {
@@ -1356,6 +1681,30 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _onMouseMove(e) {
+    // ── Rubber-band ──
+    if (_rubberBand && !_drag && !_pan) {
+      var rdx = e.clientX - _rubberBand.startClientX, rdy = e.clientY - _rubberBand.startClientY;
+      if (!_rubberBand.active && (Math.abs(rdx) > 5 || Math.abs(rdy) > 5)) {
+        _rubberBand.active = true;
+        var rb = document.createElementNS(_NS, 'rect');
+        rb.setAttribute('fill', 'rgba(99,102,241,0.08)');
+        rb.setAttribute('stroke', '#6366f1'); rb.setAttribute('stroke-width', '1');
+        rb.setAttribute('stroke-dasharray', '4,2'); rb.style.pointerEvents = 'none';
+        _rubberBand.svgRect = rb;
+        _edSvg.appendChild(rb);
+      }
+      if (_rubberBand.active && _rubberBand.svgRect) {
+        var rsvg = _svgPt(e);
+        _rubberBand.curSvgX = rsvg.x; _rubberBand.curSvgY = rsvg.y;
+        var rx1 = Math.min(_rubberBand.svgX, rsvg.x), ry1 = Math.min(_rubberBand.svgY, rsvg.y);
+        var rx2 = Math.max(_rubberBand.svgX, rsvg.x), ry2 = Math.max(_rubberBand.svgY, rsvg.y);
+        _rubberBand.svgRect.setAttribute('x', rx1); _rubberBand.svgRect.setAttribute('y', ry1);
+        _rubberBand.svgRect.setAttribute('width', rx2 - rx1); _rubberBand.svgRect.setAttribute('height', ry2 - ry1);
+      }
+      return;
+    }
+
+    // ── Pan ──
     if (_pan && !_drag) {
       var rect   = _edSvg ? _edSvg.getBoundingClientRect() : { width: 900, height: 660 };
       var scaleX = _pan.vbOrig.w / rect.width;
@@ -1365,9 +1714,81 @@ var MapaAcaoEditorUI = (function() {
       _updateViewBox();
       return;
     }
-    if (!_drag) return;
 
+    if (!_drag) return;
     var pt = _svgPt(e);
+
+    // ── Multi-move ──
+    if (_drag.type === 'multi-move') {
+      var mdx = pt.x - _drag.startX, mdy = pt.y - _drag.startY;
+      _selIds.forEach(function(id) {
+        var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+        if (!el2 || !_drag.origPositions[id]) return;
+        el2.mapaConfig = el2.mapaConfig || {};
+        el2.mapaConfig.cx = _drag.origPositions[id].cx + mdx;
+        el2.mapaConfig.cy = _drag.origPositions[id].cy + mdy;
+      });
+      _renderElementos();
+      return;
+    }
+
+    // ── Multi-resize ──
+    if (_drag.type === 'multi-resize') {
+      var b = _drag.bbox;
+      var mrDx = pt.x - _drag.startX, mrDy = pt.y - _drag.startY;
+      var h = _drag.handle;
+      var scX = 1, scY = 1;
+      if (b.w > 0) {
+        if (h==='e'||h==='ne'||h==='se') scX = Math.max(0.1, (b.w + mrDx*2) / b.w);
+        if (h==='w'||h==='nw'||h==='sw') scX = Math.max(0.1, (b.w - mrDx*2) / b.w);
+      }
+      if (b.h > 0) {
+        if (h==='s'||h==='se'||h==='sw') scY = Math.max(0.1, (b.h + mrDy*2) / b.h);
+        if (h==='n'||h==='ne'||h==='nw') scY = Math.max(0.1, (b.h - mrDy*2) / b.h);
+      }
+      _selIds.forEach(function(id) {
+        var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+        if (!el2 || !_drag.origPositions[id] || !_drag.origSizes[id]) return;
+        var cfg2 = el2.mapaConfig = el2.mapaConfig || {};
+        var op = _drag.origPositions[id], os = _drag.origSizes[id];
+        cfg2.cx = b.cx + (op.cx - b.cx) * scX;
+        cfg2.cy = b.cy + (op.cy - b.cy) * scY;
+        cfg2.w  = Math.max(20, os.w * scX);
+        cfg2.h  = Math.max(20, os.h * scY);
+        if (cfg2.forma === 'circle') cfg2.r = Math.min(cfg2.w, cfg2.h) / 2;
+        if (cfg2.forma === 'livre' && cfg2.pts && _drag.origPtsMaps && _drag.origPtsMaps[id]) {
+          var opp = _drag.origPtsMaps[id];
+          var obb = _bboxPts(opp);
+          if (obb.hw > 0 && obb.hh > 0) {
+            cfg2.pts = opp.map(function(p) { return { x: p.x * (cfg2.w / (obb.hw*2)), y: p.y * (cfg2.h / (obb.hh*2)) }; });
+          }
+        }
+      });
+      _renderElementos();
+      return;
+    }
+
+    // ── Multi-rotate ──
+    if (_drag.type === 'multi-rotate') {
+      var bRot = _drag.bbox;
+      var curA = Math.atan2(pt.y - bRot.cy, pt.x - bRot.cx) * 180 / Math.PI;
+      var delta = curA - _drag.startAngle;
+      var deltaRad = delta * Math.PI / 180;
+      _selIds.forEach(function(id) {
+        var el2 = (_mapa.elementos || []).filter(function(x) { return x.id === id; })[0];
+        if (!el2 || !_drag.origPositions[id]) return;
+        var cfg2 = el2.mapaConfig = el2.mapaConfig || {};
+        var op = _drag.origPositions[id];
+        var relX = op.cx - bRot.cx, relY = op.cy - bRot.cy;
+        cfg2.cx = bRot.cx + relX * Math.cos(deltaRad) - relY * Math.sin(deltaRad);
+        cfg2.cy = bRot.cy + relX * Math.sin(deltaRad) + relY * Math.cos(deltaRad);
+        cfg2.rotacao = (((_drag.origRotations[id] || 0) + delta) % 360 + 360) % 360;
+      });
+      _renderElementos();
+      return;
+    }
+
+    // ── Move / Resize / Rotate / Vertex (single) ──
     var el = (_mapa.elementos || []).filter(function(el) { return el.id === _drag.elId; })[0];
     if (!el) return;
 
@@ -1417,12 +1838,42 @@ var MapaAcaoEditorUI = (function() {
     _drag = null;
     _pan  = null;
     var wrap = document.getElementById('mae-canvas-wrap');
-    if (wrap) wrap.style.cursor = 'grab';
+    if (wrap) wrap.style.cursor = _spaceDown ? 'grab' : 'default';
+
+    if (_rubberBand) {
+      if (_rubberBand.active) {
+        if (_rubberBand.svgRect && _rubberBand.svgRect.parentNode) _rubberBand.svgRect.parentNode.removeChild(_rubberBand.svgRect);
+        var sx1 = Math.min(_rubberBand.svgX, _rubberBand.curSvgX || _rubberBand.svgX);
+        var sy1 = Math.min(_rubberBand.svgY, _rubberBand.curSvgY || _rubberBand.svgY);
+        var sx2 = Math.max(_rubberBand.svgX, _rubberBand.curSvgX || _rubberBand.svgX);
+        var sy2 = Math.max(_rubberBand.svgY, _rubberBand.curSvgY || _rubberBand.svgY);
+        _selIds = [];
+        (_mapa.elementos || []).forEach(function(el) {
+          if (!_layerVisivel(el.layerId)) return;
+          var cfg = el.mapaConfig || {}, cx = cfg.cx || 0, cy = cfg.cy || 0;
+          if (cx >= sx1 && cx <= sx2 && cy >= sy1 && cy <= sy2) _selIds.push(el.id);
+        });
+        _selId = _selIds.length > 0 ? _selIds[_selIds.length - 1] : null;
+      } else {
+        // Clique simples no fundo: desseleciona
+        _selId = null; _selIds = [];
+      }
+      _rubberBand = null;
+      _renderElementos();
+      _renderProps();
+    }
   }
 
   // ── Ações do usuário ─────────────────────────────────────
-  function _selecionarEl(elId) {
-    _selId = elId;
+  function _selecionarEl(elId, shiftKey) {
+    if (shiftKey) {
+      var idx = _selIds.indexOf(elId);
+      if (idx === -1) { _selIds.push(elId); _selId = elId; }
+      else { _selIds.splice(idx, 1); _selId = _selIds.length > 0 ? _selIds[_selIds.length - 1] : null; }
+    } else {
+      _selId  = elId;
+      _selIds = [elId];
+    }
     _renderElementos();
     _renderProps();
   }
@@ -1533,13 +1984,7 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _excluirElemento() {
-    if (!_selId) return;
-    _mapa.elementos = (_mapa.elementos || []).filter(function(e) { return e.id !== _selId; });
-    _selId = null;
-    _renderElementos();
-    _renderProps();
-    _renderPalette();
-    _setStatus('Elemento removido.');
+    _excluirSelecionados();
   }
 
   // ── Helpers geométricos ──────────────────────────────────
@@ -2172,6 +2617,10 @@ var MapaAcaoEditorUI = (function() {
   function _voltar() {
     document.removeEventListener('fullscreenchange', _onFullscreenChange);
     document.removeEventListener('webkitfullscreenchange', _onFullscreenChange);
+    document.removeEventListener('mousemove', _onMouseMove);
+    document.removeEventListener('mouseup',   _onMouseUp);
+    if (_kbHandler)   { document.removeEventListener('keydown', _kbHandler);   _kbHandler   = null; }
+    if (_kbUpHandler) { document.removeEventListener('keyup',   _kbUpHandler); _kbUpHandler = null; }
     if (_cbVoltar) _cbVoltar();
   }
 
@@ -2193,6 +2642,11 @@ var MapaAcaoEditorUI = (function() {
     _propChange:        _propChange,
     _propPosChange:     _propPosChange,
     _excluirElemento:   _excluirElemento,
+    _excluirSelecionados: _excluirSelecionados,
+    _copySelected:      _copySelected,
+    _pasteClipboard:    _pasteClipboard,
+    _selTodos:          _selTodos,
+    _deselecionarTudo:  _deselecionarTudo,
     _ativarLayer:       _ativarLayer,
     _toggleLayer:       _toggleLayer,
     _novaLayerForm:     _novaLayerForm,

@@ -24,6 +24,8 @@ var MapaEditorUI = (function() {
   var _edPanX    = 0;
   var _edPanY    = 0;
   var _edDragPan = null;
+  var _clipboard    = null; // cfg copiado via Ctrl+C
+  var _edKbHandler  = null; // referência para removeEventListener
 
   // ── Figuras predefinidas ────────────────────────────────
   var _FORMAS = [
@@ -209,6 +211,7 @@ var MapaEditorUI = (function() {
   }
 
   function fechar() {
+    if (_edKbHandler) { document.removeEventListener('keydown', _edKbHandler); _edKbHandler = null; }
     var el = document.getElementById('mapa-editor-overlay');
     if (el) el.parentNode.removeChild(el);
     _edSvg = null; _drag = null;
@@ -275,7 +278,10 @@ var MapaEditorUI = (function() {
               '<b>Ctrl + alça lateral</b> → só aquele lado<br>' +
               '<b>Shift + canto</b> → só aquele canto<br>' +
               '<b>⊙ circular</b> → girar livremente<br>' +
-              '<b>Arrastar figura</b> → mover' +
+              '<b>Arrastar figura</b> → mover<br>' +
+              '<b>Ctrl+C</b> → copiar forma<br>' +
+              '<b>Ctrl+V</b> → colar forma (+30px)<br>' +
+              '<b>Delete / Backspace</b> → remover' +
             '</div>' +
           '</div>' +
 
@@ -331,14 +337,14 @@ var MapaEditorUI = (function() {
       '</div>' +
 
       // ─── Status bar ───
-      '<div style="padding:7px 16px;background:var(--surface,#fff);border-top:1px solid var(--border,#e2e8f0);font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;">' +
-        'Clique em uma figura para adicioná-la · ' +
+      '<div id="ed-statusbar" style="padding:7px 16px;background:var(--surface,#fff);border-top:1px solid var(--border,#e2e8f0);font-size:11px;color:var(--muted,#94a3b8);flex-shrink:0;display:flex;align-items:center;gap:12px;">' +
+        '<span>Clique em uma figura para adicioná-la · ' +
         '<b>Arrastar</b> → mover · ' +
-        '<b>Alças ○</b> → redimensionar simétrico · ' +
-        '<b>Ctrl/Shift + alça lateral</b> → só esse lado · ' +
-        '<b>Shift + canto</b> → só esse canto · ' +
+        '<b>Alças ○</b> → redimensionar · ' +
         '<b>⊙</b> → girar · ' +
-        '<b>Editar vértices</b> → forma livre' +
+        '<b>Ctrl+C/V</b> → copiar/colar · ' +
+        '<b>Delete</b> → remover</span>' +
+        '<span id="ed-status-msg" style="margin-left:auto;color:var(--color-primary,#4f46e5);font-weight:600;transition:opacity .3s;"></span>' +
       '</div>';
 
     document.body.appendChild(ov);
@@ -779,6 +785,42 @@ var MapaEditorUI = (function() {
       e.preventDefault();
       _edZoom(e.deltaY < 0 ? 1 : -1);
     }, { passive: false });
+
+    _edKbHandler = function(e) {
+      var tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (_cfg) { _removerDoMapa(); _edStatusMsg('Forma removida.'); e.preventDefault(); }
+      } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        if (_cfg) {
+          _clipboard = JSON.parse(JSON.stringify(_cfg));
+          _edStatusMsg('Forma copiada — Ctrl+V para colar.');
+        }
+        e.preventDefault();
+      } else if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        if (_clipboard) {
+          _cfg = JSON.parse(JSON.stringify(_clipboard));
+          _cfg.cx = (_cfg.cx || 450) + 30;
+          _cfg.cy = (_cfg.cy || 330) + 30;
+          var remBtn = document.getElementById('ed-btn-remover');
+          if (remBtn) remBtn.style.display = 'flex';
+          _renderShape();
+          _atualizarPaleteSel();
+          _edStatusMsg('Forma colada.');
+        }
+        e.preventDefault();
+      } else if (e.key === 'Escape') {
+        _cancelar();
+      }
+    };
+    document.addEventListener('keydown', _edKbHandler);
+  }
+
+  function _edStatusMsg(msg) {
+    var el = document.getElementById('ed-status-msg');
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(function() { if (el.textContent === msg) el.textContent = ''; }, 2500);
   }
 
   // ── Redimensionar ────────────────────────────────────────

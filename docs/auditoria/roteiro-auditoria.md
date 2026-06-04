@@ -3237,6 +3237,27 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 22 (2026-06-04) → SESSÃO 23
+
+### Estado atual: 281 problemas registrados · Deploy @550
+
+### O que foi corrigido nesta sessão (s22)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @550 | MAPA-MULTI | Multi-select + atalhos nos mapas de evento e infraestrutura — Shift+click, rubber-band, Ctrl+C/V, Delete, Space+drag, grupo resize/rotate |
+
+### Pendentes desta sessão / próxima ação
+- Continuar auditoria de módulos conforme roteiro
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 21 (2026-06-04) → SESSÃO 22
 
 ### Estado atual: 281 problemas registrados · Deploy @538
