@@ -13,7 +13,7 @@
  * Terminais: rejeitada, cancelada. devolvida ↔ submetida.
  *
  * OrcamentoGuard: bloqueia submissão se saldo insuficiente (rubricaId preenchido).
- * Portal do Contratado: tokenPortal gerado ao entrar em em_execucao.
+ * Portal do Contratado: tokenPortal gerado em submeter(); link enviado ao fornecedor por email.
  *
  * @depends modules/contratacoes/solicitacao_repository.gs (SolicitacaoRepository)
  *          modules/financeiro/orcamento_guard.gs (OrcamentoGuard)
@@ -113,6 +113,47 @@ var SolicitacaoEngine = (function () {
       objeto:      solicitacao.objeto,
       idSolicitacao: solicitacao.id
     });
+  }
+
+  function _garantirToken(s) {
+    if (s.tokenPortal) return;
+    s.tokenPortal = Utilities.getUuid();
+    var exp = new Date();
+    exp.setDate(exp.getDate() + 365);
+    s.tokenExpiracao = exp.toISOString();
+  }
+
+  function _enviarLinkPortal(s, orgId) {
+    var email = (s.credor && s.credor.email) || '';
+    if (!email && s.idContratado) {
+      try {
+        var c = ContratadoRepository.buscarPorId(orgId, s.idContratado);
+        if (c) email = c.email || '';
+      } catch (_) {}
+    }
+    if (!email) return;
+    var appUrl = '';
+    try { appUrl = ScriptApp.getService().getUrl() || ''; } catch (_) {}
+    if (!appUrl) return;
+    var link = appUrl + '?secao=processo&token=' + s.tokenPortal;
+    var orgCfg = {};
+    try { orgCfg = getOrgConfig() || {}; } catch (_) {}
+    var orgNome = orgCfg.nomeOrg || 'CCBJ';
+    var assunto = '[' + orgNome + '] Processo ' + (s.numero||'') + ' — acompanhe pelo portal';
+    var corpo = 'Olá,\n\n'
+      + 'Sua solicitação foi registrada no sistema do ' + orgNome + '.\n\n'
+      + 'Objeto: ' + (s.objeto||'') + '\n'
+      + 'Processo nº: ' + (s.numero||'') + '\n\n'
+      + 'Acompanhe o andamento do processo pelo link abaixo:\n'
+      + link + '\n\n'
+      + 'Este link é exclusivo para você e expira em 365 dias.\n\n'
+      + 'Atenciosamente,\n' + orgNome;
+    try {
+      GmailApp.sendEmail(email, assunto, corpo, { name: orgNome });
+      _audit('CONTRATACAO_LINK_PORTAL_ENVIADO', { id: s.id, email: email });
+    } catch (e) {
+      Logger.warn('solicitacao_engine', '_enviarLinkPortal', e.message);
+    }
   }
 
   function _transitarSolicitacao(solicitacao, novoStatus, emailOperador, dadosExtras) {
@@ -225,12 +266,14 @@ var SolicitacaoEngine = (function () {
       Logger.warn('solicitacao_engine', 'submeter', guardResult.aviso);
     }
 
+    _garantirToken(s);
     _transitarSolicitacao(s, STATUS_SOLICITACAO.SUBMETIDA, emailOperador, {});
     _emit('CONTRATACAO_NOTIFICACAO', {
       emails: s.emailGestor ? [s.emailGestor] : [],
       transicao: 'submetida_aguardando_gestor',
       numero: s.numero, objeto: s.objeto, idSolicitacao: s.id
     });
+    _enviarLinkPortal(s, orgId);
     return { ok: true, id: id, numero: s.numero };
   }
 
@@ -291,10 +334,10 @@ var SolicitacaoEngine = (function () {
     if (dados && dados.numeroNF)     s.numeroNF    = dados.numeroNF;
     if (dados && dados.idContratado) s.idContratado = dados.idContratado;
 
-    // Gerar token do portal para o contratado acompanhar
-    s.tokenPortal    = Utilities.getUuid();
-    var expiracao    = new Date();
-    expiracao.setDate(expiracao.getDate() + 90);
+    // Regenerar token ao iniciar execução (atualiza link e prazo de acesso)
+    _garantirToken(s);
+    var expiracao = new Date();
+    expiracao.setDate(expiracao.getDate() + 365);
     s.tokenExpiracao = expiracao.toISOString();
 
     _transitarSolicitacao(s, STATUS_SOLICITACAO.EM_EXECUCAO, emailOperador, {});
