@@ -16527,7 +16527,7 @@ var ReservasUI = (function() {
 
   var _espacosCatalogo = [];
 
-  function popularSelectEspacos(valorAtual) {
+  function popularSelectEspacos(valorAtual, onCarregado) {
     GAS.admin.listarEspacosPublicos(function(r) {
       _espacosCatalogo = (r && r.ok && Array.isArray(r.data)) ? r.data.filter(function(e){ return e.aceitaReserva !== false; }) : [];
       var sel = document.getElementById('res-sala');
@@ -16538,6 +16538,7 @@ var ReservasUI = (function() {
             escaparHtml(e.nome) + ' (cap. ' + (e.capacidade||'?') + ')</option>';
         }).join('');
       if (valorAtual) aoSelecionarEspaco(sel);
+      if (onCarregado) onCarregado();
     }, function() {});
   }
 
@@ -16568,7 +16569,7 @@ var ReservasUI = (function() {
   function abrirForm(dados) {
     var card = document.getElementById('reservas-form-card');
     document.getElementById('res-id').value        = dados && dados.id || '';
-    popularSelectEspacos(dados && dados.sala || '');
+    popularSelectEspacos(dados && dados.sala || '', function() { _atualizarDisponibilidadeSalas(); });
     document.getElementById('res-data').value      = dados && dados.data || '';
     document.getElementById('res-hora-ini').value  = dados && dados.horaInicio || '';
     document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';

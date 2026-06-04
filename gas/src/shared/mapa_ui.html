@@ -539,68 +539,14 @@ var MapaUI=(function(){
     el.parentNode.removeChild(el);
   }
 
-  // ─── Modal: Solicitar Reserva ───────────────────────────────
+  // ─── Solicitar Reserva — delega ao form completo do ReservasUI ──
   function solicitarReserva(id){
-    var info=_statusMap[id]||{id:id,nome:'Espaço'};
-    var data=_getDataAtual();
-    _abrirModal(
-      '<div class="mapa-modal-header">'+
-        '<span class="ms ms-sm" style="color:var(--color-primary)">event_available</span>'+
-        '<strong>Solicitar Reserva</strong>'+
-        '<span class="mapa-modal-espaco">'+escaparHtml(info.nome||'')+'</span>'+
-        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="mapa-modal-close">&#x2715;</button>'+
-      '</div>'+
-      '<div class="mapa-modal-body">'+
-        '<div class="form-group">'+
-          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Nome da Ação *</label>'+
-          '<input id="mr-nome" type="text" class="form-control" placeholder="Ex: Ensaio Grupo Flor do Cerrado" autofocus>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-          '<div class="form-group">'+
-            '<label style="font-size:12px;font-weight:600;color:var(--text2)">Hora Início *</label>'+
-            '<input id="mr-ini" type="time" class="form-control">'+
-          '</div>'+
-          '<div class="form-group">'+
-            '<label style="font-size:12px;font-weight:600;color:var(--text2)">Hora Término *</label>'+
-            '<input id="mr-fim" type="time" class="form-control">'+
-          '</div>'+
-        '</div>'+
-        '<div class="form-group">'+
-          '<label style="font-size:12px;font-weight:600;color:var(--text2)">Data *</label>'+
-          '<input id="mr-data" type="date" class="form-control" value="'+escaparHtml(data)+'">'+
-        '</div>'+
-      '</div>'+
-      '<div class="mapa-modal-footer">'+
-        '<button id="mr-btn-salvar" class="btn btn-primary" style="flex:1">'+
-          '<span class="ms ms-sm">save</span> Solicitar Reserva</button>'+
-        '<button onclick="MapaUI.fecharModal()" data-bg-skip="1" class="btn btn-secondary">Cancelar</button>'+
-      '</div>'
-    );
-
-    var btnSalvar=document.getElementById('mr-btn-salvar');
-    if(!btnSalvar)return;
-    btnSalvar.addEventListener('click',function(){
-      var nome=  (document.getElementById('mr-nome') ||{}).value||'';
-      var ini=   (document.getElementById('mr-ini')  ||{}).value||'';
-      var fim=   (document.getElementById('mr-fim')  ||{}).value||'';
-      var dataR= (document.getElementById('mr-data') ||{}).value||data;
-      if(!nome.trim()){Toast.aviso('Informe o nome da ação.');return;}
-      if(!ini||!fim){Toast.aviso('Informe os horários de início e término.');return;}
-      if(ini>=fim){Toast.aviso('O horário de término deve ser após o início.');return;}
-      BtnGuard.wrap(btnSalvar,'Salvando…',function(done){
-        var dados={sala:id,nomeAcao:nome.trim(),data:dataR,horaInicio:ini,horaTermino:fim};
-        GAS.reservas.criar(dados,function(r){
-          done();
-          if(!r||!r.ok){Toast.erro((r&&r.mensagem)||'Erro ao criar reserva.');return;}
-          Toast.sucesso('Reserva solicitada com sucesso!');
-          fecharModal();
-          carregar(); // Atualiza mapa e timeline
-        },function(err){
-          done();
-          Toast.erro('Erro: '+((err&&err.message)||err));
-        });
-      });
-    });
+    var data = _getDataAtual();
+    fecharModal();
+    fecharPainel();
+    if (typeof ReservasUI !== 'undefined') {
+      ReservasUI.abrirForm({ sala: id, data: data });
+    }
   }
 
   // ─── Modal: Solicitar Chave ─────────────────────────────────

@@ -21,6 +21,7 @@ var MapaAcaoEditorUI = (function() {
   var _activeLayerId = null;   // camada ativa para novos elementos
   var _mergeMode     = false;  // aguardando 2º elemento para mesclar
   var _mergeSource   = null;   // id do 1º elemento no merge
+  var _escala        = null;   // { pixPorM: number, mostrarDimensoes: bool } ou null
 
   // ── Categorias de objetos ────────────────────────────────
   var _CATEGORIAS = [
@@ -482,6 +483,7 @@ var MapaAcaoEditorUI = (function() {
     _activeLayerId  = null;
     _paletteSecState = {};
     _vb             = { x: 0, y: 0, w: 900, h: 660 };
+    _escala         = _mapa.escala ? { pixPorM: _mapa.escala.pixPorM || 100, mostrarDimensoes: !!_mapa.escala.mostrarDimensoes } : null;
 
     // Define camada ativa como a primeira layer existente
     if (_mapa.layers && _mapa.layers.length > 0) {
@@ -489,6 +491,7 @@ var MapaAcaoEditorUI = (function() {
     }
 
     _renderEditor();
+    _atualizarBadgeEscala();
     _renderCanvas();
     _renderLayerSidebar();
     _renderPalette();
@@ -537,6 +540,11 @@ var MapaAcaoEditorUI = (function() {
           '<button id="mae-btn-fullscreen" data-bg-skip="1" onclick="MapaAcaoEditorUI._toggleFullscreen()" title="Tela cheia" ' +
             'style="background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);cursor:pointer;border-radius:6px;padding:6px 8px;display:flex;align-items:center;">' +
             '<span class="ms" style="font-size:18px;">fullscreen</span>' +
+          '</button>' +
+          // Botão escala real
+          '<button id="mae-btn-escala" data-bg-skip="1" onclick="MapaAcaoEditorUI._abrirModalEscala()" title="Configurar escala real" ' +
+            'style="background:var(--surface2,#f8fafc);border:1px solid var(--border,#e2e8f0);cursor:pointer;border-radius:6px;padding:6px 10px;font-size:13px;display:flex;align-items:center;gap:4px;">' +
+            '<span class="ms ms-sm">straighten</span><span id="mae-escala-badge"></span> Escala' +
           '</button>' +
           // Botão salvar
           '<button id="mae-btn-salvar" onclick="BtnGuard.wrap(\'mae-btn-salvar\',\'Salvando…\',MapaAcaoEditorUI._salvar)" style="background:var(--color-primary,#4f46e5);color:#fff;border:none;cursor:pointer;border-radius:6px;padding:6px 18px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:4px;">' +
@@ -864,12 +872,20 @@ var MapaAcaoEditorUI = (function() {
               formaOpts.map(function(f){return '<option value="'+f.v+'"'+(cfg.forma===f.v?' selected':'')+'>'+f.l+'</option>';}).join('') +
             '</select>' +
           '</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px;">' +
-            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Larg.</label>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:' + (_escala && _escala.pixPorM ? '2px' : '6px') + ';">' +
+            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Larg. (px)</label>' +
               '<input id="mae-prop-w" type="number" min="20" value="'+dispW+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propDimChange()"></div>' +
-            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Alt.</label>' +
+            '<div><label style="font-size:11px;color:var(--text2,#64748b);">Alt. (px)</label>' +
               '<input id="mae-prop-h" type="number" min="20" value="'+dispH+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propDimChange()"></div>' +
           '</div>' +
+          (_escala && _escala.pixPorM ?
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px;">' +
+              '<div><label style="font-size:11px;color:var(--muted,#94a3b8);">Larg. real (m)</label>' +
+                '<input id="mae-prop-wm" type="number" min="0.01" step="0.1" value="'+(dispW/_escala.pixPorM).toFixed(2)+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;background:var(--surface2,#f8fafc);" onchange="MapaAcaoEditorUI._propDimMetrosChange()"></div>' +
+              '<div><label style="font-size:11px;color:var(--muted,#94a3b8);">Alt. real (m)</label>' +
+                '<input id="mae-prop-hm" type="number" min="0.01" step="0.1" value="'+(dispH/_escala.pixPorM).toFixed(2)+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;background:var(--surface2,#f8fafc);" onchange="MapaAcaoEditorUI._propDimMetrosChange()"></div>' +
+            '</div>'
+          : '') +
           '<div style="margin-bottom:7px;">' +
             '<label style="font-size:11px;color:var(--text2,#64748b);">Rotação (°)</label>' +
             '<input id="mae-prop-rot" type="number" min="0" max="359" value="'+Math.round(cfg.rotacao||0)+'" style="width:100%;padding:5px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;" onchange="MapaAcaoEditorUI._propRotChange()">' +
@@ -944,7 +960,56 @@ var MapaAcaoEditorUI = (function() {
     _edSvg.appendChild(elemsG);
 
     _renderElementos();
+    _renderScaleBar();
     _updateViewBox();
+  }
+
+  function _renderScaleBar() {
+    if (!_edSvg || !_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    // Escolher unidade de comprimento visual agradável (60–200 SVG units)
+    var barM = 1;
+    var targets = [0.5,1,2,5,10,20,50,100];
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i] * ppm >= 60) { barM = targets[i]; break; }
+    }
+    var barPx = Math.min(barM * ppm, 200);
+    barM = barPx / ppm;
+    var label = barM >= 1 ? barM.toFixed(0) + 'm' : (barM * 100).toFixed(0) + 'cm';
+
+    var gSb = document.createElementNS(_NS, 'g');
+    gSb.setAttribute('id', 'mae-scale-bar');
+    var x = 18, y = 644;
+
+    var bgSb = document.createElementNS(_NS, 'rect');
+    bgSb.setAttribute('x', x - 6); bgSb.setAttribute('y', y - 13);
+    bgSb.setAttribute('width', String(barPx + 44)); bgSb.setAttribute('height', '20');
+    bgSb.setAttribute('rx', '4'); bgSb.setAttribute('fill', 'rgba(255,255,255,0.88)');
+    bgSb.setAttribute('stroke', 'rgba(0,0,0,.08)'); bgSb.setAttribute('stroke-width', '0.5');
+    gSb.appendChild(bgSb);
+
+    var line = document.createElementNS(_NS, 'line');
+    line.setAttribute('x1', String(x)); line.setAttribute('y1', String(y));
+    line.setAttribute('x2', String(x + barPx)); line.setAttribute('y2', String(y));
+    line.setAttribute('stroke', '#475569'); line.setAttribute('stroke-width', '2');
+    gSb.appendChild(line);
+
+    [[x, y-5, x, y+2],[x+barPx, y-5, x+barPx, y+2]].forEach(function(pts) {
+      var t = document.createElementNS(_NS, 'line');
+      t.setAttribute('x1', String(pts[0])); t.setAttribute('y1', String(pts[1]));
+      t.setAttribute('x2', String(pts[2])); t.setAttribute('y2', String(pts[3]));
+      t.setAttribute('stroke', '#475569'); t.setAttribute('stroke-width', '2');
+      gSb.appendChild(t);
+    });
+
+    var txt = document.createElementNS(_NS, 'text');
+    txt.setAttribute('x', String(x + barPx + 5)); txt.setAttribute('y', String(y + 1));
+    txt.setAttribute('font-size', '10'); txt.setAttribute('fill', '#475569');
+    txt.setAttribute('dominant-baseline', 'middle'); txt.setAttribute('font-weight', '600');
+    txt.textContent = label;
+    gSb.appendChild(txt);
+
+    _edSvg.appendChild(gSb);
   }
 
   function _renderElementos() {
@@ -1005,6 +1070,24 @@ var MapaAcaoEditorUI = (function() {
       txt.style.pointerEvents = 'none';
       txt.textContent = el.nome.length > 18 ? el.nome.substring(0, 16) + '…' : el.nome;
       g2.appendChild(txt);
+
+      // Label de dimensão real (quando escala ativa + mostrarDimensoes)
+      if (!layerOculta && _escala && _escala.mostrarDimensoes && _escala.pixPorM > 0) {
+        var ppmD = _escala.pixPorM;
+        var dimW = cfg.forma === 'circle' ? (cfg.r || 40) * 2 : (cfg.w || 80);
+        var dimH = cfg.forma === 'circle' ? (cfg.r || 40) * 2 : (cfg.h || 60);
+        if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) {
+          var bbD = _bboxPts(cfg.pts); dimW = bbD.hw * 2; dimH = bbD.hh * 2;
+        }
+        var dimTxt = document.createElementNS(_NS, 'text');
+        dimTxt.setAttribute('text-anchor', 'middle');
+        dimTxt.setAttribute('y', String(labelY + 12));
+        dimTxt.setAttribute('font-size', '9');
+        dimTxt.setAttribute('fill', '#94a3b8');
+        dimTxt.style.pointerEvents = 'none';
+        dimTxt.textContent = (dimW/ppmD).toFixed(1) + 'm×' + (dimH/ppmD).toFixed(1) + 'm';
+        g2.appendChild(dimTxt);
+      }
 
       // Alças de seleção (só quando visível e selecionado)
       if (!layerOculta && el.id === _selId) {
@@ -1657,6 +1740,14 @@ var MapaAcaoEditorUI = (function() {
       if(hV>0&&bb0.hh>0){var sy=cfg.h/(bb0.hh*2);cfg.pts=cfg.pts.map(function(p){return{x:p.x,y:p.y*sy};});}
     }
     el.mapaConfig=cfg;
+    // Sincronizar campos de metros se escala ativa
+    if (_escala && _escala.pixPorM) {
+      var ppmS = _escala.pixPorM;
+      var wmInp = document.getElementById('mae-prop-wm');
+      var hmInp = document.getElementById('mae-prop-hm');
+      if (wmInp) wmInp.value = ((cfg.w || 80) / ppmS).toFixed(2);
+      if (hmInp) hmInp.value = ((cfg.h || 60) / ppmS).toFixed(2);
+    }
     _renderElementos(); _setStatus('Dimensões atualizadas.');
   }
 
@@ -1922,8 +2013,133 @@ var MapaAcaoEditorUI = (function() {
     });
   }
 
+  // ── Escala Real ─────────────────────────────────────────
+  function _abrirModalEscala() {
+    var esc   = _escala || { pixPorM: 100, mostrarDimensoes: false };
+    var ativo = !!_escala;
+    var canvasW = (900 / esc.pixPorM).toFixed(1);
+    var canvasH = (660 / esc.pixPorM).toFixed(1);
+
+    var wrap = document.createElement('div');
+    wrap.id = 'mae-modal-escala-overlay';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;';
+    wrap.innerHTML =
+      '<div style="background:var(--surface,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;min-width:340px;max-width:440px;">' +
+        '<div style="font-size:15px;font-weight:700;color:var(--text,#1e293b);margin-bottom:16px;display:flex;align-items:center;gap:8px;">' +
+          '<span class="ms" style="font-size:20px;color:var(--color-primary,#4f46e5);">straighten</span> Escala Real' +
+        '</div>' +
+        '<div style="margin-bottom:14px;">' +
+          '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">' +
+            '<input id="mae-esc-ativo" type="checkbox"' + (ativo ? ' checked' : '') + ' onchange="MapaAcaoEditorUI._escalaToggleAtivo()" style="width:16px;height:16px;cursor:pointer;">' +
+            ' Ativar escala real' +
+          '</label>' +
+        '</div>' +
+        '<div id="mae-esc-config" style="' + (ativo ? '' : 'opacity:.4;pointer-events:none;') + '">' +
+          '<div style="margin-bottom:12px;">' +
+            '<label style="font-size:12px;color:var(--text2,#64748b);display:block;margin-bottom:5px;">1 metro equivale a quantas unidades SVG?</label>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<input id="mae-esc-ppm" type="number" min="1" max="900" value="' + esc.pixPorM + '" ' +
+                'oninput="MapaAcaoEditorUI._escalaUpdatePreview()" ' +
+                'style="width:90px;padding:6px 8px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;">' +
+              '<span style="font-size:12px;color:var(--text2,#64748b);">unidades SVG = 1m</span>' +
+            '</div>' +
+            '<div id="mae-esc-preview" style="font-size:11px;color:var(--muted,#94a3b8);margin-top:6px;background:var(--surface2,#f8fafc);border-radius:5px;padding:5px 8px;">' +
+              'Canvas total: ' + canvasW + ' m × ' + canvasH + ' m' +
+            '</div>' +
+          '</div>' +
+          '<div style="background:var(--surface2,#f8fafc);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--text2,#64748b);line-height:1.6;">' +
+            '<strong>Dica de calibração:</strong> Meça uma distância conhecida no mapa (ex: a largura do palco = 8 m). ' +
+            'Conte quantas unidades SVG ela ocupa (arraste um elemento e veja Larg. px no painel). ' +
+            'Divida: unidades ÷ metros = px/m.' +
+          '</div>' +
+          '<div style="margin-bottom:6px;">' +
+            '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">' +
+              '<input id="mae-esc-mostra-dim" type="checkbox"' + (esc.mostrarDimensoes ? ' checked' : '') + ' style="width:14px;height:14px;cursor:pointer;">' +
+              ' Exibir dimensões sobre os elementos' +
+            '</label>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button data-bg-skip="1" onclick="document.getElementById(\'mae-modal-escala-overlay\').remove()" ' +
+            'style="padding:7px 16px;border:1px solid var(--border,#e2e8f0);border-radius:7px;background:var(--surface,#fff);cursor:pointer;font-size:13px;">Cancelar</button>' +
+          '<button data-bg-skip="1" onclick="MapaAcaoEditorUI._aplicarEscala()" ' +
+            'style="padding:7px 16px;background:var(--color-primary,#4f46e5);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">Aplicar</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', function(e) { if (e.target === wrap) wrap.remove(); });
+  }
+
+  function _escalaToggleAtivo() {
+    var cb  = document.getElementById('mae-esc-ativo');
+    var cfg = document.getElementById('mae-esc-config');
+    if (cfg) cfg.style.cssText = (cb && cb.checked) ? '' : 'opacity:.4;pointer-events:none;';
+  }
+
+  function _escalaUpdatePreview() {
+    var ppm = parseFloat((document.getElementById('mae-esc-ppm') || {}).value) || 100;
+    var el  = document.getElementById('mae-esc-preview');
+    if (el) el.textContent = 'Canvas total: ' + (900/ppm).toFixed(1) + ' m × ' + (660/ppm).toFixed(1) + ' m';
+  }
+
+  function _aplicarEscala() {
+    var overlay = document.getElementById('mae-modal-escala-overlay');
+    var cbAtivo = document.getElementById('mae-esc-ativo');
+    if (!cbAtivo || !cbAtivo.checked) {
+      _escala = null;
+    } else {
+      var ppm    = parseFloat((document.getElementById('mae-esc-ppm') || {}).value) || 100;
+      var mostra = !!(document.getElementById('mae-esc-mostra-dim') || {}).checked;
+      _escala = { pixPorM: Math.max(1, ppm), mostrarDimensoes: mostra };
+    }
+    _mapa.escala = _escala ? JSON.parse(JSON.stringify(_escala)) : null;
+    if (overlay) overlay.remove();
+    _atualizarBadgeEscala();
+    _renderCanvas();
+    _renderProps();
+    _setStatus(_escala ? 'Escala: 1m = ' + _escala.pixPorM + ' un.' : 'Escala desativada.');
+  }
+
+  function _atualizarBadgeEscala() {
+    var badge = document.getElementById('mae-escala-badge');
+    if (!badge) return;
+    if (_escala && _escala.pixPorM) {
+      badge.textContent = '1m=' + _escala.pixPorM + 'un';
+      badge.style.cssText = 'background:#eef2ff;color:#4f46e5;border-radius:4px;padding:1px 4px;font-size:10px;font-weight:700;';
+    } else {
+      badge.textContent = '';
+      badge.style.cssText = '';
+    }
+  }
+
+  function _propDimMetrosChange() {
+    if (!_escala || !_escala.pixPorM) return;
+    var el  = _getSelEl(); if (!el) return;
+    var cfg = el.mapaConfig || {};
+    var ppm = _escala.pixPorM;
+    var wmV = parseFloat((document.getElementById('mae-prop-wm') || {}).value);
+    var hmV = parseFloat((document.getElementById('mae-prop-hm') || {}).value);
+    if (!isNaN(wmV) && wmV > 0) cfg.w = Math.max(20, wmV * ppm);
+    if (!isNaN(hmV) && hmV > 0) cfg.h = Math.max(20, hmV * ppm);
+    if (cfg.forma === 'circle') cfg.r = Math.min(cfg.w, cfg.h) / 2;
+    if (cfg.forma === 'livre' && cfg.pts && cfg.pts.length) {
+      var bb0 = _bboxPts(cfg.pts);
+      if (!isNaN(wmV) && wmV > 0 && bb0.hw > 0) { var sx = cfg.w/(bb0.hw*2); cfg.pts = cfg.pts.map(function(p){return{x:p.x*sx,y:p.y};}); }
+      if (!isNaN(hmV) && hmV > 0 && bb0.hh > 0) { var sy = cfg.h/(bb0.hh*2); cfg.pts = cfg.pts.map(function(p){return{x:p.x,y:p.y*sy};}); }
+    }
+    el.mapaConfig = cfg;
+    var wInp = document.getElementById('mae-prop-w');
+    var hInp = document.getElementById('mae-prop-h');
+    if (wInp) wInp.value = Math.round(cfg.w);
+    if (hInp) hInp.value = Math.round(cfg.h);
+    _renderElementos();
+    _setStatus('Dimensões reais atualizadas.');
+  }
+
   // ── Salvar e Voltar ──────────────────────────────────────
   function _salvar() {
+    _mapa.escala = _escala ? JSON.parse(JSON.stringify(_escala)) : null;
     if (_cbSalvar) _cbSalvar(JSON.parse(JSON.stringify(_mapa)));
   }
 
@@ -1969,10 +2185,15 @@ var MapaAcaoEditorUI = (function() {
     _espelharH:         _espelharH,
     _espelharV:         _espelharV,
     _adicionarVertice:  _adicionarVertice,
-    _iniciarMerge:      _iniciarMerge,
-    _propFormaChange:   _propFormaChange,
-    _propRotChange:     _propRotChange,
-    _propDimChange:     _propDimChange
+    _iniciarMerge:          _iniciarMerge,
+    _propFormaChange:       _propFormaChange,
+    _propRotChange:         _propRotChange,
+    _propDimChange:         _propDimChange,
+    _propDimMetrosChange:   _propDimMetrosChange,
+    _abrirModalEscala:      _abrirModalEscala,
+    _aplicarEscala:         _aplicarEscala,
+    _escalaToggleAtivo:     _escalaToggleAtivo,
+    _escalaUpdatePreview:   _escalaUpdatePreview
   };
 
 })();

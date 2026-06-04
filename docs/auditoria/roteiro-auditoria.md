@@ -3237,6 +3237,30 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 21 (2026-06-04) → SESSÃO 22
+
+### Estado atual: 281 problemas registrados · Deploy @538
+
+### O que foi corrigido nesta sessão (s21)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @519 | ESP-LOTE-SYNC | `_LoteUI.confirmar()`: após `criarLote` com sucesso, chama `ReservasUI._loteSincronizarForm(primeiraData, horaIni, horaFim)` — popula `res-data` e horas no form principal sem fechar o form |
+| @519 | ESP-DISP-SALAS | `_atualizarDisponibilidadeSalas()` — nova função em ReservasUI; agrupa dropdown `res-sala` em optgroups "Disponíveis" / "Ocupados neste horário" quando data+hora preenchidas; acionada por `onchange` de `res-data`, `res-hora-ini`, `res-hora-fim` e por `abrirForm` via callback de `popularSelectEspacos` |
+| @536 | MAPA-FORM-SIMPLES | `mapa_ui.solicitarReserva`: substituiu form simplificado por delegação ao `ReservasUI.abrirForm({sala,data})` completo; fecha painel+modal do mapa sem trocar o modo de visualização |
+| @538 | ESP-FORM-MODO | `reservas-form-card` movido para fora de `res-modo-lista` — form visível em qualquer aba (Lista/Agenda/Diagrama/Mapa) sem precisar trocar o modo; `popularSelectEspacos` recebe callback `onCarregado` para acionar `_atualizarDisponibilidadeSalas` após catálogo async carregar |
+
+### Pendentes desta sessão / próxima ação
+- Continuar auditoria de módulos conforme roteiro
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 20 (2026-06-04) → SESSÃO 21
 
 ### Estado atual: 281 problemas registrados · Deploy @518
@@ -3465,3 +3489,9 @@ mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações pr
 10. mod-34 FECHADO — todas as perguntas respondidas: ~~motorista~~, ~~veículos~~, ~~self-approval~~ (superadmin aprova tudo = intencional; CAR-15 registrado para papéis gestor/admin genéricos)
 11. **FIN-19** — Setor sai da Memória de Cálculo e vai para nível de Rubrica; consolidação dupla (global + por setor); FIN-01 corrigido no nível errado
 12. **FIN-20** — sistema de flags de operação configuráveis por rubrica (padrão geral): flags criadas dinamicamente no Admin, sem hardcode; casos confirmados: `voucher_uber`, `contratacao`, `compra_direta`, `pagamento`; FIN-18 é instância específica deste padrão
+
+---
+
+### HANDOFF Fase 71 (2026-06-04) — Escala Real nos Mapas
+
+**Fase 71 entregue** — Deploy @534. Funcionalidade de escala real implementada em ambos os editores de mapa. Auditoria de bugs pendente desta Fase 71: confirmar no browser que (a) barra de escala aparece com escala ativa, (b) labels de dimensão aparecem sobre elementos quando checkbox marcado, (c) campos metros funcionam bidirecionalmente, (d) escala persiste após salvar/recarregar. A auditoria de UX (APR-05 → aba Veículo) segue como próximo passo independente desta implementação.
