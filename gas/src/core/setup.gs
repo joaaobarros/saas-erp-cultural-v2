@@ -246,6 +246,7 @@ function inicializarSistema() {
   try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
   try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
   try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
+  try { setup_itens_almoxarifado_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_itens_almoxarifado: ' + e.message); }
 
   // Encargos trabalhistas — inicializa JSON e instala trigger anual
   try {
@@ -796,6 +797,256 @@ function setup_categorias_itens_iniciais() {
 
   Logger.info('setup', 'setup_categorias_itens_iniciais', 'Criadas: ' + criados + ' categorias.');
   return { criados: criados };
+}
+
+/**
+ * Seed: Itens do Almoxarifado — catálogo padrão CCBJ.
+ * Migrado do V1 catalogo_engine.gs (inicializarCatalogoPadrao).
+ * Idempotente: não cria se já existir item com o mesmo ID de semente.
+ * Executar via fase72_itens_almoxarifado_seed() no GAS Editor.
+ */
+function setup_itens_almoxarifado_iniciais() {
+  if (typeof ReservasItensRepository === 'undefined') return { criados: 0, msg: 'ReservasItensRepository indisponível.' };
+
+  var orgId = getOrgConfig().orgId;
+  var existentes = ReservasItensRepository.listarItens(orgId);
+  if (existentes.length > 0) return { criados: 0, msg: 'Catálogo já populado (' + existentes.length + ' itens).' };
+
+  var itensPadrao = [
+    // Transporte
+    { id:'ITEM-SEED-001', nome:'Van 20 lugares',          categoria:'transporte',       quantidadeTotal:2, localizacao:'Pátio',          descricao:'Van de 20 lugares para transporte de grupo' },
+    { id:'ITEM-SEED-002', nome:'Microônibus 35 lugares',  categoria:'transporte',       quantidadeTotal:1, localizacao:'Pátio',          descricao:'Microônibus para eventos e traslados' },
+    { id:'ITEM-SEED-003', nome:'Veículo de apoio',        categoria:'transporte',       quantidadeTotal:3, localizacao:'Pátio',          descricao:'Veículo de apoio operacional' },
+    // Alimentação / Insumo
+    { id:'ITEM-SEED-004', nome:'Kit lanche infantil',     categoria:'alimentacao',      quantidadeTotal:0, localizacao:'Copa',           descricao:'Kit lanche para público infantil' },
+    { id:'ITEM-SEED-005', nome:'Refeição adulto',         categoria:'alimentacao',      quantidadeTotal:0, localizacao:'Copa',           descricao:'Refeição para equipe e convidados' },
+    { id:'ITEM-SEED-006', nome:'Coffee break',            categoria:'alimentacao',      quantidadeTotal:0, localizacao:'Copa',           descricao:'Coffee break para reuniões e eventos' },
+    { id:'ITEM-SEED-007', nome:'Água mineral',            categoria:'alimentacao',      quantidadeTotal:0, localizacao:'Copa',           descricao:'Água mineral para eventos' },
+    // Estrutura técnica
+    { id:'ITEM-SEED-008', nome:'Palco pequeno (4×6m)',    categoria:'estrutura_tecnica',quantidadeTotal:1, localizacao:'Almoxarifado',   descricao:'Palco metálico pequeno' },
+    { id:'ITEM-SEED-009', nome:'Palco médio (6×8m)',      categoria:'estrutura_tecnica',quantidadeTotal:1, localizacao:'Almoxarifado',   descricao:'Palco metálico médio' },
+    { id:'ITEM-SEED-010', nome:'Sistema de sonorização P',categoria:'estrutura_tecnica',quantidadeTotal:2, localizacao:'Sala de Técnica',descricao:'Sistema de som para eventos pequenos' },
+    { id:'ITEM-SEED-011', nome:'Sistema de sonorização G',categoria:'estrutura_tecnica',quantidadeTotal:1, localizacao:'Sala de Técnica',descricao:'Sistema de som para grandes eventos' },
+    { id:'ITEM-SEED-012', nome:'Kit iluminação cênica',   categoria:'estrutura_tecnica',quantidadeTotal:2, localizacao:'Sala de Técnica',descricao:'Kit de iluminação para apresentações' },
+    { id:'ITEM-SEED-013', nome:'Gerador de energia',      categoria:'estrutura_tecnica',quantidadeTotal:1, localizacao:'Pátio',          descricao:'Gerador para áreas sem energia' },
+    // Camarim
+    { id:'ITEM-SEED-014', nome:'Camarim grande porte',    categoria:'camarim',          quantidadeTotal:2, localizacao:'Camarins',       descricao:'Camarim completo para grandes produções' },
+    { id:'ITEM-SEED-015', nome:'Camarim pequeno',         categoria:'camarim',          quantidadeTotal:3, localizacao:'Camarins',       descricao:'Camarim individual' },
+    { id:'ITEM-SEED-016', nome:'Kit camarim básico',      categoria:'camarim',          quantidadeTotal:0, localizacao:'Camarins',       descricao:'Espelho, cadeiras, mesa básica' },
+    // Material gráfico
+    { id:'ITEM-SEED-017', nome:'Banner padrão 120×180cm', categoria:'material_grafico', quantidadeTotal:0, localizacao:'Almoxarifado',   descricao:'Banner lona vinílica padrão' },
+    { id:'ITEM-SEED-018', nome:'Folder A4 (500 unidades)',categoria:'material_grafico', quantidadeTotal:0, localizacao:'Almoxarifado',   descricao:'Folder A4 frente e verso' },
+    { id:'ITEM-SEED-019', nome:'Cartaz A3',               categoria:'material_grafico', quantidadeTotal:0, localizacao:'Almoxarifado',   descricao:'Cartaz A3 para divulgação' },
+    { id:'ITEM-SEED-020', nome:'Adesivos',                categoria:'material_grafico', quantidadeTotal:0, localizacao:'Almoxarifado',   descricao:'Adesivos institucionais' },
+    // Equipamento audiovisual / informática
+    { id:'ITEM-SEED-021', nome:'Projetor multimídia',     categoria:'audiovisual',      quantidadeTotal:3, localizacao:'Sala de TI',     descricao:'Projetor HDMI Full HD' },
+    { id:'ITEM-SEED-022', nome:'Tela de projeção',        categoria:'audiovisual',      quantidadeTotal:3, localizacao:'Sala de TI',     descricao:'Tela retrátil 2m × 2m' },
+    { id:'ITEM-SEED-023', nome:'Câmera fotográfica',      categoria:'audiovisual',      quantidadeTotal:2, localizacao:'NArTE',          descricao:'Câmera para registro de eventos' },
+    { id:'ITEM-SEED-024', nome:'Notebook',                categoria:'informatica',      quantidadeTotal:4, localizacao:'Sala de TI',     descricao:'Notebook para uso em evento' }
+  ];
+
+  var agr = agora();
+  var criados = 0;
+  itensPadrao.forEach(function(dados) {
+    try {
+      ReservasItensRepository.salvarItem({
+        id:              dados.id,
+        orgId:           orgId,
+        nome:            dados.nome,
+        descricao:       dados.descricao,
+        quantidadeTotal: dados.quantidadeTotal,
+        localizacao:     dados.localizacao,
+        categoria:       dados.categoria,
+        criadoEm:        agr,
+        atualizadoEm:    agr
+      }, orgId);
+      criados++;
+    } catch(e) {
+      Logger.warn('setup', 'setup_itens_almoxarifado_iniciais', dados.nome + ': ' + e.message);
+    }
+  });
+
+  Logger.info('setup', 'setup_itens_almoxarifado_iniciais', 'Criados: ' + criados + ' itens.');
+  return { criados: criados };
+}
+
+/**
+ * Migração real dos itens cadastrados no V1.
+ *
+ * Estratégia em 3 camadas (tenta cada uma em ordem):
+ *   1. Planilha V1 CCBJ_ESPACOS.Itens  — buscada pelo nome no Drive
+ *   2. Arquivo almoxarifado.json no Drive (pasta CCBJ_DATA do V1)
+ *   3. Planilha CCBJ_MASTER.Itens (aba legada alternativa)
+ *
+ * COMO USAR no GAS Editor do V2:
+ *   fase72_migrar_itens_v1_automatico()
+ *
+ * COMO USAR com ID explícito (mais seguro):
+ *   fase72_migrar_itens_v1_por_id('ID_DA_PLANILHA_ESPACOS_V1')
+ *
+ * @returns {{ ok, importados, ignorados, erros, fonte }}
+ */
+function fase72_migrar_itens_v1_automatico() {
+  var orgId = getOrgConfig().orgId;
+  var agr   = agora();
+  var linhasV1 = [];
+  var fonte = '';
+
+  // ── Camada 1: Procura CCBJ_ESPACOS pelo nome no Drive ────────────────
+  try {
+    var iter = DriveApp.getFilesByName('CCBJ_ESPACOS');
+    if (iter.hasNext()) {
+      var ss = SpreadsheetApp.open(iter.next());
+      var aba = ss.getSheetByName('Itens');
+      if (aba && aba.getLastRow() > 1) {
+        linhasV1 = aba.getRange(2, 1, aba.getLastRow() - 1, 6).getValues();
+        fonte = 'CCBJ_ESPACOS.Itens (Drive)';
+      }
+    }
+  } catch(e) {
+    Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'CCBJ_ESPACOS: ' + e.message);
+  }
+
+  // ── Camada 2: almoxarifado.json na pasta CCBJ_DATA ───────────────────
+  if (linhasV1.length === 0) {
+    try {
+      var pastaIter = DriveApp.getFoldersByName('CCBJ_DATA');
+      if (pastaIter.hasNext()) {
+        var pasta    = pastaIter.next();
+        var fileIter = pasta.getFilesByName('almoxarifado.json');
+        if (fileIter.hasNext()) {
+          var conteudo = fileIter.next().getBlob().getDataAsString();
+          var itensObj = JSON.parse(conteudo);
+          if (Array.isArray(itensObj) && itensObj.length > 0) {
+            linhasV1 = itensObj; // array de objetos, tratado abaixo
+            fonte = 'CCBJ_DATA/almoxarifado.json';
+          }
+        }
+      }
+    } catch(e) {
+      Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'almoxarifado.json: ' + e.message);
+    }
+  }
+
+  // ── Camada 3: CCBJ_MASTER.Itens (aba legada) ─────────────────────────
+  if (linhasV1.length === 0) {
+    try {
+      var iterM = DriveApp.getFilesByName('CCBJ_MASTER');
+      if (iterM.hasNext()) {
+        var ssM = SpreadsheetApp.open(iterM.next());
+        var abaM = ssM.getSheetByName('Itens');
+        if (abaM && abaM.getLastRow() > 1) {
+          linhasV1 = abaM.getRange(2, 1, abaM.getLastRow() - 1, 6).getValues();
+          fonte = 'CCBJ_MASTER.Itens (Drive)';
+        }
+      }
+    } catch(e) {
+      Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'CCBJ_MASTER.Itens: ' + e.message);
+    }
+  }
+
+  if (linhasV1.length === 0)
+    return { ok: false, motivo: 'Nenhuma fonte V1 encontrada no Drive. Use fase72_migrar_itens_v1_por_id().' };
+
+  return _executarImportacaoItens(linhasV1, orgId, agr, fonte);
+}
+
+/**
+ * Migração com ID explícito da planilha V1 CCBJ_ESPACOS.
+ * Use quando a busca automática não encontrar (múltiplas planilhas homônimas, etc.)
+ *
+ * COMO USAR no GAS Editor do V1:
+ *   PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESPACOS')
+ *   → copie o ID retornado
+ *
+ * COMO USAR no GAS Editor do V2:
+ *   fase72_migrar_itens_v1_por_id('ID_AQUI')
+ *
+ * @param {string} sheetId — ID da planilha CCBJ_ESPACOS do V1
+ * @returns {{ ok, importados, ignorados, erros, fonte }}
+ */
+function fase72_migrar_itens_v1_por_id(sheetId) {
+  if (!sheetId) return { ok: false, motivo: 'sheetId obrigatório.' };
+
+  var orgId = getOrgConfig().orgId;
+  var agr   = agora();
+
+  try {
+    var ss  = SpreadsheetApp.openById(sheetId);
+    var aba = ss.getSheetByName('Itens');
+    if (!aba || aba.getLastRow() < 2)
+      return { ok: false, motivo: 'Aba "Itens" vazia ou inexistente na planilha ' + sheetId };
+
+    var linhas = aba.getRange(2, 1, aba.getLastRow() - 1, 6).getValues();
+    return _executarImportacaoItens(linhas, orgId, agr, 'CCBJ_ESPACOS[' + sheetId + '].Itens');
+  } catch(e) {
+    return { ok: false, motivo: e.message };
+  }
+}
+
+/**
+ * Helper interno: converte linhas/objetos V1 e salva em V2.
+ * @private
+ */
+function _executarImportacaoItens(linhasV1, orgId, agr, fonte) {
+  if (typeof ReservasItensRepository === 'undefined')
+    return { ok: false, motivo: 'ReservasItensRepository indisponível.' };
+
+  var importados = 0, ignorados = 0, erros = [];
+
+  linhasV1.forEach(function(raw) {
+    try {
+      var item;
+      if (Array.isArray(raw)) {
+        // Linha bruta: [ID Item, Nome, Categoria, Quantidade Total, Localização, Status]
+        var nomeRaw = String(raw[1] || '').trim();
+        if (!nomeRaw) { ignorados++; return; }
+        var locRaw = String(raw[4] || '').trim();
+        var loc = '';
+        try { loc = (typeof JSON.parse(locRaw) === 'object') ? '' : locRaw; } catch(e) { loc = locRaw; }
+        item = {
+          nome:            nomeRaw,
+          categoria:       String(raw[2] || '').trim(),
+          quantidadeTotal: Number(raw[3] || 0),
+          localizacao:     loc,
+          descricao:       ''
+        };
+      } else {
+        // Objeto (almoxarifado.json do V1)
+        var nomeObj = String(raw.nome || '').trim();
+        if (!nomeObj) { ignorados++; return; }
+        item = {
+          nome:            nomeObj,
+          categoria:       String(raw.categoria || raw.tipo || '').trim(),
+          quantidadeTotal: Number(raw.quantidadeTotal || raw.qtd || 0),
+          localizacao:     String(raw.localizacao || '').trim(),
+          descricao:       String(raw.descricao || '').trim()
+        };
+      }
+
+      ReservasItensRepository.salvarItem(
+        Object.assign(item, { orgId: orgId, criadoEm: agr, atualizadoEm: agr }),
+        orgId
+      );
+      importados++;
+    } catch(e) {
+      erros.push({ item: JSON.stringify(raw).slice(0, 80), erro: e.message });
+    }
+  });
+
+  Logger.info('setup', '_executarImportacaoItens',
+    'fonte=' + fonte + ' importados=' + importados + ' ignorados=' + ignorados + ' erros=' + erros.length);
+  return { ok: true, importados: importados, ignorados: ignorados, erros: erros, fonte: fonte };
+}
+
+/**
+ * Executar no GAS Editor para popular o catálogo inicial (24 itens padrão CCBJ).
+ * Idempotente: seguro reexecutar.
+ */
+function fase72_itens_almoxarifado_seed() {
+  var r = setup_itens_almoxarifado_iniciais();
+  Logger.log('[fase72_seed] ' + JSON.stringify(r));
+  return r;
 }
 
 // ─── Privados ─────────────────────────────────────────────────────────────────

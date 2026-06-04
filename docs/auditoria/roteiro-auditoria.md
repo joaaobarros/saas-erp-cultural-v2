@@ -3515,13 +3515,13 @@ mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações pr
 
 ### HANDOFF Fix 72.2 (2026-06-04) — Polígonos livres no MapaUI
 
-**Bug corrigido** — `gas/src/shared/mapa_ui.html`, função `_criarFormaEl()`. Espaços editados com forma personalizada por vértices (`forma: 'livre'`) apareciam como triângulos no mapa de reservas (MapaUI) porque o `switch` não tinha `case 'livre'` e caía no `default` (retorno hardcoded de triângulo). O `InfraConfigMapaUI` (mapa de configuração) já tratava `'livre'` corretamente — adicionado o mesmo tratamento ao `_criarFormaEl()` do `mapa_ui.html`. Deploy pendente de execução.
+**Bug corrigido** — `gas/src/shared/mapa_ui.html`, função `_criarFormaEl()`. Espaços editados com forma personalizada por vértices (`forma: 'livre'`) apareciam como triângulos no mapa de reservas (MapaUI) porque o `switch` não tinha `case 'livre'` e caía no `default` (retorno hardcoded de triângulo). O `InfraConfigMapaUI` (mapa de configuração) já tratava `'livre'` corretamente — adicionado o mesmo tratamento ao `_criarFormaEl()` do `mapa_ui.html`. Deploy @551 confirmado. Smoke test OK: multi-select, Ctrl+C/V, Delete, Shift+click, rubber-band, multi-drag/resize/rotate, Ctrl+A, Space+pan, Escape — zero regressão.
 
 ---
 
 ### HANDOFF Fase 72.1 (2026-06-04) — Seed + Migração Itens Almoxarifado V1→V2
 
-**Fase 72.1 entregue** — Sem deploy (código backend apenas). `core/setup.gs` ganhou: (1) `setup_itens_almoxarifado_iniciais()` com seed de 24 itens padrão CCBJ (chamado automaticamente em `inicializarSistema()`); (2) `fase72_migrar_itens_v1_automatico()` que busca a planilha `CCBJ_ESPACOS` no Drive e lê a aba `Itens`, com fallback para `almoxarifado.json` e `CCBJ_MASTER.Itens`; (3) `fase72_migrar_itens_v1_por_id(sheetId)` para migração com ID explícito; (4) `fase72_itens_almoxarifado_seed()` para seed standalone. **AÇÃO PENDENTE**: executar `fase72_migrar_itens_v1_automatico()` no GAS Editor do V2 para importar os itens reais do V1. Se falhar, obter o SHEET_ID_ESPACOS no GAS Editor do V1 via `PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESPACOS')` e usar `fase72_migrar_itens_v1_por_id(ID)`.
+**Fase 72.1 entregue** — Deploy @551 (junto com Fix 72.2). `core/setup.gs` ganhou: (1) `setup_itens_almoxarifado_iniciais()` com seed de 24 itens padrão CCBJ (chamado automaticamente em `inicializarSistema()`); (2) `fase72_migrar_itens_v1_automatico()` que busca a planilha `CCBJ_ESPACOS` no Drive e lê a aba `Itens`, com fallback para `almoxarifado.json` e `CCBJ_MASTER.Itens`; (3) `fase72_migrar_itens_v1_por_id(sheetId)` para migração com ID explícito; (4) `fase72_itens_almoxarifado_seed()` para seed standalone. **AÇÃO PENDENTE**: executar `fase72_migrar_itens_v1_automatico()` no GAS Editor do V2 para importar os itens reais do V1. Se falhar, obter o SHEET_ID_ESPACOS no GAS Editor do V1 via `PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESPACOS')` e usar `fase72_migrar_itens_v1_por_id(ID)`.
 
 ---
 
