@@ -71,7 +71,7 @@ var IAService = (function () {
 
   function _horariosDosTurnos() {
     try {
-      var ts = ConfigService.getTurnos();
+      var ts = SistemaConfigService.getTurnos();
       if (Array.isArray(ts) && ts.length) {
         var h = [];
         ts.forEach(function(t) {
@@ -261,9 +261,9 @@ var IAService = (function () {
       var emailAtivo = obterEmailUsuario('');
 
       var _org = getOrgConfig();
-      var _hor = ConfigService.getReservaHorario();
+      var _hor = SistemaConfigService.getReservaHorario();
       var _turnosTexto = (function() {
-        var ts = ConfigService.getTurnos();
+        var ts = SistemaConfigService.getTurnos();
         if (!Array.isArray(ts) || !ts.length) return '"manhã" = abertura–meio-dia | "tarde" = meio-dia–fim tarde | "noite" = fim tarde–encerramento';
         return ts.map(function(t) { return '"' + (t.label||t.id) + '" = ' + (t.ini||t.inicio||'?') + '–' + (t.fim||'?'); }).join(' | ');
       })();

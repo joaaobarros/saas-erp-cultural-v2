@@ -104,7 +104,7 @@ var ConfigAdminService = (function () {
         return (isNaN(h) || isNaN(m)) ? -1 : h * 60 + m;
       }
       try {
-        var _horGlobal = ConfigService.getReservaHorario ? ConfigService.getReservaHorario() : { inicio: '08:00', fim: '22:00' };
+        var _horGlobal = SistemaConfigService.getReservaHorario();
         var _gIni = _hMin(_horGlobal.inicio || _horGlobal.abertura);
         var _gFim = _hMin(_horGlobal.fim    || _horGlobal.fechamento);
         var _lIni = _hMin(_horLocal.abertura);

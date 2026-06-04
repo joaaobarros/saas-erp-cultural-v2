@@ -154,7 +154,7 @@ var ReservaEngine = (function () {
   /**
    * Valida se o horário está dentro do funcionamento configurado.
    * Usa horário local do espaço (horarioFuncionamento) como limite primário.
-   * Cai para horário global (ConfigService.getReservaHorario) se não houver local.
+   * Cai para horário global (SistemaConfigService.getReservaHorario) se não houver local.
    *
    * @param {string} horaInicio — "HH:MM"
    * @param {string} horaTermino — "HH:MM"
