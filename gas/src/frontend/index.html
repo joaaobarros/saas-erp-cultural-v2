@@ -1001,6 +1001,37 @@ body {
   .mapa-painel-lateral.fechado {
     width:0 !important; min-width:0 !important; overflow:hidden; border:none;
   }
+  /* ── Navegador vertical de níveis ── */
+  .mapa-nivel-nav {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    width:44px; min-width:44px; padding:6px 0;
+    background:var(--surface); border-radius:var(--r-lg);
+    border:1px solid var(--border); box-shadow:var(--sh-sm);
+    overflow-y:auto; max-height:100%;
+  }
+  .mapa-nivel-lista { display:flex; flex-direction:column; gap:3px; align-items:center; }
+  .mapa-nivel-item {
+    width:36px; min-height:36px; border-radius:var(--r-sm);
+    border:1.5px solid var(--border); background:var(--surface2);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; font-size:8.5px; font-weight:700; line-height:1.2;
+    color:var(--text2); transition:all .15s; text-align:center; padding:3px 2px;
+    word-break:break-word;
+  }
+  .mapa-nivel-item.ativo {
+    background:var(--color-primary); color:#fff; border-color:var(--color-primary);
+    box-shadow:0 2px 8px rgba(124,58,237,.30);
+  }
+  .mapa-nivel-item:hover:not(.ativo) { border-color:var(--color-primary); background:var(--surface); }
+  .mapa-nivel-nav-btn {
+    width:28px; height:22px; border-radius:var(--r-sm);
+    background:none; border:none; cursor:pointer; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+    transition:color .12s;
+  }
+  .mapa-nivel-nav-btn:hover { color:var(--text); }
+  /* cfg-mapa (editor) usa a mesma strip */
+  .cfg-nivel-nav { flex-shrink:0; }
   .mapa-zoom-ctrl {
     position:absolute; bottom:12px; right:12px;
     display:flex; flex-direction:column; gap:4px; z-index:10;
@@ -4051,6 +4082,13 @@ select.form-control { cursor: pointer; }
                       title="Configurar escala real do mapa">
                 <span class="ms ms-sm">straighten</span> <span id="cfg-mapa-escala-badge">Escala</span>
               </button>
+              <button onclick="InfraConfigMapaUI._abrirModalNiveis()" data-bg-skip="1"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#f5f3ff;border:1.5px solid #7c3aed;color:#7c3aed;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;"
+                      title="Gerenciar níveis e pavimentos do mapa">
+                <span class="ms ms-sm">layers</span> Níveis
+              </button>
               <span id="cfg-mapa-terreno-label"
                     style="font-size:11px;color:var(--muted);margin-left:4px;display:flex;align-items:center;gap:4px;">
                 <span class="ms ms-sm" style="font-size:13px;">landscape</span>
@@ -4063,6 +4101,12 @@ select.form-control { cursor: pointer; }
               <!-- Sidebar: lista de espaços com/sem posição -->
               <div id="cfg-mapa-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;">
                 <p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>
+              </div>
+              <!-- Navegador vertical de níveis (cfg) -->
+              <div id="cfg-nivel-nav" class="mapa-nivel-nav cfg-nivel-nav" style="display:none;border-radius:0;border-top:none;border-bottom:none;border-left:none;">
+                <button class="mapa-nivel-nav-btn" onclick="InfraConfigMapaUI._subirNivel()" data-bg-skip="1" title="Nível acima">▲</button>
+                <div id="cfg-nivel-lista" class="mapa-nivel-lista"></div>
+                <button class="mapa-nivel-nav-btn" onclick="InfraConfigMapaUI._descerNivel()" data-bg-skip="1" title="Nível abaixo">▼</button>
               </div>
               <!-- Canvas SVG do mapa -->
               <div style="flex:1;position:relative;overflow:hidden;">
@@ -4908,8 +4952,14 @@ select.form-control { cursor: pointer; }
                 <span class="ms ms-sm">fit_screen</span>
               </button>
             </div>
-            <!-- Layout: mapa + painel lateral -->
+            <!-- Layout: navegador de níveis + mapa + painel lateral -->
             <div class="mapa-wrap">
+              <!-- Navegador vertical de níveis (ocultado quando há apenas 1 nível) -->
+              <div id="mapa-nivel-nav" class="mapa-nivel-nav" style="display:none;">
+                <button class="mapa-nivel-nav-btn" onclick="MapaUI.subirNivel()" data-bg-skip="1" title="Nível acima">▲</button>
+                <div id="mapa-nivel-lista" class="mapa-nivel-lista"></div>
+                <button class="mapa-nivel-nav-btn" onclick="MapaUI.descerNivel()" data-bg-skip="1" title="Nível abaixo">▼</button>
+              </div>
               <div class="mapa-svg-area" id="mapa-svg-area">
                 <div class="mapa-svg-inner" id="mapa-svg-inner">
                   <?!= include('shared/mapa_ccbj'); ?>
@@ -8150,6 +8200,9 @@ var GAS = {
     // Terreno do Mapa
     lerTerreno:             function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerTerreno(); },
     salvarTerreno:          function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarTerreno(d); },
+    // Níveis do Mapa
+    lerNiveisMapa:          function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_lerNiveisMapa(); },
+    salvarNiveisMapa:       function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarNiveisMapa(d); },
     // Banco de Dados
     obterUrlPastaDados:     function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterUrlPastaDados(); },
     obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); },
@@ -14425,6 +14478,9 @@ var InfraConfigMapaUI = (function() {
   var _mergeMode  = false, _mergeSource = null;
   var _NS         = 'http://www.w3.org/2000/svg';
   var _escalaInfra = null;  // { pixPorM: number, mostrarDimensoes: bool } ou null
+  // ── Níveis ──────────────────────────────────────────────────
+  var _niveis     = [{ nivel: 0, label: 'Térreo', usarTerrenoBase: true, terrenoConfig: null, usarPlantaBase: true, plantaBase: null }];
+  var _nivelAtivo = 0;
 
   // ── Histórico para Desfazer (máx 10 ações) ───────────────
   // Cada entrada: { label: string, itens: [{id, cfgAntes, cfgDepois}] }
@@ -14541,10 +14597,20 @@ var InfraConfigMapaUI = (function() {
           '<input id="novo-esp-nome" class="form-input" placeholder="Ex: Sala de Ensaio 1" ' +
             'style="width:100%;box-sizing:border-box;" autofocus>' +
         '</div>' +
-        '<div style="margin-bottom:16px;">' +
+        '<div style="margin-bottom:12px;">' +
           '<label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">Forma</label>' +
           '<select id="novo-esp-forma" class="form-input" style="width:100%;box-sizing:border-box;">' + formasOpts + '</select>' +
         '</div>' +
+        (_niveis.length > 1 ?
+          '<div style="margin-bottom:16px;">' +
+            '<label style="font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;">Nível</label>' +
+            '<select id="novo-esp-nivel" class="form-input" style="width:100%;box-sizing:border-box;">' +
+              _niveis.slice().sort(function(a,b){return a.nivel-b.nivel;}).map(function(n){
+                return '<option value="' + n.nivel + '"' + (n.nivel === _nivelAtivo ? ' selected' : '') + '>' + escaparHtml(n.label) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>'
+        : '') +
         '<div style="display:flex;gap:8px;">' +
           '<button id="btn-confirmar-novo-espaco" class="btn btn-primario" ' +
             'onclick="InfraConfigMapaUI._confirmarNovoEspaco(' + cx + ',' + cy + ')">' +
@@ -14572,8 +14638,10 @@ var InfraConfigMapaUI = (function() {
     }
     if (!formaObj) formaObj = _FORMAS_INLINE[0];
 
+    var nivelEl = document.getElementById('novo-esp-nivel');
+    var nivelId = nivelEl ? (parseInt(nivelEl.value, 10) || 0) : _nivelAtivo;
     BtnGuard.wrap('btn-confirmar-novo-espaco', 'Criando…', function(liberar) {
-      GAS.admin.salvarEspaco({ nome: nome, tipoEspaco: 'multiuso' },
+      GAS.admin.salvarEspaco({ nome: nome, tipoEspaco: 'multiuso', nivel: nivelId },
         function(r) {
           if (!r || !r.ok) {
             liberar();
@@ -14763,14 +14831,20 @@ var InfraConfigMapaUI = (function() {
 
   // ── Background do campus (usa terreno salvo ou padrão) ───
   function _buildBgSvgContent() {
-    // Prioridade: terreno salvo pelo usuário → polígono padrão (hexagonal)
-    var svgPath = (_terreno && _terreno.svgPath)
-      ? _terreno.svgPath
+    var terrenoAtivo = _getTerrenoNivel(_nivelAtivo);
+    var plantaAtiva  = _getPlantaNivel(_nivelAtivo);
+    var svgPath = (terrenoAtivo && terrenoAtivo.svgPath)
+      ? terrenoAtivo.svgPath
       : 'M 90,52 L 862,52 L 866,548 L 848,576 L 96,600 L 90,572 Z';
+    var plantaLayer = '';
+    if (plantaAtiva && plantaAtiva.svgPath) {
+      plantaLayer = '<path d="' + plantaAtiva.svgPath + '" fill="#fff" stroke="#a5b4c8" stroke-width="1.5" stroke-linejoin="round" opacity=".7"/>';
+    }
     return '<defs><filter id="cfg-mapa-shadow">' +
              '<feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.12"/>' +
            '</filter></defs>' +
            '<path d="' + svgPath + '" fill="#dde3ea" stroke="#8fa0b4" stroke-width="2" stroke-linejoin="round"/>' +
+           plantaLayer +
            '<circle cx="490" cy="400" r="80" fill="#c8d3de" opacity=".25"/>' +
            '<g transform="translate(855,558)" opacity=".5">' +
              '<circle cx="0" cy="0" r="16" fill="#fff" stroke="#8fa0b4" stroke-width="1"/>' +
@@ -14811,8 +14885,11 @@ var InfraConfigMapaUI = (function() {
     var layer = document.createElementNS(_NS, 'g');
     layer.id  = 'cfg-mapa-layer';
 
+    var _multiNivel = _niveis && _niveis.length > 1;
     _espacos.forEach(function(esp) {
       if (!esp.mapaConfig) return;
+      // Filtrar por nível quando há múltiplos níveis configurados
+      if (_multiNivel && (esp.nivel !== undefined ? esp.nivel : 0) !== _nivelAtivo) return;
       // Em modo edição, o espaço editado é renderizado como handles (abaixo); aqui só contexto
       if (editId && esp.id === editId) return;
       try {
@@ -15318,10 +15395,29 @@ var InfraConfigMapaUI = (function() {
       html += '<p style="padding:6px 10px;font-size:10px;color:var(--muted);">Selecione uma figura acima para posicionar o espaço no mapa.</p>';
     }
 
+    // Seletor de nível (apenas quando há múltiplos níveis)
+    if (_niveis.length > 1) {
+      var espNivel = (_modoEdicao && _modoEdicao.nivel !== undefined) ? _modoEdicao.nivel : _nivelAtivo;
+      html +=
+        '<div style="padding:6px 8px;border-top:1px solid var(--border);">' +
+          '<label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;display:block;margin-bottom:4px;">Nível</label>' +
+          '<select id="cfged-nivel" onchange="InfraConfigMapaUI._onNivelEdicaoChange(this.value)" ' +
+            'style="width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:5px;">' +
+            _niveis.slice().sort(function(a,b){return a.nivel-b.nivel;}).map(function(n){
+              return '<option value="' + n.nivel + '"' + (n.nivel === espNivel ? ' selected' : '') + '>' + escaparHtml(n.label) + '</option>';
+            }).join('') +
+          '</select>' +
+        '</div>';
+    }
+
     html += '<p style="padding:4px 8px 8px;font-size:9.5px;color:var(--muted);line-height:1.5;border-top:1px solid var(--border);">Arraste no mapa para mover · Alças brancas: redimensionar · Alça roxa: girar</p>';
 
     sidebar.innerHTML = html;
     if (cfg) _atualizarInputsInline();
+  }
+
+  function _onNivelEdicaoChange(val) {
+    if (_modoEdicao) _modoEdicao.nivel = parseInt(val, 10) || 0;
   }
 
   // ── Inputs de propriedades (edição inline) ───────────────
@@ -15425,6 +15521,7 @@ var InfraConfigMapaUI = (function() {
     var nomeNovo  = (_modoEdicao.nomeNovo || '').trim() || espNome;
     var nomeAlterado = nomeNovo !== espNome;
     var cfgAntes  = _modoEdicao.cfgOrig;
+    var nivelNovo = _modoEdicao.nivel !== undefined ? _modoEdicao.nivel : _nivelAtivo;
 
     if (!nomeNovo) { Toast.aviso('O nome do espaço não pode ficar vazio.'); return; }
 
@@ -15436,13 +15533,13 @@ var InfraConfigMapaUI = (function() {
     // Sair do modo antes do save (UI responde imediatamente)
     _modoEdicao = null;
     var idx = _espacos.findIndex(function(e) { return e.id === id; });
-    if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg, nome: nomeNovo });
+    if (idx >= 0) _espacos[idx] = Object.assign({}, _espacos[idx], { mapaConfig: cfg, nome: nomeNovo, nivel: nivelNovo });
     _renderMapa();
     _renderSidebar();
 
-    // 1) Salvar mapaConfig
+    // 1) Salvar mapaConfig + nivel
     GAS.admin.salvarMapaEspaco(
-      { id: id, mapaConfig: cfg },
+      { id: id, mapaConfig: cfg, nivel: nivelNovo },
       function(r) {
         if (!r || !r.ok) {
           Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar posição.');
@@ -15692,6 +15789,7 @@ var InfraConfigMapaUI = (function() {
       cfgOrig:     temCfg ? JSON.parse(JSON.stringify(espaco.mapaConfig)) : null,
       nome:        espaco.nome || id,
       nomeNovo:    espaco.nome || id,   // editável pelo usuário no sidebar
+      nivel:       espaco.nivel !== undefined ? espaco.nivel : 0,
       drag:        null,
       importouBase: !temCfg && !!cfgInicial  // flag → mostra aviso na sidebar
     };
@@ -15998,10 +16096,12 @@ var InfraConfigMapaUI = (function() {
 
     var _terrenoOk  = false;
     var _espacosOk  = false;
+    var _niveisOk   = false;
 
     function _checkPronto() {
-      if (!_terrenoOk || !_espacosOk) return;
+      if (!_terrenoOk || !_espacosOk || !_niveisOk) return;
       _carregado = true;
+      _renderNivelNavCfg();
       _renderMapa();
       _renderSidebar();
       _atualizarLabelTerreno();
@@ -16015,6 +16115,20 @@ var InfraConfigMapaUI = (function() {
     }, function() {
       _terreno   = null;
       _terrenoOk = true;
+      _checkPronto();
+    });
+
+    // Carregar níveis
+    GAS.admin.lerNiveisMapa(function(r) {
+      _niveis    = (r && r.ok && Array.isArray(r.data)) ? r.data
+                 : [{ nivel: 0, label: 'Térreo', usarTerrenoBase: true, terrenoConfig: null,
+                      usarPlantaBase: true, plantaBase: null }];
+      // garantir que nivelAtivo ainda é válido
+      if (!_niveis.find(function(n){ return n.nivel === _nivelAtivo; })) _nivelAtivo = _niveis[0].nivel;
+      _niveisOk  = true;
+      _checkPronto();
+    }, function() {
+      _niveisOk  = true;
       _checkPronto();
     });
 
@@ -16040,8 +16154,269 @@ var InfraConfigMapaUI = (function() {
     _carregar();
   }
 
+  // ── Helpers de nível ─────────────────────────────────────
+  function _getNivelObj(n) {
+    return _niveis.find(function(x){ return x.nivel === n; }) || _niveis[0];
+  }
+  function _getTerrenoNivel(n) {
+    var obj = _getNivelObj(n);
+    return (obj.usarTerrenoBase !== false) ? _terreno : (obj.terrenoConfig || _terreno);
+  }
+  function _getPlantaNivel(n) {
+    var obj = _getNivelObj(n);
+    return (obj.usarPlantaBase !== false) ? null : (obj.plantaBase || null);
+  }
+
+  // ── Navegador de níveis no editor de configuração ────────
+  function _renderNivelNavCfg() {
+    var nav   = document.getElementById('cfg-nivel-nav');
+    var lista = document.getElementById('cfg-nivel-lista');
+    if (!nav || !lista) return;
+    if (!_niveis || _niveis.length <= 1) { nav.style.display = 'none'; return; }
+    nav.style.display = 'flex';
+    var sorted = _niveis.slice().sort(function(a,b){ return b.nivel - a.nivel; });
+    lista.innerHTML = sorted.map(function(n){
+      var ativo = n.nivel === _nivelAtivo;
+      return '<div class="mapa-nivel-item' + (ativo ? ' ativo' : '') + '" ' +
+        'onclick="InfraConfigMapaUI._setNivelAtivoCfg(' + n.nivel + ')" data-bg-skip="1" ' +
+        'title="' + escaparHtml(n.label) + '">' +
+        escaparHtml(n.label) + '</div>';
+    }).join('');
+  }
+
+  function _setNivelAtivoCfg(n) {
+    _nivelAtivo = n;
+    _renderNivelNavCfg();
+    _renderMapa();
+    _renderSidebar();
+  }
+
+  function _subirNivel() {
+    var sorted = _niveis.slice().sort(function(a,b){ return a.nivel - b.nivel; });
+    var idx = sorted.findIndex(function(x){ return x.nivel === _nivelAtivo; });
+    if (idx < sorted.length - 1) _setNivelAtivoCfg(sorted[idx + 1].nivel);
+  }
+
+  function _descerNivel() {
+    var sorted = _niveis.slice().sort(function(a,b){ return a.nivel - b.nivel; });
+    var idx = sorted.findIndex(function(x){ return x.nivel === _nivelAtivo; });
+    if (idx > 0) _setNivelAtivoCfg(sorted[idx - 1].nivel);
+  }
+
+  // ── Modal Gerenciar Níveis ────────────────────────────────
+  function _abrirModalNiveis() {
+    var overlay = document.createElement('div');
+    overlay.id  = 'cfg-modal-niveis-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.70);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    var sorted  = _niveis.slice().sort(function(a,b){ return a.nivel - b.nivel; });
+    var rows    = sorted.map(function(n, i) {
+      return '<tr id="cfg-nivel-row-' + i + '" style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:6px 8px;font-size:12px;width:40px;"><input type="number" value="' + n.nivel + '" ' +
+          'id="cfgn-num-' + i + '" style="width:48px;padding:3px;font-size:11px;border:1px solid var(--border);border-radius:4px;" ' +
+          'onchange="InfraConfigMapaUI._modalNivelNumChange(' + i + ')"></td>' +
+        '<td style="padding:6px 4px;"><input type="text" value="' + escaparHtml(n.label) + '" ' +
+          'id="cfgn-label-' + i + '" style="width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;" ' +
+          'placeholder="Ex: Térreo"></td>' +
+        '<td style="padding:6px 4px;font-size:11px;text-align:center;">' +
+          '<label title="Usar mesmo terreno base"><input type="checkbox" id="cfgn-tb-' + i + '" ' +
+            (n.usarTerrenoBase !== false ? 'checked' : '') + ' onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'tb\')"> Terreno base</label>' +
+        '</td>' +
+        '<td style="padding:6px 4px;font-size:11px;text-align:center;">' +
+          '<label title="Usar mesma planta base"><input type="checkbox" id="cfgn-pb-' + i + '" ' +
+            (n.usarPlantaBase !== false ? 'checked' : '') + ' onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'pb\')"> Planta base</label>' +
+        '</td>' +
+        '<td style="padding:6px 4px;text-align:center;">' +
+          '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdTerr(' + i + ')" ' +
+            'style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;" ' +
+            'id="cfgn-btn-terr-' + i + '" ' + (n.usarTerrenoBase !== false ? 'disabled style="opacity:.4;font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);"' : '') + '>Terreno</button>' +
+          ' <button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdPlanta(' + i + ')" ' +
+            'style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;" ' +
+            'id="cfgn-btn-planta-' + i + '" ' + (n.usarPlantaBase !== false ? 'disabled style="opacity:.4;font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);"' : '') + '>Planta</button>' +
+        '</td>' +
+        '<td style="padding:6px 4px;text-align:center;">' +
+          (sorted.length > 1 ? '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelRemover(' + i + ')" ' +
+            'style="color:#ef4444;font-size:10px;padding:2px 6px;border:1px solid #fca5a5;border-radius:4px;background:none;cursor:pointer;">✕</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+    overlay.innerHTML =
+      '<div style="background:var(--surface);border-radius:16px;max-width:680px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.20);">' +
+        '<div style="background:var(--color-primary);color:#fff;padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:8px;">' +
+          '<span class="ms ms-sm">layers</span>' +
+          '<strong style="flex:1;">Gerenciar Níveis do Mapa</strong>' +
+          '<button data-bg-skip="1" onclick="document.getElementById(\'cfg-modal-niveis-overlay\').remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:20px;line-height:1;">✕</button>' +
+        '</div>' +
+        '<div style="padding:16px 20px;">' +
+          '<p style="font-size:12px;color:var(--muted);margin:0 0 12px;">Cada nível pode usar o mesmo terreno e/ou a mesma planta base, ou ter os seus próprios. ' +
+          'Desmarque para editar individualmente.</p>' +
+          '<div style="overflow-x:auto;">' +
+            '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+              '<thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">' +
+                '<th style="padding:6px 8px;text-align:left;">Nº</th>' +
+                '<th style="padding:6px 4px;text-align:left;">Label</th>' +
+                '<th style="padding:6px 4px;text-align:center;">Terreno</th>' +
+                '<th style="padding:6px 4px;text-align:center;">Planta</th>' +
+                '<th style="padding:6px 4px;text-align:center;">Editar</th>' +
+                '<th style="padding:6px 4px;"></th>' +
+              '</tr></thead>' +
+              '<tbody id="cfg-niveis-tbody">' + rows + '</tbody>' +
+            '</table>' +
+          '</div>' +
+          '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelAdicionar()" ' +
+            'style="margin-top:10px;padding:6px 14px;border:1.5px dashed var(--color-primary);border-radius:6px;background:none;color:var(--color-primary);cursor:pointer;font-size:12px;font-weight:600;">' +
+            '+ Adicionar Nível' +
+          '</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;padding:12px 20px 16px;border-top:1px solid var(--border);">' +
+          '<button id="cfgn-btn-salvar" class="btn btn-primary" style="flex:1;" ' +
+            'onclick="InfraConfigMapaUI._salvarNiveis()">Salvar Níveis</button>' +
+          '<button data-bg-skip="1" onclick="document.getElementById(\'cfg-modal-niveis-overlay\').remove()" ' +
+            'class="btn btn-secondary">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    // armazenar dados editáveis temporariamente
+    overlay._niveisEdit = sorted.map(function(n){ return JSON.parse(JSON.stringify(n)); });
+  }
+
+  function _modalNivelNumChange(i) {
+    var el  = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    var num = parseInt((document.getElementById('cfgn-num-' + i)||{}).value, 10);
+    if (!isNaN(num)) el._niveisEdit[i].nivel = num;
+  }
+
+  function _modalNivelToggle(i, campo) {
+    var el  = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    var cb  = document.getElementById('cfgn-' + campo + '-' + i);
+    var chk = cb ? cb.checked : true;
+    el._niveisEdit[i][campo === 'tb' ? 'usarTerrenoBase' : 'usarPlantaBase'] = chk;
+    var btn = document.getElementById('cfgn-btn-' + (campo === 'tb' ? 'terr' : 'planta') + '-' + i);
+    if (btn) { btn.disabled = chk; btn.style.opacity = chk ? '.4' : '1'; }
+  }
+
+  function _modalNivelAdicionar() {
+    var el = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    var nums = el._niveisEdit.map(function(n){ return n.nivel; });
+    var max  = nums.length ? Math.max.apply(null, nums) : 0;
+    var novo = { nivel: max + 1, label: (max + 1) + 'º Andar',
+                 usarTerrenoBase: true, terrenoConfig: null,
+                 usarPlantaBase: true, plantaBase: null };
+    el._niveisEdit.push(novo);
+    // re-abrir modal para refletir novo item
+    el.remove();
+    // aplica temporariamente e reabre
+    var tmp = _niveis;
+    _niveis = el._niveisEdit.slice(0, el._niveisEdit.length - 1);
+    _abrirModalNiveis();
+    _niveis = tmp;
+    // adicionar linha ao tbody recém-criado
+    var el2 = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el2) return;
+    el2._niveisEdit = el._niveisEdit;
+    var tbody = document.getElementById('cfg-niveis-tbody');
+    if (!tbody) return;
+    var i = el2._niveisEdit.length - 1;
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML =
+      '<td style="padding:6px 8px;font-size:12px;width:40px;"><input type="number" value="' + novo.nivel + '" ' +
+        'id="cfgn-num-' + i + '" style="width:48px;padding:3px;font-size:11px;border:1px solid var(--border);border-radius:4px;" ' +
+        'onchange="InfraConfigMapaUI._modalNivelNumChange(' + i + ')"></td>' +
+      '<td style="padding:6px 4px;"><input type="text" value="' + escaparHtml(novo.label) + '" ' +
+        'id="cfgn-label-' + i + '" style="width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;" ' +
+        'placeholder="Ex: 1º Andar"></td>' +
+      '<td style="padding:6px 4px;font-size:11px;text-align:center;">' +
+        '<label><input type="checkbox" id="cfgn-tb-' + i + '" checked onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'tb\')"> Terreno base</label></td>' +
+      '<td style="padding:6px 4px;font-size:11px;text-align:center;">' +
+        '<label><input type="checkbox" id="cfgn-pb-' + i + '" checked onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'pb\')"> Planta base</label></td>' +
+      '<td style="padding:6px 4px;text-align:center;">' +
+        '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdTerr(' + i + ')" disabled style="opacity:.4;font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);" id="cfgn-btn-terr-' + i + '">Terreno</button> ' +
+        '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdPlanta(' + i + ')" disabled style="opacity:.4;font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);" id="cfgn-btn-planta-' + i + '">Planta</button>' +
+      '</td>' +
+      '<td style="padding:6px 4px;text-align:center;">' +
+        '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelRemover(' + i + ')" ' +
+          'style="color:#ef4444;font-size:10px;padding:2px 6px;border:1px solid #fca5a5;border-radius:4px;background:none;cursor:pointer;">✕</button>' +
+      '</td>';
+    tbody.appendChild(tr);
+  }
+
+  function _modalNivelRemover(i) {
+    var el = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el || el._niveisEdit.length <= 1) return;
+    el._niveisEdit.splice(i, 1);
+    el.remove();
+    var saved = _niveis;
+    _niveis = el._niveisEdit;
+    _abrirModalNiveis();
+    _niveis = saved;
+    var el2 = document.getElementById('cfg-modal-niveis-overlay');
+    if (el2) el2._niveisEdit = el._niveisEdit;
+  }
+
+  function _modalNivelEdTerr(i) {
+    var el = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    var n = el._niveisEdit[i];
+    var pontosAtuais = (n.terrenoConfig && n.terrenoConfig.pontos) ? n.terrenoConfig.pontos : null;
+    TerrenoEditorUI.abrir(pontosAtuais, function(pontos, svgPath, salvo) {
+      if (!salvo) return;
+      el._niveisEdit[i].terrenoConfig = { pontos: pontos, svgPath: svgPath };
+      Toast.sucesso('Terreno do nível "' + escaparHtml(n.label) + '" configurado.');
+    });
+  }
+
+  function _modalNivelEdPlanta(i) {
+    var el = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    var n = el._niveisEdit[i];
+    var pontosAtuais = (n.plantaBase && n.plantaBase.pontos) ? n.plantaBase.pontos : null;
+    TerrenoEditorUI.abrir(pontosAtuais, function(pontos, svgPath, salvo) {
+      if (!salvo) return;
+      el._niveisEdit[i].plantaBase = { pontos: pontos, svgPath: svgPath };
+      Toast.sucesso('Planta base do nível "' + escaparHtml(n.label) + '" configurada.');
+    });
+  }
+
+  function _salvarNiveis() {
+    var el = document.getElementById('cfg-modal-niveis-overlay');
+    if (!el) return;
+    // Coletar labels e nums dos inputs
+    el._niveisEdit.forEach(function(n, i) {
+      var numEl   = document.getElementById('cfgn-num-' + i);
+      var labelEl = document.getElementById('cfgn-label-' + i);
+      if (numEl)   n.nivel = parseInt(numEl.value, 10) || 0;
+      if (labelEl) n.label = labelEl.value.trim() || 'Nível ' + n.nivel;
+    });
+    var btn = document.getElementById('cfgn-btn-salvar');
+    BtnGuard.wrap(btn || 'cfgn-btn-salvar', 'Salvando…', function(done) {
+      GAS.admin.salvarNiveisMapa({ niveis: el._niveisEdit }, function(r) {
+        done();
+        if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar níveis.'); return; }
+        _niveis = el._niveisEdit.slice();
+        if (!_niveis.find(function(n){ return n.nivel === _nivelAtivo; })) _nivelAtivo = _niveis[0].nivel;
+        el.remove();
+        _renderNivelNavCfg();
+        _renderMapa();
+        Toast.sucesso('Níveis salvos (' + _niveis.length + ').');
+        // Sincronizar com MapaUI
+        if (typeof MapaUI !== 'undefined') MapaUI._atualizarNiveis(_niveis);
+      }, function(err) { done(); Toast.erro('Erro: ' + ((err && err.message) || err)); });
+    });
+  }
+
   // ── Editar terreno (abre TerrenoEditorUI) ────────────────
   function _editarTerreno() {
+    // Se nível ativo usa terreno próprio, editar terreno do nível; senão, editar o terreno base
+    var nivelObj = _getNivelObj(_nivelAtivo);
+    if (nivelObj && nivelObj.usarTerrenoBase === false) {
+      // Editar terreno do nível ativo via modal de níveis (orientar usuário)
+      Toast.info('Este nível tem terreno próprio. Abra "Gerenciar Níveis" → botão "Terreno".');
+      return;
+    }
     var pontosAtuais = (_terreno && _terreno.pontos) ? _terreno.pontos : null;
     TerrenoEditorUI.abrir(pontosAtuais, function(pontos, svgPath, salvo) {
       if (!salvo) return;
@@ -16334,7 +16709,20 @@ var InfraConfigMapaUI = (function() {
     _escalaInfraUpdatePreview:     _escalaInfraUpdatePreview,
     _propDimMetrosInfraChange:     _propDimMetrosInfraChange,
     _confirmarExcluirEspacoMapa:   _confirmarExcluirEspacoMapa,
-    _executarExcluirEspacoMapa:    _executarExcluirEspacoMapa
+    _executarExcluirEspacoMapa:    _executarExcluirEspacoMapa,
+    // Níveis
+    _setNivelAtivoCfg:             _setNivelAtivoCfg,
+    _subirNivel:                   _subirNivel,
+    _descerNivel:                  _descerNivel,
+    _abrirModalNiveis:             _abrirModalNiveis,
+    _salvarNiveis:                 _salvarNiveis,
+    _modalNivelNumChange:          _modalNivelNumChange,
+    _modalNivelToggle:             _modalNivelToggle,
+    _modalNivelAdicionar:          _modalNivelAdicionar,
+    _modalNivelRemover:            _modalNivelRemover,
+    _modalNivelEdTerr:             _modalNivelEdTerr,
+    _modalNivelEdPlanta:           _modalNivelEdPlanta,
+    _onNivelEdicaoChange:          _onNivelEdicaoChange
   };
 })();
 
@@ -21900,20 +22288,40 @@ var MapaAcaoUI = (function() {
     if(!mapa)return;
     var container=document.getElementById('painel-mapa-container');
     if(!container)return;
-    MapaAcaoEditorUI.init(container,mapa,
-      function(mapaAtualizado){
-        GAS.acoes.mapaAcao.salvar(mapaAtualizado,function(r){
-          if(r&&r.ok){Toast.sucesso('Mapa salvo!');for(var i=0;i<_mapas.length;i++){if(_mapas[i].id===mapaAtualizado.id){_mapas[i]=mapaAtualizado;break;}}}
-          else Toast.erro('Erro ao salvar: '+(r&&r.error?r.error.message:'Tente novamente.'));
-        },function(){Toast.erro('Erro de comunicação ao salvar.');});
-      },
-      function(){
-        // Garantir que a view principal seja 'acoes' — o usuário pode ter navegado
-        // para Contratações via novaParaAcao enquanto o editor estava aberto
-        if (Router.getAtual && Router.getAtual() !== 'acoes') Router.navegar('acoes');
-        _renderizarLista();
-      }
-    );
+    // Carregar níveis para o editor de eventos e passar como 5º param
+    GAS.admin.lerNiveisMapa(function(r){
+      var niveis=(r&&r.ok&&Array.isArray(r.data))?r.data
+                :[{nivel:0,label:'Térreo',usarTerrenoBase:true,terrenoConfig:null,usarPlantaBase:true,plantaBase:null}];
+      MapaAcaoEditorUI.init(container,mapa,
+        function(mapaAtualizado){
+          GAS.acoes.mapaAcao.salvar(mapaAtualizado,function(r){
+            if(r&&r.ok){Toast.sucesso('Mapa salvo!');for(var i=0;i<_mapas.length;i++){if(_mapas[i].id===mapaAtualizado.id){_mapas[i]=mapaAtualizado;break;}}}
+            else Toast.erro('Erro ao salvar: '+(r&&r.error?r.error.message:'Tente novamente.'));
+          },function(){Toast.erro('Erro de comunicação ao salvar.');});
+        },
+        function(){
+          // Garantir que a view principal seja 'acoes' — o usuário pode ter navegado
+          // para Contratações via novaParaAcao enquanto o editor estava aberto
+          if (Router.getAtual && Router.getAtual() !== 'acoes') Router.navegar('acoes');
+          _renderizarLista();
+        },
+        niveis
+      );
+    },function(){
+      // Falha ao carregar níveis: abrir editor sem níveis
+      MapaAcaoEditorUI.init(container,mapa,
+        function(mapaAtualizado){
+          GAS.acoes.mapaAcao.salvar(mapaAtualizado,function(r){
+            if(r&&r.ok){Toast.sucesso('Mapa salvo!');for(var i=0;i<_mapas.length;i++){if(_mapas[i].id===mapaAtualizado.id){_mapas[i]=mapaAtualizado;break;}}}
+            else Toast.erro('Erro ao salvar: '+(r&&r.error?r.error.message:'Tente novamente.'));
+          },function(){Toast.erro('Erro de comunicação ao salvar.');});
+        },
+        function(){
+          if (Router.getAtual && Router.getAtual() !== 'acoes') Router.navegar('acoes');
+          _renderizarLista();
+        }
+      );
+    });
   }
 
   function _excluirMapa(mapaId) {

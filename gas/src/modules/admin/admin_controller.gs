@@ -79,6 +79,20 @@ function ctrl_admin_salvarTerreno(params) {
   }, 'ctrl_admin_salvarTerreno');
 }
 
+// ── Níveis do Mapa ───────────────────────────────────────────────────────────
+
+function ctrl_admin_lerNiveisMapa() {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.lerNiveisMapa();
+  }, 'ctrl_admin_lerNiveisMapa');
+}
+
+function ctrl_admin_salvarNiveisMapa(params) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.salvarNiveisMapa(params);
+  }, 'ctrl_admin_salvarNiveisMapa');
+}
+
 function ctrl_admin_alternarReservaEspaco(espacoId) {
   return GasResponse.wrap(function() {
     return ConfigAdminService.alternarReservaEspaco(espacoId);

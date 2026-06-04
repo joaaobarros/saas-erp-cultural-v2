@@ -16,6 +16,10 @@ var MapaUI=(function(){
   var _terrenoCarregado=false,_terrenoConfig=null;
   var _meuPapel='colaborador';
   var _PAPEIS_GESTAO=['superadmin','admin','gestor','habilitador'];
+  // ── Níveis ──────────────────────────────────────────────
+  var _niveis=[{nivel:0,label:'Térreo',usarTerrenoBase:true,terrenoConfig:null,usarPlantaBase:true,plantaBase:null}];
+  var _nivelAtivo=0;
+  var _niveisCarregados=false;
   var _SL={disponivel:'Disponível',ocupado:'Ocupado',em_uso:'Em uso',
     aguardando:'Aguardando',manutencao:'Manutenção',bloqueado:'Bloqueado',default:'—'};
   var _SC={disponivel:'badge-success',ocupado:'badge-error',em_uso:'badge-accent',
@@ -25,6 +29,30 @@ var MapaUI=(function(){
   function _getDataAtual(){
     var inp=document.getElementById('mapa-data');
     return (inp&&inp.value)||new Date().toISOString().slice(0,10);
+  }
+
+  // ─── Helpers de nível ──────────────────────────────────────
+  function _getTerrenoAtivo(){
+    var n=_niveis.find(function(x){return x.nivel===_nivelAtivo;});
+    if(!n)return _terrenoConfig;
+    return n.usarTerrenoBase!==false?_terrenoConfig:(n.terrenoConfig||_terrenoConfig);
+  }
+
+  // ─── Navegador vertical de níveis ──────────────────────────
+  function _renderNivelNav(){
+    var nav=document.getElementById('mapa-nivel-nav');
+    var lista=document.getElementById('mapa-nivel-lista');
+    if(!nav||!lista)return;
+    if(!_niveis||_niveis.length<=1){nav.style.display='none';return;}
+    nav.style.display='flex';
+    var sorted=_niveis.slice().sort(function(a,b){return b.nivel-a.nivel;});
+    lista.innerHTML=sorted.map(function(n){
+      var a=n.nivel===_nivelAtivo;
+      return '<div class="mapa-nivel-item'+(a?' ativo':'')+'" '+
+        'onclick="MapaUI.setNivel('+n.nivel+')" data-bg-skip="1" '+
+        'title="'+escaparHtml(n.label||'Nível '+n.nivel)+'">'+
+        escaparHtml(n.label||'N'+n.nivel)+'</div>';
+    }).join('');
   }
 
   // ─── Aplicar terreno personalizado ao SVG ──────────────────
@@ -59,15 +87,27 @@ var MapaUI=(function(){
     if(inp&&!inp.value)inp.value=new Date().toISOString().slice(0,10);
     var data=_getDataAtual();
     _skeleton();
-    // Carregar terreno uma vez (cacheado); aplicar imediatamente se já disponível
+    // Carregar terreno uma vez (cacheado)
     if(!_terrenoCarregado){
       GAS.admin.lerTerreno(function(r){
         _terrenoConfig=(r&&r.ok&&r.data)?r.data:null;
         _terrenoCarregado=true;
-        _aplicarTerreno(_terrenoConfig);
+        _aplicarTerreno(_getTerrenoAtivo());
       },function(){_terrenoCarregado=true;});
     } else {
-      _aplicarTerreno(_terrenoConfig);
+      _aplicarTerreno(_getTerrenoAtivo());
+    }
+    // Carregar níveis uma vez (cacheado)
+    if(!_niveisCarregados){
+      GAS.admin.lerNiveisMapa(function(r){
+        _niveis=(r&&r.ok&&Array.isArray(r.data))?r.data
+               :[{nivel:0,label:'Térreo',usarTerrenoBase:true,terrenoConfig:null,usarPlantaBase:true,plantaBase:null}];
+        if(!_niveis.find(function(n){return n.nivel===_nivelAtivo;})) _nivelAtivo=_niveis[0].nivel;
+        _niveisCarregados=true;
+        _renderNivelNav();
+      },function(){_niveisCarregados=true;});
+    } else {
+      _renderNivelNav();
     }
     GAS.mapa.statusEspacos({data:data},function(r){
       if(!r||!r.ok){Toast.erro('Erro ao carregar mapa');return;}
@@ -145,8 +185,14 @@ var MapaUI=(function(){
     var layer=document.getElementById('mapa-espacos-custom');
     if(!layer)return;
     layer.innerHTML='';
+    var _multiNivel=_niveis&&_niveis.length>1;
+    // Quando há apenas 1 nível, mostrar todos; estáticos sem nivel = nivel 0
+    document.querySelectorAll('#mapa-svg-inner .mapa-espaco:not(#mapa-espacos-custom *)').forEach(function(g){
+      g.style.display=(_multiNivel&&_nivelAtivo!==0)?'none':'';
+    });
     espacos.forEach(function(esp){
       if(!esp.mapaConfig)return;
+      if(_multiNivel&&(esp.nivel!==undefined?esp.nivel:0)!==_nivelAtivo)return;
       var cfg=esp.mapaConfig;
       // Ocultar elemento estático com mesmo data-id ou data-nome (cobre diferença de formato de ID)
       var staticG=document.querySelector('#mapa-svg-inner .mapa-espaco[data-id="'+esp.id+'"]');
@@ -813,7 +859,42 @@ var MapaUI=(function(){
   function atualizarTerreno(cfg){
     _terrenoConfig=cfg;
     _terrenoCarregado=true;
-    _aplicarTerreno(cfg);
+    _aplicarTerreno(_getTerrenoAtivo());
+  }
+
+  function setNivel(n){
+    _nivelAtivo=n;
+    _renderNivelNav();
+    // Reaplicar terreno do novo nível e re-renderizar espaços
+    _aplicarTerreno(_getTerrenoAtivo());
+    var data=_getDataAtual();
+    GAS.mapa.statusEspacos({data:data},function(r){
+      if(!r||!r.ok)return;
+      _statusMap={};
+      (r.data.espacos||[]).forEach(function(e){_statusMap[e.id]=e;});
+      _renderCustomSpaces(r.data.espacos||[]);
+      _cores();
+      _dash(r.data.espacos||[]);
+    },function(){});
+  }
+
+  function subirNivel(){
+    var sorted=_niveis.slice().sort(function(a,b){return a.nivel-b.nivel;});
+    var idx=sorted.findIndex(function(x){return x.nivel===_nivelAtivo;});
+    if(idx<sorted.length-1)setNivel(sorted[idx+1].nivel);
+  }
+
+  function descerNivel(){
+    var sorted=_niveis.slice().sort(function(a,b){return a.nivel-b.nivel;});
+    var idx=sorted.findIndex(function(x){return x.nivel===_nivelAtivo;});
+    if(idx>0)setNivel(sorted[idx-1].nivel);
+  }
+
+  function _atualizarNiveis(niveis){
+    _niveis=niveis||_niveis;
+    if(!_niveis.find(function(n){return n.nivel===_nivelAtivo;})) _nivelAtivo=_niveis[0].nivel;
+    _renderNivelNav();
+    _aplicarTerreno(_getTerrenoAtivo());
   }
 
   return{
@@ -826,6 +907,10 @@ var MapaUI=(function(){
     solicitarReserva:solicitarReserva,
     solicitarChave:solicitarChave,
     atualizarTerreno:atualizarTerreno,
+    setNivel:setNivel,
+    subirNivel:subirNivel,
+    descerNivel:descerNivel,
+    _atualizarNiveis:_atualizarNiveis,
     _alternarManutencao:_alternarManutencao
   };
 })();

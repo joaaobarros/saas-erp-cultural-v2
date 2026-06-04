@@ -3513,6 +3513,12 @@ mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações pr
 
 ---
 
+### HANDOFF Fase 73 (2026-06-04) — Sistema multi-nível nos mapas
+
+**Entregue** — Deploy @554. Sistema de níveis (pavimentos/andares) implementado em todos os três mapas do sistema (infraestrutura, reservas, eventos). Cada nível tem dois toggles independentes: terreno próprio ou base; planta base própria ou base. Padrão: herdar ambos (zero quebra retroativa). Navegador vertical aparece apenas com ≥ 2 níveis. Para configurar: Infraestrutura → Configurações → Mapa → botão "Níveis". Campo `nivel` salvo em cada espaço via `salvarMapaEspaco` e `salvarEspaco`.
+
+---
+
 ### HANDOFF Fix 72.2 (2026-06-04) — Polígonos livres no MapaUI
 
 **Bug corrigido** — `gas/src/shared/mapa_ui.html`, função `_criarFormaEl()`. Espaços editados com forma personalizada por vértices (`forma: 'livre'`) apareciam como triângulos no mapa de reservas (MapaUI) porque o `switch` não tinha `case 'livre'` e caía no `default` (retorno hardcoded de triângulo). O `InfraConfigMapaUI` (mapa de configuração) já tratava `'livre'` corretamente — adicionado o mesmo tratamento ao `_criarFormaEl()` do `mapa_ui.html`. Deploy @551 confirmado. Smoke test OK: multi-select, Ctrl+C/V, Delete, Shift+click, rubber-band, multi-drag/resize/rotate, Ctrl+A, Space+pan, Escape — zero regressão.

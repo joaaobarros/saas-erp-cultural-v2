@@ -154,6 +154,7 @@ var ConfigAdminService = (function () {
       tags:                   espaco.tags || [],
       bloqueios:              espaco.bloqueios || [],
       mapaConfig:             espaco.mapaConfig || null,
+      nivel:                  espaco.nivel !== undefined ? (Number(espaco.nivel) || 0) : 0,
       ativo:                  espaco.ativo !== false,
       criadoEm:               espaco.criadoEm || agora_,
       atualizadoEm:           agora_,
@@ -214,6 +215,7 @@ var ConfigAdminService = (function () {
       if (idx < 0) throw new Error('Espaço não encontrado: ' + params.id);
       lista[idx] = JSON.parse(JSON.stringify(lista[idx]));
       lista[idx].mapaConfig   = params.mapaConfig || null;
+      if (params.nivel !== undefined) lista[idx].nivel = Number(params.nivel) || 0;
       lista[idx].atualizadoEm = agora();
       lista[idx].versao       = (lista[idx].versao || 0) + 1;
       registro = lista[idx];
@@ -639,7 +641,10 @@ var ConfigAdminService = (function () {
     salvarMapaEspaco:            salvarMapaEspaco,
     // Terreno do mapa
     lerTerreno:                  lerTerreno,
-    salvarTerreno:               salvarTerreno
+    salvarTerreno:               salvarTerreno,
+    // Níveis do mapa
+    lerNiveisMapa:               lerNiveisMapa,
+    salvarNiveisMapa:            salvarNiveisMapa
   };
 
   // ─── Terreno do Mapa ─────────────────────────────────────────────────────
@@ -678,6 +683,57 @@ var ConfigAdminService = (function () {
     Logger.info('config_admin_service', 'salvarTerreno',
       'pontos=' + params.pontos.length);
     return { numPontos: params.pontos.length };
+  }
+
+  // ─── Níveis do Mapa ──────────────────────────────────────────────────────────
+
+  /**
+   * Lê a configuração de níveis do mapa (config_org.json → niveisMapaConfig).
+   * Retorna array de níveis ou array padrão com apenas o Térreo (nivel 0).
+   * @returns {Array<{nivel,label,usarTerrenoBase,terrenoConfig,usarPlantaBase,plantaBase}>}
+   */
+  function lerNiveisMapa() {
+    var cfg = readJSON('config_org.json') || {};
+    return cfg.niveisMapaConfig || [
+      { nivel: 0, label: 'Térreo', usarTerrenoBase: true, terrenoConfig: null,
+        usarPlantaBase: true, plantaBase: null }
+    ];
+  }
+
+  /**
+   * Salva a configuração de níveis do mapa.
+   * @param {{ niveis: Array }} params
+   */
+  function salvarNiveisMapa(params) {
+    _assertAdmin();
+    if (!params || !Array.isArray(params.niveis) || params.niveis.length < 1) {
+      throw new Error('Deve existir pelo menos um nível.');
+    }
+    // Validar e normalizar cada nível
+    params.niveis.forEach(function(n) {
+      if (typeof n.nivel !== 'number') throw new Error('Cada nível deve ter um número inteiro.');
+      if (!n.label || !String(n.label).trim()) throw new Error('Cada nível deve ter um label.');
+    });
+    modifyJSON('config_org.json', function(cfg) {
+      cfg.niveisMapaConfig = params.niveis.map(function(n) {
+        return {
+          nivel:           Number(n.nivel),
+          label:           String(n.label).trim(),
+          usarTerrenoBase: n.usarTerrenoBase !== false,
+          terrenoConfig:   n.usarTerrenoBase !== false ? null : (n.terrenoConfig || null),
+          usarPlantaBase:  n.usarPlantaBase !== false,
+          plantaBase:      n.usarPlantaBase !== false ? null : (n.plantaBase || null)
+        };
+      });
+      cfg.niveisMapaConfig.atualizadoEm = agora();
+      return cfg;
+    });
+    if (typeof SistemaConfigService !== 'undefined') SistemaConfigService.invalidarCache();
+    AuditoriaService.registrar('MAPA_NIVEIS_SALVOS', 'config_org', {
+      usuario:    getEmailSessao(),
+      numNiveis:  params.niveis.length
+    });
+    return { numNiveis: params.niveis.length };
   }
 
 })();

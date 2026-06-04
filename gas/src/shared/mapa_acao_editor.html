@@ -28,6 +28,8 @@ var MapaAcaoEditorUI = (function() {
   var _mergeMode     = false;  // aguardando 2º elemento para mesclar
   var _mergeSource   = null;   // id do 1º elemento no merge
   var _escala        = null;   // { pixPorM: number, mostrarDimensoes: bool } ou null
+  var _niveis        = [{ nivel:0, label:'Térreo', usarTerrenoBase:true, terrenoConfig:null, usarPlantaBase:true, plantaBase:null }];
+  var _nivelAtivo    = 0;
 
   // ── Categorias de objetos ────────────────────────────────
   var _CATEGORIAS = [
@@ -603,11 +605,14 @@ var MapaAcaoEditorUI = (function() {
   var _NS = 'http://www.w3.org/2000/svg';
 
   // ── Inicialização ────────────────────────────────────────
-  function init(container, mapa, cbSalvar, cbVoltar) {
+  function init(container, mapa, cbSalvar, cbVoltar, niveis) {
     _container     = container;
     _mapa          = JSON.parse(JSON.stringify(mapa));
     _cbSalvar      = cbSalvar;
     _cbVoltar      = cbVoltar;
+    _niveis        = (Array.isArray(niveis) && niveis.length > 0) ? niveis
+                   : [{ nivel:0, label:'Térreo', usarTerrenoBase:true, terrenoConfig:null, usarPlantaBase:true, plantaBase:null }];
+    _nivelAtivo    = _niveis[0].nivel;
     _selId         = null;
     _selIds        = [];
     _clipboard     = null;
@@ -630,6 +635,7 @@ var MapaAcaoEditorUI = (function() {
     _renderCanvas();
     _renderLayerSidebar();
     _renderPalette();
+    _renderNivelNavMae();
     _initIO();
 
     // Ouvir mudança de fullscreen para atualizar ícone
@@ -693,6 +699,12 @@ var MapaAcaoEditorUI = (function() {
             '<div id="mae-palette-espacos"></div>' +
             '<div style="height:1px;background:var(--border,#e2e8f0);margin:10px 0;"></div>' +
             '<div id="mae-palette-objs"></div>' +
+          '</div>' +
+          // Navegador de níveis
+          '<div id="mae-nivel-nav" style="display:none;flex-direction:column;align-items:center;gap:3px;width:44px;flex-shrink:0;padding:6px 0;background:var(--surface,#fff);border-right:1px solid var(--border,#e2e8f0);overflow-y:auto;">' +
+            '<button onclick="MapaAcaoEditorUI._maeSubirNivel()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:13px;width:28px;height:22px;display:flex;align-items:center;justify-content:center;" title="Nível acima">▲</button>' +
+            '<div id="mae-nivel-lista" style="display:flex;flex-direction:column;gap:3px;align-items:center;"></div>' +
+            '<button onclick="MapaAcaoEditorUI._maeDescerNivel()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:13px;width:28px;height:22px;display:flex;align-items:center;justify-content:center;" title="Nível abaixo">▼</button>' +
           '</div>' +
           // Canvas central
           '<div style="flex:1;overflow:hidden;position:relative;background:var(--surface2,#f1f5f9);">' +
@@ -1082,6 +1094,43 @@ var MapaAcaoEditorUI = (function() {
   }
 
   // ── Canvas SVG ──────────────────────────────────────────
+  // ── Navegador de níveis (evento) ─────────────────────────
+  function _renderNivelNavMae() {
+    var nav   = document.getElementById('mae-nivel-nav');
+    var lista = document.getElementById('mae-nivel-lista');
+    if (!nav || !lista) return;
+    if (!_niveis || _niveis.length <= 1) { nav.style.display = 'none'; return; }
+    nav.style.display = 'flex';
+    var sorted = _niveis.slice().sort(function(a, b) { return b.nivel - a.nivel; });
+    lista.innerHTML = sorted.map(function(n) {
+      var a = n.nivel === _nivelAtivo;
+      return '<div onclick="MapaAcaoEditorUI._maeSetNivel(' + n.nivel + ')" data-bg-skip="1" title="' + escaparHtml(n.label) + '" ' +
+        'style="width:36px;min-height:36px;border-radius:5px;border:1.5px solid ' + (a ? '#7c3aed' : '#e2e8f0') + ';' +
+        'background:' + (a ? '#7c3aed' : '#f8fafc') + ';color:' + (a ? '#fff' : '#475569') + ';' +
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;' +
+        'font-size:8.5px;font-weight:700;text-align:center;padding:3px 2px;word-break:break-word;line-height:1.2;">' +
+        escaparHtml(n.label) + '</div>';
+    }).join('');
+  }
+
+  function _maeSetNivel(n) {
+    _nivelAtivo = n;
+    _renderNivelNavMae();
+    _renderCanvas();
+  }
+
+  function _maeSubirNivel() {
+    var s = _niveis.slice().sort(function(a,b){return a.nivel-b.nivel;});
+    var i = s.findIndex(function(x){return x.nivel===_nivelAtivo;});
+    if (i < s.length - 1) _maeSetNivel(s[i + 1].nivel);
+  }
+
+  function _maeDescerNivel() {
+    var s = _niveis.slice().sort(function(a,b){return a.nivel-b.nivel;});
+    var i = s.findIndex(function(x){return x.nivel===_nivelAtivo;});
+    if (i > 0) _maeSetNivel(s[i - 1].nivel);
+  }
+
   function _renderCanvas() {
     if (!_edSvg) return;
 
@@ -1108,14 +1157,25 @@ var MapaAcaoEditorUI = (function() {
     gridRect.setAttribute('fill', 'url(#mae-grid)');
     _edSvg.appendChild(gridRect);
 
-    // Terreno
-    if (_mapa.terreno && _mapa.terreno.path) {
+    // Terreno: usar terreno do nível ativo (ou base)
+    var nivelObj = _niveis.find(function(x){return x.nivel===_nivelAtivo;}) || _niveis[0];
+    var terrenoAtivo = nivelObj.usarTerrenoBase !== false ? _mapa.terreno : (nivelObj.terrenoConfig || _mapa.terreno);
+    if (terrenoAtivo && terrenoAtivo.path) {
       var terrG = document.createElementNS(_NS, 'g');
       var terrP = document.createElementNS(_NS, 'path');
-      terrP.setAttribute('d', _mapa.terreno.path);
+      terrP.setAttribute('d', terrenoAtivo.path);
       terrP.setAttribute('fill', '#e8f5e9'); terrP.setAttribute('stroke', '#a5d6a7');
       terrP.setAttribute('stroke-width', '2');
       terrG.appendChild(terrP); _edSvg.appendChild(terrG);
+    }
+    // Planta base do nível (se diferente da base)
+    if (nivelObj.usarPlantaBase === false && nivelObj.plantaBase && nivelObj.plantaBase.svgPath) {
+      var plantaG = document.createElementNS(_NS, 'g');
+      var plantaP = document.createElementNS(_NS, 'path');
+      plantaP.setAttribute('d', nivelObj.plantaBase.svgPath);
+      plantaP.setAttribute('fill', '#fff'); plantaP.setAttribute('stroke', '#a5b4c8');
+      plantaP.setAttribute('stroke-width', '1.5'); plantaP.setAttribute('opacity', '.7');
+      plantaG.appendChild(plantaP); _edSvg.appendChild(plantaG);
     }
 
     // Grupo de elementos
@@ -1181,7 +1241,10 @@ var MapaAcaoEditorUI = (function() {
     if (!g) return;
     while (g.lastChild) g.removeChild(g.lastChild);
 
+    var _multiNivelMae = _niveis && _niveis.length > 1;
     (_mapa.elementos || []).forEach(function(el) {
+      // Filtrar por nível (elementos sem nivel = nivel 0)
+      if (_multiNivelMae && (el.nivel !== undefined ? el.nivel : 0) !== _nivelAtivo) return;
       var layerOculta = !_layerVisivel(el.layerId);
 
       // Objetos em layer oculta: pular totalmente
@@ -2674,7 +2737,10 @@ var MapaAcaoEditorUI = (function() {
     _aplicarEscala:             _aplicarEscala,
     _escalaToggleAtivo:         _escalaToggleAtivo,
     _escalaUpdatePreview:       _escalaUpdatePreview,
-    _toggleMostrarDimensoes:    _toggleMostrarDimensoes
+    _toggleMostrarDimensoes:    _toggleMostrarDimensoes,
+    _maeSetNivel:               _maeSetNivel,
+    _maeSubirNivel:             _maeSubirNivel,
+    _maeDescerNivel:            _maeDescerNivel
   };
 
 })();
