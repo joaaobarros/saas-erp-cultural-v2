@@ -4044,6 +4044,13 @@ select.form-control { cursor: pointer; }
                              border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;opacity:0.4;">
                 <span class="ms ms-sm">undo</span> Desfazer
               </button>
+              <button id="cfg-mapa-btn-escala" onclick="InfraConfigMapaUI._abrirModalEscala()" data-bg-skip="1"
+                      style="display:flex;align-items:center;gap:5px;padding:6px 12px;
+                             background:#f0f9ff;border:1.5px solid #0284c7;color:#0369a1;
+                             border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;"
+                      title="Configurar escala real do mapa">
+                <span class="ms ms-sm">straighten</span> <span id="cfg-mapa-escala-badge">Escala</span>
+              </button>
               <span id="cfg-mapa-terreno-label"
                     style="font-size:11px;color:var(--muted);margin-left:4px;display:flex;align-items:center;gap:4px;">
                 <span class="ms ms-sm" style="font-size:13px;">landscape</span>
@@ -4116,10 +4123,7 @@ select.form-control { cursor: pointer; }
             </button>
           </div>
 
-          <!-- MODO LISTA (padrão) -->
-          <div id="res-modo-lista">
-
-          <!-- Form nova reserva -->
+          <!-- Form nova reserva — fora dos containers de modo para ser visível em qualquer view -->
           <div class="card" id="reservas-form-card" style="display:none">
             <div class="card-header">
               <div class="card-titulo"><span class="ms">event</span> <span id="reservas-form-titulo">Nova Reserva</span></div>
@@ -4229,6 +4233,9 @@ select.form-control { cursor: pointer; }
             </div>
             <div id="res-disp-resultado" style="display:none;margin-top:12px;"></div>
           </div>
+
+          <!-- MODO LISTA (padrão) -->
+          <div id="res-modo-lista">
 
           <!-- Lista reservas -->
           <div class="card">
@@ -14411,12 +14418,13 @@ var InfraConfigUI = (function() {
 // e refletem imediatamente no modo Mapa das Reservas.
 // ═══════════════════════════════════════════════════════════
 var InfraConfigMapaUI = (function() {
-  var _espacos   = [];
-  var _carregado = false;
-  var _terreno   = null;   // { pontos: [], svgPath: 'M ...' } salvo no config_org.json
+  var _espacos    = [];
+  var _carregado  = false;
+  var _terreno    = null;   // { pontos: [], svgPath: 'M ...' } salvo no config_org.json
   var _zoom = 1, _panX = 0, _panY = 0;
-  var _mergeMode = false, _mergeSource = null;
-  var _NS = 'http://www.w3.org/2000/svg';
+  var _mergeMode  = false, _mergeSource = null;
+  var _NS         = 'http://www.w3.org/2000/svg';
+  var _escalaInfra = null;  // { pixPorM: number, mostrarDimensoes: bool } ou null
 
   // ── Histórico para Desfazer (máx 10 ações) ───────────────
   // Cada entrada: { label: string, itens: [{id, cfgAntes, cfgDepois}] }
@@ -14981,8 +14989,55 @@ var InfraConfigMapaUI = (function() {
 
     canvas.innerHTML = '';
     canvas.appendChild(svgEl);
+    _renderScaleBarInfra(svgEl);
     _tr();
     _initIO();
+  }
+
+  function _renderScaleBarInfra(svgEl) {
+    if (!svgEl || !_escalaInfra || !_escalaInfra.pixPorM) return;
+    var ppm = _escalaInfra.pixPorM;
+    var barM = 0.5;
+    var targets = [0.5,1,2,5,10,20,50,100];
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i] * ppm >= 60) { barM = targets[i]; break; }
+    }
+    var barPx = Math.min(barM * ppm, 200);
+    barM = barPx / ppm;
+    var label = barM >= 1 ? barM.toFixed(0) + 'm' : (barM * 100).toFixed(0) + 'cm';
+
+    var gSb = document.createElementNS(_NS, 'g');
+    var x = 18, y = 644;
+
+    var bgSb = document.createElementNS(_NS, 'rect');
+    bgSb.setAttribute('x', String(x - 6)); bgSb.setAttribute('y', String(y - 13));
+    bgSb.setAttribute('width', String(barPx + 44)); bgSb.setAttribute('height', '20');
+    bgSb.setAttribute('rx', '4'); bgSb.setAttribute('fill', 'rgba(255,255,255,0.88)');
+    bgSb.setAttribute('stroke', 'rgba(0,0,0,.08)'); bgSb.setAttribute('stroke-width', '0.5');
+    gSb.appendChild(bgSb);
+
+    var line = document.createElementNS(_NS, 'line');
+    line.setAttribute('x1', String(x)); line.setAttribute('y1', String(y));
+    line.setAttribute('x2', String(x + barPx)); line.setAttribute('y2', String(y));
+    line.setAttribute('stroke', '#475569'); line.setAttribute('stroke-width', '2');
+    gSb.appendChild(line);
+
+    [[x, y-5, x, y+2],[x+barPx, y-5, x+barPx, y+2]].forEach(function(pts) {
+      var t = document.createElementNS(_NS, 'line');
+      t.setAttribute('x1', String(pts[0])); t.setAttribute('y1', String(pts[1]));
+      t.setAttribute('x2', String(pts[2])); t.setAttribute('y2', String(pts[3]));
+      t.setAttribute('stroke', '#475569'); t.setAttribute('stroke-width', '2');
+      gSb.appendChild(t);
+    });
+
+    var txt = document.createElementNS(_NS, 'text');
+    txt.setAttribute('x', String(x + barPx + 5)); txt.setAttribute('y', String(y + 1));
+    txt.setAttribute('font-size', '10'); txt.setAttribute('fill', '#475569');
+    txt.setAttribute('dominant-baseline', 'middle'); txt.setAttribute('font-weight', '600');
+    txt.textContent = label;
+    gSb.appendChild(txt);
+
+    svgEl.appendChild(gSb);
   }
 
   // ── Renderizar handles do espaço sendo editado ───────────
@@ -15204,13 +15259,27 @@ var InfraConfigMapaUI = (function() {
       '</div>';
 
     if (cfg) {
+      var _wM = (_escalaInfra && _escalaInfra.pixPorM && cfg.w) ? (cfg.w / _escalaInfra.pixPorM).toFixed(2) : null;
+      var _hM = (_escalaInfra && _escalaInfra.pixPorM && cfg.h) ? (cfg.h / _escalaInfra.pixPorM).toFixed(2) : null;
       html +=
         '<div style="padding:6px 8px 4px;border-top:1px solid var(--border);margin-top:4px;">' +
           '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:6px;">Propriedades</div>' +
           _inputInline('cfged-cx',  'Posição X') +
           _inputInline('cfged-cy',  'Posição Y') +
-          _inputInline('cfged-w',   'Largura') +
-          _inputInline('cfged-h',   'Altura') +
+          _inputInline('cfged-w',   'Largura (px)') +
+          _inputInline('cfged-h',   'Altura (px)') +
+          (_wM !== null ?
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:4px;">' +
+              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Larg. real (m)</label>' +
+                '<input id="cfged-wm" type="number" min="0.01" step="0.1" value="' + _wM + '" ' +
+                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
+                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
+              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Alt. real (m)</label>' +
+                '<input id="cfged-hm" type="number" min="0.01" step="0.1" value="' + _hM + '" ' +
+                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
+                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
+            '</div>'
+          : '') +
           _inputInline('cfged-rot', 'Rotação °') +
         '</div>' +
         '<div style="padding:4px 8px 4px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
@@ -15733,12 +15802,136 @@ var InfraConfigMapaUI = (function() {
     _proxR(0);
   }
 
+  // ── Escala Real (InfraConfigMapaUI) ─────────────────────
+  function _abrirModalEscala() {
+    var esc   = _escalaInfra || { pixPorM: 100, mostrarDimensoes: false };
+    var ativo = !!_escalaInfra;
+    var canvasW = (900 / esc.pixPorM).toFixed(1);
+    var canvasH = (660 / esc.pixPorM).toFixed(1);
+
+    var wrap = document.createElement('div');
+    wrap.id = 'cfg-modal-escala-overlay';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;';
+    wrap.innerHTML =
+      '<div style="background:var(--surface,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;min-width:340px;max-width:440px;">' +
+        '<div style="font-size:15px;font-weight:700;color:var(--text,#1e293b);margin-bottom:16px;display:flex;align-items:center;gap:8px;">' +
+          '<span class="ms" style="font-size:20px;color:#0284c7;">straighten</span> Escala Real — Mapa de Infraestrutura' +
+        '</div>' +
+        '<div style="margin-bottom:14px;">' +
+          '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">' +
+            '<input id="cfg-esc-ativo" type="checkbox"' + (ativo ? ' checked' : '') + ' onchange="InfraConfigMapaUI._escalaInfraToggleAtivo()" style="width:16px;height:16px;cursor:pointer;">' +
+            ' Ativar escala real' +
+          '</label>' +
+        '</div>' +
+        '<div id="cfg-esc-config" style="' + (ativo ? '' : 'opacity:.4;pointer-events:none;') + '">' +
+          '<div style="margin-bottom:12px;">' +
+            '<label style="font-size:12px;color:var(--text2,#64748b);display:block;margin-bottom:5px;">1 metro equivale a quantas unidades SVG?</label>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<input id="cfg-esc-ppm" type="number" min="1" max="900" value="' + esc.pixPorM + '" ' +
+                'oninput="InfraConfigMapaUI._escalaInfraUpdatePreview()" ' +
+                'style="width:90px;padding:6px 8px;border:1px solid var(--border,#e2e8f0);border-radius:6px;font-size:13px;">' +
+              '<span style="font-size:12px;color:var(--text2,#64748b);">unidades SVG = 1m</span>' +
+            '</div>' +
+            '<div id="cfg-esc-preview" style="font-size:11px;color:var(--muted,#94a3b8);margin-top:6px;background:var(--surface2,#f8fafc);border-radius:5px;padding:5px 8px;">' +
+              'Canvas total: ' + canvasW + ' m × ' + canvasH + ' m' +
+            '</div>' +
+          '</div>' +
+          '<div style="background:var(--surface2,#f8fafc);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--text2,#64748b);line-height:1.6;">' +
+            '<strong>Dica:</strong> Se o terreno do campus tem 100 m de largura e ocupa 900 unidades SVG, use 9 un/m.' +
+          '</div>' +
+          '<div style="margin-bottom:6px;">' +
+            '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">' +
+              '<input id="cfg-esc-mostra-dim" type="checkbox"' + (esc.mostrarDimensoes ? ' checked' : '') + ' style="width:14px;height:14px;cursor:pointer;">' +
+              ' Exibir dimensões (m) no sidebar de edição' +
+            '</label>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button data-bg-skip="1" onclick="document.getElementById(\'cfg-modal-escala-overlay\').remove()" ' +
+            'style="padding:7px 16px;border:1px solid var(--border,#e2e8f0);border-radius:7px;background:var(--surface,#fff);cursor:pointer;font-size:13px;">Cancelar</button>' +
+          '<button data-bg-skip="1" onclick="InfraConfigMapaUI._aplicarEscalaInfra()" ' +
+            'style="padding:7px 16px;background:#0284c7;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">Aplicar</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', function(e) { if (e.target === wrap) wrap.remove(); });
+  }
+
+  function _escalaInfraToggleAtivo() {
+    var cb  = document.getElementById('cfg-esc-ativo');
+    var cfg = document.getElementById('cfg-esc-config');
+    if (cfg) cfg.style.cssText = (cb && cb.checked) ? '' : 'opacity:.4;pointer-events:none;';
+  }
+
+  function _escalaInfraUpdatePreview() {
+    var ppm = parseFloat((document.getElementById('cfg-esc-ppm') || {}).value) || 100;
+    var el  = document.getElementById('cfg-esc-preview');
+    if (el) el.textContent = 'Canvas total: ' + (900/ppm).toFixed(1) + ' m × ' + (660/ppm).toFixed(1) + ' m';
+  }
+
+  function _aplicarEscalaInfra() {
+    var overlay = document.getElementById('cfg-modal-escala-overlay');
+    var cbAtivo = document.getElementById('cfg-esc-ativo');
+    if (!cbAtivo || !cbAtivo.checked) {
+      _escalaInfra = null;
+    } else {
+      var ppm    = parseFloat((document.getElementById('cfg-esc-ppm') || {}).value) || 100;
+      var mostra = !!(document.getElementById('cfg-esc-mostra-dim') || {}).checked;
+      _escalaInfra = { pixPorM: Math.max(1, ppm), mostrarDimensoes: mostra };
+    }
+    try { localStorage.setItem('infra-mapa-escala', _escalaInfra ? JSON.stringify(_escalaInfra) : ''); } catch(e) {}
+    if (overlay) overlay.remove();
+    _atualizarBadgeEscalaInfra();
+    _renderMapa();
+    if (_modoEdicao) _renderSidebarEdicao();
+    Toast.info(_escalaInfra ? 'Escala: 1m = ' + _escalaInfra.pixPorM + ' un.' : 'Escala desativada.');
+  }
+
+  function _atualizarBadgeEscalaInfra() {
+    var badge = document.getElementById('cfg-mapa-escala-badge');
+    if (!badge) return;
+    if (_escalaInfra && _escalaInfra.pixPorM) {
+      badge.textContent = 'Escala 1m=' + _escalaInfra.pixPorM + 'un';
+      badge.style.cssText = 'background:#e0f2fe;color:#0369a1;border-radius:4px;padding:1px 4px;font-weight:700;';
+    } else {
+      badge.textContent = 'Escala';
+      badge.style.cssText = '';
+    }
+  }
+
+  function _propDimMetrosInfraChange() {
+    if (!_escalaInfra || !_escalaInfra.pixPorM || !_modoEdicao || !_modoEdicao.cfg) return;
+    var ppm = _escalaInfra.pixPorM;
+    var cfg = _modoEdicao.cfg;
+    var wmV = parseFloat((document.getElementById('cfged-wm') || {}).value);
+    var hmV = parseFloat((document.getElementById('cfged-hm') || {}).value);
+    if (!isNaN(wmV) && wmV > 0) cfg.w = Math.max(20, wmV * ppm);
+    if (!isNaN(hmV) && hmV > 0) cfg.h = Math.max(20, hmV * ppm);
+    if (cfg.forma === 'circle') cfg.r = Math.min(cfg.w, cfg.h) / 2;
+    // Atualizar inputs px
+    var wInp = document.getElementById('cfged-w');
+    var hInp = document.getElementById('cfged-h');
+    if (wInp) wInp.value = Math.round(cfg.w);
+    if (hInp) hInp.value = Math.round(cfg.h);
+    _modoEdicao.cfg = cfg;
+    _atualizarHandles();
+    Toast.info('Dimensões reais atualizadas.');
+  }
+
   // ── Carregar dados (terreno + espaços em paralelo) ───────
   function _carregar() {
     var sidebar = document.getElementById('cfg-mapa-sidebar');
     if (sidebar) sidebar.innerHTML = '<p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>';
     var canvas  = document.getElementById('cfg-mapa-canvas');
     if (canvas)  canvas.innerHTML  = '<p class="muted-text" style="padding:20px;font-size:12px;">Carregando mapa…</p>';
+
+    // Carregar escala do localStorage
+    try {
+      var escSalva = localStorage.getItem('infra-mapa-escala');
+      _escalaInfra = escSalva ? JSON.parse(escSalva) : null;
+    } catch(e) { _escalaInfra = null; }
+    _atualizarBadgeEscalaInfra();
 
     var _terrenoOk  = false;
     var _espacosOk  = false;
@@ -16069,9 +16262,14 @@ var InfraConfigMapaUI = (function() {
     _restaurarPadrao:       _restaurarPadrao,
     _restaurarTodosPadrao:  _restaurarTodosPadrao,
     _confirmarRestaurarTodos: _confirmarRestaurarTodos,
-    _iniciarNovoEspaco:     _iniciarNovoEspaco,
-    _cancelarNovoEspaco:    _cancelarNovoEspaco,
-    _confirmarNovoEspaco:   _confirmarNovoEspaco
+    _iniciarNovoEspaco:          _iniciarNovoEspaco,
+    _cancelarNovoEspaco:         _cancelarNovoEspaco,
+    _confirmarNovoEspaco:        _confirmarNovoEspaco,
+    _abrirModalEscala:           _abrirModalEscala,
+    _aplicarEscalaInfra:         _aplicarEscalaInfra,
+    _escalaInfraToggleAtivo:     _escalaInfraToggleAtivo,
+    _escalaInfraUpdatePreview:   _escalaInfraUpdatePreview,
+    _propDimMetrosInfraChange:   _propDimMetrosInfraChange
   };
 })();
 
@@ -21989,7 +22187,7 @@ var App = (function() {
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
     { id:'espacos',     label:'Infraestrutura',   icone:'museum',                  modulo:'ESPACOS' },
-    { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes' },
+    { id:'aprovacoes',  label:'Aprovações',      icone:'approval',    badge:'badgeSolicitacoes', modulo:null },
     { id:'reservas-carro', label:'Reserva de Veículo', icone:'directions_car', badge:'badgeReservasCarro', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
     { id:'rh',            label:'RH / Depto. Pessoal', icone:'badge',              modulo:'PESSOAS' },

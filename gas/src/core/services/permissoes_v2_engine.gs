@@ -28,7 +28,8 @@ var PermissoesV2Engine = (function () {
   // Correspondem ao campo `modulo` em _MODULOS_MENU no frontend (index.html).
   var _MODULOS = [
     'ACOES', 'ESPACOS', 'PESSOAS', 'FINANCEIRO', 'COMUNICACAO',
-    'TAREFAS', 'REUNIOES', 'RELATORIOS', 'ADMIN', 'MASTER', 'PUBLICO'
+    'TAREFAS', 'REUNIOES', 'RELATORIOS', 'ADMIN', 'MASTER', 'PUBLICO',
+    'AGENTES', 'VOLUNTARIOS'
   ];
 
   // Papéis válidos do sistema — sincronizado com PAPEIS_VALIDOS em acesso_service.gs
@@ -54,7 +55,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,1,1), ESPACOS:     _p(1,1,1), PESSOAS:    _p(1,1,1),
       FINANCEIRO:  _p(1,1,1), COMUNICACAO: _p(1,1,1), TAREFAS:    _p(1,1,1),
       REUNIOES:    _p(1,1,1), RELATORIOS:  _p(1,1,1), ADMIN:      _p(1,1,1),
-      MASTER:      _p(1,1,1), PUBLICO:     _p(1,1,1)
+      MASTER:      _p(1,1,1), PUBLICO:     _p(1,1,1), AGENTES:    _p(1,1,1),
+      VOLUNTARIOS: _p(1,1,1)
     },
 
     admin: {
@@ -63,7 +65,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,1,1), ESPACOS:     _p(1,1,1), PESSOAS:    _p(1,1,0),
       FINANCEIRO:  _p(1,1,0), COMUNICACAO: _p(1,1,1), TAREFAS:    _p(1,1,1),
       REUNIOES:    _p(1,1,1), RELATORIOS:  _p(1,1,0), ADMIN:      _p(1,1,0),
-      MASTER:      _p(1,1,0), PUBLICO:     _p(1,1,0)
+      MASTER:      _p(1,1,0), PUBLICO:     _p(1,1,0), AGENTES:    _p(1,1,0),
+      VOLUNTARIOS: _p(1,1,0)
     },
 
     gestor: {
@@ -73,7 +76,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,1,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(1,0,0),
       FINANCEIRO:  _p(1,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,1,0), RELATORIOS:  _p(1,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(1,0,0), PUBLICO:     _p(1,0,0)
+      MASTER:      _p(1,0,0), PUBLICO:     _p(1,0,0), AGENTES:    _p(1,1,0),
+      VOLUNTARIOS: _p(1,1,0)
     },
 
     financeiro: {
@@ -82,7 +86,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,0,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(1,0,0),
       FINANCEIRO:  _p(1,1,1), COMUNICACAO: _p(0,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(1,1,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0), AGENTES:    _p(1,0,0),
+      VOLUNTARIOS: _p(0,0,0)
     },
 
     rh: {
@@ -91,7 +96,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,0,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(1,1,1),
       FINANCEIRO:  _p(1,0,0), COMUNICACAO: _p(0,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(1,1,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0), AGENTES:    _p(1,0,0),
+      VOLUNTARIOS: _p(1,1,0)
     },
 
     comunicacao: {
@@ -100,7 +106,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,1,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(0,0,0),
       FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(1,1,1), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0), AGENTES:    _p(1,1,0),
+      VOLUNTARIOS: _p(1,0,0)
     },
 
     coordenador: {
@@ -110,7 +117,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,1,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(1,0,0),
       FINANCEIRO:  _p(1,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,1,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(1,1,0), AGENTES:    _p(1,1,0),
+      VOLUNTARIOS: _p(1,1,0)
     },
 
     habilitador: {
@@ -119,7 +127,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,0,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(0,0,0),
       FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(0,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0), AGENTES:    _p(1,0,0),
+      VOLUNTARIOS: _p(0,0,0)
     },
 
     colaborador: {
@@ -128,7 +137,8 @@ var PermissoesV2Engine = (function () {
       ACOES:       _p(1,0,0), ESPACOS:     _p(1,0,0), PESSOAS:    _p(0,0,0),
       FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(1,0,0)
+      MASTER:      _p(0,0,0), PUBLICO:     _p(1,0,0), AGENTES:    _p(1,0,0),
+      VOLUNTARIOS: _p(0,0,0)
     }
 
   };
@@ -321,7 +331,8 @@ var PermissoesV2Engine = (function () {
     COMUNICACAO: 'Comunicação',  TAREFAS:     'Tarefas',
     REUNIOES:    'Reuniões',     RELATORIOS:  'Relatórios',
     ADMIN:       'Administração',MASTER:      'Master',
-    PUBLICO:     'Público'
+    PUBLICO:     'Público',      AGENTES:     'Agentes',
+    VOLUNTARIOS: 'Voluntários'
   };
 
   return {

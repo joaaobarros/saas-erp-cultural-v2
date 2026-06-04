@@ -3282,6 +3282,7 @@ Implementar ferramenta de escala real (m²/m) nos mapas de eventos e infraestrut
 | @505 | ESC-12 | Guia contextual in-app adicionado ao header da view Escuta (botão help_outline + modal 4 seções) |
 | @507 | ESC-15 | Modal "Nova Pesquisa" expandido para formulário completo (metodologia, periodicidade, participantes, canal) |
 | @510 | — | **Porta SimulacaoUI + SimulacaoService** do branch GitHub remote (divergido, Fase 23/24): `simulacao_service.gs` CRIADO; `boot_service.gs` atualizado com matrizCompleta/moduloLabels/modulosOrdem; `index.html` com banner simulação + aba Ferramentas no Admin + SimulacaoUI IIFE (~378 linhas) |
+| @533 | PERM-01 | **AGENTES e VOLUNTARIOS ausentes do motor de permissões** — `permissoes_v2_engine.gs`: módulos AGENTES/VOLUNTARIOS adicionados a `_MODULOS`, `_MATRIZ` (9 papéis) e `_MODULO_LABELS`. Sem isso, `permissoesModulos` nunca retornava essas chaves → menu nunca filtrava esses itens na simulação. `index.html`: `aprovacoes` recebe `modulo:null` explícito. |
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-17** (cálculo de benefícios incorreto)
@@ -3292,13 +3293,11 @@ Implementar ferramenta de escala real (m²/m) nos mapas de eventos e infraestrut
 
 ### PRÓXIMA AÇÃO (IMEDIATA)
 
-Contratações encerrada (CON-10 corrigido). Próximo: Agentes Culturais — AGN-01 foi corrigido em s16 Fase 6; testar se a view carrega agora.
-
-> **Pergunta ao usuário:** "Abre o módulo Agentes Culturais agora — a view carrega normalmente (lista e métricas visíveis) ou ainda mostra badge 'Inativo' e bloqueia o acesso?"
+PERM-01 corrigido (@533). Módulos Agentes e Voluntários agora aparecem na matriz do modal de simulação e são filtrados corretamente. Testar simulação com colaborador + tudo desmarcado.
 
 ### Sequência
-1. **Agentes Culturais** — verificar se AGN-01 está resolvido ← PRÓXIMA
-2. **Voluntários** — verificar se o mesmo fix resolve Voluntários
+1. **Agentes Culturais** — verificar se a view carrega normalmente (lista + métricas) ← PRÓXIMA
+2. **Voluntários** — mesma verificação
 3. **Dashboard Executivo (mod-41)** — nunca testado
 4. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
 
@@ -3307,7 +3306,7 @@ Contratações encerrada (CON-10 corrigido). Próximo: Agentes Culturais — AGN
 2. Verificar Rastreador antes de pedir algo já testado
 3. Claude dirige — não esperar direção do usuário
 4. Uma pergunta por vez
-5. Deploy corrente: `@512`
+5. Deploy corrente: `@533`
 6. Regra obrigatória: git → clasp push → clasp deploy → smoke test → atualizar docs → git commit docs
 
 ---
