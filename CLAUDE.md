@@ -231,16 +231,22 @@ BtnGuard.auditar()  // deve retornar "✅ todos protegidos"
 
 > **Regra de ouro: Git ANTES do deploy GAS.** O git deve estar sempre igual ou à frente da versão deployada. Nunca deploar código que não está commitado.
 
+> ⛔ **STOP ANTES DE QUALQUER COMANDO GIT OU CLASP:**
+> Os passos 1 e 2 são pré-condições. Não existe `git add`, `git commit`, `clasp push` ou `clasp deploy` sem ambos os docs atualizados e staged no mesmo commit do código. O hook `pre-commit` bloqueia o commit se os docs estiverem ausentes.
+
 ```
-1. Atualizar PROGRESS.md e roteiro-auditoria.md:              ← PRIMEIRO
+1. Atualizar PROGRESS.md:                                     ← PRIMEIRO, ANTES DE QUALQUER GIT
    - Atualizar "⚡ RETOMANDO AGORA?" com número do deploy e resumo
+2. Atualizar docs/auditoria/roteiro-auditoria.md:             ← SEGUNDO, ANTES DE QUALQUER GIT
    - Marcar bugs como CORRIGIDO nas 3 seções do roteiro
-2. git add <código> PROGRESS.md docs/auditoria/roteiro-auditoria.md
-3. git commit -m "fix/feat: Fase X.Y — ..."
-4. clasp push
-5. clasp deploy (deploymentId fixo)
-6. [Descrever] simulação do smoke-test no browser
-7. git push                                                    ← SEMPRE ao final
+   - Atualizar seção HANDOFF da sessão atual
+3. git add <código> PROGRESS.md docs/auditoria/roteiro-auditoria.md
+   (tudo em um único git add — um único commit)
+4. git commit -m "fix/feat: Fase X.Y — ..."
+5. clasp push  (de dentro de /gas)
+6. clasp deploy (deploymentId fixo)
+7. [Descrever] simulação do smoke-test no browser
+8. git push                                                    ← SEMPRE ao final
 ```
 
 ---
