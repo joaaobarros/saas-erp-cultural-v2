@@ -122,6 +122,13 @@ var MapaUI=(function(){
         el=document.createElementNS(_NS_SVG,'ellipse');
         el.setAttribute('cx','0');el.setAttribute('cy','0');
         el.setAttribute('rx',hw);el.setAttribute('ry',hh); return el;
+      case 'livre':
+        if(cfg.pts&&cfg.pts.length>=3){
+          el=document.createElementNS(_NS_SVG,'polygon');
+          el.setAttribute('points',cfg.pts.map(function(p){return p.x+','+p.y;}).join(' '));
+          return el;
+        }
+        /* fallthrough — sem pts, renderiza tri como fallback */
       default:
         el=document.createElementNS(_NS_SVG,'polygon');
         el.setAttribute('points',_pontosForma(cfg)); return el;
