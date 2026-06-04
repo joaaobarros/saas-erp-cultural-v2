@@ -31,16 +31,27 @@ var BootService = (function () {
   function obter() {
     var email  = getEmailSessao();
     var orgId  = getOrgConfig().orgId;
-    var cache  = CacheService.getScriptCache();
-    var chave  = _chaveCache(email, orgId);
-    var cached = cache.get(chave);
 
-    if (cached) {
-      try {
-        var obj = JSON.parse(cached);
-        obj.usuarioEmail = email; // sempre atualizar — email pode mudar entre caches
-        return obj;
-      } catch(e) {}
+    // Pular cache quando simulação está ativa — dados de permissão mudam dinamicamente
+    var _simAtiva = false;
+    try {
+      if (typeof SimulacaoService !== 'undefined') {
+        _simAtiva = !!SimulacaoService.getContextoAtivo();
+      }
+    } catch(_e) {}
+
+    var cache = CacheService.getScriptCache();
+    var chave = _chaveCache(email, orgId);
+
+    if (!_simAtiva) {
+      var cached = cache.get(chave);
+      if (cached) {
+        try {
+          var obj = JSON.parse(cached);
+          obj.usuarioEmail = email; // sempre atualizar — email pode mudar entre caches
+          return obj;
+        } catch(e) {}
+      }
     }
 
     var orgConfig    = getPublicOrgConfig();
@@ -99,6 +110,24 @@ var BootService = (function () {
       featuresCatalogo = typeof PermissoesV2Engine !== 'undefined' ? PermissoesV2Engine.FEATURES : {};
     } catch(_e) {}
 
+    // Matriz completa papel × módulo — usada pelo SimulacaoUI para pré-preencher defaults
+    var matrizCompleta = {};
+    try {
+      matrizCompleta = typeof PermissoesV2Engine !== 'undefined' ? PermissoesV2Engine.MATRIZ : {};
+    } catch(_e) {}
+
+    // Labels legíveis dos módulos para o SimulacaoUI
+    var moduloLabels = {};
+    try {
+      moduloLabels = typeof PermissoesV2Engine !== 'undefined' ? PermissoesV2Engine.MODULO_LABELS : {};
+    } catch(_e) {}
+
+    // Lista ordenada dos módulos para exibição na matriz
+    var modulosOrdem = [];
+    try {
+      modulosOrdem = typeof PermissoesV2Engine !== 'undefined' ? PermissoesV2Engine.MODULOS : [];
+    } catch(_e) {}
+
     var resultado = {
       orgId:              orgId,
       orgConfig:          orgConfig,
@@ -110,6 +139,10 @@ var BootService = (function () {
       papeisAtribuiveis:  papeisAtribuiveis,
       featuresAtivas:     featuresAtivas,
       featuresCatalogo:   featuresCatalogo,
+      matrizCompleta:     matrizCompleta,
+      moduloLabels:       moduloLabels,
+      modulosOrdem:       modulosOrdem,
+      simulando:          _simAtiva,
       modulosAtivos:      modulosAtivos,
       setores:            setores.map(function(s) { return { id: s.id, nome: s.label || s.nome || s.id, cor: s.cor || null }; }),
       espacos:            espacos,
@@ -119,7 +152,9 @@ var BootService = (function () {
       timestamp:          agora()
     };
 
-    cache.put(chave, JSON.stringify(resultado), _CACHE_TTL);
+    if (!_simAtiva) {
+      cache.put(chave, JSON.stringify(resultado), _CACHE_TTL);
+    }
     Logger.info('boot_service', 'obter', 'Boot OK: ' + email + ' | org: ' + orgId);
     return resultado;
   }

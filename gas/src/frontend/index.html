@@ -1442,6 +1442,10 @@ textarea.input { resize: vertical; }
    FASE 10 — Alertas, Reuniões, Balcão, TaskHub, Auditoria
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .topbar-btn-alertas { position: relative; }
+#banner-simulacao { display:none;background:#fde68a;color:#78350f;padding:7px 16px;font-size:13px;font-weight:600;align-items:center;gap:10px;border-bottom:2px solid #f59e0b;flex-shrink:0; }
+#banner-simulacao.ativo { display:flex; }
+#btn-sair-simulacao { margin-left:auto;padding:3px 12px;background:rgba(120,53,15,.15);border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;color:#78350f; }
+#btn-sair-simulacao:hover { background:rgba(120,53,15,.28); }
 .alertas-badge { position:absolute;top:3px;right:3px;background:var(--color-error);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;line-height:1.4;min-width:16px;text-align:center;pointer-events:none; }
 .alertas-painel { position:fixed;top:0;right:0;width:380px;max-width:96vw;height:100vh;background:var(--surface);z-index:1900;box-shadow:-6px 0 32px rgba(0,0,0,.14);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease; }
 .alertas-painel.aberto { transform:translateX(0); }
@@ -1874,6 +1878,15 @@ select.form-control { cursor: pointer; }
       </div>
     </div><!-- /topbar -->
 
+    <!-- BANNER DE SIMULAÇÃO DE PAPEL -->
+    <div id="banner-simulacao">
+      <span class="ms ms-sm">theater_comedy</span>
+      <span id="banner-simulacao-texto">Simulando papel</span>
+      <button id="btn-sair-simulacao" onclick="SimulacaoUI.encerrar()" data-bg-skip="1">
+        Sair da simulação
+      </button>
+    </div>
+
     <!-- CONTEÚDO -->
     <div id="conteudo">
 
@@ -1945,6 +1958,7 @@ select.form-control { cursor: pointer; }
               <button class="tab-btn" data-tab="usuarios"       onclick="AdminCadastrosUI.abrirTab('usuarios')">Usuários</button>
               <button class="tab-btn" data-tab="identidade"     onclick="AdminCadastrosUI.abrirTab('identidade')"><span class="ms ms-sm">palette</span> Identidade Visual</button>
               <button class="tab-btn" data-tab="dados"          onclick="AdminCadastrosUI.abrirTab('dados')">Banco de Dados</button>
+              <button class="tab-btn" data-tab="ferramentas"   onclick="AdminCadastrosUI.abrirTab('ferramentas')"><span class="ms ms-sm">theater_comedy</span> Ferramentas</button>
             </div>
             <!-- Tab: Espaços -->
             <div id="admin-tab-espacos" class="admin-tab-content">
@@ -2131,6 +2145,41 @@ select.form-control { cursor: pointer; }
                 <p class="muted-text" style="grid-column:1/-1;">Carregando…</p>
               </div>
             </div><!-- /admin-tab-dados -->
+
+            <!-- Tab: Ferramentas de Diagnóstico (SuperAdmin) -->
+            <div id="admin-tab-ferramentas" class="admin-tab-content oculto">
+              <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
+                Ferramentas exclusivas para Admin e SuperAdmin. Simule papéis e visualize telas sem alterar dados reais.
+              </p>
+              <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Prévia de Telas</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;">
+                <button class="btn btn-ghost btn-sm" data-bg-skip="1"
+                  onclick="SimulacaoUI.abrirPreviewPrimeiroAcesso()">
+                  <span class="ms ms-sm">visibility</span> Prévia: Tela de Primeiro Acesso
+                </button>
+              </div>
+              <div style="height:1px;background:var(--border);margin-bottom:16px;"></div>
+              <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Simulação de Papel e Permissões</div>
+              <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">
+                Simula o sistema como outro papel, incluindo permissões reais no backend. Configure overrides granulares por módulo e feature. Nenhum dado é alterado.
+              </p>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <select id="sim-select-papel" class="form-input" style="max-width:200px;">
+                  <option value="colaborador">Colaborador</option>
+                  <option value="habilitador">Habilitador</option>
+                  <option value="rh">RH</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="comunicacao">Comunicação</option>
+                  <option value="coordenador">Coordenador</option>
+                  <option value="gestor">Gestor</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button class="btn btn-primary btn-sm" data-bg-skip="1"
+                  onclick="SimulacaoUI.iniciar(document.getElementById('sim-select-papel').value)">
+                  <span class="ms ms-sm">tune</span> Configurar e Simular
+                </button>
+              </div>
+            </div><!-- /admin-tab-ferramentas -->
 
           </div><!-- /card cadastros -->
 
@@ -8632,6 +8681,11 @@ var GAS = {
     metricas: function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_metricas(); },
     geocode:  function(e,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_geocode(e); }
   },
+  simulacao: {
+    ativar:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_ativar(d); },
+    encerrar: function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_encerrar(); },
+    status:   function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_status(); }
+  },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
 
@@ -11651,6 +11705,14 @@ var AdminCadastrosUI = (function() {
         return;
       }
       AdminDadosUI.carregar();
+    }
+    if (tab === 'ferramentas') {
+      var _bFerr = App.getBoot ? App.getBoot() : null;
+      var _papelFerr = _bFerr && _bFerr.usuarioPapel;
+      if (_papelFerr !== 'admin' && _papelFerr !== 'superadmin') {
+        var elFerr = document.getElementById('admin-tab-ferramentas');
+        if (elFerr) elFerr.innerHTML = '<p class="muted-text" style="padding:24px;">Esta aba está disponível apenas para Admin e SuperAdmin.</p>';
+      }
     }
   }
 
@@ -22159,6 +22221,386 @@ var App = (function() {
     Toast, BtnGuard, Router
   };
 })();
+
+/* ══════════════════════════════════════════════════════════════
+   SimulacaoUI — simulação de papel e permissões para admin/superadmin
+   Afeta tanto a interface (menu) quanto as permissões reais no backend
+   via PropertiesService.getUserProperties().
+   O estado persiste entre chamadas google.script.run enquanto ativo.
+══════════════════════════════════════════════════════════════ */
+var SimulacaoUI = (function() {
+  var _bootOriginal = null; // snapshot do boot real antes da simulação
+
+  // ── Abrir modal de configuração ────────────────────────────────────────────
+
+  function iniciar(papel) {
+    _abrirModal(papel || 'colaborador');
+  }
+
+  function _abrirModal(papelInicial) {
+    var boot = App.getBoot ? App.getBoot() : null;
+    if (!boot) return;
+
+    var papeis = [
+      ['colaborador','Colaborador'],['habilitador','Habilitador'],
+      ['rh','RH'],['financeiro','Financeiro'],['comunicacao','Comunicação'],
+      ['coordenador','Coordenador'],['gestor','Gestor'],['admin','Admin']
+    ];
+
+    var optsSelect = papeis.map(function(p) {
+      return '<option value="' + p[0] + '"' + (p[0] === papelInicial ? ' selected' : '') + '>' + p[1] + '</option>';
+    }).join('');
+
+    var overlay = document.createElement('div');
+    overlay.id  = 'overlay-simulacao-config';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    overlay.innerHTML =
+      '<div style="background:var(--surface);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;">' +
+        '<div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;">' +
+          '<span class="ms" style="color:var(--primary);">theater_comedy</span>' +
+          '<div style="flex:1;">' +
+            '<div style="font-weight:700;font-size:16px;">Configurar Simulação</div>' +
+            '<div style="font-size:12px;color:var(--muted);margin-top:2px;">Permissões reais do backend serão aplicadas durante a simulação</div>' +
+          '</div>' +
+          '<button onclick="document.getElementById(\'overlay-simulacao-config\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1;">✕</button>' +
+        '</div>' +
+
+        '<div style="padding:16px 24px 8px;border-bottom:1px solid var(--border);">' +
+          '<label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">Papel a simular</label>' +
+          '<select id="sim-modal-papel" class="form-input" style="max-width:220px;" onchange="SimulacaoUI._atualizarMatriz(this.value)">' +
+            optsSelect +
+          '</select>' +
+        '</div>' +
+
+        '<div style="flex:1;overflow-y:auto;padding:16px 24px;">' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
+            '<span class="ms ms-sm">lock</span> Permissões por módulo' +
+            '<span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px;">— desmarque para restringir além do padrão do papel</span>' +
+          '</div>' +
+          '<div id="sim-matriz-container" style="overflow-x:auto;">' +
+            _renderMatriz(papelInicial, boot) +
+          '</div>' +
+
+          '<div style="font-size:13px;font-weight:600;margin:16px 0 10px;display:flex;align-items:center;gap:6px;">' +
+            '<span class="ms ms-sm">tune</span> Features individuais' +
+          '</div>' +
+          '<div id="sim-features-container">' +
+            _renderFeatures(papelInicial, boot) +
+          '</div>' +
+        '</div>' +
+
+        '<div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;">' +
+          '<button class="btn btn-ghost" onclick="document.getElementById(\'overlay-simulacao-config\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '<button id="sim-btn-confirmar" class="btn btn-primario" data-bg-skip="1" onclick="SimulacaoUI._confirmar()">' +
+            '<span class="ms ms-sm">play_arrow</span> Iniciar Simulação' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+  }
+
+  // ── Renderizar matriz de permissões ────────────────────────────────────────
+
+  function _renderMatriz(papel, boot) {
+    var modulos   = (boot && boot.modulosOrdem) || [];
+    var labels    = (boot && boot.moduloLabels) || {};
+    var matriz    = (boot && boot.matrizCompleta) || {};
+    var papelMat  = matriz[papel] || {};
+
+    if (!modulos.length) return '<p style="font-size:13px;color:var(--muted);">Dados de matriz não disponíveis.</p>';
+
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+      '<thead><tr style="background:var(--surface2);">' +
+        '<th style="text-align:left;padding:8px 10px;font-weight:600;">Módulo</th>' +
+        '<th style="text-align:center;padding:8px 10px;font-weight:600;width:90px;">Visualizar</th>' +
+        '<th style="text-align:center;padding:8px 10px;font-weight:600;width:80px;">Editar</th>' +
+        '<th style="text-align:center;padding:8px 10px;font-weight:600;width:80px;">Excluir</th>' +
+      '</tr></thead><tbody>';
+
+    modulos.forEach(function(mod, i) {
+      var perm = papelMat[mod] || { visualizar: false, editar: false, excluir: false };
+      var bg   = i % 2 === 0 ? '' : 'background:var(--surface2);';
+      html += '<tr style="' + bg + '">' +
+        '<td style="padding:7px 10px;font-weight:500;">' + (labels[mod] || mod) + '</td>' +
+        '<td style="text-align:center;padding:7px 10px;"><input type="checkbox" data-mod="' + mod + '" data-acao="visualizar" ' + (perm.visualizar ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;" onchange="SimulacaoUI._onPermChange(this)"></td>' +
+        '<td style="text-align:center;padding:7px 10px;"><input type="checkbox" data-mod="' + mod + '" data-acao="editar" ' + (perm.editar ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;" onchange="SimulacaoUI._onPermChange(this)"></td>' +
+        '<td style="text-align:center;padding:7px 10px;"><input type="checkbox" data-mod="' + mod + '" data-acao="excluir" ' + (perm.excluir ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;" onchange="SimulacaoUI._onPermChange(this)"></td>' +
+      '</tr>';
+    });
+
+    return html + '</tbody></table>';
+  }
+
+  // ── Renderizar features individuais ───────────────────────────────────────
+
+  function _renderFeatures(papel, boot) {
+    var catalogo = (boot && boot.featuresCatalogo) || {};
+    var mods     = Object.keys(catalogo);
+    var labels   = (boot && boot.moduloLabels) || {};
+    var matriz   = (boot && boot.matrizCompleta) || {};
+
+    if (!mods.length) return '<p style="font-size:13px;color:var(--muted);">Catálogo de features não disponível.</p>';
+
+    var papeisList = typeof PermissoesV2Engine !== 'undefined' ? null : null; // só no backend
+
+    var html = '';
+    mods.forEach(function(mod) {
+      var feats = catalogo[mod];
+      if (!feats || !feats.length) return;
+      html += '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">' +
+          (labels[mod] || mod) +
+        '</div>';
+      feats.forEach(function(f) {
+        var padrao = f.papeis && f.papeis.indexOf(papel) !== -1;
+        html += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;cursor:pointer;">' +
+          '<input type="checkbox" data-feat-mod="' + mod + '" data-feat-id="' + f.id + '" ' +
+            (padrao ? 'checked' : '') +
+            ' style="width:15px;height:15px;cursor:pointer;">' +
+          '<span>' + escaparHtml(f.label) + '</span>' +
+        '</label>';
+      });
+      html += '</div>';
+    });
+
+    return html || '<p style="font-size:13px;color:var(--muted);">Nenhuma feature configurável.</p>';
+  }
+
+  // ── Atualizar matriz ao trocar papel ──────────────────────────────────────
+
+  function _atualizarMatriz(papel) {
+    var boot = App.getBoot ? App.getBoot() : null;
+    if (!boot) return;
+    var mc = document.getElementById('sim-matriz-container');
+    var fc = document.getElementById('sim-features-container');
+    if (mc) mc.innerHTML = _renderMatriz(papel, boot);
+    if (fc) fc.innerHTML = _renderFeatures(papel, boot);
+  }
+
+  // ── Sem efeito visual no checkbox (apenas UI) ──────────────────────────────
+
+  function _onPermChange(cb) {
+    // Regra: desmarcar "Visualizar" força desmarcar "Editar" e "Excluir"
+    var mod  = cb.dataset.mod;
+    var acao = cb.dataset.acao;
+    if (acao === 'visualizar' && !cb.checked) {
+      var container = document.getElementById('sim-matriz-container');
+      if (!container) return;
+      ['editar','excluir'].forEach(function(a) {
+        var other = container.querySelector('[data-mod="' + mod + '"][data-acao="' + a + '"]');
+        if (other) other.checked = false;
+      });
+    }
+    if ((acao === 'editar' || acao === 'excluir') && cb.checked) {
+      var cont2 = document.getElementById('sim-matriz-container');
+      if (!cont2) return;
+      var vis = cont2.querySelector('[data-mod="' + mod + '"][data-acao="visualizar"]');
+      if (vis) vis.checked = true;
+    }
+  }
+
+  // ── Confirmar e ativar ────────────────────────────────────────────────────
+
+  function _confirmar() {
+    var boot  = App.getBoot ? App.getBoot() : null;
+    if (!boot) return;
+
+    var papel = (document.getElementById('sim-modal-papel') || {}).value || 'colaborador';
+
+    // Coletar overrides de permissões (apenas diferenças do padrão do papel)
+    var matrizRef    = (boot.matrizCompleta && boot.matrizCompleta[papel]) || {};
+    var modulos      = boot.modulosOrdem || [];
+    var permOvr      = {};
+    var matrContainer = document.getElementById('sim-matriz-container');
+
+    if (matrContainer) {
+      modulos.forEach(function(mod) {
+        var ref = matrizRef[mod] || { visualizar: false, editar: false, excluir: false };
+        ['visualizar','editar','excluir'].forEach(function(acao) {
+          var cb = matrContainer.querySelector('[data-mod="' + mod + '"][data-acao="' + acao + '"]');
+          if (!cb) return;
+          if (cb.checked !== !!ref[acao]) {
+            if (!permOvr[mod]) permOvr[mod] = {};
+            permOvr[mod][acao] = cb.checked;
+          }
+        });
+      });
+    }
+
+    // Coletar overrides de features
+    var catalogo = boot.featuresCatalogo || {};
+    var featOvr  = {};
+    var featCont = document.getElementById('sim-features-container');
+
+    if (featCont) {
+      Object.keys(catalogo).forEach(function(mod) {
+        var feats = catalogo[mod] || [];
+        feats.forEach(function(f) {
+          var cb = featCont.querySelector('[data-feat-mod="' + mod + '"][data-feat-id="' + f.id + '"]');
+          if (!cb) return;
+          var padrao = f.papeis && f.papeis.indexOf(papel) !== -1;
+          if (cb.checked !== padrao) {
+            if (!featOvr[mod]) featOvr[mod] = {};
+            featOvr[mod][f.id] = cb.checked;
+          }
+        });
+      });
+    }
+
+    // Desabilitar botão durante chamada
+    var btn = document.getElementById('sim-btn-confirmar');
+    if (btn) { btn.disabled = true; btn.textContent = 'Ativando…'; }
+
+    GAS.simulacao.ativar({ papel: papel, permissoesOverride: permOvr, featuresOverride: featOvr },
+      function(resp) {
+        if (!resp || !resp.ok) {
+          Toast.erro(resp && resp.mensagem ? resp.mensagem : 'Erro ao ativar simulação.');
+          if (btn) { btn.disabled = false; btn.innerHTML = '<span class="ms ms-sm">play_arrow</span> Iniciar Simulação'; }
+          return;
+        }
+        // Fechar modal
+        var ov = document.getElementById('overlay-simulacao-config');
+        if (ov) ov.remove();
+        // Aplicar boot simulado
+        _aplicarBootSimulado(resp.data && resp.data.boot ? resp.data.boot : (resp.boot || {}));
+      },
+      function(e) {
+        Toast.erro('Erro de comunicação: ' + (e && e.message ? e.message : 'falha'));
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="ms ms-sm">play_arrow</span> Iniciar Simulação'; }
+      }
+    );
+  }
+
+  // ── Aplicar boot simulado ─────────────────────────────────────────────────
+
+  function _aplicarBootSimulado(bootSim) {
+    var boot = App.getBoot ? App.getBoot() : null;
+    if (!boot || !bootSim || !bootSim.usuarioPapel) return;
+
+    // Guardar snapshot do boot real (apenas uma vez)
+    if (!_bootOriginal) {
+      _bootOriginal = {
+        usuarioPapel:      boot.usuarioPapel,
+        permissoesModulos: JSON.parse(JSON.stringify(boot.permissoesModulos || {})),
+        featuresAtivas:    JSON.parse(JSON.stringify(boot.featuresAtivas    || {})),
+        papeisAtribuiveis: (boot.papeisAtribuiveis || []).slice()
+      };
+    }
+
+    // Atualizar boot em-place
+    boot.usuarioPapel      = bootSim.usuarioPapel;
+    boot.permissoesModulos = bootSim.permissoesModulos || boot.permissoesModulos;
+    boot.featuresAtivas    = bootSim.featuresAtivas    || boot.featuresAtivas;
+    boot.papeisAtribuiveis = bootSim.papeisAtribuiveis || boot.papeisAtribuiveis;
+    boot.simulando         = true;
+
+    App.reconstruirMenu();
+
+    var banner = document.getElementById('banner-simulacao');
+    var texto  = document.getElementById('banner-simulacao-texto');
+    if (banner) banner.classList.add('ativo');
+    var p = bootSim.usuarioPapel;
+    if (texto) texto.textContent = 'Simulando como: ' + p.charAt(0).toUpperCase() + p.slice(1);
+
+    Toast.info('Simulando como ' + bootSim.usuarioPapel + ' — menu e permissões atualizados.');
+  }
+
+  // ── Encerrar simulação ────────────────────────────────────────────────────
+
+  function encerrar() {
+    GAS.simulacao.encerrar(function(resp) {
+      var boot = App.getBoot ? App.getBoot() : null;
+      if (boot && _bootOriginal) {
+        boot.usuarioPapel      = _bootOriginal.usuarioPapel;
+        boot.permissoesModulos = _bootOriginal.permissoesModulos;
+        boot.featuresAtivas    = _bootOriginal.featuresAtivas;
+        boot.papeisAtribuiveis = _bootOriginal.papeisAtribuiveis;
+        boot.simulando         = false;
+      }
+      _bootOriginal = null;
+      App.reconstruirMenu();
+      var banner = document.getElementById('banner-simulacao');
+      if (banner) banner.classList.remove('ativo');
+      Toast.info('Simulação encerrada — permissões reais restauradas.');
+    });
+  }
+
+  function abrirPreviewPrimeiroAcesso() {
+    var boot   = App.getBoot ? App.getBoot() : null;
+    var org    = (boot && boot.orgConfig) || {};
+    var setores = (boot && boot.setores) || [];
+    var dominio = org.dominio || 'dominio.org';
+    var emailFake = 'novo.colaborador@' + dominio;
+
+    var logoHtml = org.logoUrl
+      ? '<img src="' + escaparHtml(org.logoUrl) + '" alt="Logo" style="max-width:80px;max-height:80px;object-fit:contain;border-radius:8px;">'
+      : '🏛️';
+
+    var optsSetores = setores.map(function(s) {
+      return '<option value="' + escaparHtml(s.id) + '">' + escaparHtml(s.nome || s.id) + '</option>';
+    }).join('');
+
+    var html =
+      '<div id="overlay-preview-acesso" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;">' +
+        '<div style="background:#f1f5f9;border-radius:1rem;box-shadow:0 8px 40px rgba(0,0,0,.25);max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">' +
+          '<div style="background:#fef9c3;border-bottom:2px solid #f59e0b;padding:.55rem 1rem;font-size:.8125rem;color:#78350f;display:flex;align-items:center;gap:.5rem;border-radius:1rem 1rem 0 0;">' +
+            '👁️ &nbsp;<strong>Modo Prévia</strong> — Tela vista por novos colaboradores no primeiro acesso.' +
+            '<button onclick="document.getElementById(\'overlay-preview-acesso\').remove()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;line-height:1;color:#78350f;">✕</button>' +
+          '</div>' +
+          '<div style="background:#fff;margin:.75rem;border-radius:.75rem;padding:2rem 1.5rem;">' +
+            '<div style="font-size:2rem;text-align:center;margin-bottom:1rem;">' + logoHtml + '</div>' +
+            '<h1 style="font-size:1.25rem;font-weight:700;color:#1e3a5f;text-align:center;margin:0 0 .25rem;">' + escaparHtml(org.nome || 'Organização') + '</h1>' +
+            '<p style="text-align:center;color:#64748b;font-size:.875rem;margin:0 0 1.75rem;">Sistema de Gestão Cultural</p>' +
+            '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:.5rem;padding:.5rem .875rem;font-size:.875rem;color:#1d4ed8;text-align:center;margin-bottom:1.5rem;">🔐 &nbsp;<strong>' + escaparHtml(emailFake) + '</strong></div>' +
+            '<div style="background:#fefce8;border:1px solid #fde047;border-radius:.5rem;padding:.75rem 1rem;font-size:.875rem;color:#713f12;margin-bottom:1.5rem;line-height:1.5;">ℹ️ &nbsp;Seu email está no domínio autorizado, mas você ainda não tem cadastro.<br><br>Preencha os dados abaixo para solicitar acesso. Um administrador irá analisar e liberar.</div>' +
+            '<div style="margin-bottom:1rem;">' +
+              '<label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.35rem;">Seu nome completo *</label>' +
+              '<input type="text" placeholder="Ex: Maria da Silva" style="width:100%;padding:.6rem .875rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.9375rem;color:#111827;box-sizing:border-box;">' +
+            '</div>' +
+            '<div style="margin-bottom:1rem;">' +
+              '<label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.35rem;">Como prefere ser chamado(a)? <span style="font-weight:400;color:#9ca3af;font-size:.8125rem;">opcional</span></label>' +
+              '<input type="text" placeholder="Ex: Mari, João, Duda — se vazio, usaremos seu primeiro nome" style="width:100%;padding:.6rem .875rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.9375rem;color:#111827;box-sizing:border-box;">' +
+            '</div>' +
+            '<div style="margin-bottom:1rem;">' +
+              '<label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.35rem;">Pronomes *</label>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:.4rem;">' +
+                ['ela/dela','ele/dele','elu/delu','outro'].map(function(p) {
+                  return '<label style="display:flex;align-items:center;gap:.35rem;padding:.35rem .7rem;border:1.5px solid #d1d5db;border-radius:2rem;font-size:.875rem;color:#374151;cursor:pointer;">' +
+                    '<input type="radio" name="pronome-prev" value="' + p + '" style="width:auto;margin:0;accent-color:#3b82f6;"> ' + p + '</label>';
+                }).join('') +
+              '</div>' +
+              '<div id="outro-prev-wrapper" style="display:none;margin-top:.5rem;"><input type="text" placeholder="Escreva seus pronomes (ex: el/dele, per/pers…)" style="width:100%;padding:.6rem .875rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.9375rem;color:#111827;box-sizing:border-box;"></div>' +
+            '</div>' +
+            '<div style="margin-bottom:1.5rem;">' +
+              '<label style="display:block;font-size:.875rem;font-weight:600;color:#374151;margin-bottom:.35rem;">Setor / área de trabalho *</label>' +
+              '<select style="width:100%;padding:.6rem .875rem;border:1px solid #d1d5db;border-radius:.5rem;font-size:.9375rem;color:#111827;background:#fff;box-sizing:border-box;"><option value="">Selecione o setor...</option>' + optsSetores + '</select>' +
+            '</div>' +
+            '<button id="btn-preview-solicitar" data-bg-skip="1" onclick="this.textContent=\'👁️ Prévia — em produção a solicitação seria enviada ao admin\';this.disabled=true;this.style.background=\'#16a34a\';" style="width:100%;padding:.75rem;background:#1a237e;color:#fff;border:none;border-radius:.5rem;font-size:1rem;font-weight:600;cursor:pointer;">Solicitar acesso</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    var el = document.getElementById('overlay-preview-acesso');
+    if (el) el.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.querySelectorAll('input[name=pronome-prev]').forEach(function(r) {
+      r.addEventListener('change', function() {
+        document.getElementById('outro-prev-wrapper').style.display = this.value === 'outro' ? 'block' : 'none';
+      });
+    });
+  }
+
+  return {
+    iniciar:                    iniciar,
+    encerrar:                   encerrar,
+    abrirPreviewPrimeiroAcesso: abrirPreviewPrimeiroAcesso,
+    _confirmar:                 _confirmar,
+    _atualizarMatriz:           _atualizarMatriz,
+    _onPermChange:              _onPermChange
+  };
+})();
+
 
 /* ══════════════════════════════════════════════════════════════
    MetricsToggle — retração/expansão de blocos de métricas
