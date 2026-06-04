@@ -26400,6 +26400,48 @@ var EscutaUI = (function() {
     });
   }
 
+  // ── ESC-15: constantes de metodologia ────────────────────────────────────
+  var _MET_DIMS = {
+    uwes:          ['vigor','dedicacao','absorcao'],
+    jdc:           ['demanda','controle'],
+    cvf:           ['colaboracao','inovacao'],
+    nr1:           ['seguranca'],
+    completa:      ['vigor','dedicacao','absorcao','demanda','controle','colaboracao','inovacao','seguranca'],
+    personalizada: []
+  };
+  var _DIM_LABELS = {
+    vigor:'Vigor', dedicacao:'Dedicação', absorcao:'Absorção',
+    demanda:'Demanda/Carga', controle:'Controle/Autonomia',
+    colaboracao:'Colaboração', inovacao:'Inovação', seguranca:'Segurança Psicológica'
+  };
+
+  function _onMetodologiaChange(val) {
+    var customDiv = document.getElementById('esc-f-dims-custom');
+    var preview   = document.getElementById('esc-f-dims-preview');
+    if (!customDiv || !preview) return;
+    if (val === 'personalizada') {
+      customDiv.style.display = 'block';
+      var sel = document.querySelectorAll('.esc-f-dim-cb:checked');
+      var nomes = [];
+      sel.forEach(function(cb){ nomes.push(_DIM_LABELS[cb.value] || cb.value); });
+      preview.textContent = nomes.length ? nomes.join(', ') : 'Nenhuma dimensão selecionada.';
+    } else {
+      customDiv.style.display = 'none';
+      var dims = _MET_DIMS[val] || [];
+      preview.textContent = dims.length ? dims.map(function(d){ return _DIM_LABELS[d]||d; }).join(', ') : '—';
+    }
+  }
+
+  function _getDimensoesByMetodologia(met) {
+    if (met === 'personalizada') {
+      var dims = [];
+      var cbs = document.querySelectorAll('.esc-f-dim-cb:checked');
+      cbs.forEach(function(cb){ dims.push(cb.value); });
+      return dims.length ? dims : _MET_DIMS.completa;
+    }
+    return _MET_DIMS[met] || _MET_DIMS.completa;
+  }
+
   // ── Formulário de pesquisa formal ─────────────────────────────────────────
   function abrirFormPesquisa(id) {
     var item = id ? _lista.find(function(p){ return p.id===id; }) : null;
@@ -26407,39 +26449,92 @@ var EscutaUI = (function() {
     ov.id    = 'modal-escuta-overlay';
     ov.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.52);';
     var box  = document.createElement('div');
-    box.style.cssText = 'background:var(--surface);border-radius:16px;padding:24px 28px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.22);';
+    box.style.cssText = 'background:var(--surface);border-radius:16px;padding:24px 28px;width:92%;max-width:660px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.22);';
+    var _metAtual   = (item && item.metodologia)       || 'completa';
+    var _perAtual   = (item && item.periodicidade)      || 'unica';
+    var _partAtual  = (item && item.grupoParticipantes) || 'todos';
+    var _canalAtual = item && Array.isArray(item.canalNotificacao) ? item.canalNotificacao : ['email','sistema'];
+    var _itemDims   = item && Array.isArray(item.dimensoes) ? item.dimensoes : _MET_DIMS.completa;
+    var _allDimIds  = ['vigor','dedicacao','absorcao','demanda','controle','colaboracao','inovacao','seguranca'];
+    function _opt(v, l, cur) { return '<option value="' + v + '"' + (cur===v?' selected':'') + '>' + l + '</option>'; }
+    function _sec(t) { return '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);">' + t + '</div>'; }
+    function _cbCanal(v, l) { return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" value="' + v + '" class="esc-f-canal"' + (_canalAtual.indexOf(v)>=0?' checked':'') + '> ' + l + '</label>'; }
+    function _cbDim(d) { return '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="checkbox" value="' + d + '" class="esc-f-dim-cb"' + (_itemDims.indexOf(d)>=0?' checked':'') + ' onchange="EscutaUI._onMetodologiaChange(\'personalizada\')">' + (_DIM_LABELS[d]||d) + '</label>'; }
+    var _previewText = _metAtual === 'personalizada'
+      ? (_itemDims.map(function(d){ return _DIM_LABELS[d]||d; }).join(', ') || 'Nenhuma dimensão selecionada.')
+      : ((_MET_DIMS[_metAtual]||[]).map(function(d){ return _DIM_LABELS[d]||d; }).join(', '));
     box.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
         '<h3 style="margin:0;font-size:16px;">' + (id?'Editar':'Nova') + ' Pesquisa</h3>' +
         '<button onclick="document.getElementById(\'modal-escuta-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);" data-bg-skip="1">✕</button>' +
       '</div>' +
+      _sec('Identificação') +
       '<div class="form-group"><label class="form-label">Título *</label><input id="esc-f-titulo" class="form-control" value="' + _esc(item?item.titulo:'') + '" placeholder="Pesquisa de Clima Q2 2026"></div>' +
       '<div class="form-group"><label class="form-label">Descrição</label><textarea id="esc-f-desc" class="form-control" rows="2" style="resize:vertical;">' + _esc(item?item.descricao:'') + '</textarea></div>' +
+      _sec('Metodologia') +
+      '<div class="form-group">' +
+        '<label class="form-label">Metodologia *</label>' +
+        '<select id="esc-f-metodologia" class="form-control" onchange="EscutaUI._onMetodologiaChange(this.value)">' +
+          _opt('completa',      'Completa — todas as 8 dimensões (padrão)',     _metAtual) +
+          _opt('uwes',          'UWES — Bem-estar e Engajamento (3 dimensões)', _metAtual) +
+          _opt('jdc',           'JDC — Demanda e Controle (2 dimensões)',       _metAtual) +
+          _opt('cvf',           'CVF — Clima Cultural (2 dimensões)',           _metAtual) +
+          _opt('nr1',           'NR-1 — Psicossocial (1 dimensão)',             _metAtual) +
+          _opt('personalizada', 'Personalizada — selecionar dimensões',         _metAtual) +
+        '</select>' +
+      '</div>' +
+      '<div id="esc-f-dims-custom" style="display:' + (_metAtual==='personalizada'?'block':'none') + ';background:var(--bg,#f8f9fa);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">' +
+        '<p style="font-size:12px;font-weight:600;margin:0 0 8px;color:var(--text1);">Selecione as dimensões:</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' + _allDimIds.map(_cbDim).join('') + '</div>' +
+      '</div>' +
+      '<div style="background:var(--bg,#f0f4ff);border:1px solid var(--border);border-radius:6px;padding:7px 12px;margin-bottom:4px;">' +
+        '<span style="font-size:11px;color:var(--text2);font-weight:600;">Dimensões incluídas: </span>' +
+        '<span id="esc-f-dims-preview" style="font-size:11px;color:var(--text1);">' + _previewText + '</span>' +
+      '</div>' +
+      _sec('Período e Periodicidade') +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
         '<div class="form-group"><label class="form-label">Início</label><input type="date" id="esc-f-inicio" class="form-control" value="' + _esc(item?item.dataInicio:'') + '"></div>' +
         '<div class="form-group"><label class="form-label">Fim</label><input type="date" id="esc-f-fim" class="form-control" value="' + _esc(item?item.dataFim:'') + '"></div>' +
       '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Periodicidade</label>' +
+        '<select id="esc-f-periodicidade" class="form-control">' +
+          _opt('unica','Única — aplicação pontual',_perAtual) +
+          _opt('quinzenal','Quinzenal',_perAtual) +
+          _opt('mensal','Mensal',_perAtual) +
+          _opt('trimestral','Trimestral',_perAtual) +
+          _opt('semestral','Semestral',_perAtual) +
+        '</select>' +
+      '</div>' +
+      _sec('Participantes') +
+      '<div class="form-group">' +
+        '<label class="form-label">Destinatários</label>' +
+        '<select id="esc-f-participantes" class="form-control">' +
+          _opt('todos','Todos os colaboradores ativos',_partAtual) +
+          _opt('gestores','Apenas gestores e coordenadores',_partAtual) +
+          _opt('voluntarios','Voluntários e colaboradores',_partAtual) +
+        '</select>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Canal de notificação</label>' +
+        '<div style="display:flex;gap:16px;margin-top:4px;">' + _cbCanal('email','E-mail') + _cbCanal('sistema','Notificação no sistema') + '</div>' +
+      '</div>' +
+      _sec('Configurações') +
       '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
           '<input type="checkbox" id="esc-f-anonima"' + ((!item||item.anonima!==false)?' checked':'') + '>' +
           '<label for="esc-f-anonima" style="font-size:13px;font-weight:600;cursor:pointer;">Pesquisa anônima</label>' +
         '</div>' +
-        '<p style="font-size:11px;color:var(--text2);margin:0;">' +
-          '<strong>Marcado:</strong> as respostas não serão vinculadas ao nome do participante — apenas agregadas por dimensão. ' +
-          '<strong>Desmarcado:</strong> o participante será identificado nas respostas e poderá ver essa informação ao preencher.' +
-        '</p>' +
+        '<p style="font-size:11px;color:var(--text2);margin:0;"><strong>Marcado:</strong> respostas não vinculadas ao nome — apenas agregadas por dimensão. <strong>Desmarcado:</strong> participante identificado nas respostas.</p>' +
       '</div>' +
-      '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:16px;">' +
+      '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:12px;">' +
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
           '<input type="checkbox" id="esc-f-obrigatoria"' + (item&&item.obrigatoria?' checked':'') + '>' +
           '<label for="esc-f-obrigatoria" style="font-size:13px;font-weight:600;cursor:pointer;color:#92400e;">Pesquisa obrigatória</label>' +
         '</div>' +
-        '<p style="font-size:11px;color:#92400e;margin:0;">' +
-          'Quando ativada, todos os colaboradores serão convidados e <strong>não poderão usar o sistema</strong> até responderem. ' +
-          'Use apenas para pesquisas críticas (ex.: NR-1, compliance).' +
-        '</p>' +
+        '<p style="font-size:11px;color:#92400e;margin:0;">Quando ativada, todos os colaboradores serão convidados e <strong>não poderão usar o sistema</strong> até responderem. Use apenas para pesquisas críticas (ex.: NR-1, compliance).</p>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border);">' +
         '<button class="btn btn-ghost" onclick="BtnGuard.liberar(\'btn-nova-pesquisa\');document.getElementById(\'modal-escuta-overlay\').remove()" data-bg-skip="1">Cancelar</button>' +
         '<button id="btn-salvar-escuta" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-salvar-escuta\',\'Salvando…\',EscutaUI.salvarPesquisa)">Salvar</button>' +
       '</div>';
@@ -26450,17 +26545,26 @@ var EscutaUI = (function() {
   }
 
   function salvarPesquisa(done) {
-    var boxEl  = document.querySelector('#modal-escuta-overlay div[data-edit-id]');
+    var boxEl  = document.querySelector('#modal-escuta-overlay [data-edit-id]');
     var editId = boxEl ? boxEl.dataset.editId : null;
     var titulo = ((document.getElementById('esc-f-titulo')||{}).value||'').trim();
     if (!titulo) { Toast.aviso('Título obrigatório.'); if(done) done(); return; }
+    var metSel = (document.getElementById('esc-f-metodologia')||{}).value || 'completa';
+    var canalEls = document.querySelectorAll('.esc-f-canal:checked');
+    var canal = [];
+    canalEls.forEach(function(cb){ canal.push(cb.value); });
     var dados = {
-      titulo:      titulo,
-      descricao:   (document.getElementById('esc-f-desc')||{}).value||'',
-      dataInicio:  (document.getElementById('esc-f-inicio')||{}).value||'',
-      dataFim:     (document.getElementById('esc-f-fim')||{}).value||'',
-      anonima:     !!(document.getElementById('esc-f-anonima')||{}).checked,
-      obrigatoria: !!(document.getElementById('esc-f-obrigatoria')||{}).checked
+      titulo:             titulo,
+      descricao:          (document.getElementById('esc-f-desc')||{}).value||'',
+      metodologia:        metSel,
+      dimensoes:          _getDimensoesByMetodologia(metSel),
+      dataInicio:         (document.getElementById('esc-f-inicio')||{}).value||'',
+      dataFim:            (document.getElementById('esc-f-fim')||{}).value||'',
+      periodicidade:      (document.getElementById('esc-f-periodicidade')||{}).value||'unica',
+      grupoParticipantes: (document.getElementById('esc-f-participantes')||{}).value||'todos',
+      canalNotificacao:   canal.length ? canal : ['email'],
+      anonima:            !!(document.getElementById('esc-f-anonima')||{}).checked,
+      obrigatoria:        !!(document.getElementById('esc-f-obrigatoria')||{}).checked
     };
     if (editId) dados.id = editId;
     GAS.escuta.salvar(dados, function(r) {
@@ -26565,7 +26669,7 @@ var EscutaUI = (function() {
   return {
     aoAbrir, carregar, setTab, filtrarLista,
     // Pesquisas
-    abrirFormPesquisa, salvarPesquisa, mudarStatus, verResultados,
+    abrirFormPesquisa, salvarPesquisa, mudarStatus, verResultados, _onMetodologiaChange,
     // Relatórios
     carregarResultado, carregarCruzamento, gerarRelatorio,
     // Escuta livre

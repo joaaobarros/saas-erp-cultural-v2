@@ -124,17 +124,21 @@ var EscutaEngine = (function() {
 
   function criarPesquisa(orgId, dados, emailCriador) {
     var pesquisa = {
-      titulo:      dados.titulo || 'Pesquisa de Clima ' + new Date().getFullYear(),
-      descricao:   dados.descricao || '',
-      rodada:      dados.rodada   || _proximaRodada(orgId),
-      dimensoes:   dados.dimensoes || DIMENSOES.map(function(d) { return d.id; }),
-      anonima:     dados.anonima !== false,   // default true
-      obrigatoria: dados.obrigatoria === true, // default false
-      dataInicio:  dados.dataInicio || new Date().toISOString().split('T')[0],
-      dataFim:     dados.dataFim    || _dataFimPadrao(),
-      status:      'rascunho',
-      convidados:  [],   // preenchido ao ativar
-      criadoPor:   emailCriador
+      titulo:             dados.titulo || 'Pesquisa de Clima ' + new Date().getFullYear(),
+      descricao:          dados.descricao || '',
+      rodada:             dados.rodada   || _proximaRodada(orgId),
+      metodologia:        dados.metodologia || 'completa',
+      dimensoes:          dados.dimensoes || DIMENSOES.map(function(d) { return d.id; }),
+      anonima:            dados.anonima !== false,
+      obrigatoria:        dados.obrigatoria === true,
+      periodicidade:      dados.periodicidade || 'unica',
+      grupoParticipantes: dados.grupoParticipantes || 'todos',
+      canalNotificacao:   dados.canalNotificacao || ['email'],
+      dataInicio:         dados.dataInicio || new Date().toISOString().split('T')[0],
+      dataFim:            dados.dataFim    || _dataFimPadrao(),
+      status:             'rascunho',
+      convidados:         [],
+      criadoPor:          emailCriador
     };
     var id = EscutaRepository.salvarPesquisa(orgId, pesquisa);
     AuditoriaService.registrar('ESCUTA_CRIADA', 'escuta', { id: id, titulo: pesquisa.titulo }, emailCriador);

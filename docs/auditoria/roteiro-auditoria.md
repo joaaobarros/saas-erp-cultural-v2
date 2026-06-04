@@ -277,7 +277,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Painel — carrega (loading infinito parcial) | ✅ ESC-04 CORRIGIDO s16 F13 | 2026-06-01 |
 | Aba Painel — EVOLUÇÃO DO CLIMA (estado vazio) | ✅ | 2026-05-31 s11 |
 | Aba Painel — PESQUISAS FORMAIS (estado vazio) | ✅ | 2026-05-31 s11 |
-| Modal "+ Nova Pesquisa" — campos | ✅ com ⚠️ ESC-06, ESC-15 | 2026-05-31 s11 |
+| Modal "+ Nova Pesquisa" — campos | ✅ ESC-15 CORRIGIDO s17 F65 @507 — modal expandido: metodologia, periodicidade, participantes, canal; ESC-06 BtnGuard ok | 2026-06-04 |
 | Aba Escuta Livre — RESPONDER PESQUISA ATIVA | ✅ estado vazio com orientação | 2026-05-31 s11 |
 | Aba Escuta Livre — RELATO ESPONTÂNEO | ✅ textarea + dimensão + anônimo | 2026-05-31 s11 |
 | Aba Escuta Livre — MEU PERFIL ANALÍTICO | ⚠️ ESC-08 deve ser removido | 2026-05-31 s11 |
@@ -1573,7 +1573,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 **ESC-14** `🟡 Média` — **Contradição na aba Gestão** — seção "MARCADORES METODOLÓGICOS" exibe ao mesmo tempo "Qualidade baixa — revisar" (problema) e "✅ Motor metodológico sem avisos." (tudo ok). As duas mensagens são contraditórias e geram confusão — uma avalia a qualidade dos dados coletados, a outra avalia o funcionamento do motor. Devem estar em sub-seções distintas com contexto claro.
 
-**ESC-15** `🔴 Alta` — **Modal "Nova Pesquisa" extremamente minimalista** — apenas 4 campos (título, descrição, período, anonimato). Criar uma pesquisa formal de clima organizacional exige: (a) seleção de metodologia (UWES, JDC, CVF, NR-1 ou personalizada); (b) seleção ou edição do banco de questões; (c) configuração de participantes (quem receberá); (d) canal de notificação; (e) definição de periodicidade (única, mensal, trimestral). O formulário atual não permite criar uma pesquisa utilizável. Gap crítico para a funcionalidade central do módulo.
+~~**ESC-15**~~ ✅ CORRIGIDO s17 Fase 65 @507 — Modal "Nova Pesquisa" expandido de 4 para ~15 campos em 4 seções: Identificação (título+desc), Metodologia (select UWES/JDC/CVF/NR-1/Completa/Personalizada com preview dinâmico + checkboxes de dimensões), Período e Periodicidade (datas + Única/Quinzenal/Mensal/Trimestral/Semestral), Participantes (Todos/Gestores/Voluntários + canal Email+Sistema). Backend `criarPesquisa` persiste `metodologia`, `periodicidade`, `grupoParticipantes`, `canalNotificacao`. Pendente: (b) seleção/edição do banco de questões (aberto como ESC-19).
 
 ~~**ESC-16**~~ FALSO POSITIVO — Código `(id?'Editar':'Nova') + ' Pesquisa'` já era correto; ao clicar "+ Nova Pesquisa", `id` é `undefined`, título exibe "Nova Pesquisa".
 
@@ -2993,7 +2993,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | ~~219~~ | ~~ESC-12~~ | Escuta — Documentação | ~~Módulo sem documentação ou guia contextual integrado~~ **CORRIGIDO s17 F64 @505**: botão `help_outline` no header + modal guia in-app (O que é / Abas / Glossário / Fluxo). Pendente: tour guiado e tooltips por seção. | ~~🔴 Alta~~ |
 | 220 | ESC-13 | Escuta — DS / Linguagem | Subtítulo "Clima organizacional · UWES · JDC · CVF · NR-1" usa siglas sem explicação — instância de SIS-08; substituir por linguagem orientada ao benefício ou adicionar tooltips nas siglas | 🟡 Média |
 | 221 | ESC-14 | Escuta — Gestão | Contradição na seção MARCADORES METODOLÓGICOS — "Qualidade baixa — revisar" (problema) e "✅ Motor metodológico sem avisos." (tudo ok) na mesma seção sem distinção de contexto | 🟡 Média |
-| 222 | ESC-15 | Escuta — Nova Pesquisa | Modal "Nova Pesquisa" extremamente minimalista (4 campos) — sem seleção de metodologia, sem banco de questões, sem configuração de participantes, sem periodicidade; não permite criar pesquisa utilizável | 🔴 Alta |
+| ~~222~~ | ~~ESC-15~~ | Escuta — Nova Pesquisa | ~~Modal "Nova Pesquisa" extremamente minimalista~~ **CORRIGIDO s17 F65 @507**: modal expandido com Metodologia (UWES/JDC/CVF/NR-1/Completa/Personalizada + preview dimensões), Periodicidade, Destinatários e Canal de notificação. Pendente: edição do banco de questões. | ~~🔴 Alta~~ |
 | ~~223~~ | ~~ESC-16~~ | Escuta — Modal | ~~Título "Editar Pesquisa" ao criar nova pesquisa~~ **JÁ ESTAVA CORRIGIDO**: `abrirFormPesquisa()` usa `(id?'Editar':'Nova') + ' Pesquisa'` — quando chamada sem id, título é "Nova Pesquisa". | ~~🟡 Baixa~~ |
 | 224 | SIS-12 | Sistema Global — Nome Social | Sistema não implementa prioridade de nome social — todas as exibições de nome usam email ou iniciais; nome social (quando cadastrado) deve ter prioridade absoluta sobre nome registrado em: saudações, avatar, campos de autoria, listas, relatórios | 🔴 Alta |
 | 225 | HUB-01 | Meu Centro — Produtividade | Aba Produtividade tem 5 cards de métricas sem MetricsToggle — único módulo com múltiplos cards numéricos fora do padrão obrigatório | ~~🟡 Média~~ |
