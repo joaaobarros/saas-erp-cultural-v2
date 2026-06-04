@@ -229,16 +229,17 @@ BtnGuard.auditar()  // deve retornar "✅ todos protegidos"
 
 ### 4. SEQUÊNCIA OBRIGATÓRIA ao final de cada fase
 
+> **Regra de ouro: Git ANTES do deploy GAS.** O git deve estar sempre igual ou à frente da versão deployada. Nunca deploar código que não está commitado.
+
 ```
-1. clasp push
-2. clasp deploy --deploymentId AKfycb... --description "Fase X.Y — ..."
-3. [Descrever] simulação do smoke-test no browser
-4. Atualizar PROGRESS.md:
-   - Marcar checkboxes como [x]
-   - Atualizar "⚡ RETOMANDO AGORA?" com próximo passo
-   - Adicionar linha no "Log de Sessões"
-   - Atualizar checklist BtnGuard
-5. git add -A && git commit -m "feat: Fase X.Y — ..."
+1. git add <arquivos> && git commit -m "fix/feat: Fase X.Y — ..."   ← PRIMEIRO
+2. clasp push
+3. clasp deploy (via script Python — ver seção de deploy)
+4. [Descrever] simulação do smoke-test no browser
+5. Atualizar PROGRESS.md e roteiro-auditoria.md:
+   - Atualizar "⚡ RETOMANDO AGORA?" com número do deploy e resumo
+   - Marcar bugs como CORRIGIDO nas 3 seções do roteiro
+6. git add PROGRESS.md docs/auditoria/roteiro-auditoria.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
 ```
 
 ---
