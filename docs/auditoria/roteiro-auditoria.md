@@ -3237,6 +3237,34 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 20 (2026-06-04) → SESSÃO 21
+
+### Estado atual: 281 problemas registrados · Deploy @518
+
+### O que foi corrigido nesta sessão (s20)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @518 | ESP-CRIAÇÃO | `config_admin_service.gs` `salvarEspaco()`: default de `horarioFuncionamento` ao criar espaço pelo mapa herdado do config global da org (via `SistemaConfigService.getReservaHorario()`) em vez de `08:00–22:00` fixo — corrige erro de criação quando expediente configurado é menor que o padrão |
+| @518 | MAPA-TOPO | `InfraConfigMapaUI._renderMapa()`: `viewBox` alterado de `"0 0 900 660"` para `"0 -30 900 690"` — 30px extras acima evitam corte do trecho superior do mapa |
+| @518 | MAPA-TOOLS | `InfraConfigMapaUI`: paridade de ferramentas com `MapaAcaoEditorUI` — forma `livre` (pts) suportada em `_criarForma`/`_bboxHW`; vértices arrastáveis; `_espelharH`, `_espelharV`, `_adicionarVertice`, `_iniciarMerge`, `_completarMerge`; painel lateral com botões Esp. H · Esp. V · +Vértice · Mesclar |
+
+### Pendentes desta sessão
+- **Escala real** no mapa de eventos (mapa_acao_editor.html): indicar metragem por espaço/item mantendo proporções com a realidade
+- **Escala real** no mapa de infraestrutura (InfraConfigMapaUI): idem
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — nível errado — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+- **ESC-17** (pesquisas não-anônimas permitem override pelo respondente — decisão arquitetural)
+
+### PRÓXIMA AÇÃO
+Implementar ferramenta de escala real (m²/m) nos mapas de eventos e infraestrutura.
+
+---
+
 ## HANDOFF — SESSÃO 19 (2026-06-04) → SESSÃO 20
 
 ### Estado atual: 281 problemas registrados · Deploy @512
