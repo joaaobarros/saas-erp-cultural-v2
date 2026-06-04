@@ -157,21 +157,21 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Item | Status | Sessão |
 |---|---|---|
 | View carrega, métricas, lista de protocolos | ✅ | 2026-05-31 |
-| Formulário Nova Retirada (painel inline) | ✅ (com CHV-04 a CHV-08) | 2026-05-31 |
+| Formulário Nova Retirada (painel inline) | ✅ CHV-06 CORRIGIDO F58+59 @474 (setor select); CHV-04/05 CORRIGIDOS F60+61 @476 (sala/responsável selects) | 2026-06-03 |
 | Devolução — modal inline (condição + obs + confirmar) | ✅ CHV-03 CORRIGIDO s16 @387 | 2026-06-01 |
 
 ### Módulo 09 — Infraestrutura / Empréstimos
 | Item | Status | Sessão |
 |---|---|---|
 | View carrega, métricas, lista vazia | ✅ | 2026-05-31 |
-| Formulário Solicitar Empréstimo (catálogo vazio) | ✅ (com EMP-01 a EMP-07) | 2026-05-31 |
+| Formulário Solicitar Empréstimo (catálogo vazio) | ✅ EMP-03 CORRIGIDO F58+59 @474 (setor select) | 2026-06-03 |
 
 ### Módulo 13 — Ações Culturais / Lista e Kanban
 | Item | Status | Sessão |
 |---|---|---|
 | Kanban carrega, métricas, filtros | ✅ | 2026-05-31 |
 | Toggle Lista/Kanban | ✅ | 2026-05-31 |
-| Formulário Nova Ação (9 campos) | ✅ (com ACO-12, ACO-14, ACO-17 a ACO-20) | 2026-05-31 |
+| Formulário Nova Ação (9 campos) | ✅ ACO-12/17 CORRIGIDOS s17 F57 @466 (form-control/form-label); ACO-18/19/20 CORRIGIDOS F58+59 @474 (modal reordenado) | 2026-06-03 |
 | Modal Editar Ação | ✅ | 2026-05-31 |
 | Botão Editar (caminho direto) | ✅ ACO-05 CORRIGIDO — BtnGuard.liberar em fecharForm | 2026-06-01 |
 | Botão ✕ fecha painel | ✅ ACO-16 CORRIGIDO — stopPropagation + overlay guard | 2026-06-01 |
@@ -250,7 +250,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Identidade Visual (novo, substituiu Config. Sistema) | ✅ mesmo conteúdo, agora aba direta em Cadastros Base | 2026-06-03 |
 | Aba Banco de Dados | ✅ ADM-04 CORRIGIDO s17 F63 @490 — oculta para não-SuperAdmin | 2026-06-03 |
 | Botão "Visualizar Cadastro" em Acessos Pendentes | ❌ ADM-12 — página externa em branco | 2026-05-31 s10 |
-| Tab bar com 10 abas — scroll sinalizado? | ⚠️ ADM-07 — scroll oculto sem indicação visual | 2026-05-31 s10 |
+| Tab bar com 10 abas — scroll sinalizado? | ✅ ADM-07 CORRIGIDO s17 F44 @430 — `_initTabBarNav` com botões prev/next e fade gradient | 2026-06-02 |
 | Modal "Novo Espaço" — campos | ✅ (horário por espaço e responsáveis por período já implementados) | 2026-05-31 s10 |
 | Modal "Novo Turno" — campos | ✅ (Nome, Início, Fim, Dias da semana com checkboxes) | 2026-05-31 s10 |
 | Modal "Novo Setor" — campos | ✅ (Nome + Cor identificadora com seletor de cor) | 2026-05-31 s10 |
@@ -284,7 +284,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Alertas — carrega, estado vazio | ✅ ESC-10 CORRIGIDO s17 F63 @490 — card explicativo com propósito, instrução Gestão e botão "Ir para Gestão →" | 2026-06-03 |
 | Guia contextual / documentação in-app | ✅ ESC-12 CORRIGIDO s17 F64 @505 — botão help_outline no header + modal guia in-app (4 seções: O que é, Abas, Glossário, Fluxo) | 2026-06-04 |
 | Aba Distribuição — SISTEMA PULSE MÉDIAS | ✅ estado vazio (com ⚠️ ESC-11) | 2026-05-31 s11 |
-| Aba Distribuição — SATURAÇÃO POR DIMENSÃO | ⚠️ ESC-11 IDs numéricos em vez de nomes | 2026-05-31 s11 |
+| Aba Distribuição — SATURAÇÃO POR DIMENSÃO | ✅ ESC-11 CORRIGIDO s17 F62 @480 — `carregarPulseDash()` usa `d.indicadores`; `Array.isArray()+forEach` com `s.label\|\|s.id` | 2026-06-03 |
 | Aba Distribuição — PARTICIPAÇÃO HISTÓRICA (12m) | ✅ gráfico linha mensal | 2026-05-31 s11 |
 | Aba Relatórios — select pesquisa + Cruzamento + Relatório | ✅ estado vazio funcional | 2026-05-31 s11 |
 | Aba Gestão — MARCADORES METODOLÓGICOS | ✅ ESC-05 CORRIGIDO s16 F13 | 2026-06-01 |
@@ -300,7 +300,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | View carrega com 4 abas (Contratos, Remanejamentos, Aditivos, Exportações) | ✅ | 2026-06-01 |
 | MÉTRICAS nível-1 (Total, Ativos, Suspensos, Valor em aberto) com MetricsToggle | ✅ | 2026-06-01 |
 | Aba Remanejamentos — vazia | ✅ | 2026-06-01 |
-| Aba Aditivos — card "Valor Aditivado" exibe "—" | ⚠️ FIN-13 | 2026-06-01 |
+| Aba Aditivos — card "Valor Aditivado" exibe "—" | ✅ FIN-13 CORRIGIDO s17 F62 @480 — `_fmt(v)` usa `Number(v\|\|0).toLocaleString(...)` | 2026-06-03 |
 | Aba Exportações (SALIC, PNAB, SNIIC) | ✅ estrutura confirmada | 2026-06-01 |
 | Painel do contrato (5 abas) abre ao clicar no card | ✅ | 2026-06-01 |
 | Painel — Plano de Trabalho (hierarquia Meta → Atividade → Rubrica) | ✅ | 2026-06-01 |
@@ -312,7 +312,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Formulário de Rubrica com Memória de Cálculo inline | ✅ (com FIN-01, FIN-10) | 2026-06-01 |
 | Modal read-only da Memória de Cálculo (ícone olho) | ✅ FIN-03 NEGADO | 2026-06-01 |
 | FIN-01 (Setor não persiste na Memória de Cálculo) | ⚠️ CONFIRMADO | 2026-06-01 |
-| FIN-07 (label "Valor em Aberto" ambíguo) | ⚠️ CONFIRMADO | 2026-06-01 |
+| FIN-07 (label "Valor em Aberto" ambíguo) | ✅ CORRIGIDO s17 F62 @480 — renomeado "Total Previsto Ativo" | 2026-06-03 |
 | FSM do contrato — botões de transição na UI | ✅ FIN-14 CORRIGIDO s16 F17 — botões Suspender/Encerrar no card + modal de confirmação + motivo | 2026-06-01 |
 | Ícone de pessoas no card | ⚠️ ~~FIN-15~~ CORRIGIDO s17 F50 — `manage_accounts` → `folder_open` no card do contrato. FIN-17 CORRIGIDO s16 F12 | 2026-06-01 |
 | Modal "Editar Pessoal" — campos mapeados | ✅ confirmado via screenshot | 2026-05-31 s10 |
@@ -368,11 +368,11 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 |---|---|---|
 | View carrega | ✅ | 2026-05-31 s14 |
 | Galeria — "Carregando..." sem resolver | ✅ CORRIGIDO s16 Fase 7 | 2026-06-01 |
-| Stats sem MetricsToggle | ⚠️ ACV-03 | 2026-05-31 s14 |
+| Stats sem MetricsToggle | ✅ ACV-03 CORRIGIDO s17 F43 @428 — id="acv-stats" adicionado ao stats-strip | 2026-06-02 |
 | Filtros inline sem classe DS | ✅ ACV-05 CORRIGIDO s17 Fases 60+61 @476 | 2026-06-03 |
 | Modal "Adicionar ao Acervo" — estrutura | ✅ abre | 2026-05-31 s14 |
 | Modal — Select Ação vinculada vazio + campo nome + acaoId obrigatório | ✅ ACV-07 + ACV-08 + ACV-11 CORRIGIDOS s16 F14 | 2026-06-01 |
-| Modal — Botão Cancelar rosa/pink | ⚠️ ACV-02 | 2026-05-31 s14 |
+| Modal — Botão Cancelar rosa/pink | ✅ ACV-02 CORRIGIDO s17 F43 @428 — btn-secondary → btn-ghost | 2026-06-02 |
 | Fluxo de salvamento | 🔲 bloqueado (ACV-01/07) | — |
 
 ### Módulo 34 — Reserva de Veículo
@@ -384,7 +384,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Modal de detalhes (agenda) | ✅ (CAR-07/SIS-14 CORRIGIDO s16 Fase 11; CAR-08 persiste) | 2026-06-01 |
 | Formulário "Nova Reserva" — campos mapeados | ✅ (com CAR-04, CAR-09, CAR-10, CAR-11) | 2026-05-31 s13 |
 | FSM — botões Concluir / Cancelar (card + modal) | ✅ | 2026-05-31 s13 |
-| Sidebar: "Reserva de Carro" vs "Reserva de Veículo" | ⚠️ CAR-02 | 2026-05-31 s13 |
+| Sidebar: "Reserva de Carro" vs "Reserva de Veículo" | ✅ CAR-02 CORRIGIDO s17 F42 @428 — sidebar exibe "Reserva de Veículo" | 2026-06-02 |
 | Motorista — feature configurável, desativada por padrão | ✅ CAR-12 respondido | 2026-05-31 s13 |
 | Veículos — feature configurável, desativada por padrão | ✅ CAR-14 respondido | 2026-05-31 s13 |
 | Self-approval superadmin | ✅ INTENCIONAL — superadmin aprova qualquer coisa | 2026-05-31 s13 |
@@ -3223,24 +3223,39 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
-## HANDOFF — SESSÃO 17 (2026-06-02) → SESSÃO 18
+## HANDOFF — SESSÃO 18 (2026-06-04) → SESSÃO 19
 
-### Estado atual: 280 problemas registrados · Deploy @426
+### Estado atual: 280 problemas registrados · Deploy @510
 
-### O que foi corrigido nesta sessão (s17)
+### O que foi corrigido nesta sessão
 
 | Deploy | IDs | O que foi corrigido |
 |---|---|---|
-| @424 | PUL-03, PUL-04, PUL-05 | **Anti-spam quebrado**: `registrarRespostaPulse` salvava `colaboradorId: null`, tornando todos os filtros de anti-spam/monitoramento cegos. Fix: `colaboradorId` sempre persistido; `anonima` flag controla apenas exibição. TURNOS atualizados para 8-12/12-17/17-21.5. AB01 `tipoTempo` `acumulativa`→`final`. `_lerConfigPulse()` lê `antiSpamHoras`/`limiteDia` do `config_org.json`. |
-| @426 | PUL-06, ESC-17 | Monitoramento não expõe mais nomes de quem não respondeu — apenas contagem. Modal "Nova Pesquisa" com painel explicativo de anonimato. View de resposta com badge ANÔNIMA/IDENTIFICADA + aviso colorido ao respondente. |
+| @505 | ESC-12 | Guia contextual in-app adicionado ao header da view Escuta (botão help_outline + modal 4 seções) |
+| @507 | ESC-15 | Modal "Nova Pesquisa" expandido para formulário completo (metodologia, periodicidade, participantes, canal) |
+| @510 | — | **Porta SimulacaoUI + SimulacaoService** do branch GitHub remote (divergido, Fase 23/24): `simulacao_service.gs` CRIADO; `boot_service.gs` atualizado com matrizCompleta/moduloLabels/modulosOrdem; `index.html` com banner simulação + aba Ferramentas no Admin + SimulacaoUI IIFE (~378 linhas) |
+
+### Fases implementadas em s17 (Fases 57–65, Deploys @466–@507)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @424 | PUL-03..05 | Anti-spam Pulse corrigido; TURNOS atualizados; `_lerConfigPulse()` via config_org.json |
+| @426 | PUL-06, ESC-17 | Monitoramento anônimo (só contagem); painel anonimato no modal Nova Pesquisa |
+| @430 | REU-03, REU-04, REU-11, ADM-07 | Modal Reunião reordenado; estado vazio Pauta; template Ata; tab bar scroll sinalizado |
+| @446 | ADM-08, ESP-16, PUL-04 | Hardcodes de horário removidos; Admin reestruturado (Turnos→Infra, Config.Sistema→Identidade Visual) |
+| @448..@476 | Múltiplos | s17 Fases 47–61: habilitador infra, REU-02, BAL-07, ACO-21/22, CON-01/02, ACV-05/10, CHV-04/05/06, EMP-03, ACO-18/19/20 |
+| @466 | ACO-12, ACO-17, RECE-15 | form-control/form-label em modal Ações; label mês filtro RECE |
+| @480 | ESC-07, ESC-11, ESC-13, FIN-07, FIN-13 | Escuta DS unificado; Pulse dashboard corrigido; labels Financeiro |
+| @490 | ESC-10, ADM-04, ADM-11 | Card explicativo Alertas Escuta; Banco de Dados guard SuperAdmin; wizard cap passno 7 |
+| @505 | ESC-12 | Guia contextual Escuta (help_outline + modal 4 seções) |
+| @507 | ESC-15 | Modal Nova Pesquisa expandido |
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-17** (cálculo de benefícios incorreto)
-- ~~**SIS-14**~~ (datas ISO) — **RESOLVIDO** 2026-06-03: auditoria sistêmica completa; único ponto remanescente era Aprovações > Veículo — corrigido
-- **FIN-19** (Setor na Rubrica — nível errado)
-- **FIN-20** (flags de operação configuráveis por rubrica)
+- **FIN-19** (Setor na Rubrica — nível errado — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
 - **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
-- **ESC-17** (pesquisas não-anônimas ainda permitem override pelo respondente — decisão arquitetural pendente)
+- **ESC-17** (pesquisas não-anônimas permitem override pelo respondente — decisão arquitetural)
 
 ### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
 
@@ -3259,7 +3274,14 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 2. Verificar Rastreador de Testes Reais antes de pedir algo já testado
 3. Claude dirige — não esperar direção do usuário
 4. Uma pergunta por vez
-5. Deploy corrente: `@426`
+5. Deploy corrente: `@510`
+6. **Divergência GitHub/local RESOLVIDA** — SimulacaoUI portado; remote ainda tem 17 commits exclusivos (Fase 21-24) mas suas features principais agora estão no local
+
+---
+
+## HANDOFF — SESSÃO 17 (2026-06-02) → SESSÃO 18 (ARQUIVADO)
+
+### Estado na sessão 17: 280 problemas registrados · Deploy @426 → @507
 
 ---
 
