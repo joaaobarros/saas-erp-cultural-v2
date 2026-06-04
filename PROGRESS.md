@@ -13,13 +13,13 @@
 > **Regra de ouro: Git ANTES do deploy GAS.** O git deve estar sempre igual ou à frente da versão deployada. Nunca deploar código que não está commitado.
 
 ```
-1. git add <arquivos> && git commit -m "fix/feat: Fase X.Y — ..."   ← PRIMEIRO
-2. clasp push
-3. clasp deploy (deploymentId fixo)
-4. Smoke test no browser
-5. Atualizar PROGRESS.md + roteiro-auditoria.md
-6. git add PROGRESS.md docs/auditoria/roteiro-auditoria.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
-7. git push                                                          ← SEMPRE ao final
+1. Atualizar PROGRESS.md + roteiro-auditoria.md               ← PRIMEIRO
+2. git add <código + docs>
+3. git commit -m "fix/feat: Fase X.Y — ..."
+4. clasp push
+5. clasp deploy (deploymentId fixo)
+6. Smoke test no browser
+7. git push                                                    ← SEMPRE ao final
 ```
 
 ---
