@@ -15157,17 +15157,24 @@ var InfraConfigMapaUI = (function() {
       var cor   = temMapa ? 'var(--color-primary)' : 'var(--muted)';
       var icone = temMapa ? 'room' : 'add_location_alt';
       var title = temMapa ? 'Editar posição no mapa' : 'Definir posição no mapa';
-      return '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;' +
-               'border-bottom:1px solid var(--border);cursor:pointer;' +
-               'transition:background .1s;" ' +
+      var idEsc = JSON.stringify(e.id).replace(/"/g,"'");
+      return '<div style="display:flex;align-items:center;gap:4px;padding:5px 6px 5px 10px;' +
+               'border-bottom:1px solid var(--border);transition:background .1s;" ' +
              'onmouseenter="this.style.background=\'var(--surface2)\'" ' +
-             'onmouseleave="this.style.background=\'\'" ' +
-             'onclick="InfraConfigMapaUI._editarPosicao(\'' + e.id.replace(/'/g,"\\'") + '\')" ' +
-             'title="' + escaparHtml(title) + '">' +
-             '<span class="ms ms-sm" style="color:' + cor + ';flex-shrink:0;font-size:15px;">' + icone + '</span>' +
-             '<span style="font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' +
+             'onmouseleave="this.style.background=\'\'">' +
+             '<span class="ms ms-sm" style="color:' + cor + ';flex-shrink:0;font-size:15px;cursor:pointer;" ' +
+               'onclick="InfraConfigMapaUI._editarPosicao(' + idEsc + ')" title="' + escaparHtml(title) + '">' + icone + '</span>' +
+             '<span style="font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);cursor:pointer;" ' +
+               'onclick="InfraConfigMapaUI._editarPosicao(' + idEsc + ')" title="' + escaparHtml(title) + '">' +
                escaparHtml(e.nome) + '</span>' +
-             (temMapa ? '<span class="ms ms-sm" style="color:var(--muted);font-size:13px;flex-shrink:0;">edit</span>' : '') +
+             (temMapa ? '<span class="ms ms-sm" style="color:var(--muted);font-size:13px;flex-shrink:0;cursor:pointer;" ' +
+               'onclick="InfraConfigMapaUI._editarPosicao(' + idEsc + ')" title="Editar posição">edit</span>' : '') +
+             '<button data-bg-skip="1" onclick="InfraConfigMapaUI._confirmarExcluirEspacoMapa(' + idEsc + ')" ' +
+               'title="Excluir espaço" ' +
+               'style="background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:4px;color:var(--color-error,#ef4444);font-size:0;display:flex;align-items:center;opacity:.5;" ' +
+               'onmouseenter="this.style.opacity=\'1\'" onmouseleave="this.style.opacity=\'.5\'">' +
+               '<span class="ms ms-sm" style="font-size:15px;">delete</span>' +
+             '</button>' +
              '</div>';
     }
 
@@ -15802,6 +15809,62 @@ var InfraConfigMapaUI = (function() {
     _proxR(0);
   }
 
+  // ── Excluir espaço (lista + mapa) ───────────────────────
+  function _confirmarExcluirEspacoMapa(id) {
+    var esp = _espacos.filter(function(e) { return e.id === id; })[0];
+    if (!esp) return;
+
+    var wrap = document.createElement('div');
+    wrap.id = 'cfg-modal-excluir-overlay';
+    wrap.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;';
+    wrap.innerHTML =
+      '<div style="background:var(--surface,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;min-width:320px;max-width:400px;">' +
+        '<div style="font-size:15px;font-weight:700;color:var(--color-error,#ef4444);margin-bottom:12px;display:flex;align-items:center;gap:8px;">' +
+          '<span class="ms" style="font-size:20px;">delete_forever</span> Excluir espaço' +
+        '</div>' +
+        '<p style="font-size:13px;color:var(--text,#1e293b);margin-bottom:6px;">' +
+          'Tem certeza que deseja excluir <strong>' + escaparHtml(esp.nome) + '</strong>?' +
+        '</p>' +
+        '<p style="font-size:12px;color:var(--muted,#94a3b8);margin-bottom:20px;">' +
+          'Esta ação remove o espaço do sistema, do mapa e de todos os cadastros. Reservas existentes não são afetadas.' +
+        '</p>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button data-bg-skip="1" onclick="document.getElementById(\'cfg-modal-excluir-overlay\').remove()" ' +
+            'style="padding:7px 16px;border:1px solid var(--border,#e2e8f0);border-radius:7px;background:var(--surface,#fff);cursor:pointer;font-size:13px;">Cancelar</button>' +
+          '<button data-bg-skip="1" id="cfg-btn-confirmar-excluir" onclick="InfraConfigMapaUI._executarExcluirEspacoMapa(' + JSON.stringify(id).replace(/"/g,"'") + ')" ' +
+            'style="padding:7px 16px;background:var(--color-error,#ef4444);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">Excluir</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', function(e) { if (e.target === wrap) wrap.remove(); });
+  }
+
+  function _executarExcluirEspacoMapa(id) {
+    var overlay = document.getElementById('cfg-modal-excluir-overlay');
+    var btn = document.getElementById('cfg-btn-confirmar-excluir');
+    if (btn) { btn.disabled = true; btn.textContent = 'Excluindo…'; }
+
+    GAS.admin.excluirEspaco(id,
+      function(r) {
+        if (overlay) overlay.remove();
+        if (r && r.ok) {
+          _espacos = _espacos.filter(function(e) { return e.id !== id; });
+          if (_modoEdicao && _modoEdicao.id === id) _modoEdicao = null;
+          _renderMapa();
+          _renderSidebar();
+          Toast.sucesso('Espaço excluído com sucesso.');
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao excluir espaço.');
+        }
+      },
+      function(err) {
+        if (overlay) overlay.remove();
+        Toast.erro('Erro ao excluir: ' + ((err && err.message) || String(err)));
+      }
+    );
+  }
+
   // ── Escala Real (InfraConfigMapaUI) ─────────────────────
   function _abrirModalEscala() {
     var esc   = _escalaInfra || { pixPorM: 100, mostrarDimensoes: false };
@@ -16265,11 +16328,13 @@ var InfraConfigMapaUI = (function() {
     _iniciarNovoEspaco:          _iniciarNovoEspaco,
     _cancelarNovoEspaco:         _cancelarNovoEspaco,
     _confirmarNovoEspaco:        _confirmarNovoEspaco,
-    _abrirModalEscala:           _abrirModalEscala,
-    _aplicarEscalaInfra:         _aplicarEscalaInfra,
-    _escalaInfraToggleAtivo:     _escalaInfraToggleAtivo,
-    _escalaInfraUpdatePreview:   _escalaInfraUpdatePreview,
-    _propDimMetrosInfraChange:   _propDimMetrosInfraChange
+    _abrirModalEscala:             _abrirModalEscala,
+    _aplicarEscalaInfra:           _aplicarEscalaInfra,
+    _escalaInfraToggleAtivo:       _escalaInfraToggleAtivo,
+    _escalaInfraUpdatePreview:     _escalaInfraUpdatePreview,
+    _propDimMetrosInfraChange:     _propDimMetrosInfraChange,
+    _confirmarExcluirEspacoMapa:   _confirmarExcluirEspacoMapa,
+    _executarExcluirEspacoMapa:    _executarExcluirEspacoMapa
   };
 })();
 

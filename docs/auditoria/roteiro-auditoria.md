@@ -3492,6 +3492,12 @@ mod-34 completamente fechado. Investigar APR-05 (aba Veículo em Aprovações pr
 
 ---
 
+### HANDOFF Fase 71.1 (2026-06-04) — Excluir espaço + Dimensões popup + Toggle rápido
+
+**Fase 71.1 entregue** — Deploy @549. Três melhorias nos mapas: (1) botão excluir com confirmação no sidebar do mapa de infraestrutura; (2) linha "Dimensões" no popup do MapaUI mostrando dimensões em SVG units e metros (se escala configurada); (3) botão toggle rápido de dimensões nos controles de zoom do editor de eventos.
+
+---
+
 ### HANDOFF Fase 71 (2026-06-04) — Escala Real nos Mapas
 
 **Fase 71 entregue** — Deploy @534. Funcionalidade de escala real implementada em ambos os editores de mapa. Auditoria de bugs pendente desta Fase 71: confirmar no browser que (a) barra de escala aparece com escala ativa, (b) labels de dimensão aparecem sobre elementos quando checkbox marcado, (c) campos metros funcionam bidirecionalmente, (d) escala persiste após salvar/recarregar. A auditoria de UX (APR-05 → aba Veículo) segue como próximo passo independente desta implementação.

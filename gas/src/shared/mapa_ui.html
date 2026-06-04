@@ -303,6 +303,23 @@ var MapaUI=(function(){
           _row('Categoria',_cl(info.categoria))+
           _row('Chave',info.possuiChaves?'Necessária':'Não')+
           _row('N&#xBA; planta',info.numeroPlanta?'#'+info.numeroPlanta:'—')+
+          (function(){
+            var cfg = info.mapaConfig;
+            if (!cfg) return '';
+            var w = cfg.forma==='circle'?(cfg.r||40)*2:(cfg.w||0);
+            var h = cfg.forma==='circle'?(cfg.r||40)*2:(cfg.h||0);
+            if (cfg.forma==='livre' && cfg.pts && cfg.pts.length) {
+              var xs=cfg.pts.map(function(p){return p.x;}), ys=cfg.pts.map(function(p){return p.y;});
+              w=(Math.max.apply(null,xs)-Math.min.apply(null,xs));
+              h=(Math.max.apply(null,ys)-Math.min.apply(null,ys));
+            }
+            if (!w && !h) return '';
+            var escStr = '';
+            try { var esc=JSON.parse(localStorage.getItem('infra-mapa-escala')||'null');
+              if (esc && esc.pixPorM>0) { escStr = ' ≈ '+(w/esc.pixPorM).toFixed(1)+'m × '+(h/esc.pixPorM).toFixed(1)+'m'; }
+            } catch(e_) {}
+            return _row('Dimensões', Math.round(w)+'×'+Math.round(h)+' un'+escStr);
+          })()+
           _row('Reservas hoje',String(info.totalReservasHoje||0))+
         '</div>'+
         '<div class="mapa-pl-agenda"><h4>Agenda do Dia</h4>'+

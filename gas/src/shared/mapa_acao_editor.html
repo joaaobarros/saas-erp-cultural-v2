@@ -491,7 +491,7 @@ var MapaAcaoEditorUI = (function() {
     }
 
     _renderEditor();
-    _atualizarBadgeEscala();
+    _atualizarBadgeEscala();   // inclui _atualizarBtnToggleDim()
     _renderCanvas();
     _renderLayerSidebar();
     _renderPalette();
@@ -568,7 +568,8 @@ var MapaAcaoEditorUI = (function() {
             '<div class="mae-no-print" style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px;">' +
               '<button onclick="MapaAcaoEditorUI._zoom(1)"  data-bg-skip="1" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;">+</button>' +
               '<button onclick="MapaAcaoEditorUI._zoom(-1)" data-bg-skip="1" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;">−</button>' +
-              '<button onclick="MapaAcaoEditorUI._resetZoom()" data-bg-skip="1" title="Ajustar" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;"><span class="ms" style="font-size:16px;">fit_screen</span></button>' +
+              '<button onclick="MapaAcaoEditorUI._resetZoom()" data-bg-skip="1" title="Ajustar ao tamanho" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;"><span class="ms" style="font-size:16px;">fit_screen</span></button>' +
+              '<button id="mae-btn-toggle-dim" data-bg-skip="1" onclick="MapaAcaoEditorUI._toggleMostrarDimensoes()" title="Mostrar/ocultar dimensões reais" style="width:28px;height:28px;background:var(--surface,#fff);border:1px solid var(--border,#e2e8f0);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:16px;">straighten</span></button>' +
             '</div>' +
             // Legenda de layers
             '<div id="mae-legenda" class="mae-no-print" style="position:absolute;bottom:10px;left:10px;z-index:2;background:rgba(255,255,255,.92);border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:6px 10px;font-size:11px;line-height:1.8;max-width:200px;box-shadow:0 2px 8px rgba(0,0,0,.08);"></div>' +
@@ -2111,6 +2112,31 @@ var MapaAcaoEditorUI = (function() {
       badge.textContent = '';
       badge.style.cssText = '';
     }
+    _atualizarBtnToggleDim();
+  }
+
+  function _atualizarBtnToggleDim() {
+    var btn = document.getElementById('mae-btn-toggle-dim');
+    if (!btn) return;
+    var ativo = _escala && _escala.mostrarDimensoes;
+    btn.style.background   = ativo ? '#eef2ff' : 'var(--surface,#fff)';
+    btn.style.borderColor  = ativo ? '#6366f1' : 'var(--border,#e2e8f0)';
+    btn.style.color        = ativo ? '#4f46e5' : 'var(--text2,#64748b)';
+    btn.title = _escala
+      ? (ativo ? 'Ocultar dimensões reais' : 'Mostrar dimensões reais')
+      : 'Configure a escala real primeiro';
+  }
+
+  function _toggleMostrarDimensoes() {
+    if (!_escala || !_escala.pixPorM) {
+      _abrirModalEscala();
+      return;
+    }
+    _escala.mostrarDimensoes = !_escala.mostrarDimensoes;
+    _mapa.escala = JSON.parse(JSON.stringify(_escala));
+    _atualizarBtnToggleDim();
+    _renderElementos();
+    _setStatus(_escala.mostrarDimensoes ? 'Dimensões reais visíveis.' : 'Dimensões ocultas.');
   }
 
   function _propDimMetrosChange() {
@@ -2189,11 +2215,12 @@ var MapaAcaoEditorUI = (function() {
     _propFormaChange:       _propFormaChange,
     _propRotChange:         _propRotChange,
     _propDimChange:         _propDimChange,
-    _propDimMetrosChange:   _propDimMetrosChange,
-    _abrirModalEscala:      _abrirModalEscala,
-    _aplicarEscala:         _aplicarEscala,
-    _escalaToggleAtivo:     _escalaToggleAtivo,
-    _escalaUpdatePreview:   _escalaUpdatePreview
+    _propDimMetrosChange:       _propDimMetrosChange,
+    _abrirModalEscala:          _abrirModalEscala,
+    _aplicarEscala:             _aplicarEscala,
+    _escalaToggleAtivo:         _escalaToggleAtivo,
+    _escalaUpdatePreview:       _escalaUpdatePreview,
+    _toggleMostrarDimensoes:    _toggleMostrarDimensoes
   };
 
 })();
