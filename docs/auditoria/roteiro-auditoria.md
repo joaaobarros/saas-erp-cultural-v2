@@ -282,6 +282,7 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 | Aba Escuta Livre — RELATO ESPONTÂNEO | ✅ textarea + dimensão + anônimo | 2026-05-31 s11 |
 | Aba Escuta Livre — MEU PERFIL ANALÍTICO | ⚠️ ESC-08 deve ser removido | 2026-05-31 s11 |
 | Aba Alertas — carrega, estado vazio | ✅ ESC-10 CORRIGIDO s17 F63 @490 — card explicativo com propósito, instrução Gestão e botão "Ir para Gestão →" | 2026-06-03 |
+| Guia contextual / documentação in-app | ✅ ESC-12 CORRIGIDO s17 F64 @505 — botão help_outline no header + modal guia in-app (4 seções: O que é, Abas, Glossário, Fluxo) | 2026-06-04 |
 | Aba Distribuição — SISTEMA PULSE MÉDIAS | ✅ estado vazio (com ⚠️ ESC-11) | 2026-05-31 s11 |
 | Aba Distribuição — SATURAÇÃO POR DIMENSÃO | ⚠️ ESC-11 IDs numéricos em vez de nomes | 2026-05-31 s11 |
 | Aba Distribuição — PARTICIPAÇÃO HISTÓRICA (12m) | ✅ gráfico linha mensal | 2026-05-31 s11 |
@@ -1566,7 +1567,7 @@ Duas sub-abas: **RESULTADOS (por Meta/Mês)** | **GESTÃO (Semestral/Anual)**
 
 ~~**ESC-11**~~ ✅ CORRIGIDO s17 Fase 62 @480 — `carregarPulseDash()`: campo `d.mediaPorDimensao` (inexistente) → `d.indicadores`; dicionário `NOMES_DIM` adicionado com nomes legíveis (Vigor, Dedicação, Absorção…); valor acessa `entry.media` (não o objeto inteiro).
 
-**ESC-12** `🔴 Alta` — **Módulo Escuta sem documentação ou guia contextual integrado** — o módulo é metodologicamente complexo (UWES, JDC, CVF, NR-1, saturação, ciclo de feedback, marcadores metodológicos) e mesmo o administrador do sistema não compreende todas as abas. Precisa de: (a) tour guiado na primeira abertura; (b) tooltips explicativos por seção com linguagem simples; (c) glossário contextual acessível por hover/clique nas siglas e termos técnicos; (d) manual operacional in-app ("Como usar o módulo Escuta") acessível pelo botão ❓ do header.
+~~**ESC-12**~~ ✅ CORRIGIDO s17 Fase 64 @505 — Botão `help_outline` adicionado ao header da view Escuta (`btn-escuta-ajuda`); `EscutaUI.abrirGuia()` abre modal in-app com 4 seções: "O que é o módulo Escuta?" (visão geral e propósito), "O que cada aba faz" (Painel/Escuta Livre/Alertas/Distribuição/Relatórios/Gestão), "Glossário das metodologias" (UWES/JDC/CVF/NR-1/Pulse/Saturação), "Como usar — fluxo recomendado" (5 passos). Pendente: (a) tour guiado na primeira abertura; (b) tooltips por seção.
 
 ~~**ESC-13**~~ ✅ CORRIGIDO s17 Fase 62 @480 — Subtítulo da view Escuta: "Clima organizacional · UWES · JDC · CVF · NR-1" → "Bem-estar, engajamento e clima organizacional".
 
@@ -2989,7 +2990,7 @@ Sistema externo **Estoque Fácil** (`estoque.ccbj.org.br`) está em uso ativo e 
 | 216 | ESC-09 | Sistema Global — Perfil | **Sistema sem área de perfil editável pelo usuário** — não existe "Meu Perfil" onde o colaborador possa cadastrar nome social (prioridade máxima), pronomes, raça/cor, foto. Dados do RH (cargo, setor, vínculo, admissão) devem ser somente leitura nessa tela. Afeta Escuta, saudações (SIS-11), avatar e campos de autoria em todo o sistema | 🔴 Alta |
 | ~~217~~ | ~~ESC-10~~ | Escuta — Alertas | ~~Aba "Alertas" com estado vazio sem orientação~~ **CORRIGIDO s17 F63 @490** (parcial a+b): card explicativo com ícone `notifications_off`, propósito dos alertas, instrução para configurar limiares em Gestão e botão "Ir para Gestão →". Pendente: (c) seção de configuração de thresholds por dimensão na aba Gestão. | ~~🟡 Média~~ |
 | ~~218~~ | ~~ESC-11~~ | ~~Escuta — Distribuição~~ | ~~Saturação por Dimensão exibe IDs numéricos~~ **CORRIGIDO s16 F39**: `_carregarSaturacao()` reescrito para iterar `d.dimensoes` como array com `forEach`, exibindo `s.label || s.id` em vez de índice numérico. | ~~🟡 Média~~ |
-| 219 | ESC-12 | Escuta — Documentação | Módulo sem documentação ou guia contextual integrado — complexidade metodológica (UWES, JDC, CVF, NR-1, saturação, ciclo de feedback) não documentada in-app; o próprio admin não compreende todas as abas. Precisa de tour, tooltips, glossário e manual in-app | 🔴 Alta |
+| ~~219~~ | ~~ESC-12~~ | Escuta — Documentação | ~~Módulo sem documentação ou guia contextual integrado~~ **CORRIGIDO s17 F64 @505**: botão `help_outline` no header + modal guia in-app (O que é / Abas / Glossário / Fluxo). Pendente: tour guiado e tooltips por seção. | ~~🔴 Alta~~ |
 | 220 | ESC-13 | Escuta — DS / Linguagem | Subtítulo "Clima organizacional · UWES · JDC · CVF · NR-1" usa siglas sem explicação — instância de SIS-08; substituir por linguagem orientada ao benefício ou adicionar tooltips nas siglas | 🟡 Média |
 | 221 | ESC-14 | Escuta — Gestão | Contradição na seção MARCADORES METODOLÓGICOS — "Qualidade baixa — revisar" (problema) e "✅ Motor metodológico sem avisos." (tudo ok) na mesma seção sem distinção de contexto | 🟡 Média |
 | 222 | ESC-15 | Escuta — Nova Pesquisa | Modal "Nova Pesquisa" extremamente minimalista (4 campos) — sem seleção de metodologia, sem banco de questões, sem configuração de participantes, sem periodicidade; não permite criar pesquisa utilizável | 🔴 Alta |

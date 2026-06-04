@@ -6901,6 +6901,10 @@ select.form-control { cursor: pointer; }
             <p class="view-subtitle">Bem-estar, engajamento e clima organizacional</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
+            <button id="btn-escuta-ajuda" class="btn btn-ghost btn-sm" title="Guia do módulo Escuta"
+                    onclick="EscutaUI.abrirGuia()" data-bg-skip="1">
+              <span class="ms ms-sm">help_outline</span>
+            </button>
             <button id="btn-escuta-refresh" class="btn btn-ghost btn-sm"
                     onclick="BtnGuard.wrap('btn-escuta-refresh','Atualizando…',EscutaUI.carregar)" data-bg-skip="1">
               <span class="ms ms-sm">refresh</span>
@@ -26479,6 +26483,85 @@ var EscutaUI = (function() {
     }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
   }
 
+  // ── ESC-12: Guia contextual do módulo ───────────────────────────────────────
+  function abrirGuia() {
+    if (document.getElementById('escuta-guia-overlay')) return;
+    var ov = document.createElement('div');
+    ov.id = 'escuta-guia-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.52);';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:16px;padding:28px 32px;width:92%;max-width:680px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.25);';
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);">' +
+        '<div>' +
+          '<h3 style="margin:0 0 4px;font-size:17px;font-weight:700;">Guia do Módulo Escuta</h3>' +
+          '<p style="margin:0;font-size:13px;color:var(--muted);">Como usar o módulo de bem-estar e engajamento organizacional</p>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'escuta-guia-overlay\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;" data-bg-skip="1">✕</button>' +
+      '</div>' +
+      /* ─ O que é ─ */
+      '<section style="margin-bottom:20px;">' +
+        '<h4 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:0 0 10px;">O que é o módulo Escuta?</h4>' +
+        '<p style="font-size:13px;color:var(--text);line-height:1.65;margin:0 0 8px;">' +
+          'O módulo Escuta permite medir e acompanhar o <strong>bem-estar</strong>, o <strong>engajamento</strong> e o <strong>clima organizacional</strong> da equipe ao longo do tempo, usando metodologias científicas validadas.' +
+        '</p>' +
+        '<p style="font-size:13px;color:var(--text);line-height:1.65;margin:0;">' +
+          'As informações geradas servem de base para decisões de gestão de pessoas, identificação de riscos psicossociais (NR-1) e ações de melhoria do ambiente de trabalho.' +
+        '</p>' +
+      '</section>' +
+      /* ─ Abas ─ */
+      '<section style="margin-bottom:20px;">' +
+        '<h4 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:0 0 10px;">O que cada aba faz</h4>' +
+        [
+          ['Painel','Visão geral dos indicadores: média de bem-estar, pesquisas ativas e respondentes. Inclui o <em>Pulse Dashboard</em> com médias por dimensão.'],
+          ['Escuta Livre','Formulário de relato espontâneo — o colaborador descreve o que está sentindo com suas próprias palavras, sem estrutura de questionário.'],
+          ['Alertas','Notificações automáticas geradas quando indicadores de bem-estar ficam abaixo dos limiares configurados (ex: Vigor médio &lt; 2 por 4 semanas).'],
+          ['Distribuição','Análise estatística das respostas: médias por dimensão, saturação (indicador de esgotamento) e taxa de participação.'],
+          ['Relatórios','Exportação de resultados por período e dimensão. Use para apresentações e registros de gestão.'],
+          ['Gestão','Configuração das pesquisas, banco de perguntas, limiares de alerta e monitoramento de respostas pendentes.']
+        ].map(function(row) {
+          return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<strong style="font-size:12px;min-width:110px;color:var(--text);">' + row[0] + '</strong>' +
+            '<span style="font-size:12px;color:var(--muted);line-height:1.5;">' + row[1] + '</span>' +
+          '</div>';
+        }).join('') +
+      '</section>' +
+      /* ─ Glossário ─ */
+      '<section style="margin-bottom:20px;">' +
+        '<h4 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:0 0 10px;">Glossário das metodologias</h4>' +
+        [
+          ['UWES','Utrecht Work Engagement Scale — escala de engajamento que mede Vigor (energia e persistência), Dedicação (entusiasmo e significado) e Absorção (concentração e imersão). Pontuação de 0 a 6.'],
+          ['JDC','Job Demands-Control — analisa o equilíbrio entre exigências do trabalho e autonomia do trabalhador. Detecta risco de estresse ocupacional.'],
+          ['CVF','Competing Values Framework — mapa de clima organizacional que identifica se a cultura da equipe é mais orientada a colaboração, inovação, resultados ou estabilidade.'],
+          ['NR-1','Norma Regulamentadora nº 1 (Ministério do Trabalho) — obriga empregadores a identificar e gerenciar riscos psicossociais. O módulo Escuta apoia o Programa de Gerenciamento de Riscos (PGR).'],
+          ['Pulse','Check-in rápido diário ou semanal (1–2 perguntas) para monitoramento contínuo do estado da equipe, sem a carga de uma pesquisa formal.'],
+          ['Saturação','Indicador que aponta quando uma dimensão atingiu nível crítico de baixo bem-estar, sinalizando necessidade de intervenção imediata.']
+        ].map(function(row) {
+          return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<strong style="font-size:12px;color:var(--text);">' + row[0] + '</strong>' +
+            ' <span style="font-size:12px;color:var(--muted);">— ' + row[1] + '</span>' +
+          '</div>';
+        }).join('') +
+      '</section>' +
+      /* ─ Como usar ─ */
+      '<section style="margin-bottom:20px;">' +
+        '<h4 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);margin:0 0 10px;">Como usar — fluxo recomendado</h4>' +
+        '<ol style="margin:0;padding-left:18px;font-size:13px;color:var(--text);line-height:1.8;">' +
+          '<li>Acesse <strong>Gestão → Banco de Perguntas</strong> e confirme as perguntas ativas (padrão UWES + JDC).</li>' +
+          '<li>Clique em <strong>Nova Pesquisa</strong>, defina título, período e se é anônima.</li>' +
+          '<li>Acompanhe respostas em <strong>Gestão → Monitoramento</strong> — você vê quem ainda não respondeu.</li>' +
+          '<li>Ao fim do período, veja os resultados em <strong>Distribuição</strong> e exporte pelo <strong>Relatórios</strong>.</li>' +
+          '<li>Configure limiares de alerta em <strong>Gestão → Thresholds</strong> para receber notificações automáticas.</li>' +
+        '</ol>' +
+      '</section>' +
+      '<div style="text-align:right;padding-top:8px;border-top:1px solid var(--border);">' +
+        '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'escuta-guia-overlay\').remove()" data-bg-skip="1">Fechar</button>' +
+      '</div>';
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if (e.target === ov) ov.remove(); });
+  }
+
   return {
     aoAbrir, carregar, setTab, filtrarLista,
     // Pesquisas
@@ -26495,6 +26578,7 @@ var EscutaUI = (function() {
     togglePergunta, toggleTodasPerguntas, salvarConfig, suprimirEmails, carregarMonitoramento,
     // Pulse widget
     abrirPulse, fecharPulse, responderPulse,
+    abrirGuia,
     tentarMostrarPulse: _tentarMostrarPulse
   };
 })();
