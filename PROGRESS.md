@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **s19 Fase 68 — ESP-29 ConfigService residual eliminado (2026-06-04)** — Deploy @513. `ia_service.gs`: 3 referências a `ConfigService` (inexistente) substituídas por `SistemaConfigService` — `_horariosDosTurnos()` e `perguntar()`. `config_admin_service.gs`: validação de horário de espaço migrada de `ConfigService` para `SistemaConfigService.getReservaHorario()`. Erro "ConfigService is not defined" ao salvar reservas eliminado definitivamente.
+**Fase atual**: **s19 Fase 68 — ESP-29 ConfigService residual eliminado (2026-06-04)** — Deploy @514. `ia_service.gs`: 3 referências a `ConfigService` (inexistente) substituídas por `SistemaConfigService` — `_horariosDosTurnos()` e `perguntar()`. `config_admin_service.gs`: validação de horário de espaço migrada de `ConfigService` para `SistemaConfigService.getReservaHorario()`. Erro "ConfigService is not defined" ao salvar reservas eliminado definitivamente.
 
 **Fase anterior**: **s19 Fase 67 — CON-10 Portal do Contratado (2026-06-04)** — Deploy @512. Subtítulo de Contratações: "Portal LGPD" → "Portal do Contratado". `solicitacao_engine.gs`: `_garantirToken()` e `_enviarLinkPortal()` adicionados; token gerado em `submeter()` (antes era só em `iniciarExecucao`); email enviado automaticamente ao fornecedor com link de acompanhamento. Regra "git antes do deploy GAS" registrada em PROGRESS.md e roteiro-auditoria.md.
 
