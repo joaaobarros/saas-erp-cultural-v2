@@ -37,6 +37,18 @@ Esta auditoria opera em modo equivalente a **Planning / Deep Analysis / Extended
 - Apontar inconsistências conceituais entre módulos
 - Atualizar o Rastreador de Testes Reais a cada sessão
 
+### 🔴 Regra obrigatória a cada fase implementada
+
+> **Regra de ouro: Git ANTES do deploy GAS.** O git deve estar sempre igual ou à frente da versão deployada. Nunca deploar código que não está commitado.
+
+```
+1. git add <arquivos> && git commit -m "fix/feat: Fase X.Y — ..."   ← PRIMEIRO
+2. clasp push
+3. clasp deploy (deploymentId fixo)
+4. Smoke test → atualizar PROGRESS.md + roteiro-auditoria.md
+5. git add docs PROGRESS.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
+```
+
 ---
 
 ## PROMPT BASE DA AUDITORIA
@@ -3223,32 +3235,23 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
-## HANDOFF — SESSÃO 18 (2026-06-04) → SESSÃO 19
+## HANDOFF — SESSÃO 19 (2026-06-04) → SESSÃO 20
 
-### Estado atual: 280 problemas registrados · Deploy @510
+### Estado atual: 281 problemas registrados · Deploy @512
 
-### O que foi corrigido nesta sessão
+### O que foi corrigido nesta sessão (s19)
+
+| Deploy | IDs | O que foi corrigido |
+|---|---|---|
+| @512 | CON-10 | Subtítulo Contratações: "Portal LGPD" → "Portal do Contratado"; `_garantirToken()` + `_enviarLinkPortal()` adicionados ao engine; token gerado em `submeter()` + email automático ao fornecedor com link de acompanhamento |
+
+### O que foi corrigido em s18 (Fase 66, Deploy @510)
 
 | Deploy | IDs | O que foi corrigido |
 |---|---|---|
 | @505 | ESC-12 | Guia contextual in-app adicionado ao header da view Escuta (botão help_outline + modal 4 seções) |
 | @507 | ESC-15 | Modal "Nova Pesquisa" expandido para formulário completo (metodologia, periodicidade, participantes, canal) |
 | @510 | — | **Porta SimulacaoUI + SimulacaoService** do branch GitHub remote (divergido, Fase 23/24): `simulacao_service.gs` CRIADO; `boot_service.gs` atualizado com matrizCompleta/moduloLabels/modulosOrdem; `index.html` com banner simulação + aba Ferramentas no Admin + SimulacaoUI IIFE (~378 linhas) |
-
-### Fases implementadas em s17 (Fases 57–65, Deploys @466–@507)
-
-| Deploy | IDs | O que foi corrigido |
-|---|---|---|
-| @424 | PUL-03..05 | Anti-spam Pulse corrigido; TURNOS atualizados; `_lerConfigPulse()` via config_org.json |
-| @426 | PUL-06, ESC-17 | Monitoramento anônimo (só contagem); painel anonimato no modal Nova Pesquisa |
-| @430 | REU-03, REU-04, REU-11, ADM-07 | Modal Reunião reordenado; estado vazio Pauta; template Ata; tab bar scroll sinalizado |
-| @446 | ADM-08, ESP-16, PUL-04 | Hardcodes de horário removidos; Admin reestruturado (Turnos→Infra, Config.Sistema→Identidade Visual) |
-| @448..@476 | Múltiplos | s17 Fases 47–61: habilitador infra, REU-02, BAL-07, ACO-21/22, CON-01/02, ACV-05/10, CHV-04/05/06, EMP-03, ACO-18/19/20 |
-| @466 | ACO-12, ACO-17, RECE-15 | form-control/form-label em modal Ações; label mês filtro RECE |
-| @480 | ESC-07, ESC-11, ESC-13, FIN-07, FIN-13 | Escuta DS unificado; Pulse dashboard corrigido; labels Financeiro |
-| @490 | ESC-10, ADM-04, ADM-11 | Card explicativo Alertas Escuta; Banco de Dados guard SuperAdmin; wizard cap passno 7 |
-| @505 | ESC-12 | Guia contextual Escuta (help_outline + modal 4 seções) |
-| @507 | ESC-15 | Modal Nova Pesquisa expandido |
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-17** (cálculo de benefícios incorreto)
@@ -3257,25 +3260,25 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 - **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
 - **ESC-17** (pesquisas não-anônimas permitem override pelo respondente — decisão arquitetural)
 
-### PRÓXIMA PERGUNTA A FAZER (IMEDIATA)
+### PRÓXIMA AÇÃO (IMEDIATA)
 
-> "O subtítulo de Contratações menciona 'Portal LGPD'. O que é esse portal — é uma área pública onde fornecedores podem solicitar exclusão dos seus dados do sistema, ou tem outro propósito?"
+Contratações encerrada (CON-10 corrigido). Próximo: Agentes Culturais — AGN-01 foi corrigido em s16 Fase 6; testar se a view carrega agora.
 
-### Sequência após essa pergunta
+> **Pergunta ao usuário:** "Abre o módulo Agentes Culturais agora — a view carrega normalmente (lista e métricas visíveis) ou ainda mostra badge 'Inativo' e bloqueia o acesso?"
 
-1. **Contratações — Portal LGPD** ← PRÓXIMA
-2. **Agentes Culturais** — AGN-01 corrigido; testar se view carrega agora
+### Sequência
+1. **Agentes Culturais** — verificar se AGN-01 está resolvido ← PRÓXIMA
+2. **Voluntários** — verificar se o mesmo fix resolve Voluntários
 3. **Dashboard Executivo (mod-41)** — nunca testado
 4. **Estratégia — Objetivos e KPIs (mod-30/31)** — nunca testado
-5. **Voluntários** — verificar se AGN-01 fix também resolve Voluntários
 
 ### Instruções para o próximo Claude
-1. Ler roteiro completo antes de qualquer pergunta
-2. Verificar Rastreador de Testes Reais antes de pedir algo já testado
+1. Ler roteiro completo antes de qualquer ação
+2. Verificar Rastreador antes de pedir algo já testado
 3. Claude dirige — não esperar direção do usuário
 4. Uma pergunta por vez
-5. Deploy corrente: `@510`
-6. **Divergência GitHub/local RESOLVIDA** — SimulacaoUI portado; remote ainda tem 17 commits exclusivos (Fase 21-24) mas suas features principais agora estão no local
+5. Deploy corrente: `@512`
+6. Regra obrigatória: git → clasp push → clasp deploy → smoke test → atualizar docs → git commit docs
 
 ---
 

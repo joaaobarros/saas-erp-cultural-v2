@@ -8,6 +8,21 @@
 
 > **Estas regras se aplicam a toda nova fase ou implementação, sem exceção.**
 
+### 🔴 Sequência obrigatória a cada fase
+
+> **Regra de ouro: Git ANTES do deploy GAS.** O git deve estar sempre igual ou à frente da versão deployada. Nunca deploar código que não está commitado.
+
+```
+1. git add <arquivos> && git commit -m "fix/feat: Fase X.Y — ..."   ← PRIMEIRO
+2. clasp push
+3. clasp deploy (deploymentId fixo)
+4. Smoke test no browser
+5. Atualizar PROGRESS.md + roteiro-auditoria.md
+6. git add PROGRESS.md docs/auditoria/roteiro-auditoria.md && git commit -m "docs: Fase X.Y — PROGRESS + roteiro"
+```
+
+---
+
 ### ✅ Testes em browser a cada fase
 Após qualquer nova implementação ou fase concluída, **é obrigatório testar no browser** antes de considerar a entrega completa:
 
@@ -23,7 +38,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fase 66 — SimulacaoUI + SimulacaoService (2026-06-04)** — Deploy @510. Portado do remote GitHub (branch divergido com 16 commits únicos): `simulacao_service.gs` CRIADO (214 linhas) — backend para simulação de papel/permissões via `PropertiesService.getUserProperties()`; ctrl_simulacao_ativar/encerrar/status; bypass de AcessoService para evitar loop. `boot_service.gs` atualizado — matrizCompleta/moduloLabels/modulosOrdem expostos no boot (via PermissoesV2Engine.MATRIZ/MODULO_LABELS/MODULOS); campo `simulando`; cache pulado quando _simAtiva. `index.html` — CSS `#banner-simulacao`; banner HTML entre topbar e conteúdo; aba "Ferramentas" no Admin (guard: apenas admin/superadmin) com select de papel + botão "Configurar e Simular"; `GAS.simulacao` namespace (ativar/encerrar/status); `SimulacaoUI` IIFE ~378 linhas com modal configuração papel + matriz de permissões por módulo + features granulares; `_aplicarBootSimulado` atualiza boot e menu em-place; `encerrar()` restaura estado original. Local agora tem 30.021 linhas (remote: 29.845). Divergência resolvida: remote tinha Fase 21-24 com SimulacaoUI que local não tinha — portado sem regredir as 78 fases locais (s16/s17).
+**Fase atual**: **s19 Fase 67 — CON-10 Portal do Contratado (2026-06-04)** — Deploy @512. Subtítulo de Contratações: "Portal LGPD" → "Portal do Contratado". `solicitacao_engine.gs`: `_garantirToken()` e `_enviarLinkPortal()` adicionados; token gerado em `submeter()` (antes era só em `iniciarExecucao`); email enviado automaticamente ao fornecedor com link de acompanhamento. Regra "git antes do deploy GAS" registrada em PROGRESS.md e roteiro-auditoria.md.
+
+**Fase anterior**: **Fase 66 — SimulacaoUI + SimulacaoService (2026-06-04)** — Deploy @510. Portado do remote GitHub (branch divergido com 16 commits únicos): `simulacao_service.gs` CRIADO (214 linhas) — backend para simulação de papel/permissões via `PropertiesService.getUserProperties()`; ctrl_simulacao_ativar/encerrar/status; bypass de AcessoService para evitar loop. `boot_service.gs` atualizado — matrizCompleta/moduloLabels/modulosOrdem expostos no boot (via PermissoesV2Engine.MATRIZ/MODULO_LABELS/MODULOS); campo `simulando`; cache pulado quando _simAtiva. `index.html` — CSS `#banner-simulacao`; banner HTML entre topbar e conteúdo; aba "Ferramentas" no Admin (guard: apenas admin/superadmin) com select de papel + botão "Configurar e Simular"; `GAS.simulacao` namespace (ativar/encerrar/status); `SimulacaoUI` IIFE ~378 linhas com modal configuração papel + matriz de permissões por módulo + features granulares; `_aplicarBootSimulado` atualiza boot e menu em-place; `encerrar()` restaura estado original. Local agora tem 30.021 linhas (remote: 29.845). Divergência resolvida: remote tinha Fase 21-24 com SimulacaoUI que local não tinha — portado sem regredir as 78 fases locais (s16/s17).
 
 **Fase anterior**: **s17 Fase 65 (2026-06-04)** — Deploy @507. ESC-15 CORRIGIDO: modal "Nova Pesquisa" expandido de 4 campos para formulário completo com 4 seções — (a) Identificação: título + descrição; (b) Metodologia: select UWES/JDC/CVF/NR-1/Completa/Personalizada com preview dinâmico das dimensões incluídas; seção "Personalizada" exibe grid de 8 checkboxes de dimensões com atualização de preview em tempo real (`EscutaUI._onMetodologiaChange`); (c) Período e Periodicidade: data início/fim + select Única/Quinzenal/Mensal/Trimestral/Semestral; (d) Participantes: select Todos/Gestores/Voluntários + canal de notificação (Email + Sistema); (e) Configurações: anônima + obrigatória (existentes). Backend `criarPesquisa` expandido para persistir `metodologia`, `periodicidade`, `grupoParticipantes`, `canalNotificacao`. Modal ampliado para max-width:660px. `salvarPesquisa()` coleta todos os campos novos e passa `dimensoes` derivadas da metodologia.
 
