@@ -3237,6 +3237,28 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 24 (2026-06-05) → SESSÃO 25
+
+### Estado atual: 281 problemas registrados · Deploy @563
+
+### O que foi feito nesta sessão (s24)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @563 | 74 — Frontend EstoqueUI | `GAS.estoque` namespace (15 bindings). Tab "Estoque" no módulo Infraestrutura. `<div id="esp-tab-estoque">` com 5 sub-abas HTML (Itens, Estoque, Solicitações, Entradas, Relatórios). `EspacosUI.abrirTab` atualizado. `EstoqueUI` IIFE ~500 linhas: `aoAbrir`, `abrirSubTab`, `_carregarItens`/`_carregarEstoque`/`_carregarSolicitacoes`, FSM Separar/Entregar/Cancelar via modais, modal Novo/Editar Item, modal Registrar Entrada, modal Transferência, tela Nova Solicitação com carrinho interativo, Relatórios saídas+entradas mensais. |
+
+### Pendentes desta sessão / próxima ação
+- **Executar `fase73_estoque_prepararIndice()` no GAS Editor** (se ainda não feito) para criar abas MASTER.ItensEstoque/SaldoEstoque/MovimentacoesEstoque e seed dep-01/dep-02
+- **Fase 75 — Pipeline + Alertas Inteligentes**: barras de progresso por depósito, `PrevisaoEstoqueEngine`, verificadoras de alerta automático
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 23 (2026-06-04) → SESSÃO 24
 
 ### Estado atual: 281 problemas registrados · Deploy @561

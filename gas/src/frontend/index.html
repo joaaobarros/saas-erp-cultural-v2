@@ -3962,6 +3962,9 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn esp-tab" data-tab="ativos" onclick="EspacosUI.abrirTab('ativos')">
             <span class="ms ms-sm">inventory_2</span> Patrimônio
           </button>
+          <button class="tab-btn esp-tab" data-tab="estoque" onclick="EspacosUI.abrirTab('estoque')">
+            <span class="ms ms-sm">inventory</span> Estoque
+          </button>
           <!-- Aba Configurações: visível apenas para perfis autorizados -->
           <button class="tab-btn esp-tab oculto" id="btn-esp-tab-config" data-tab="config" onclick="EspacosUI.abrirTab('config')">
             <span class="ms ms-sm">settings</span> Configurações
@@ -5252,6 +5255,190 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
         </div><!-- /tab-ativos -->
+
+        <!-- ═══ TAB ESTOQUE (Fase 74) ═══ -->
+        <div id="esp-tab-estoque" class="esp-tab-content" style="display:none">
+
+          <!-- Métricas -->
+          <div class="stats-grid" id="est-metricas"></div>
+
+          <!-- Sub-abas -->
+          <div class="tab-bar" id="est-subtabs" style="margin-bottom:14px;">
+            <button class="tab-btn est-subtab-btn ativa" data-tab="itens" onclick="EstoqueUI.abrirSubTab('itens')">
+              <span class="ms ms-sm">category</span> Itens
+            </button>
+            <button class="tab-btn est-subtab-btn" data-tab="estoque" onclick="EstoqueUI.abrirSubTab('estoque')">
+              <span class="ms ms-sm">warehouse</span> Estoque
+            </button>
+            <button class="tab-btn est-subtab-btn" data-tab="solicitacoes" onclick="EstoqueUI.abrirSubTab('solicitacoes')">
+              <span class="ms ms-sm">pending_actions</span> Solicitações
+            </button>
+            <button class="tab-btn est-subtab-btn" data-tab="entradas" onclick="EstoqueUI.abrirSubTab('entradas')">
+              <span class="ms ms-sm">add_box</span> Entradas
+            </button>
+            <button class="tab-btn est-subtab-btn" data-tab="relatorios" onclick="EstoqueUI.abrirSubTab('relatorios')">
+              <span class="ms ms-sm">bar_chart</span> Relatórios
+            </button>
+          </div>
+
+          <!-- ── Sub-aba: Itens ── -->
+          <div id="est-tab-itens" class="est-subtab-content">
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">category</span> Catálogo de Itens</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <input type="text" id="est-itens-busca" class="form-input" style="width:180px;"
+                         placeholder="Buscar…" oninput="EstoqueUI.recarregarItens()">
+                  <select id="est-itens-cat" class="select-sm" onchange="EstoqueUI.recarregarItens()">
+                    <option value="">Todas categorias</option>
+                    <option value="Expediente">Expediente</option>
+                    <option value="Limpeza">Limpeza</option>
+                    <option value="Manutenção">Manutenção</option>
+                    <option value="TI">TI</option>
+                    <option value="Copa">Copa</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                  <select id="est-itens-sit" class="select-sm" onchange="EstoqueUI.recarregarItens()">
+                    <option value="">Todas situações</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                    <option value="novo">Novo</option>
+                  </select>
+                  <button class="btn btn-ghost btn-sm" id="btn-est-itens-reload" onclick="EstoqueUI.recarregarItens()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                  <button class="btn btn-primario btn-sm" id="btn-est-novo-item" onclick="EstoqueUI.abrirNovoItem()">
+                    <span class="ms ms-sm">add</span> Novo Item
+                  </button>
+                </div>
+              </div>
+              <div id="est-itens-lista">
+                <p class="muted-text" style="padding:12px 0;">Carregando…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Sub-aba: Estoque (Saldo por depósito) ── -->
+          <div id="est-tab-estoque" class="est-subtab-content" style="display:none">
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">warehouse</span> Saldo por Depósito</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                  <button class="btn btn-ghost btn-sm" id="btn-est-saldo-reload"
+                          onclick="EstoqueUI._forcarRecarregarEstoque()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                </div>
+              </div>
+              <div id="est-saldo-lista">
+                <p class="muted-text" style="padding:12px 0;">Carregando…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Sub-aba: Solicitações ── -->
+          <div id="est-tab-solicitacoes" class="est-subtab-content" style="display:none">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:10px;gap:8px;">
+              <button class="btn btn-ghost btn-sm" id="btn-est-sol-reload"
+                      onclick="EstoqueUI._forcarRecarregarSolicitacoes()">
+                <span class="ms ms-sm">refresh</span>
+              </button>
+              <button class="btn btn-primario btn-sm" id="btn-est-nova-sol"
+                      onclick="EstoqueUI.abrirNovaSolicitacao()">
+                <span class="ms ms-sm">add</span> Nova Solicitação
+              </button>
+            </div>
+            <div class="card" style="margin-bottom:12px;">
+              <div class="card-header">
+                <div class="card-titulo"><span class="ms">hourglass_empty</span> Aguardando Separação</div>
+              </div>
+              <div id="est-sol-pendentes">
+                <p class="muted-text" style="padding:12px 0;">Carregando…</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-titulo"><span class="ms">inventory</span> Prontas para Entrega</div>
+              </div>
+              <div id="est-sol-separadas">
+                <p class="muted-text" style="padding:12px 0;">Carregando…</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Sub-aba: Entradas ── -->
+          <div id="est-tab-entradas" class="est-subtab-content" style="display:none">
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">add_box</span> Entradas no Estoque</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <label style="font-size:12px;color:var(--muted);">De</label>
+                  <input type="date" id="est-ent-ini" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._forcarRecarregarEntradas()">
+                  <label style="font-size:12px;color:var(--muted);">Até</label>
+                  <input type="date" id="est-ent-fim" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._forcarRecarregarEntradas()">
+                  <button class="btn btn-ghost btn-sm" id="btn-est-ent-reload"
+                          onclick="EstoqueUI._forcarRecarregarEntradas()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                  <button class="btn btn-primario btn-sm" id="btn-est-nova-entrada"
+                          onclick="EstoqueUI.abrirRegistrarEntrada()">
+                    <span class="ms ms-sm">add</span> Registrar Entrada
+                  </button>
+                </div>
+              </div>
+              <div id="est-entradas-lista">
+                <p class="muted-text" style="padding:12px 0;">Selecione um período para consultar entradas.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Sub-aba: Relatórios ── -->
+          <div id="est-tab-relatorios" class="est-subtab-content" style="display:none">
+            <!-- Relatório Saídas -->
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">output</span> Saídas por Setor (Sintético)</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <label style="font-size:12px;color:var(--muted);">De</label>
+                  <input type="date" id="est-rel-ini" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._carregarRelatorioSaidas()">
+                  <label style="font-size:12px;color:var(--muted);">Até</label>
+                  <input type="date" id="est-rel-fim" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._carregarRelatorioSaidas()">
+                  <button class="btn btn-ghost btn-sm" onclick="EstoqueUI._carregarRelatorioSaidas()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                </div>
+              </div>
+              <div id="est-rel-saidas-lista">
+                <p class="muted-text" style="padding:12px 0;">Selecione um período para gerar o relatório.</p>
+              </div>
+            </div>
+            <!-- Relatório Entradas Mensal -->
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">input</span> Entradas Mensais (Sintético)</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <label style="font-size:12px;color:var(--muted);">De</label>
+                  <input type="date" id="est-rel-ent-ini" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._carregarRelatorioEntradas()">
+                  <label style="font-size:12px;color:var(--muted);">Até</label>
+                  <input type="date" id="est-rel-ent-fim" class="form-input" style="width:140px;"
+                         onchange="EstoqueUI._carregarRelatorioEntradas()">
+                  <button class="btn btn-ghost btn-sm" onclick="EstoqueUI._carregarRelatorioEntradas()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                </div>
+              </div>
+              <div id="est-rel-entradas-lista">
+                <p class="muted-text" style="padding:12px 0;">Selecione um período para gerar o relatório.</p>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /tab-estoque -->
 
       </div><!-- /view-espacos -->
 
@@ -8497,6 +8684,23 @@ var GAS = {
     cancelar:         function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_cancelar(id,m||''); },
     // ── GAP-01 corrigido ──
     salvarItem:       function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_almox_salvar_item(d); }
+  },
+  estoque: {
+    listarItens:         function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_itens(f||{}); },
+    salvarItem:          function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_salvar_item(d); },
+    metricas:            function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_metricas(); },
+    saldoItem:           function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_saldo_item(id); },
+    registrarEntrada:    function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_registrar_entrada(d); },
+    registrarSaida:      function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_registrar_saida(d); },
+    transferir:          function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_transferir(d); },
+    pipeline:            function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_pipeline(); },
+    novaSolicitacao:     function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_nova_solicitacao(d); },
+    separarSolicitacao:  function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_separar_solicitacao(id); },
+    entregarSolicitacao: function(id,r,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_entregar_solicitacao(id,r); },
+    cancelarSolicitacao: function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_cancelar_solicitacao(id,m); },
+    listarSolicitacoes:  function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_solicitacoes(f||{}); },
+    relatorioSaidas:     function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_saidas(f||{}); },
+    relatorioEntradas:   function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_entradas(f||{}); }
   },
   acoes: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_listar(f||{}); },
@@ -14266,6 +14470,7 @@ var EspacosUI = (function() {
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
       if (tab === 'ativos')      AtivosUI.carregar();
+      if (tab === 'estoque')     EstoqueUI.aoAbrir();
       if (tab === 'config')      InfraConfigUI.aoAbrir();
     }
   }
@@ -19533,6 +19738,752 @@ var AtivosUI = (function() {
   return { carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, aoAbrir: aoAbrir, _confirmarManutencao: _confirmarManutencao };
 })();
 
+// ═══════════════════════════════════════════════════════════
+// ESTOQUE UI — Fase 74
+// Sub-abas: Itens | Estoque | Solicitações | Entradas | Relatórios
+// ═══════════════════════════════════════════════════════════
+var EstoqueUI = (function() {
+  var _subTab     = 'itens';
+  var _carregados = {};
+  var _itensCache = [];
+  var _carrinho   = [];
+
+  var _SOL_LABEL = { pendente:'Pendente', separada:'Separada', finalizada:'Finalizada', cancelada:'Cancelada' };
+  var _SOL_CLASS = { pendente:'badge-warning', separada:'badge-primary', finalizada:'badge-success', cancelada:'badge-error' };
+
+  function _badge(s) {
+    return '<span class="badge '+(_SOL_CLASS[s]||'badge-primary')+'">'+escaparHtml(_SOL_LABEL[s]||s)+'</span>';
+  }
+
+  // ── Sub-tab routing ─────────────────────────────────────
+  function abrirSubTab(tab) {
+    _subTab = tab;
+    document.querySelectorAll('.est-subtab-content').forEach(function(el){ el.style.display='none'; });
+    document.querySelectorAll('.est-subtab-btn').forEach(function(btn){
+      btn.classList.toggle('ativa', btn.getAttribute('data-tab') === tab);
+    });
+    var painel = document.getElementById('est-tab-'+tab);
+    if (painel) painel.style.display = '';
+    if (!_carregados[tab]) {
+      _carregados[tab] = true;
+      if (tab === 'itens')        _carregarItens();
+      if (tab === 'estoque')      _carregarEstoque();
+      if (tab === 'solicitacoes') _carregarSolicitacoes();
+      if (tab === 'entradas')     { /* aguarda seleção de período */ }
+      if (tab === 'relatorios')   { /* aguarda seleção de período */ }
+    }
+  }
+
+  function aoAbrir() {
+    GAS.estoque.metricas(function(r) {
+      if (!r || !r.ok) return;
+      var m = r.data || {};
+      var el = document.getElementById('est-metricas');
+      if (!el) return;
+      el.innerHTML = [
+        { valor: m.totalItens||0,              label:'Itens cadastrados',  icone:'category',       classe:'primary' },
+        { valor: m.itensComSaldo||0,           label:'Com saldo',          icone:'check_circle',   classe:'success' },
+        { valor: m.itensCriticos||0,           label:'Críticos/zerados',   icone:'warning',        classe:'error'   },
+        { valor: m.solicitacoesPendentes||0,   label:'Sol. pendentes',     icone:'pending_actions',classe:'warning' }
+      ].map(function(s) {
+        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+          +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(String(s.valor))+'</div>'
+          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+      }).join('');
+      if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('est-metricas');
+    });
+    abrirSubTab('itens');
+  }
+
+  // ── Sub-aba: Itens ───────────────────────────────────────
+  function _carregarItens() {
+    var busca = (document.getElementById('est-itens-busca')||{}).value || '';
+    var cat   = (document.getElementById('est-itens-cat')||{}).value  || '';
+    var sit   = (document.getElementById('est-itens-sit')||{}).value  || '';
+    var f = {};
+    if (busca) f.busca    = busca;
+    if (cat)   f.categoria = cat;
+    if (sit)   f.situacao  = sit;
+    var el = document.getElementById('est-itens-lista');
+    if (el) el.innerHTML = '<p class="muted-text" style="padding:12px 0;">Carregando…</p>';
+    GAS.estoque.listarItens(f, function(r) {
+      _itensCache = (r && r.ok && r.data) ? r.data : [];
+      _renderItens(_itensCache);
+    });
+  }
+
+  function recarregarItens() {
+    _carregados['itens'] = false;
+    _carregarItens();
+  }
+
+  function _renderItens(lista) {
+    var el = document.getElementById('est-itens-lista');
+    if (!el) return;
+    if (!lista || !lista.length) {
+      el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+        +'<span class="ms" style="font-size:32px;color:var(--muted)">category</span>'
+        +'<p style="font-size:13px;color:var(--muted)">Nenhum item encontrado.</p></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:4px 0;">'
+      + lista.map(function(it) {
+        var critico = it.critico ? '<span class="badge badge-error" style="font-size:10px;">Crítico</span> ' : '';
+        var sitC = it.situacao === 'ativo' ? 'badge-success' : it.situacao === 'inativo' ? 'badge-error' : 'badge-primary';
+        var sitL = it.situacao || 'novo';
+        var saldo = it.saldoTotal !== undefined ? String(it.saldoTotal) : '—';
+        var idStr = JSON.stringify(it.id).replace(/"/g,"'");
+        return '<div class="card" style="padding:14px;">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+          +'<div style="font-size:14px;font-weight:600;color:var(--text);flex:1;padding-right:6px;">'+escaparHtml(it.descricao||'—')+'</div>'
+          +'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0;">'+critico+'<span class="badge '+sitC+'" style="font-size:10px;">'+escaparHtml(sitL)+'</span></div>'
+          +'</div>'
+          +'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">'+escaparHtml(it.categoria||'—')+' · '+escaparHtml(it.unidadeMedida||'un')+'</div>'
+          +'<div style="display:flex;gap:16px;margin-bottom:10px;font-size:13px;">'
+          +'<div><span style="font-size:11px;color:var(--muted);display:block;">Saldo total</span><b>'+escaparHtml(saldo)+'</b></div>'
+          +(it.valorUnitario ? '<div><span style="font-size:11px;color:var(--muted);display:block;">Valor unit.</span><b>'+fmtMoeda(it.valorUnitario)+'</b></div>' : '')
+          +'</div>'
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+          +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI.abrirEditarItem('+idStr+')"><span class="ms ms-sm">edit</span> Editar</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI.abrirRegistrarEntradaParaItem('+idStr+')"><span class="ms ms-sm">add_circle</span> Entrada</button>'
+          +'</div>'
+          +'</div>';
+      }).join('') + '</div>';
+  }
+
+  // ── Sub-aba: Estoque (Saldo por depósito) ────────────────
+  function _carregarEstoque() {
+    var el = document.getElementById('est-saldo-lista');
+    if (el) el.innerHTML = '<p class="muted-text" style="padding:12px 0;">Carregando…</p>';
+    GAS.estoque.listarItens({}, function(r) {
+      var itens = (r && r.ok && r.data) ? r.data : [];
+      if (!el) return;
+      var linhas = [];
+      itens.forEach(function(it) {
+        var saldos = it.saldos || [];
+        if (!saldos.length) {
+          if (!it.saldoTotal) return;
+          saldos = [{ depositoId:'—', local:'—', quantidade: it.saldoTotal||0, quantidadeAlocada:0 }];
+        }
+        saldos.forEach(function(s) {
+          var disp = (s.quantidade||0) - (s.quantidadeAlocada||0);
+          var cor  = disp <= 0 ? '#dc2626' : disp < 5 ? '#d97706' : 'var(--color-success)';
+          var idStr = JSON.stringify(it.id).replace(/"/g,"'");
+          linhas.push('<div class="card" style="padding:14px;">'
+            +'<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">'+escaparHtml(it.descricao||'—')+'</div>'
+            +'<div style="font-size:12px;color:var(--text2);margin-bottom:8px);">'+escaparHtml(it.categoria||'—')
+            +' · <b>'+escaparHtml(s.depositoId||'—')+'</b>'+(s.local && s.local !== '—' ? ' · '+escaparHtml(s.local) : '')+'</div>'
+            +'<div style="display:flex;gap:16px;font-size:13px;margin-bottom:10px;">'
+            +'<div><span style="font-size:11px;color:var(--muted);display:block;">Qtd real</span><b>'+escaparHtml(String(s.quantidade||0))+'</b></div>'
+            +'<div><span style="font-size:11px;color:var(--muted);display:block;">Alocada</span><b>'+escaparHtml(String(s.quantidadeAlocada||0))+'</b></div>'
+            +'<div><span style="font-size:11px;color:var(--muted);display:block;">Disponível</span><b style="color:'+cor+';">'+escaparHtml(String(disp))+'</b></div>'
+            +'</div>'
+            +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI.abrirTransferencia('+idStr+')"><span class="ms ms-sm">swap_horiz</span> Transferir</button>'
+            +'</div>');
+        });
+      });
+      if (!linhas.length) {
+        el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+          +'<span class="ms" style="font-size:32px;color:var(--muted)">warehouse</span>'
+          +'<p style="font-size:13px;color:var(--muted)">Nenhum item com saldo registrado.</p></div>';
+      } else {
+        el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:4px 0;">'+linhas.join('')+'</div>';
+      }
+    });
+  }
+
+  function _forcarRecarregarEstoque() {
+    _carregados['estoque'] = false;
+    _carregarEstoque();
+  }
+
+  // ── Sub-aba: Solicitações ────────────────────────────────
+  function _carregarSolicitacoes() {
+    var elPend = document.getElementById('est-sol-pendentes');
+    var elSep  = document.getElementById('est-sol-separadas');
+    if (elPend) elPend.innerHTML = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+    if (elSep)  elSep.innerHTML  = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+
+    GAS.estoque.listarSolicitacoes({status:'pendente'}, function(r) {
+      if (!elPend) return;
+      var lista = (r && r.ok && r.data) ? r.data : [];
+      if (!lista.length) { elPend.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma pendente.</p>'; return; }
+      elPend.innerHTML = lista.map(function(s) {
+        var idStr = JSON.stringify(s.id).replace(/"/g,"'");
+        return '<div class="pendente-item">'
+          +'<div class="pendente-info">'
+          +'<div class="pendente-nome">#'+escaparHtml(String(s.codigo||'—'))+' — '+escaparHtml(s.solicitante||s.criadoPor||'—')+'</div>'
+          +'<div class="pendente-meta">Setor: '+escaparHtml(s.setorDestino||'—')+(s.subsetorDestino?' / '+escaparHtml(s.subsetorDestino):'')+' · '+escaparHtml(fmtDataPtBR((s.dataSolicitacao||s.criadoEm||'').slice(0,10)))+'</div>'
+          +'<div class="pendente-meta">'+(s.itens||[]).map(function(i){ return escaparHtml(i.descricao||i.itemId)+' ×'+i.qtdSolicitada; }).join(', ')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+          +_badge(s.status)
+          +'<button class="btn btn-ghost btn-sm btn-est-separar" data-id='+idStr+'><span class="ms ms-sm">inventory</span> Separar</button>'
+          +'<button class="btn btn-ghost btn-sm btn-est-cancelar" data-id='+idStr+'><span class="ms ms-sm">cancel</span></button>'
+          +'</div></div>';
+      }).join('');
+      elPend.querySelectorAll('.btn-est-separar').forEach(function(btn){
+        btn.addEventListener('click', function(){ _separarSolicitacao(this.getAttribute('data-id'), this); });
+      });
+      elPend.querySelectorAll('.btn-est-cancelar').forEach(function(btn){
+        btn.addEventListener('click', function(){ _abrirCancelar(this.getAttribute('data-id')); });
+      });
+    });
+
+    GAS.estoque.listarSolicitacoes({status:'separada'}, function(r) {
+      if (!elSep) return;
+      var lista = (r && r.ok && r.data) ? r.data : [];
+      if (!lista.length) { elSep.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma separada.</p>'; return; }
+      elSep.innerHTML = lista.map(function(s) {
+        var idStr = JSON.stringify(s.id).replace(/"/g,"'");
+        return '<div class="pendente-item">'
+          +'<div class="pendente-info">'
+          +'<div class="pendente-nome">#'+escaparHtml(String(s.codigo||'—'))+' — '+escaparHtml(s.solicitante||s.criadoPor||'—')+'</div>'
+          +'<div class="pendente-meta">Setor: '+escaparHtml(s.setorDestino||'—')+(s.subsetorDestino?' / '+escaparHtml(s.subsetorDestino):'')
+            +' · Separado por: '+escaparHtml(s.separadaPor||'—')+'</div>'
+          +'<div class="pendente-meta">'+(s.itens||[]).map(function(i){ return escaparHtml(i.descricao||i.itemId)+' ×'+i.qtdSolicitada; }).join(', ')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+          +_badge(s.status)
+          +'<button class="btn btn-ghost btn-sm btn-est-entregar" data-id='+idStr+'><span class="ms ms-sm">check_circle</span> Entregar</button>'
+          +'<button class="btn btn-ghost btn-sm btn-est-cancelar" data-id='+idStr+'><span class="ms ms-sm">cancel</span></button>'
+          +'</div></div>';
+      }).join('');
+      elSep.querySelectorAll('.btn-est-entregar').forEach(function(btn){
+        btn.addEventListener('click', function(){ _abrirEntregarSolicitacao(this.getAttribute('data-id')); });
+      });
+      elSep.querySelectorAll('.btn-est-cancelar').forEach(function(btn){
+        btn.addEventListener('click', function(){ _abrirCancelar(this.getAttribute('data-id')); });
+      });
+    });
+  }
+
+  function _forcarRecarregarSolicitacoes() {
+    _carregados['solicitacoes'] = false;
+    _carregarSolicitacoes();
+  }
+
+  function _separarSolicitacao(id, btnEl) {
+    BtnGuard.wrap(btnEl, 'Separando…', function(done) {
+      GAS.estoque.separarSolicitacao(id, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao separar.'); return; }
+        Toast.sucesso('Solicitação separada.'); _forcarRecarregarSolicitacoes();
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  function _abrirEntregarSolicitacao(id) {
+    var idStr = JSON.stringify(id).replace(/"/g,"'");
+    _abrirModalSimples(
+      '<div style="padding:20px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Registrar Entrega</h3>'
+      +'<div style="margin-bottom:16px;">'
+      +'<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Receptor (nome de quem recebeu) *</label>'
+      +'<input id="est-receptor" type="text" class="form-input" placeholder="Nome do receptor" style="width:100%;">'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button id="btn-est-entregar-ok" class="btn btn-primario" onclick="EstoqueUI._confirmarEntrega('+idStr+')"><span class="ms ms-sm">check_circle</span> Confirmar</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>'
+    );
+  }
+
+  function _confirmarEntrega(id) {
+    var receptor = (document.getElementById('est-receptor')||{}).value || '';
+    if (!receptor.trim()) { Toast.aviso('Informe o nome do receptor.'); return; }
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
+    GAS.estoque.entregarSolicitacao(id, receptor.trim(), function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao entregar.'); return; }
+      Toast.sucesso('Entrega registrada.');
+      _forcarRecarregarSolicitacoes();
+      _carregados['itens'] = false; _carregados['estoque'] = false;
+    });
+  }
+
+  function _abrirCancelar(id) {
+    var idStr = JSON.stringify(id).replace(/"/g,"'");
+    _abrirModalSimples(
+      '<div style="padding:20px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Cancelar Solicitação</h3>'
+      +'<div style="margin-bottom:16px;">'
+      +'<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Motivo *</label>'
+      +'<textarea id="est-cancel-motivo" class="form-input" rows="3" placeholder="Descreva o motivo…" style="width:100%;resize:vertical;"></textarea>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button class="btn btn-error" onclick="EstoqueUI._confirmarCancelamento('+idStr+')">Cancelar Solicitação</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Fechar</button>'
+      +'</div></div>'
+    );
+  }
+
+  function _confirmarCancelamento(id) {
+    var motivo = (document.getElementById('est-cancel-motivo')||{}).value || '';
+    if (!motivo.trim()) { Toast.aviso('Informe o motivo.'); return; }
+    var overlay = document.querySelector('.modal-simples');
+    if (overlay) overlay.remove();
+    GAS.estoque.cancelarSolicitacao(id, motivo.trim(), function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao cancelar.'); return; }
+      Toast.sucesso('Solicitação cancelada.');
+      _forcarRecarregarSolicitacoes();
+      _carregados['itens'] = false; _carregados['estoque'] = false;
+    });
+  }
+
+  // ── Relatórios ───────────────────────────────────────────
+  function _carregarRelatorioSaidas() {
+    var el = document.getElementById('est-rel-saidas-lista');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+    var f = {
+      dataInicio: (document.getElementById('est-rel-ini')||{}).value || '',
+      dataFim:    (document.getElementById('est-rel-fim')||{}).value || ''
+    };
+    GAS.estoque.relatorioSaidas(f, function(r) {
+      var dados = (r && r.ok && r.data) ? r.data : [];
+      if (!dados.length) {
+        el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma saída no período.</p>';
+        return;
+      }
+      el.innerHTML = '<div class="table-wrapper"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        +'<thead><tr style="border-bottom:2px solid var(--border);">'
+        +'<th style="text-align:left;padding:8px 10px;font-weight:600;color:var(--text2);">Setor / Usuário</th>'
+        +'<th style="text-align:center;padding:8px 10px;font-weight:600;color:var(--text2);">Itens</th>'
+        +'<th style="text-align:right;padding:8px 10px;font-weight:600;color:var(--text2);">Custo Total</th>'
+        +'</tr></thead><tbody>'
+        + dados.map(function(d) {
+          return '<tr style="border-bottom:1px solid var(--border);">'
+            +'<td style="padding:8px 10px;">'+escaparHtml(d.setor||'—')+(d.usuario ? ' / '+escaparHtml(d.usuario) : '')+'</td>'
+            +'<td style="text-align:center;padding:8px 10px;">'+escaparHtml(String(d.totalItens||0))+'</td>'
+            +'<td style="text-align:right;padding:8px 10px;">'+fmtMoeda(d.custoTotal||0)+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>';
+    });
+  }
+
+  function _carregarRelatorioEntradas() {
+    var el = document.getElementById('est-rel-entradas-lista');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+    var f = {
+      dataInicio: (document.getElementById('est-rel-ent-ini')||{}).value || '',
+      dataFim:    (document.getElementById('est-rel-ent-fim')||{}).value || ''
+    };
+    GAS.estoque.relatorioEntradas(f, function(r) {
+      var dados = (r && r.ok && r.data) ? r.data : [];
+      if (!dados.length) {
+        el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma entrada no período.</p>';
+        return;
+      }
+      el.innerHTML = '<div class="table-wrapper"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        +'<thead><tr style="border-bottom:2px solid var(--border);">'
+        +'<th style="text-align:left;padding:8px 10px;font-weight:600;color:var(--text2);">Mês</th>'
+        +'<th style="text-align:right;padding:8px 10px;font-weight:600;color:var(--text2);">Compras (R$)</th>'
+        +'<th style="text-align:right;padding:8px 10px;font-weight:600;color:var(--text2);">Ajustes (R$)</th>'
+        +'<th style="text-align:center;padding:8px 10px;font-weight:600;color:var(--text2);">Quantidade</th>'
+        +'</tr></thead><tbody>'
+        + dados.map(function(d) {
+          return '<tr style="border-bottom:1px solid var(--border);">'
+            +'<td style="padding:8px 10px;">'+escaparHtml(d.mes||'—')+'</td>'
+            +'<td style="text-align:right;padding:8px 10px;">'+fmtMoeda(d.totalCompras||0)+'</td>'
+            +'<td style="text-align:right;padding:8px 10px;">'+fmtMoeda(d.totalAjustes||0)+'</td>'
+            +'<td style="text-align:center;padding:8px 10px;">'+escaparHtml(String(d.quantidade||0))+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>';
+    });
+  }
+
+  function _forcarRecarregarEntradas() {
+    _carregados['entradas'] = false;
+    _carregarEntradas_periodo();
+  }
+
+  function _carregarEntradas_periodo() {
+    var el = document.getElementById('est-entradas-lista');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Carregando…</p>';
+    var f = {
+      dataInicio: (document.getElementById('est-ent-ini')||{}).value || '',
+      dataFim:    (document.getElementById('est-ent-fim')||{}).value || ''
+    };
+    GAS.estoque.relatorioEntradas(f, function(r) {
+      var dados = (r && r.ok && r.data) ? r.data : [];
+      if (!dados.length) {
+        el.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma entrada no período.</p>';
+        return;
+      }
+      el.innerHTML = '<div class="table-wrapper"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        +'<thead><tr style="border-bottom:2px solid var(--border);">'
+        +'<th style="text-align:left;padding:8px 10px;font-weight:600;color:var(--text2);">Mês</th>'
+        +'<th style="text-align:right;padding:8px 10px;font-weight:600;color:var(--text2);">Compras</th>'
+        +'<th style="text-align:right;padding:8px 10px;font-weight:600;color:var(--text2);">Ajustes</th>'
+        +'<th style="text-align:center;padding:8px 10px;font-weight:600;color:var(--text2);">Qtd</th>'
+        +'</tr></thead><tbody>'
+        + dados.map(function(d) {
+          return '<tr style="border-bottom:1px solid var(--border);">'
+            +'<td style="padding:8px 10px;">'+escaparHtml(d.mes||'—')+'</td>'
+            +'<td style="text-align:right;padding:8px 10px;">'+fmtMoeda(d.totalCompras||0)+'</td>'
+            +'<td style="text-align:right;padding:8px 10px;">'+fmtMoeda(d.totalAjustes||0)+'</td>'
+            +'<td style="text-align:center;padding:8px 10px;">'+escaparHtml(String(d.quantidade||0))+'</td>'
+            +'</tr>';
+        }).join('')+'</tbody></table></div>';
+    });
+  }
+
+  // ── Modal: Novo / Editar Item ────────────────────────────
+  function abrirNovoItem() { _abrirModalSimples(_htmlFormItem(null)); }
+
+  function abrirEditarItem(id) {
+    var item = null;
+    for (var i = 0; i < _itensCache.length; i++) { if (_itensCache[i].id === id) { item = _itensCache[i]; break; } }
+    _abrirModalSimples(_htmlFormItem(item || { id: id }));
+  }
+
+  function _htmlFormItem(item) {
+    item = item || {};
+    var cats = ['Expediente','Limpeza','Manutenção','TI','Copa','Outros'];
+    var uns  = ['un','resma','caixa','pacote','litro','kg','rolo','par'];
+    var sits = [['novo','Novo'],['ativo','Ativo'],['inativo','Inativo']];
+    return '<div style="padding:20px;max-width:520px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">'+(item.id?'Editar Item':'Novo Item')+'</h3>'
+      +'<input type="hidden" id="est-item-id" value="'+escaparHtml(item.id||'')+'">'
+      +'<div class="form-grid">'
+      +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Descrição *</label>'
+      +'<input type="text" id="est-item-desc" class="form-input" value="'+escaparHtml(item.descricao||'')+'" placeholder="Ex: Papel A4 Resma 500fls"></div>'
+      +'<div class="form-group"><label class="form-label">Referência</label>'
+      +'<input type="text" id="est-item-ref" class="form-input" value="'+escaparHtml(item.referencia||'')+'" placeholder="Código/ref."></div>'
+      +'<div class="form-group"><label class="form-label">Categoria</label>'
+      +'<select id="est-item-cat" class="form-input">'+cats.map(function(c){ return '<option value="'+c+'"'+(item.categoria===c?' selected':'')+'>'+c+'</option>'; }).join('')+'</select></div>'
+      +'<div class="form-group"><label class="form-label">Unidade de Medida *</label>'
+      +'<select id="est-item-un" class="form-input">'+uns.map(function(u){ return '<option value="'+u+'"'+(item.unidadeMedida===u?' selected':'')+'>'+u+'</option>'; }).join('')+'</select></div>'
+      +'<div class="form-group"><label class="form-label">Valor Unitário (R$)</label>'
+      +'<input type="text" id="est-item-valor" class="form-input" value="'+escaparHtml(item.valorUnitario?String(item.valorUnitario):'')+'" placeholder="0,00"></div>'
+      +'<div class="form-group"><label class="form-label">Situação</label>'
+      +'<select id="est-item-sit" class="form-input">'+sits.map(function(s){ return '<option value="'+s[0]+'"'+((item.situacao||'novo')===s[0]?' selected':'')+'>'+s[1]+'</option>'; }).join('')+'</select></div>'
+      +'<div class="form-group" style="grid-column:1/-1;display:flex;gap:20px;">'
+      +'<label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;">'
+      +'<input type="checkbox" id="est-item-critico"'+(item.critico?' checked':'')+' style="margin:0;"> Item crítico</label>'
+      +'<label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;">'
+      +'<input type="checkbox" id="est-item-visivel"'+(item.visivelSolicitantes!==false?' checked':'')+' style="margin:0;"> Visível a solicitantes</label>'
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:16px;">'
+      +'<button id="btn-est-item-salvar" class="btn btn-primario" onclick="EstoqueUI._salvarItem()"><span class="ms ms-sm">save</span> Salvar</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>';
+  }
+
+  function _salvarItem() {
+    var id   = (document.getElementById('est-item-id')||{}).value || '';
+    var desc = ((document.getElementById('est-item-desc')||{}).value||'').trim();
+    if (!desc) { Toast.aviso('Descrição obrigatória.'); return; }
+    var dados = {
+      descricao:         desc,
+      referencia:        ((document.getElementById('est-item-ref')||{}).value||'').trim(),
+      categoria:         (document.getElementById('est-item-cat')||{}).value || 'Expediente',
+      unidadeMedida:     (document.getElementById('est-item-un')||{}).value  || 'un',
+      valorUnitario:     parseFloat(((document.getElementById('est-item-valor')||{}).value||'0').replace(',','.')) || 0,
+      situacao:          (document.getElementById('est-item-sit')||{}).value || 'ativo',
+      critico:           !!((document.getElementById('est-item-critico')||{}).checked),
+      visivelSolicitantes: !!((document.getElementById('est-item-visivel')||{}).checked)
+    };
+    if (id) dados.id = id;
+    BtnGuard.wrap('btn-est-item-salvar', 'Salvando…', function(done) {
+      GAS.estoque.salvarItem(dados, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao salvar.'); return; }
+        var overlay = document.querySelector('.modal-simples');
+        if (overlay) overlay.remove();
+        Toast.sucesso('Item salvo.'); recarregarItens(); _carregados['estoque'] = false;
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  // ── Modal: Registrar Entrada ─────────────────────────────
+  function abrirRegistrarEntrada() { _abrirModalSimples(_htmlFormEntrada(null)); }
+
+  function abrirRegistrarEntradaParaItem(itemId) { _abrirModalSimples(_htmlFormEntrada(itemId)); }
+
+  function _htmlFormEntrada(itemId) {
+    var opts = '<option value="">Selecione…</option>'
+      + _itensCache.map(function(i){ return '<option value="'+escaparHtml(i.id)+'"'+(i.id===itemId?' selected':'')+'>'+escaparHtml(i.descricao)+'</option>'; }).join('');
+    return '<div style="padding:20px;max-width:520px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Registrar Entrada</h3>'
+      +'<div class="form-grid">'
+      +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Item *</label>'
+      +'<select id="est-ent-item" class="form-input">'+opts+'</select></div>'
+      +'<div class="form-group"><label class="form-label">Tipo de entrada *</label>'
+      +'<select id="est-ent-tipo" class="form-input">'
+      +'<option value="entrada_compra">Compra</option>'
+      +'<option value="entrada_ajuste">Ajuste positivo</option>'
+      +'<option value="entrada_devolucao">Devolução</option>'
+      +'</select></div>'
+      +'<div class="form-group"><label class="form-label">Tipo de compra</label>'
+      +'<select id="est-ent-tipo-compra" class="form-input">'
+      +'<option value="">—</option><option value="pregao">Pregão</option>'
+      +'<option value="caixa">Caixa</option><option value="dispensa">Dispensa</option>'
+      +'<option value="dispensa_emergencia">Dispensa Emergência</option>'
+      +'</select></div>'
+      +'<div class="form-group"><label class="form-label">Depósito</label>'
+      +'<input type="text" id="est-ent-deposito" class="form-input" value="dep-01" placeholder="ID do depósito"></div>'
+      +'<div class="form-group"><label class="form-label">Local / Prateleira</label>'
+      +'<input type="text" id="est-ent-local" class="form-input" placeholder="Ex: A1, ARMO1N05"></div>'
+      +'<div class="form-group"><label class="form-label">Quantidade *</label>'
+      +'<input type="number" id="est-ent-qtd" class="form-input" value="1" min="1"></div>'
+      +'<div class="form-group"><label class="form-label">Valor Unitário (R$)</label>'
+      +'<input type="text" id="est-ent-valor" class="form-input" placeholder="0,00"></div>'
+      +'<div class="form-group"><label class="form-label">Fornecedor</label>'
+      +'<input type="text" id="est-ent-fornecedor" class="form-input" placeholder="Nome do fornecedor"></div>'
+      +'<div class="form-group"><label class="form-label">Nota Fiscal</label>'
+      +'<input type="text" id="est-ent-nf" class="form-input" placeholder="Nº da NF"></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:16px;">'
+      +'<button id="btn-est-ent-salvar" class="btn btn-primario" onclick="EstoqueUI._confirmarEntrada()"><span class="ms ms-sm">add_circle</span> Registrar</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>';
+  }
+
+  function _confirmarEntrada() {
+    var itemId = (document.getElementById('est-ent-item')||{}).value || '';
+    if (!itemId) { Toast.aviso('Selecione o item.'); return; }
+    var qtd = parseInt((document.getElementById('est-ent-qtd')||{}).value||'1', 10);
+    if (!qtd || qtd <= 0) { Toast.aviso('Informe a quantidade.'); return; }
+    var dados = {
+      itemId:      itemId,
+      tipo:        (document.getElementById('est-ent-tipo')||{}).value        || 'entrada_compra',
+      tipoCompra:  (document.getElementById('est-ent-tipo-compra')||{}).value || '',
+      depositoId:  (document.getElementById('est-ent-deposito')||{}).value    || 'dep-01',
+      local:       (document.getElementById('est-ent-local')||{}).value       || '',
+      quantidade:  qtd,
+      valorUnitario: parseFloat(((document.getElementById('est-ent-valor')||{}).value||'0').replace(',','.')) || 0,
+      fornecedor:  (document.getElementById('est-ent-fornecedor')||{}).value  || '',
+      notaFiscal:  (document.getElementById('est-ent-nf')||{}).value          || ''
+    };
+    BtnGuard.wrap('btn-est-ent-salvar', 'Registrando…', function(done) {
+      GAS.estoque.registrarEntrada(dados, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao registrar.'); return; }
+        var overlay = document.querySelector('.modal-simples');
+        if (overlay) overlay.remove();
+        Toast.sucesso('Entrada registrada.');
+        recarregarItens(); _carregados['estoque'] = false; _carregados['entradas'] = false;
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  // ── Modal: Transferência ─────────────────────────────────
+  function abrirTransferencia(itemId) {
+    var item = null;
+    for (var i = 0; i < _itensCache.length; i++) { if (_itensCache[i].id === itemId) { item = _itensCache[i]; break; } }
+    var nome = item ? item.descricao : itemId;
+    var idStr = JSON.stringify(itemId).replace(/"/g,"'");
+    _abrirModalSimples(
+      '<div style="padding:20px;max-width:480px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Transferir: '+escaparHtml(nome)+'</h3>'
+      +'<input type="hidden" id="est-tr-item" value="'+escaparHtml(itemId)+'">'
+      +'<div class="form-grid">'
+      +'<div class="form-group"><label class="form-label">Depósito Origem</label>'
+      +'<input type="text" id="est-tr-orig" class="form-input" placeholder="ID depósito origem"></div>'
+      +'<div class="form-group"><label class="form-label">Local Origem</label>'
+      +'<input type="text" id="est-tr-orig-local" class="form-input" placeholder="Ex: A1"></div>'
+      +'<div class="form-group"><label class="form-label">Depósito Destino</label>'
+      +'<input type="text" id="est-tr-dest" class="form-input" placeholder="ID depósito destino"></div>'
+      +'<div class="form-group"><label class="form-label">Local Destino</label>'
+      +'<input type="text" id="est-tr-dest-local" class="form-input" placeholder="Ex: B2"></div>'
+      +'<div class="form-group"><label class="form-label">Quantidade *</label>'
+      +'<input type="number" id="est-tr-qtd" class="form-input" value="1" min="1"></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:16px;">'
+      +'<button id="btn-est-tr-ok" class="btn btn-primario" onclick="EstoqueUI._confirmarTransferencia()"><span class="ms ms-sm">swap_horiz</span> Transferir</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>'
+    );
+  }
+
+  function _confirmarTransferencia() {
+    var itemId = (document.getElementById('est-tr-item')||{}).value || '';
+    var qtd    = parseInt((document.getElementById('est-tr-qtd')||{}).value||'1', 10);
+    var orig   = (document.getElementById('est-tr-orig')||{}).value || '';
+    var dest   = (document.getElementById('est-tr-dest')||{}).value || '';
+    if (!orig || !dest) { Toast.aviso('Informe os depósitos de origem e destino.'); return; }
+    if (!qtd || qtd <= 0) { Toast.aviso('Quantidade inválida.'); return; }
+    var dados = {
+      itemId: itemId, quantidade: qtd,
+      depositoOrigemId:  orig,  localOrigem:   (document.getElementById('est-tr-orig-local')||{}).value || '',
+      depositoDestinoId: dest,  localDestino:  (document.getElementById('est-tr-dest-local')||{}).value || ''
+    };
+    BtnGuard.wrap('btn-est-tr-ok', 'Transferindo…', function(done) {
+      GAS.estoque.transferir(dados, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        var overlay = document.querySelector('.modal-simples');
+        if (overlay) overlay.remove();
+        Toast.sucesso('Transferência registrada.'); _carregados['estoque'] = false; _carregarEstoque();
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  // ── Nova Solicitação ─────────────────────────────────────
+  function abrirNovaSolicitacao() {
+    if (!_itensCache.length) {
+      GAS.estoque.listarItens({ visivelSolicitantes: true }, function(r) {
+        _itensCache = (r && r.ok && r.data) ? r.data : [];
+        _mostrarTelaSolicitacao();
+      });
+    } else {
+      _mostrarTelaSolicitacao();
+    }
+  }
+
+  function _mostrarTelaSolicitacao() {
+    _carrinho = [];
+    var boot = App.getBoot ? App.getBoot() : null;
+    var setores = (boot && boot.setores) || [];
+    var setorOpts = '<option value="">Selecione o setor…</option>'
+      + setores.map(function(s){ var id=s.id||s; var n=s.nome||s.label||s; return '<option value="'+escaparHtml(id)+'">'+escaparHtml(n)+'</option>'; }).join('');
+    var itensDisp = _itensCache.filter(function(i){ return i.visivelSolicitantes !== false && i.situacao !== 'inativo'; });
+
+    _abrirModalSimples(
+      '<div style="padding:20px;">'
+      +'<h3 style="margin:0 0 14px;font-size:15px;font-weight:700;color:var(--text);">Nova Solicitação de Materiais</h3>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">'
+      +'<div class="form-group"><label class="form-label">Solicitante *</label>'
+      +'<input type="text" id="est-sol-solicitante" class="form-input" value="'+escaparHtml((boot&&boot.usuarioNome)||'')+'"></div>'
+      +'<div class="form-group"><label class="form-label">Setor destino *</label>'
+      +'<select id="est-sol-setor" class="form-input">'+setorOpts+'</select></div>'
+      +'<div class="form-group"><label class="form-label">Subsetor</label>'
+      +'<input type="text" id="est-sol-subsetor" class="form-input" placeholder="Opcional"></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+      // Itens disponíveis
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text);">Itens disponíveis</div>'
+      +'<input type="text" id="est-sol-busca-item" class="form-input" placeholder="Buscar…" oninput="EstoqueUI._filtrarItensNovaSol()" style="margin-bottom:8px;">'
+      +'<div id="est-sol-itens-grid" style="max-height:260px;overflow-y:auto;">'
+      + (itensDisp.length ? itensDisp.map(function(i){
+          var idStr = JSON.stringify(i.id).replace(/"/g,"'");
+          return '<div class="est-sol-item-card" style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">'
+            +'<div><div style="font-size:13px;font-weight:600;color:var(--text);">'+escaparHtml(i.descricao)+'</div>'
+            +'<div style="font-size:11px;color:var(--text2);">'+escaparHtml(i.categoria||'—')+' · '+escaparHtml(i.unidadeMedida||'un')+'</div></div>'
+            +'<div style="display:flex;gap:5px;align-items:center;">'
+            +'<input type="number" id="est-sol-qty-'+escaparHtml(i.id)+'" min="1" value="1" class="form-input" style="width:55px;padding:4px 6px;">'
+            +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI._adicionarCarrinho('+idStr+')" data-bg-skip="1"><span class="ms ms-sm">add</span></button>'
+            +'</div></div>';
+        }).join('') : '<p class="muted-text" style="font-size:12px;">Nenhum item disponível.</p>')
+      +'</div></div>'
+      // Carrinho
+      +'<div>'
+      +'<div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text);">Sua Solicitação</div>'
+      +'<div id="est-carrinho" style="min-height:80px;max-height:260px;overflow-y:auto;">'
+      +'<p style="font-size:12px;color:var(--muted);">Adicione itens ao lado.</p></div>'
+      +'<div style="margin-top:10px;">'
+      +'<label class="form-label">Observações</label>'
+      +'<textarea id="est-sol-obs" class="form-input" rows="2" placeholder="Finalidade, urgência…" style="resize:vertical;"></textarea>'
+      +'</div></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+      +'<button id="btn-est-sol-enviar" class="btn btn-primario" onclick="EstoqueUI._enviarSolicitacao()"><span class="ms ms-sm">send</span> Enviar Solicitação</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>'
+    );
+  }
+
+  function _filtrarItensNovaSol() {
+    var busca = ((document.getElementById('est-sol-busca-item')||{}).value||'').toLowerCase();
+    document.querySelectorAll('#est-sol-itens-grid .est-sol-item-card').forEach(function(card) {
+      card.style.display = (!busca || card.textContent.toLowerCase().indexOf(busca) >= 0) ? '' : 'none';
+    });
+  }
+
+  function _adicionarCarrinho(itemId) {
+    var item = null;
+    for (var i = 0; i < _itensCache.length; i++) { if (_itensCache[i].id === itemId) { item = _itensCache[i]; break; } }
+    if (!item) return;
+    var qtd = parseInt((document.getElementById('est-sol-qty-'+itemId)||{}).value||'1', 10);
+    if (!qtd || qtd <= 0) { Toast.aviso('Quantidade inválida.'); return; }
+    var found = false;
+    for (var j = 0; j < _carrinho.length; j++) {
+      if (_carrinho[j].itemId === itemId) { _carrinho[j].qtdSolicitada += qtd; found = true; break; }
+    }
+    if (!found) {
+      _carrinho.push({ itemId: itemId, descricao: item.descricao, unidade: item.unidadeMedida||'un', qtdSolicitada: qtd, valorUnitario: item.valorUnitario||0 });
+    }
+    _renderCarrinho();
+  }
+
+  function _renderCarrinho() {
+    var el = document.getElementById('est-carrinho');
+    if (!el) return;
+    if (!_carrinho.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted);">Adicione itens ao lado.</p>'; return; }
+    el.innerHTML = _carrinho.map(function(c, idx) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;">'
+        +'<div style="font-size:12px;color:var(--text);">'+escaparHtml(c.descricao)+' <b>×'+c.qtdSolicitada+'</b> '+escaparHtml(c.unidade)+'</div>'
+        +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI._removerCarrinho('+idx+')" data-bg-skip="1">'
+        +'<span class="ms ms-sm" style="font-size:14px;color:var(--error);">remove_circle</span></button>'
+        +'</div>';
+    }).join('');
+  }
+
+  function _removerCarrinho(idx) {
+    _carrinho.splice(idx, 1);
+    _renderCarrinho();
+  }
+
+  function _enviarSolicitacao() {
+    if (!_carrinho.length) { Toast.aviso('Adicione pelo menos um item.'); return; }
+    var solicitante = ((document.getElementById('est-sol-solicitante')||{}).value||'').trim();
+    var setor       = (document.getElementById('est-sol-setor')||{}).value || '';
+    if (!solicitante || !setor) { Toast.aviso('Informe solicitante e setor.'); return; }
+    var dados = {
+      solicitante:    solicitante,
+      setorDestino:   setor,
+      subsetorDestino: ((document.getElementById('est-sol-subsetor')||{}).value||'').trim(),
+      observacoes:    ((document.getElementById('est-sol-obs')||{}).value||'').trim(),
+      itens: _carrinho.map(function(c){ return { itemId:c.itemId, descricao:c.descricao, unidade:c.unidade, qtdSolicitada:c.qtdSolicitada, valorUnitario:c.valorUnitario }; })
+    };
+    BtnGuard.wrap('btn-est-sol-enviar', 'Enviando…', function(done) {
+      GAS.estoque.novaSolicitacao(dados, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao enviar.'); return; }
+        var overlay = document.querySelector('.modal-simples');
+        if (overlay) overlay.remove();
+        _carrinho = [];
+        Toast.sucesso('Solicitação enviada!');
+        _forcarRecarregarSolicitacoes();
+        abrirSubTab('solicitacoes');
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  return {
+    aoAbrir:                   aoAbrir,
+    abrirSubTab:               abrirSubTab,
+    recarregarItens:           recarregarItens,
+    abrirNovoItem:             abrirNovoItem,
+    abrirEditarItem:           abrirEditarItem,
+    _salvarItem:               _salvarItem,
+    abrirRegistrarEntrada:     abrirRegistrarEntrada,
+    abrirRegistrarEntradaParaItem: abrirRegistrarEntradaParaItem,
+    _confirmarEntrada:         _confirmarEntrada,
+    abrirTransferencia:        abrirTransferencia,
+    _confirmarTransferencia:   _confirmarTransferencia,
+    abrirNovaSolicitacao:      abrirNovaSolicitacao,
+    _filtrarItensNovaSol:      _filtrarItensNovaSol,
+    _adicionarCarrinho:        _adicionarCarrinho,
+    _removerCarrinho:          _removerCarrinho,
+    _enviarSolicitacao:        _enviarSolicitacao,
+    _confirmarEntrega:         _confirmarEntrega,
+    _confirmarCancelamento:    _confirmarCancelamento,
+    _forcarRecarregarEstoque:  _forcarRecarregarEstoque,
+    _forcarRecarregarSolicitacoes: _forcarRecarregarSolicitacoes,
+    _forcarRecarregarEntradas: _forcarRecarregarEntradas,
+    _carregarRelatorioSaidas:  _carregarRelatorioSaidas,
+    _carregarRelatorioEntradas:_carregarRelatorioEntradas
+  };
+})();
 
 <?!= include('shared/mapa_ui'); ?>
 <?!= include('shared/mapa_editor'); ?>
