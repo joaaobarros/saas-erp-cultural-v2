@@ -5279,6 +5279,9 @@ select.form-control { cursor: pointer; }
             <button class="tab-btn est-subtab-btn" data-tab="relatorios" onclick="EstoqueUI.abrirSubTab('relatorios')">
               <span class="ms ms-sm">bar_chart</span> Relatórios
             </button>
+            <button class="tab-btn est-subtab-btn" data-tab="pipeline" onclick="EstoqueUI.abrirSubTab('pipeline')">
+              <span class="ms ms-sm">stacked_bar_chart</span> Pipeline
+            </button>
           </div>
 
           <!-- ── Sub-aba: Itens ── -->
@@ -5434,6 +5437,28 @@ select.form-control { cursor: pointer; }
               </div>
               <div id="est-rel-entradas-lista">
                 <p class="muted-text" style="padding:12px 0;">Selecione um período para gerar o relatório.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Sub-aba: Pipeline ── -->
+          <div id="est-tab-pipeline" class="est-subtab-content" style="display:none">
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">stacked_bar_chart</span> Pipeline de Estoque</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <select id="est-pip-dias" class="select-sm" onchange="EstoqueUI._carregarPipeline()">
+                    <option value="30" selected>Últimos 30 dias</option>
+                    <option value="60">Últimos 60 dias</option>
+                    <option value="90">Últimos 90 dias</option>
+                  </select>
+                  <button class="btn btn-ghost btn-sm" id="btn-est-pip-reload" onclick="EstoqueUI._carregarPipeline()">
+                    <span class="ms ms-sm">refresh</span>
+                  </button>
+                </div>
+              </div>
+              <div id="est-pipeline-lista">
+                <p class="muted-text" style="padding:12px 0;">Carregando pipeline…</p>
               </div>
             </div>
           </div>
@@ -8700,7 +8725,8 @@ var GAS = {
     cancelarSolicitacao: function(id,m,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_cancelar_solicitacao(id,m); },
     listarSolicitacoes:  function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_solicitacoes(f||{}); },
     relatorioSaidas:     function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_saidas(f||{}); },
-    relatorioEntradas:   function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_entradas(f||{}); }
+    relatorioEntradas:   function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_entradas(f||{}); },
+    previsao:            function(dias,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_previsao(dias||30); }
   },
   acoes: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_listar(f||{}); },
@@ -19771,6 +19797,7 @@ var EstoqueUI = (function() {
       if (tab === 'solicitacoes') _carregarSolicitacoes();
       if (tab === 'entradas')     { /* aguarda seleção de período */ }
       if (tab === 'relatorios')   { /* aguarda seleção de período */ }
+      if (tab === 'pipeline')     _carregarPipeline();
     }
   }
 
@@ -20432,6 +20459,76 @@ var EstoqueUI = (function() {
     _renderCarrinho();
   }
 
+  // ── Sub-aba: Pipeline ───────────────────────────────────────
+
+  function _carregarPipeline() {
+    var lista = document.getElementById('est-pipeline-lista');
+    if (!lista) return;
+    lista.innerHTML = '<p class="muted-text" style="padding:12px 0;">Carregando…</p>';
+    var dias = parseInt((document.getElementById('est-pip-dias')||{}).value || '30', 10);
+    GAS.estoque.previsao(dias, function(r) {
+      if (!r || !r.ok) { lista.innerHTML = '<p class="muted-text">Erro ao carregar pipeline.</p>'; return; }
+      var itens = r.data || [];
+      if (!itens.length) { lista.innerHTML = '<p class="muted-text" style="padding:12px 0;">Nenhum item cadastrado.</p>'; return; }
+
+      var _COR_BARRA = { zerado: '#dc2626', baixo: '#f59e0b', previsto_acabar: '#f97316', ok: '#16a34a' };
+      var _LABEL_ALERTA = { zerado: '<span class="badge badge-error">ZERADO</span>', baixo: '<span class="badge badge-warning">BAIXO</span>', previsto_acabar: '<span class="badge badge-warning">ACABANDO</span>' };
+
+      var html = itens.map(function(p) {
+        var item   = p.item || {};
+        var alerta = p.alerta;
+        var cor    = _COR_BARRA[alerta] || _COR_BARRA.ok;
+        var limiar = p.limiar || 5;
+        var pct    = limiar > 0 ? Math.min(100, Math.round((p.saldoTotal / limiar) * 100)) : 100;
+        var diasStr = p.taxa && p.taxa.diasAteEsgotar !== null
+          ? p.taxa.diasAteEsgotar + ' dia(s)'
+          : '—';
+        var mediaStr = p.taxa ? p.taxa.mediaDiaria + ' ' + (item.unidadeMedida||'un') + '/dia' : '—';
+
+        // Barras por depósito
+        var depositosHtml = '';
+        if (Array.isArray(p.porDeposito) && p.porDeposito.length) {
+          depositosHtml = p.porDeposito.map(function(d) {
+            var depPct = limiar > 0 ? Math.min(100, Math.round((d.quantidade / limiar) * 100)) : 100;
+            var depCor = d.quantidade === 0 ? '#dc2626' : d.quantidade <= limiar ? '#f59e0b' : '#16a34a';
+            var acaoHtml = '';
+            if (d.tipo === 'rapido' && d.disponivel < limiar) {
+              acaoHtml = '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EstoqueUI.abrirTransferencia(\''+escaparHtml(item.id)+'\')" data-bg-skip="1">'
+                +'<span class="ms ms-sm">swap_horiz</span> Transferir p/ Rápido</button>';
+            }
+            if (d.tipo === 'principal' && d.disponivel < limiar) {
+              acaoHtml += '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;margin-left:4px;" onclick="EstoqueUI.abrirRegistrarEntradaParaItem(\''+escaparHtml(item.id)+'\')" data-bg-skip="1">'
+                +'<span class="ms ms-sm">shopping_cart</span> Registrar Compra</button>';
+            }
+            return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;">'
+              +'<span style="width:90px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escaparHtml(d.depositoNome||d.depositoId)+'">'+escaparHtml(d.depositoCod||d.depositoId)+'</span>'
+              +'<div style="flex:1;background:var(--border);border-radius:4px;height:10px;overflow:hidden;">'
+              +'<div style="width:'+depPct+'%;background:'+depCor+';height:100%;border-radius:4px;transition:width .3s;"></div></div>'
+              +'<span style="width:60px;text-align:right;color:var(--text-muted);">'+d.quantidade+' / '+limiar+'</span>'
+              + acaoHtml
+              +'</div>';
+          }).join('');
+        }
+
+        return '<div class="card" style="margin-bottom:12px;padding:14px 16px;">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+          +'<div style="flex:1;">'
+          +'<div style="font-weight:600;font-size:14px;">'+escaparHtml(item.descricao||'—')+' '+(alerta ? (_LABEL_ALERTA[alerta]||'') : '')+'</div>'
+          +'<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">'+escaparHtml(item.categoria||'')+(item.unidadeMedida?' · '+escaparHtml(item.unidadeMedida):'')+'</div>'
+          +'</div>'
+          +'<div style="font-size:12px;color:var(--text-muted);text-align:right;white-space:nowrap;">'
+          +'<div>Saldo total: <strong>'+p.saldoTotal+'</strong></div>'
+          +'<div>Consumo: '+mediaStr+'</div>'
+          +'<div>Previsão: '+diasStr+'</div>'
+          +'</div></div>'
+          +'<div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Por depósito:</div>'
+          + depositosHtml
+          +'</div>';
+      }).join('');
+      lista.innerHTML = html;
+    }, function(e) { lista.innerHTML = '<p class="muted-text">Erro: '+escaparHtml(e.message||String(e))+'</p>'; });
+  }
+
   function _enviarSolicitacao() {
     if (!_carrinho.length) { Toast.aviso('Adicione pelo menos um item.'); return; }
     var solicitante = ((document.getElementById('est-sol-solicitante')||{}).value||'').trim();
@@ -20481,7 +20578,8 @@ var EstoqueUI = (function() {
     _forcarRecarregarSolicitacoes: _forcarRecarregarSolicitacoes,
     _forcarRecarregarEntradas: _forcarRecarregarEntradas,
     _carregarRelatorioSaidas:  _carregarRelatorioSaidas,
-    _carregarRelatorioEntradas:_carregarRelatorioEntradas
+    _carregarRelatorioEntradas:_carregarRelatorioEntradas,
+    _carregarPipeline:         _carregarPipeline
   };
 })();
 

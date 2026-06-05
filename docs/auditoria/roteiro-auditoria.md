@@ -3237,6 +3237,28 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 25 (2026-06-05) → SESSÃO 26
+
+### Estado atual: 281 problemas registrados · Deploy @564
+
+### O que foi feito nesta sessão (s25)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @564 | 75 — Pipeline + Alertas Inteligentes | **Novo**: `previsao_estoque_engine.gs` — `calcularTaxaConsumo(itemId,orgId,diasHistorico)` (lê MovimentacoesEstoque, retorna mediaDiaria + diasAteEsgotar), `calcularCoberturaDuraveis(itemId,orgId,horizonte)` (reservas futuras com materiaisReservados), `previsaoTodosItens(orgId,dias)` (todos itens com saldo por depósito + taxa + alerta). **Modificado**: `estoque_controller.gs` (+`ctrl_estoque_previsao`). `alertas_engine.gs` (+`_verificarEstoqueItens` + `_verificarSolicitacoesPendentesEstoque` chamadas em `verificarTodosAutomaticos()`). `index.html`: binding `GAS.estoque.previsao`, sub-aba "Pipeline" (HTML + JS `_carregarPipeline()`), barras de progresso por depósito, ações contextuais "Transferir p/ Rápido" e "Registrar Compra". |
+
+### Pendentes desta sessão / próxima ação
+- **Executar `fase73_estoque_prepararIndice()` no GAS Editor** (se ainda não feito) para criar abas MASTER.ItensEstoque/SaldoEstoque/MovimentacoesEstoque e seed dep-01/dep-02
+- **Fase 76 — Integração de Materiais nas Reservas**: seção "Materiais necessários" no formulário de ReservaUI + criação automática de SolicitacaoMaterial vinculada com reservaId
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 24 (2026-06-05) → SESSÃO 25
 
 ### Estado atual: 281 problemas registrados · Deploy @563

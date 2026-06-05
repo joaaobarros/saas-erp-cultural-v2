@@ -246,3 +246,19 @@ function ctrl_estoque_relatorio_entradas(filtros) {
     return EstoqueEngine.relatorioEntradas(filtros || {}, ctx.orgId);
   }, 'ctrl_estoque_relatorio_entradas');
 }
+
+// ═══════════════════════════════════════════════════════════════
+// PREVISÃO / PIPELINE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Retorna previsão de estoque de todos os itens (taxa de consumo + saldo por depósito).
+ * Alimenta a sub-aba Pipeline do EstoqueUI.
+ * @param {number} diasHistorico — janela de análise em dias (padrão: 30)
+ */
+function ctrl_estoque_previsao(diasHistorico) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    return PrevisaoEstoqueEngine.previsaoTodosItens(ctx.orgId, diasHistorico || 30);
+  }, 'ctrl_estoque_previsao');
+}

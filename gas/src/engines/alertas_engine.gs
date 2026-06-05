@@ -226,6 +226,9 @@ var AlertasEngine = (function () {
       _verificarEncaminhamentosVencidos(orgId, contadores);
       _verificarDemandasSLA(orgId, contadores);
       _verificarSolicitacoesSemAnalise(orgId, contadores);
+      // --- Estoque ---
+      _verificarEstoqueItens(orgId, contadores);
+      _verificarSolicitacoesPendentesEstoque(orgId, contadores);
 
       Logger.info('alertas_engine', 'verificarTodosAutomaticos',
         'Verificação concluída. Emitidos: ' + contadores.emitidos + ', Erros: ' + contadores.erros);
@@ -510,6 +513,62 @@ var AlertasEngine = (function () {
         cont.emitidos++;
       });
     } catch(e) { cont.erros++; }
+  }
+
+  function _verificarEstoqueItens(orgId, cont) {
+    try {
+      if (typeof PrevisaoEstoqueEngine === 'undefined' ||
+          typeof ItemEstoqueRepository  === 'undefined') return;
+
+      var limiar      = PrevisaoEstoqueEngine.getLimiarBaixo();
+      var prazoAlerta = PrevisaoEstoqueEngine.getPrazoAlertaDias();
+      var itens       = ItemEstoqueRepository.listar({ critico: true }, orgId);
+
+      itens.forEach(function (item) {
+        try {
+          var saldoTotal = ItemEstoqueRepository.getSaldoTotal(item.id, orgId);
+
+          if (saldoTotal === 0) {
+            emitir('ESTOQUE_ITEM_CRITICO',
+              'Item crítico "' + item.descricao + '" com saldo zerado.',
+              { orgId: orgId, entidade: 'item_estoque', entidadeId: item.id });
+            cont.emitidos++;
+            return;
+          }
+
+          if (saldoTotal <= limiar) {
+            emitir('ESTOQUE_ITEM_BAIXO',
+              'Item crítico "' + item.descricao + '" com saldo baixo: ' + saldoTotal + ' ' + item.unidadeMedida + '.',
+              { orgId: orgId, entidade: 'item_estoque', entidadeId: item.id });
+            cont.emitidos++;
+          }
+
+          var taxa = PrevisaoEstoqueEngine.calcularTaxaConsumo(item.id, orgId, 30);
+          if (taxa.diasAteEsgotar !== null && taxa.diasAteEsgotar < prazoAlerta) {
+            emitir('ESTOQUE_PREVISTO_ACABAR',
+              'Item "' + item.descricao + '" previsto para acabar em ' + taxa.diasAteEsgotar + ' dia(s) no ritmo atual.',
+              { orgId: orgId, entidade: 'item_estoque', entidadeId: item.id + '_prev' });
+            cont.emitidos++;
+          }
+        } catch (ei) { cont.erros++; }
+      });
+    } catch(e) { cont.erros++; Logger.warn('alertas_engine', '_verificarEstoqueItens', e.message); }
+  }
+
+  function _verificarSolicitacoesPendentesEstoque(orgId, cont) {
+    try {
+      if (typeof SolicitacaoMaterialRepository === 'undefined') return;
+      var limite = new Date(new Date().getTime() - 24 * 3600000);
+      var pends  = SolicitacaoMaterialRepository.listar({ status: 'pendente' }, orgId);
+      pends.filter(function (s) {
+        return new Date(s.dataSolicitacao || s.criadoEm) < limite;
+      }).forEach(function (s) {
+        emitir('SOLICITACAO_SEM_SEPARACAO',
+          'Solicitação #' + (s.codigo || s.id) + ' de "' + (s.solicitante || '—') + '" aguarda separação há mais de 24h.',
+          { orgId: orgId, entidade: 'solicitacao_material', entidadeId: s.id });
+        cont.emitidos++;
+      });
+    } catch(e) { cont.erros++; Logger.warn('alertas_engine', '_verificarSolicitacoesPendentesEstoque', e.message); }
   }
 
   // ─── Persistência ─────────────────────────────────────────────────────────────
