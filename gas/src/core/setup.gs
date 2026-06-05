@@ -23,7 +23,8 @@ var PROP_SHEETS = {
   REUNIOES:    'SHEET_ID_REUNIOES',
   COMUNICACAO: 'SHEET_ID_COMUNICACAO',
   PUBLICO:     'SHEET_ID_PUBLICO',
-  ESCUTA:      'SHEET_ID_ESCUTA'
+  ESCUTA:      'SHEET_ID_ESCUTA',
+  ESTOQUE:     'SHEET_ID_ESTOQUE'
 };
 
 // Schema de abas esperadas por planilha
@@ -31,7 +32,9 @@ var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
     'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
-    'Contratados', 'AgentesCulturais', 'Voluntarios',
+    'Contratados', 'AgentesCulturais', 'Voluntarios'
+  ],
+  ESTOQUE: [
     'ItensEstoque', 'SaldoEstoque', 'MovimentacoesEstoque'
   ],
   ACOES: [
@@ -50,7 +53,8 @@ var SCHEMA_ABAS = {
   ],
   FINANCEIRO: [
     'Contratos', 'ContratosVersoes', 'Rubricas', 'Pagamentos',
-    'Contratacoes', 'SolicitacoesContratacao', 'Orcamentos', 'Remanejamentos', 'Aditivos', 'FontesRecurso'
+    'Contratacoes', 'SolicitacoesContratacao', 'Orcamentos', 'Remanejamentos', 'Aditivos', 'FontesRecurso',
+    'SolicitacoesCompra'
   ],
   RELATORIOS: ['CODIP', 'RelGerencial', 'Exportacoes'],
   REUNIOES:   ['Reunioes', 'Encaminhamentos', 'Atas'],
@@ -244,8 +248,16 @@ function inicializarSistema() {
     }
   }
 
-  // Fase 73 — Estoque: garante MASTER.ItensEstoque, MASTER.SaldoEstoque,
-  //           MASTER.MovimentacoesEstoque e ESPACOS.SolicitacoesMaterial
+  // Fase 76 — Compras/Aquisições: garante aba FINANCEIRO.SolicitacoesCompra
+  if (typeof SolicitacaoCompraRepository !== 'undefined' &&
+      typeof SolicitacaoCompraRepository.prepararIndice === 'function') {
+    try { SolicitacaoCompraRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'SolicitacaoCompraRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 73 — Estoque: garante ESTOQUE.ItensEstoque, ESTOQUE.SaldoEstoque,
+  //           ESTOQUE.MovimentacoesEstoque e ESPACOS.SolicitacoesMaterial
   if (typeof ItemEstoqueRepository !== 'undefined' &&
       typeof ItemEstoqueRepository.prepararIndice === 'function') {
     try { ItemEstoqueRepository.prepararIndice(); } catch(e) {
@@ -819,7 +831,7 @@ function setup_categorias_itens_iniciais() {
  * Seed: Itens do Almoxarifado — catálogo padrão CCBJ.
  * Migrado do V1 catalogo_engine.gs (inicializarCatalogoPadrao).
  * Idempotente: não cria se já existir item com o mesmo ID de semente.
- * Executar via fase72_itens_almoxarifado_seed() no GAS Editor.
+ * Executar via setup_itens_almoxarifado_iniciais() no GAS Editor.
  */
 function setup_itens_almoxarifado_iniciais() {
   if (typeof ReservasItensRepository === 'undefined') return { criados: 0, msg: 'ReservasItensRepository indisponível.' };
@@ -884,185 +896,6 @@ function setup_itens_almoxarifado_iniciais() {
 
   Logger.info('setup', 'setup_itens_almoxarifado_iniciais', 'Criados: ' + criados + ' itens.');
   return { criados: criados };
-}
-
-/**
- * Migração real dos itens cadastrados no V1.
- *
- * Estratégia em 3 camadas (tenta cada uma em ordem):
- *   1. Planilha V1 CCBJ_ESPACOS.Itens  — buscada pelo nome no Drive
- *   2. Arquivo almoxarifado.json no Drive (pasta CCBJ_DATA do V1)
- *   3. Planilha CCBJ_MASTER.Itens (aba legada alternativa)
- *
- * COMO USAR no GAS Editor do V2:
- *   fase72_migrar_itens_v1_automatico()
- *
- * COMO USAR com ID explícito (mais seguro):
- *   fase72_migrar_itens_v1_por_id('ID_DA_PLANILHA_ESPACOS_V1')
- *
- * @returns {{ ok, importados, ignorados, erros, fonte }}
- */
-function fase72_migrar_itens_v1_automatico() {
-  var orgId = getOrgConfig().orgId;
-  var agr   = agora();
-  var linhasV1 = [];
-  var fonte = '';
-
-  // ── Camada 1: Procura CCBJ_ESPACOS pelo nome no Drive ────────────────
-  try {
-    var iter = DriveApp.getFilesByName('CCBJ_ESPACOS');
-    if (iter.hasNext()) {
-      var ss = SpreadsheetApp.open(iter.next());
-      var aba = ss.getSheetByName('Itens');
-      if (aba && aba.getLastRow() > 1) {
-        linhasV1 = aba.getRange(2, 1, aba.getLastRow() - 1, 6).getValues();
-        fonte = 'CCBJ_ESPACOS.Itens (Drive)';
-      }
-    }
-  } catch(e) {
-    Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'CCBJ_ESPACOS: ' + e.message);
-  }
-
-  // ── Camada 2: almoxarifado.json na pasta CCBJ_DATA ───────────────────
-  if (linhasV1.length === 0) {
-    try {
-      var pastaIter = DriveApp.getFoldersByName('CCBJ_DATA');
-      if (pastaIter.hasNext()) {
-        var pasta    = pastaIter.next();
-        var fileIter = pasta.getFilesByName('almoxarifado.json');
-        if (fileIter.hasNext()) {
-          var conteudo = fileIter.next().getBlob().getDataAsString();
-          var itensObj = JSON.parse(conteudo);
-          if (Array.isArray(itensObj) && itensObj.length > 0) {
-            linhasV1 = itensObj; // array de objetos, tratado abaixo
-            fonte = 'CCBJ_DATA/almoxarifado.json';
-          }
-        }
-      }
-    } catch(e) {
-      Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'almoxarifado.json: ' + e.message);
-    }
-  }
-
-  // ── Camada 3: CCBJ_MASTER.Itens (aba legada) ─────────────────────────
-  if (linhasV1.length === 0) {
-    try {
-      var iterM = DriveApp.getFilesByName('CCBJ_MASTER');
-      if (iterM.hasNext()) {
-        var ssM = SpreadsheetApp.open(iterM.next());
-        var abaM = ssM.getSheetByName('Itens');
-        if (abaM && abaM.getLastRow() > 1) {
-          linhasV1 = abaM.getRange(2, 1, abaM.getLastRow() - 1, 6).getValues();
-          fonte = 'CCBJ_MASTER.Itens (Drive)';
-        }
-      }
-    } catch(e) {
-      Logger.warn('setup', 'fase72_migrar_itens_v1_automatico', 'CCBJ_MASTER.Itens: ' + e.message);
-    }
-  }
-
-  if (linhasV1.length === 0)
-    return { ok: false, motivo: 'Nenhuma fonte V1 encontrada no Drive. Use fase72_migrar_itens_v1_por_id().' };
-
-  return _executarImportacaoItens(linhasV1, orgId, agr, fonte);
-}
-
-/**
- * Migração com ID explícito da planilha V1 CCBJ_ESPACOS.
- * Use quando a busca automática não encontrar (múltiplas planilhas homônimas, etc.)
- *
- * COMO USAR no GAS Editor do V1:
- *   PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESPACOS')
- *   → copie o ID retornado
- *
- * COMO USAR no GAS Editor do V2:
- *   fase72_migrar_itens_v1_por_id('ID_AQUI')
- *
- * @param {string} sheetId — ID da planilha CCBJ_ESPACOS do V1
- * @returns {{ ok, importados, ignorados, erros, fonte }}
- */
-function fase72_migrar_itens_v1_por_id(sheetId) {
-  if (!sheetId) return { ok: false, motivo: 'sheetId obrigatório.' };
-
-  var orgId = getOrgConfig().orgId;
-  var agr   = agora();
-
-  try {
-    var ss  = SpreadsheetApp.openById(sheetId);
-    var aba = ss.getSheetByName('Itens');
-    if (!aba || aba.getLastRow() < 2)
-      return { ok: false, motivo: 'Aba "Itens" vazia ou inexistente na planilha ' + sheetId };
-
-    var linhas = aba.getRange(2, 1, aba.getLastRow() - 1, 6).getValues();
-    return _executarImportacaoItens(linhas, orgId, agr, 'CCBJ_ESPACOS[' + sheetId + '].Itens');
-  } catch(e) {
-    return { ok: false, motivo: e.message };
-  }
-}
-
-/**
- * Helper interno: converte linhas/objetos V1 e salva em V2.
- * @private
- */
-function _executarImportacaoItens(linhasV1, orgId, agr, fonte) {
-  if (typeof ReservasItensRepository === 'undefined')
-    return { ok: false, motivo: 'ReservasItensRepository indisponível.' };
-
-  var importados = 0, ignorados = 0, erros = [];
-
-  linhasV1.forEach(function(raw) {
-    try {
-      var item;
-      if (Array.isArray(raw)) {
-        // Linha bruta: [ID Item, Nome, Categoria, Quantidade Total, Localização, Status]
-        var nomeRaw = String(raw[1] || '').trim();
-        if (!nomeRaw) { ignorados++; return; }
-        var locRaw = String(raw[4] || '').trim();
-        var loc = '';
-        try { loc = (typeof JSON.parse(locRaw) === 'object') ? '' : locRaw; } catch(e) { loc = locRaw; }
-        item = {
-          nome:            nomeRaw,
-          categoria:       String(raw[2] || '').trim(),
-          quantidadeTotal: Number(raw[3] || 0),
-          localizacao:     loc,
-          descricao:       ''
-        };
-      } else {
-        // Objeto (almoxarifado.json do V1)
-        var nomeObj = String(raw.nome || '').trim();
-        if (!nomeObj) { ignorados++; return; }
-        item = {
-          nome:            nomeObj,
-          categoria:       String(raw.categoria || raw.tipo || '').trim(),
-          quantidadeTotal: Number(raw.quantidadeTotal || raw.qtd || 0),
-          localizacao:     String(raw.localizacao || '').trim(),
-          descricao:       String(raw.descricao || '').trim()
-        };
-      }
-
-      ReservasItensRepository.salvarItem(
-        Object.assign(item, { orgId: orgId, criadoEm: agr, atualizadoEm: agr }),
-        orgId
-      );
-      importados++;
-    } catch(e) {
-      erros.push({ item: JSON.stringify(raw).slice(0, 80), erro: e.message });
-    }
-  });
-
-  Logger.info('setup', '_executarImportacaoItens',
-    'fonte=' + fonte + ' importados=' + importados + ' ignorados=' + ignorados + ' erros=' + erros.length);
-  return { ok: true, importados: importados, ignorados: ignorados, erros: erros, fonte: fonte };
-}
-
-/**
- * Executar no GAS Editor para popular o catálogo inicial (24 itens padrão CCBJ).
- * Idempotente: seguro reexecutar.
- */
-function fase72_itens_almoxarifado_seed() {
-  var r = setup_itens_almoxarifado_iniciais();
-  Logger.log('[fase72_seed] ' + JSON.stringify(r));
-  return r;
 }
 
 // ─── Privados ─────────────────────────────────────────────────────────────────

@@ -1088,6 +1088,33 @@ body {
     0%,100% { opacity:.6; } 50% { opacity:1; }
   }
 
+  /* ── Skeleton / Shimmer ─────────────────────────────── */
+  @keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position:  600px 0; }
+  }
+  .skeleton-cell {
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+    background-size: 1200px 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+  .skeleton-row {
+    display: flex; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--border); align-items: center;
+  }
+  .skeleton-row .skeleton-cell.largo  { height:14px; flex:2; }
+  .skeleton-row .skeleton-cell.medio  { height:14px; flex:1; }
+  .skeleton-row .skeleton-cell.curto  { height:14px; width:80px; flex-shrink:0; }
+  .skeleton-row .skeleton-cell.badge  { height:22px; width:72px; border-radius:12px; flex-shrink:0; }
+  .skeleton-metrics { display:flex; gap:12px; flex-wrap:wrap; }
+  .skeleton-metric-card {
+    flex:1; min-width:110px; height:76px; border-radius:10px;
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+    background-size: 1200px 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
   /* ── Timeline hora a hora ── */
   .mapa-pl-timeline { padding:12px 16px 14px; border-top:1px solid var(--border); }
   .mapa-pl-timeline h4 {
@@ -2857,6 +2884,9 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn cont-tab" data-tab="pregoes" onclick="ContratacoesTabs.abrirTab('pregoes')">
             <span class="ms ms-sm">gavel</span> Pregões / Atas RP
           </button>
+          <button class="tab-btn cont-tab" data-tab="compras" onclick="ContratacoesTabs.abrirTab('compras')">
+            <span class="ms ms-sm">shopping_cart</span> Compras
+          </button>
         </div>
 
         <!-- Tab: Solicitações -->
@@ -3190,6 +3220,39 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
         </div><!-- /pre-modal -->
+
+        <!-- Tab: Compras / Aquisições -->
+        <div id="cont-tab-compras" class="cont-tab-content" style="display:none">
+          <div class="view-header">
+            <div class="view-title"><span class="ms">shopping_cart</span> Solicitações de Compra / Aquisição</div>
+            <div class="view-actions">
+              <button class="btn btn-ghost btn-sm" id="btn-cmp-reload" onclick="ComprasUI.carregar()">
+                <span class="ms ms-sm">refresh</span>
+              </button>
+              <button class="btn btn-primario btn-sm" id="btn-cmp-novo" onclick="ComprasUI.abrirNova()">
+                <span class="ms ms-sm">add</span> Nova Solicitação
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <select id="cmp-fil-status" class="select-sm" onchange="ComprasUI.carregar()">
+              <option value="">Todos os status</option>
+              <option value="pendente">Pendente</option>
+              <option value="aprovada">Aprovada</option>
+              <option value="executada">Executada</option>
+              <option value="recebida">Recebida</option>
+              <option value="rejeitada">Rejeitada</option>
+            </select>
+            <select id="cmp-fil-tipo" class="select-sm" onchange="ComprasUI.carregar()">
+              <option value="">Todos os tipos</option>
+              <option value="Consumível">Consumível</option>
+              <option value="Permanente">Permanente</option>
+            </select>
+          </div>
+          <div id="cmp-lista">
+            <p class="muted-text" style="padding:12px 0;">Clique em Atualizar para carregar as solicitações.</p>
+          </div>
+        </div><!-- /cont-tab-compras -->
 
       </div><!-- /view-contratacoes -->
 
@@ -5359,11 +5422,19 @@ select.form-control { cursor: pointer; }
                 <p class="muted-text" style="padding:12px 0;">Carregando…</p>
               </div>
             </div>
-            <div class="card">
+            <div class="card" style="margin-bottom:12px;">
               <div class="card-header">
                 <div class="card-titulo"><span class="ms">inventory</span> Prontas para Entrega</div>
               </div>
               <div id="est-sol-separadas">
+                <p class="muted-text" style="padding:12px 0;">Carregando…</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-titulo"><span class="ms">assignment_return</span> Entregues — Aguardando Devolução</div>
+              </div>
+              <div id="est-sol-finalizadas">
                 <p class="muted-text" style="padding:12px 0;">Carregando…</p>
               </div>
             </div>
@@ -8578,6 +8649,15 @@ var GAS = {
   financeiro: {
     meuNivel: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_financeiro_meu_nivel(); }
   },
+  compras: {
+    listar:    function(f,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_listar(f||{}); },
+    criar:     function(d,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_criar(d); },
+    aprovar:   function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_aprovar(id); },
+    rejeitar:  function(id,m,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_rejeitar(id,m||''); },
+    executada: function(id,nf,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_executada(id,nf||''); },
+    receber:   function(id,nf,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_receber(id,nf||''); },
+    metricas:  function(cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_compra_metricas(); }
+  },
   contratos: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_listar(f||{}); },
     obter:       function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_obter(id); },
@@ -8726,7 +8806,9 @@ var GAS = {
     listarSolicitacoes:  function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_solicitacoes(f||{}); },
     relatorioSaidas:     function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_saidas(f||{}); },
     relatorioEntradas:   function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_entradas(f||{}); },
-    previsao:            function(dias,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_previsao(dias||30); }
+    previsao:            function(dias,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_previsao(dias||30); },
+    excluirItem:         function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_excluir_item(id); },
+    devolverSolicitacao: function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_devolver_solicitacao(id); }
   },
   acoes: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_listar(f||{}); },
@@ -9470,6 +9552,39 @@ var Toast = (function() {
 })();
 
 // ═══════════════════════════════════════════════════════════
+// SKELETON — Placeholders animados durante carregamento
+// Uso: Skeleton.lista('container-id', 5);
+//      Skeleton.metricas('stats-id', 4);
+// ═══════════════════════════════════════════════════════════
+var Skeleton = (function() {
+  function lista(containerId, n) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var rows = '';
+    for (var i = 0; i < (n || 5); i++) {
+      rows += '<div class="skeleton-row">'
+        + '<div class="skeleton-cell largo"></div>'
+        + '<div class="skeleton-cell medio"></div>'
+        + '<div class="skeleton-cell badge"></div>'
+        + '</div>';
+    }
+    el.innerHTML = rows;
+  }
+
+  function metricas(containerId, n) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var cards = '';
+    for (var i = 0; i < (n || 4); i++) {
+      cards += '<div class="skeleton-metric-card"></div>';
+    }
+    el.innerHTML = '<div class="skeleton-metrics">' + cards + '</div>';
+  }
+
+  return { lista: lista, metricas: metricas };
+})();
+
+// ═══════════════════════════════════════════════════════════
 // TAREFAS — Fase 1.1
 // ═══════════════════════════════════════════════════════════
 var TarefasUI = (function() {
@@ -9534,6 +9649,8 @@ var TarefasUI = (function() {
 
   function carregar() {
     BtnGuard.wrap('btn-tarefas-recarregar', 'Atualizando…', function(done) {
+      Skeleton.metricas('tarefas-metricas', 4);
+      Skeleton.lista('tarefas-lista', 5);
       GAS.tarefas.metricas(function(respM) {
         if (respM && respM.ok) _renderMetricas(respM.data);
         GAS.tarefas.listar({}, function(resp) {
@@ -11159,6 +11276,187 @@ var ContratosDetailUI = (function() {
 // ═══════════════════════════════════════════════════════════
 // FINANCEIRO — Tab Controller (Fase 4)
 // ═══════════════════════════════════════════════════════════
+var ComprasUI = (function() {
+  var _carregado = false;
+
+  var _STATUS_LABEL = {
+    pendente:  'Pendente',
+    aprovada:  'Aprovada',
+    executada: 'Executada',
+    recebida:  'Recebida',
+    rejeitada: 'Rejeitada'
+  };
+  var _STATUS_BADGE = {
+    pendente:  'badge-warning',
+    aprovada:  'badge-success',
+    executada: 'badge-info',
+    recebida:  'badge-success',
+    rejeitada: 'badge-error'
+  };
+
+  function aoAbrir() { if (!_carregado) carregar(); }
+
+  function carregar() {
+    var el = document.getElementById('cmp-lista');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="padding:12px 0;">Carregando…</p>';
+    var filtros = {};
+    var s = (document.getElementById('cmp-fil-status')||{}).value;
+    var t = (document.getElementById('cmp-fil-tipo')||{}).value;
+    if (s) filtros.status   = s;
+    if (t) filtros.tipoItem = t;
+
+    GAS.compras.listar(filtros, function(r) {
+      _carregado = true;
+      var lista = (r && r.ok && r.data) ? r.data : [];
+      if (!lista.length) {
+        el.innerHTML = '<p class="muted-text" style="padding:12px 0;">Nenhuma solicitação encontrada.</p>';
+        return;
+      }
+      el.innerHTML = lista.map(function(c) {
+        var idStr  = JSON.stringify(c.id).replace(/"/g,"'");
+        var stBadge = _STATUS_BADGE[c.status] || '';
+        var stLabel = _STATUS_LABEL[c.status] || c.status;
+        var tipoBadge = c.tipoItem === 'Permanente'
+          ? '<span class="badge badge-info" style="font-size:10px;">Permanente</span>'
+          : '<span class="badge" style="font-size:10px;background:var(--border);color:var(--text2);">Consumível</span>';
+        var acoes = '';
+        if (c.status === 'pendente') {
+          acoes += '<button class="btn btn-ghost btn-sm" onclick="ComprasUI._aprovar('+idStr+')"><span class="ms ms-sm">check_circle</span> Aprovar</button>';
+          acoes += '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="ComprasUI._rejeitar('+idStr+')"><span class="ms ms-sm">cancel</span> Rejeitar</button>';
+        }
+        if (c.status === 'aprovada') {
+          acoes += '<button class="btn btn-ghost btn-sm" onclick="ComprasUI._executada('+idStr+')"><span class="ms ms-sm">local_shipping</span> Marcar Executada</button>';
+          acoes += '<button class="btn btn-ghost btn-sm" onclick="ComprasUI._receber('+idStr+')"><span class="ms ms-sm">inventory_2</span> Receber Direto</button>';
+        }
+        if (c.status === 'executada') {
+          acoes += '<button class="btn btn-ghost btn-sm" onclick="ComprasUI._receber('+idStr+')"><span class="ms ms-sm">inventory_2</span> Receber no Estoque</button>';
+        }
+        return '<div class="card" style="padding:14px;margin-bottom:10px;">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+          +'<div style="font-size:14px;font-weight:600;color:var(--text);">'
+          +'<span style="color:var(--muted);font-size:12px;margin-right:6px;">#'+escaparHtml(c.codigo||'—')+'</span>'
+          +escaparHtml(c.descricao||'—')+'</div>'
+          +'<div style="display:flex;gap:4px;flex-shrink:0;">'+tipoBadge+'<span class="badge '+stBadge+'" style="font-size:10px;">'+stLabel+'</span></div>'
+          +'</div>'
+          +'<div style="font-size:12px;color:var(--text2);margin-bottom:6px;">'
+          +'Solicitante: '+escaparHtml(c.solicitante||'—')+' · Depto: '+escaparHtml(c.departamento||'—')+' · Cat: '+escaparHtml(c.categoria||'—')
+          +'</div>'
+          +'<div style="display:flex;gap:16px;margin-bottom:8px;font-size:13px;">'
+          +'<div><span style="font-size:11px;color:var(--muted);display:block;">Qtd</span><b>'+escaparHtml(String(c.quantidade||1))+'</b></div>'
+          +(c.valorUnitarioEstimado ? '<div><span style="font-size:11px;color:var(--muted);display:block;">Valor unit. estimado</span><b>'+fmtMoeda(c.valorUnitarioEstimado)+'</b></div>' : '')
+          +'</div>'
+          +(c.justificativa ? '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-style:italic;">'+escaparHtml(c.justificativa)+'</div>' : '')
+          +(c.motivoRejeicao ? '<div style="font-size:12px;color:var(--danger);margin-bottom:8px;">Motivo rejeição: '+escaparHtml(c.motivoRejeicao)+'</div>' : '')
+          +(acoes ? '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+acoes+'</div>' : '')
+          +'</div>';
+      }).join('');
+    }, function(e) {
+      _carregado = true;
+      el.innerHTML = '<p style="color:var(--danger);">Erro: '+(e.message||e)+'</p>';
+    });
+  }
+
+  function abrirNova() {
+    var boot = window._BOOT_DATA || {};
+    _abrirModalSimples(
+      '<div style="padding:20px;max-width:520px;">'
+      +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Nova Solicitação de Compra</h3>'
+      +'<div class="form-grid">'
+      +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Item / Descrição *</label>'
+      +'<input type="text" id="cmp-desc" class="form-input" placeholder="Ex: Resma de papel A4"></div>'
+      +'<div class="form-group"><label class="form-label">Tipo</label>'
+      +'<select id="cmp-tipo" class="form-input"><option value="Consumível">Consumível</option><option value="Permanente">Permanente</option></select></div>'
+      +'<div class="form-group"><label class="form-label">Categoria</label>'
+      +'<select id="cmp-cat" class="form-input"><option>Expediente</option><option>Limpeza</option><option>Manutenção</option><option>TI</option><option>Copa</option><option>Outros</option></select></div>'
+      +'<div class="form-group"><label class="form-label">Quantidade *</label>'
+      +'<input type="number" id="cmp-qtd" class="form-input" value="1" min="1"></div>'
+      +'<div class="form-group"><label class="form-label">Valor Unit. Estimado (R$)</label>'
+      +'<input type="text" id="cmp-valor" class="form-input" placeholder="0,00"></div>'
+      +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Departamento</label>'
+      +'<input type="text" id="cmp-depto" class="form-input" placeholder="Setor solicitante"></div>'
+      +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Justificativa</label>'
+      +'<input type="text" id="cmp-just" class="form-input" placeholder="Motivo da aquisição"></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:16px;">'
+      +'<button id="btn-cmp-criar" class="btn btn-primario" onclick="ComprasUI._criar()"><span class="ms ms-sm">save</span> Solicitar</button>'
+      +'<button class="btn btn-ghost" data-bg-skip="1" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'
+      +'</div></div>'
+    );
+  }
+
+  function _criar() {
+    var desc = ((document.getElementById('cmp-desc')||{}).value||'').trim();
+    if (!desc) { Toast.aviso('Descrição obrigatória.'); return; }
+    var dados = {
+      descricao:             desc,
+      tipoItem:              (document.getElementById('cmp-tipo')||{}).value || 'Consumível',
+      categoria:             (document.getElementById('cmp-cat')||{}).value  || 'Expediente',
+      quantidade:            parseInt(((document.getElementById('cmp-qtd')||{}).value||'1'), 10) || 1,
+      valorUnitarioEstimado: parseFloat(((document.getElementById('cmp-valor')||{}).value||'0').replace(',','.')) || 0,
+      departamento:          ((document.getElementById('cmp-depto')||{}).value||'').trim(),
+      justificativa:         ((document.getElementById('cmp-just')||{}).value||'').trim()
+    };
+    BtnGuard.wrap('btn-cmp-criar', 'Enviando…', function(done) {
+      GAS.compras.criar(dados, function(r) {
+        done();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao criar.'); return; }
+        var ov = document.querySelector('.modal-simples'); if (ov) ov.remove();
+        Toast.sucesso('Solicitação criada.');
+        _carregado = false; carregar();
+      }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+    });
+  }
+
+  function _aprovar(id) {
+    var _conf = confirm('Aprovar esta solicitação de compra?');
+    if (!_conf) return;
+    GAS.compras.aprovar(id, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Aprovada.'); _carregado = false; carregar();
+    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function _rejeitar(id) {
+    var _raw = prompt('Motivo da rejeição:');
+    if (_raw === null) return;
+    GAS.compras.rejeitar(id, _raw, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Rejeitada.'); _carregado = false; carregar();
+    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function _executada(id) {
+    var _raw = prompt('Nº da Nota Fiscal / Empenho (opcional):');
+    if (_raw === null) return;
+    GAS.compras.executada(id, _raw, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Marcada como executada.'); _carregado = false; carregar();
+    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  function _receber(id) {
+    var _raw = prompt('Nº da Nota Fiscal / Empenho (opcional):');
+    if (_raw === null) return;
+    GAS.compras.receber(id, _raw, function(r) {
+      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+      Toast.sucesso('Recebida! Item adicionado ao estoque.');
+      _carregado = false; carregar();
+    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+  }
+
+  return {
+    aoAbrir:   aoAbrir,
+    carregar:  carregar,
+    abrirNova: abrirNova,
+    _criar:    _criar,
+    _aprovar:  _aprovar,
+    _rejeitar: _rejeitar,
+    _executada:_executada,
+    _receber:  _receber
+  };
+})();
+
 var FinanceiroTabs = (function() {
   var _tabAtual = 'contratos';
   var _carregados = {};
@@ -14450,7 +14748,15 @@ var Router = (function() {
     _atual = id;
   }
 
-  return { registrar, navegar, getAtual: function(){return _atual;} };
+  // Inicia o carregamento de dados de um módulo sem navegar para ele.
+  // Chamado no hover do menu (~150ms) para que os dados cheguem antes do clique.
+  function prefetch(id) {
+    if (id === _atual) return;
+    var meta = _views[id];
+    if (meta && meta.fn) { try { meta.fn(); } catch(_) {} }
+  }
+
+  return { registrar: registrar, navegar: navegar, prefetch: prefetch, getAtual: function(){return _atual;} };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -19857,13 +20163,16 @@ var EstoqueUI = (function() {
       + lista.map(function(it) {
         var critico = it.critico ? '<span class="badge badge-error" style="font-size:10px;">Crítico</span> ' : '';
         var sitC = it.situacao === 'ativo' ? 'badge-success' : it.situacao === 'inativo' ? 'badge-error' : 'badge-primary';
-        var sitL = it.situacao || 'novo';
+        var sitL  = it.situacao || 'novo';
         var saldo = it.saldoTotal !== undefined ? String(it.saldoTotal) : '—';
         var idStr = JSON.stringify(it.id).replace(/"/g,"'");
+        var tipoBadge = it.tipo === 'Permanente'
+          ? '<span class="badge badge-info" style="font-size:10px;">Permanente</span>'
+          : '<span class="badge" style="font-size:10px;background:var(--border);color:var(--text2);">Consumível</span>';
         return '<div class="card" style="padding:14px;">'
           +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
           +'<div style="font-size:14px;font-weight:600;color:var(--text);flex:1;padding-right:6px;">'+escaparHtml(it.descricao||'—')+'</div>'
-          +'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0;">'+critico+'<span class="badge '+sitC+'" style="font-size:10px;">'+escaparHtml(sitL)+'</span></div>'
+          +'<div style="display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0;">'+critico+tipoBadge+'<span class="badge '+sitC+'" style="font-size:10px;">'+escaparHtml(sitL)+'</span></div>'
           +'</div>'
           +'<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">'+escaparHtml(it.categoria||'—')+' · '+escaparHtml(it.unidadeMedida||'un')+'</div>'
           +'<div style="display:flex;gap:16px;margin-bottom:10px;font-size:13px;">'
@@ -19873,6 +20182,7 @@ var EstoqueUI = (function() {
           +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
           +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI.abrirEditarItem('+idStr+')"><span class="ms ms-sm">edit</span> Editar</button>'
           +'<button class="btn btn-ghost btn-sm" onclick="EstoqueUI.abrirRegistrarEntradaParaItem('+idStr+')"><span class="ms ms-sm">add_circle</span> Entrada</button>'
+          +'<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="EstoqueUI.excluirItem('+idStr+')"><span class="ms ms-sm">delete</span> Excluir</button>'
           +'</div>'
           +'</div>';
       }).join('') + '</div>';
@@ -19983,6 +20293,31 @@ var EstoqueUI = (function() {
         btn.addEventListener('click', function(){ _abrirCancelar(this.getAttribute('data-id')); });
       });
     });
+
+    var elFin = document.getElementById('est-sol-finalizadas');
+    GAS.estoque.listarSolicitacoes({status:'finalizada'}, function(r) {
+      if (!elFin) return;
+      var lista = (r && r.ok && r.data) ? r.data : [];
+      if (!lista.length) { elFin.innerHTML = '<p class="muted-text" style="padding:8px 0;">Nenhuma aguardando devolução.</p>'; return; }
+      elFin.innerHTML = lista.map(function(s) {
+        var idStr    = JSON.stringify(s.id).replace(/"/g,"'");
+        var temPerm  = (s.itens||[]).some(function(i){ return i.tipoPermanente; });
+        var alertaPerm = temPerm ? '<span class="badge badge-warning" style="font-size:10px;">Permanente — devolução obrigatória</span> ' : '';
+        return '<div class="pendente-item">'
+          +'<div class="pendente-info">'
+          +'<div class="pendente-nome">#'+escaparHtml(String(s.codigo||'—'))+' — '+escaparHtml(s.solicitante||'—')+'</div>'
+          +'<div class="pendente-meta">Entregue a: '+escaparHtml(s.receptorFinal||'—')+' · Setor: '+escaparHtml(s.setorDestino||'—')+'</div>'
+          +'<div class="pendente-meta">'+(s.itens||[]).map(function(i){ return escaparHtml(i.descricao||i.itemId)+' ×'+(i.qtdAtendida||i.qtdSolicitada); }).join(', ')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+          +alertaPerm+_badge(s.status)
+          +'<button class="btn btn-ghost btn-sm btn-est-devolver" data-id='+idStr+'><span class="ms ms-sm">assignment_return</span> Devolver</button>'
+          +'</div></div>';
+      }).join('');
+      elFin.querySelectorAll('.btn-est-devolver').forEach(function(btn){
+        btn.addEventListener('click', function(){ _devolverSolicitacao(this.getAttribute('data-id')); });
+      });
+    });
   }
 
   function _forcarRecarregarSolicitacoes() {
@@ -19998,6 +20333,17 @@ var EstoqueUI = (function() {
         Toast.sucesso('Solicitação separada.'); _forcarRecarregarSolicitacoes();
       }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
     });
+  }
+
+  function _devolverSolicitacao(id) {
+    var _conf = confirm('Confirmar devolução? Itens permanentes terão o saldo restaurado no depósito padrão.');
+    if (!_conf) return;
+    GAS.estoque.devolverSolicitacao(id, function(r) {
+      if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao registrar devolução.'); return; }
+      Toast.sucesso('Devolução registrada.');
+      _forcarRecarregarSolicitacoes();
+      _carregados['estoque'] = false;
+    }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
   }
 
   function _abrirEntregarSolicitacao(id) {
@@ -20171,19 +20517,23 @@ var EstoqueUI = (function() {
 
   function _htmlFormItem(item) {
     item = item || {};
-    var cats = ['Expediente','Limpeza','Manutenção','TI','Copa','Outros'];
-    var uns  = ['un','resma','caixa','pacote','litro','kg','rolo','par'];
-    var sits = [['novo','Novo'],['ativo','Ativo'],['inativo','Inativo']];
+    var cats  = ['Expediente','Limpeza','Manutenção','TI','Copa','Outros'];
+    var uns   = ['un','resma','caixa','pacote','litro','kg','rolo','par'];
+    var sits  = [['novo','Novo'],['ativo','Ativo'],['inativo','Inativo']];
+    var tipos = ['Consumível','Permanente'];
+    var tipoAtual = item.tipo || 'Consumível';
     return '<div style="padding:20px;max-width:520px;">'
       +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">'+(item.id?'Editar Item':'Novo Item')+'</h3>'
       +'<input type="hidden" id="est-item-id" value="'+escaparHtml(item.id||'')+'">'
       +'<div class="form-grid">'
       +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Descrição *</label>'
       +'<input type="text" id="est-item-desc" class="form-input" value="'+escaparHtml(item.descricao||'')+'" placeholder="Ex: Papel A4 Resma 500fls"></div>'
-      +'<div class="form-group"><label class="form-label">Referência</label>'
-      +'<input type="text" id="est-item-ref" class="form-input" value="'+escaparHtml(item.referencia||'')+'" placeholder="Código/ref."></div>'
+      +'<div class="form-group"><label class="form-label">Tipo</label>'
+      +'<select id="est-item-tipo" class="form-input">'+tipos.map(function(t){ return '<option value="'+t+'"'+(tipoAtual===t?' selected':'')+'>'+t+'</option>'; }).join('')+'</select></div>'
       +'<div class="form-group"><label class="form-label">Categoria</label>'
       +'<select id="est-item-cat" class="form-input">'+cats.map(function(c){ return '<option value="'+c+'"'+(item.categoria===c?' selected':'')+'>'+c+'</option>'; }).join('')+'</select></div>'
+      +'<div class="form-group"><label class="form-label">Referência</label>'
+      +'<input type="text" id="est-item-ref" class="form-input" value="'+escaparHtml(item.referencia||'')+'" placeholder="Código/ref."></div>'
       +'<div class="form-group"><label class="form-label">Unidade de Medida *</label>'
       +'<select id="est-item-un" class="form-input">'+uns.map(function(u){ return '<option value="'+u+'"'+(item.unidadeMedida===u?' selected':'')+'>'+u+'</option>'; }).join('')+'</select></div>'
       +'<div class="form-group"><label class="form-label">Valor Unitário (R$)</label>'
@@ -20209,6 +20559,7 @@ var EstoqueUI = (function() {
     if (!desc) { Toast.aviso('Descrição obrigatória.'); return; }
     var dados = {
       descricao:         desc,
+      tipo:              (document.getElementById('est-item-tipo')||{}).value || 'Consumível',
       referencia:        ((document.getElementById('est-item-ref')||{}).value||'').trim(),
       categoria:         (document.getElementById('est-item-cat')||{}).value || 'Expediente',
       unidadeMedida:     (document.getElementById('est-item-un')||{}).value  || 'un',
@@ -20227,6 +20578,17 @@ var EstoqueUI = (function() {
         Toast.sucesso('Item salvo.'); recarregarItens(); _carregados['estoque'] = false;
       }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
     });
+  }
+
+  function excluirItem(id) {
+    var _conf = confirm('Excluir este item do catálogo? Esta ação não pode ser desfeita.');
+    if (!_conf) return;
+    GAS.estoque.excluirItem(id, function(r) {
+      if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao excluir.'); return; }
+      Toast.sucesso('Item excluído.');
+      recarregarItens();
+      _carregados['estoque'] = false;
+    }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
   }
 
   // ── Modal: Registrar Entrada ─────────────────────────────
@@ -20561,6 +20923,7 @@ var EstoqueUI = (function() {
     recarregarItens:           recarregarItens,
     abrirNovoItem:             abrirNovoItem,
     abrirEditarItem:           abrirEditarItem,
+    excluirItem:               excluirItem,
     _salvarItem:               _salvarItem,
     abrirRegistrarEntrada:     abrirRegistrarEntrada,
     abrirRegistrarEntradaParaItem: abrirRegistrarEntradaParaItem,
@@ -20929,6 +21292,7 @@ var ContratacoesTabs = (function() {
       if (tab === 'solicitacoes') SolicitacoesUI.carregar();
       if (tab === 'agentes')      ContratadosUI.carregar();
       if (tab === 'pregoes')      PregoesUI.carregar();
+      if (tab === 'compras')      ComprasUI.aoAbrir();
     }
   }
 
@@ -23967,17 +24331,27 @@ var App = (function() {
           '<span class="label">'+escaparHtml(item.label)+inativoTag+'</span>' +
           badgeHtml +
         '</a>';
-      li.querySelector('a').addEventListener('click', function(e) {
-        e.preventDefault();
-        if(moduloInativo) { Toast.aviso('Módulo "' + item.label + '" está desativado.'); return; }
-        if (item.id === 'manual' && typeof ManualUI !== 'undefined') ManualUI.setRotaAnterior(Router.getAtual());
-        Router.navegar(item.id);
-        if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
-          document.getElementById('sidebar').classList.remove('aberto');
-          var _bd = document.getElementById('sidebar-backdrop');
-          if (_bd) _bd.classList.remove('visivel');
+      (function(navLink, id, inativo) {
+        navLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          if(inativo) { Toast.aviso('Módulo "' + item.label + '" está desativado.'); return; }
+          if (id === 'manual' && typeof ManualUI !== 'undefined') ManualUI.setRotaAnterior(Router.getAtual());
+          Router.navegar(id);
+          if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
+            document.getElementById('sidebar').classList.remove('aberto');
+            var _bd = document.getElementById('sidebar-backdrop');
+            if (_bd) _bd.classList.remove('visivel');
+          }
+        });
+        // Prefetch: inicia carregamento ~150ms após hover, cancela se o mouse sair antes
+        if (!inativo) {
+          var _t;
+          navLink.addEventListener('mouseenter', function() {
+            _t = setTimeout(function() { Router.prefetch(id); }, 150);
+          });
+          navLink.addEventListener('mouseleave', function() { clearTimeout(_t); });
         }
-      });
+      })(li.querySelector('a'), item.id, moduloInativo);
       ul.appendChild(li);
 
       // Registrar view (apenas na primeira construção do menu)

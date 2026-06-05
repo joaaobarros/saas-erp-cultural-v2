@@ -747,6 +747,133 @@ function ctrl_contratado_verificar_habilitacao(id) {
   }, 'ctrl_contratado_verificar_habilitacao');
 }
 
+// ── Solicitações de Compra / Aquisição ───────────────────────────
+
+function ctrl_compra_listar(filtros) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    return SolicitacaoCompraRepository.listar(filtros || {}, ctx.orgId);
+  }, 'ctrl_compra_listar');
+}
+
+function ctrl_compra_criar(dados) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    var d   = dados || {};
+    if (!d.descricao) throw new Error('Descrição obrigatória.');
+    d.solicitante = d.solicitante || ctx.email;
+    AuditoriaService.registrar('COMPRA_CRIADA', 'contratacoes', { descricao: d.descricao, ator: ctx.email });
+    return SolicitacaoCompraRepository.criar(d, ctx.orgId);
+  }, 'ctrl_compra_criar');
+}
+
+function ctrl_compra_aprovar(id) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(ctx.papel) === -1) throw new Error('Sem permissão para aprovar.');
+    var sol = SolicitacaoCompraRepository.buscarPorId(id, ctx.orgId);
+    if (!sol) throw new Error('Solicitação não encontrada.');
+    if (sol.status !== 'pendente') throw new Error('Apenas solicitações pendentes podem ser aprovadas.');
+    AuditoriaService.registrar('COMPRA_APROVADA', 'contratacoes', { id: id, ator: ctx.email });
+    return SolicitacaoCompraRepository.atualizar(id, {
+      status: 'aprovada', aprovadoPor: ctx.email, dataAprovacao: agora()
+    }, ctx.orgId);
+  }, 'ctrl_compra_aprovar');
+}
+
+function ctrl_compra_rejeitar(id, motivo) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(ctx.papel) === -1) throw new Error('Sem permissão para rejeitar.');
+    var sol = SolicitacaoCompraRepository.buscarPorId(id, ctx.orgId);
+    if (!sol) throw new Error('Solicitação não encontrada.');
+    if (sol.status !== 'pendente') throw new Error('Apenas solicitações pendentes podem ser rejeitadas.');
+    AuditoriaService.registrar('COMPRA_REJEITADA', 'contratacoes', { id: id, motivo: motivo, ator: ctx.email });
+    return SolicitacaoCompraRepository.atualizar(id, {
+      status: 'rejeitada', motivoRejeicao: motivo || ''
+    }, ctx.orgId);
+  }, 'ctrl_compra_rejeitar');
+}
+
+function ctrl_compra_executada(id, notaFiscal) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(ctx.papel) === -1) throw new Error('Sem permissão.');
+    var sol = SolicitacaoCompraRepository.buscarPorId(id, ctx.orgId);
+    if (!sol) throw new Error('Solicitação não encontrada.');
+    if (sol.status !== 'aprovada') throw new Error('Somente aprovadas podem ser marcadas como executadas.');
+    AuditoriaService.registrar('COMPRA_EXECUTADA', 'contratacoes', { id: id, ator: ctx.email });
+    return SolicitacaoCompraRepository.atualizar(id, {
+      status: 'executada', notaFiscal: notaFiscal || ''
+    }, ctx.orgId);
+  }, 'ctrl_compra_executada');
+}
+
+function ctrl_compra_receber(id, notaFiscal) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    if (_PODE_APROVAR_FINANCEIRO.indexOf(ctx.papel) === -1) throw new Error('Sem permissão.');
+    var sol = SolicitacaoCompraRepository.buscarPorId(id, ctx.orgId);
+    if (!sol) throw new Error('Solicitação não encontrada.');
+    if (sol.status !== 'executada' && sol.status !== 'aprovada')
+      throw new Error('Somente aprovadas ou executadas podem ser recebidas.');
+
+    var itemId = '';
+    if (typeof ItemEstoqueRepository !== 'undefined') {
+      var existentes = ItemEstoqueRepository.listar({ busca: sol.descricao }, ctx.orgId);
+      var itemExistente = existentes.length > 0 ? existentes[0] : null;
+      if (itemExistente) {
+        itemId = itemExistente.id;
+        ItemEstoqueRepository.atualizarSaldo(itemId, 'dep-01', '', sol.quantidade, 0, ctx.orgId);
+      } else {
+        var novoItem = ItemEstoqueRepository.criar({
+          descricao:    sol.descricao,
+          tipo:         sol.tipoItem || 'Consumível',
+          categoria:    sol.categoria || 'Geral',
+          situacao:     'Ativo',
+          unidadeMedida: 'un'
+        }, ctx.orgId);
+        itemId = novoItem.id;
+        ItemEstoqueRepository.atualizarSaldo(itemId, 'dep-01', '', sol.quantidade, 0, ctx.orgId);
+      }
+      ItemEstoqueRepository.registrarMovimentacao({
+        tipo:          'entrada_compra',
+        itemId:        itemId,
+        descricaoItem: sol.descricao,
+        depositoId:    'dep-01',
+        local:         '',
+        quantidade:    sol.quantidade,
+        valorUnitario: sol.valorUnitarioEstimado || 0,
+        referencia:    sol.codigo,
+        notaFiscal:    notaFiscal || sol.notaFiscal || '',
+        ator:          ctx.email,
+        observacoes:   'Recebimento da compra ' + sol.codigo
+      }, ctx.orgId);
+    }
+
+    AuditoriaService.registrar('COMPRA_RECEBIDA', 'contratacoes', { id: id, itemId: itemId, ator: ctx.email });
+    return SolicitacaoCompraRepository.atualizar(id, {
+      status: 'recebida', itemEstoqueId: itemId, notaFiscal: notaFiscal || sol.notaFiscal || ''
+    }, ctx.orgId);
+  }, 'ctrl_compra_receber');
+}
+
+function ctrl_compra_metricas() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratacoes();
+    return SolicitacaoCompraRepository.metricas(ctx.orgId);
+  }, 'ctrl_compra_metricas');
+}
+
+function fase76_compras_prepararIndice() {
+  SolicitacaoCompraRepository.prepararIndice();
+  return { ok: true };
+}
+
+function fase76_compras_migrarDoMaster() {
+  return SolicitacaoCompraRepository.migrarDoMaster();
+}
+
 // ── Trigger diário (registrar no GAS Editor) ─────────────────────
 function varreduraPendenciasContratacoes() {
   try {

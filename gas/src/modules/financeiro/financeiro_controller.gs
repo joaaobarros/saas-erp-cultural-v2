@@ -361,3 +361,4 @@ function ctrl_contrato_salvar_indicador(idContrato, idMeta, dados) {
     return ContratosEngine.salvarIndicador(idContrato, idMeta, dados, ctx.email, ctx.orgId);
   }, 'ctrl_contrato_salvar_indicador');
 }
+
