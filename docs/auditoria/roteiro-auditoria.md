@@ -3237,6 +3237,31 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 25B (2026-06-05) → SESSÃO 26
+
+### Estado atual: 281 problemas registrados · Deploy @566
+
+### O que foi feito nesta sessão (s25B)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @566 | 75.1 — Migração Estoque V1→V2 + limpeza | **NOVO**: `migracao_estoque_v1.gs` — `fase75_inspecionar_estoque_v1()` (lista abas/headers/amostra nos Logs para confirmar mapeamento) + `fase75_importar_consumiveis_v1(opcoes)` (auto-detecta colunas por alias em `_MAPA_COLUNAS`, idempotente por referência/descrição, importa saldo inicial em dep-01 via `atualizarSaldo` + `registrarMovimentacao`, modo teste com `modoTeste:true`). Planilha V1: `19UKfQ4cKFKEWlK8K3JaeajsALafNdTQJOD-w_LG-Q_g` GID `15114512`. **REMOVIDO**: `migracao_itens_v1.gs` + `migracao_pccs_cargos_v1.gs` (dead code). |
+
+### Pendentes desta sessão / próxima ação
+- **Executar no GAS Editor (nesta ordem):**
+  1. `fase73_estoque_prepararIndice()` — cria abas MASTER + seed dep-01/dep-02
+  2. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
+  3. `fase75_importar_consumiveis_v1()` — importar itens
+- **Fase 76 — Integração de Materiais nas Reservas**
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 25 (2026-06-05) → SESSÃO 26
 
 ### Estado atual: 281 problemas registrados · Deploy @564
