@@ -31,7 +31,8 @@ var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
     'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
-    'Contratados', 'AgentesCulturais', 'Voluntarios'
+    'Contratados', 'AgentesCulturais', 'Voluntarios',
+    'ItensEstoque', 'SaldoEstoque', 'MovimentacoesEstoque'
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
@@ -40,7 +41,7 @@ var SCHEMA_ABAS = {
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
     'Ativos', 'MovimentacoesAtivos', 'Manutencoes', 'UsoAtivos', 'BaixasAtivos',
-    'AlertasInfra', 'Solicitacoes', 'ReservasCarro'
+    'AlertasInfra', 'Solicitacoes', 'ReservasCarro', 'SolicitacoesMaterial'
   ],
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
@@ -240,6 +241,21 @@ function inicializarSistema() {
       typeof PregaoRepository.prepararIndice === 'function') {
     try { PregaoRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'PregaoRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 73 — Estoque: garante MASTER.ItensEstoque, MASTER.SaldoEstoque,
+  //           MASTER.MovimentacoesEstoque e ESPACOS.SolicitacoesMaterial
+  if (typeof ItemEstoqueRepository !== 'undefined' &&
+      typeof ItemEstoqueRepository.prepararIndice === 'function') {
+    try { ItemEstoqueRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'ItemEstoqueRepository.prepararIndice: ' + e.message);
+    }
+  }
+  if (typeof SolicitacaoMaterialRepository !== 'undefined' &&
+      typeof SolicitacaoMaterialRepository.prepararIndice === 'function') {
+    try { SolicitacaoMaterialRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'SolicitacaoMaterialRepository.prepararIndice: ' + e.message);
     }
   }
 
@@ -1559,4 +1575,90 @@ function fase20_escuta_prepararIndice() {
     Logger.error('setup', 'fase20_escuta_prepararIndice', e.message);
     return { ok: false, motivo: e.message };
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FASE 73 — Módulo Estoque (Consumíveis e Materiais)
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Prepara índices do módulo Estoque e faz seed dos depósitos padrão.
+ * Executar no GAS Editor após o deploy da Fase 73.
+ * Idempotente — seguro reexecutar.
+ * @returns {{ ok, passos }}
+ */
+function fase73_estoque_prepararIndice() {
+  var resultado = { ok: true, passos: [] };
+
+  try {
+    var r = ItemEstoqueRepository.prepararIndice();
+    resultado.passos.push('ItemEstoqueRepository: ' + r.abas.join(', '));
+  } catch(e) {
+    resultado.passos.push('ItemEstoqueRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  try {
+    var r2 = SolicitacaoMaterialRepository.prepararIndice();
+    resultado.passos.push('SolicitacaoMaterialRepository: ' + r2.aba);
+  } catch(e) {
+    resultado.passos.push('SolicitacaoMaterialRepository: ERRO — ' + e.message);
+    resultado.ok = false;
+  }
+
+  try {
+    var seedDep = setup_depositos_iniciais();
+    resultado.passos.push('Depósitos seed: ' + seedDep.criados + ' criados, ' + seedDep.ja_existiam + ' já existiam.');
+  } catch(e) {
+    resultado.passos.push('Depósitos seed: ERRO — ' + e.message);
+  }
+
+  Logger.info('setup', 'fase73_estoque_prepararIndice',
+    'Fase 73 pronta. Passos: ' + resultado.passos.join(' | '));
+  return resultado;
+}
+
+/**
+ * Seed: 2 depósitos padrão CCBJ para o módulo Estoque.
+ * Idempotente: ignora depósitos com ID já existente no depositos_config.json.
+ */
+function setup_depositos_iniciais() {
+  var orgId = getOrgConfig().orgId;
+  var agr   = agora();
+
+  var depositos = [
+    {
+      id:       'dep-01',
+      nome:     'Almoxarifado Central',
+      codigo:   'Almox.',
+      tipo:     'principal',
+      descricao: 'Depósito principal de materiais e consumíveis do CCBJ.',
+      ativo:    true
+    },
+    {
+      id:       'dep-02',
+      nome:     'Estoque Rápido Infra',
+      codigo:   'Infra.',
+      tipo:     'rapido',
+      descricao: 'Estoque de acesso rápido para a equipe de Infraestrutura.',
+      ativo:    true
+    }
+  ];
+
+  var criados = 0, jaExistiam = 0;
+
+  modifyJSON('depositos_config.json', function(lista) {
+    if (!Array.isArray(lista)) lista = [];
+    depositos.forEach(function(dep) {
+      var jaExiste = lista.some(function(d) { return d.id === dep.id && d.orgId === orgId; });
+      if (jaExiste) { jaExistiam++; return; }
+      lista.push(Object.assign({}, dep, { orgId: orgId, criadoEm: agr, atualizadoEm: agr }));
+      criados++;
+    });
+    return lista;
+  });
+
+  Logger.info('setup', 'setup_depositos_iniciais',
+    'Depósitos: ' + criados + ' criados, ' + jaExistiam + ' já existiam.');
+  return { criados: criados, ja_existiam: jaExistiam };
 }

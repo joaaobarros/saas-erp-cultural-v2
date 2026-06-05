@@ -43,7 +43,11 @@ var AlertasEngine = (function () {
     LOCK_TIMEOUT:                { severidade: SEVERIDADE.ATENCAO, modulo: 'sistema'     },
     ENCAMINHAMENTO_VENCIDO:      { severidade: SEVERIDADE.ATENCAO, modulo: 'reunioes'    },
     DEMANDA_COMUNICACAO_SLA:     { severidade: SEVERIDADE.ATENCAO, modulo: 'comunicacao' },
-    SOLICITACAO_SEM_ANALISE:     { severidade: SEVERIDADE.ATENCAO, modulo: 'espacos'     }
+    SOLICITACAO_SEM_ANALISE:     { severidade: SEVERIDADE.ATENCAO, modulo: 'espacos'     },
+    ESTOQUE_ITEM_CRITICO:        { severidade: SEVERIDADE.URGENTE, modulo: 'estoque'     },
+    ESTOQUE_ITEM_BAIXO:          { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     },
+    ESTOQUE_PREVISTO_ACABAR:     { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     },
+    SOLICITACAO_SEM_SEPARACAO:   { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     }
   };
 
   // Cabeçalho do AlertasLog (12 colunas)

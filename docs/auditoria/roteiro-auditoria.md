@@ -3237,6 +3237,28 @@ Após cada sessão: copiar o conteúdo atualizado para `docs/auditoria/roteiro-a
 
 ---
 
+## HANDOFF — SESSÃO 23 (2026-06-04) → SESSÃO 24
+
+### Estado atual: 281 problemas registrados · Deploy @561
+
+### O que foi feito nesta sessão (s23)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @561 | 73 — Backend Estoque | `item_estoque_repository.gs` (MASTER.ItensEstoque/SaldoEstoque/MovimentacoesEstoque + depositos_config.json), `solicitacao_material_repository.gs` (JSON canônico + ESPACOS.SolicitacoesMaterial), `estoque_engine.gs` (FSM + LockService + 12 funções), `estoque_controller.gs` (15 ctrl_estoque_*). `setup.gs`: SCHEMA_ABAS expandido, fase73_estoque_prepararIndice(), seed dep-01/dep-02. `alertas_engine.gs`: 4 novos TIPOS de estoque. |
+
+### Pendentes desta sessão / próxima ação
+- **Executar `fase73_estoque_prepararIndice()` no GAS Editor** para criar abas e seed dos depósitos
+- **Fase 74 — EstoqueUI**: nova aba no módulo Infraestrutura, sub-abas Itens/Estoque/Solicitações/Entradas/Relatórios, bindings GAS.estoque.*
+
+### Bugs ativos importantes (não corrigidos)
+- **FIN-17** (cálculo de benefícios incorreto)
+- **FIN-19** (Setor na Rubrica — decisão arquitetural)
+- **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
+- **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
+
+---
+
 ## HANDOFF — SESSÃO 22 (2026-06-04) → SESSÃO 23
 
 ### Estado atual: 281 problemas registrados · Deploy @550
