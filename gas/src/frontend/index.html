@@ -3603,6 +3603,13 @@ select.form-control { cursor: pointer; }
                   <div class="form-group full-width"><label class="form-label">Item Anexo IX</label><input id="cd-rub-item-anexo" class="form-input" type="text" readonly style="background:var(--surface3);" placeholder="(auto)"></div>
                   <div class="form-group"><label class="form-label">Qtd. Meses</label><input id="cd-rub-meses" class="form-input" type="number" min="1" value="12"></div>
                   <div class="form-group"><label class="form-label">Valor Total (calculado)</label><input id="cd-rub-valor" class="form-input" type="text" value="R$ 0,00" readonly style="background:var(--surface3);font-weight:600;color:var(--color-primary);"></div>
+                  <div class="form-group full-width" style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
+                    <label class="form-label" style="margin-bottom:6px;">Opções de Operação</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                      <input type="checkbox" id="cd-rub-flag-voucher-uber" style="width:15px;height:15px;">
+                      Permite solicitação de voucher Uber
+                    </label>
+                  </div>
                 </div>
                 <!-- Memória de Cálculo -->
                 <div style="margin-top:10px;">
@@ -10485,7 +10492,7 @@ var ContratosDetailUI = (function() {
       var mem = (r.memoriaCalculo || []).length;
       return '<div class="pt-rub-row">'
         +'<span class="pt-rub-codigo">'+escaparHtml(r.codigoSeplag||'—')+'</span>'
-        +'<span class="pt-rub-nome">'+escaparHtml(r.nome||r.id)+(mem?' <span style="font-size:10px;color:var(--muted);">('+mem+' linhas)</span>':'')+'</span>'
+        +'<span class="pt-rub-nome">'+escaparHtml(r.nome||r.id)+(mem?' <span style="font-size:10px;color:var(--muted);">('+mem+' linhas)</span>':'')+(r.flags&&r.flags.voucher_uber?' <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 5px;" title="Permite voucher Uber">Uber</span>':'')+'</span>'
         +'<span class="pt-rub-cat '+catClass+'">'+escaparHtml(r.categoria||'custeio')+'</span>'
         +'<span class="pt-rub-valor">'+_R(r.valorTotal)+'</span>'
         +(mem ? '<button class="btn btn-ghost" style="padding:0 4px;font-size:11px;" onclick="ContratosDetailUI._verMemoria('+JSON.stringify(r).replace(/"/g,"'")+')\" title="Ver memória de cálculo"><span class="ms ms-sm">visibility</span></button>' : '')
@@ -10801,6 +10808,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rub-item-anexo').value= '';
     document.getElementById('cd-rub-meses').value     = _calcMesesMeta(metaId);
     document.getElementById('cd-rub-valor').value     = _R(0);
+    var cbUber = document.getElementById('cd-rub-flag-voucher-uber');
+    if (cbUber) cbUber.checked = false;
     _memLinhas = [];
     _renderMemTabela();
     _popularCatalogo();
@@ -10819,6 +10828,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rub-meses').value     = r.qtdMeses || 12;
     document.getElementById('cd-rub-valor').value     = _R(r.valorTotal);
     _memLinhas = (r.memoriaCalculo || []).map(function(l) { return Object.assign({}, l); });
+    var cbUber = document.getElementById('cd-rub-flag-voucher-uber');
+    if (cbUber) cbUber.checked = !!(r.flags && r.flags.voucher_uber);
     _renderMemTabela();
     _popularCatalogo();
     // Selecionar item do catálogo se possível
@@ -10917,6 +10928,7 @@ var ContratosDetailUI = (function() {
       return { descricao:l.descricao||'', setor:l.setor||'', metrica:l.metrica||'UN', qtd:l.qtd||0, valorUnitario:l.valorUnitario||0, subtotal:l.subtotal||0 };
     });
     var total = mem.reduce(function(s,l){ return s+(parseFloat(l.subtotal)||0); }, 0);
+    var _cbUber = document.getElementById('cd-rub-flag-voucher-uber');
     var dados = {
       id:           rubId,
       nome:         item.nome,
@@ -10925,7 +10937,8 @@ var ContratosDetailUI = (function() {
       categoria:    document.getElementById('cd-rub-categoria').value || 'custeio',
       qtdMeses:     parseInt(document.getElementById('cd-rub-meses').value,10)||12,
       valorTotal:   total,
-      memoriaCalculo: mem
+      memoriaCalculo: mem,
+      flags:        { voucher_uber: !!(_cbUber && _cbUber.checked) }
     };
     if (!dados.id) delete dados.id;
     BtnGuard.wrap('btn-cd-rub-salvar', 'Salvando…', function(done) {
@@ -21851,6 +21864,7 @@ var SolicitacoesUI = (function() {
   var _lista = [];   // cache para filtro client-side
   var _chipAtivo = '';
   var _detAtual = null; // solicitação no painel de detalhe
+  var _atvOptions = []; // atividades da meta selecionada para o select nas parcelas
   var _docContextId = null; // ID da sol para modal de doc
   var _solDevPendente  = null;
   var _solAprGPendente = null;
@@ -22000,6 +22014,7 @@ var SolicitacoesUI = (function() {
   function fecharForm() { document.getElementById('sol-form-card').style.display = 'none'; }
 
   function _limparForm() {
+    _atvOptions = [];
     var ids = ['sol-id','sol-n-esboco','sol-programa','sol-link-processo','sol-objeto','sol-setor',
                'sol-justificativa','sol-natureza-outro','sol-contratado-id','sol-credor-nome',
                'sol-credor-cpfcnpj','sol-credor-email','sol-credor-telefone','sol-forn-nome',
@@ -22093,13 +22108,15 @@ var SolicitacoesUI = (function() {
     var rows = document.querySelectorAll('#sol-parcelas-tbody tr');
     var parcelas = [];
     rows.forEach(function(tr, idx) {
-      var inputs = tr.querySelectorAll('input');
-      if (inputs.length >= 3) {
+      var atvEl  = tr.querySelector('[data-atv]');
+      var valEl  = tr.querySelector('[data-moeda]');
+      var datEl  = tr.querySelector('input[type="date"]');
+      if (atvEl && valEl && datEl) {
         parcelas.push({
           numero:       idx+1,
-          atividade:    inputs[0].value||'',
-          valor:        parseMoeda(inputs[1].value),
-          dataPrevista: inputs[2].value||''
+          atividade:    atvEl.value||'',
+          valor:        parseMoeda(valEl.value),
+          dataPrevista: datEl.value||''
         });
       }
     });
@@ -22765,6 +22782,8 @@ var SolicitacoesUI = (function() {
     sel.innerHTML = '<option value="">— Carregando… —</option>';
     sel.disabled = true; selR.disabled = true;
     document.getElementById('sol-saldo-widget').style.display = 'none';
+    _atvOptions = [];
+    atualizarGridParcelas();
     if (!contratoId) { sel.innerHTML = '<option value="">— Selecione o Contrato primeiro —</option>'; return; }
     GAS.contratos.obter(contratoId, function(resp){
       var metas = resp&&resp.ok&&resp.data&&resp.data.metas||[];
@@ -22786,14 +22805,19 @@ var SolicitacoesUI = (function() {
       var meta = metas.filter(function(m){ return m.id===metaId; })[0];
       // Coletar rubricas de todas as atividades (estrutura normal) + rubricas diretas (backward compat)
       var rubricas = [];
+      _atvOptions = [];
       if (meta) {
-        (meta.atividades||[]).forEach(function(atv){ (atv.rubricas||[]).forEach(function(r){ rubricas.push(r); }); });
+        (meta.atividades||[]).forEach(function(atv){
+          (atv.rubricas||[]).forEach(function(r){ rubricas.push(r); });
+          if (atv.descricao) _atvOptions.push({ id: atv.id, nome: atv.descricao });
+        });
         (meta.rubricas||[]).forEach(function(r){ rubricas.push(r); });
       }
       selR.innerHTML = '<option value="">— Selecione a Rubrica —</option>'
         + rubricas.map(function(r){ return '<option value="'+r.id+'">'+escaparHtml(r.nome||r.id)+'</option>'; }).join('');
       selR.disabled = !rubricas.length;
       if (!rubricas.length) selR.innerHTML = '<option value="">Nenhuma rubrica cadastrada nesta meta</option>';
+      atualizarGridParcelas();
     }, function(){});
   }
 
@@ -22869,15 +22893,40 @@ var SolicitacoesUI = (function() {
     var qtd = parseInt(document.getElementById('sol-qtd-parcelas').value)||0;
     var tbody = document.getElementById('sol-parcelas-tbody');
     if (!tbody) return;
-    var existentes = tbody.rows.length;
-    while (tbody.rows.length > qtd) tbody.deleteRow(-1);
-    for (var i = tbody.rows.length; i < qtd; i++) {
+    // Preservar valores já preenchidos antes de re-renderizar linhas existentes
+    var valoresAtivos = [];
+    Array.prototype.forEach.call(tbody.rows, function(tr) {
+      var atv = tr.querySelector('[data-atv]');
+      var val = tr.querySelector('[data-moeda]');
+      var dat = tr.querySelector('input[type="date"]');
+      valoresAtivos.push({
+        atividade: atv ? atv.value : '',
+        valor:     val ? val.value : '',
+        data:      dat ? dat.value : ''
+      });
+    });
+    var useSelect = _atvOptions.length > 0;
+    var atvOptsHtml = useSelect
+      ? '<option value="">— Selecione —</option>' + _atvOptions.map(function(a){
+          return '<option value="'+escaparHtml(a.nome)+'" data-id="'+escaparHtml(a.id)+'">'+escaparHtml(a.nome)+'</option>';
+        }).join('')
+      : '';
+    tbody.innerHTML = '';
+    for (var i = 0; i < qtd; i++) {
+      var prev = valoresAtivos[i] || {};
+      var atvCell = useSelect
+        ? '<select class="form-input" data-atv="1" style="min-width:140px;">' + atvOptsHtml + '</select>'
+        : '<input class="form-input" type="text" data-atv="1" placeholder="Atividade" style="min-width:120px" value="'+escaparHtml(prev.atividade||'')+'">';
       var tr = tbody.insertRow();
       tr.innerHTML = '<td style="width:30px;text-align:center;color:var(--muted)">'+(i+1)+'</td>'
-        +'<td><input class="form-input" type="text" placeholder="Atividade" style="min-width:120px"></td>'
-        +'<td><input class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00" style="width:110px"></td>'
-        +'<td><input class="form-input" type="date"></td>'
+        +'<td>'+atvCell+'</td>'
+        +'<td><input class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00" style="width:110px" value="'+escaparHtml(prev.valor||'')+'"></td>'
+        +'<td><input class="form-input" type="date" value="'+escaparHtml(prev.data||'')+'"></td>'
         +'<td><button class="btn btn-ghost btn-sm" onclick="this.closest(\'tr\').remove()" data-bg-skip="1" style="padding:2px 6px"><span class="ms ms-sm">delete</span></button></td>';
+      if (useSelect && prev.atividade) {
+        var selEl = tr.querySelector('select[data-atv]');
+        if (selEl) selEl.value = prev.atividade;
+      }
     }
   }
 

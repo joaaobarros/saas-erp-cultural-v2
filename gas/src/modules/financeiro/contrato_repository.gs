@@ -529,6 +529,7 @@ var ContratoRepository = (function () {
       return {
         id:          item.id || gerarId('mem'),
         descricao:   String(item.descricao || '').trim(),
+        setor:       String(item.setor || '').trim(),
         qtd:         qtd,
         metrica:     String(item.metrica || item.tipo || 'UN').trim(),
         valorUnitario: valorUnit,
