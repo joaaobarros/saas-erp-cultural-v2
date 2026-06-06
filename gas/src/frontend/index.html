@@ -9626,23 +9626,24 @@ var IdentidadeAdmin = (function() {
           +'<div class="pendente-nome">'+escaparHtml(u.nome || email)+'</div>'
           +'<div class="pendente-meta">'+escaparHtml(email)+' · '+escaparHtml(u.setorDesejado||'sem setor')+'</div>'
           +'</div>'
-          +'<button id="'+escaparHtml(btnId)+'" class="btn btn-primario btn-sm btn-aprovar-acesso" data-email="'+escaparHtml(email)+'">'
+          +'<button id="'+escaparHtml(btnId)+'" class="btn btn-primario btn-sm btn-aprovar-acesso"'
+          +' data-email="'+escaparHtml(email)+'" data-setor="'+escaparHtml(u.setorDesejado||'')+'">'
           +'<span class="ms ms-sm">check</span> Aprovar</button>'
           +'</div>';
       }).join('');
       Array.prototype.slice.call(lista.querySelectorAll('.btn-aprovar-acesso')).forEach(function(btn) {
         btn.addEventListener('click', function() {
-          IdentidadeAdmin.aprovar(this.getAttribute('data-email') || '');
+          IdentidadeAdmin.aprovar(this.getAttribute('data-email') || '', this.getAttribute('data-setor') || '');
         });
       });
     });
   }
 
-  function aprovar(email) {
+  function aprovar(email, setor) {
     // Mesma sanitização de _carregarPendentes para garantir que o ID bate
     var btnId='btn-aprovar-'+String(email).replace(/[^a-zA-Z0-9_-]/g,'-');
     BtnGuard.wrap(btnId,'Aprovando…',function(done){
-      GAS.admin.aprovarAcesso({emailAlvo:email,papel:'colaborador',setor:''},function(resp){
+      GAS.admin.aprovarAcesso({emailAlvo:email,papel:'colaborador',setor:setor||''},function(resp){
         done();
         if(resp&&resp.ok){Toast.sucesso('Acesso aprovado: '+email);_carregarPendentes();}
         else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao aprovar.');

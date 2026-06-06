@@ -416,8 +416,9 @@ var EscutaPulseEngine = (function() {
         .filter(function(u) { return u.status === 'ativo'; })
         .forEach(function(u) {
           var email = (u.email || '').toLowerCase().trim();
-          var setor = u.setor || 'Sem setor';
-          if (email) mapa[email] = setor;
+          var setor = (u.setor || u.setorDesejado || '').trim();
+          if (!email || !setor) return;
+          mapa[email] = setor;
           totalPorSetor[setor] = (totalPorSetor[setor] || 0) + 1;
         });
     } catch(e) { return []; }

@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @616 · 280 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @620 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -196,6 +196,7 @@
 | Guia contextual in-app | ✅ ESC-12 CORRIGIDO s17 F64 @505 | 2026-06-04 |
 | Aba Alertas — card explicativo | ✅ ESC-10 CORRIGIDO s17 F63 @490 | 2026-06-03 |
 | Perfil Analítico removido | ✅ ESC-08 CORRIGIDO s17 F56 @460 | 2026-06-03 |
+| Pulse — clima por setor vazio | ✅ PUL-07 CORRIGIDO @620 | 2026-06-06 |
 
 ### Módulo 16 — Financeiro
 | Item | Status | Sessão |
@@ -463,7 +464,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 31 (2026-06-06) → SESSÃO 32
 
-### Estado atual: ~277 bugs registrados · Deploy @619 (GAS) · Firebase live
+### Estado atual: ~277 bugs registrados · Deploy @620 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s31)
 
@@ -474,6 +475,7 @@
 | @619 | FIN-19 (auditoria) | `contrato_repository.gs/adicionarRubrica`: campo `setor` adicionado ao mapeamento de `memoriaCalculo` — era descartado na normalização. |
 | @619 | FIN-20 (auditoria) | Flags de operação por rubrica: checkbox "Permite solicitação de voucher Uber" (`cd-rub-flag-voucher-uber`) no form; badge "Uber" no card; `flags:{voucher_uber:bool}` em `dados` de `salvarRubrica`; restore em `editarRub`; reset em `abrirRubForm`. |
 | @619 | CON-09 (auditoria) | Campo "Atividade" nas parcelas de contratações: `_atvOptions` armazena atividades da meta selecionada; `atualizarGridParcelas` cria `<select>` quando `_atvOptions.length > 0`; `_coletarParcelas` usa `[data-atv]`; reset em `_limparForm`, `onContratoSelecionado` e `onMetaSelecionada`. |
+| @620 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback (aprovações rápidas deixavam setor vazio); usuários sem nenhum setor excluídos em vez de 'Sem setor'. Aprovação no admin: `data-setor` no botão + `aprovar(email, setor)` repassam `setorDesejado` ao `aprovarAcesso` — novas aprovações já definem setor. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
