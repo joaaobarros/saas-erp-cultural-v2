@@ -475,10 +475,8 @@
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
-  2. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
-  3. `fase75_importar_consumiveis_v1()` — importar consumíveis V1
-  4. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
-  5. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+  2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
+  3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
 - **Bugs prioritários:** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)
