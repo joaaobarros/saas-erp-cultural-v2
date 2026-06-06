@@ -15,7 +15,7 @@ var TarefaRepository = (function () {
   var _HEADERS = [
     'ID', 'OrgId', 'Titulo', 'Descricao', 'Responsavel', 'Setor', 'Prioridade',
     'Status', 'CriadoEm', 'Prazo', 'ConcluidoEm', 'AcaoId', 'ProcessoId',
-    'Modulo', 'Tipo', 'AtualizadoEm', 'Versao'
+    'ReservaId', 'ContratoId', 'Modulo', 'Tipo', 'AtualizadoEm', 'Versao'
   ];
   var _NIVEIS_AMPLOS = ['admin', 'superadmin', 'gestor'];
 
@@ -89,6 +89,8 @@ var TarefaRepository = (function () {
       tarefa.concluidoEm || '',
       tarefa.acaoId || tarefa.idAcao || '',
       tarefa.processoId || '',
+      tarefa.reservaId || '',
+      tarefa.contratoId || '',
       tarefa.modulo || '',
       tarefa.tipo || '',
       tarefa.atualizadoEm || '',

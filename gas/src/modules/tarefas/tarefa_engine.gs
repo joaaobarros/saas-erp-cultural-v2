@@ -80,6 +80,8 @@ var TarefaEngine = (function () {
       concluidoEm: '',
       acaoId: dados.acaoId || dados.idAcao || '',
       processoId: dados.processoId || '',
+      reservaId: dados.reservaId || '',
+      contratoId: dados.contratoId || '',
       origem: dados.origem || '',
       origemId: dados.origemId || dados.idOrigem || '',
       criadoPor: emailCriador || _emailAtual() || 'sistema',
@@ -155,7 +157,8 @@ var TarefaEngine = (function () {
     if (!tarefa) throw new Error('Tarefa nao encontrada: ' + id);
 
     var editaveis = ['titulo', 'descricao', 'prioridade', 'responsavel', 'executores',
-      'setor', 'modulo', 'tipo', 'prazo', 'acaoId', 'idAcao', 'processoId', 'metadados'];
+      'setor', 'modulo', 'tipo', 'prazo', 'acaoId', 'idAcao', 'processoId',
+      'reservaId', 'contratoId', 'metadados'];
     var alteracoes = [];
     editaveis.forEach(function (campo) {
       if (campos.hasOwnProperty(campo)) {

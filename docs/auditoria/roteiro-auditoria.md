@@ -308,7 +308,7 @@
 | ~~SIDEBAR-05~~ | Sidebar | ✅ CORRIGIDO @590 — Meu Centro movido para posição #2 (após Início) | — |
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
 | ~~TAR-02~~ | Tarefas | ✅ VERIFICADO @648 — `tf-responsavel` é `<select>` populado por `_carregarSelectUsuariosHelper` em `aoAbrir()`; nunca foi texto livre na v2 | — |
-| TAR-03 | Tarefas | Tarefas não se vinculam a Ações, Reservas, Contratos | 🔴 |
+| ~~TAR-03~~ | Tarefas | ✅ CORRIGIDO @654 — form ganha campos Prazo + Vínculo (select tipo: Ação/Reserva/Contrato; select ID dinâmico carregado por `atualizarVinculo()` com cache). `criar()` passa `acaoId`/`reservaId`/`contratoId` ao backend. Engine + repository recebem os dois novos campos (`reservaId`, `contratoId`). Lista exibe badges de vínculo (Ação/Reserva/Contrato) e prazo. Header migrado para `view-header` DS. | — |
 | TAR-04 | Tarefas | Sem gatilhos automáticos | 🔴 |
 | TAR-05 | Tarefas | Sem alertas para vencimento | 🟡 |
 | PFANTASMA | Admin | "Perfis Fantasma" solicitado mas não implementado | 🔴 |
@@ -490,7 +490,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-03 (tarefas sem vínculo a Ações/Reservas)
+- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)

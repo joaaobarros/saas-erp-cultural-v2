@@ -2647,9 +2647,11 @@ select.form-control { cursor: pointer; }
 
       <!-- VIEW: Tarefas -->
       <div id="view-tarefas" class="view">
-        <div class="page-header">
-          <div class="page-title">Tarefas</div>
-          <div class="page-subtitle">Centro operacional com persistência canônica em tarefas.json</div>
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Tarefas</h1>
+            <p class="view-subtitle">Centro operacional de tarefas da equipe</p>
+          </div>
         </div>
 
         <div class="stats-grid" id="tarefas-metricas"></div>
@@ -2660,26 +2662,44 @@ select.form-control { cursor: pointer; }
               <span class="ms">add_task</span> Nova Tarefa
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr) auto;gap:10px;align-items:end;">
+          <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
             <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Título</label>
-              <input id="tf-titulo" class="form-input" type="text" placeholder="Ex: Preparar pauta da reunião">
+              <label class="form-label">Título *</label>
+              <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label">Responsável</label>
-              <select id="tf-responsavel" class="form-input"><option value="">— Responsável —</option></select>
+              <select id="tf-responsavel" class="form-control"><option value="">— Responsável —</option></select>
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label">Prioridade</label>
-              <select id="tf-prioridade" class="form-input">
+              <select id="tf-prioridade" class="form-control">
                 <option value="media">Média</option>
                 <option value="alta">Alta</option>
                 <option value="critica">Crítica</option>
                 <option value="baixa">Baixa</option>
               </select>
             </div>
-            <button class="btn btn-primario" id="btn-tarefa-criar" onclick="TarefasUI.criar()">
-              <span class="ms ms-sm">save</span> Criar
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Prazo</label>
+              <input id="tf-prazo" class="form-control" type="date">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Vínculo</label>
+              <div style="display:flex;gap:6px;">
+                <select id="tf-vinculo-tipo" class="select-sm" style="min-width:110px;" onchange="TarefasUI.atualizarVinculo()">
+                  <option value="">— Nenhum —</option>
+                  <option value="acao">Ação</option>
+                  <option value="reserva">Reserva</option>
+                  <option value="contrato">Contrato</option>
+                </select>
+                <select id="tf-vinculo-id" class="form-control" style="display:none;"><option value="">Carregando…</option></select>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="btn-tarefa-criar" onclick="TarefasUI.criar()" style="white-space:nowrap;">
+              <span class="ms ms-sm">save</span> Criar Tarefa
             </button>
           </div>
         </div>
@@ -9897,6 +9917,7 @@ var Skeleton = (function() {
 // ═══════════════════════════════════════════════════════════
 var TarefasUI = (function() {
   var _carregado = false;
+  var _vinculoCache = { acao: null, reserva: null, contrato: null };
 
   function _statusLabel(status) {
     var map = {
@@ -9943,10 +9964,21 @@ var TarefasUI = (function() {
       var concluir = t.status !== 'concluida' && t.status !== 'cancelada'
         ? '<button class="btn btn-ghost btn-sm btn-concluir-tarefa" data-id="'+escaparHtml(t.id)+'"><span class="ms ms-sm">check</span> Concluir</button>'
         : '';
+      var vinculo = t.acaoId
+        ? '<span style="font-size:11px;color:var(--color-accent);font-weight:600;"><span class="ms ms-sm">campaign</span> Ação</span>'
+        : t.reservaId
+        ? '<span style="font-size:11px;color:var(--color-info);font-weight:600;"><span class="ms ms-sm">event_available</span> Reserva</span>'
+        : t.contratoId
+        ? '<span style="font-size:11px;color:var(--color-success);font-weight:600;"><span class="ms ms-sm">description</span> Contrato</span>'
+        : '';
+      var prazo = t.prazo ? '<span style="font-size:11px;color:var(--muted);"><span class="ms ms-sm">schedule</span> ' + fmtDataPtBR(t.prazo.slice(0,10)) + '</span>' : '';
       return '<div class="pendente-item">'
         + '<div class="pendente-info">'
         + '<div class="pendente-nome">'+escaparHtml(t.titulo)+'</div>'
-        + '<div class="pendente-meta">'+escaparHtml(t.responsavel || 'sem responsável')+' · '+escaparHtml(t.prioridade || 'media')+'</div>'
+        + '<div class="pendente-meta" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+        + '<span>'+escaparHtml(t.responsavel || 'sem responsável')+' · '+escaparHtml(t.prioridade || 'media')+'</span>'
+        + prazo + vinculo
+        + '</div>'
         + '</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
         + _badge(t.status) + concluir + '</div></div>';
     }).join('');
@@ -9970,16 +10002,57 @@ var TarefasUI = (function() {
     });
   }
 
+  function atualizarVinculo() {
+    var tipo = (document.getElementById('tf-vinculo-tipo')||{}).value || '';
+    var sel  = document.getElementById('tf-vinculo-id');
+    if (!sel) return;
+    if (!tipo) { sel.style.display = 'none'; sel.value = ''; return; }
+    sel.style.display = '';
+    sel.innerHTML = '<option value="">Carregando…</option>';
+    if (_vinculoCache[tipo]) { _preencherVinculo(sel, tipo, _vinculoCache[tipo]); return; }
+    var loaders = {
+      acao:     function(cb) { GAS.acoes.listar({}, function(r){ cb((r&&r.ok)?r.data:[]); }, function(){ cb([]); }); },
+      reserva:  function(cb) { GAS.reservas.listar({}, function(r){ cb((r&&r.ok)?r.data:[]); }, function(){ cb([]); }); },
+      contrato: function(cb) { GAS.contratos.listar({}, function(r){ cb((r&&r.ok)?r.data:[]); }, function(){ cb([]); }); }
+    };
+    (loaders[tipo] || function(cb){ cb([]); })(function(lista) {
+      _vinculoCache[tipo] = lista;
+      _preencherVinculo(sel, tipo, lista);
+    });
+  }
+
+  function _preencherVinculo(sel, tipo, lista) {
+    var labels = {
+      acao:     function(i){ return i.nome || i.titulo || i.id; },
+      reserva:  function(i){ return (i.espaco || i.espacoNome || '') + (i.dataInicio ? ' (' + fmtDataPtBR((i.dataInicio||'').slice(0,10)) + ')' : '') || i.id; },
+      contrato: function(i){ return i.numero || i.titulo || i.nome || i.id; }
+    };
+    var fn = labels[tipo] || function(i){ return i.id; };
+    var ativos = lista.filter(function(i){ return i.status !== 'cancelada' && i.status !== 'cancelado' && i.status !== 'concluida' && i.status !== 'concluido'; });
+    sel.innerHTML = '<option value="">— Selecionar —</option>'
+      + ativos.map(function(i){ return '<option value="'+escaparHtml(i.id)+'">'+escaparHtml(fn(i))+'</option>'; }).join('');
+  }
+
   function criar() {
-    var titulo = document.getElementById('tf-titulo').value.trim();
+    var titulo      = document.getElementById('tf-titulo').value.trim();
     var responsavel = document.getElementById('tf-responsavel').value.trim();
-    var prioridade = document.getElementById('tf-prioridade').value;
+    var prioridade  = document.getElementById('tf-prioridade').value;
+    var prazo       = (document.getElementById('tf-prazo')||{}).value || '';
+    var vinculoTipo = (document.getElementById('tf-vinculo-tipo')||{}).value || '';
+    var vinculoId   = (document.getElementById('tf-vinculo-id')||{}).value || '';
     if (!titulo) { Toast.aviso('Informe o título da tarefa.'); return; }
+    var dados = { titulo: titulo, responsavel: responsavel, prioridade: prioridade, prazo: prazo };
+    if (vinculoTipo === 'acao'     && vinculoId) dados.acaoId     = vinculoId;
+    if (vinculoTipo === 'reserva'  && vinculoId) dados.reservaId  = vinculoId;
+    if (vinculoTipo === 'contrato' && vinculoId) dados.contratoId = vinculoId;
     BtnGuard.wrap('btn-tarefa-criar', 'Criando…', function(done) {
-      GAS.tarefas.salvar({ titulo: titulo, responsavel: responsavel, prioridade: prioridade }, function(resp) {
+      GAS.tarefas.salvar(dados, function(resp) {
         done();
         if (!resp || !resp.ok) { Toast.erro('Erro ao criar tarefa.'); return; }
         document.getElementById('tf-titulo').value = '';
+        if (document.getElementById('tf-prazo')) document.getElementById('tf-prazo').value = '';
+        if (document.getElementById('tf-vinculo-tipo')) document.getElementById('tf-vinculo-tipo').value = '';
+        if (document.getElementById('tf-vinculo-id'))  { document.getElementById('tf-vinculo-id').style.display = 'none'; }
         Toast.sucesso('Tarefa criada.');
         carregar();
       }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
@@ -10003,7 +10076,7 @@ var TarefasUI = (function() {
     _carregarSelectUsuariosHelper('tf-responsavel', (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '', '— Responsável —');
   }
 
-  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir };
+  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir, atualizarVinculo: atualizarVinculo };
 })();
 
 // ═══════════════════════════════════════════════════════════

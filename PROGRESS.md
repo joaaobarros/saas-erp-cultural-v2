@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria BAL-15 (2026-06-06)** — Deploy @651. BAL-15 CORRIGIDO: empty state da lista do Balcão agora orienta o usuário. Dois casos: (1) lista vazia sem filtros → ícone `support_agent` + texto explicando o Balcão + CTA "Nova Demanda"; (2) filtros sem resultado → ícone `filter_list_off` + botão "Limpar filtros" (chama `BalcaoUI.limparFiltros()` que zera busca + status + tipo e re-renderiza). `limparFiltros` exposto no return do módulo. Próximos: TAR-03 (vínculo tarefas), HUB-03 (Meu Dia real).
+**Fase atual**: **Auditoria TAR-03 (2026-06-06)** — Deploy @654. TAR-03 CORRIGIDO: form de Tarefas ganha campos Prazo + Vínculo (select tipo Ação/Reserva/Contrato + select ID carregado dinamicamente com cache em `_vinculoCache`). `criar()` envia `acaoId`, `reservaId` ou `contratoId` ao backend. Engine ganha `reservaId`/`contratoId` em `_novaTarefa` e `editar`. Repository ganha as duas colunas em `_HEADERS` + `_serializarIndice`. Lista exibe badges de vínculo (ícones MS + cor DS) e prazo. Header migrado para `view-header` DS. Próximo: HUB-03 (Meu Dia sem pendências reais).
 
 **Fase anterior**: **Auditoria HUB-10 (2026-06-06)** — Deploy @648.
 
