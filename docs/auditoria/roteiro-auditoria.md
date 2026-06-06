@@ -249,6 +249,7 @@
 
 | Deploy | Fase | Resumo |
 |---|---|---|
+| @584 | 79 | ctrl_reservas_criar: auto-cria SolicitacaoMaterial com reservaId (best-effort). Frontend: listarItens(estoque) no form de reserva; label "Materiais necessários"; toast com SOL-XXXX |
 | @581 | 77 | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
 | @579 | 76 | Compras/Aquisições migrado de Financeiro → Contratações; planilha MASTER→FINANCEIRO.SolicitacoesCompra; tab reposicionada |
 | @566 | 75.1 | `migracao_estoque_v1.gs` (inspecionar + importar V1→V2). Dead code removido |
@@ -460,25 +461,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 26 (2026-06-05) → SESSÃO 27
+## HANDOFF ATUAL — SESSÃO 27 (2026-06-05) → SESSÃO 28
 
-### Estado atual: 280 bugs registrados (ESTO-14 corrigido) · Deploy @583
+### Estado atual: 280 bugs registrados · Deploy @584
 
-### O que foi feito nesta sessão (s26)
+### O que foi feito nesta sessão (s27)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col (NumeroPatrimonio + 9 campos patrimoniais). FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" no EstoqueUI. Tab EspacosUI redireciona |
-| @581 | 77 — Performance + Dashboard + Devolução | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
+| @584 | 79 — Integração de Materiais nas Reservas | `ctrl_reservas_criar`: extrai `itensMateriais`, cria `SolicitacaoMaterial` via `EstoqueEngine.novaSolicitacao` com `reservaId`, retorna `solicitacaoCodigo` (best-effort). Frontend: `_carregarDisponibilidadeItens` migrado para `GAS.estoque.listarItens`; label → "Materiais necessários"; `salvar()` passa `itensMateriais`; toast exibe SOL-XXXX |
+| @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col. FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" |
 
 ### Pendentes / próxima ação
-- **Executar no GAS Editor (nesta ordem):**
+- **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
   3. `fase75_importar_consumiveis_v1()` — importar consumíveis V1
   4. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   5. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Fase 79 — Integração de Materiais nas Reservas**
+- **Bugs prioritários:** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-19** (Setor na Rubrica — decisão arquitetural)

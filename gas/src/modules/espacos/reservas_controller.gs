@@ -229,18 +229,53 @@ function ctrl_reservas_verificar_disponibilidade(params) {
 
 /**
  * Cria uma reserva para uma data específica.
- * @param {Object} dados — { sala, data, horaInicio, horaTermino, nomeAcao, ... }
+ * Fase 79: se dados.itensMateriais (array de {itemId, descricao, qtdSolicitada}) for
+ * fornecido, cria automaticamente uma SolicitacaoMaterial vinculada via reservaId.
+ * O campo itensMateriais não é persistido na reserva — serve apenas para orquestrar
+ * a criação da solicitação. Retorna { ...reserva, solicitacaoCodigo }.
+ *
+ * @param {Object} dados — { sala, data, horaInicio, horaTermino, nomeAcao,
+ *                           itensMateriais?: [{itemId, descricao, qtdSolicitada}], ... }
  */
 function ctrl_reservas_criar(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxReservas();
     if (!dados) throw new Error('Dados da reserva são obrigatórios.');
-    // Garante que o responsável é o usuário logado (ou admin pode sobrescrever)
     var nivel = _nivelReservas(ctx.email);
     if (!dados.responsavel || nivel === 'colaborador') {
       dados.responsavel = ctx.email;
     }
-    return ReservaEngine.criar(dados, ctx.email, ctx.orgId);
+
+    // Fase 79: extrair itensMateriais antes de passar ao engine (não faz parte do schema da reserva)
+    var itensMateriais = Array.isArray(dados.itensMateriais) ? dados.itensMateriais.slice() : [];
+    delete dados.itensMateriais;
+
+    var reserva = ReservaEngine.criar(dados, ctx.email, ctx.orgId);
+
+    // Fase 79: auto-criar SolicitacaoMaterial vinculada (best-effort — falha não cancela reserva)
+    var solicitacaoCodigo = '';
+    var itensSolicitaveis = itensMateriais.filter(function(it) {
+      return it && it.itemId && Number(it.qtdSolicitada) > 0;
+    });
+    if (itensSolicitaveis.length > 0) {
+      try {
+        var sol = EstoqueEngine.novaSolicitacao({
+          itens:        itensSolicitaveis,
+          setorDestino: dados.setor || 'geral',
+          solicitante:  ctx.email,
+          observacoes:  'Reserva: ' + (dados.nomeAcao || reserva.id),
+          reservaId:    reserva.id
+        }, ctx.email, ctx.orgId);
+        solicitacaoCodigo = sol ? (sol.codigo || '') : '';
+        Logger.info('reservas_controller', 'ctrl_reservas_criar',
+          'SolicitacaoMaterial ' + solicitacaoCodigo + ' vinculada à reserva ' + reserva.id);
+      } catch (solErr) {
+        Logger.warn('reservas_controller', 'ctrl_reservas_criar',
+          'Reserva ' + reserva.id + ' criada, mas SolicitacaoMaterial falhou: ' + solErr.message);
+      }
+    }
+
+    return Object.assign({}, reserva, { solicitacaoCodigo: solicitacaoCodigo });
   }, 'ctrl_reservas_criar');
 }
 

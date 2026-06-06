@@ -4316,9 +4316,12 @@ select.form-control { cursor: pointer; }
                 <label class="form-label" style="color:var(--muted);">Equipamentos já disponíveis nesta sala</label>
                 <div id="res-itens-fixos-lista" style="font-size:13px;color:var(--muted);padding:4px 0;"></div>
               </div>
-              <!-- Bloco: Solicitar itens volantes -->
+              <!-- Bloco: Materiais necessários (Fase 79 — novo sistema de Estoque) -->
               <div class="form-group" id="res-itens-volantes-bloco" style="grid-column:1/-1;display:none;">
-                <label class="form-label">Itens solicitados (almoxarifado)</label>
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
+                  <label class="form-label" style="margin:0;">Materiais necessários</label>
+                  <span style="font-size:11px;color:var(--muted);">Uma solicitação será criada no almoxarifado ao salvar.</span>
+                </div>
                 <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
                   <div style="flex:1;min-width:160px;">
                     <select id="res-item-select" class="form-input" style="width:100%;"></select>
@@ -4331,7 +4334,7 @@ select.form-control { cursor: pointer; }
                   </button>
                 </div>
                 <div id="res-itens-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
-                <small id="res-itens-hint" style="display:none;color:var(--color-error);margin-top:4px;font-size:11px;">Itens indisponíveis no horário — remova-os antes de salvar.</small>
+                <small id="res-itens-hint" style="display:none;color:var(--color-error);margin-top:4px;font-size:11px;">Quantidade solicitada excede o saldo disponível — ajuste antes de salvar.</small>
               </div>
             </div>
             <input type="hidden" id="res-id">
@@ -17841,6 +17844,12 @@ var ReservasUI = (function() {
       minutosEncerramento: parseInt(document.getElementById('res-encerramento').value||0, 10) || 0
     };
     var id = (document.getElementById('res-id').value||'').trim();
+    // Fase 79: para novas reservas com itens do novo estoque, envia itensMateriais estruturados
+    if (!id && _itensChips.length > 0) {
+      dados.itensMateriais = _itensChips.map(function(c) {
+        return { itemId: c.id, descricao: c.nome, qtdSolicitada: c.qtd };
+      });
+    }
     BtnGuard.wrap('btn-res-salvar', 'Salvando…', function(done) {
       if (id) {
         // EDIÇÃO — chama atualizar com o ID separado dos dados
@@ -17864,8 +17873,11 @@ var ReservasUI = (function() {
             else { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar reserva.'); }
             return;
           }
+          // Fase 79: exibe código da SolicitacaoMaterial criada automaticamente
+          var _sol = resp.data && resp.data.solicitacaoCodigo;
+          var _msg = _sol ? ('Reserva criada · Materiais: ' + _sol) : 'Reserva criada com sucesso.';
           fecharForm();
-          Toast.sucesso('Reserva criada com sucesso.');
+          Toast.sucesso(_msg);
           carregar();
         }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
       }
@@ -18609,11 +18621,16 @@ var ReservasUI = (function() {
     if (!blocoV) return;
     if (!sala || !data || !ini || !fim) { blocoV.style.display = 'none'; return; }
     blocoV.style.display = '';
-    var excluirId = (document.getElementById('res-id').value||'').trim() || null;
-    var params = { sala: sala, data: data, horaInicio: ini, horaTermino: fim };
-    if (excluirId) params.excluirReservaId = excluirId;
-    GAS.reservas.disponibilidadeItens(params, function(resp) {
-      _itensDisponibilidade = (resp && resp.ok && resp.data && resp.data.itens) ? resp.data.itens : [];
+    // Fase 79: usa catálogo do novo sistema de Estoque (saldoDisponivel já desconta alocações)
+    GAS.estoque.listarItens({ visivelSolicitantes: true }, function(resp) {
+      var itens = (resp && resp.ok && Array.isArray(resp.data)) ? resp.data : [];
+      _itensDisponibilidade = itens.map(function(it) {
+        return {
+          id:        it.id,
+          nome:      it.descricao || it.nome || '—',
+          disponivel: it.saldoDisponivel != null ? Number(it.saldoDisponivel) : 0
+        };
+      }).filter(function(it) { return it.id; });
       _populateItemSelect();
       _revalidarChips();
     }, function() { _itensDisponibilidade = []; _populateItemSelect(); });
