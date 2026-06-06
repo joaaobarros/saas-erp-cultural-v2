@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @579 · 281 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @581 · 281 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -249,7 +249,7 @@
 
 | Deploy | Fase | Resumo |
 |---|---|---|
-| @580 | 77 | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
+| @581 | 77 | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
 | @579 | 76 | Compras/Aquisições migrado de Financeiro → Contratações; planilha MASTER→FINANCEIRO.SolicitacoesCompra; tab reposicionada |
 | @566 | 75.1 | `migracao_estoque_v1.gs` (inspecionar + importar V1→V2). Dead code removido |
 | @564 | 75 | `previsao_estoque_engine.gs` (taxaConsumo/cobertura/previsão). Sub-aba Pipeline. Alertas de estoque |
@@ -463,13 +463,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 26 (2026-06-05) → SESSÃO 27
 
-### Estado atual: 281 bugs registrados · Deploy @580
+### Estado atual: 281 bugs registrados · Deploy @581
 
 ### O que foi feito nesta sessão (s26)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @580 | 77 — Performance + Dashboard + Devolução | **data_gateway.gs**: TextFinder em `atualizarLinhaPorColuna`/`removerLinhaPorColuna` (10–50× mais rápido). **utils.gs**: `_getSheet` com cache de referência por execução. **item_estoque_repository.gs**: `_SHEET_KEY` MASTER→ESTOQUE; schema Tipo+Tombado (16→18 col). **estoque_engine.gs**: FSM `finalizada→devolvida` + `devolverSolicitacao()`. **estoque/tarefas/acoes/reuniao controllers**: `ctrl_*_dashboard` + cache layer. **index.html**: GAS.* bindings + UI refatorada de 2 GAS calls → 1 por módulo |
+| @581 | 77 — Performance + Dashboard + Devolução | **data_gateway.gs**: TextFinder em `atualizarLinhaPorColuna`/`removerLinhaPorColuna` (10–50× mais rápido). **utils.gs**: `_getSheet` com cache de referência por execução. **item_estoque_repository.gs**: `_SHEET_KEY` MASTER→ESTOQUE; schema Tipo+Tombado (16→18 col). **estoque_engine.gs**: FSM `finalizada→devolvida` + `devolverSolicitacao()`. **estoque/tarefas/acoes/reuniao controllers**: `ctrl_*_dashboard` + cache layer. **index.html**: GAS.* bindings + UI refatorada de 2 GAS calls → 1 por módulo |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem):**
