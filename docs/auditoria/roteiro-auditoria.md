@@ -463,13 +463,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 29 (2026-06-06) → SESSÃO 30
 
-### Estado atual: 280 bugs registrados · Deploy @597 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @599 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s29)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @597 | Firebase + URL routing | `public/index.html` — página de redirect com design do sistema (gradiente roxo, spinner, barra progresso accent, redirect JS 2,5 s, preserve `?secao=`). `firebase-hosting-merge.yml` — deploy automático ao push na `main`. `.gitignore` + `.firebase/`. Router SPA: `_pushUrl(id)` com `google.script.history` (`replace` na 1ª nav, `push` nas demais); `setChangeHandler` para Voltar/Avançar; `_getSecaoUrl()` restaura módulo ao recarregar. |
+| @599 | Firebase + URL routing | `public/index.html` — página de redirect com design do sistema (gradiente roxo, spinner, barra progresso accent, redirect JS 2,5 s, preserve `?secao=`). `firebase-hosting-merge.yml` — deploy automático ao push na `main`. `.gitignore` + `.firebase/`. Router SPA: `_pushUrl(id)` com `google.script.history` (`replace` na 1ª nav, `push` nas demais); `setChangeHandler` para Voltar/Avançar; `_getSecaoUrl()` restaura módulo ao recarregar. |
 | @596 | SIS-13 (auditoria) | 5 campos "responsável" texto livre → `<select>` + `_carregarSelectUsuariosHelper`. `par-resp` (Parcerias) mantido como texto — contato externo |
 | @594 | SIS-10 (auditoria) | 3 modais com header scrollável corrigidos (`rece-modal`, `run-modal`, `bl-modal`) |
 | @593 | SIS-01 (auditoria) | `confirm()` inline migrado para `_conf`; bug motivo suspensão Contratados corrigido end-to-end |
