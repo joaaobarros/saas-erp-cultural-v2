@@ -18,6 +18,14 @@
  *          core/config.gs (getOrgConfig)
  */
 
+// ── Cache keys ────────────────────────────────────────────────────────────────
+
+var _CK_EST_ITENS = 'ctrl_est_itens';
+
+function _invalidarCacheEstoque() {
+  AppCache.removeAll([_CK_EST_ITENS + '_{}']);
+}
+
 // ── Helpers privados ──────────────────────────────────────────────────────────
 
 function _ctxEstoque() {
@@ -57,7 +65,12 @@ function _exigirRelatorioEstoque(ctx) {
 function ctrl_estoque_listar_itens(filtros) {
   return GasResponse.wrap(function () {
     var ctx = _ctxEstoque();
-    return EstoqueEngine.listarItens(filtros || {}, ctx.orgId);
+    var ck  = _CK_EST_ITENS + '_' + JSON.stringify(filtros || {});
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
+    var lista = EstoqueEngine.listarItens(filtros || {}, ctx.orgId);
+    AppCache.set(ck, lista, 60);
+    return lista;
   }, 'ctrl_estoque_listar_itens');
 }
 
@@ -69,8 +82,37 @@ function ctrl_estoque_salvar_item(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
-    return EstoqueEngine.salvarItem(dados || {}, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.salvarItem(dados || {}, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_salvar_item');
+}
+
+/**
+ * Registra devolução de uma solicitação finalizada.
+ * Permanentes: restaura saldo. Consumíveis: apenas log.
+ * @param {string} id — ID da solicitação
+ */
+function ctrl_estoque_devolver_solicitacao(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    return EstoqueEngine.devolverSolicitacao(id, ctx.email, ctx.orgId);
+  }, 'ctrl_estoque_devolver_solicitacao');
+}
+
+/**
+ * Remove permanentemente um item do catálogo.
+ * @param {string} id — ID do item
+ */
+function ctrl_estoque_excluir_item(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    _exigirGestaoEstoque(ctx);
+    AuditoriaService.registrar('EXCLUIR_ITEM_ESTOQUE', 'estoque', { itemId: id, ator: ctx.email });
+    var resultado = ItemEstoqueRepository.excluir(id, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
+  }, 'ctrl_estoque_excluir_item');
 }
 
 /**
@@ -81,6 +123,20 @@ function ctrl_estoque_metricas() {
     var ctx = _ctxEstoque();
     return EstoqueEngine.metricas(ctx.orgId);
   }, 'ctrl_estoque_metricas');
+}
+
+/**
+ * Retorna lista de itens + métricas em uma única chamada GAS.
+ * @param {Object} filtros — { situacao?, categoria?, critico?, busca? }
+ */
+function ctrl_estoque_dashboard(filtros) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    return {
+      lista:    EstoqueEngine.listarItens(filtros || {}, ctx.orgId),
+      metricas: EstoqueEngine.metricas(ctx.orgId)
+    };
+  }, 'ctrl_estoque_dashboard');
 }
 
 /**
@@ -112,7 +168,9 @@ function ctrl_estoque_registrar_entrada(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
-    return EstoqueEngine.registrarEntrada(dados || {}, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.registrarEntrada(dados || {}, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_registrar_entrada');
 }
 
@@ -124,7 +182,9 @@ function ctrl_estoque_registrar_saida(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
-    return EstoqueEngine.registrarSaida(dados || {}, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.registrarSaida(dados || {}, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_registrar_saida');
 }
 
@@ -136,7 +196,9 @@ function ctrl_estoque_transferir(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
-    return EstoqueEngine.transferirEntreDepositos(dados || {}, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.transferirEntreDepositos(dados || {}, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_transferir');
 }
 
@@ -176,7 +238,9 @@ function ctrl_estoque_separar_solicitacao(id) {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
     if (!id) throw new Error('id é obrigatório.');
-    return EstoqueEngine.separarSolicitacao(id, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.separarSolicitacao(id, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_separar_solicitacao');
 }
 
@@ -190,7 +254,9 @@ function ctrl_estoque_entregar_solicitacao(id, receptor) {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
     if (!id) throw new Error('id é obrigatório.');
-    return EstoqueEngine.entregarSolicitacao(id, receptor || ctx.email, ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.entregarSolicitacao(id, receptor || ctx.email, ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_entregar_solicitacao');
 }
 
@@ -204,7 +270,9 @@ function ctrl_estoque_cancelar_solicitacao(id, motivo) {
     var ctx = _ctxEstoque();
     _exigirGestaoEstoque(ctx);
     if (!id) throw new Error('id é obrigatório.');
-    return EstoqueEngine.cancelarSolicitacao(id, motivo || '', ctx.email, ctx.orgId);
+    var resultado = EstoqueEngine.cancelarSolicitacao(id, motivo || '', ctx.email, ctx.orgId);
+    _invalidarCacheEstoque();
+    return resultado;
   }, 'ctrl_estoque_cancelar_solicitacao');
 }
 

@@ -69,6 +69,26 @@ function ctrl_acoes_metricas() {
 }
 
 /**
+ * Retorna lista + métricas em uma única chamada GAS, com cache de 120s.
+ * @param {Object} filtros — { status, tipo, responsavel, visibilidadePublica }
+ */
+function ctrl_acoes_dashboard(filtros) {
+  return GasResponse.wrap(function() {
+    filtros = filtros || {};
+    var orgId    = getOrgConfig().orgId;
+    var cacheKey = 'ctrl_acoes_dashboard_' + JSON.stringify(filtros);
+    var cached   = AppCache.get(cacheKey);
+    if (cached) return cached;
+    var resultado = {
+      lista:    AcaoRepository.listar(orgId, filtros),
+      metricas: AcaoEngine.obterMetricas(orgId)
+    };
+    AppCache.set(cacheKey, resultado, 120);
+    return resultado;
+  }, 'ctrl_acoes_dashboard');
+}
+
+/**
  * Retorna painel integrado de uma Ação (tarefas + reservas + contratos).
  * @param {string} acaoId
  */

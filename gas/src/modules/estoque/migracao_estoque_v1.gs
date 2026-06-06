@@ -1,8 +1,11 @@
 /**
  * @file modules/estoque/migracao_estoque_v1.gs
  * @layer modules/estoque
- * @description Migração de itens do Estoque V1 (Estoque Fácil / planilha legada)
- *              para o módulo Estoque V2 (Fase 73+). Fase 75.1.
+ * @description Migração de itens do V1 (patrimônio/almoxarifado antigo) para o
+ *              módulo Estoque V2 (Fase 73+). Fase 75.1.
+ *
+ *              Patrimônio e Estoque são o mesmo domínio em V2. O campo Tombado
+ *              distingue bens formalmente registrados no patrimônio institucional.
  *
  * Planilha V1: 19UKfQ4cKFKEWlK8K3JaeajsALafNdTQJOD-w_LG-Q_g (GID 15114512)
  *
@@ -13,14 +16,16 @@
  */
 
 var _SHEET_ID_V1_ESTOQUE = '19UKfQ4cKFKEWlK8K3JaeajsALafNdTQJOD-w_LG-Q_g';
-var _GID_V1_ESTOQUE      = 15114512;
+var _GID_V1_ESTOQUE      = 1863856920;
 
 // ─── Mapeamento de colunas V1 → V2 ────────────────────────────────────────────
 // Tenta correspondência por substring (case-insensitive).
 // Adicione aliases se o nome real da coluna for diferente.
 var _MAPA_COLUNAS = [
-  { v2: 'descricao',         aliases: ['descri', 'nome', 'item', 'produto', 'material'] },
-  { v2: 'referencia',        aliases: ['refer', 'cod', 'código', 'codigo', 'ref'] },
+  // 'item' removido de descricao — captura incorretamente "ID Item"
+  { v2: 'descricao',         aliases: ['descri', 'nome', 'produto', 'material'] },
+  // 'id item' e 'id_item' adicionados — capturam o código identificador do V1
+  { v2: 'referencia',        aliases: ['id item', 'id_item', 'refer', 'cod', 'código', 'codigo', 'ref'] },
   { v2: 'tamanho',           aliases: ['tamanho', 'size'] },
   { v2: 'cor',               aliases: ['cor'] },
   { v2: 'marcaFabricante',   aliases: ['marca', 'fabricante', 'fornecedor'] },
@@ -45,42 +50,42 @@ function fase75_inspecionar_estoque_v1() {
     var ss   = SpreadsheetApp.openById(_SHEET_ID_V1_ESTOQUE);
     var abas = ss.getSheets();
 
-    Logger.log('=== PLANILHA V1 ESTOQUE ===');
-    Logger.log('Abas disponíveis (' + abas.length + '):');
+    console.log('=== PLANILHA V1 ESTOQUE ===');
+    console.log('Abas disponíveis (' + abas.length + '):');
     abas.forEach(function(a, i) {
-      Logger.log('  [' + i + '] nome="' + a.getName() + '" gid=' + a.getSheetId() + ' linhas=' + a.getLastRow());
+      console.log('  [' + i + '] nome="' + a.getName() + '" gid=' + a.getSheetId() + ' linhas=' + a.getLastRow());
     });
 
     // Localiza a aba pelo GID
     var aba = _getAbaV1(ss);
     if (!aba) {
-      Logger.log('ERRO: aba com GID ' + _GID_V1_ESTOQUE + ' não encontrada.');
+      console.log('ERRO: aba com GID ' + _GID_V1_ESTOQUE + ' não encontrada.');
       return { ok: false, erro: 'Aba não encontrada' };
     }
 
-    Logger.log('\nAba alvo: "' + aba.getName() + '" (GID=' + aba.getSheetId() + ')');
-    Logger.log('Dimensões: ' + aba.getLastRow() + ' linhas x ' + aba.getLastColumn() + ' colunas\n');
+    console.log('\nAba alvo: "' + aba.getName() + '" (GID=' + aba.getSheetId() + ')');
+    console.log('Dimensões: ' + aba.getLastRow() + ' linhas x ' + aba.getLastColumn() + ' colunas\n');
 
     var lastRow = aba.getLastRow();
     var lastCol = aba.getLastColumn();
     if (lastRow < 1 || lastCol < 1) {
-      Logger.log('AVISO: aba vazia.');
+      console.log('AVISO: aba vazia.');
       return { ok: true, headers: [], dados: [] };
     }
 
     var headers = aba.getRange(1, 1, 1, lastCol).getValues()[0];
-    Logger.log('CABEÇALHOS:');
+    console.log('CABEÇALHOS:');
     headers.forEach(function(h, i) {
       var mapeado = _detectarCampo(String(h));
-      Logger.log('  col[' + i + '] = "' + h + '" → v2.' + (mapeado || '(não mapeado)'));
+      console.log('  col[' + i + '] = "' + h + '" → v2.' + (mapeado || '(não mapeado)'));
     });
 
     var numAmostras = Math.min(5, lastRow - 1);
     if (numAmostras > 0) {
-      Logger.log('\nPRIMEIRAS ' + numAmostras + ' LINHAS:');
+      console.log('\nPRIMEIRAS ' + numAmostras + ' LINHAS:');
       var dados = aba.getRange(2, 1, numAmostras, lastCol).getValues();
       dados.forEach(function(row, ri) {
-        Logger.log('  linha[' + (ri + 2) + ']: ' + row.map(function(c, ci) {
+        console.log('  linha[' + (ri + 2) + ']: ' + row.map(function(c, ci) {
           return headers[ci] + '=' + JSON.stringify(c);
         }).join(' | '));
       });
@@ -94,7 +99,7 @@ function fase75_inspecionar_estoque_v1() {
       headers: headers
     };
   } catch (e) {
-    Logger.log('ERRO: ' + e.message);
+    Logger.error('migracao_estoque_v1', 'inspecionar', e.message);
     return { ok: false, erro: e.message };
   }
 }
@@ -104,10 +109,15 @@ function fase75_inspecionar_estoque_v1() {
  * Idempotente: verifica por `referencia` ou `descricao` antes de criar.
  * Retorna { ok, importados, ignorados, erros, detalhes }.
  *
+ * Patrimônio e Estoque são o mesmo domínio em V2. Os itens do V1 são bens
+ * físicos permanentes — importados como tipo='Permanente', tombado=false.
+ *
  * @param {Object} opcoes {
  *   depositoIdPadrao? — ID do depósito para saldo inicial (padrão: 'dep-01')
  *   situacaoPadrao?   — situação dos itens sem valor (padrão: 'Ativo')
  *   categoriaPadrao?  — categoria fallback (padrão: 'Geral')
+ *   tipoPadrao?       — tipo dos itens (padrão: 'Permanente' para V1)
+ *   tombado?          — se true marca como bem tombado (padrão: false)
  *   importarSaldo?    — se true tenta ler coluna de saldo (padrão: true)
  *   modoTeste?        — se true mostra o que faria mas não grava (padrão: false)
  * }
@@ -117,6 +127,8 @@ function fase75_importar_consumiveis_v1(opcoes) {
   var depositoPadrao  = opcoes.depositoIdPadrao || 'dep-01';
   var situacaoPadrao  = opcoes.situacaoPadrao   || 'Ativo';
   var categoriaPadrao = opcoes.categoriaPadrao  || 'Geral';
+  var tipoPadrao      = opcoes.tipoPadrao       || 'Permanente';
+  var tombado         = opcoes.tombado === true;
   var importarSaldo   = opcoes.importarSaldo !== false;
   var modoTeste       = opcoes.modoTeste === true;
 
@@ -148,7 +160,7 @@ function fase75_importar_consumiveis_v1(opcoes) {
       if (campo && idx[campo] === undefined) idx[campo] = i;
     });
 
-    Logger.log('[migracao_estoque_v1] Headers detectados: ' + JSON.stringify(idx));
+    console.log('[migracao_estoque_v1] Headers detectados: ' + JSON.stringify(idx));
 
     // Cache de itens existentes para deduplicação
     var existentes = ItemEstoqueRepository.listar({}, orgId);
@@ -187,7 +199,9 @@ function fase75_importar_consumiveis_v1(opcoes) {
           valorUnitario:        idx.valorUnitario     !== undefined ? _parseMoeda(row[idx.valorUnitario]) : 0,
           descricaoPregao:      idx.descricaoPregao   !== undefined ? String(row[idx.descricaoPregao]   || '').trim() : '',
           critico:              idx.critico           !== undefined ? _parseBoolean(row[idx.critico]) : false,
-          visivelSolicitantes:  idx.visivelSolicitantes !== undefined ? _parseBoolean(row[idx.visivelSolicitantes]) : true
+          visivelSolicitantes:  idx.visivelSolicitantes !== undefined ? _parseBoolean(row[idx.visivelSolicitantes]) : true,
+          tipo:                 tipoPadrao,
+          tombado:              tombado
         };
 
         var saldoQtd = 0;
@@ -237,7 +251,7 @@ function fase75_importar_consumiveis_v1(opcoes) {
       }
     });
 
-    Logger.log('[migracao_estoque_v1] Concluído. Importados=' + resultado.importados + ' Ignorados=' + resultado.ignorados + ' Erros=' + resultado.erros);
+    console.log('[migracao_estoque_v1] Concluído. Importados=' + resultado.importados + ' Ignorados=' + resultado.ignorados + ' Erros=' + resultado.erros);
     return resultado;
 
   } catch (e) {
@@ -290,4 +304,50 @@ function _parseMoeda(valor) {
   var s = String(valor).replace(/[R$\s]/g, '').replace('.', '').replace(',', '.');
   var n = parseFloat(s);
   return isNaN(n) ? 0 : Math.round(n * 100) / 100;
+}
+
+// ─── Utilitários administrativos ───────────────────────────────────────────────
+
+/**
+ * Remove todos os itens (e saldos) do estoque V2 para a org atual.
+ * Executar no GAS Editor para limpar dados importados incorretamente.
+ */
+function fase75_limpar_itens_estoque_v2() {
+  var orgId   = getOrgConfig().orgId;
+  var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESTOQUE');
+  if (!sheetId) return { ok: false, erro: 'SHEET_ID_ESTOQUE não configurada. Execute inicializarSistema().' };
+
+  var ss = SpreadsheetApp.openById(sheetId);
+  var removidos = 0;
+
+  ['ItensEstoque', 'SaldoEstoque'].forEach(function(nomeAba) {
+    var aba = ss.getSheetByName(nomeAba);
+    if (!aba || aba.getLastRow() < 2) return;
+    var rows = aba.getRange(2, 1, aba.getLastRow() - 1, 2).getValues();
+    for (var i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][1] === orgId) { aba.deleteRow(i + 2); removidos++; }
+    }
+  });
+
+  Logger.info('migracao_estoque_v1', 'fase75_limpar_itens_estoque_v2', 'Removidos: ' + removidos);
+  return { ok: true, removidos: removidos };
+}
+
+/**
+ * Adiciona a coluna "Tipo" (Consumível/Permanente) ao cabeçalho de ItensEstoque.
+ * Executar UMA VEZ após o deploy que adiciona o campo tipo ao repositório.
+ */
+function fase75_adicionar_coluna_tipo() {
+  var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_ESTOQUE');
+  if (!sheetId) return { ok: false, erro: 'SHEET_ID_ESTOQUE não configurada. Execute inicializarSistema().' };
+
+  var aba = SpreadsheetApp.openById(sheetId).getSheetByName('ItensEstoque');
+  if (!aba) return { ok: false, erro: 'Aba ItensEstoque não encontrada.' };
+
+  var headers = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Tipo') !== -1) return { ok: true, msg: 'Coluna Tipo já existe.' };
+
+  var colNova = aba.getLastColumn() + 1;
+  aba.getRange(1, colNova).setValue('Tipo');
+  return { ok: true, msg: 'Coluna Tipo adicionada na col ' + colNova + '.' };
 }

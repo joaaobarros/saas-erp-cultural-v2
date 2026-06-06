@@ -8,6 +8,14 @@
  * @depends reuniao_engine.gs, reuniao_repository.gs, acesso_service.gs, gas_response.gs
  */
 
+// ─── Cache keys ───────────────────────────────────────────────────────────────
+
+var _CK_RUN_LISTA = 'ctrl_run_lista';
+
+function _invalidarCacheReunioes() {
+  AppCache.removeAll([_CK_RUN_LISTA + '_{}']);
+}
+
 // ─── Leitura ──────────────────────────────────────────────────────────────────
 
 function ctrl_reunioes_listar(params) {
@@ -15,7 +23,12 @@ function ctrl_reunioes_listar(params) {
     var email  = getEmailSessao();
     var acesso = AcessoService.verificar(email);
     if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
-    return ReuniaoRepository.listar(getOrgConfig().orgId, params || {});
+    var ck = _CK_RUN_LISTA + '_' + JSON.stringify(params || {});
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
+    var lista = ReuniaoRepository.listar(getOrgConfig().orgId, params || {});
+    AppCache.set(ck, lista, 60);
+    return lista;
   }, 'ctrl_reunioes_listar');
 }
 
@@ -41,6 +54,23 @@ function ctrl_reunioes_metricas(params) {
   }, 'ctrl_reunioes_metricas');
 }
 
+/**
+ * Retorna lista + métricas em uma única chamada GAS.
+ * @param {Object} params — filtros passados ao listar
+ */
+function ctrl_reunioes_dashboard(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    var orgId = getOrgConfig().orgId;
+    return {
+      lista:    ReuniaoRepository.listar(orgId, params || {}),
+      metricas: ReuniaoRepository.metricas(orgId)
+    };
+  }, 'ctrl_reunioes_dashboard');
+}
+
 function ctrl_reunioes_listar_encaminhamentos(params) {
   return GasResponse.wrap(function() {
     var email  = getEmailSessao();
@@ -63,10 +93,11 @@ function ctrl_reunioes_salvar(params) {
 
     var orgId = getOrgConfig().orgId;
     params = params || {};
-    if (params.id) {
-      return ReuniaoEngine.atualizar(params.id, params, email, orgId);
-    }
-    return ReuniaoEngine.criar(params, email, orgId);
+    var resultado = params.id
+      ? ReuniaoEngine.atualizar(params.id, params, email, orgId)
+      : ReuniaoEngine.criar(params, email, orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_salvar');
 }
 
@@ -80,7 +111,9 @@ function ctrl_reunioes_mudar_status(params) {
     var id     = params && params.id;
     var status = params && params.status;
     if (!id || !status) throw new Error('ID e status obrigatórios');
-    return ReuniaoEngine.mudarStatus(id, status, email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.mudarStatus(id, status, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_mudar_status');
 }
 
@@ -91,10 +124,12 @@ function ctrl_reunioes_salvar_ata(params) {
     if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
     _assertPapelReuniao(acesso.registro && acesso.registro.papel);
 
-    var id   = params && params.id;
+    var id    = params && params.id;
     var texto = params && params.textoRascunho;
     if (!id) throw new Error('ID obrigatório');
-    return ReuniaoEngine.salvarRascunhoAta(id, texto || '', email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.salvarRascunhoAta(id, texto || '', email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_salvar_ata');
 }
 
@@ -107,7 +142,9 @@ function ctrl_reunioes_submeter_ata(params) {
 
     var id = params && params.id;
     if (!id) throw new Error('ID obrigatório');
-    return ReuniaoEngine.submeterAtaParaAprovacao(id, email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.submeterAtaParaAprovacao(id, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_submeter_ata');
 }
 
@@ -122,7 +159,9 @@ function ctrl_reunioes_aprovar_ata(params) {
 
     var id = params && params.id;
     if (!id) throw new Error('ID obrigatório');
-    return ReuniaoEngine.aprovarAta(id, email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.aprovarAta(id, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_aprovar_ata');
 }
 
@@ -137,11 +176,13 @@ function ctrl_reunioes_adicionar_encaminhamento(params) {
     if (!id)              throw new Error('reuniaoId obrigatório');
     if (!params.texto)    throw new Error('Texto do encaminhamento obrigatório');
     if (!params.responsavel) throw new Error('Responsável obrigatório');
-    return ReuniaoEngine.adicionarEncaminhamento(id, {
+    var resultado = ReuniaoEngine.adicionarEncaminhamento(id, {
       texto:       params.texto,
       responsavel: params.responsavel,
       prazo:       params.prazo || null
     }, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_adicionar_encaminhamento');
 }
 
@@ -154,7 +195,9 @@ function ctrl_reunioes_concluir_encaminhamento(params) {
     var reuniaoId = params && params.reuniaoId;
     var encId     = params && params.encId;
     if (!reuniaoId || !encId) throw new Error('reuniaoId e encId obrigatórios');
-    return ReuniaoEngine.concluirEncaminhamento(reuniaoId, encId, email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.concluirEncaminhamento(reuniaoId, encId, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_concluir_encaminhamento');
 }
 
@@ -169,7 +212,9 @@ function ctrl_reunioes_excluir(params) {
     var id = params && params.id;
     if (!id) throw new Error('ID obrigatório');
     AuditoriaService.registrar('REUNIAO_EXCLUIDA', 'reunioes', { id: id, email: email });
-    return { ok: ReuniaoRepository.excluir(getOrgConfig().orgId, id, email) };
+    var resultado = { ok: ReuniaoRepository.excluir(getOrgConfig().orgId, id, email) };
+    _invalidarCacheReunioes();
+    return resultado;
   }, 'ctrl_reunioes_excluir');
 }
 

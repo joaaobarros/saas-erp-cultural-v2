@@ -151,24 +151,31 @@ function obterLockComRetry(timeoutMs) {
 
 // ─── Acesso a Sheets ─────────────────────────────────────────────────────────
 
+// Cache de referências de aba por execução — evita openById + getSheetByName repetidos.
+// Mesmo padrão de _dataFolderCache em data_layer.gs.
+var _sheetCache = {};
+
 /**
  * Retorna referência a uma aba de uma planilha pelo ID registrado em PropertiesService.
+ * Reutiliza a referência em cache dentro da mesma execução GAS.
  * @param {string} chaveProps — ex: 'SHEET_ID_MASTER', 'SHEET_ID_ACOES'
  * @param {string} nomeAba    — nome real da aba (usar ABA_PARA_MODULO)
  */
 function _getSheet(chaveProps, nomeAba) {
-  var props    = PropertiesService.getScriptProperties();
-  var sheetId  = props.getProperty(chaveProps);
+  var cacheKey = chaveProps + ':' + nomeAba;
+  if (_sheetCache[cacheKey]) return _sheetCache[cacheKey];
+
+  var sheetId = PropertiesService.getScriptProperties().getProperty(chaveProps);
   if (!sheetId) {
     Logger.error('utils', '_getSheet', 'Planilha não configurada: ' + chaveProps);
     throw new Error('Planilha não configurada: ' + chaveProps);
   }
-  var ss  = SpreadsheetApp.openById(sheetId);
-  var aba = ss.getSheetByName(nomeAba);
+  var aba = SpreadsheetApp.openById(sheetId).getSheetByName(nomeAba);
   if (!aba) {
     Logger.error('utils', '_getSheet', 'Aba não encontrada: ' + nomeAba + ' em ' + chaveProps);
     throw new Error('Aba não encontrada: ' + nomeAba);
   }
+  _sheetCache[cacheKey] = aba;
   return aba;
 }
 

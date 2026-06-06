@@ -331,29 +331,41 @@ O sistema `sistema-gestao-cultural-ccbj` já implementa vários desses padrões 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      CAMADA DE BORDA                        │
-│   verificarPermissao() + limitarRequisicoes()               │
-│   + detectarComportamentoSuspeito()                         │
+│   AcessoService.verificar() + limitarRequisicoes()          │
 │   (equivalente ao Sidecar Auth + Rate Limiter)              │
 └───────────────────────┬─────────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
 │                  CAMADA DE LÓGICA                           │
-│   Código.js: processarAgendamentoLote(), salvarEdicao()     │
-│   verificarConflitoEspaco(), obterMetricasDashboard()       │
+│   EstoqueEngine, FinanceiroEngine, ReservaEngine…           │
+│   FsmGuardian (FSMs) + SystemEvents (eventos)               │
 └───────────────────────┬─────────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
 │             CAMADA DE ACESSO A DADOS                        │
-│   _getSheet() + mapa central de planilhas                   │
-│   (equivalente ao Control Plane configurando o Data Plane)  │
+│   PROP_SHEETS + SCHEMA_ABAS em setup.gs                     │
+│   (Control Plane canônico — fonte de verdade da topologia)  │
 └───────────────────────┬─────────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────────┐
 │                  CAMADA DE DADOS                            │
-│   Google Sheets: MASTER / ESPACOS / COMUNICACAO / RELATORIOS│
-│   (equivalente ao DynamoDB + banco de estado)               │
+│   Google Sheets — uma planilha por domínio:                 │
+│   MASTER · ESTOQUE · ACOES · ESPACOS · EQUIPES              │
+│   FINANCEIRO · REUNIOES · COMUNICACAO · PUBLICO             │
+│   ESCUTA · RELATORIOS · PESSOAL                             │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+#### Princípio de separação de planilhas — "one domain, one spreadsheet"
+
+O padrão da Atlassian de separar serviços (cada serviço tem seu próprio armazenamento, sem compartilhamento de banco) se aplica diretamente aqui:
+
+- **Cada módulo autônomo tem sua própria planilha** — assim como microserviços têm bancos isolados.
+- **O MASTER é infraestrutura transversal**, não um depósito de tudo que não tem lugar definido: contém apenas logs de auditoria, eventos, configurações de org e entidades que de fato cruzam todos os módulos (LogAcessos, Tokens, AlertasLog).
+- **Crescer adicionando abas ao MASTER é o anti-padrão** — equivale ao "monolith database" que a Atlassian gastou anos desfazendo.
+- **A decisão de criar planilha nova vs. nova aba** deve ser tomada com base no ciclo de vida: se a entidade pertence a um módulo com lógica, FSM e repositório próprios → planilha dedicada.
+
+> **Exemplo histórico do projeto:** `ItensEstoque`, `SaldoEstoque` e `MovimentacoesEstoque` nasceram no MASTER (Fase 73) e foram migradas para a planilha dedicada ESTOQUE (2026-06-05) quando ficou claro que o módulo de Estoque tem ciclo de vida completamente autônomo.
 
 ### 7.3 Oportunidades de evolução identificadas
 

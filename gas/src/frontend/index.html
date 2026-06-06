@@ -8564,10 +8564,11 @@ var GAS = {
     contar:     function(cb,err)             { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_solicitacoes_contarPendentes(); }
   },
   tarefas: {
-    listar:      function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_listar(f||{}); },
-    salvar:      function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_salvar(d); },
-    mudarStatus: function(id,s,c,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_mudar_status(id,s,c||''); },
-    metricas:    function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_metricas(); }
+    listar:      function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_listar(f||{}); },
+    salvar:      function(d,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_salvar(d); },
+    mudarStatus: function(id,s,c,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_mudar_status(id,s,c||''); },
+    metricas:    function(cb,err)           { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_metricas(); },
+    dashboard:   function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_dashboard(f||{}); }
   },
   pessoas: {
     listar:               function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar(f||{}); },
@@ -8794,6 +8795,7 @@ var GAS = {
     listarItens:         function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_itens(f||{}); },
     salvarItem:          function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_salvar_item(d); },
     metricas:            function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_metricas(); },
+    dashboard:           function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_dashboard(f||{}); },
     saldoItem:           function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_saldo_item(id); },
     registrarEntrada:    function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_registrar_entrada(d); },
     registrarSaida:      function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_registrar_saida(d); },
@@ -8816,6 +8818,7 @@ var GAS = {
     salvar:      function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_salvar(d); },
     atualizar:   function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_salvar(d); },
     metricas:    function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_metricas(); },
+    dashboard:   function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_dashboard(f||{}); },
     mudarStatus: function(p,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_mudar_status(p); },
     excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_excluir(id); },
     painel:      function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_painel(id); },
@@ -8927,6 +8930,7 @@ var GAS = {
     listar:                   function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_listar(f||{}); },
     obter:                    function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_obter({id:id}); },
     metricas:                 function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_metricas(); },
+    dashboard:                function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_dashboard(f||{}); },
     listarEncaminhamentos:    function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_listar_encaminhamentos(p||{}); },
     salvar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar(d); },
     mudarStatus:              function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_mudar_status({id:id,status:s}); },
@@ -9651,14 +9655,13 @@ var TarefasUI = (function() {
     BtnGuard.wrap('btn-tarefas-recarregar', 'Atualizando…', function(done) {
       Skeleton.metricas('tarefas-metricas', 4);
       Skeleton.lista('tarefas-lista', 5);
-      GAS.tarefas.metricas(function(respM) {
-        if (respM && respM.ok) _renderMetricas(respM.data);
-        GAS.tarefas.listar({}, function(resp) {
-          done();
-          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar tarefas.'); return; }
-          _renderLista(resp.data || []);
-          _carregado = true;
-        }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+      // dashboard retorna lista + métricas numa única chamada GAS (sem aninhamento)
+      GAS.tarefas.dashboard({}, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro('Erro ao carregar tarefas.'); return; }
+        _renderMetricas(resp.data.metricas || {});
+        _renderLista(resp.data.lista || []);
+        _carregado = true;
       }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
     });
   }
@@ -20108,24 +20111,31 @@ var EstoqueUI = (function() {
   }
 
   function aoAbrir() {
-    GAS.estoque.metricas(function(r) {
-      if (!r || !r.ok) return;
-      var m = r.data || {};
-      var el = document.getElementById('est-metricas');
-      if (!el) return;
-      el.innerHTML = [
-        { valor: m.totalItens||0,              label:'Itens cadastrados',  icone:'category',       classe:'primary' },
-        { valor: m.itensComSaldo||0,           label:'Com saldo',          icone:'check_circle',   classe:'success' },
-        { valor: m.itensCriticos||0,           label:'Críticos/zerados',   icone:'warning',        classe:'error'   },
-        { valor: m.solicitacoesPendentes||0,   label:'Sol. pendentes',     icone:'pending_actions',classe:'warning' }
-      ].map(function(s) {
-        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
-          +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(String(s.valor))+'</div>'
-          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
-      }).join('');
-      if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('est-metricas');
+    GAS.estoque.dashboard({}, function(r) {
+      if (r && r.ok) {
+        var m = r.data.metricas || {};
+        var el = document.getElementById('est-metricas');
+        if (el) {
+          el.innerHTML = [
+            { valor: m.totalItens||0,              label:'Itens cadastrados',  icone:'category',       classe:'primary' },
+            { valor: m.itensComSaldo||0,           label:'Com saldo',          icone:'check_circle',   classe:'success' },
+            { valor: m.itensCriticos||0,           label:'Críticos/zerados',   icone:'warning',        classe:'error'   },
+            { valor: m.solicitacoesPendentes||0,   label:'Sol. pendentes',     icone:'pending_actions',classe:'warning' }
+          ].map(function(s) {
+            return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+              +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(String(s.valor))+'</div>'
+              +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+          }).join('');
+          if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('est-metricas');
+        }
+        _itensCache = r.data.lista || [];
+        _carregados['itens'] = true;
+      }
+      abrirSubTab('itens');
+      if (r && r.ok) _renderItens(_itensCache);
+    }, function() {
+      abrirSubTab('itens');
     });
-    abrirSubTab('itens');
   }
 
   // ── Sub-aba: Itens ───────────────────────────────────────
@@ -22894,16 +22904,14 @@ var AcoesUI = (function() {
 
   function carregar() {
     _renderizarCarregando();
-    GAS.acoes.metricas(function(r) {
-      if (r && r.ok) _renderizarMetricasData(r.data);
-    });
-    GAS.acoes.listar({}, function(r) {
+    GAS.acoes.dashboard({}, function(r) {
       BtnGuard.liberar('acao-nova-btn');
       if (!r || !r.ok) {
         _mostrarErro(r && r.error ? r.error.message : 'Erro ao carregar ações.');
         return;
       }
-      _lista    = r.data || [];
+      if (r.data.metricas) _renderizarMetricasData(r.data.metricas);
+      _lista    = r.data.lista || [];
       _carregado = true;
       _renderizar();
     }, function(e) {
@@ -27289,9 +27297,13 @@ var ReunioesUI = (function() {
   function aoAbrir() { if (!_carregado) carregar(); }
 
   function carregar() {
-    GAS.reunioes.metricas(function(r) {
-      if (!r || !r.ok) return;
-      var m = r.data;
+    Skeleton.lista('run-lista', 5);
+    GAS.reunioes.dashboard({}, function(resp) {
+      if (!resp || !resp.ok) {
+        document.getElementById('run-lista').innerHTML = '<p class="error-text">Erro ao carregar.</p>';
+        return;
+      }
+      var m = resp.data.metricas || {};
       document.getElementById('run-total').textContent     = m.total;
       document.getElementById('run-agendada').textContent  = m.agendada;
       document.getElementById('run-andamento').textContent = m.em_andamento;
@@ -27305,16 +27317,12 @@ var ReunioesUI = (function() {
         comb.textContent = pend + (venc > 0 ? ' / ' + venc + ' ⚠' : '');
         comb.style.color = venc > 0 ? 'var(--danger)' : (pend > 0 ? 'var(--warning)' : 'var(--text)');
       }
-    }, function(){});
-
-    var el = document.getElementById('run-lista');
-    el.innerHTML = '<p class="muted-text">Carregando…</p>';
-    GAS.reunioes.listar({}, function(resp) {
-      if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ao carregar.</p>'; return; }
-      _lista = resp.data || [];
+      _lista = resp.data.lista || [];
       _carregado = true;
       _renderLista();
-    }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
+    }, function(e) {
+      document.getElementById('run-lista').innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>';
+    });
   }
 
   function _renderLista() {

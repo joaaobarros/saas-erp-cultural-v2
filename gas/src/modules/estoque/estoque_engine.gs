@@ -26,7 +26,8 @@
 var _TRANSICOES_SOL_MATERIAL = {
   'pendente':   ['separada', 'cancelada'],
   'separada':   ['finalizada', 'cancelada'],
-  'finalizada': [],
+  'finalizada': ['devolvida'],
+  'devolvida':  [],
   'cancelada':  []
 };
 
@@ -469,6 +470,64 @@ var EstoqueEngine = (function () {
     }
   }
 
+  /**
+   * Registra devolução de uma solicitação finalizada.
+   * - Permanentes: restaura saldo no depósito padrão.
+   * - Consumíveis: apenas registra a movimentação (saldo não restaurado).
+   */
+  function devolverSolicitacao(solId, ator, orgId) {
+    orgId = orgId || _orgId();
+    var sol = SolicitacaoMaterialRepository.buscarPorId(solId, orgId);
+    if (!sol) throw new Error('Solicitação não encontrada: ' + solId);
+
+    FsmGuardian.transitar('sol_material', sol.status, 'devolvida', { id: solId, ator: ator });
+
+    var lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+    try {
+      var agr           = agora();
+      var depositoPadrao = 'dep-01';
+
+      sol.itens.forEach(function (it) {
+        var qtd      = it.qtdAtendida || it.qtdSolicitada;
+        if (qtd <= 0) return;
+        var itemInfo = ItemEstoqueRepository.buscarPorId(it.itemId, orgId) || {};
+
+        if (itemInfo.tipo === 'Permanente') {
+          ItemEstoqueRepository.atualizarSaldo(
+            it.itemId, depositoPadrao, '', qtd, 0, orgId
+          );
+        }
+
+        ItemEstoqueRepository.registrarMovimentacao({
+          tipo:          'entrada_devolucao',
+          itemId:        it.itemId,
+          descricaoItem: it.descricao || itemInfo.descricao || '',
+          depositoId:    depositoPadrao,
+          local:         '',
+          quantidade:    qtd,
+          valorUnitario: it.valorUnitario || 0,
+          referencia:    sol.id,
+          ator:          ator,
+          observacoes:   'Devolução: ' + sol.codigo
+        }, orgId);
+      });
+
+      var atualizada = SolicitacaoMaterialRepository.salvar(Object.assign({}, sol, {
+        status:        'devolvida',
+        devolvidaPor:  ator,
+        dataDevolucao: agr
+      }), orgId);
+
+      AuditoriaService.registrar('ESTOQUE_SOLICITACAO_DEVOLVIDA', 'estoque', {
+        solId: solId, codigo: sol.codigo, ator: ator, orgId: orgId
+      });
+      return atualizada;
+    } finally {
+      lock.releaseLock();
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // RELATÓRIOS E MÉTRICAS
   // ──────────────────────────────────────────────────────────────────
@@ -583,6 +642,7 @@ var EstoqueEngine = (function () {
     separarSolicitacao:      separarSolicitacao,
     entregarSolicitacao:     entregarSolicitacao,
     cancelarSolicitacao:     cancelarSolicitacao,
+    devolverSolicitacao:     devolverSolicitacao,
     metricas:                metricas,
     relatorioSaidas:         relatorioSaidas,
     relatorioEntradas:       relatorioEntradas,

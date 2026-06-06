@@ -81,6 +81,30 @@ function ctrl_tarefas_metricas() {
   }, 'ctrl_tarefas_metricas');
 }
 
+/**
+ * Retorna lista + métricas em uma única chamada GAS.
+ * As métricas são calculadas da mesma lista já lida — sem segunda leitura de JSON.
+ * @param {Object} filtros — passado ao listarParaUsuario
+ */
+function ctrl_tarefas_dashboard(filtros) {
+  return GasResponse.wrap(function () {
+    var ctx  = _ctrlTarefasContexto();
+    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {});
+    var now   = Date.now();
+    var abertas = lista.filter(function(t) {
+      return t.status !== 'concluida' && t.status !== 'cancelada';
+    });
+    var metricas = {
+      total:      lista.length,
+      abertas:    abertas.length,
+      concluidas: lista.filter(function(t) { return t.status === 'concluida'; }).length,
+      bloqueadas: lista.filter(function(t) { return t.status === 'bloqueada'; }).length,
+      atrasadas:  abertas.filter(function(t) { return t.prazo && new Date(t.prazo).getTime() < now; }).length
+    };
+    return { lista: lista, metricas: metricas };
+  }, 'ctrl_tarefas_dashboard');
+}
+
 function ctrl_tarefas_migrar_sheet_para_json() {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();

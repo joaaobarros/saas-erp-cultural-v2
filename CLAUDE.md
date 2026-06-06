@@ -48,6 +48,76 @@ O documento disseca a arquitetura de platform engineering da Atlassian (Jira, Co
 
 ---
 
+## 🗄️ COORDENAÇÃO COM O BANCO DE DADOS — OBRIGATÓRIA ANTES DE INICIAR QUALQUER FASE
+
+> Toda nova entidade precisa de um lar definido **antes** de qualquer linha de código ser escrita. A ausência dessa decisão foi o que levou `ItensEstoque`, `SaldoEstoque` e `MovimentacoesEstoque` a ficarem no MASTER por meses, até a extração forçada em 2026-06-05.
+
+### Passo 1 — Ler o mapa canônico do banco
+
+Antes de criar qualquer repositório, aba, campo ou migração, abrir [gas/src/core/setup.gs](gas/src/core/setup.gs) e ler:
+
+- **`PROP_SHEETS`** — quais planilhas existem e sua chave `SHEET_ID_*` em PropertiesService
+- **`SCHEMA_ABAS`** — quais abas vivem em cada planilha
+
+Esse mapa é a **fonte de verdade** da topologia de dados. Nunca criar ou mover entidades sem consultá-lo primeiro.
+
+### Passo 2 — Decidir: nova planilha ou nova aba em planilha existente?
+
+| Situação | Decisão correta |
+|---------|----------------|
+| Nova entidade que é o núcleo de um módulo autônomo | **Nova planilha** — adicionar chave em `PROP_SHEETS` + lista em `SCHEMA_ABAS` |
+| Entidade auxiliar de um módulo já existente | **Nova aba** na planilha do módulo correspondente |
+| Dados transversais (auditoria, eventos, config, logs) | **MASTER** |
+| Dados de portal público / inscrições / pesquisas | **PUBLICO** |
+
+> **Regra de ouro:** o MASTER é infraestrutura transversal, não domínio de negócio.
+> Módulos com ciclo de vida próprio (Estoque, Financeiro, Equipes…) têm — ou devem ter — planilha dedicada.
+
+**Topologia atual de planilhas** (conferir sempre em `setup.gs/PROP_SHEETS`):
+
+| Chave | Conteúdo canônico |
+|-------|------------------|
+| `SHEET_ID_MASTER` | Configurações, logs, auditoria, agentes, voluntários, contratados |
+| `SHEET_ID_ESTOQUE` | ItensEstoque, SaldoEstoque, MovimentacoesEstoque |
+| `SHEET_ID_ACOES` | Ações, habilitações, acervo, parcerias, estratégia |
+| `SHEET_ID_ESPACOS` | Reservas, ativos, manutenções, solicitações, veículos |
+| `SHEET_ID_EQUIPES` | Funcionários, escalas, férias, holerites, ponto |
+| `SHEET_ID_FINANCEIRO` | Contratos, rubricas, pagamentos, pregões |
+| `SHEET_ID_REUNIOES` | Reuniões, atas, encaminhamentos |
+| `SHEET_ID_COMUNICACAO` | Demandas, entregas, agenda RECE |
+| `SHEET_ID_PUBLICO` | Inscrições, presenças, pesquisas, certificados |
+| `SHEET_ID_ESCUTA` | Pesquisas de escuta, respostas, indicadores |
+| `SHEET_ID_RELATORIOS` | CODIP, relatórios gerenciais, exportações |
+| `SHEET_ID_PESSOAL` | Tarefas, demandas, processos |
+
+### Passo 3 — Confirmar que a entidade não tem lar duplicado
+
+Antes de criar uma nova aba ou planilha, verificar:
+1. A entidade já existe em outro módulo com nome diferente?
+2. O módulo destino já tem planilha própria que deve receber a nova aba?
+3. É realmente uma entidade nova ou é uma visão de dados já existentes?
+
+### Passo 4 — Atualizar `setup.gs` junto com o repositório
+
+`PROP_SHEETS` e `SCHEMA_ABAS` são o contrato canônico. Qualquer nova planilha ou aba **deve** aparecer neles antes do primeiro `clasp push`. A função `verificarTodasAbas()` usa esse contrato para detectar inconsistências em produção.
+
+Se for planilha nova, também:
+- O repositório usa `PropertiesService.getScriptProperties().getProperty('SHEET_ID_NOVOMODULO')`
+- `inicializarSistema()` em `setup.gs` chama o `prepararIndice()` do novo repositório
+
+### Checklist de coordenação com o banco (executar antes de qualquer nova fase)
+
+```
+[ ] Li PROP_SHEETS + SCHEMA_ABAS em setup.gs — conheço a topologia atual
+[ ] Defini o lar correto para cada nova entidade (nova planilha? aba existente? MASTER?)
+[ ] Não adicionei abas de domínio de negócio ao MASTER
+[ ] Registrei nova planilha/aba em PROP_SHEETS + SCHEMA_ABAS antes do clasp push
+[ ] prepararIndice() do novo repositório está registrado em inicializarSistema()
+[ ] Repositório usa a chave SHEET_ID_* correta (não SHEET_ID_MASTER por conveniência)
+```
+
+---
+
 ## 🧪 AUDITORIA DE BUGS — OBRIGATÓRIA ANTES DE QUALQUER DEPLOY
 
 > Diretriz adicionada após sessão de auditoria (2026-05-22) que identificou 5 bugs ativos no sistema.

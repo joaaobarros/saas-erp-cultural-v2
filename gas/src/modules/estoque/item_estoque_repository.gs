@@ -3,10 +3,10 @@
  * @layer modules/estoque
  * @description Repositório de Itens de Estoque, Saldo por Depósito e Movimentações.
  *
- * Três fontes de dados (todas em MASTER):
- *   - MASTER.ItensEstoque (16 col)         — catálogo canônico de itens
- *   - MASTER.SaldoEstoque (8 col)           — qty por item × depósito × local
- *   - MASTER.MovimentacoesEstoque (16 col)  — log imutável (append-only)
+ * Três fontes de dados (planilha dedicada ESTOQUE):
+ *   - ESTOQUE.ItensEstoque (16 col)         — catálogo canônico de itens
+ *   - ESTOQUE.SaldoEstoque (8 col)           — qty por item × depósito × local
+ *   - ESTOQUE.MovimentacoesEstoque (16 col)  — log imutável (append-only)
  *
  * Depósitos são configurados em depositos_config.json (Drive).
  *
@@ -18,17 +18,19 @@
 
 var ItemEstoqueRepository = (function () {
 
-  var _SHEET_KEY = 'SHEET_ID_MASTER';
+  var _SHEET_KEY = 'SHEET_ID_ESTOQUE';
   var _ABA_ITENS = 'ItensEstoque';
   var _ABA_SALDO = 'SaldoEstoque';
   var _ABA_MOV   = 'MovimentacoesEstoque';
 
-  // ── Schema: ItensEstoque (16 colunas) ────────────────────────────────
+  // ── Schema: ItensEstoque (18 colunas) ───────────────────────────────
+  // Tipo:    'Consumível' | 'Permanente'
+  // Tombado: true = bem formalmente registrado no patrimônio institucional
 
   var _HEADERS_ITENS = [
     'ID', 'OrgId', 'Descricao', 'Referencia', 'Tamanho', 'Cor', 'MarcaFabricante',
     'Categoria', 'Situacao', 'UnidadeMedida', 'ValorUnitario', 'DescricaoPregao',
-    'VisivelSolicitantes', 'Critico', 'CriadoEm', 'AtualizadoEm'
+    'VisivelSolicitantes', 'Critico', 'CriadoEm', 'AtualizadoEm', 'Tipo', 'Tombado'
   ];
   var _COL_I = {};
   _HEADERS_ITENS.forEach(function (h, i) { _COL_I[h] = i; });
@@ -58,13 +60,13 @@ var ItemEstoqueRepository = (function () {
 
   function _getMaster() {
     var id = PropertiesService.getScriptProperties().getProperty(_SHEET_KEY);
-    if (!id) throw new Error('[ItemEstoqueRepository] MASTER não registrada nas PropertiesService.');
+    if (!id) throw new Error('[ItemEstoqueRepository] ESTOQUE não registrada nas PropertiesService. Execute inicializarSistema().');
     return SpreadsheetApp.openById(id);
   }
 
   function _getAba(nome) {
     var aba = _getMaster().getSheetByName(nome);
-    if (!aba) throw new Error('[ItemEstoqueRepository] Aba "' + nome + '" não encontrada. Execute fase73_estoque_prepararIndice().');
+    if (!aba) throw new Error('[ItemEstoqueRepository] Aba "' + nome + '" não encontrada. Execute ItemEstoqueRepository.prepararIndice().');
     return aba;
   }
 
@@ -85,7 +87,9 @@ var ItemEstoqueRepository = (function () {
       visivelSolicitantes:  String(row[_COL_I.VisivelSolicitantes]).toLowerCase() !== 'false',
       critico:              String(row[_COL_I.Critico]).toLowerCase() === 'true',
       criadoEm:             row[_COL_I.CriadoEm]             || '',
-      atualizadoEm:         row[_COL_I.AtualizadoEm]         || ''
+      atualizadoEm:         row[_COL_I.AtualizadoEm]         || '',
+      tipo:                 (row.length > _COL_I.Tipo    && row[_COL_I.Tipo])    ? String(row[_COL_I.Tipo])    : 'Consumível',
+      tombado:              (row.length > _COL_I.Tombado && row[_COL_I.Tombado]) ? String(row[_COL_I.Tombado]).toLowerCase() === 'true' : false
     };
   }
 
@@ -135,13 +139,13 @@ var ItemEstoqueRepository = (function () {
         var aba  = ss.getSheetByName(nome);
         if (!aba) {
           aba = ss.insertSheet(nome);
-          Logger.info('ItemEstoqueRepository', 'prepararIndice', 'Aba criada: MASTER.' + nome);
+          Logger.info('ItemEstoqueRepository', 'prepararIndice', 'Aba criada: ESTOQUE.' + nome);
         }
         if (aba.getLastRow() === 0) {
           aba.getRange(1, 1, 1, headers.length).setValues([headers]);
           aba.setFrozenRows(1);
         }
-        res.abas.push('MASTER.' + nome);
+        res.abas.push('ESTOQUE.' + nome);
       });
 
     return res;
@@ -152,14 +156,16 @@ var ItemEstoqueRepository = (function () {
   function listar(filtros, orgId) {
     filtros = filtros || {};
     orgId   = orgId   || _orgId();
-    var aba  = _getAba(_ABA_ITENS);
-    var last = aba.getLastRow();
+    var aba     = _getAba(_ABA_ITENS);
+    var last    = aba.getLastRow();
     if (last < 2) return [];
-    var rows = aba.getRange(2, 1, last - 1, _HEADERS_ITENS.length).getValues();
+    var numCols = Math.min(_HEADERS_ITENS.length, aba.getLastColumn());
+    var rows    = aba.getRange(2, 1, last - 1, numCols).getValues();
     return rows.map(_linhaParaItem).filter(function (r) {
       if (r.orgId !== orgId || !r.id) return false;
       if (filtros.situacao            && r.situacao            !== filtros.situacao)            return false;
       if (filtros.categoria           && r.categoria           !== filtros.categoria)           return false;
+      if (filtros.tipo                && r.tipo                !== filtros.tipo)                return false;
       if (filtros.critico !== undefined && r.critico           !== filtros.critico)             return false;
       if (filtros.visivelSolicitantes !== undefined && r.visivelSolicitantes !== filtros.visivelSolicitantes) return false;
       if (filtros.busca) {
@@ -208,6 +214,8 @@ var ItemEstoqueRepository = (function () {
     row[_COL_I.Critico]             = dados.critico === true;
     row[_COL_I.CriadoEm]            = agr;
     row[_COL_I.AtualizadoEm]        = agr;
+    row[_COL_I.Tipo]                = dados.tipo    || 'Consumível';
+    row[_COL_I.Tombado]             = dados.tombado === true;
     aba.appendRow(row);
     return Object.assign({}, dados, { id: id, orgId: orgId, criadoEm: agr, atualizadoEm: agr });
   }
@@ -234,9 +242,26 @@ var ItemEstoqueRepository = (function () {
       if (dados.descricaoPregao     !== undefined) row[_COL_I.DescricaoPregao]     = dados.descricaoPregao;
       if (dados.visivelSolicitantes !== undefined) row[_COL_I.VisivelSolicitantes] = dados.visivelSolicitantes;
       if (dados.critico             !== undefined) row[_COL_I.Critico]             = dados.critico;
+      if (dados.tipo                !== undefined) row[_COL_I.Tipo]                = dados.tipo;
+      if (dados.tombado             !== undefined) row[_COL_I.Tombado]             = dados.tombado;
       row[_COL_I.AtualizadoEm] = agr;
       aba.getRange(i + 2, 1, 1, _HEADERS_ITENS.length).setValues([row]);
       return _linhaParaItem(row);
+    }
+    throw new Error('Item não encontrado: ' + id);
+  }
+
+  function excluir(id, orgId) {
+    orgId    = orgId || _orgId();
+    var aba  = _getAba(_ABA_ITENS);
+    var last = aba.getLastRow();
+    if (last < 2) throw new Error('Item não encontrado: ' + id);
+    var numCols = Math.min(_HEADERS_ITENS.length, aba.getLastColumn());
+    var rows = aba.getRange(2, 1, last - 1, numCols).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i][_COL_I.ID] !== id || rows[i][_COL_I.OrgId] !== orgId) continue;
+      aba.deleteRow(i + 2);
+      return { ok: true, id: id };
     }
     throw new Error('Item não encontrado: ' + id);
   }
@@ -442,6 +467,7 @@ var ItemEstoqueRepository = (function () {
     buscarPorId:           buscarPorId,
     criar:                 criar,
     atualizar:             atualizar,
+    excluir:               excluir,
     getSaldo:              getSaldo,
     getSaldoTotal:         getSaldoTotal,
     getSaldoDisponivel:    getSaldoDisponivel,

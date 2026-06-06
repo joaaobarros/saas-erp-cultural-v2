@@ -81,15 +81,15 @@ var DataGateway = (function () {
 
   function atualizarLinhaPorColuna(spreadsheetKey, nomeAba, indiceColuna, valorChave, novosDados) {
     try {
-      var aba   = _aba(spreadsheetKey, nomeAba);
-      var dados = aba.getDataRange().getValues();
-      for (var i = 1; i < dados.length; i++) {
-        if (String(dados[i][indiceColuna] || '') === String(valorChave)) {
-          aba.getRange(i + 1, 1, 1, novosDados.length).setValues([novosDados]);
-          return true;
-        }
-      }
-      return false;
+      var aba = _aba(spreadsheetKey, nomeAba);
+      var numLinhas = aba.getLastRow() - 1;
+      if (numLinhas < 1) return false;
+      // TextFinder faz busca nativa no Sheets — 10-50x mais rápido que carregar toda a aba
+      var colRange = aba.getRange(2, indiceColuna + 1, numLinhas, 1);
+      var cell = colRange.createTextFinder(String(valorChave)).matchEntireCell(true).findNext();
+      if (!cell) return false;
+      aba.getRange(cell.getRow(), 1, 1, novosDados.length).setValues([novosDados]);
+      return true;
     } catch (e) {
       Logger.error('data_gateway', 'atualizarLinhaPorColuna', nomeAba + ': ' + e.message);
       throw e;
@@ -98,15 +98,14 @@ var DataGateway = (function () {
 
   function removerLinhaPorColuna(spreadsheetKey, nomeAba, indiceColuna, valorChave) {
     try {
-      var aba   = _aba(spreadsheetKey, nomeAba);
-      var dados = aba.getDataRange().getValues();
-      for (var i = 1; i < dados.length; i++) {
-        if (String(dados[i][indiceColuna] || '') === String(valorChave)) {
-          aba.deleteRow(i + 1);
-          return true;
-        }
-      }
-      return false;
+      var aba = _aba(spreadsheetKey, nomeAba);
+      var numLinhas = aba.getLastRow() - 1;
+      if (numLinhas < 1) return false;
+      var colRange = aba.getRange(2, indiceColuna + 1, numLinhas, 1);
+      var cell = colRange.createTextFinder(String(valorChave)).matchEntireCell(true).findNext();
+      if (!cell) return false;
+      aba.deleteRow(cell.getRow());
+      return true;
     } catch (e) {
       Logger.error('data_gateway', 'removerLinhaPorColuna', nomeAba + ': ' + e.message);
       return false;
