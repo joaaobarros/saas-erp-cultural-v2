@@ -23,14 +23,19 @@ var ItemEstoqueRepository = (function () {
   var _ABA_SALDO = 'SaldoEstoque';
   var _ABA_MOV   = 'MovimentacoesEstoque';
 
-  // ── Schema: ItensEstoque (18 colunas) ───────────────────────────────
-  // Tipo:    'Consumível' | 'Permanente'
-  // Tombado: true = bem formalmente registrado no patrimônio institucional
+  // ── Schema: ItensEstoque (28 colunas) ───────────────────────────────
+  // Tipo:             'Consumível' | 'Permanente'
+  // Tombado:          true = bem formalmente registrado no patrimônio
+  // NumeroPatrimonio: número do registro patrimonial (ex: "PAT-0042")
+  // StatusItem:       (apenas Permanentes) 'disponivel'|'em_uso'|'manutencao'|'baixado'
+  // Cols 19-28:       campos patrimoniais — ignorados para Consumíveis
 
   var _HEADERS_ITENS = [
     'ID', 'OrgId', 'Descricao', 'Referencia', 'Tamanho', 'Cor', 'MarcaFabricante',
     'Categoria', 'Situacao', 'UnidadeMedida', 'ValorUnitario', 'DescricaoPregao',
-    'VisivelSolicitantes', 'Critico', 'CriadoEm', 'AtualizadoEm', 'Tipo', 'Tombado'
+    'VisivelSolicitantes', 'Critico', 'CriadoEm', 'AtualizadoEm', 'Tipo', 'Tombado',
+    'NumeroPatrimonio', 'StatusItem', 'Localizacao', 'Responsavel', 'AcaoId',
+    'DataAquisicao', 'NotaFiscal', 'VidaUtilAnos', 'ProximaManutencao', 'UltimaManutencao'
   ];
   var _COL_I = {};
   _HEADERS_ITENS.forEach(function (h, i) { _COL_I[h] = i; });
@@ -70,6 +75,8 @@ var ItemEstoqueRepository = (function () {
     return aba;
   }
 
+  function _col(row, col) { return row.length > col ? row[col] : ''; }
+
   function _linhaParaItem(row) {
     return {
       id:                   row[_COL_I.ID]                   || '',
@@ -88,8 +95,19 @@ var ItemEstoqueRepository = (function () {
       critico:              String(row[_COL_I.Critico]).toLowerCase() === 'true',
       criadoEm:             row[_COL_I.CriadoEm]             || '',
       atualizadoEm:         row[_COL_I.AtualizadoEm]         || '',
-      tipo:                 (row.length > _COL_I.Tipo    && row[_COL_I.Tipo])    ? String(row[_COL_I.Tipo])    : 'Consumível',
-      tombado:              (row.length > _COL_I.Tombado && row[_COL_I.Tombado]) ? String(row[_COL_I.Tombado]).toLowerCase() === 'true' : false
+      tipo:                 (_col(row, _COL_I.Tipo)    || 'Consumível'),
+      tombado:              String(_col(row, _COL_I.Tombado)).toLowerCase() === 'true',
+      // campos patrimoniais (cols 18-27 — presentes apenas em Permanentes)
+      numeroPatrimonio:     _col(row, _COL_I.NumeroPatrimonio) || '',
+      statusItem:           _col(row, _COL_I.StatusItem)       || 'disponivel',
+      localizacao:          _col(row, _COL_I.Localizacao)      || '',
+      responsavel:          _col(row, _COL_I.Responsavel)      || '',
+      acaoId:               _col(row, _COL_I.AcaoId)           || '',
+      dataAquisicao:        _col(row, _COL_I.DataAquisicao)    || '',
+      notaFiscal:           _col(row, _COL_I.NotaFiscal)       || '',
+      vidaUtilAnos:         Number(_col(row, _COL_I.VidaUtilAnos) || 0),
+      proximaManutencao:    _col(row, _COL_I.ProximaManutencao) || '',
+      ultimaManutencao:     _col(row, _COL_I.UltimaManutencao)  || ''
     };
   }
 
@@ -166,6 +184,7 @@ var ItemEstoqueRepository = (function () {
       if (filtros.situacao            && r.situacao            !== filtros.situacao)            return false;
       if (filtros.categoria           && r.categoria           !== filtros.categoria)           return false;
       if (filtros.tipo                && r.tipo                !== filtros.tipo)                return false;
+      if (filtros.statusItem          && r.statusItem          !== filtros.statusItem)          return false;
       if (filtros.critico !== undefined && r.critico           !== filtros.critico)             return false;
       if (filtros.visivelSolicitantes !== undefined && r.visivelSolicitantes !== filtros.visivelSolicitantes) return false;
       if (filtros.busca) {
@@ -210,12 +229,22 @@ var ItemEstoqueRepository = (function () {
     row[_COL_I.UnidadeMedida]       = dados.unidadeMedida      || '';
     row[_COL_I.ValorUnitario]       = dados.valorUnitario      || 0;
     row[_COL_I.DescricaoPregao]     = dados.descricaoPregao    || '';
-    row[_COL_I.VisivelSolicitantes] = dados.visivelSolicitantes !== false;
-    row[_COL_I.Critico]             = dados.critico === true;
-    row[_COL_I.CriadoEm]            = agr;
-    row[_COL_I.AtualizadoEm]        = agr;
-    row[_COL_I.Tipo]                = dados.tipo    || 'Consumível';
-    row[_COL_I.Tombado]             = dados.tombado === true;
+    row[_COL_I.VisivelSolicitantes]  = dados.visivelSolicitantes !== false;
+    row[_COL_I.Critico]              = dados.critico === true;
+    row[_COL_I.CriadoEm]             = agr;
+    row[_COL_I.AtualizadoEm]         = agr;
+    row[_COL_I.Tipo]                 = dados.tipo    || 'Consumível';
+    row[_COL_I.Tombado]              = dados.tombado === true;
+    row[_COL_I.NumeroPatrimonio]     = dados.numeroPatrimonio   || '';
+    row[_COL_I.StatusItem]           = dados.statusItem        || 'disponivel';
+    row[_COL_I.Localizacao]          = dados.localizacao        || '';
+    row[_COL_I.Responsavel]          = dados.responsavel        || '';
+    row[_COL_I.AcaoId]               = dados.acaoId             || '';
+    row[_COL_I.DataAquisicao]        = dados.dataAquisicao      || '';
+    row[_COL_I.NotaFiscal]           = dados.notaFiscal         || '';
+    row[_COL_I.VidaUtilAnos]         = dados.vidaUtilAnos       || 0;
+    row[_COL_I.ProximaManutencao]    = dados.proximaManutencao  || '';
+    row[_COL_I.UltimaManutencao]     = dados.ultimaManutencao   || '';
     aba.appendRow(row);
     return Object.assign({}, dados, { id: id, orgId: orgId, criadoEm: agr, atualizadoEm: agr });
   }
@@ -242,8 +271,18 @@ var ItemEstoqueRepository = (function () {
       if (dados.descricaoPregao     !== undefined) row[_COL_I.DescricaoPregao]     = dados.descricaoPregao;
       if (dados.visivelSolicitantes !== undefined) row[_COL_I.VisivelSolicitantes] = dados.visivelSolicitantes;
       if (dados.critico             !== undefined) row[_COL_I.Critico]             = dados.critico;
-      if (dados.tipo                !== undefined) row[_COL_I.Tipo]                = dados.tipo;
-      if (dados.tombado             !== undefined) row[_COL_I.Tombado]             = dados.tombado;
+      if (dados.tipo               !== undefined) row[_COL_I.Tipo]              = dados.tipo;
+      if (dados.tombado            !== undefined) row[_COL_I.Tombado]           = dados.tombado;
+      if (dados.numeroPatrimonio   !== undefined) row[_COL_I.NumeroPatrimonio]  = dados.numeroPatrimonio;
+      if (dados.statusItem         !== undefined) row[_COL_I.StatusItem]        = dados.statusItem;
+      if (dados.localizacao        !== undefined) row[_COL_I.Localizacao]       = dados.localizacao;
+      if (dados.responsavel        !== undefined) row[_COL_I.Responsavel]       = dados.responsavel;
+      if (dados.acaoId             !== undefined) row[_COL_I.AcaoId]            = dados.acaoId;
+      if (dados.dataAquisicao      !== undefined) row[_COL_I.DataAquisicao]     = dados.dataAquisicao;
+      if (dados.notaFiscal         !== undefined) row[_COL_I.NotaFiscal]        = dados.notaFiscal;
+      if (dados.vidaUtilAnos       !== undefined) row[_COL_I.VidaUtilAnos]      = dados.vidaUtilAnos;
+      if (dados.proximaManutencao  !== undefined) row[_COL_I.ProximaManutencao] = dados.proximaManutencao;
+      if (dados.ultimaManutencao   !== undefined) row[_COL_I.UltimaManutencao]  = dados.ultimaManutencao;
       row[_COL_I.AtualizadoEm] = agr;
       aba.getRange(i + 2, 1, 1, _HEADERS_ITENS.length).setValues([row]);
       return _linhaParaItem(row);
@@ -451,11 +490,18 @@ var ItemEstoqueRepository = (function () {
       }
     });
 
+    var permanentes = itens.filter(function (i) { return i.tipo === 'Permanente'; });
+
     return {
-      totalItens:           itens.length,
-      totalValorEstoque:    totalValor,
-      itensCriticosZerados: criticos0,
-      itensCriticosBaixo:   criticosBaixo
+      totalItens:              itens.length,
+      totalValorEstoque:       totalValor,
+      itensCriticosZerados:    criticos0,
+      itensCriticosBaixo:      criticosBaixo,
+      totalPermanentes:        permanentes.length,
+      permanentesDisponiveis:  permanentes.filter(function (i) { return i.statusItem === 'disponivel' || !i.statusItem; }).length,
+      permanentesEmUso:        permanentes.filter(function (i) { return i.statusItem === 'em_uso'; }).length,
+      permanentesManutencao:   permanentes.filter(function (i) { return i.statusItem === 'manutencao'; }).length,
+      permanentesBaixados:     permanentes.filter(function (i) { return i.statusItem === 'baixado'; }).length
     };
   }
 

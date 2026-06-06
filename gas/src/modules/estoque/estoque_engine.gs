@@ -529,6 +529,89 @@ var EstoqueEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // PATRIMÔNIO — FSM e operações de bens Permanentes
+  // ──────────────────────────────────────────────────────────────────
+
+  var _TRANS_PATRIM = {
+    'disponivel': ['em_uso', 'manutencao', 'baixado'],
+    'em_uso':     ['disponivel', 'manutencao', 'baixado'],
+    'manutencao': ['disponivel', 'baixado'],
+    'baixado':    []
+  };
+
+  try { FsmGuardian.registrar('item_patrimonio', _TRANS_PATRIM); } catch (_) {}
+
+  /**
+   * Transição genérica de status de um item permanente.
+   * @param {string} itemId
+   * @param {string} novoStatus  — um dos _TRANS_PATRIM
+   * @param {string} ator
+   * @param {string} motivo
+   * @param {Object} extras      — campos adicionais { responsavel?, acaoId?, localizacao? }
+   * @param {string} orgId
+   */
+  function mudarStatusItem(itemId, novoStatus, ator, motivo, extras, orgId) {
+    orgId = orgId || _orgId();
+    var item = ItemEstoqueRepository.buscarPorId(itemId, orgId);
+    if (!item) throw new Error('Item não encontrado: ' + itemId);
+    if (item.tipo !== 'Permanente') throw new Error('Operação patrimonial aplicável somente a itens Permanentes.');
+
+    FsmGuardian.transitar('item_patrimonio', item.statusItem || 'disponivel', novoStatus, {
+      itemId: itemId, ator: ator
+    });
+
+    var dadosUpdate = Object.assign({ statusItem: novoStatus }, extras || {});
+    if (novoStatus === 'disponivel') {
+      dadosUpdate.responsavel = '';
+      dadosUpdate.acaoId      = '';
+    }
+    if (novoStatus === 'manutencao') dadosUpdate.ultimaManutencao = agora();
+
+    var atualizado = ItemEstoqueRepository.atualizar(itemId, dadosUpdate, orgId);
+
+    ItemEstoqueRepository.registrarMovimentacao({
+      tipo:          'patrimonio_' + novoStatus,
+      itemId:        itemId,
+      descricaoItem: item.descricao,
+      depositoId:    '',
+      local:         item.localizacao || '',
+      quantidade:    0,
+      valorUnitario: 0,
+      referencia:    motivo || '',
+      ator:          ator,
+      observacoes:   motivo || ''
+    }, orgId);
+
+    AuditoriaService.registrar('PATRIMONIO_STATUS_' + novoStatus.toUpperCase(), 'estoque', {
+      itemId: itemId, de: item.statusItem, para: novoStatus, ator: ator, motivo: motivo
+    });
+
+    return atualizado;
+  }
+
+  function registrarUsoItem(itemId, acaoId, responsavel, ator, orgId) {
+    return mudarStatusItem(itemId, 'em_uso', ator,
+      'Saída para uso' + (acaoId ? ' / ação ' + acaoId : ''),
+      { acaoId: acaoId || '', responsavel: responsavel || ator }, orgId);
+  }
+
+  function devolverItem(itemId, ator, motivo, orgId) {
+    return mudarStatusItem(itemId, 'disponivel', ator, motivo || 'Devolução', {}, orgId);
+  }
+
+  function enviarManutencaoItem(itemId, ator, descricao, orgId) {
+    return mudarStatusItem(itemId, 'manutencao', ator, descricao || 'Manutenção', {}, orgId);
+  }
+
+  function concluirManutencaoItem(itemId, ator, orgId) {
+    return mudarStatusItem(itemId, 'disponivel', ator, 'Manutenção concluída', {}, orgId);
+  }
+
+  function registrarBaixaItem(itemId, ator, motivo, orgId) {
+    return mudarStatusItem(itemId, 'baixado', ator, motivo || 'Baixa patrimonial', {}, orgId);
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // RELATÓRIOS E MÉTRICAS
   // ──────────────────────────────────────────────────────────────────
 
@@ -643,6 +726,12 @@ var EstoqueEngine = (function () {
     entregarSolicitacao:     entregarSolicitacao,
     cancelarSolicitacao:     cancelarSolicitacao,
     devolverSolicitacao:     devolverSolicitacao,
+    mudarStatusItem:         mudarStatusItem,
+    registrarUsoItem:        registrarUsoItem,
+    devolverItem:            devolverItem,
+    enviarManutencaoItem:    enviarManutencaoItem,
+    concluirManutencaoItem:  concluirManutencaoItem,
+    registrarBaixaItem:      registrarBaixaItem,
     metricas:                metricas,
     relatorioSaidas:         relatorioSaidas,
     relatorioEntradas:       relatorioEntradas,

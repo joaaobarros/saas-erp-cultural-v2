@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @581 · 281 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @582 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -457,26 +457,28 @@
 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
 | HUB-12 | Meu Centro | Sem seção de aniversariantes | 🔴 |
 | HUB-13 | Meu Centro | Sem workflow de dayoff de aniversário | 🔴 |
-| ESTO-14 | Infraestrutura — Patrimônio | Aba Patrimônio usa UI/repositório distintos do Estoque — refatoração necessária | 🔴 |
 
 ---
 
 ## HANDOFF ATUAL — SESSÃO 26 (2026-06-05) → SESSÃO 27
 
-### Estado atual: 281 bugs registrados · Deploy @581
+### Estado atual: 280 bugs registrados (ESTO-14 corrigido) · Deploy @582
 
 ### O que foi feito nesta sessão (s26)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @581 | 77 — Performance + Dashboard + Devolução | **data_gateway.gs**: TextFinder em `atualizarLinhaPorColuna`/`removerLinhaPorColuna` (10–50× mais rápido). **utils.gs**: `_getSheet` com cache de referência por execução. **item_estoque_repository.gs**: `_SHEET_KEY` MASTER→ESTOQUE; schema Tipo+Tombado (16→18 col). **estoque_engine.gs**: FSM `finalizada→devolvida` + `devolverSolicitacao()`. **estoque/tarefas/acoes/reuniao controllers**: `ctrl_*_dashboard` + cache layer. **index.html**: GAS.* bindings + UI refatorada de 2 GAS calls → 1 por módulo |
+| @582 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col (NumeroPatrimonio + 9 campos patrimoniais). FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" no EstoqueUI. Tab EspacosUI redireciona |
+| @581 | 77 — Performance + Dashboard + Devolução | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem):**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
-  3. `fase75_importar_consumiveis_v1()` — importar itens de estoque
-- **Fase 78 — Integração de Materiais nas Reservas**
+  3. `fase75_importar_consumiveis_v1()` — importar consumíveis V1
+  4. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
+  5. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+- **Fase 79 — Integração de Materiais nas Reservas**
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-19** (Setor na Rubrica — decisão arquitetural)

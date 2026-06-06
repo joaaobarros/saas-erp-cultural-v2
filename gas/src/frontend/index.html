@@ -5330,6 +5330,9 @@ select.form-control { cursor: pointer; }
             <button class="tab-btn est-subtab-btn ativa" data-tab="itens" onclick="EstoqueUI.abrirSubTab('itens')">
               <span class="ms ms-sm">category</span> Itens
             </button>
+            <button class="tab-btn est-subtab-btn" data-tab="patrimonio" onclick="EstoqueUI.abrirSubTab('patrimonio')">
+              <span class="ms ms-sm">inventory_2</span> Patrimônio
+            </button>
             <button class="tab-btn est-subtab-btn" data-tab="estoque" onclick="EstoqueUI.abrirSubTab('estoque')">
               <span class="ms ms-sm">warehouse</span> Estoque
             </button>
@@ -5383,6 +5386,115 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
           </div>
+
+          <!-- ── Sub-aba: Patrimônio ── -->
+          <div id="est-tab-patrimonio" class="est-subtab-content" style="display:none">
+
+            <!-- Form cadastro / edição de bem patrimonial -->
+            <div class="card" id="pat-form-card" style="display:none">
+              <div class="card-header">
+                <div class="card-titulo"><span class="ms">add_box</span> <span id="pat-form-titulo">Novo Bem Patrimonial</span></div>
+                <button class="btn btn-ghost btn-sm" onclick="EstoqueUI.pat.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Descrição *</label>
+                  <input type="text" id="pat-descricao" class="form-input" placeholder="Ex: Câmera Sony A7">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Número de Patrimônio</label>
+                  <input type="text" id="pat-numero" class="form-input" placeholder="Ex: PAT-0042">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Categoria</label>
+                  <select id="pat-categoria" class="form-input">
+                    <option value="Audiovisual">Audiovisual</option>
+                    <option value="Informática">Informática</option>
+                    <option value="Mobiliário">Mobiliário</option>
+                    <option value="Infraestrutura">Infraestrutura</option>
+                    <option value="Geral">Geral</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Marca / Fabricante</label>
+                  <input type="text" id="pat-marca" class="form-input" placeholder="Ex: Sony, Dell…">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Localização</label>
+                  <select id="pat-localizacao" class="form-input"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Valor de Aquisição (R$)</label>
+                  <input type="text" id="pat-valor" class="form-input" placeholder="0,00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Data de Aquisição</label>
+                  <input type="date" id="pat-data-aquisicao" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nota Fiscal</label>
+                  <input type="text" id="pat-nota-fiscal" class="form-input" placeholder="Nº ou link NF">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Vida Útil (anos)</label>
+                  <input type="number" id="pat-vida-util" class="form-input" min="0" value="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Próxima Manutenção</label>
+                  <input type="date" id="pat-prox-manut" class="form-input">
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+                    <input type="checkbox" id="pat-tombado"> <span>Item formalmente tombado no patrimônio institucional</span>
+                  </label>
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label class="form-label">Observações</label>
+                  <textarea id="pat-obs" class="form-input" rows="2" placeholder="Características, número de série…"></textarea>
+                </div>
+              </div>
+              <input type="hidden" id="pat-id">
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+                <button class="btn btn-ghost" onclick="EstoqueUI.pat.fecharForm()" data-bg-skip="1">Cancelar</button>
+                <button class="btn btn-primario" id="btn-pat-salvar" onclick="EstoqueUI.pat.salvar()">
+                  <span class="ms ms-sm">save</span> Salvar
+                </button>
+              </div>
+            </div>
+
+            <!-- Métricas patrimônio -->
+            <div class="stats-grid" id="pat-metricas"></div>
+
+            <!-- Filtros + lista -->
+            <div class="card">
+              <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                <div class="card-titulo"><span class="ms">inventory_2</span> Bens Patrimoniais</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+                  <input type="text" id="pat-busca" class="form-input" style="width:160px;" placeholder="Buscar…" oninput="EstoqueUI.pat.carregar()">
+                  <select id="pat-filtro-status" class="select-sm" onchange="EstoqueUI.pat.carregar()">
+                    <option value="">Todos os status</option>
+                    <option value="disponivel">Disponíveis</option>
+                    <option value="em_uso">Em uso</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="baixado">Baixados</option>
+                  </select>
+                  <select id="pat-filtro-cat" class="select-sm" onchange="EstoqueUI.pat.carregar()">
+                    <option value="">Todas categorias</option>
+                    <option value="Audiovisual">Audiovisual</option>
+                    <option value="Informática">Informática</option>
+                    <option value="Mobiliário">Mobiliário</option>
+                    <option value="Infraestrutura">Infraestrutura</option>
+                    <option value="Geral">Geral</option>
+                  </select>
+                  <button class="btn btn-ghost btn-sm" id="btn-pat-reload" onclick="EstoqueUI.pat.carregar()"><span class="ms ms-sm">refresh</span></button>
+                  <button class="btn btn-primario btn-sm" id="btn-pat-novo" onclick="EstoqueUI.pat.abrirForm()">
+                    <span class="ms ms-sm">add</span> Novo Bem
+                  </button>
+                </div>
+              </div>
+              <div id="pat-lista"><p class="muted-text" style="padding:12px 0;">Carregando…</p></div>
+            </div>
+          </div><!-- /est-tab-patrimonio -->
 
           <!-- ── Sub-aba: Estoque (Saldo por depósito) ── -->
           <div id="est-tab-estoque" class="est-subtab-content" style="display:none">
@@ -8810,7 +8922,14 @@ var GAS = {
     relatorioEntradas:   function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_relatorio_entradas(f||{}); },
     previsao:            function(dias,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_previsao(dias||30); },
     excluirItem:         function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_excluir_item(id); },
-    devolverSolicitacao: function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_devolver_solicitacao(id); }
+    devolverSolicitacao: function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_devolver_solicitacao(id); },
+    // patrimônio
+    listarPatrimonio:    function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_listar_patrimonio(f||{}); },
+    registrarUso:        function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_registrar_uso(d); },
+    devolverItem:        function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_devolver_item(d); },
+    enviarManutencao:    function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_enviar_manutencao(d); },
+    concluirManutencao:  function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_concluir_manutencao(id); },
+    baixarItem:          function(d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_estoque_baixar_item(d); }
   },
   acoes: {
     listar:      function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_listar(f||{}); },
@@ -14779,6 +14898,8 @@ var EspacosUI = (function() {
   };
 
   function abrirTab(tab) {
+    // 'ativos' é alias de 'estoque' (patrimônio integrado)
+    var painelKey = tab === 'ativos' ? 'estoque' : tab;
     // Ocultar todas
     document.querySelectorAll('.esp-tab-content').forEach(function(el){ el.style.display='none'; });
     // Desmarcar todos os botões de tab
@@ -14788,7 +14909,7 @@ var EspacosUI = (function() {
       btn.style.fontWeight='500';
     });
     // Mostrar a tab selecionada
-    var painel = document.getElementById('esp-tab-'+tab);
+    var painel = document.getElementById('esp-tab-'+painelKey);
     if (painel) painel.style.display='';
     // Marcar botão ativo
     var btn = document.querySelector('.esp-tab[data-tab="'+tab+'"]');
@@ -14804,7 +14925,7 @@ var EspacosUI = (function() {
       if (tab === 'reservas')    ReservasUI.carregar();
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
-      if (tab === 'ativos')      AtivosUI.carregar();
+      if (tab === 'ativos')      EstoqueUI.abrirSubTab('patrimonio');
       if (tab === 'estoque')     EstoqueUI.aoAbrir();
       if (tab === 'config')      InfraConfigUI.aoAbrir();
     }
@@ -20102,6 +20223,7 @@ var EstoqueUI = (function() {
     if (!_carregados[tab]) {
       _carregados[tab] = true;
       if (tab === 'itens')        _carregarItens();
+      if (tab === 'patrimonio')   pat.carregar();
       if (tab === 'estoque')      _carregarEstoque();
       if (tab === 'solicitacoes') _carregarSolicitacoes();
       if (tab === 'entradas')     { /* aguarda seleção de período */ }
@@ -20927,9 +21049,313 @@ var EstoqueUI = (function() {
     });
   }
 
+  // ── Submódulo: Patrimônio ────────────────────────────────────────────
+  var pat = (function() {
+    var _espacosCat = [];
+    var _espacosCatOk = false;
+
+    var _ST_LABEL = { disponivel:'Disponível', em_uso:'Em uso', manutencao:'Manutenção', baixado:'Baixado' };
+    var _ST_CLASS = { disponivel:'badge-success', em_uso:'badge-accent', manutencao:'badge-warning', baixado:'badge-error' };
+
+    function _badge(s) {
+      return '<span class="badge '+(_ST_CLASS[s]||'badge-primary')+'">'+escaparHtml(_ST_LABEL[s]||s)+'</span>';
+    }
+
+    function _tagPatrimonio(item) {
+      if (!item.tombado) return '';
+      var num = item.numeroPatrimonio ? escaparHtml(item.numeroPatrimonio) : 'tombado';
+      return '<span class="badge badge-info" style="font-size:10px;font-family:monospace;">'+num+'</span>';
+    }
+
+    function _renderMetricas(m) {
+      var el = document.getElementById('pat-metricas');
+      if (!el || !m) return;
+      el.innerHTML = [
+        { valor: m.totalPermanentes       ||0, label:'Total cadastrado', icone:'inventory_2',  classe:'primary' },
+        { valor: m.permanentesDisponiveis ||0, label:'Disponíveis',      icone:'check_circle', classe:'success' },
+        { valor: m.permanentesEmUso       ||0, label:'Em uso',           icone:'play_circle',  classe:'accent'  },
+        { valor: m.permanentesManutencao  ||0, label:'Em manutenção',    icone:'build',        classe:'warning' },
+        { valor: m.permanentesBaixados    ||0, label:'Baixados',         icone:'archive',      classe:'error'   }
+      ].map(function(s) {
+        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+          +'<div class="stat-info"><div class="stat-valor">'+s.valor+'</div>'
+          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+      }).join('');
+      if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('pat-metricas');
+    }
+
+    function _botoesAcao(item) {
+      var id  = escaparHtml(item.id);
+      var btns = '';
+      if (item.statusItem !== 'baixado') {
+        if (item.statusItem === 'disponivel' || item.statusItem === 'em_uso') {
+          if (item.statusItem === 'disponivel')
+            btns += '<button class="btn btn-ghost btn-sm btn-pat-uso" data-id="'+id+'"><span class="ms ms-sm">play_circle</span> Em uso</button>';
+          if (item.statusItem === 'em_uso')
+            btns += '<button class="btn btn-ghost btn-sm btn-pat-dev" data-id="'+id+'"><span class="ms ms-sm">undo</span> Devolver</button>';
+        }
+        if (item.statusItem !== 'manutencao')
+          btns += '<button class="btn btn-ghost btn-sm btn-pat-man" data-id="'+id+'"><span class="ms ms-sm">build</span> Manutenção</button>';
+        if (item.statusItem === 'manutencao')
+          btns += '<button class="btn btn-ghost btn-sm btn-pat-ok" data-id="'+id+'"><span class="ms ms-sm">check</span> Concluir</button>';
+        btns += '<button class="btn btn-ghost btn-sm btn-pat-edit" data-id="'+id+'"'
+          +' data-desc="'+escaparHtml(item.descricao||'')+'"'
+          +' data-num="'+escaparHtml(item.numeroPatrimonio||'')+'"'
+          +' data-cat="'+escaparHtml(item.categoria||'')+'"'
+          +' data-marca="'+escaparHtml(item.marcaFabricante||'')+'"'
+          +' data-loc="'+escaparHtml(item.localizacao||'')+'"'
+          +' data-val="'+escaparHtml(String(item.valorUnitario||0))+'"'
+          +' data-dataq="'+escaparHtml(item.dataAquisicao||'')+'"'
+          +' data-nf="'+escaparHtml(item.notaFiscal||'')+'"'
+          +' data-vida="'+escaparHtml(String(item.vidaUtilAnos||0))+'"'
+          +' data-prox="'+escaparHtml(item.proximaManutencao||'')+'"'
+          +' data-tomb="'+escaparHtml(String(item.tombado||false))+'"'
+          +' data-obs="'+escaparHtml(item.descricaoPregao||'')+'"'
+          +'><span class="ms ms-sm">edit</span></button>';
+      }
+      return btns;
+    }
+
+    function _renderLista(lista) {
+      var el = document.getElementById('pat-lista');
+      if (!lista || !lista.length) {
+        el.innerHTML = '<div class="empty-state" style="min-height:100px;padding:20px;">'
+          +'<span class="ms" style="font-size:32px;color:var(--muted)">inventory_2</span>'
+          +'<p class="muted-text">Nenhum bem patrimonial encontrado.</p></div>';
+        return;
+      }
+      el.innerHTML = lista.map(function(item) {
+        return '<div class="pendente-item">'
+          +'<div class="pendente-info">'
+          +'<div class="pendente-nome">'+escaparHtml(item.descricao)
+          +(item.referencia ? ' <span style="font-size:11px;color:var(--muted)">['+escaparHtml(item.referencia)+']</span>' : '')
+          +' '+_tagPatrimonio(item)
+          +'</div>'
+          +'<div class="pendente-meta">'
+          +escaparHtml(item.categoria||'Geral')
+          +(item.localizacao ? ' · <span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">location_on</span> '+escaparHtml(item.localizacao) : '')
+          +(item.responsavel ? ' · <em>'+escaparHtml(item.responsavel)+'</em>' : '')
+          +(item.marcaFabricante ? ' · '+escaparHtml(item.marcaFabricante) : '')
+          +'</div></div>'
+          +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+          +_badge(item.statusItem||'disponivel')
+          +_botoesAcao(item)
+          +'</div></div>';
+      }).join('');
+
+      el.querySelectorAll('.btn-pat-uso').forEach(function(btn) {
+        btn.addEventListener('click', function() { _abrirModalUso(this.getAttribute('data-id')); });
+      });
+      el.querySelectorAll('.btn-pat-dev').forEach(function(btn) {
+        btn.addEventListener('click', function() { _devolver(this.getAttribute('data-id'), this); });
+      });
+      el.querySelectorAll('.btn-pat-man').forEach(function(btn) {
+        btn.addEventListener('click', function() { _abrirModalManutencao(this.getAttribute('data-id')); });
+      });
+      el.querySelectorAll('.btn-pat-ok').forEach(function(btn) {
+        btn.addEventListener('click', function() { _concluirManutencao(this.getAttribute('data-id'), this); });
+      });
+      el.querySelectorAll('.btn-pat-edit').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var d = this.dataset;
+          abrirForm({ id:d.id, descricao:d.desc, numeroPatrimonio:d.num, categoria:d.cat,
+            marcaFabricante:d.marca, localizacao:d.loc, valorUnitario:d.val,
+            dataAquisicao:d.dataq, notaFiscal:d.nf, vidaUtilAnos:d.vida,
+            proximaManutencao:d.prox, tombado:d.tomb==='true', descricaoPregao:d.obs });
+        });
+      });
+    }
+
+    function _popularSelectLocalizacao(selecionado) {
+      var sel = document.getElementById('pat-localizacao');
+      if (!sel) return;
+      var opts = '<option value="">— Sem localização —</option>';
+      _espacosCat.forEach(function(e) {
+        var nome = e.nome || e.id || '';
+        opts += '<option value="'+escaparHtml(nome)+'"'+(nome===selecionado?' selected':'')+'>'+escaparHtml(nome)+'</option>';
+      });
+      if (selecionado && !_espacosCat.some(function(e){ return (e.nome||e.id)===selecionado; })) {
+        opts += '<option value="'+escaparHtml(selecionado)+'" selected>'+escaparHtml(selecionado)+'</option>';
+      }
+      sel.innerHTML = opts;
+    }
+
+    function carregar() {
+      var filtros = { tipo: 'Permanente' };
+      var statusFiltro = (document.getElementById('pat-filtro-status')||{}).value || '';
+      var catFiltro    = (document.getElementById('pat-filtro-cat')||{}).value    || '';
+      var busca        = (document.getElementById('pat-busca')||{}).value          || '';
+      if (statusFiltro) filtros.statusItem = statusFiltro;
+      if (catFiltro)    filtros.categoria  = catFiltro;
+      if (busca)        filtros.busca      = busca;
+
+      BtnGuard.wrap('btn-pat-reload', 'Atualizando…', function(done) {
+        GAS.estoque.listarPatrimonio(filtros, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar patrimônio.'); return; }
+          GAS.estoque.metricas(function(rm) {
+            if (rm && rm.ok) _renderMetricas(rm.data);
+          });
+          _renderLista(resp.data || []);
+        }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+      });
+    }
+
+    function abrirForm(dados) {
+      if (!_espacosCatOk) {
+        GAS.admin.listarEspacos(function(r) {
+          _espacosCat = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+          _espacosCatOk = true;
+          abrirForm(dados);
+        }, function() { _espacosCatOk = true; abrirForm(dados); });
+        return;
+      }
+      var card = document.getElementById('pat-form-card');
+      card.style.display = '';
+      document.getElementById('pat-id').value         = dados && dados.id          || '';
+      document.getElementById('pat-descricao').value  = dados && dados.descricao   || '';
+      document.getElementById('pat-numero').value     = dados && dados.numeroPatrimonio || '';
+      document.getElementById('pat-marca').value      = dados && dados.marcaFabricante || '';
+      document.getElementById('pat-valor').value      = fmtMoeda(dados && dados.valorUnitario || 0);
+      document.getElementById('pat-data-aquisicao').value = dados && dados.dataAquisicao || '';
+      document.getElementById('pat-nota-fiscal').value    = dados && dados.notaFiscal || '';
+      document.getElementById('pat-vida-util').value      = dados && dados.vidaUtilAnos || 0;
+      document.getElementById('pat-prox-manut').value     = dados && dados.proximaManutencao || '';
+      document.getElementById('pat-tombado').checked      = !!(dados && dados.tombado);
+      document.getElementById('pat-obs').value            = dados && dados.descricaoPregao || '';
+      if (dados && dados.categoria) document.getElementById('pat-categoria').value = dados.categoria;
+      _popularSelectLocalizacao((dados && dados.localizacao) || '');
+      document.getElementById('pat-form-titulo').textContent = dados && dados.id ? 'Editar Bem' : 'Novo Bem Patrimonial';
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function fecharForm() { document.getElementById('pat-form-card').style.display = 'none'; }
+
+    function salvar() {
+      var descricao = (document.getElementById('pat-descricao').value||'').trim();
+      if (!descricao) { Toast.aviso('Descrição é obrigatória.'); return; }
+      var id = (document.getElementById('pat-id').value||'').trim();
+      var dados = {
+        descricao:          descricao,
+        numeroPatrimonio:   (document.getElementById('pat-numero').value||'').trim(),
+        categoria:          document.getElementById('pat-categoria').value || 'Geral',
+        marcaFabricante:    (document.getElementById('pat-marca').value||'').trim(),
+        localizacao:        document.getElementById('pat-localizacao').value || '',
+        valorUnitario:      parseMoeda(document.getElementById('pat-valor').value),
+        dataAquisicao:      document.getElementById('pat-data-aquisicao').value || '',
+        notaFiscal:         (document.getElementById('pat-nota-fiscal').value||'').trim(),
+        vidaUtilAnos:       parseInt(document.getElementById('pat-vida-util').value||'0', 10) || 0,
+        proximaManutencao:  document.getElementById('pat-prox-manut').value || '',
+        tombado:            document.getElementById('pat-tombado').checked,
+        descricaoPregao:    (document.getElementById('pat-obs').value||'').trim(),
+        tipo:               'Permanente',
+        visivelSolicitantes: false
+      };
+      if (id) dados.id = id;
+      BtnGuard.wrap('btn-pat-salvar', 'Salvando…', function(done) {
+        GAS.estoque.salvarItem(dados, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao salvar.'); return; }
+          fecharForm();
+          Toast.sucesso(id ? 'Bem atualizado.' : 'Bem cadastrado.');
+          carregar();
+        }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+      });
+    }
+
+    // ── FSM actions ─────────────────────────────────────────────────
+    var _pendId = null;
+
+    function _abrirModalUso(id) {
+      _pendId = id;
+      _abrirModalSimples(
+        '<div style="padding:20px;">'
+        +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Registrar Saída para Uso</h3>'
+        +'<div class="form-group"><label class="form-label">Responsável</label>'
+        +'<input type="text" id="pat-modal-resp" class="form-input" placeholder="Nome ou e-mail do responsável"></div>'
+        +'<div class="form-group"><label class="form-label">Ação Cultural (opcional)</label>'
+        +'<input type="text" id="pat-modal-acao" class="form-input" placeholder="ID ou nome da ação"></div>'
+        +'<div style="display:flex;gap:8px;margin-top:12px;">'
+        +'<button class="btn btn-primario" onclick="EstoqueUI.pat._confirmarUso()">Confirmar</button>'
+        +'<button class="btn btn-ghost" data-bg-skip="1" onclick="document.querySelector(\'.modal-simples\').remove()">Cancelar</button>'
+        +'</div></div>'
+      );
+    }
+
+    function _confirmarUso() {
+      var resp = (document.getElementById('pat-modal-resp')||{}).value || '';
+      var acao = (document.getElementById('pat-modal-acao')||{}).value || '';
+      var id   = _pendId; _pendId = null;
+      var m    = document.querySelector('.modal-simples'); if (m) m.remove();
+      GAS.estoque.registrarUso({ id: id, responsavel: resp, acaoId: acao }, function(r) {
+        if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao registrar uso.'); return; }
+        Toast.sucesso('Bem marcado como "Em uso".');
+        carregar();
+      }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    }
+
+    function _devolver(id, btnEl) {
+      BtnGuard.wrap(btnEl, 'Devolvendo…', function(done) {
+        GAS.estoque.devolverItem({ id: id, motivo: 'Devolução' }, function(r) {
+          done();
+          if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao devolver.'); return; }
+          Toast.sucesso('Bem devolvido — disponível.');
+          carregar();
+        }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+      });
+    }
+
+    function _abrirModalManutencao(id) {
+      _pendId = id;
+      _abrirModalSimples(
+        '<div style="padding:20px;">'
+        +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Registrar Manutenção</h3>'
+        +'<div class="form-group"><label class="form-label">Descrição do problema / motivo <span style="color:#ef4444">*</span></label>'
+        +'<textarea id="pat-modal-manut" class="form-input" rows="3" placeholder="Descreva o problema…"></textarea></div>'
+        +'<div style="display:flex;gap:8px;margin-top:12px;">'
+        +'<button class="btn btn-primario" onclick="EstoqueUI.pat._confirmarManutencao()">Confirmar</button>'
+        +'<button class="btn btn-ghost" data-bg-skip="1" onclick="document.querySelector(\'.modal-simples\').remove()">Cancelar</button>'
+        +'</div></div>'
+      );
+    }
+
+    function _confirmarManutencao() {
+      var desc = (document.getElementById('pat-modal-manut')||{}).value || '';
+      if (!desc.trim()) { Toast.aviso('Descrição é obrigatória.'); return; }
+      var id = _pendId; _pendId = null;
+      var m  = document.querySelector('.modal-simples'); if (m) m.remove();
+      GAS.estoque.enviarManutencao({ id: id, descricao: desc }, function(r) {
+        if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        Toast.sucesso('Bem enviado para manutenção.');
+        carregar();
+      }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    }
+
+    function _concluirManutencao(id, btnEl) {
+      BtnGuard.wrap(btnEl, 'Concluindo…', function(done) {
+        GAS.estoque.concluirManutencao(id, function(r) {
+          done();
+          if (!r || !r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+          Toast.sucesso('Manutenção concluída — bem disponível.');
+          carregar();
+        }, function(e) { done(); Toast.erro('Erro: '+(e.message||e)); });
+      });
+    }
+
+    return {
+      carregar:             carregar,
+      abrirForm:            abrirForm,
+      fecharForm:           fecharForm,
+      salvar:               salvar,
+      _confirmarUso:        _confirmarUso,
+      _confirmarManutencao: _confirmarManutencao
+    };
+  })();
+
   return {
     aoAbrir:                   aoAbrir,
     abrirSubTab:               abrirSubTab,
+    pat:                       pat,
     recarregarItens:           recarregarItens,
     abrirNovoItem:             abrirNovoItem,
     abrirEditarItem:           abrirEditarItem,

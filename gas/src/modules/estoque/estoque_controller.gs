@@ -288,6 +288,89 @@ function ctrl_estoque_listar_solicitacoes(filtros) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// PATRIMÔNIO — operações de bens Permanentes
+// ═══════════════════════════════════════════════════════════════
+
+var _BAIXA_PATRIMONIO = ['superadmin', 'admin'];
+
+/**
+ * Lista itens permanentes com campos patrimoniais enriquecidos.
+ * @param {Object} filtros { statusItem?, categoria?, busca?, tombado? }
+ */
+function ctrl_estoque_listar_patrimonio(filtros) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    filtros = Object.assign({ tipo: 'Permanente' }, filtros || {});
+    return EstoqueEngine.listarItens(filtros, ctx.orgId);
+  }, 'ctrl_estoque_listar_patrimonio');
+}
+
+/**
+ * Registra saída do bem para uso.
+ * @param {Object} dados { id, acaoId?, responsavel? }
+ */
+function ctrl_estoque_registrar_uso(dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    _exigirGestaoEstoque(ctx);
+    dados = dados || {};
+    return EstoqueEngine.registrarUsoItem(dados.id, dados.acaoId || '', dados.responsavel || '', ctx.email, ctx.orgId);
+  }, 'ctrl_estoque_registrar_uso');
+}
+
+/**
+ * Registra devolução do bem (em_uso → disponivel).
+ * @param {Object} dados { id, motivo? }
+ */
+function ctrl_estoque_devolver_item(dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    _exigirGestaoEstoque(ctx);
+    dados = dados || {};
+    return EstoqueEngine.devolverItem(dados.id, ctx.email, dados.motivo || '', ctx.orgId);
+  }, 'ctrl_estoque_devolver_item');
+}
+
+/**
+ * Envia bem para manutenção.
+ * @param {Object} dados { id, descricao? }
+ */
+function ctrl_estoque_enviar_manutencao(dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    _exigirGestaoEstoque(ctx);
+    dados = dados || {};
+    return EstoqueEngine.enviarManutencaoItem(dados.id, ctx.email, dados.descricao || '', ctx.orgId);
+  }, 'ctrl_estoque_enviar_manutencao');
+}
+
+/**
+ * Conclui manutenção e retorna bem como disponível.
+ * @param {string} id
+ */
+function ctrl_estoque_concluir_manutencao(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    _exigirGestaoEstoque(ctx);
+    return EstoqueEngine.concluirManutencaoItem(id, ctx.email, ctx.orgId);
+  }, 'ctrl_estoque_concluir_manutencao');
+}
+
+/**
+ * Registra baixa definitiva (apenas admin/superadmin).
+ * @param {Object} dados { id, motivo? }
+ */
+function ctrl_estoque_baixar_item(dados) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEstoque();
+    if (_BAIXA_PATRIMONIO.indexOf(ctx.papel) === -1)
+      throw new Error('Apenas administradores podem dar baixa em bens patrimoniais.');
+    dados = dados || {};
+    return EstoqueEngine.registrarBaixaItem(dados.id, ctx.email, dados.motivo || '', ctx.orgId);
+  }, 'ctrl_estoque_baixar_item');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RELATÓRIOS
 // ═══════════════════════════════════════════════════════════════
 
