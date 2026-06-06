@@ -344,7 +344,7 @@
 | SIS-06 | Sistema | Dois padrões de filter bar: `filter-bar` e `toolbar` | 🟡 |
 | SIS-07 | Sistema | Duas variáveis de cor para stat-cards intercambiáveis | 🔵 |
 | SIS-08 | Sistema | Jargão técnico na UI (SLA, FSM, webhook, endpoint) | 🟡 |
-| SIS-10 | Sistema | Layout de modais inconsistente — parcialmente CORRIGIDO @594 (rece/run/bl) | 🟡 |
+| ~~SIS-10~~ | Sistema | ✅ CORRIGIDO @594+@617 — @594: rece/run/bl modais; @617: carro-modal, cd-meta-modal, cd-pes-modal, cd-indr-modal | — |
 | SIS-12 | Sistema | Nome social sem prioridade absoluta sobre nome registrado | 🔴 |
 | SIS-13 | Sistema | Campo "responsável" texto livre — CORRIGIDO @596 (5 campos → select) | ✅ |
 | ESP-03 | Infraestrutura — Lista | Filtros inconsistentes entre modos | 🟡 |
@@ -463,27 +463,27 @@
 
 ## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @616 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @617 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s30)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @600 | SIDEBAR-04 (auditoria) | Seção MEMÓRIA consolidada: 4 itens do sidebar (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional". `view-memoria` com tab-bar + 4 painéis. `MemoriaUI` IIFE gerencia abas. Router.registrar internos dos 4 sub-módulos removidos. Sidebar ~17 itens visíveis. |
+| @614 | SIDEBAR-04 (auditoria) | Seção MEMÓRIA consolidada: 4 itens do sidebar (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional". `view-memoria` com tab-bar + 4 painéis. `MemoriaUI` IIFE gerencia abas. Router.registrar internos dos 4 sub-módulos removidos. Sidebar ~17 itens visíveis. |
 | @601 | Pulse multiplataforma | `_sincronizarPulse()` com polling 5 min: fecha widget/FAB quando resposta já feita em outro dispositivo. Substitui `_tentarMostrarPulse()` no boot. |
 | @603 | Pulse por setor | `_calcPorSetor()` em `escuta_pulse.gs`: participação + clima por setor com threshold de anonimato (≥5 participantes). `carregarPulseDash` renderiza barras semáforo por setor. |
 | @609 | Fix anti-spam pulse | Bug: verificação de intervalo 4h usava `respostasHoje` — falhava na virada de meia-noite. Corrigido para `respostasColab` (todo o mês). |
-| @616 | Fix informações desconexas pulse | 3 inconsistências: (1) `_calcConfianca`/`_metaDimensao`/`_calcPorSetor` trocaram `ColaboradorRepository` → `AcessoService` (conta 9 usuários ativos, não 1); (2) monitoramento usa `u.email` em vez de `emailInstitucional/emailPessoal`; (3) marcadores metodológicos recebem labels `(pesquisas formais)` e `(pulse)` para eliminar contradição visual. |
+| @616 | Fix informações desconexas pulse | 3 inconsistências: (1) `_calcConfianca`/`_metaDimensao`/`_calcPorSetor` trocaram `ColaboradorRepository` → `AcessoService`; (2) monitoramento usa `u.email` em vez de `emailInstitucional/emailPessoal`; (3) marcadores metodológicos recebem labels `(pesquisas formais)` e `(pulse)`. |
+| @617 | SIS-10 restante (auditoria) | 4 modais com header scrollável corrigidos: `carro-modal-box` (flex column, body scrollável, footer sticky); `cd-meta-modal`, `cd-pes-modal`, `cd-indr-modal` migrados de `modal-box-animar` + inline styles para `modal-box` + `modal-header` + `modal-body` + `modal-footer`. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** SIS-10 restante (carro-modal + modais Contratos Detail), FIN-19, FIN-20, CON-09
+- **Próximos bugs de auditoria (em ordem):** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)
-- **SIS-10 restante** — `carro-modal` e modais do Contratos Detail (cd-meta-modal, cd-pes-modal, cd-indr-modal): mesmo padrão de header scrollável
 - **FIN-19** (Setor na Rubrica — decisão arquitetural)
 - **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
 - **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
