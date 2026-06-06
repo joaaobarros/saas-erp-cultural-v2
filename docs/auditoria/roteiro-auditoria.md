@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @636 · ~272 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @637 · ~272 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -205,7 +205,7 @@
 | View carrega com 4 abas (Contratos, Remanejamentos, Aditivos, Exportações) | ✅ | 2026-06-01 |
 | MÉTRICAS com MetricsToggle | ✅ | 2026-06-01 |
 | Painel do contrato (5 abas) | ✅ | 2026-06-01 |
-| Histórico — Ver diff + Restaurar versão | ✅ FIN-12 CORRIGIDO @636 | 2026-06-06 |
+| Histórico — Ver diff + Restaurar versão | ✅ FIN-12 CORRIGIDO @637 | 2026-06-06 |
 | FSM do contrato — botões Suspender/Encerrar | ✅ FIN-14 CORRIGIDO s16 F17 | 2026-06-01 |
 | FIN-07 — label renomeado "Total Previsto Ativo" | ✅ CORRIGIDO s17 F62 @480 | 2026-06-03 |
 | Setor na Rubrica (nível correto) | ✅ FIN-19 CORRIGIDO @631 — `setor` preservado no mapeamento de `memoriaCalculo` em `adicionarRubrica` | 2026-06-06 |
@@ -252,7 +252,7 @@
 
 | Deploy | Fase | Resumo |
 |---|---|---|
-| @636 | CAR-08+FIN-12 | CAR-08: linha "Setor Solicitante" no modal carro-det-overlay. FIN-12: histórico com diff modal + restauração de versão (backup automático antes de restaurar) |
+| @637 | CAR-08+FIN-12 | CAR-08: linha "Setor Solicitante" no modal carro-det-overlay. FIN-12: histórico com diff modal + restauração de versão (backup automático antes de restaurar) |
 | @584 | 79 | ctrl_reservas_criar: auto-cria SolicitacaoMaterial com reservaId (best-effort). Frontend: listarItens(estoque) no form de reserva; label "Materiais necessários"; toast com SOL-XXXX |
 | @581 | 77 | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
 | @579 | 76 | Compras/Aquisições migrado de Financeiro → Contratações; planilha MASTER→FINANCEIRO.SolicitacoesCompra; tab reposicionada |
@@ -421,7 +421,7 @@
 | FIN-06 | Financeiro | Integração Financeiro↔RH inexistente — mudança arquitetural grande (fase futura) | 🔴 |
 | ~~FIN-09~~ | Financeiro | ✅ CORRIGIDO @635 — aba "Fontes de Recurso" adicionada à view-financeiro; `FontesRecursoUI` → `FontesUI` corrigido | — |
 | ~~FIN-11~~ | Financeiro | ✅ CORRIGIDO @635 — aba "Execução" no painel do contrato: Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica | — |
-| ~~FIN-12~~ | Financeiro | ✅ CORRIGIDO @636 — histórico com botão "Ver diff" por versão; modal compara snapshot × estado atual em 7 campos; botão "Restaurar esta versão" com confirmação + backup automático antes de restaurar | — |
+| ~~FIN-12~~ | Financeiro | ✅ CORRIGIDO @637 — histórico com botão "Ver diff" por versão; modal compara snapshot × estado atual em 7 campos; botão "Restaurar esta versão" com confirmação + backup automático antes de restaurar | — |
 | FIN-15 | Financeiro | Ícone `manage_accounts` ambíguo no card do contrato | 🔵 |
 | ~~FIN-18~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — coberto por FIN-20 (flag `voucher_uber` implementado no form da rubrica) | — |
 | ~~FIN-19~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — `setor` adicionado ao mapeamento de `memoriaCalculo` em `contrato_repository.gs/adicionarRubrica` | — |
@@ -442,7 +442,7 @@
 | CAR-04 | Veículo — Formulário | Select "Vincular a Ação" preso em "Carregando..." | 🟡 |
 | CAR-06 | Veículo | Card exibe email em vez do nome completo | 🟡 |
 | CAR-07 | Veículo | "Aprov: email" abreviatura incorreta | 🟡 |
-| ~~CAR-08~~ | Veículo — Modal | ✅ CORRIGIDO @636 — linha "Setor Solicitante" dedicada adicionada ao modal `carro-det-overlay`; `_verDetalhesAgenda` popula `carro-det-setor` separado do nome do solicitante | — |
+| ~~CAR-08~~ | Veículo — Modal | ✅ CORRIGIDO @637 — linha "Setor Solicitante" dedicada adicionada ao modal `carro-det-overlay`; `_verDetalhesAgenda` popula `carro-det-setor` separado do nome do solicitante | — |
 | CAR-09 | Veículo | Campo Passageiros texto livre sem distinção interno/externo | 🔴 |
 | CAR-10 | Veículo | Sem paradas intermediárias | 🔴 |
 | CAR-11 | Veículo | Sem bloqueio de datas/horas passadas no frontend | 🔴 |
@@ -467,7 +467,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 33 (2026-06-06) → SESSÃO 34
 
-### Estado atual: ~272 bugs registrados · Deploy @636 (GAS) · Firebase live
+### Estado atual: ~272 bugs registrados · Deploy @637 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s33)
 
