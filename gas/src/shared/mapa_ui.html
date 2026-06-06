@@ -281,7 +281,14 @@ var MapaUI=(function(){
     inner.addEventListener('click',function(e){
       var g=e.target.closest('.mapa-espaco');
       if(!g){fecharPainel();return;}
-      _sel(g.dataset.id);
+      var id=g.dataset.id;
+      var info=_statusMap[id]||{};
+      // Espaço disponível e que aceita reserva → atalho direto para o form
+      if(info.status==='disponivel' && info.aceitaReserva!==false && g.dataset.aceita!=='false'){
+        solicitarReserva(id);
+      } else {
+        _sel(id);
+      }
     });
     area.addEventListener('wheel',function(e){
       e.preventDefault();

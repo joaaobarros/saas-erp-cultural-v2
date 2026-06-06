@@ -18841,7 +18841,8 @@ var ReservasUI = (function() {
 
       html += '<div class="rdg-row" style="height:' + _ROW_H_RDG + 'px;">';
       html += '<div class="rdg-sala-label" style="width:' + _SALA_W_RDG + 'px;background:' + corSala + ';position:sticky;left:0;z-index:2;" title="' + escaparHtml(nomeSala) + '">' + escaparHtml(nomeSala) + '</div>';
-      html += '<div class="rdg-grid-area" style="width:' + _TOTAL_PX_RDG + 'px;flex-shrink:0;position:relative;">';
+      html += '<div class="rdg-grid-area" style="width:' + _TOTAL_PX_RDG + 'px;flex-shrink:0;position:relative;cursor:crosshair;"'
+        + ' onclick="ReservasUI._rdgClickVazio(event,' + JSON.stringify(espacoId).replace(/"/g,"'") + ')">';
 
       // Linhas verticais de hora
       for (var hg = _HORA_INI_RDG; hg <= _HORA_FIM_RDG; hg++) {
@@ -18910,6 +18911,22 @@ var ReservasUI = (function() {
     }
     // Relógio
     window._rdgClockInt = setInterval(function() { if (_modo === 'diagrama') _renderDiagrama(); }, 60000);
+  }
+
+  // ── Click em área vazia do Diagrama ──────────────────────────────────────
+  function _rdgClickVazio(e, espacoId) {
+    if (e.target.closest && e.target.closest('.rdg-bloco')) return;
+    var hoje = new Date().toISOString().slice(0,10);
+    if (_diagramaDia < hoje) return;
+    var rect = e.currentTarget.getBoundingClientRect();
+    var offsetX = e.clientX - rect.left;
+    var totalMin = Math.round((_HORA_INI_RDG*60 + offsetX/_MIN_PX_RDG) / 30) * 30;
+    totalMin = Math.max(_HORA_INI_RDG*60, Math.min((_HORA_FIM_RDG-1)*60, totalMin));
+    var h = Math.floor(totalMin/60), m = totalMin%60;
+    var fimMin = Math.min(totalMin + 60, _HORA_FIM_RDG*60);
+    var hf = Math.floor(fimMin/60), mf = fimMin%60;
+    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    abrirForm({ sala: espacoId, data: _diagramaDia, horaInicio: pad(h)+':'+pad(m), horaTermino: pad(hf)+':'+pad(mf) });
   }
 
   // ── Agenda (calendário semanal) ───────────────────────────────────────────
@@ -18992,7 +19009,9 @@ var ReservasUI = (function() {
       });
       var nCols = Math.max(1, cols.length);
 
-      html += '<div style="flex:1;position:relative;border-left:1px solid var(--border);height:' + _TOTAL_H_RAG + 'px;">';
+      html += '<div style="flex:1;position:relative;border-left:1px solid var(--border);height:' + _TOTAL_H_RAG + 'px;'
+        + (d >= hoje ? 'cursor:crosshair;' : '') + '"'
+        + (d >= hoje ? ' onclick="ReservasUI._ragClickVazio(event,\'' + d + '\')"' : '') + '>';
       // Linhas de hora
       for (var hg = _HORA_INI_RAG; hg < _HORA_FIM_RAG; hg++) {
         html += '<div style="position:absolute;top:' + ((hg-_HORA_INI_RAG)*60*_PX_MIN_RAG) + 'px;left:0;right:0;'
@@ -19034,6 +19053,22 @@ var ReservasUI = (function() {
     // Auto-scroll
     var scrollEl = container.querySelector('#rag-scroll');
     if (scrollEl) scrollEl.scrollTop = Math.max(0, (agoraMin - _HORA_INI_RAG*60 - 60)*_PX_MIN_RAG);
+  }
+
+  // ── Click em slot vazio da Agenda ─────────────────────────────────────────
+  function _ragClickVazio(e, d) {
+    if (e.target.closest && e.target.closest('.rag-bloco')) return;
+    var hoje = new Date().toISOString().slice(0,10);
+    if (d < hoje) return;
+    var rect = e.currentTarget.getBoundingClientRect();
+    var offsetY = e.clientY - rect.top;
+    var totalMin = Math.round((_HORA_INI_RAG*60 + offsetY/_PX_MIN_RAG) / 30) * 30;
+    totalMin = Math.max(_HORA_INI_RAG*60, Math.min((_HORA_FIM_RAG-1)*60, totalMin));
+    var h = Math.floor(totalMin/60), m = totalMin%60;
+    var fimMin = Math.min(totalMin + 60, _HORA_FIM_RAG*60);
+    var hf = Math.floor(fimMin/60), mf = fimMin%60;
+    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    abrirForm({ data: d, horaInicio: pad(h)+':'+pad(m), horaTermino: pad(hf)+':'+pad(mf) });
   }
 
   // ── Modal de detalhe de reserva ───────────────────────────────────────────
@@ -19491,6 +19526,8 @@ var ReservasUI = (function() {
       _renderAgenda(); carregar();
     },
     _garantirEspacosPorId:_garantirEspacosPorId,
+    _ragClickVazio:_ragClickVazio,
+    _rdgClickVazio:_rdgClickVazio,
     // Lote de Reservas — delega para _LoteUI (inicializado logo abaixo)
     abrirModalLote:         function()   { window._LoteUI && window._LoteUI.abrir(); },
     _loteFecharModal:       function()   { window._LoteUI && window._LoteUI.fechar(); },
