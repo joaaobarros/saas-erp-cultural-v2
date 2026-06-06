@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @620 · 280 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @631 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -196,7 +196,7 @@
 | Guia contextual in-app | ✅ ESC-12 CORRIGIDO s17 F64 @505 | 2026-06-04 |
 | Aba Alertas — card explicativo | ✅ ESC-10 CORRIGIDO s17 F63 @490 | 2026-06-03 |
 | Perfil Analítico removido | ✅ ESC-08 CORRIGIDO s17 F56 @460 | 2026-06-03 |
-| Pulse — clima por setor vazio | ✅ PUL-07 CORRIGIDO @620 | 2026-06-06 |
+| Pulse — clima por setor vazio | ✅ PUL-07 CORRIGIDO @631 | 2026-06-06 |
 
 ### Módulo 16 — Financeiro
 | Item | Status | Sessão |
@@ -206,8 +206,8 @@
 | Painel do contrato (5 abas) | ✅ | 2026-06-01 |
 | FSM do contrato — botões Suspender/Encerrar | ✅ FIN-14 CORRIGIDO s16 F17 | 2026-06-01 |
 | FIN-07 — label renomeado "Total Previsto Ativo" | ✅ CORRIGIDO s17 F62 @480 | 2026-06-03 |
-| Setor na Rubrica (nível correto) | ✅ FIN-19 CORRIGIDO @620 — `setor` preservado no mapeamento de `memoriaCalculo` em `adicionarRubrica` | 2026-06-06 |
-| Flags de operação configuráveis | ✅ FIN-20 CORRIGIDO @620 — checkbox `voucher_uber` no form; badge no card; `flags` em `dados` | 2026-06-06 |
+| Setor na Rubrica (nível correto) | ✅ FIN-19 CORRIGIDO @631 — `setor` preservado no mapeamento de `memoriaCalculo` em `adicionarRubrica` | 2026-06-06 |
+| Flags de operação configuráveis | ✅ FIN-20 CORRIGIDO @631 — checkbox `voucher_uber` no form; badge no card; `flags` em `dados` | 2026-06-06 |
 
 ### Módulo 22/23 — Comunicação (RECE + Balcão)
 | Item | Status | Sessão |
@@ -421,9 +421,9 @@
 | FIN-12 | Financeiro | Histórico apenas metadados, sem diff nem reversão | 🔴 |
 | FIN-15 | Financeiro | Ícone `manage_accounts` ambíguo no card do contrato | 🔵 |
 | FIN-18 | Financeiro — Rubricas | Flag `voucher_uber` configurável por rubrica | 🔴 |
-| ~~FIN-19~~ | Financeiro — Rubricas | ✅ CORRIGIDO @620 — `setor` adicionado ao mapeamento de `memoriaCalculo` em `contrato_repository.gs/adicionarRubrica` | — |
-| ~~FIN-20~~ | Financeiro — Rubricas | ✅ CORRIGIDO @620 — checkbox `voucher_uber` no form da rubrica; badge no card; campo `flags` persistido | — |
-| ~~CON-09~~ | Contratações | ✅ CORRIGIDO @620 — campo "Atividade" nas parcelas vira select com atividades da meta selecionada; `_atvOptions` reseta ao trocar contrato/form | — |
+| ~~FIN-19~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — `setor` adicionado ao mapeamento de `memoriaCalculo` em `contrato_repository.gs/adicionarRubrica` | — |
+| ~~FIN-20~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — checkbox `voucher_uber` no form da rubrica; badge no card; campo `flags` persistido | — |
+| ~~CON-09~~ | Contratações | ✅ CORRIGIDO @631 — campo "Atividade" nas parcelas vira select com atividades da meta selecionada; `_atvOptions` reseta ao trocar contrato/form | — |
 | REU-09 | Reuniões — Ata | Aprovação single-approver; desejado: coletiva por participante | 🔴 |
 | REU-10 | Reuniões — Ata | Sem auxílio de IA (geração de rascunho, revisão, extração encaminhamentos) | 🔴 |
 | REU-12 | Meu Centro | Sem botão "+ Tarefa Rápida" no inbox | 🟡 |
@@ -464,7 +464,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 31 (2026-06-06) → SESSÃO 32
 
-### Estado atual: ~277 bugs registrados · Deploy @620 (GAS) · Firebase live
+### Estado atual: ~277 bugs registrados · Deploy @631 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s31)
 
@@ -475,7 +475,7 @@
 | @620 | FIN-19 (auditoria) | `contrato_repository.gs/adicionarRubrica`: campo `setor` adicionado ao mapeamento de `memoriaCalculo` — era descartado na normalização. |
 | @620 | FIN-20 (auditoria) | Flags de operação por rubrica: checkbox "Permite solicitação de voucher Uber" (`cd-rub-flag-voucher-uber`) no form; badge "Uber" no card; `flags:{voucher_uber:bool}` em `dados` de `salvarRubrica`; restore em `editarRub`; reset em `abrirRubForm`. |
 | @620 | CON-09 (auditoria) | Campo "Atividade" nas parcelas de contratações: `_atvOptions` armazena atividades da meta selecionada; `atualizarGridParcelas` cria `<select>` quando `_atvOptions.length > 0`; `_coletarParcelas` usa `[data-atv]`; reset em `_limparForm`, `onContratoSelecionado` e `onMetaSelecionada`. |
-| @620 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback (aprovações rápidas deixavam setor vazio); usuários sem nenhum setor excluídos em vez de 'Sem setor'. Aprovação no admin: `data-setor` no botão + `aprovar(email, setor)` repassam `setorDesejado` ao `aprovarAcesso` — novas aprovações já definem setor. |
+| @631 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback (aprovações rápidas deixavam setor vazio); usuários sem nenhum setor excluídos em vez de 'Sem setor'. Aprovação no admin: `data-setor` no botão + `aprovar(email, setor)` repassam `setorDesejado` ao `aprovarAcesso` — novas aprovações já definem setor. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
