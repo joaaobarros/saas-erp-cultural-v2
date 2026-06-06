@@ -459,7 +459,7 @@
 | HUB-07 | Meu Centro | Integração de fontes não implementada | 🔴 |
 | HUB-08 | Meu Centro | Sem botão de criação de tarefa | 🔴 |
 | ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @643 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
-| HUB-10 | Meu Centro | Cards com bordas e formato diferente do padrão | 🟡 |
+| ~~HUB-10~~ | Meu Centro | ✅ CORRIGIDO @646 — `.th-item`: padding `10px 14px` → `12px 16px`, margem `6px` → `8px`, transition → `var(--fast)`; ícone 30×30 → 32×32; CSS `.th-prod-*` morto removido (nunca usado — `_prodCard` usa `stat-card`) | — |
 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
 | HUB-12 | Meu Centro | Sem seção de aniversariantes | 🔴 |
 | HUB-13 | Meu Centro | Sem workflow de dayoff de aniversário | 🔴 |
@@ -468,7 +468,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @645 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @646 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 
@@ -481,6 +481,7 @@
 | @641 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |
 | @643 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
 | @644 | CAR-06/07 (auditoria) | `ctrl_carro_dados` enriquece lista com `solicitanteNome` + `aprovadorNome` via bulk map; frontend: card exibe nome (email no title); aprovador: "Aprovado por: Nome" em vez de "Aprov: prefix". CAR-03/04 verificados corretos. |
+| @646 | HUB-10 (auditoria) | `.th-item`: padding alinhado com DS (`12px 16px`), margem `8px`, transition → `var(--fast)`, ícone 32×32; CSS morto `.th-prod-*` removido. |
 | @645 | Feature: click-to-reserve | Agenda: slot vazio → form (hora calculada por Y). Diagrama: área vazia → form (espaço+hora por X). Mapa: clique em `disponivel` → form direto (sem painel lateral). |
 
 ### Pendentes / próxima ação
@@ -488,7 +489,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-10 (cards formato diferente), HUB-03 (Meu Dia sem pendências reais), CAR-01 (módulo nunca testado completamente), CAR-12 (motorista configurável)
+- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-02 (responsável texto livre → select), APR-01 (badges contadores por aba)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
