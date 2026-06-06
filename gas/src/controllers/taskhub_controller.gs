@@ -62,19 +62,27 @@ function ctrl_taskhub_minha_caixa(params) {
     // ── 4. Aprovações pendentes (solicitações de reserva para gestores) ───
     try {
       var papel = acesso.registro && acesso.registro.papel;
-      if (['gestor','admin','superadmin'].includes(papel)) {
-        var solic = readJSON('solicitacoes_reserva.json') || [];
-        solic.filter(function(s) {
-          return s.orgId === orgId && s.status === 'pendente';
-        }).forEach(function(s) {
+      if (['gestor','admin','superadmin'].indexOf(papel) !== -1) {
+        var solic = SolicitacaoReservaRepository.listarPorStatus('pendente', orgId);
+        solic.forEach(function(s) {
           itens.push(_itemCaixa('aprovacao', s.id,
-            'Aprovar reserva de "' + (s.espacoNome || s.espacoId) + '" por ' + (s.solicitante || '—'),
+            'Aprovar reserva de "' + (s.espacoNome || s.espacoId || '—') + '" por ' + (s.solicitante || '—'),
             null, 'alta', 'espacos', { tipo: 'reserva', solicitante: s.solicitante }));
         });
       }
     } catch(e) { Logger.warn('taskhub', 'aprovacoes', e.message); }
 
-    // ── 5. Alertas não lidos (todos os módulos) ───────────────────────────
+    // ── 5. Chaves com devolução atrasada (como responsável) ───────────────
+    try {
+      var chaves = ChaveRepository.listar({ status: 'atrasado', responsavel: email }, orgId);
+      chaves.forEach(function(c) {
+        itens.push(_itemCaixa('chave', c.id,
+          'Devolver chave: ' + (c.nomeSala || c.salaId || '—'),
+          c.dataDevolucao || null, 'alta', 'chaves', { salaId: c.salaId }));
+      });
+    } catch(e) { Logger.warn('taskhub', 'chaves', e.message); }
+
+    // ── 6. Alertas não lidos (todos os módulos) ───────────────────────────
     try {
       var alertas = AlertasEngine.listarAtivos(orgId, { somenteNaoLidos: true });
       alertas.slice(0, 10).forEach(function(a) {

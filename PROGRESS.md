@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria TAR-03 (2026-06-06)** — Deploy @654. TAR-03 CORRIGIDO: form de Tarefas ganha campos Prazo + Vínculo (select tipo Ação/Reserva/Contrato + select ID carregado dinamicamente com cache em `_vinculoCache`). `criar()` envia `acaoId`, `reservaId` ou `contratoId` ao backend. Engine ganha `reservaId`/`contratoId` em `_novaTarefa` e `editar`. Repository ganha as duas colunas em `_HEADERS` + `_serializarIndice`. Lista exibe badges de vínculo (ícones MS + cor DS) e prazo. Header migrado para `view-header` DS. Próximo: HUB-03 (Meu Dia sem pendências reais).
+**Fase atual**: **Auditoria HUB-03 + HUB-07 + HUB-08 (2026-06-06)** — Deploy @656. HUB-03 CORRIGIDO: bug crítico — `readJSON('solicitacoes_reserva.json')` sempre retornava null; substituído por `SolicitacaoReservaRepository.listarPorStatus('pendente', orgId)` (dados vivem em Sheet, não JSON). `.includes()` → `.indexOf()` para ES5. HUB-07 CORRIGIDO: chaves atrasadas (`status='atrasado'`, `responsavel=email`) adicionadas como 6ª fonte; ícone `key`, click → Espaços. HUB-08 CORRIGIDO: botão "Nova Tarefa" no header do Meu Dia → navega para view Tarefas. Próximos: HUB-11/12 (aniversariantes), TAR-04 (gatilhos automáticos).
 
 **Fase anterior**: **Auditoria HUB-10 (2026-06-06)** — Deploy @648.
 

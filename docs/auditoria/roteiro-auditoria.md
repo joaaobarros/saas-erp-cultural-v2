@@ -452,12 +452,12 @@
 | CAR-14 | Veículo — Feature | Frota configurável — não implementado | 🔴 |
 | ~~HUB-01~~ | Meu Centro | ✅ VERIFICADO @641 — aba Produtividade já tinha MetricsToggle.wrap(); abas Meu Dia/Meu Time não têm stats panel | — |
 | ~~HUB-02~~ | Meu Centro | ✅ VERIFICADO @641 — estado vazio usa Material Symbol `celebration`, não emoji literal; sem emoji unicode no HTML | — |
-| HUB-03 | Meu Centro | Meu Dia não agrega pendências dos módulos | 🔴 |
+| ~~HUB-03~~ | Meu Centro | ✅ CORRIGIDO @656 — bug crítico: `readJSON('solicitacoes_reserva.json')` substituído por `SolicitacaoReservaRepository.listarPorStatus('pendente', orgId)` (entidade usa Sheet, não JSON). `.includes()` → `.indexOf()` (ES5). | — |
 | ~~HUB-04~~ | Meu Centro | ✅ CORRIGIDO @643 — empty state do Meu Time com orientação: explica o que fazer (criar tarefas / encaminhamentos) | — |
 | ~~HUB-05~~ | Meu Centro | ✅ CORRIGIDO @643 — unidade '(h)' movida para o label; valor de dias sem unidade embutida | — |
 | ~~HUB-06~~ | Meu Centro | ✅ VERIFICADO @641 — label sidebar "Meu Centro", view-title "Meu Centro de Controle"; "TaskHub" só em IDs internos | — |
-| HUB-07 | Meu Centro | Integração de fontes não implementada | 🔴 |
-| HUB-08 | Meu Centro | Sem botão de criação de tarefa | 🔴 |
+| ~~HUB-07~~ | Meu Centro | ✅ CORRIGIDO @656 — chaves com devolução atrasada (`status='atrasado'`, `responsavel=email`) adicionadas como 6ª fonte de agregação; tipo `chave` com ícone `key`; click navega para Espaços. | — |
+| ~~HUB-08~~ | Meu Centro | ✅ CORRIGIDO @656 — botão "Nova Tarefa" adicionado no header do tab Meu Dia; navega para view-tarefas onde o form de criação está disponível. | — |
 | ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @643 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
 | ~~HUB-10~~ | Meu Centro | ✅ CORRIGIDO @648 — `.th-item`: padding `10px 14px` → `12px 16px`, margem `6px` → `8px`, transition → `var(--fast)`; ícone 30×30 → 32×32; CSS `.th-prod-*` morto removido (nunca usado — `_prodCard` usa `stat-card`) | — |
 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
@@ -490,9 +490,9 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend)
+- **Próximos bugs de auditoria:** HUB-11 (modelo heterogêneo), HUB-12 (aniversariantes), TAR-04 (gatilhos automáticos)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
 - **CAR-12/13/14** (motorista configurável, voucher Uber, frota — features não implementadas)
-- **HUB-03/07/08** (Meu Centro: pendências reais, fontes, criação de tarefa)
+- **HUB-11/12/13** (Meu Centro: modelo heterogêneo, aniversariantes, dayoff)
