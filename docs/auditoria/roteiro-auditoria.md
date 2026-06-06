@@ -461,28 +461,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 28 (2026-06-05) → SESSÃO 29
+## HANDOFF ATUAL — SESSÃO 29 (2026-06-06) → SESSÃO 30
 
-### Estado atual: 280 bugs registrados · Deploy @596
+### Estado atual: 280 bugs registrados · Deploy @597 (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s28)
+### O que foi feito nesta sessão (s29)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @596 | SIS-13 (auditoria) | 5 campos "responsável" texto livre → `<select>` + `_carregarSelectUsuariosHelper`: `tf-responsavel` (Tarefas), `acao-responsavel` (Ações), `obj-responsavel` (Estratégia), `pat-modal-resp` (Patrimônio dinâmico), `run-enc-resp-input` (Reuniões). `par-resp` (Parcerias) mantido como texto — contato externo |
-| @594 | SIS-10 (auditoria) | 3 modais com header scrollável corrigidos (`rece-modal`, `run-modal`, `bl-modal`): `overflow-y:auto` removido do `.modal-box`; `<div class="modal-body">` adicionado como wrapper scrollável; `.modal-footer` movido para fora do `<form>` e migrado para classe CSS padrão. Modais restantes (`carro-modal`, Contratos Detail) com conteúdo curto — anotados para fase posterior |
-| @593 | SIS-01 (auditoria) | `confirm()` inline migrado para padrão `_conf` (linhas 9665, 28116). Bug: motivo da suspensão em `ContratadosUI.suspender()` capturado mas nunca passado — cadeia inteira corrigida: frontend, GAS binding, controller, engine, `_transitarContratado` (motivo gravado em `motivoUltimaAlteracao` + audit). Anti-padrão crítico confirmado ausente em todas as 30+ chamadas. |
-| @590 | SIDEBAR/ESTR (auditoria) | Sidebar: `pessoas`, `ponto`, `balcao`, `estrategia` removidos do menu (cross-nav nas views); `rh` → "Pessoas / RH"; `taskhub` → posição #2. Views ainda acessíveis via cross-nav e Router.registrar explícito |
-| @589 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
-| @587 | limpeza | Remove `fase75_inspecionar_estoque_v1` e `fase75_importar_consumiveis_v1` — sem dados V1 para migrar |
-| @584 | 79 — Integração de Materiais nas Reservas | `ctrl_reservas_criar`: extrai `itensMateriais`, cria `SolicitacaoMaterial` via `EstoqueEngine.novaSolicitacao` com `reservaId`, retorna `solicitacaoCodigo` (best-effort). Frontend: `_carregarDisponibilidadeItens` migrado para `GAS.estoque.listarItens`; label → "Materiais necessários"; `salvar()` passa `itensMateriais`; toast exibe SOL-XXXX |
+| @597 | Firebase + URL routing | `public/index.html` — página de redirect com design do sistema (gradiente roxo, spinner, barra progresso accent, redirect JS 2,5 s, preserve `?secao=`). `firebase-hosting-merge.yml` — deploy automático ao push na `main`. `.gitignore` + `.firebase/`. Router SPA: `_pushUrl(id)` com `google.script.history` (`replace` na 1ª nav, `push` nas demais); `setChangeHandler` para Voltar/Avançar; `_getSecaoUrl()` restaura módulo ao recarregar. |
+| @596 | SIS-13 (auditoria) | 5 campos "responsável" texto livre → `<select>` + `_carregarSelectUsuariosHelper`. `par-resp` (Parcerias) mantido como texto — contato externo |
+| @594 | SIS-10 (auditoria) | 3 modais com header scrollável corrigidos (`rece-modal`, `run-modal`, `bl-modal`) |
+| @593 | SIS-01 (auditoria) | `confirm()` inline migrado para `_conf`; bug motivo suspensão Contratados corrigido end-to-end |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** SIDEBAR-04, SIS-10 (modais restantes: carro-modal + Contratos Detail), FIN-19, FIN-20, CON-09
+- **Próximos bugs de auditoria (em ordem):** SIDEBAR-04, FIN-19, FIN-20, CON-09
 - **Bugs prioritários:** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)

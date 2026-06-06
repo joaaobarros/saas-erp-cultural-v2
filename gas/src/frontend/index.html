@@ -14871,9 +14871,19 @@ var ReservasCarroUI = (function() {
 // ROUTER
 // ═══════════════════════════════════════════════════════════
 var Router = (function() {
-  var _views = {}, _atual = 'home';
+  var _views = {}, _atual = 'home', _firstNav = true, _fromHistory = false;
 
   function registrar(id, titulo, fn) { _views[id] = {titulo:titulo, fn:fn}; }
+
+  function _pushUrl(id) {
+    if (_fromHistory) return;
+    try {
+      var hist = google.script.history;
+      var path = '?secao=' + encodeURIComponent(id);
+      if (_firstNav) { hist.replace({secao:id}, null, path); _firstNav = false; }
+      else           { hist.push({secao:id},    null, path); }
+    } catch(_) {}
+  }
 
   function navegar(id) {
     document.querySelectorAll('.modal-simples,.rh-modal-overlay').forEach(function(m){ m.remove(); });
@@ -14893,6 +14903,7 @@ var Router = (function() {
     if(link) link.classList.add('ativo');
     if(meta && meta.fn) meta.fn();
     _atual = id;
+    _pushUrl(id);
   }
 
   function _renderComingSoon(id) {
@@ -14918,7 +14929,18 @@ var Router = (function() {
     document.querySelectorAll('.view').forEach(function(v){v.classList.remove('ativa');});
     cs.classList.add('ativa');
     _atual = id;
+    _pushUrl(id);
   }
+
+  // Botão Voltar/Avançar do browser
+  try {
+    google.script.history.setChangeHandler(function(e) {
+      var id = (e && e.state && e.state.secao) || 'home';
+      _fromHistory = true;
+      navegar(id);
+      _fromHistory = false;
+    });
+  } catch(_) {}
 
   // Inicia o carregamento de dados de um módulo sem navegar para ele.
   // Chamado no hover do menu (~150ms) para que os dados cheguem antes do clique.
@@ -24601,6 +24623,13 @@ var App = (function() {
     { id:'manual',           label:'Manual',          icone:'help_outline',   modulo:null }
   ];
 
+  function _getSecaoUrl() {
+    try {
+      var m = /[?&]secao=([^&#]+)/.exec(window.location.search);
+      return m ? decodeURIComponent(m[1]) : null;
+    } catch(e) { return null; }
+  }
+
   function iniciar() {
     GAS.sistema.getBootstrap(
       function(resp) {
@@ -24899,7 +24928,8 @@ var App = (function() {
         ManualUI.setPapelAnterior(_papelMudou);
         Router.navegar('manual');
       } else {
-        Router.navegar('home');
+        var _secaoUrl = _getSecaoUrl();
+        Router.navegar((_secaoUrl && _secaoUrl !== 'app') ? _secaoUrl : 'home');
       }
     }
   }
