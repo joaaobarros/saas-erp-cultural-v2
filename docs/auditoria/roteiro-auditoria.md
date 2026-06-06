@@ -446,7 +446,7 @@
 | ~~CAR-08~~ | Veículo — Modal | ✅ CORRIGIDO @637 — linha "Setor Solicitante" dedicada adicionada ao modal `carro-det-overlay`; `_verDetalhesAgenda` popula `carro-det-setor` separado do nome do solicitante | — |
 | ~~CAR-09~~ | Veículo | ✅ CORRIGIDO @638 — passageiros separados em internos (select colaboradores + chip tags) e externos (texto livre); backend: `passageirosInternos[]`, `passageirosExternos[]` | — |
 | ~~CAR-10~~ | Veículo | ✅ CORRIGIDO @638 — seção "Paradas intermediárias" dinâmica no form; `rota.paradas[]` persistido; modal de detalhes renderiza Saída → Paradas → Chegada com ícones dinâmicos | — |
-| CAR-11 | Veículo | Sem bloqueio de datas/horas passadas no frontend | 🔴 |
+| ~~CAR-11~~ | Veículo | ✅ CORRIGIDO @639 — agenda: dias passados não-clicáveis (opacidade reduzida, sem onclick); `_abrirFormularioDia` guarda contra datas passadas + Toast; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje | — |
 | CAR-12 | Veículo — Feature | Motorista configurável — não implementado | 🔴 |
 | CAR-13 | Veículo | Sem suporte a solicitação de voucher Uber | 🔴 |
 | CAR-14 | Veículo — Feature | Frota configurável — não implementado | 🔴 |
@@ -466,11 +466,11 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 33 (2026-06-06) → SESSÃO 34
+## HANDOFF ATUAL — SESSÃO 34 (2026-06-06) → SESSÃO 35
 
-### Estado atual: ~270 bugs registrados · Deploy @638 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @639 (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s33)
+### O que foi feito nesta sessão (s34)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
@@ -478,14 +478,16 @@
 | @637 | FIN-12 (auditoria) | Histórico com "Ver diff" + restauração de versão (diff modal 7 campos + backup automático + `ContratosEngine.restaurarVersao`). |
 | @638 | CAR-09 (auditoria) | Passageiros separados: internos (select colaboradores + chip tags `_passInternosData`) e externos (texto livre); `passageirosInternos/Externos` no backend; legado `passageiros[]` preservado. |
 | @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
+| @639 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** FIN-06 (integração Financeiro↔RH — avaliar escopo), CAR-11 (sem bloqueio de datas passadas no frontend — já parcialmente implementado?)
+- **Próximos bugs de auditoria:** FIN-06 (integração Financeiro↔RH — avaliar escopo), CAR-12 (motorista configurável — feature), CAR-13 (voucher Uber), HUB-01 (MetricsToggle), HUB-06 (título "TaskHub")
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
-- **CAR-11** (Sem bloqueio de datas/horas passadas no frontend — verificar se já coberto)
+- **CAR-12/13/14** (motorista configurável, voucher Uber, frota — features não implementadas)
+- **HUB-03/07/08/09** (Meu Centro: pendências, fontes, criação de tarefa, time)

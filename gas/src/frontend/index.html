@@ -2406,7 +2406,7 @@ select.form-control { cursor: pointer; }
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <div class="form-group">
                 <label class="form-label">Data da Viagem *</label>
-                <input id="carro-f-data" type="date" class="form-control" required>
+                <input id="carro-f-data" type="date" class="form-control" required onchange="ReservasCarroUI._onDataChange()">
               </div>
               <div class="form-group">
                 <label class="form-label">Setor / Equipe</label>
@@ -14657,14 +14657,24 @@ var ReservasCarroUI = (function() {
         var sid = JSON.stringify(r.id).replace(/"/g, "'");
         return '<div class="badge ' + cls + '" title="' + tip + '" onclick="event.stopPropagation();ReservasCarroUI._verDetalhesAgenda(' + sid + ')" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer;">' + label + '</div>';
       }).join('');
+      var ehPassado = (ano < aH) || (ano === aH && mes < mH) || (ano === aH && mes === mH && dia < dH);
       var dsSafe = escaparHtml(ds);
-      cells += '<div onclick="ReservasCarroUI._abrirFormularioDia(\'' + dsSafe + '\')" style="cursor:pointer;min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);transition:background .15s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'var(--surface)\'">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
-          '<span style="font-size:11px;font-weight:' + (ehHoje ? '700' : '500') + ';color:' + (ehHoje ? 'var(--primario)' : 'var(--muted)') + ';">' + dia + '</span>' +
-          '<span style="font-size:14px;color:var(--muted);opacity:.5;line-height:1;" title="Nova reserva neste dia">+</span>' +
-        '</div>' +
-        chips +
-      '</div>';
+      if (ehPassado) {
+        cells += '<div style="cursor:default;min-height:64px;border:1px solid var(--border);border-radius:4px;padding:4px;background:var(--surface2);opacity:.55;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+            '<span style="font-size:11px;font-weight:500;color:var(--muted);">' + dia + '</span>' +
+          '</div>' +
+          chips +
+        '</div>';
+      } else {
+        cells += '<div onclick="ReservasCarroUI._abrirFormularioDia(\'' + dsSafe + '\')" style="cursor:pointer;min-height:64px;border:1px solid ' + (ehHoje ? 'var(--primario)' : 'var(--border)') + ';border-radius:4px;padding:4px;background:var(--surface);transition:background .15s;" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'var(--surface)\'">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+            '<span style="font-size:11px;font-weight:' + (ehHoje ? '700' : '500') + ';color:' + (ehHoje ? 'var(--primario)' : 'var(--muted)') + ';">' + dia + '</span>' +
+            '<span style="font-size:14px;color:var(--muted);opacity:.5;line-height:1;" title="Nova reserva neste dia">+</span>' +
+          '</div>' +
+          chips +
+        '</div>';
+      }
     }
 
     grid.innerHTML = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">' + cabecalho + cells + '</div>';
@@ -14697,9 +14707,16 @@ var ReservasCarroUI = (function() {
   }
 
   function _abrirFormularioDia(ds) {
+    var hoje = new Date();
+    var minData = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + String(hoje.getDate()).padStart(2,'0');
+    if (ds < minData) {
+      Toast.aviso('Não é possível criar reserva para datas passadas.');
+      return;
+    }
     abrirFormulario();
     var elData = document.getElementById('carro-f-data');
     if (elData) elData.value = ds;
+    _onDataChange();
   }
 
   function carregar() {
@@ -15292,6 +15309,22 @@ var ReservasCarroUI = (function() {
     });
   }
 
+  function _onDataChange() {
+    var data = (document.getElementById('carro-f-data') || {}).value || '';
+    var hoje = new Date();
+    var minData = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + String(hoje.getDate()).padStart(2,'0');
+    var elSaida = document.getElementById('carro-f-saida');
+    var elCheg  = document.getElementById('carro-f-chegada');
+    if (data === minData) {
+      var horaMin = String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
+      if (elSaida) elSaida.min = horaMin;
+      if (elCheg)  elCheg.min  = horaMin;
+    } else {
+      if (elSaida) elSaida.removeAttribute('min');
+      if (elCheg)  elCheg.removeAttribute('min');
+    }
+  }
+
   function aoAbrir() {
     var boot = (window.App && App.getBoot) ? App.getBoot() : null;
     _setPapel(boot ? (boot.usuarioPapel || '') : '');
@@ -15304,6 +15337,7 @@ var ReservasCarroUI = (function() {
     setModo:              setModo,
     agendaMes:            agendaMes,
     _abrirFormularioDia:  _abrirFormularioDia,
+    _onDataChange:        _onDataChange,
     _verDetalhesAgenda:   _verDetalhesAgenda,
     _fecharDetalhes:      _fecharDetalhes,
     abrirFormulario:      abrirFormulario,
