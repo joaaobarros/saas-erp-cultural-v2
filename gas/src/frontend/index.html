@@ -2256,6 +2256,7 @@ select.form-control { cursor: pointer; }
         <div class="tab-bar" style="margin-bottom:16px;">
           <button class="tab-btn ativa" id="aprov-tab-btn-reservas" onclick="AprovacaoReservaUI.setTab('reservas',this)">
             <span class="ms ms-sm">meeting_room</span> Reservas de Espaço
+            <span id="badge-aprov-reservas" class="nav-badge oculto" style="position:static;margin-left:4px;display:inline-block;"></span>
           </button>
           <button class="tab-btn" id="aprov-tab-btn-acessos" onclick="AprovacaoReservaUI.setTab('acessos',this)">
             <span class="ms ms-sm">person_add</span> Primeiros Acessos
@@ -13785,7 +13786,7 @@ var AprovacaoReservaUI = (function() {
     var fn = status === 'TODOS' ? GAS.solicitacoes.listarTodas : GAS.solicitacoes.listar;
     fn(function(r) {
       var itens = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
-      _atualizarBadge(itens.filter(function(s){ return s.status === 'PENDENTE'; }).length, null);
+      _atualizarBadgeReservas(itens.filter(function(s){ return s.status === 'PENDENTE'; }).length);
       if (!itens.length) { el.innerHTML = '<p class="muted-text" style="padding:24px;">Nenhuma solicitação.</p>'; return; }
       el.innerHTML = itens.map(function(s) {
         var isPendente = s.status === 'PENDENTE';
@@ -13989,6 +13990,13 @@ var AprovacaoReservaUI = (function() {
     badge.classList.toggle('oculto', total === 0);
   }
 
+  function _atualizarBadgeReservas(count) {
+    var b = document.getElementById('badge-aprov-reservas');
+    if (!b) return;
+    b.textContent = count;
+    b.classList.toggle('oculto', count === 0);
+  }
+
   function _atualizarBadgeAcessos(count) {
     var b = document.getElementById('badge-aprov-acessos');
     if (!b) return;
@@ -14015,6 +14023,7 @@ var AprovacaoReservaUI = (function() {
         var cAcessos = (r2 && r2.ok && Array.isArray(r2.data)) ? r2.data.length : 0;
         GAS.reservasCarro.metricas(function(r3) {
           var cCarros = (r3 && r3.ok && r3.data) ? (r3.data.pendentes || 0) : 0;
+          _atualizarBadgeReservas(cReservas);
           _atualizarBadgeCarros(cCarros);
           _atualizarBadge(cReservas, cAcessos, cCarros);
         }, function() { _atualizarBadge(cReservas, cAcessos, 0); });

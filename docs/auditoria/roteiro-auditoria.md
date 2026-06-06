@@ -372,10 +372,10 @@
 | ADM-08 | Admin | Turnos e Config.Sistema devem ser unificados | 🟡 |
 | ADM-09 | Admin | Categ.Itens deve migrar para Estoque | 🟡 |
 | ADM-12 | Admin | Botão "Visualizar Cadastro" leva para página em branco | 🟡 |
-| APR-01 | Aprovações | Sem badge de contador por aba | 🔴 |
-| APR-02 | Aprovações | SuperAdmin não acessa (restrição RBAC `modulo:'ESPACOS'`) | 🔴 |
+| ~~APR-01~~ | Aprovações | ✅ CORRIGIDO @588 — badge adicionado à aba Reservas; `_atualizarBadgeReservas` criada; `carregar()` e `atualizarBadge()` atualizados | — |
+| ~~APR-02~~ | Aprovações | ✅ CORRIGIDO — `aprovacoes` usa `modulo:null` no menu; acesso não depende de ESPACOS | — |
 | APR-03 | Aprovações | Aba Permissões ausente como centralização de acessos | 🟡 |
-| APR-06 | Aprovações | Cabeçalho usa padrão antigo `page-header` | 🟡 |
+| ~~APR-06~~ | Aprovações | ✅ CORRIGIDO — `view-header/view-title/view-subtitle` já em uso | — |
 | CHV-07 | Chaves — Retirada | "Previsão de Devolução" apenas data, sem campo de hora | 🟡 |
 | CHV-08 | Chaves — Retirada | Sem auto-preenchimento por papel do usuário | 🔴 |
 | EMP-01 | Empréstimos | Desvinculado do fluxo de reserva | 🔴 |
@@ -469,6 +469,8 @@
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
+| @588 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
+| @587 | limpeza | Remove `fase75_inspecionar_estoque_v1` e `fase75_importar_consumiveis_v1` — sem dados V1 para migrar |
 | @584 | 79 — Integração de Materiais nas Reservas | `ctrl_reservas_criar`: extrai `itensMateriais`, cria `SolicitacaoMaterial` via `EstoqueEngine.novaSolicitacao` com `reservaId`, retorna `solicitacaoCodigo` (best-effort). Frontend: `_carregarDisponibilidadeItens` migrado para `GAS.estoque.listarItens`; label → "Materiais necessários"; `salvar()` passa `itensMateriais`; toast exibe SOL-XXXX |
 | @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col. FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" |
 
