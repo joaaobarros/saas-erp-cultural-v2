@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @637 · ~272 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @638 · ~270 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -242,7 +242,7 @@
 | Datas ISO→pt-BR, nome no card | ✅ CAR-05 CORRIGIDO @474 | 2026-06-01 |
 | Sidebar "Reserva de Veículo" | ✅ CAR-02 CORRIGIDO s17 F42 @428 | 2026-06-02 |
 | FSM — botões Concluir / Cancelar | ✅ | 2026-05-31 |
-| Modal detalhes, passageiros, paradas, CAR-12/14 | ✅ CAR-08 CORRIGIDO @636 · ⚠️ pendentes CAR-09/10 | 2026-06-06 |
+| Modal detalhes, passageiros, paradas, CAR-12/14 | ✅ CAR-08/09/10 CORRIGIDOS @637+@638 | 2026-06-06 |
 
 **Legenda:** ✅ confirmado · 🔲 pendente · ⚠️ problema · ❌ não funciona / arquiteturalmente errado
 
@@ -252,6 +252,7 @@
 
 | Deploy | Fase | Resumo |
 |---|---|---|
+| @638 | CAR-09+CAR-10 | CAR-09: passageiros internos (select+tags) / externos (texto); backend passageirosInternos/Externos. CAR-10: paradas dinâmicas no form; rota.paradas[]; modal Saída→Paradas→Chegada com ícones dinâmicos |
 | @637 | CAR-08+FIN-12 | CAR-08: linha "Setor Solicitante" no modal carro-det-overlay. FIN-12: histórico com diff modal + restauração de versão (backup automático antes de restaurar) |
 | @584 | 79 | ctrl_reservas_criar: auto-cria SolicitacaoMaterial com reservaId (best-effort). Frontend: listarItens(estoque) no form de reserva; label "Materiais necessários"; toast com SOL-XXXX |
 | @581 | 77 | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
@@ -443,8 +444,8 @@
 | CAR-06 | Veículo | Card exibe email em vez do nome completo | 🟡 |
 | CAR-07 | Veículo | "Aprov: email" abreviatura incorreta | 🟡 |
 | ~~CAR-08~~ | Veículo — Modal | ✅ CORRIGIDO @637 — linha "Setor Solicitante" dedicada adicionada ao modal `carro-det-overlay`; `_verDetalhesAgenda` popula `carro-det-setor` separado do nome do solicitante | — |
-| CAR-09 | Veículo | Campo Passageiros texto livre sem distinção interno/externo | 🔴 |
-| CAR-10 | Veículo | Sem paradas intermediárias | 🔴 |
+| ~~CAR-09~~ | Veículo | ✅ CORRIGIDO @638 — passageiros separados em internos (select colaboradores + chip tags) e externos (texto livre); backend: `passageirosInternos[]`, `passageirosExternos[]` | — |
+| ~~CAR-10~~ | Veículo | ✅ CORRIGIDO @638 — seção "Paradas intermediárias" dinâmica no form; `rota.paradas[]` persistido; modal de detalhes renderiza Saída → Paradas → Chegada com ícones dinâmicos | — |
 | CAR-11 | Veículo | Sem bloqueio de datas/horas passadas no frontend | 🔴 |
 | CAR-12 | Veículo — Feature | Motorista configurável — não implementado | 🔴 |
 | CAR-13 | Veículo | Sem suporte a solicitação de voucher Uber | 🔴 |
@@ -467,23 +468,24 @@
 
 ## HANDOFF ATUAL — SESSÃO 33 (2026-06-06) → SESSÃO 34
 
-### Estado atual: ~272 bugs registrados · Deploy @637 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @638 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s33)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @636 | CAR-08 (auditoria) | Linha dedicada "Setor Solicitante" no modal `carro-det-overlay`: HTML `carro-det-setor-bloco/carro-det-setor`; `_verDetalhesAgenda` popula setor separado do nome do solicitante (antes estava embutido no Solicitante como "Nome / Setor"). |
-| @636 | FIN-12 (auditoria) | Histórico com diff e restauração: (1) tabela ganha coluna "Ver diff"; (2) `_verDiffContrato` compara snapshot × atual em 7 campos com destaque em azul; (3) `_restaurarVersao` + `_executarRestaurar` com confirmação e backup automático; (4) backend: `ContratosEngine.restaurarVersao` + `ctrl_contrato_restaurar_versao` + `GAS.contratos.restaurar`. |
+| @637 | CAR-08 (auditoria) | Linha dedicada "Setor Solicitante" no modal `carro-det-overlay`; `_verDetalhesAgenda` popula setor separado. |
+| @637 | FIN-12 (auditoria) | Histórico com "Ver diff" + restauração de versão (diff modal 7 campos + backup automático + `ContratosEngine.restaurarVersao`). |
+| @638 | CAR-09 (auditoria) | Passageiros separados: internos (select colaboradores + chip tags `_passInternosData`) e externos (texto livre); `passageirosInternos/Externos` no backend; legado `passageiros[]` preservado. |
+| @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** CAR-09, CAR-10, FIN-06
+- **Próximos bugs de auditoria:** FIN-06 (integração Financeiro↔RH — avaliar escopo), CAR-11 (sem bloqueio de datas passadas no frontend — já parcialmente implementado?)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
-- **CAR-09** (Campo Passageiros texto livre sem distinção interno/externo)
-- **CAR-10** (Sem paradas intermediárias)
+- **CAR-11** (Sem bloqueio de datas/horas passadas no frontend — verificar se já coberto)

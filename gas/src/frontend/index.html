@@ -2424,10 +2424,24 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
 
+            <!-- Passageiros Internos -->
             <div class="form-group">
-              <label class="form-label">Passageiros</label>
-              <input id="carro-f-passageiros" type="text" class="form-control" placeholder="Nomes separados por vírgula">
-              <span style="font-size:11px;color:var(--muted)">Informe os nomes dos passageiros, separados por vírgula.</span>
+              <label class="form-label">Passageiros Internos</label>
+              <div style="display:flex;gap:8px;">
+                <select id="carro-f-pass-sel" class="form-control" style="flex:1;">
+                  <option value="">— Selecionar colaborador —</option>
+                </select>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._adicionarPassInterno()" data-bg-skip="1" title="Adicionar" style="padding:0 10px;flex-shrink:0;">
+                  <span class="ms ms-sm">person_add</span>
+                </button>
+              </div>
+              <div id="carro-f-pass-int-lista" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
+            </div>
+            <!-- Passageiros Externos -->
+            <div class="form-group">
+              <label class="form-label">Passageiros Externos <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+              <input id="carro-f-pass-externo" type="text" class="form-control" placeholder="Nomes separados por vírgula">
+              <span style="font-size:11px;color:var(--muted)">Visitantes, convidados e pessoas externas à organização.</span>
             </div>
 
             <div class="form-group">
@@ -2483,6 +2497,15 @@ select.form-control { cursor: pointer; }
 
             <input type="hidden" id="carro-f-mapa">
 
+            <!-- Paradas Intermediárias -->
+            <div class="form-group">
+              <label class="form-label">Paradas intermediárias <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
+              <div id="carro-paradas-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._adicionarParada()" data-bg-skip="1" style="margin-top:6px;font-size:12px;align-self:flex-start;">
+                <span class="ms ms-sm">add_location_alt</span> Adicionar parada
+              </button>
+            </div>
+
             <div class="form-group">
               <label class="form-label">Observação</label>
               <textarea id="carro-f-obs" class="form-control" rows="3" placeholder="Informações adicionais sobre a viagem…" style="resize:vertical;"></textarea>
@@ -2532,25 +2555,20 @@ select.form-control { cursor: pointer; }
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Setor solicitante</div>
                 <div id="carro-det-setor" style="font-size:13px;"></div>
               </div>
-              <!-- Passageiros -->
-              <div id="carro-det-pass-bloco">
-                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Passageiros</div>
-                <div id="carro-det-pass" style="font-size:13px;"></div>
+              <!-- Passageiros Internos -->
+              <div id="carro-det-pass-int-bloco" style="display:none;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Passageiros internos</div>
+                <div id="carro-det-pass-int" style="font-size:13px;"></div>
+              </div>
+              <!-- Passageiros Externos -->
+              <div id="carro-det-pass-ext-bloco" style="display:none;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Passageiros externos</div>
+                <div id="carro-det-pass-ext" style="font-size:13px;"></div>
               </div>
               <!-- Rota -->
               <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;">
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Rota</div>
-                <div style="display:flex;align-items:flex-start;gap:8px;">
-                  <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:2px;">
-                    <span class="ms ms-sm" style="color:var(--primario);font-size:16px;">trip_origin</span>
-                    <div style="width:1px;height:18px;background:var(--border);margin:2px 0;"></div>
-                    <span class="ms ms-sm" style="color:#ef4444;font-size:16px;">place</span>
-                  </div>
-                  <div style="flex:1;min-width:0;">
-                    <div id="carro-det-saida" style="font-size:13px;margin-bottom:20px;word-break:break-word;"></div>
-                    <div id="carro-det-chegada" style="font-size:13px;word-break:break-word;"></div>
-                  </div>
-                </div>
+                <div id="carro-det-rota-paradas"></div>
                 <div id="carro-det-mapa-link-bloco" style="margin-top:10px;display:none;">
                   <a id="carro-det-mapa-link" href="#" target="_blank" rel="noopener" style="font-size:12px;color:var(--primario);text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
                     <span class="ms ms-sm">open_in_new</span> Ver rota no Google Maps
@@ -14436,6 +14454,7 @@ var ReservasCarroUI = (function() {
   var _mapaPickerMap  = null;
   var _mapaPickerMarker = null;
   var _mapaPickerEnd  = '';
+  var _passInternosData = []; // [{email, nome}] selecionados no form
 
   var _MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -14457,6 +14476,61 @@ var ReservasCarroUI = (function() {
   function _fmtPassageiros(lista) {
     if (!Array.isArray(lista) || !lista.length) return '—';
     return escaparHtml(lista.join(', '));
+  }
+
+  // ── Passageiros internos (chip tags) ───────────────────────────────────────
+
+  function _renderPassInternosTags() {
+    var el = document.getElementById('carro-f-pass-int-lista');
+    if (!el) return;
+    el.innerHTML = _passInternosData.map(function(p, i) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:2px 8px;font-size:12px;">'
+        + escaparHtml(p.nome)
+        + '<button type="button" onclick="ReservasCarroUI._removerPassInterno(' + i + ')" data-bg-skip="1" style="background:none;border:none;cursor:pointer;padding:0;color:var(--muted);line-height:1;font-size:14px;" title="Remover">×</button>'
+        + '</span>';
+    }).join('');
+  }
+
+  function _adicionarPassInterno() {
+    var sel = document.getElementById('carro-f-pass-sel');
+    if (!sel || !sel.value) return;
+    var email = sel.value;
+    var nome  = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.trim() : email;
+    var jaAdicionado = _passInternosData.some(function(p) { return p.email === email; });
+    if (!jaAdicionado) _passInternosData.push({ email: email, nome: nome });
+    sel.value = '';
+    _renderPassInternosTags();
+  }
+
+  function _removerPassInterno(idx) {
+    _passInternosData.splice(idx, 1);
+    _renderPassInternosTags();
+  }
+
+  // ── Paradas intermediárias ─────────────────────────────────────────────────
+
+  function _adicionarParada() {
+    var container = document.getElementById('carro-paradas-lista');
+    if (!container) return;
+    var idx = container.children.length;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+    row.innerHTML =
+      '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;font-size:14px;">radio_button_unchecked</span>'
+      + '<input type="text" class="form-control carro-parada-input" placeholder="Local da parada ' + (idx + 1) + '…" style="flex:1;">'
+      + '<button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()" data-bg-skip="1" style="padding:0 6px;color:var(--muted);" title="Remover"><span class="ms ms-sm">close</span></button>';
+    container.appendChild(row);
+    row.querySelector('input').focus();
+  }
+
+  function _getParadas() {
+    var inputs = document.querySelectorAll('#carro-paradas-lista .carro-parada-input');
+    var paradas = [];
+    inputs.forEach(function(inp) {
+      var v = inp.value.trim();
+      if (v) paradas.push(v);
+    });
+    return paradas;
   }
 
   function _atualizarBadge(pendentes) {
@@ -14676,11 +14750,19 @@ var ReservasCarroUI = (function() {
   function abrirFormulario() {
     var overlay = document.getElementById('carro-modal-overlay');
     if (!overlay) return;
-    ['carro-f-data','carro-f-saida','carro-f-chegada','carro-f-passageiros',
-     'carro-f-mapa','carro-f-obs','carro-f-acao-nome'].forEach(function(id) {
+    ['carro-f-data','carro-f-saida','carro-f-chegada',
+     'carro-f-pass-externo','carro-f-mapa','carro-f-obs','carro-f-acao-nome'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
     });
+    // Resetar passageiros internos
+    _passInternosData = [];
+    _renderPassInternosTags();
+    // Popular select de colaboradores
+    _carregarSelectUsuariosHelper('carro-f-pass-sel', '', '— Selecionar colaborador —');
+    // Resetar paradas
+    var elParadas = document.getElementById('carro-paradas-lista');
+    if (elParadas) elParadas.innerHTML = '';
     // Resetar select de ação e carregar lista
     var selAcao = document.getElementById('carro-f-acao');
     if (selAcao) {
@@ -14827,18 +14909,46 @@ var ReservasCarroUI = (function() {
     if (elSetorB) elSetorB.style.display = r.solicitanteSetor ? '' : 'none';
     if (elSetor)  elSetor.textContent = r.solicitanteSetor || '';
 
-    // Passageiros
-    var elPassB = document.getElementById('carro-det-pass-bloco');
-    var elPass  = document.getElementById('carro-det-pass');
-    var passLista = Array.isArray(r.passageiros) ? r.passageiros.filter(Boolean) : [];
-    if (elPassB) elPassB.style.display = passLista.length ? '' : 'none';
-    if (elPass)  elPass.textContent = passLista.length ? passLista.join(', ') : '';
+    // Passageiros internos
+    var elPassIntB = document.getElementById('carro-det-pass-int-bloco');
+    var elPassInt  = document.getElementById('carro-det-pass-int');
+    var passInt = Array.isArray(r.passageirosInternos) ? r.passageirosInternos.filter(Boolean) : [];
+    if (!passInt.length && Array.isArray(r.passageiros) && r.passageiros.length && !Array.isArray(r.passageirosExternos)) {
+      // legado: passageiros sem distinção → mostrar como internos
+      passInt = r.passageiros.filter(Boolean);
+    }
+    if (elPassIntB) elPassIntB.style.display = passInt.length ? '' : 'none';
+    if (elPassInt) elPassInt.textContent = passInt.map(function(p){ return typeof p === 'object' ? p.nome||p.email : p; }).join(', ');
 
-    // Rota
-    var elSaida   = document.getElementById('carro-det-saida');
-    var elChegada = document.getElementById('carro-det-chegada');
-    if (elSaida)   elSaida.textContent   = escaparHtml(rota.localSaida   || '—');
-    if (elChegada) elChegada.textContent = escaparHtml(rota.localChegada || '—');
+    // Passageiros externos
+    var elPassExtB = document.getElementById('carro-det-pass-ext-bloco');
+    var elPassExt  = document.getElementById('carro-det-pass-ext');
+    var passExt = Array.isArray(r.passageirosExternos) ? r.passageirosExternos.filter(Boolean) : [];
+    if (elPassExtB) elPassExtB.style.display = passExt.length ? '' : 'none';
+    if (elPassExt) elPassExt.textContent = passExt.join(', ');
+
+    // Rota + Paradas
+    var elRotaParadas = document.getElementById('carro-det-rota-paradas');
+    if (elRotaParadas) {
+      var paradas = Array.isArray(rota.paradas) ? rota.paradas.filter(Boolean) : [];
+      var pontos = [{ local: rota.localSaida || '—', icone: 'trip_origin', cor: 'var(--primario)' }];
+      paradas.forEach(function(p) { pontos.push({ local: p, icone: 'radio_button_unchecked', cor: 'var(--muted)' }); });
+      pontos.push({ local: rota.localChegada || '—', icone: 'place', cor: '#ef4444' });
+      elRotaParadas.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;">'
+        + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:2px;">'
+        + pontos.map(function(pt, i) {
+            return '<span class="ms ms-sm" style="color:'+pt.cor+';font-size:16px;">'+pt.icone+'</span>'
+              + (i < pontos.length - 1 ? '<div style="width:1px;height:14px;background:var(--border);margin:2px 0;"></div>' : '');
+          }).join('')
+        + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + pontos.map(function(pt, i) {
+            var mb = i < pontos.length - 1 ? 'margin-bottom:14px;' : '';
+            return '<div style="font-size:13px;word-break:break-word;'+mb+'">'+escaparHtml(pt.local)+'</div>';
+          }).join('')
+        + '</div>'
+        + '</div>';
+    }
     var linkBloco = document.getElementById('carro-det-mapa-link-bloco');
     var link      = document.getElementById('carro-det-mapa-link');
     if (linkBloco && link && rota.mapaUrl) {
@@ -15041,7 +15151,7 @@ var ReservasCarroUI = (function() {
     var horaSaida  = (document.getElementById('carro-f-saida')        || {}).value || '';
     var horaCheg   = (document.getElementById('carro-f-chegada')      || {}).value || '';
     var setor      = (document.getElementById('carro-f-setor')        || {}).value || '';
-    var passRaw    = (document.getElementById('carro-f-passageiros')  || {}).value || '';
+    var passExtRaw = (document.getElementById('carro-f-pass-externo') || {}).value || '';
     var localSaida = (document.getElementById('carro-f-local-saida')  || {}).value || '';
     var localCheg  = (document.getElementById('carro-f-local-chegada')|| {}).value || '';
     var mapaUrl    = (document.getElementById('carro-f-mapa')         || {}).value || '';
@@ -15066,20 +15176,26 @@ var ReservasCarroUI = (function() {
       return;
     }
 
-    var passageiros = passRaw ? passRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+    var passExterno  = passExtRaw ? passExtRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+    var passInterno  = _passInternosData.slice(); // [{email, nome}]
+    var passageiros  = passInterno.map(function(p){ return p.nome; }).concat(passExterno);
+    var paradas      = _getParadas();
 
     var dados = {
-      data:             data,
-      horaSaida:        horaSaida,
-      horaChegada:      horaCheg,
-      solicitanteSetor: setor,
-      passageiros:      passageiros,
-      localSaida:       localSaida,
-      localChegada:     localCheg,
-      mapaUrl:          mapaUrl,
-      acaoId:           acaoId,
-      acaoNome:         acaoNome,
-      observacao:       obs
+      data:                 data,
+      horaSaida:            horaSaida,
+      horaChegada:          horaCheg,
+      solicitanteSetor:     setor,
+      passageiros:          passageiros,
+      passageirosInternos:  passInterno,
+      passageirosExternos:  passExterno,
+      localSaida:           localSaida,
+      localChegada:         localCheg,
+      paradas:              paradas,
+      mapaUrl:              mapaUrl,
+      acaoId:               acaoId,
+      acaoNome:             acaoNome,
+      observacao:           obs
     };
 
     var btn = document.getElementById('btn-carro-salvar');
@@ -15204,7 +15320,11 @@ var ReservasCarroUI = (function() {
     fecharModalRecusa:    fecharModalRecusa,
     confirmarRecusa:      confirmarRecusa,
     cancelar:             cancelar,
-    concluir:             concluir
+    concluir:             concluir,
+    // Passageiros internos / paradas
+    _adicionarPassInterno: _adicionarPassInterno,
+    _removerPassInterno:   _removerPassInterno,
+    _adicionarParada:      _adicionarParada
   };
 })();
 

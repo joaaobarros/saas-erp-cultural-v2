@@ -89,11 +89,15 @@ var ReservaCarroRepository = (function() {
       horaChegada:     dados.horaChegada     || '',
       solicitante:     dados.solicitante     || '',
       solicitanteSetor: dados.solicitanteSetor || '',
-      passageiros:     Array.isArray(dados.passageiros) ? dados.passageiros : [],
+      passageiros:          Array.isArray(dados.passageiros)         ? dados.passageiros         : [],
+      passageirosInternos:  Array.isArray(dados.passageirosInternos) ? dados.passageirosInternos : [],
+      passageirosExternos:  Array.isArray(dados.passageirosExternos) ? dados.passageirosExternos : [],
       rota: {
         localSaida:   (dados.rota || {}).localSaida   || dados.localSaida   || '',
         localChegada: (dados.rota || {}).localChegada || dados.localChegada || '',
-        mapaUrl:      (dados.rota || {}).mapaUrl      || dados.mapaUrl      || ''
+        mapaUrl:      (dados.rota || {}).mapaUrl      || dados.mapaUrl      || '',
+        paradas:      Array.isArray((dados.rota || {}).paradas) ? dados.rota.paradas :
+                      Array.isArray(dados.paradas) ? dados.paradas : []
       },
       observacao:      dados.observacao      || '',
       status:          'PENDENTE',
