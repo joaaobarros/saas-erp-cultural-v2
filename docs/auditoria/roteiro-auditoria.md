@@ -463,7 +463,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @617 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @618 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s30)
 
@@ -474,7 +474,7 @@
 | @603 | Pulse por setor | `_calcPorSetor()` em `escuta_pulse.gs`: participação + clima por setor com threshold de anonimato (≥5 participantes). `carregarPulseDash` renderiza barras semáforo por setor. |
 | @609 | Fix anti-spam pulse | Bug: verificação de intervalo 4h usava `respostasHoje` — falhava na virada de meia-noite. Corrigido para `respostasColab` (todo o mês). |
 | @616 | Fix informações desconexas pulse | 3 inconsistências: (1) `_calcConfianca`/`_metaDimensao`/`_calcPorSetor` trocaram `ColaboradorRepository` → `AcessoService`; (2) monitoramento usa `u.email` em vez de `emailInstitucional/emailPessoal`; (3) marcadores metodológicos recebem labels `(pesquisas formais)` e `(pulse)`. |
-| @617 | SIS-10 restante (auditoria) | 4 modais com header scrollável corrigidos: `carro-modal-box` (flex column, body scrollável, footer sticky); `cd-meta-modal`, `cd-pes-modal`, `cd-indr-modal` migrados de `modal-box-animar` + inline styles para `modal-box` + `modal-header` + `modal-body` + `modal-footer`. |
+| @618 | SIS-10 restante (auditoria) | 4 modais com header scrollável corrigidos: `carro-modal-box` (flex column, body scrollável, footer sticky); `cd-meta-modal`, `cd-pes-modal`, `cd-indr-modal` migrados de `modal-box-animar` + inline styles para `modal-box` + `modal-header` + `modal-body` + `modal-footer`. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
