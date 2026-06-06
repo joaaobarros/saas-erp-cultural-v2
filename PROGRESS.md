@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria HUB-10 (2026-06-06)** — Deploy @648. HUB-10 CORRIGIDO: `.th-item` alinhado com DS — padding `12px 16px` (era `10px 14px`), margem `8px` (era `6px`), `transition:box-shadow var(--fast)` (era `.15s` hardcoded), ícone 32×32 (era 30×30); CSS morto `.th-prod-card/.th-prod-valor/.th-prod-label` removido (nunca usado — `_prodCard()` usa `stat-card`).
+**Fase atual**: **Auditoria CHV-07 + REU-13 (2026-06-06)** — Deploy @649. CHV-07 CORRIGIDO: `<input type="time" id="chv-hora-dev">` adicionado ao form de retirada de chaves; `salvar()` combina data+hora como `YYYY-MM-DDTHH:MM`; retrocompatível (display usa `.substring(0,10)`). REU-13 CORRIGIDO: `NotificationEngine.enviarNotificacaoEncaminhamento()` adicionado — template `encaminhamento_atribuido` com assunto+corpo; chamado em `ReuniaoEngine.adicionarEncaminhamento` com try/catch silencioso. Verificados e confirmados já corretos: TAR-02 (resp. é select), ACO-14 (resp. é select), ACV-02 (cancelar usa btn-ghost), BAL-13 (ghost toggle + primary submit), SIDEBAR-03 (inativos corretos).
+
+**Fase anterior**: **Auditoria HUB-10 (2026-06-06)** — Deploy @648.
 
 **Fase anterior**: **Feature: Reservas por clique direto na Agenda/Diagrama/Mapa (2026-06-06)** — Deploy @645. (1) Agenda: clique em slot vazio de qualquer dia futuro/hoje abre form pré-preenchido com data + horário calculado pela posição Y do clique (arredondado a 30min); dias passados permanecem não clicáveis (cursor:default). (2) Diagrama: clique em área vazia na linha de um espaço abre form pré-preenchido com espaço + data + horário calculado pela posição X do clique. (3) Mapa: clique em espaço com status `disponível` e `aceitaReserva!==false` abre form diretamente (bypassa painel lateral); demais status continuam abrindo o painel lateral. Novos handlers: `_ragClickVazio`, `_rdgClickVazio` (expostos na API pública do ReservasUI); mapa_ui.html/_initIO modificado.
 

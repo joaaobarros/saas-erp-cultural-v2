@@ -86,6 +86,14 @@ var NotificationEngine = (function() {
       corpo:    'A reunião "{titulo}" tem ata aguardando aprovação há {dias} dias.\n\n' +
                 'Acesse o módulo de Reuniões para aprovar.\n\n' +
                 '— {org}'
+    },
+    encaminhamento_atribuido: {
+      assunto:  '[{org}] 📋 Encaminhamento atribuído a você: {texto}',
+      corpo:    'Você recebeu um novo encaminhamento na reunião "{reuniao}".\n\n' +
+                'Encaminhamento: {texto}\n' +
+                'Prazo: {prazo}\n\n' +
+                'Acesse o módulo de Reuniões para acompanhar.\n\n' +
+                '— {org}'
     }
   };
 
@@ -240,6 +248,24 @@ var NotificationEngine = (function() {
       };
       return _enviarEmail(
         destinatario,
+        _interpolar(tpl.assunto, dados),
+        _interpolar(tpl.corpo, dados)
+      );
+    },
+
+    // ── Notificação de encaminhamento atribuído ───────────────────────────────
+
+    enviarNotificacaoEncaminhamento: function(encaminhamento, reuniao) {
+      var responsavel = encaminhamento.responsavel || '';
+      if (!responsavel || !responsavel.includes('@')) return false;
+      var tpl   = _TEMPLATES_EMAIL.encaminhamento_atribuido;
+      var dados = {
+        texto:  encaminhamento.texto  || '',
+        reuniao: reuniao ? (reuniao.titulo || reuniao.id || '') : '',
+        prazo:  encaminhamento.prazo  || 'Sem prazo definido'
+      };
+      return _enviarEmail(
+        responsavel,
         _interpolar(tpl.assunto, dados),
         _interpolar(tpl.corpo, dados)
       );

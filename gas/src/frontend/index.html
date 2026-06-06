@@ -5182,7 +5182,10 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Previsão de devolução</label>
-                <input type="date" id="chv-data-dev" class="form-input">
+                <div style="display:flex;gap:6px;">
+                  <input type="date" id="chv-data-dev" class="form-input" style="flex:1;">
+                  <input type="time" id="chv-hora-dev" class="form-input" style="width:110px;" placeholder="HH:MM">
+                </div>
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Observações</label>
@@ -20228,6 +20231,7 @@ var ChavesUI = (function() {
   function abrirForm() {
     document.getElementById('chv-obs').value      = '';
     document.getElementById('chv-data-dev').value = '';
+    document.getElementById('chv-hora-dev').value = '';
     var now = new Date();
     var hora = now.getHours();
     document.getElementById('chv-turno').value = hora < 12 ? 'manha' : hora < 18 ? 'tarde' : 'noite';
@@ -20256,7 +20260,7 @@ var ChavesUI = (function() {
       nomeResponsavel: respNome,
       setor:           (document.getElementById('chv-setor').value||'').trim(),
       turno:           document.getElementById('chv-turno').value || 'manha',
-      dataDevolucao:   document.getElementById('chv-data-dev').value || '',
+      dataDevolucao:   (function(){ var d=document.getElementById('chv-data-dev').value||''; var h=document.getElementById('chv-hora-dev').value||''; return d ? (h ? d+'T'+h : d) : ''; })(),
       observacoes:     (document.getElementById('chv-obs').value||'').trim()
     };
     BtnGuard.wrap('btn-chv-salvar', 'Registrando…', function(done) {

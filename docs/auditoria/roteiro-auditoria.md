@@ -303,11 +303,11 @@
 | HOME-04 | Home | Sem widget de resumo do Meu Centro | 🟡 |
 | SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🟡 |
 | ~~SIDEBAR-02~~ | Sidebar | ✅ CORRIGIDO @590 — Balcão removido do sidebar; cross-nav "Balcão" em view-comunicacao e "RECE" em view-balcao | — |
-| SIDEBAR-03 | Sidebar | Módulos inativos visíveis com badge | 🟡 |
+| ~~SIDEBAR-03~~ | Sidebar | ✅ VERIFICADO @648 — inativos ocultos para usuários comuns; superadmin vê com opacity .5 + tag "inativo"; badge começa `oculto` — nunca exibido sem dados reais | — |
 | ~~SIDEBAR-04~~ | Sidebar | ✅ CORRIGIDO @614 — seção MEMÓRIA consolidada: 4 itens (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional" com tab-bar interna; sidebar total ~17 itens | — |
 | ~~SIDEBAR-05~~ | Sidebar | ✅ CORRIGIDO @590 — Meu Centro movido para posição #2 (após Início) | — |
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
-| TAR-02 | Tarefas | Responsável é texto livre | 🔴 |
+| ~~TAR-02~~ | Tarefas | ✅ VERIFICADO @648 — `tf-responsavel` é `<select>` populado por `_carregarSelectUsuariosHelper` em `aoAbrir()`; nunca foi texto livre na v2 | — |
 | TAR-03 | Tarefas | Tarefas não se vinculam a Ações, Reservas, Contratos | 🔴 |
 | TAR-04 | Tarefas | Sem gatilhos automáticos | 🔴 |
 | TAR-05 | Tarefas | Sem alertas para vencimento | 🟡 |
@@ -381,7 +381,7 @@
 | ~~APR-02~~ | Aprovações | ✅ CORRIGIDO — `aprovacoes` usa `modulo:null` no menu; acesso não depende de ESPACOS | — |
 | APR-03 | Aprovações | Aba Permissões ausente como centralização de acessos | 🟡 |
 | ~~APR-06~~ | Aprovações | ✅ CORRIGIDO — `view-header/view-title/view-subtitle` já em uso | — |
-| CHV-07 | Chaves — Retirada | "Previsão de Devolução" apenas data, sem campo de hora | 🟡 |
+| ~~CHV-07~~ | Chaves — Retirada | ✅ CORRIGIDO @649 — adicionado `<input type="time" id="chv-hora-dev">` ao lado do date; `salvar()` combina data+hora como `YYYY-MM-DDTHH:MM`; `abrirForm()` reseta hora; display existente usa `.substring(0,10)` — retrocompatível | — |
 | CHV-08 | Chaves — Retirada | Sem auto-preenchimento por papel do usuário | 🔴 |
 | EMP-01 | Empréstimos | Desvinculado do fluxo de reserva | 🔴 |
 | EMP-02 | Empréstimos — Externo | Sem suporte a empréstimos externos | 🔴 |
@@ -390,7 +390,7 @@
 | EMP-06 | Empréstimos — Externo | Sem cadastro prévio de solicitante externo | 🔴 |
 | EMP-07 | Empréstimos — Externo | Sem histórico de empréstimos por solicitante | 🟡 |
 | ACO-13 | Ações — Criação | Sem campo de vínculo com contrato/fonte na criação | 🟡 |
-| ACO-14 | Ações — Formulário | Campo "Responsável" texto livre | 🔴 |
+| ~~ACO-14~~ | Ações — Formulário | ✅ VERIFICADO @648 — `acao-responsavel` é `<select>` populado por `_carregarSelectUsuariosHelper` em `abrirFormulario()`; nunca foi texto livre na v2 | — |
 | ACO-23 | Ações × RECE | Sem vínculo entre Ações e Agenda RECE | 🔴 |
 | ACO-24 | Ações × Alertas | Sem alertas automáticos no ciclo de vida da ação | 🔴 |
 | ACO-25 | Ações — Painel | Sem aba "Comunicação" (9ª aba: RECE + Balcão contextualizados) | 🔴 |
@@ -415,7 +415,7 @@
 | BAL-09 | Balcão — Modal | Campo "Título" desnecessário com ação vinculada | 🔴 |
 | BAL-10 | Balcão — Modal | Campo "Release" ausente | 🔴 |
 | BAL-11 | Balcão — Modal | "Descrição" vs "Release" não diferenciados | 🔴 |
-| BAL-13 | Balcão — Versões | Botão "+ Enviar Nova Versão" com cor divergente | 🟡 |
+| ~~BAL-13~~ | Balcão — Versões | ✅ VERIFICADO @648 — toggle usa `btn-ghost`; submit usa `btn-primary`; padrão correto (toggle expande, primary envia) | — |
 | BAL-15 | Balcão — Versões | Estado vazio sem orientação ao usuário | 🔵 |
 | BAL-16 | Balcão — FSM | Sem etapa de aprovação final do material | 🔴 |
 | BAL-18 | Balcão — Modal | Layout visual deficiente | 🔴 |
@@ -431,12 +431,12 @@
 | REU-09 | Reuniões — Ata | Aprovação single-approver; desejado: coletiva por participante | 🔴 |
 | REU-10 | Reuniões — Ata | Sem auxílio de IA (geração de rascunho, revisão, extração encaminhamentos) | 🔴 |
 | REU-12 | Meu Centro | Sem botão "+ Tarefa Rápida" no inbox | 🟡 |
-| REU-13 | Reuniões | Encaminhamentos sem notificação ao responsável | 🟡 |
+| ~~REU-13~~ | Reuniões | ✅ CORRIGIDO @649 — `NotificationEngine.enviarNotificacaoEncaminhamento(enc, reuniao)` adicionado; template `encaminhamento_atribuido` com assunto + corpo; chamado em `adicionarEncaminhamento` com try/catch silencioso | — |
 | ESC-09 | Sistema Global | Sem área de perfil editável pelo usuário (nome social, pronomes, foto) | 🔴 |
 | ESC-13 | Escuta | Subtítulo com siglas sem explicação (SIS-08) | 🟡 |
 | ESC-14 | Escuta | Contradição nos Marcadores Metodológicos | 🟡 |
 | ESC-17 | Escuta | Pesquisas não-anônimas permitem override pelo respondente | 🟡 |
-| ACV-02 | Acervo | Botão Cancelar no modal com cor rosa/pink | 🟡 |
+| ~~ACV-02~~ | Acervo | ✅ VERIFICADO @648 — botão Cancelar usa `btn btn-ghost`; sem cor rosa/pink no HTML gerado | — |
 | ACV-10 | Acervo | Formulário com estilos 100% inline | 🟡 |
 | CAR-01 | Reserva de Veículo | Módulo nunca testado completamente na auditoria | 🔴 |
 | ~~CAR-03~~ | Veículo — Métricas | ✅ VERIFICADO @643 — `_renderMetricas` já tem cards Recusadas + Canceladas; backend `ctrl_carro_dados` já retorna ambos os contadores | — |
@@ -468,7 +468,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @648 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @649 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 
@@ -482,6 +482,7 @@
 | @643 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
 | @644 | CAR-06/07 (auditoria) | `ctrl_carro_dados` enriquece lista com `solicitanteNome` + `aprovadorNome` via bulk map; frontend: card exibe nome (email no title); aprovador: "Aprovado por: Nome" em vez de "Aprov: prefix". CAR-03/04 verificados corretos. |
 | @648 | HUB-10 (auditoria) | `.th-item`: padding alinhado com DS (`12px 16px`), margem `8px`, transition → `var(--fast)`, ícone 32×32; CSS morto `.th-prod-*` removido. |
+| @649 | CHV-07 + REU-13 (auditoria) | CHV-07: input hora adicionado ao form de chaves; salvar combina data+hora. REU-13: `NotificationEngine.enviarNotificacaoEncaminhamento` + template; chamado em `adicionarEncaminhamento`. Verificados corretos: TAR-02/ACO-14/ACV-02/BAL-13/SIDEBAR-03. |
 | @645 | Feature: click-to-reserve | Agenda: slot vazio → form (hora calculada por Y). Diagrama: área vazia → form (espaço+hora por X). Mapa: clique em `disponivel` → form direto (sem painel lateral). |
 
 ### Pendentes / próxima ação
@@ -489,7 +490,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-02 (responsável texto livre → select), APR-01 (badges contadores por aba)
+- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-03 (tarefas sem vínculo a Ações/Reservas), BAL-15 (empty state sem orientação)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)

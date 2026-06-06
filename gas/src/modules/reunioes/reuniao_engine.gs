@@ -190,6 +190,7 @@ var ReuniaoEngine = (function () {
     var atualizada = ReuniaoRepository.salvar(orgId, reuniao, email);
     AuditoriaService.registrar('ENCAMINHAMENTO_ADICIONADO', 'reunioes',
       { reuniaoId: id, texto: encaminhamento.texto, responsavel: encaminhamento.responsavel });
+    try { NotificationEngine.enviarNotificacaoEncaminhamento(encaminhamento, reuniao); } catch(e) { /* silencioso */ }
     return atualizada;
   }
 
