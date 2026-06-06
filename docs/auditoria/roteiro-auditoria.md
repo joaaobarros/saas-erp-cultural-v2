@@ -453,12 +453,12 @@
 | ~~HUB-01~~ | Meu Centro | ✅ VERIFICADO @641 — aba Produtividade já tinha MetricsToggle.wrap(); abas Meu Dia/Meu Time não têm stats panel | — |
 | ~~HUB-02~~ | Meu Centro | ✅ VERIFICADO @641 — estado vazio usa Material Symbol `celebration`, não emoji literal; sem emoji unicode no HTML | — |
 | HUB-03 | Meu Centro | Meu Dia não agrega pendências dos módulos | 🔴 |
-| ~~HUB-04~~ | Meu Centro | ✅ CORRIGIDO @642 — empty state do Meu Time com orientação: explica o que fazer (criar tarefas / encaminhamentos) | — |
-| ~~HUB-05~~ | Meu Centro | ✅ CORRIGIDO @642 — unidade '(h)' movida para o label; valor de dias sem unidade embutida | — |
+| ~~HUB-04~~ | Meu Centro | ✅ CORRIGIDO @643 — empty state do Meu Time com orientação: explica o que fazer (criar tarefas / encaminhamentos) | — |
+| ~~HUB-05~~ | Meu Centro | ✅ CORRIGIDO @643 — unidade '(h)' movida para o label; valor de dias sem unidade embutida | — |
 | ~~HUB-06~~ | Meu Centro | ✅ VERIFICADO @641 — label sidebar "Meu Centro", view-title "Meu Centro de Controle"; "TaskHub" só em IDs internos | — |
 | HUB-07 | Meu Centro | Integração de fontes não implementada | 🔴 |
 | HUB-08 | Meu Centro | Sem botão de criação de tarefa | 🔴 |
-| ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @642 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
+| ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @643 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
 | HUB-10 | Meu Centro | Cards com bordas e formato diferente do padrão | 🟡 |
 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
 | HUB-12 | Meu Centro | Sem seção de aniversariantes | 🔴 |
@@ -468,7 +468,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @642 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @643 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 
@@ -479,7 +479,7 @@
 | @638 | CAR-09 (auditoria) | Passageiros separados: internos (select colaboradores + chip tags `_passInternosData`) e externos (texto livre); `passageirosInternos/Externos` no backend; legado `passageiros[]` preservado. |
 | @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
 | @641 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |
-| @642 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
+| @643 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
