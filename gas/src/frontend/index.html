@@ -9606,49 +9606,101 @@ var IdentidadeAdmin = (function() {
     });
   }
 
+  var _pendentes = [];
+
   function _carregarPendentes() {
     var lista=_el('admin-pendentes-lista'); if(!lista) return;
     var badge=_el('badge-pendentes');
     GAS.admin.listarPendentes(function(resp){
-      if(!resp||!resp.ok||!resp.data||!resp.data.length){
+      _pendentes = (resp&&resp.ok&&Array.isArray(resp.data)) ? resp.data : [];
+      if(!_pendentes.length){
         lista.innerHTML='<div class="empty-state" style="min-height:80px;padding:16px;">'
           +'<span class="ms" style="font-size:28px;color:var(--muted)">check_circle</span>'
           +'<p style="font-size:13px;color:var(--muted)">Nenhum acesso pendente.</p></div>';
         if(badge) badge.style.display='none';
         return;
       }
-      if(badge){ badge.textContent=resp.data.length; badge.style.display='inline-flex'; }
-      lista.innerHTML=resp.data.map(function(u){
+      if(badge){ badge.textContent=_pendentes.length; badge.style.display='inline-flex'; }
+      lista.innerHTML=_pendentes.map(function(u){
         var email = String(u.email || '');
         var btnId='btn-aprovar-'+email.replace(/[^a-zA-Z0-9_-]/g,'-');
         return '<div class="pendente-item">'
           +'<div class="pendente-info">'
           +'<div class="pendente-nome">'+escaparHtml(u.nome || email)+'</div>'
-          +'<div class="pendente-meta">'+escaparHtml(email)+' · '+escaparHtml(u.setorDesejado||'sem setor')+'</div>'
+          +'<div class="pendente-meta">'+escaparHtml(email)+' · '+escaparHtml(u.setorDesejado||'sem setor informado')+'</div>'
           +'</div>'
           +'<button id="'+escaparHtml(btnId)+'" class="btn btn-primario btn-sm btn-aprovar-acesso"'
-          +' data-email="'+escaparHtml(email)+'" data-setor="'+escaparHtml(u.setorDesejado||'')+'">'
+          +' data-email="'+escaparHtml(email)+'">'
           +'<span class="ms ms-sm">check</span> Aprovar</button>'
           +'</div>';
       }).join('');
       Array.prototype.slice.call(lista.querySelectorAll('.btn-aprovar-acesso')).forEach(function(btn) {
         btn.addEventListener('click', function() {
-          IdentidadeAdmin.aprovar(this.getAttribute('data-email') || '', this.getAttribute('data-setor') || '');
+          IdentidadeAdmin.aprovar(this.getAttribute('data-email') || '');
         });
       });
     });
   }
 
-  function aprovar(email, setor) {
-    // Mesma sanitização de _carregarPendentes para garantir que o ID bate
-    var btnId='btn-aprovar-'+String(email).replace(/[^a-zA-Z0-9_-]/g,'-');
-    BtnGuard.wrap(btnId,'Aprovando…',function(done){
-      GAS.admin.aprovarAcesso({emailAlvo:email,papel:'colaborador',setor:setor||''},function(resp){
+  function _modalAprovacao(usuario) {
+    var setores = ((App.getBoot && App.getBoot()) ? App.getBoot().setores : []) || [];
+    // Pré-seleciona o setor do catálogo mais próximo ao setorDesejado (hint de cadastro)
+    var hint = (usuario.setorDesejado || '').toLowerCase().trim();
+    var preId = '';
+    if (hint) {
+      setores.forEach(function(s) {
+        if (preId) return;
+        var sid = (s.id || '').toLowerCase();
+        var snm = (s.nome || s.label || '').toLowerCase();
+        if (sid === hint || snm === hint || snm.indexOf(hint) >= 0 || hint.indexOf(sid) >= 0) preId = s.id;
+      });
+    }
+    var optsSetor = '<option value="">— Selecione o setor —</option>' +
+      setores.map(function(s){
+        var lbl = escaparHtml(s.label || s.nome || s.id);
+        return '<option value="'+escaparHtml(s.id)+'"'+(s.id===preId?' selected':'')+'>'+lbl+'</option>';
+      }).join('');
+    var optsPapel = ['colaborador','coordenador','gestor','comunicacao','rh','admin'].map(function(p){
+      return '<option value="'+p+'"'+(p==='colaborador'?' selected':'')+'>'+p+'</option>';
+    }).join('');
+
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9100;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:12px;padding:20px 24px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+    box.innerHTML =
+      '<h4 style="margin:0 0 2px;font-size:14px;font-weight:700;">Aprovar acesso</h4>'+
+      '<p style="margin:0 0 14px;font-size:12px;color:var(--text2);">'+escaparHtml(usuario.nome||usuario.email)+' &mdash; '+escaparHtml(usuario.email)+'</p>'+
+      (hint ? '<p style="margin:0 0 12px;font-size:11px;color:var(--text2);background:var(--surface1,#f8fafc);padding:6px 8px;border-radius:6px;">Setor desejado pelo usuário: <strong>'+escaparHtml(usuario.setorDesejado)+'</strong></p>' : '')+
+      '<label class="form-label" style="font-size:12px;margin-bottom:4px;display:block;">Setor</label>'+
+      '<select id="modal-aprov-setor" class="form-control" style="width:100%;margin-bottom:12px;">'+optsSetor+'</select>'+
+      '<label class="form-label" style="font-size:12px;margin-bottom:4px;display:block;">Papel</label>'+
+      '<select id="modal-aprov-papel" class="form-control" style="width:100%;margin-bottom:18px;">'+optsPapel+'</select>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">'+
+        '<button class="btn btn-ghost btn-sm" id="modal-aprov-cancelar" data-bg-skip="1">Cancelar</button>'+
+        '<button class="btn btn-primario btn-sm" id="modal-aprov-confirmar">Confirmar</button>'+
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById('modal-aprov-cancelar').onclick = function(){ document.body.removeChild(overlay); };
+
+    BtnGuard.wrap('modal-aprov-confirmar', 'Aprovando…', function(done) {
+      var setor = document.getElementById('modal-aprov-setor').value;
+      var papel = document.getElementById('modal-aprov-papel').value;
+      if (!setor) { done(); Toast.aviso('Selecione um setor antes de aprovar.'); return; }
+      GAS.admin.aprovarAcesso({emailAlvo: usuario.email, papel: papel||'colaborador', setor: setor}, function(resp){
         done();
-        if(resp&&resp.ok){Toast.sucesso('Acesso aprovado: '+email);_carregarPendentes();}
+        document.body.removeChild(overlay);
+        if(resp&&resp.ok){ Toast.sucesso('Acesso aprovado: '+usuario.email); _carregarPendentes(); }
         else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao aprovar.');
-      },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+      }, function(err){ done(); Toast.erro('Erro: '+(err.message||err)); });
     });
+  }
+
+  function aprovar(email) {
+    var u = _pendentes.find(function(p){ return p.email === email; });
+    if (u) _modalAprovacao(u);
   }
 
   function salvar() {

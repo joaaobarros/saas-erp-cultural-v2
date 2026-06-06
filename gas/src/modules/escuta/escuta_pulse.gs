@@ -407,45 +407,54 @@ var EscutaPulseEngine = (function() {
    * indicadores:null (protegido) para preservar anonimato.
    */
   function _calcPorSetor(orgId, respostas) {
-    var mapa = {};           // email → setor
-    var totalPorSetor = {};  // setor → total de usuários ativos
+    var mapa = {};           // email → setorId
+    var totalPorSetor = {};  // setorId → total de usuários ativos
+    var labelPorSetor = {};  // setorId → label do catálogo Admin/Setores
+
+    // Carrega catálogo de setores para exibir label correto
     try {
-      // AcessoService tem todos os usuários ativos com campo email e setor —
-      // é a fonte correta pois o colaboradorId nas respostas pulse é o email da sessão.
+      SistemaConfigService.getSetores().forEach(function(s) {
+        var id = (s.id || '').trim();
+        if (id) labelPorSetor[id] = s.label || s.nome || id;
+      });
+    } catch(e) { /* continua sem labels — exibe id bruto */ }
+
+    try {
+      // u.setor deve conter o id de um setor do catálogo Admin/Setores
       AcessoService.listarUsuarios()
         .filter(function(u) { return u.status === 'ativo'; })
         .forEach(function(u) {
-          var email = (u.email || '').toLowerCase().trim();
-          var setor = (u.setor || u.setorDesejado || '').trim();
-          if (!email || !setor) return;
-          mapa[email] = setor;
-          totalPorSetor[setor] = (totalPorSetor[setor] || 0) + 1;
+          var email   = (u.email || '').toLowerCase().trim();
+          var setorId = (u.setor || '').trim();
+          if (!email || !setorId) return;
+          mapa[email] = setorId;
+          totalPorSetor[setorId] = (totalPorSetor[setorId] || 0) + 1;
         });
     } catch(e) { return []; }
 
-    // Agrupa respostas e participantes únicos por setor
+    // Agrupa respostas e participantes únicos por setorId
     var grupos = {};
     respostas.forEach(function(r) {
       if (!r.colaboradorId) return;
-      var cid   = (r.colaboradorId || '').toLowerCase();
-      var setor = mapa[cid] || mapa[r.colaboradorId] || null;
-      if (!setor) return;
-      if (!grupos[setor]) grupos[setor] = { respostas: [], participantes: {} };
-      grupos[setor].respostas.push(r);
-      grupos[setor].participantes[r.colaboradorId] = true;
+      var cid     = (r.colaboradorId || '').toLowerCase();
+      var setorId = mapa[cid] || mapa[r.colaboradorId] || null;
+      if (!setorId) return;
+      if (!grupos[setorId]) grupos[setorId] = { respostas: [], participantes: {} };
+      grupos[setorId].respostas.push(r);
+      grupos[setorId].participantes[r.colaboradorId] = true;
     });
 
-    return Object.keys(grupos).map(function(setor) {
-      var g     = grupos[setor];
+    return Object.keys(grupos).map(function(setorId) {
+      var g     = grupos[setorId];
       var nPart = Object.keys(g.participantes).length;
-      var total = totalPorSetor[setor] || null;
-      // Abaixo do mínimo: omite indicadores para proteger anonimato
+      var total = totalPorSetor[setorId] || null;
+      var label = labelPorSetor[setorId] || setorId; // label do catálogo ou id bruto
       if (nPart < DEFAULTS.GRUPO_MINIMO) {
-        return { setor: setor, participantes: nPart, totalAtivos: total,
+        return { setor: label, participantes: nPart, totalAtivos: total,
                  indicadores: null, climaGeral: null, protegido: true };
       }
       var ind = _calcIndicadores(orgId, g.respostas);
-      return { setor: setor, participantes: nPart, totalAtivos: total,
+      return { setor: label, participantes: nPart, totalAtivos: total,
                indicadores: ind, climaGeral: ind._climaGeral || null, protegido: false };
     }).sort(function(a, b) { return b.participantes - a.participantes; });
   }
