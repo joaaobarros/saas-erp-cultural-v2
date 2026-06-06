@@ -87,10 +87,25 @@ function ctrl_carro_dados(filtros) {
       canceladas: todas.filter(function(r){ return r.status === 'CANCELADA'; }).length,
       concluidas: todas.filter(function(r){ return r.status === 'CONCLUIDA'; }).length
     };
+    // Mapa bulk de email → nome para exibição nos cards
+    var nomeMap = {};
+    try {
+      AcessoService.listarUsuarios().forEach(function(u) {
+        if (u.email) nomeMap[u.email] = u.nome || u.email;
+      });
+    } catch(e) { /* silencioso */ }
+    function _nome(email) { return nomeMap[email] || (email ? email.replace(/@.*$/, '') : '—'); }
+
     var f = filtros || {};
     var lista = todas;
     if (f.status) lista = lista.filter(function(r){ return r.status === f.status; });
     if (f.data)   lista = lista.filter(function(r){ return r.data   === f.data;   });
+    lista = lista.map(function(r) {
+      return Object.assign({}, r, {
+        solicitanteNome: _nome(r.solicitante),
+        aprovadorNome:   r.aprovador ? _nome(r.aprovador) : null
+      });
+    });
     return { lista: lista, metricas: metricas };
   }, 'ctrl_carro_dados');
 }

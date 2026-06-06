@@ -439,10 +439,10 @@
 | ACV-02 | Acervo | Botão Cancelar no modal com cor rosa/pink | 🟡 |
 | ACV-10 | Acervo | Formulário com estilos 100% inline | 🟡 |
 | CAR-01 | Reserva de Veículo | Módulo nunca testado completamente na auditoria | 🔴 |
-| CAR-03 | Veículo — Métricas | Sem cards "Recusadas" e "Canceladas" | 🟡 |
-| CAR-04 | Veículo — Formulário | Select "Vincular a Ação" preso em "Carregando..." | 🟡 |
-| CAR-06 | Veículo | Card exibe email em vez do nome completo | 🟡 |
-| CAR-07 | Veículo | "Aprov: email" abreviatura incorreta | 🟡 |
+| ~~CAR-03~~ | Veículo — Métricas | ✅ VERIFICADO @643 — `_renderMetricas` já tem cards Recusadas + Canceladas; backend `ctrl_carro_dados` já retorna ambos os contadores | — |
+| ~~CAR-04~~ | Veículo — Formulário | ✅ VERIFICADO @643 — `GAS.acoes.listar` binding correto + fallback 6s já presente; select funciona mesmo com lentidão da GAS | — |
+| ~~CAR-06~~ | Veículo | ✅ CORRIGIDO @644 — `ctrl_carro_dados` enriquece lista com `solicitanteNome` via `AcessoService.listarUsuarios()` (bulk map); frontend usa `rc.solicitanteNome` com `title` exibindo email | — |
+| ~~CAR-07~~ | Veículo | ✅ CORRIGIDO @644 — aprovador exibe `rc.aprovadorNome` com texto "Aprovado por:" em vez de "Aprov: email-prefix" | — |
 | ~~CAR-08~~ | Veículo — Modal | ✅ CORRIGIDO @637 — linha "Setor Solicitante" dedicada adicionada ao modal `carro-det-overlay`; `_verDetalhesAgenda` popula `carro-det-setor` separado do nome do solicitante | — |
 | ~~CAR-09~~ | Veículo | ✅ CORRIGIDO @638 — passageiros separados em internos (select colaboradores + chip tags) e externos (texto livre); backend: `passageirosInternos[]`, `passageirosExternos[]` | — |
 | ~~CAR-10~~ | Veículo | ✅ CORRIGIDO @638 — seção "Paradas intermediárias" dinâmica no form; `rota.paradas[]` persistido; modal de detalhes renderiza Saída → Paradas → Chegada com ícones dinâmicos | — |
@@ -468,7 +468,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @643 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @644 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 
@@ -480,16 +480,16 @@
 | @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
 | @641 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |
 | @643 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
+| @644 | CAR-06/07 (auditoria) | `ctrl_carro_dados` enriquece lista com `solicitanteNome` + `aprovadorNome` via bulk map; frontend: card exibe nome (email no title); aprovador: "Aprovado por: Nome" em vez de "Aprov: prefix". CAR-03/04 verificados corretos. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-10 (cards formato diferente), HUB-03 (Meu Dia sem pendências reais), CAR-03 (métricas faltando), CAR-04 (select Vincular Ação preso)
+- **Próximos bugs de auditoria:** HUB-10 (cards formato diferente), HUB-03 (Meu Dia sem pendências reais), CAR-01 (módulo nunca testado completamente), CAR-12 (motorista configurável)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
 - **CAR-12/13/14** (motorista configurável, voucher Uber, frota — features não implementadas)
 - **HUB-03/07/08** (Meu Centro: pendências reais, fontes, criação de tarefa)
-- **CAR-03/04/06/07** (métricas, select Ação, email vs nome, abreviatura aprovador)
