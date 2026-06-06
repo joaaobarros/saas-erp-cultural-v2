@@ -463,13 +463,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 28 (2026-06-05) → SESSÃO 29
 
-### Estado atual: 280 bugs registrados · Deploy @591
+### Estado atual: 280 bugs registrados · Deploy @593
 
 ### O que foi feito nesta sessão (s28)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @591 | SIS-01 (auditoria) | `confirm()` inline migrado para padrão `_conf` (linhas 9665, 28116). Bug: motivo da suspensão em `ContratadosUI.suspender()` capturado mas nunca passado — cadeia inteira corrigida: frontend, GAS binding, controller, engine, `_transitarContratado` (motivo gravado em `motivoUltimaAlteracao` + audit). Anti-padrão crítico confirmado ausente em todas as 30+ chamadas. |
+| @593 | SIS-01 (auditoria) | `confirm()` inline migrado para padrão `_conf` (linhas 9665, 28116). Bug: motivo da suspensão em `ContratadosUI.suspender()` capturado mas nunca passado — cadeia inteira corrigida: frontend, GAS binding, controller, engine, `_transitarContratado` (motivo gravado em `motivoUltimaAlteracao` + audit). Anti-padrão crítico confirmado ausente em todas as 30+ chamadas. |
 | @590 | SIDEBAR/ESTR (auditoria) | Sidebar: `pessoas`, `ponto`, `balcao`, `estrategia` removidos do menu (cross-nav nas views); `rh` → "Pessoas / RH"; `taskhub` → posição #2. Views ainda acessíveis via cross-nav e Router.registrar explícito |
 | @589 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
 | @587 | limpeza | Remove `fase75_inspecionar_estoque_v1` e `fase75_importar_consumiveis_v1` — sem dados V1 para migrar |
