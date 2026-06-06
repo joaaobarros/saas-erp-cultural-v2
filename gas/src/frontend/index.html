@@ -2646,7 +2646,7 @@ select.form-control { cursor: pointer; }
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label">Responsável</label>
-              <input id="tf-responsavel" class="form-input" type="text" placeholder="email@dominio.org">
+              <select id="tf-responsavel" class="form-input"><option value="">— Responsável —</option></select>
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label class="form-label">Prioridade</label>
@@ -5824,7 +5824,7 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group" style="grid-column:1/-1">
                 <label class="form-label">Responsável *</label>
-                <input type="text" id="acao-responsavel" class="form-control" placeholder="email@org.br">
+                <select id="acao-responsavel" class="form-control"><option value="">Selecionar responsável…</option></select>
               </div>
               <div class="form-group">
                 <label class="form-label">Data Início</label>
@@ -6627,7 +6627,7 @@ select.form-control { cursor: pointer; }
               <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
                 <input type="text" id="run-enc-texto-input" class="form-control" placeholder="Texto do encaminhamento…" style="width:100%">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <input type="email" id="run-enc-resp-input" class="form-control" placeholder="Responsável (email)" style="flex:1;min-width:150px">
+                  <select id="run-enc-resp-input" class="form-control" style="flex:1;min-width:150px"><option value="">— Responsável —</option></select>
                   <input type="date" id="run-enc-prazo-input" class="form-control" style="flex:0 0 140px;">
                   <button type="button" class="btn btn-secondary btn-sm"
                     id="run-enc-add-btn"
@@ -7376,7 +7376,7 @@ select.form-control { cursor: pointer; }
                   </div>
                   <div class="form-group">
                     <label class="form-label">Responsável</label>
-                    <input type="email" id="obj-responsavel" class="form-control" placeholder="email@org.br">
+                    <select id="obj-responsavel" class="form-control"><option value="">Selecionar responsável…</option></select>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Início</label>
@@ -9856,6 +9856,7 @@ var TarefasUI = (function() {
 
   function aoAbrir() {
     if (!_carregado) carregar();
+    _carregarSelectUsuariosHelper('tf-responsavel', (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '', '— Responsável —');
   }
 
   return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir };
@@ -21335,7 +21336,7 @@ var EstoqueUI = (function() {
         '<div style="padding:20px;">'
         +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Registrar Saída para Uso</h3>'
         +'<div class="form-group"><label class="form-label">Responsável</label>'
-        +'<input type="text" id="pat-modal-resp" class="form-input" placeholder="Nome ou e-mail do responsável"></div>'
+        +'<select id="pat-modal-resp" class="form-input"><option value="">Selecionar responsável…</option></select></div>'
         +'<div class="form-group"><label class="form-label">Ação Cultural (opcional)</label>'
         +'<input type="text" id="pat-modal-acao" class="form-input" placeholder="ID ou nome da ação"></div>'
         +'<div style="display:flex;gap:8px;margin-top:12px;">'
@@ -21343,6 +21344,7 @@ var EstoqueUI = (function() {
         +'<button class="btn btn-ghost" data-bg-skip="1" onclick="document.querySelector(\'.modal-simples\').remove()">Cancelar</button>'
         +'</div></div>'
       );
+      _carregarSelectUsuariosHelper('pat-modal-resp', '', 'Selecionar responsável…');
     }
 
     function _confirmarUso() {
@@ -23564,7 +23566,8 @@ var AcoesUI = (function() {
     document.getElementById('acao-id').value           = (acao && acao.id)           || '';
     document.getElementById('acao-nome').value         = (acao && acao.nome)         || '';
     document.getElementById('acao-tipo').value         = (acao && acao.tipo)         || 'curso';
-    document.getElementById('acao-responsavel').value  = (acao && acao.responsavel)  || '';
+    var _acoBootEmail = (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '';
+    _carregarSelectUsuariosHelper('acao-responsavel', (acao && acao.responsavel) || (!acao ? _acoBootEmail : ''), 'Selecionar responsável…');
     document.getElementById('acao-data-inicio').value  = (acao && acao.dataInicio)   || '';
     document.getElementById('acao-data-fim').value     = (acao && acao.dataFim)      || '';
     document.getElementById('acao-publico').value      = (acao && acao.publicoPrevisto) || 0;
@@ -27309,7 +27312,7 @@ var EstrategiaUI = (function() {
       if (obj) {
         document.getElementById('obj-titulo').value      = obj.titulo || '';
         document.getElementById('obj-horizonte').value   = obj.horizonte || 'curto_prazo';
-        document.getElementById('obj-responsavel').value = obj.responsavel || '';
+        _carregarSelectUsuariosHelper('obj-responsavel', obj.responsavel || '', 'Selecionar responsável…');
         document.getElementById('obj-data-inicio').value = obj.dataInicio || '';
         document.getElementById('obj-data-fim').value    = obj.dataFim || '';
         document.getElementById('obj-descricao').value   = obj.descricao || '';
@@ -27317,9 +27320,11 @@ var EstrategiaUI = (function() {
         document.getElementById('obj-observacoes').value = obj.observacoes || '';
       }
     } else {
-      ['obj-titulo','obj-responsavel','obj-data-inicio','obj-data-fim','obj-descricao','obj-meta','obj-observacoes']
+      ['obj-titulo','obj-data-inicio','obj-data-fim','obj-descricao','obj-meta','obj-observacoes']
         .forEach(function(id){ document.getElementById(id).value=''; });
       document.getElementById('obj-horizonte').value = 'curto_prazo';
+      var _objBootEmail = (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '';
+      _carregarSelectUsuariosHelper('obj-responsavel', _objBootEmail, 'Selecionar responsável…');
     }
   }
 
@@ -27908,6 +27913,7 @@ var ReunioesUI = (function() {
     _carregarSelectAcoesRun('');
     var _bootEmail = (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '';
     _carregarSelectUsuariosHelper('run-convocador', id ? '' : _bootEmail, '— Selecionar —');
+    _carregarSelectUsuariosHelper('run-enc-resp-input', '', '— Responsável —');
     if (id) {
       GAS.reunioes.obter(id, function(resp) {
         if (!resp || !resp.ok) return;

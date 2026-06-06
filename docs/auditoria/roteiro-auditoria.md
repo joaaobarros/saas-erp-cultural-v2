@@ -346,7 +346,7 @@
 | SIS-08 | Sistema | Jargão técnico na UI (SLA, FSM, webhook, endpoint) | 🟡 |
 | SIS-10 | Sistema | Layout de modais inconsistente — parcialmente CORRIGIDO @594 (rece/run/bl) | 🟡 |
 | SIS-12 | Sistema | Nome social sem prioridade absoluta sobre nome registrado | 🔴 |
-| SIS-13 | Sistema | Campo "responsável" texto livre bloqueia Task Federation Universal | 🔴 |
+| SIS-13 | Sistema | Campo "responsável" texto livre — CORRIGIDO @595 (5 campos → select) | ✅ |
 | ESP-03 | Infraestrutura — Lista | Filtros inconsistentes entre modos | 🟡 |
 | ESP-05 | Infraestrutura — Reserva | Sem vínculo com Ação Cultural | 🔴 |
 | ESP-06 | Infraestrutura — Reserva | Sem suporte a espaço externo | 🔴 |
@@ -463,12 +463,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 28 (2026-06-05) → SESSÃO 29
 
-### Estado atual: 280 bugs registrados · Deploy @594
+### Estado atual: 280 bugs registrados · Deploy @595
 
 ### O que foi feito nesta sessão (s28)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
+| @595 | SIS-13 (auditoria) | 5 campos "responsável" texto livre → `<select>` + `_carregarSelectUsuariosHelper`: `tf-responsavel` (Tarefas), `acao-responsavel` (Ações), `obj-responsavel` (Estratégia), `pat-modal-resp` (Patrimônio dinâmico), `run-enc-resp-input` (Reuniões). `par-resp` (Parcerias) mantido como texto — contato externo |
 | @594 | SIS-10 (auditoria) | 3 modais com header scrollável corrigidos (`rece-modal`, `run-modal`, `bl-modal`): `overflow-y:auto` removido do `.modal-box`; `<div class="modal-body">` adicionado como wrapper scrollável; `.modal-footer` movido para fora do `<form>` e migrado para classe CSS padrão. Modais restantes (`carro-modal`, Contratos Detail) com conteúdo curto — anotados para fase posterior |
 | @593 | SIS-01 (auditoria) | `confirm()` inline migrado para padrão `_conf` (linhas 9665, 28116). Bug: motivo da suspensão em `ContratadosUI.suspender()` capturado mas nunca passado — cadeia inteira corrigida: frontend, GAS binding, controller, engine, `_transitarContratado` (motivo gravado em `motivoUltimaAlteracao` + audit). Anti-padrão crítico confirmado ausente em todas as 30+ chamadas. |
 | @590 | SIDEBAR/ESTR (auditoria) | Sidebar: `pessoas`, `ponto`, `balcao`, `estrategia` removidos do menu (cross-nav nas views); `rh` → "Pessoas / RH"; `taskhub` → posição #2. Views ainda acessíveis via cross-nav e Router.registrar explícito |
@@ -481,7 +482,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** SIS-13, SIDEBAR-04, SIS-10 (modais restantes: carro-modal + Contratos Detail)
+- **Próximos bugs de auditoria (em ordem):** SIDEBAR-04, SIS-10 (modais restantes: carro-modal + Contratos Detail), FIN-19, FIN-20, CON-09
 - **Bugs prioritários:** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)
