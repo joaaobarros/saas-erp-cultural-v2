@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @583 · 280 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @609 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -463,13 +463,16 @@
 
 ## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @600 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @609 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s30)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
 | @600 | SIDEBAR-04 (auditoria) | Seção MEMÓRIA consolidada: 4 itens do sidebar (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional". `view-memoria` com tab-bar + 4 painéis. `MemoriaUI` IIFE gerencia abas. Router.registrar internos dos 4 sub-módulos removidos. Sidebar ~17 itens visíveis. |
+| @601 | Pulse multiplataforma | `_sincronizarPulse()` com polling 5 min: fecha widget/FAB quando resposta já feita em outro dispositivo. Substitui `_tentarMostrarPulse()` no boot. |
+| @603 | Pulse por setor | `_calcPorSetor()` em `escuta_pulse.gs`: participação + clima por setor com threshold de anonimato (≥5 participantes). `carregarPulseDash` renderiza barras semáforo por setor. |
+| @609 | Fix anti-spam pulse | Bug: verificação de intervalo 4h usava `respostasHoje` — falhava na virada de meia-noite. Corrigido para `respostasColab` (todo o mês). |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**

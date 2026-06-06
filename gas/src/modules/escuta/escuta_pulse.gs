@@ -245,9 +245,10 @@ var EscutaPulseEngine = (function() {
         return { ok: true, pergunta: null, motivo: 'limite_dia' };
       }
 
-      // Anti-spam (usa config da org)
-      if (respostasHoje.length > 0) {
-        var ultima = respostasHoje.slice().sort(function(a, b) {
+      // Anti-spam — usa respostasColab (não respostasHoje) para cobrir a virada de meia-noite:
+      // se a última resposta foi às 23h50 de ontem, a janela de 4h deve continuar bloqueando hoje.
+      if (respostasColab.length > 0) {
+        var ultima = respostasColab.slice().sort(function(a, b) {
           return new Date(b.criadoEm) - new Date(a.criadoEm);
         })[0];
         var diffH = (agora - new Date(ultima.criadoEm)) / 3600000;
@@ -365,7 +366,7 @@ var EscutaPulseEngine = (function() {
    *
    * @param {string} orgId
    * @param {string} [periodo] — YYYY-MM; default: período atual
-   * @returns {{ ok, indicadores, confianca, saturacao, tendencia, totalParticipantes }}
+   * @returns {{ ok, indicadores, confianca, saturacao, tendencia, totalParticipantes, porSetor }}
    */
   function obterDashboardPulse(orgId, periodo) {
     try {
@@ -377,6 +378,7 @@ var EscutaPulseEngine = (function() {
       var confianca    = _calcConfianca(orgId, participantes);
       var saturacao    = _calcStatusSaturacao(orgId, p);
       var tendencia    = _calcTendencia(orgId, p);
+      var porSetor     = _calcPorSetor(orgId, respostas);
 
       return {
         ok:               true,
@@ -386,6 +388,7 @@ var EscutaPulseEngine = (function() {
         totalParticipantes: participantes,
         saturacao:        saturacao,
         tendencia:        tendencia,
+        porSetor:         porSetor,
         bloqueado:        !confianca.suficiente
       };
     } catch(e) {
@@ -394,6 +397,54 @@ var EscutaPulseEngine = (function() {
   }
 
   // ─── Cálculos internos ──────────────────────────────────────────────────────
+
+  /**
+   * Agrupa respostas pulse por setor do colaborador.
+   * Carrega colaboradores uma única vez e constrói mapa id/email→setor.
+   * Setores com menos que GRUPO_MINIMO participantes são retornados com
+   * indicadores:null (protegido) para preservar anonimato.
+   */
+  function _calcPorSetor(orgId, respostas) {
+    var mapa = {};           // colaboradorId (email ou id) → setor
+    var totalPorSetor = {};  // setor → total de colaboradores ativos
+    try {
+      ColaboradorRepository.listar(orgId).forEach(function(c) {
+        var email = (c.emailInstitucional || c.email || '').toLowerCase();
+        var setor = c.setor || 'Sem setor';
+        if (email)  mapa[email] = setor;
+        if (c.id)   mapa[c.id]  = setor;
+        if (c.status === 'ativo') {
+          totalPorSetor[setor] = (totalPorSetor[setor] || 0) + 1;
+        }
+      });
+    } catch(e) { return []; }
+
+    // Agrupa respostas e participantes únicos por setor
+    var grupos = {};
+    respostas.forEach(function(r) {
+      if (!r.colaboradorId) return;
+      var cid   = (r.colaboradorId || '').toLowerCase();
+      var setor = mapa[cid] || mapa[r.colaboradorId] || null;
+      if (!setor) return;
+      if (!grupos[setor]) grupos[setor] = { respostas: [], participantes: {} };
+      grupos[setor].respostas.push(r);
+      grupos[setor].participantes[r.colaboradorId] = true;
+    });
+
+    return Object.keys(grupos).map(function(setor) {
+      var g     = grupos[setor];
+      var nPart = Object.keys(g.participantes).length;
+      var total = totalPorSetor[setor] || null;
+      // Abaixo do mínimo: omite indicadores para proteger anonimato
+      if (nPart < DEFAULTS.GRUPO_MINIMO) {
+        return { setor: setor, participantes: nPart, totalAtivos: total,
+                 indicadores: null, climaGeral: null, protegido: true };
+      }
+      var ind = _calcIndicadores(orgId, g.respostas);
+      return { setor: setor, participantes: nPart, totalAtivos: total,
+               indicadores: ind, climaGeral: ind._climaGeral || null, protegido: false };
+    }).sort(function(a, b) { return b.participantes - a.participantes; });
+  }
 
   function _calcIndicadores(orgId, respostas) {
     var PESOS = {
