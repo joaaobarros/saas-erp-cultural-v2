@@ -417,11 +417,11 @@
 | BAL-16 | Balcão — FSM | Sem etapa de aprovação final do material | 🔴 |
 | BAL-18 | Balcão — Modal | Layout visual deficiente | 🔴 |
 | FIN-06 | Financeiro | Integração Financeiro↔RH inexistente | 🔴 |
-| FIN-09 | Financeiro | Fonte de Recurso sem gestão independente | 🔴 |
-| FIN-11 | Financeiro | Sem acompanhamento de execução financeira | 🔴 |
+| ~~FIN-09~~ | Financeiro | ✅ CORRIGIDO @634 — aba "Fontes de Recurso" adicionada à view-financeiro; `FontesRecursoUI` → `FontesUI` corrigido | — |
+| ~~FIN-11~~ | Financeiro | ✅ CORRIGIDO @634 — aba "Execução" no painel do contrato: Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica | — |
 | FIN-12 | Financeiro | Histórico apenas metadados, sem diff nem reversão | 🔴 |
 | FIN-15 | Financeiro | Ícone `manage_accounts` ambíguo no card do contrato | 🔵 |
-| FIN-18 | Financeiro — Rubricas | Flag `voucher_uber` configurável por rubrica | 🔴 |
+| ~~FIN-18~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — coberto por FIN-20 (flag `voucher_uber` implementado no form da rubrica) | — |
 | ~~FIN-19~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — `setor` adicionado ao mapeamento de `memoriaCalculo` em `contrato_repository.gs/adicionarRubrica` | — |
 | ~~FIN-20~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — checkbox `voucher_uber` no form da rubrica; badge no card; campo `flags` persistido | — |
 | ~~CON-09~~ | Contratações | ✅ CORRIGIDO @631 — campo "Atividade" nas parcelas vira select com atividades da meta selecionada; `_atvOptions` reseta ao trocar contrato/form | — |
@@ -463,30 +463,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 31 (2026-06-06) → SESSÃO 32
+## HANDOFF ATUAL — SESSÃO 32 (2026-06-06) → SESSÃO 33
 
-### Estado atual: ~277 bugs registrados · Deploy @633 (GAS) · Firebase live
+### Estado atual: ~274 bugs registrados · Deploy @634 (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s31)
+### O que foi feito nesta sessão (s32)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @614 | SIDEBAR-04 (auditoria) | Seção MEMÓRIA consolidada: 4 itens do sidebar (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional". `view-memoria` com tab-bar + 4 painéis. `MemoriaUI` IIFE gerencia abas. Router.registrar internos dos 4 sub-módulos removidos. Sidebar ~17 itens visíveis. |
-| @618 | SIS-10 restante (auditoria) | 4 modais com header scrollável corrigidos: `carro-modal-box` (flex column, body scrollável, footer sticky); `cd-meta-modal`, `cd-pes-modal`, `cd-indr-modal` migrados de `modal-box-animar` + inline styles para `modal-box` + `modal-header` + `modal-body` + `modal-footer`. |
-| @620 | FIN-19 (auditoria) | `contrato_repository.gs/adicionarRubrica`: campo `setor` adicionado ao mapeamento de `memoriaCalculo` — era descartado na normalização. |
-| @620 | FIN-20 (auditoria) | Flags de operação por rubrica: checkbox "Permite solicitação de voucher Uber" (`cd-rub-flag-voucher-uber`) no form; badge "Uber" no card; `flags:{voucher_uber:bool}` em `dados` de `salvarRubrica`; restore em `editarRub`; reset em `abrirRubForm`. |
-| @620 | CON-09 (auditoria) | Campo "Atividade" nas parcelas de contratações: `_atvOptions` armazena atividades da meta selecionada; `atualizarGridParcelas` cria `<select>` quando `_atvOptions.length > 0`; `_coletarParcelas` usa `[data-atv]`; reset em `_limparForm`, `onContratoSelecionado` e `onMetaSelecionada`. |
-| @631 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback (aprovações rápidas deixavam setor vazio); usuários sem nenhum setor excluídos em vez de 'Sem setor'. Aprovação no admin: `data-setor` no botão + `aprovar(email, setor)` repassam `setorDesejado` ao `aprovarAcesso` — novas aprovações já definem setor. |
-| @633 | PUL-08 (auditoria) | Pulse setor por catálogo: `_calcPorSetor` cruza `u.setor` com `SistemaConfigService.getSetores()` — label do catálogo Admin/Setores em vez de id bruto ou texto livre. Aprovação: modal `_modalAprovacao` com select de setores do catálogo (pré-seleção por hint setorDesejado), select de papel, validação obrigatória. `_pendentes` como variável de módulo. |
+| @631 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback; usuários sem setor excluídos. Aprovação: `data-setor` + `aprovar(email, setor)` repassa setorDesejado. |
+| @633 | PUL-08 (auditoria) | Pulse setor por catálogo: `_calcPorSetor` cruza `u.setor` com `SistemaConfigService.getSetores()`. Modal `_modalAprovacao` com select de setores do catálogo. |
+| @634 | FIN-09 (auditoria) | Aba "Fontes de Recurso" adicionada à view-financeiro: tab button + div `data-tab="fontes"` com form `ff-*` + lista + métricas. Bug `FontesRecursoUI._confirmarMudarStatus()` → `FontesUI._confirmarMudarStatus()` corrigido. |
+| @634 | FIN-11 (auditoria) | Aba "Execução" no painel de detalhe do contrato: tab button + div `cd-tab-execucao`; `_tabs()` atualizado; `carregarExecucao()` cruza rubricas do PT com solicitações (`GAS.contratacoes.listar({contratoId})`) para exibir Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica. |
+| @634 | FIN-18 (auditoria) | Marcado como corrigido — coberto por FIN-20 (@631). |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** FIN-18 (voucher Uber em Reserva Veículo), FIN-09, CON-05
+- **Próximos bugs de auditoria (em ordem):** FIN-06, FIN-12, CAR-08
 
 ### Bugs ativos importantes (não corrigidos)
-- **FIN-18** (flag `voucher_uber` no módulo Reserva de Veículo — depende de FIN-20)
-- **FIN-09** (Fonte de Recurso sem gestão independente)
-- **FIN-11** (sem acompanhamento de execução financeira)
+- **FIN-06** (Integração Financeiro↔RH inexistente)
+- **FIN-12** (Histórico sem diff nem reversão)
+- **CAR-08** (Modal de detalhes do veículo omite setor, passageiros, observação, ação)
