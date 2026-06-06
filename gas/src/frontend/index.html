@@ -2527,6 +2527,11 @@ select.form-control { cursor: pointer; }
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Solicitante</div>
                 <div id="carro-det-solicitante" style="font-size:13px;"></div>
               </div>
+              <!-- Setor Solicitante -->
+              <div id="carro-det-setor-bloco" style="display:none;">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Setor solicitante</div>
+                <div id="carro-det-setor" style="font-size:13px;"></div>
+              </div>
               <!-- Passageiros -->
               <div id="carro-det-pass-bloco">
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Passageiros</div>
@@ -8915,8 +8920,9 @@ var GAS = {
     // ── Reordenação de metas (drag and drop) ──
     reordenarMetas: function(cid,ordem,cb,err) { google.script.run.withSuccessHandler(cb||function(){}).withFailureHandler(err||GAS._err).ctrl_contratos_reordenar_metas(cid,ordem); },
     // ── Histórico de versões ──
-    historico: function(cid,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_historico(cid); },
-    versao:    function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_versao(cid,v); }
+    historico:  function(cid,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_historico(cid); },
+    versao:     function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_versao(cid,v); },
+    restaurar:  function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_restaurar_versao(cid,v); }
   },
   catalogoSeplag: {
     listar:          function(cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_catalogo_listar(false); },
@@ -11488,14 +11494,126 @@ var ContratosDetailUI = (function() {
       if (!resp || !resp.ok) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Erro ao carregar histórico.</p>'; return; }
       var versoes = resp.data || [];
       if (!versoes.length) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhuma versão salva.</p>'; return; }
-      el.innerHTML = '<table class="tabela"><thead><tr><th>Versão</th><th>Salvo por</th><th>Data</th></tr></thead><tbody>'
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Versão</th><th>Salvo por</th><th>Data</th><th></th></tr></thead><tbody>'
         + versoes.map(function(v) {
             var dtISO = (v.criadoEm||'').slice(0,16);
             var dtFmt = dtISO ? fmtDataPtBR(dtISO.slice(0,10)) + (dtISO.length>10 ? ' ' + dtISO.slice(11,16) : '') : '—';
-            return '<tr><td>v'+escaparHtml(v.versao)+'</td><td>'+escaparHtml(v.criadoPor||'—')+'</td><td>'+escaparHtml(dtFmt)+'</td></tr>';
+            var sn = JSON.stringify(v.versao);
+            return '<tr>'
+              + '<td>v'+escaparHtml(v.versao)+'</td>'
+              + '<td>'+escaparHtml(v.criadoPor||'—')+'</td>'
+              + '<td>'+escaparHtml(dtFmt)+'</td>'
+              + '<td><button class="btn btn-ghost btn-sm" onclick="ContratosDetailUI._verDiffContrato('+sn+')" data-bg-skip="1" style="padding:2px 8px;font-size:11px;">Ver diff</button></td>'
+              + '</tr>';
           }).join('')
         + '</tbody></table>';
     });
+  }
+
+  function _verDiffContrato(versaoNum) {
+    if (!_cid) return;
+    Toast.info('Carregando versão v' + versaoNum + '…');
+    GAS.contratos.versao(_cid, versaoNum, function(resp) {
+      if (!resp || !resp.ok || !resp.data || !resp.data.snapshot) {
+        Toast.aviso('Versão não encontrada.');
+        return;
+      }
+      var snap = resp.data.snapshot;
+      var criadoEm  = resp.data.criadoEm  || '';
+      var criadoPor = resp.data.criadoPor  || '—';
+
+      function _mostrarDiff(atual) {
+        function _campo(label, valSnap, valAtual) {
+          var igual = String(valSnap||'') === String(valAtual||'');
+          return '<tr>'
+            + '<td style="font-size:12px;color:var(--muted);white-space:nowrap;">'+escaparHtml(label)+'</td>'
+            + '<td style="font-size:12px;">'+escaparHtml(String(valSnap||'—'))+'</td>'
+            + '<td style="font-size:12px;'+(igual ? '' : 'font-weight:600;color:var(--primario);')+'">'+escaparHtml(String(valAtual||'—'))+'</td>'
+            + '</tr>';
+        }
+        var dtSnap = criadoEm ? fmtDataPtBR(criadoEm.slice(0,10)) + (criadoEm.length > 10 ? ' ' + criadoEm.slice(11,16) : '') : '—';
+        var totSnap = 0;
+        (snap.metas||[]).forEach(function(m){ totSnap += parseFloat(m.subtotal)||0; });
+        var totAtual = 0;
+        if (atual) (atual.metas||[]).forEach(function(m){ totAtual += parseFloat(m.subtotal)||0; });
+
+        var nDiffs = 0;
+        [snap.status !== (atual&&atual.status),
+         snap.nome   !== (atual&&atual.nome),
+         snap.numero !== (atual&&atual.numero),
+         (snap.vigenciaInicio||'') !== (atual&&atual.vigenciaInicio||''),
+         (snap.vigenciaFim||'')    !== (atual&&atual.vigenciaFim||''),
+         String(_R(totSnap)) !== String(_R(totAtual)),
+         String((snap.metas||[]).length) !== String(atual?(atual.metas||[]).length:'—')
+        ].forEach(function(d){ if (d) nDiffs++; });
+
+        var sid = JSON.stringify(versaoNum);
+        var html = '<div style="border-radius:17px;overflow:hidden;">'
+          + '<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:10px;">'
+            + '<span class="ms" style="color:var(--primario);font-size:20px;">history</span>'
+            + '<div><div style="font-size:15px;font-weight:600;">Versão v'+escaparHtml(versaoNum)+' — '+escaparHtml(dtSnap)+'</div>'
+              + '<div style="font-size:11px;color:var(--muted);">Salvo por: '+escaparHtml(criadoPor)
+              + (nDiffs ? ' · <strong style="color:var(--primario);">'+nDiffs+' campo'+(nDiffs>1?'s':'')+' alterado'+(nDiffs>1?'s':'')+'</strong>' : ' · sem alterações')
+              + '</div></div>'
+            + '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;width:30px;height:30px;border-radius:50%;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:18px;">close</span></button>'
+          + '</div>'
+          + '<div style="padding:14px 20px;">'
+            + (nDiffs ? '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Campos em <strong style="color:var(--primario);">azul</strong> foram modificados desde esta versão.</div>' : '')
+            + '<div style="overflow-x:auto;">'
+              + '<table class="tabela" style="width:100%"><thead><tr><th style="font-size:11px;">Campo</th><th style="font-size:11px;">Esta versão</th><th style="font-size:11px;">Estado atual</th></tr></thead><tbody>'
+              + _campo('Status',         snap.status,            atual ? atual.status         : '—')
+              + _campo('Nome',           snap.nome,              atual ? atual.nome           : '—')
+              + _campo('Número',         snap.numero,            atual ? atual.numero         : '—')
+              + _campo('Vigência início', fmtDataPtBR(snap.vigenciaInicio||''), atual ? fmtDataPtBR(atual.vigenciaInicio||'') : '—')
+              + _campo('Vigência fim',   fmtDataPtBR(snap.vigenciaFim||''),    atual ? fmtDataPtBR(atual.vigenciaFim||'')    : '—')
+              + _campo('Valor total',    _R(totSnap),            _R(totAtual))
+              + _campo('Nº de metas',   (snap.metas||[]).length, atual ? (atual.metas||[]).length : '—')
+              + '</tbody></table>'
+            + '</div>'
+          + '</div>'
+          + '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">'
+            + '<button class="btn btn-ghost btn-sm" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Fechar</button>'
+            + '<button class="btn btn-aviso btn-sm" id="btn-restaurar-v'+escaparHtml(versaoNum)+'" onclick="ContratosDetailUI._restaurarVersao('+sid+')" data-bg-skip="1">Restaurar esta versão</button>'
+          + '</div>'
+        + '</div>';
+        _abrirModalSimples(html);
+      }
+
+      if (_obj) {
+        _mostrarDiff(_obj);
+      } else {
+        GAS.contratos.obter(_cid, function(r2) {
+          _mostrarDiff(r2 && r2.ok ? r2.data : null);
+        });
+      }
+    });
+  }
+
+  function _restaurarVersao(versaoNum) {
+    if (!_cid) return;
+    _abrirModalConfirmar({
+      titulo:         'Restaurar versão v' + versaoNum,
+      mensagem:       'O estado atual do contrato será salvo automaticamente como nova versão antes de restaurar. Esta ação sobrescreve os dados atuais do plano de trabalho. Deseja continuar?',
+      icone:          'restore',
+      corIcone:       '#f59e0b',
+      labelConfirmar: 'Restaurar',
+      idBtn:          'btn-conf-restaurar-v' + versaoNum,
+      onConfirm:      'ContratosDetailUI._executarRestaurar(' + JSON.stringify(versaoNum) + ');this.closest(\'.modal-simples\').remove()'
+    });
+  }
+
+  function _executarRestaurar(versaoNum) {
+    document.querySelectorAll('.modal-simples').forEach(function(el) { el.remove(); });
+    Toast.info('Restaurando versão v' + versaoNum + '…');
+    GAS.contratos.restaurar(_cid, versaoNum, function(r) {
+      if (r && r.ok) {
+        Toast.sucesso('Versão v' + versaoNum + ' restaurada com sucesso.');
+        _carregarContrato(_renderPT);
+        _carregarHistorico();
+      } else {
+        Toast.erro('Erro ao restaurar: ' + ((r && r.error && r.error.message) || 'erro desconhecido'));
+      }
+    }, function(e) { Toast.erro('Erro ao restaurar versão: ' + (e.message || e)); });
   }
 
   // ── Acompanhamento de Execução Financeira ───────────────
@@ -11642,6 +11760,10 @@ var ContratosDetailUI = (function() {
     _updGestao: _updGestao,
     // Plano de Contas
     carregarPlanoContas: carregarPlanoContas,
+    // Histórico de Versões
+    _verDiffContrato:   _verDiffContrato,
+    _restaurarVersao:   _restaurarVersao,
+    _executarRestaurar: _executarRestaurar,
     // Execução Financeira
     carregarExecucao: carregarExecucao,
     // Exportação SALIC
@@ -14698,10 +14820,12 @@ var ReservasCarroUI = (function() {
 
     // Solicitante
     var elSol = document.getElementById('carro-det-solicitante');
-    if (elSol) {
-      elSol.innerHTML = escaparHtml(r.solicitante||'—') +
-        (r.solicitanteSetor ? ' <span style="color:var(--muted);font-size:12px;">/ ' + escaparHtml(r.solicitanteSetor) + '</span>' : '');
-    }
+    if (elSol) elSol.textContent = r.solicitante || '—';
+    // Setor
+    var elSetorB = document.getElementById('carro-det-setor-bloco');
+    var elSetor  = document.getElementById('carro-det-setor');
+    if (elSetorB) elSetorB.style.display = r.solicitanteSetor ? '' : 'none';
+    if (elSetor)  elSetor.textContent = r.solicitanteSetor || '';
 
     // Passageiros
     var elPassB = document.getElementById('carro-det-pass-bloco');

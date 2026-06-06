@@ -905,6 +905,35 @@ var ContratosEngine = (function () {
     } catch(_) { return null; }
   }
 
+  function restaurarVersao(idContrato, versaoNum, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    var entrada = obterVersao(idContrato, versaoNum, orgId);
+    if (!entrada || !entrada.snapshot) throw new Error('Versão não encontrada: v' + versaoNum);
+    var snap = entrada.snapshot;
+
+    // Salva estado atual como nova versão antes de sobrescrever
+    salvarVersaoContrato(idContrato, emailOperador, orgId);
+
+    // Restaura o snapshot preservando id e orgId
+    modifyJSON('contratos.json', function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = -1;
+      lista.forEach(function(c, i) { if (c.id === idContrato && c.orgId === orgId) idx = i; });
+      if (idx === -1) throw new Error('Contrato não encontrado: ' + idContrato);
+      var restaurado = JSON.parse(JSON.stringify(snap));
+      restaurado.id    = idContrato;
+      restaurado.orgId = orgId;
+      restaurado.atualizadoEm = agora();
+      lista[idx] = restaurado;
+      return lista;
+    });
+
+    AuditoriaService.registrar('CONTRATO_VERSAO_RESTAURADA', 'financeiro', {
+      contratoId: idContrato, versaoRestaurada: versaoNum, operador: emailOperador
+    });
+    return { contratoId: idContrato, versaoRestaurada: versaoNum };
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // ANÁLISE
   // ──────────────────────────────────────────────────────────────────
@@ -1036,6 +1065,7 @@ var ContratosEngine = (function () {
     salvarVersaoContrato: salvarVersaoContrato,
     listarVersoes:        listarVersoes,
     obterVersao:          obterVersao,
+    restaurarVersao:      restaurarVersao,
 
     // Reordenação de Metas (drag and drop)
     reordenarMetas: reordenarMetas,

@@ -337,6 +337,13 @@ function ctrl_contrato_versao(idContrato, versaoNum) {
   }, 'ctrl_contrato_versao');
 }
 
+function ctrl_contrato_restaurar_versao(idContrato, versaoNum) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxFinanceiro();
+    return ContratosEngine.restaurarVersao(idContrato, Number(versaoNum), ctx.email, ctx.orgId);
+  }, 'ctrl_contrato_restaurar_versao');
+}
+
 // ── Nível do usuário no módulo financeiro ────────────────────────────────────
 
 /**
