@@ -314,14 +314,14 @@ function ctrl_contratados_salvar(dados) {
   }, 'ctrl_contratados_salvar');
 }
 
-function ctrl_contratados_mudar_status(id, novoStatus) {
+function ctrl_contratados_mudar_status(id, novoStatus, motivo) {
   return GasResponse.wrap(function () {
     var ctx   = _ctxContratacoes();
     var nivel = _nivelContratacoes(ctx.email);
     if (_PODE_GERENCIAR_CONTRATADOS.indexOf(nivel) === -1)
       throw new Error('Apenas RH, financeiro e administradores podem alterar status de contratados.');
     if (!id || !novoStatus) throw new Error('ID e novoStatus são obrigatórios.');
-    var r = ContratadoEngine.mudarStatus(id, novoStatus, ctx.email, ctx.orgId);
+    var r = ContratadoEngine.mudarStatus(id, novoStatus, ctx.email, ctx.orgId, motivo || '');
     _cacheInvalidar('ctr', ctx.orgId);
     return r;
   }, 'ctrl_contratados_mudar_status');

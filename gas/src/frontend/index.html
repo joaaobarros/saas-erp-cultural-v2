@@ -8742,7 +8742,7 @@ var GAS = {
     listar:        function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_listar(f||{}); },
     metricas:      function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_metricas(); },
     salvar:        function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_salvar(d); },
-    mudarStatus:   function(id,s,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_mudar_status(id,s); },
+    mudarStatus:   function(id,s,motivo,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_mudar_status(id,s,motivo||''); },
     buscarDocumento:function(doc,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratados_buscar_documento(doc); }
   },
   habilitacoes: {
@@ -9662,7 +9662,8 @@ var IdentidadeAdmin = (function() {
   }
 
   function restaurarPadrao() {
-    if(!confirm('Restaurar a paleta de cores padrão do sistema?')) return;
+    var _conf = confirm('Restaurar a paleta de cores padrão do sistema?');
+    if (!_conf) return;
     BtnGuard.wrap('btn-restaurar-padrao','Restaurando…',function(done){
       GAS.admin.restaurarPadrao(function(resp){
         done();
@@ -23019,8 +23020,9 @@ var ContratadosUI = (function() {
   function suspender(id) {
     var _raw = prompt('Motivo da suspensão:');
     if (_raw === null) return;
+    var motivo = _raw || '';
     BtnGuard.wrap('btn-ag-sus-'+id, 'Suspendendo…', function(done){
-      GAS.contratados.mudarStatus(id, 'suspenso', function(resp){
+      GAS.contratados.mudarStatus(id, 'suspenso', motivo, function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         Toast.sucesso('Agente suspenso.'); carregar();
@@ -28113,7 +28115,10 @@ var ReunioesUI = (function() {
   function _usarTemplateAta() {
     var el = document.getElementById('run-ata-texto');
     if (!el) return;
-    if (el.value.trim() && !confirm('Substituir o texto atual pelo template?')) return;
+    if (el.value.trim()) {
+      var _conf = confirm('Substituir o texto atual pelo template?');
+      if (!_conf) return;
+    }
     // Coleta dados disponíveis para pré-preencher
     var titulo   = (document.getElementById('run-titulo')     || {}).value || '___';
     var local    = (document.getElementById('run-local')      || {}).value || '___';

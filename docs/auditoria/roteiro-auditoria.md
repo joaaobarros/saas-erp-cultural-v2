@@ -340,7 +340,7 @@
 | ESC-01 | Escalas | Escalas simples — sem escala completa por colaborador | 🔴 |
 | ESC-02 | Escalas | Sem workflow de troca de escala | 🔴 |
 | ESC-03 | Escalas | Trocas de escala não geram tarefas | 🟡 |
-| SIS-01 | SISTEMA | `prompt()`/`confirm()` nativos — parcialmente resolvido, restam alguns | 🔴 |
+| SIS-01 | SISTEMA | `prompt()`/`confirm()` nativos — CORRIGIDO @591 | ✅ |
 | SIS-06 | Sistema | Dois padrões de filter bar: `filter-bar` e `toolbar` | 🟡 |
 | SIS-07 | Sistema | Duas variáveis de cor para stat-cards intercambiáveis | 🔵 |
 | SIS-08 | Sistema | Jargão técnico na UI (SLA, FSM, webhook, endpoint) | 🟡 |
@@ -461,25 +461,26 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 27 (2026-06-05) → SESSÃO 28
+## HANDOFF ATUAL — SESSÃO 28 (2026-06-05) → SESSÃO 29
 
-### Estado atual: 280 bugs registrados · Deploy @584
+### Estado atual: 280 bugs registrados · Deploy @591
 
-### O que foi feito nesta sessão (s27)
+### O que foi feito nesta sessão (s28)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
+| @591 | SIS-01 (auditoria) | `confirm()` inline migrado para padrão `_conf` (linhas 9665, 28116). Bug: motivo da suspensão em `ContratadosUI.suspender()` capturado mas nunca passado — cadeia inteira corrigida: frontend, GAS binding, controller, engine, `_transitarContratado` (motivo gravado em `motivoUltimaAlteracao` + audit). Anti-padrão crítico confirmado ausente em todas as 30+ chamadas. |
 | @590 | SIDEBAR/ESTR (auditoria) | Sidebar: `pessoas`, `ponto`, `balcao`, `estrategia` removidos do menu (cross-nav nas views); `rh` → "Pessoas / RH"; `taskhub` → posição #2. Views ainda acessíveis via cross-nav e Router.registrar explícito |
 | @589 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
 | @587 | limpeza | Remove `fase75_inspecionar_estoque_v1` e `fase75_importar_consumiveis_v1` — sem dados V1 para migrar |
 | @584 | 79 — Integração de Materiais nas Reservas | `ctrl_reservas_criar`: extrai `itensMateriais`, cria `SolicitacaoMaterial` via `EstoqueEngine.novaSolicitacao` com `reservaId`, retorna `solicitacaoCodigo` (best-effort). Frontend: `_carregarDisponibilidadeItens` migrado para `GAS.estoque.listarItens`; label → "Materiais necessários"; `salvar()` passa `itensMateriais`; toast exibe SOL-XXXX |
-| @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col. FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+- **Próximos bugs de auditoria (em ordem):** SIS-10, SIS-13, SIDEBAR-04
 - **Bugs prioritários:** FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)

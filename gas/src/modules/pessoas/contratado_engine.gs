@@ -97,15 +97,16 @@ var ContratadoEngine = (function () {
     } catch (_) {}
   }
 
-  function _transitarContratado(contratado, novoStatus, emailOperador) {
+  function _transitarContratado(contratado, novoStatus, emailOperador, motivo) {
     var atual = contratado.status || 'cadastrado';
     if (typeof FsmGuardian !== 'undefined') {
       FsmGuardian.validarTransicao('contratado_status', atual, novoStatus);
     }
     contratado.status = novoStatus;
+    if (motivo) contratado.motivoUltimaAlteracao = motivo;
     ContratadoRepository.salvar(contratado.orgId || _orgId(), contratado);
     _audit('CONTRATADO_STATUS_ALTERADO', {
-      id: contratado.id, de: atual, para: novoStatus, operador: emailOperador
+      id: contratado.id, de: atual, para: novoStatus, operador: emailOperador, motivo: motivo || ''
     });
   }
 
@@ -146,11 +147,11 @@ var ContratadoEngine = (function () {
     return r.id;
   }
 
-  function mudarStatus(id, novoStatus, emailOperador, orgId) {
+  function mudarStatus(id, novoStatus, emailOperador, orgId, motivo) {
     orgId = orgId || _orgId();
     var c = ContratadoRepository.buscarPorId(orgId, id);
     if (!c) throw new Error('Contratado não encontrado: ' + id);
-    _transitarContratado(c, novoStatus, emailOperador);
+    _transitarContratado(c, novoStatus, emailOperador, motivo || '');
     return { ok: true, id: id, status: novoStatus };
   }
 
