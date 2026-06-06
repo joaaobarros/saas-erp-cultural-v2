@@ -6866,9 +6866,16 @@ select.form-control { cursor: pointer; }
       </div><!-- /view-auditoria -->
 
       <!-- ═══════════════════════════════════════════════════ -->
-      <!-- VIEW AGENTES CULTURAIS                            -->
+      <!-- VIEW MEMÓRIA INSTITUCIONAL                        -->
       <!-- ═══════════════════════════════════════════════════ -->
-      <div id="view-agentes" class="view">
+      <div id="view-memoria" class="view">
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn ativa" id="mem-tab-agentes" onclick="MemoriaUI.abrirTab('agentes')" data-bg-skip="1"><span class="ms ms-sm">record_voice_over</span> Agentes</button>
+          <button class="tab-btn" id="mem-tab-acervo" onclick="MemoriaUI.abrirTab('acervo')" data-bg-skip="1"><span class="ms ms-sm">photo_library</span> Acervo</button>
+          <button class="tab-btn" id="mem-tab-voluntarios" onclick="MemoriaUI.abrirTab('voluntarios')" data-bg-skip="1"><span class="ms ms-sm">volunteer_activism</span> Voluntários</button>
+          <button class="tab-btn" id="mem-tab-parcerias" onclick="MemoriaUI.abrirTab('parcerias')" data-bg-skip="1"><span class="ms ms-sm">handshake</span> Parcerias</button>
+        </div>
+        <div id="mem-panel-agentes">
         <div class="view-header">
           <h1 class="view-title"><span class="ms">record_voice_over</span> Agentes Culturais</h1>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -6982,10 +6989,7 @@ select.form-control { cursor: pointer; }
         </div>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════ -->
-      <!-- VIEW ACERVO DIGITAL                               -->
-      <!-- ═══════════════════════════════════════════════════ -->
-      <div id="view-acervo" class="view">
+        <div id="mem-panel-acervo" style="display:none">
         <div class="view-header">
           <h1 class="view-title"><span class="ms">photo_library</span> Acervo Digital</h1>
           <button class="btn btn-primary" id="btn-novo-arquivo"
@@ -7092,10 +7096,7 @@ select.form-control { cursor: pointer; }
         </div>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════ -->
-      <!-- VIEW VOLUNTÁRIOS                                   -->
-      <!-- ═══════════════════════════════════════════════════ -->
-      <div id="view-voluntarios" class="view">
+        <div id="mem-panel-voluntarios" style="display:none">
         <div class="view-header">
           <h1 class="view-title"><span class="ms">volunteer_activism</span> Voluntários</h1>
           <button class="btn btn-primary" id="btn-novo-vol"
@@ -7182,10 +7183,7 @@ select.form-control { cursor: pointer; }
         </div>
       </div>
 
-      <!-- ═══════════════════════════════════════════════════ -->
-      <!-- VIEW PARCERIAS                                     -->
-      <!-- ═══════════════════════════════════════════════════ -->
-      <div id="view-parcerias" class="view">
+        <div id="mem-panel-parcerias" style="display:none">
         <div class="view-header">
           <h1 class="view-title"><span class="ms">handshake</span> Parcerias</h1>
           <button class="btn btn-primary" id="btn-nova-parceria"
@@ -7283,7 +7281,8 @@ select.form-control { cursor: pointer; }
             </form>
           </div>
         </div>
-      </div>
+        </div><!-- /mem-panel-parcerias -->
+      </div><!-- /view-memoria -->
 
       <!-- ═══════════════════════════════════════════════ -->
       <!-- VIEW: ESTRATÉGIA INSTITUCIONAL (FASE 11.1)     -->
@@ -24610,10 +24609,7 @@ var App = (function() {
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
     { secao:'MEMÓRIA' },
-    { id:'agentes',     label:'Agentes',         icone:'record_voice_over',       modulo:'AGENTES' },
-    { id:'acervo',      label:'Acervo',          icone:'photo_library',           modulo:'ACOES' },
-    { id:'voluntarios', label:'Voluntários',     icone:'volunteer_activism',      modulo:'VOLUNTARIOS' },
-    { id:'parcerias',   label:'Parcerias',       icone:'handshake',               modulo:'ACOES' },
+    { id:'memoria',     label:'Memória Institucional', icone:'collections_bookmark', modulo:null },
     { secao:'SISTEMA', superadmin:true },
     { id:'admin',            label:'Administração',   icone:'admin_panel_settings', modulo:'ADMIN', superadmin:true },
     { id:'auditoria',        label:'Auditoria',       icone:'manage_search',         modulo:'ADMIN', superadmin:true },
@@ -24681,10 +24677,11 @@ var App = (function() {
     _atualizarBadgeEscuta();
     setInterval(function(){ _atualizarBadgeEscuta(); }, 300000);
 
-    // Pulse widget — verificação global única após boot (aparece em qualquer módulo)
+    // Pulse widget — primeira verificação após boot + polling a cada 5 min (sinc. multiplataforma)
     setTimeout(function() {
-      if (typeof EscutaUI !== 'undefined' && EscutaUI.tentarMostrarPulse) {
-        EscutaUI.tentarMostrarPulse();
+      if (typeof EscutaUI !== 'undefined' && EscutaUI.sincronizarPulse) {
+        EscutaUI.sincronizarPulse();
+        setInterval(function() { EscutaUI.sincronizarPulse(); }, 300000);
       }
     }, 4000);
 
@@ -24904,10 +24901,7 @@ var App = (function() {
             : id === 'escuta'         ? function(){ EscutaUI.aoAbrir(); }
             : id === 'dashboard'      ? function(){ DashboardUI.aoAbrir(); }
             : id === 'ponto'          ? function(){ PontoUI.aoAbrir(); }
-            : id === 'agentes'        ? function(){ AgentesUI.aoAbrir(); }
-            : id === 'acervo'         ? function(){ AcervoUI.aoAbrir(); }
-            : id === 'voluntarios'    ? function(){ VoluntariosUI.aoAbrir(); }
-            : id === 'parcerias'      ? function(){ ParceriasUI.aoAbrir(); }
+            : id === 'memoria'         ? function(){ MemoriaUI.aoAbrir(); }
             : id === 'reservas-carro' ? function(){ ReservasCarroUI.aoAbrir(); }
             : id === 'manual'         ? function(){ ManualUI.aoAbrir(); }
             : null
@@ -26613,7 +26607,7 @@ var AgentesUI = (function() {
   var _BADGE = { rascunho:'warning', ativo:'success', suspenso:'danger', descredenciado:'secondary' };
   var _LABEL = { rascunho:'Rascunho', ativo:'Ativo', suspenso:'Suspenso', descredenciado:'Descredenciado' };
 
-  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('agentes','Agentes',aoAbrir); }
+  function aoAbrir() { if (!_carregado) carregar(); }
 
   function carregar() {
     GAS.agentes.metricas(function(r) {
@@ -26744,7 +26738,6 @@ var AgentesUI = (function() {
            abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
            ativar:ativar, suspender:suspender, reativar:reativar };
 })();
-Router.registrar('agentes','Agentes',AgentesUI.aoAbrir);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ACERVO UI
@@ -26755,7 +26748,7 @@ var AcervoUI = (function() {
   var _LGPD_LABEL = { nao_verificado:'Não verificado', autorizado:'Autorizado', restrito:'Restrito', sem_pessoas:'Sem pessoas' };
   var _LGPD_COR   = { nao_verificado:'#f59e0b', autorizado:'#16a34a', restrito:'#dc2626', sem_pessoas:'#6b7280' };
 
-  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('acervo','Acervo',aoAbrir); }
+  function aoAbrir() { if (!_carregado) carregar(); }
 
   function carregar() {
     GAS.acervo.listar({}, function(r) {
@@ -26889,7 +26882,6 @@ var AcervoUI = (function() {
   return { aoAbrir:aoAbrir, carregar:carregar, filtrar:filtrar,
            abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar };
 })();
-Router.registrar('acervo','Acervo',AcervoUI.aoAbrir);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VOLUNTÁRIOS UI
@@ -26899,7 +26891,7 @@ var VoluntariosUI = (function() {
   var _BADGE_VOL  = { cadastrado:'secondary', ativo:'success', inativo:'warning' };
   var _BADGE_ALOC = { alocado:'secondary', confirmado:'info', presente:'warning', concluido:'success', cancelado:'danger' };
 
-  function aoAbrir() { if (!_carregado) { carregar(); carregarAlocacoes(); } Router.registrar('voluntarios','Voluntários',aoAbrir); }
+  function aoAbrir() { if (!_carregado) { carregar(); carregarAlocacoes(); } }
 
   function carregar() {
     GAS.voluntarios.metricas(function(r) {
@@ -27013,7 +27005,6 @@ var VoluntariosUI = (function() {
            abrirTab:abrirTab, abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
            registrarPresenca:registrarPresenca, concluir:concluir };
 })();
-Router.registrar('voluntarios','Voluntários',VoluntariosUI.aoAbrir);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PARCERIAS UI
@@ -27024,7 +27015,7 @@ var ParceriasUI = (function() {
   var _LABEL = { proposta:'Proposta', negociacao:'Em negociação', ativa:'Ativa', encerrada:'Encerrada', cancelada:'Cancelada' };
   var _TIPO_LABEL = { coproducao:'Co-produção', patrocinio:'Patrocínio', cessao:'Cessão', intercambio:'Intercâmbio', apoio:'Apoio' };
 
-  function aoAbrir() { if (!_carregado) carregar(); Router.registrar('parcerias','Parcerias',aoAbrir); }
+  function aoAbrir() { if (!_carregado) carregar(); }
 
   function carregar() {
     GAS.parcerias.metricas(function(r) {
@@ -27134,7 +27125,31 @@ var ParceriasUI = (function() {
            abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar,
            avancar:avancar, ativar:ativar, encerrar:encerrar };
 })();
-Router.registrar('parcerias','Parcerias',ParceriasUI.aoAbrir);
+// ═══════════════════════════════════════════════════════════════════════════
+// MEMÓRIA INSTITUCIONAL UI — tab wrapper (Agentes | Acervo | Voluntários | Parcerias)
+// ═══════════════════════════════════════════════════════════════════════════
+var MemoriaUI = (function() {
+  var _tab = 'agentes';
+  var _tabs = ['agentes','acervo','voluntarios','parcerias'];
+  var _sub = {
+    agentes:     function(){ AgentesUI.aoAbrir(); },
+    acervo:      function(){ AcervoUI.aoAbrir(); },
+    voluntarios: function(){ VoluntariosUI.aoAbrir(); },
+    parcerias:   function(){ ParceriasUI.aoAbrir(); }
+  };
+  function abrirTab(tab) {
+    _tab = tab;
+    _tabs.forEach(function(t) {
+      var p = document.getElementById('mem-panel-'+t);
+      var b = document.getElementById('mem-tab-'+t);
+      if (p) p.style.display = t === tab ? '' : 'none';
+      if (b) b.classList.toggle('ativa', t === tab);
+    });
+    if (_sub[tab]) _sub[tab]();
+  }
+  function aoAbrir() { abrirTab(_tab); }
+  return { aoAbrir:aoAbrir, abrirTab:abrirTab };
+})();
 
 // ─── Fase 11.1: EstrategiaUI ─────────────────────────────────────────────────
 var EstrategiaUI = (function() {
@@ -29073,9 +29088,27 @@ var EscutaUI = (function() {
     var NOMES_DIM = { vigor:'Vigor', dedicacao:'Dedicação', absorcao:'Absorção', demanda:'Demanda/Carga', controle:'Controle/Autonomia', colaboracao:'Colaboração', inovacao:'Inovação', seguranca:'Segurança Psicológica' };
     GAS.escuta.pulseDashboard({ periodo: per }, function(r) {
       if (!r || !r.ok || !r.data) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados pulse no período.</p>'; return; }
-      var d = r.data;
+      var d           = r.data;
       var indicadores = d.indicadores || {};
-      var html = '';
+      var confianca   = d.confianca   || {};
+      var porSetor    = Array.isArray(d.porSetor) ? d.porSetor : [];
+
+      // ── Cabeçalho de participação geral ─────────────────────────────────────
+      var nTotal   = d.totalParticipantes || 0;
+      var nAtivos  = confianca.total || 0;
+      var pctGeral = nAtivos > 0 ? Math.round((nTotal / nAtivos) * 100) : 0;
+      var corGeral = pctGeral >= 35 ? 'var(--success)' : pctGeral >= 15 ? 'var(--warning)' : 'var(--danger)';
+      var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;' +
+        'padding:10px 12px;background:var(--surface1,#f8fafc);border-radius:8px;border:1px solid var(--border);">' +
+        '<div style="font-size:22px;font-weight:800;color:' + corGeral + ';">' + nTotal + '</div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:12px;font-weight:600;color:var(--text);">pessoas responderam</div>' +
+          '<div style="font-size:10px;color:var(--text2);">' + pctGeral + '% do total de ' + nAtivos + ' colaboradores ativos</div>' +
+        '</div>' +
+      '</div>';
+
+      // ── Indicadores gerais por dimensão ─────────────────────────────────────
+      var dimHtml = '';
       Object.keys(indicadores).forEach(function(dim) {
         if (dim === '_climaGeral') return;
         var entry = indicadores[dim];
@@ -29083,7 +29116,7 @@ var EscutaUI = (function() {
         var pct = v != null ? Math.round(((v-1)/4)*100) : 0;
         var cor = _cor(pct);
         var nome = NOMES_DIM[dim] || dim;
-        html += '<div style="margin-bottom:10px;">' +
+        dimHtml += '<div style="margin-bottom:10px;">' +
           '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
             '<span>' + nome + '</span>' +
             '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'N/D') + '</span>' +
@@ -29092,10 +29125,44 @@ var EscutaUI = (function() {
             '<div style="width:' + pct + '%;background:' + cor + ';height:7px;border-radius:4px;"></div>' +
           '</div></div>';
       });
-      el.innerHTML = (html || '<p class="muted-text" style="font-size:12px;">Sem respostas pulse neste período.</p>') +
-        '<p style="font-size:10px;color:var(--text2);margin-top:6px;">' +
-          'Total participantes: ' + (d.totalParticipantes||0) +
-        '</p>';
+      html += dimHtml || '<p class="muted-text" style="font-size:12px;">Sem respostas pulse neste período.</p>';
+
+      // ── Participação e clima por setor ───────────────────────────────────────
+      if (porSetor.length) {
+        html += '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">' +
+          '<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;' +
+          'color:var(--text2);margin:0 0 10px;">Por setor</p>';
+        porSetor.forEach(function(s) {
+          var nP   = s.participantes || 0;
+          var nA   = s.totalAtivos   || 0;
+          var pctS = nA > 0 ? Math.round((nP / nA) * 100) : 0;
+          var corS = pctS >= 35 ? 'var(--success)' : pctS >= 15 ? 'var(--warning)' : 'var(--danger)';
+          var clima = s.climaGeral;
+          var climaMedia = clima && clima.media != null ? Number(clima.media).toFixed(1) : null;
+          var corClima   = climaMedia != null ? _cor(Math.round(((Number(climaMedia)-1)/4)*100)) : '#94a3b8';
+          var badgeClima = s.protegido
+            ? '<span style="font-size:9px;color:var(--text2);font-style:italic;">grupo pequeno</span>'
+            : (climaMedia != null
+                ? '<span style="font-size:11px;font-weight:700;color:' + corClima + ';">' + climaMedia + '/5</span>'
+                : '<span style="font-size:9px;color:var(--text2);">N/D</span>');
+          html +=
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">' +
+                  '<span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;" title="' + _esc(s.setor) + '">' + _esc(s.setor) + '</span>' +
+                  '<span style="color:var(--text2);white-space:nowrap;">' + nP + (nA ? '/' + nA : '') + '</span>' +
+                '</div>' +
+                '<div style="background:var(--border);border-radius:4px;height:5px;">' +
+                  '<div style="width:' + pctS + '%;background:' + corS + ';height:5px;border-radius:4px;"></div>' +
+                '</div>' +
+              '</div>' +
+              '<div style="text-align:right;min-width:52px;">' + badgeClima + '</div>' +
+            '</div>';
+        });
+        html += '</div>';
+      }
+
+      el.innerHTML = html;
     }, function(){ el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível (permissão RH+).</p>'; });
   }
 
@@ -29616,6 +29683,29 @@ var EscutaUI = (function() {
     }, function(){});
   }
 
+  // Sincroniza estado do pulse entre dispositivos — rodada periodicamente.
+  // Ao contrário de _tentarMostrarPulse, sempre consulta o backend:
+  //   - pergunta disponível → exibe FAB (se ainda não visível)
+  //   - sem pergunta (respondida em outro dispositivo) → fecha widget + esconde FAB
+  function _sincronizarPulse() {
+    if (_pulseEnviando) return; // não interromper envio em andamento
+    GAS.escuta.pulseObter(function(r) {
+      if (_pulseEnviando) return;
+      var fab       = document.getElementById('pulse-fab');
+      var fabVis    = fab && fab.style.display === 'flex';
+      if (r && r.ok && r.data && r.data.pergunta) {
+        if (!fabVis) {
+          _pulseAtual = r.data;
+          if (fab) fab.style.display = 'flex';
+        }
+        // FAB já visível: não perturba — usuário pode estar respondendo
+      } else if (fabVis) {
+        // Pergunta já respondida em outro dispositivo — limpa o widget
+        fecharPulse();
+      }
+    }, function(){});
+  }
+
   function abrirPulse() {
     if (!_pulseAtual) {
       GAS.escuta.pulseObter(function(r) {
@@ -30054,7 +30144,8 @@ var EscutaUI = (function() {
     // Pulse widget
     abrirPulse, fecharPulse, responderPulse,
     abrirGuia,
-    tentarMostrarPulse: _tentarMostrarPulse
+    tentarMostrarPulse: _tentarMostrarPulse,
+    sincronizarPulse:   _sincronizarPulse
   };
 })();
 Router.registrar('escuta', 'Escuta Institucional', EscutaUI.aoAbrir);

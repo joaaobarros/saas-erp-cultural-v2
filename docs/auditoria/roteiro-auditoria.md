@@ -299,7 +299,7 @@
 | SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🟡 |
 | ~~SIDEBAR-02~~ | Sidebar | ✅ CORRIGIDO @590 — Balcão removido do sidebar; cross-nav "Balcão" em view-comunicacao e "RECE" em view-balcao | — |
 | SIDEBAR-03 | Sidebar | Módulos inativos visíveis com badge | 🟡 |
-| SIDEBAR-04 | Sidebar | ~20 itens → parcialmente corrigido: -5 itens (pessoas, ponto, balcao, estrategia removidos do sidebar) | 🟡 |
+| ~~SIDEBAR-04~~ | Sidebar | ✅ CORRIGIDO @600 — seção MEMÓRIA consolidada: 4 itens (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional" com tab-bar interna; sidebar total ~17 itens | — |
 | ~~SIDEBAR-05~~ | Sidebar | ✅ CORRIGIDO @590 — Meu Centro movido para posição #2 (após Início) | — |
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
 | TAR-02 | Tarefas | Responsável é texto livre | 🔴 |
@@ -461,28 +461,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 29 (2026-06-06) → SESSÃO 30
+## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @599 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @600 (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s29)
+### O que foi feito nesta sessão (s30)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @599 | Firebase + URL routing | `public/index.html` — página de redirect com design do sistema (gradiente roxo, spinner, barra progresso accent, redirect JS 2,5 s, preserve `?secao=`). `firebase-hosting-merge.yml` — deploy automático ao push na `main`. `.gitignore` + `.firebase/`. Router SPA: `_pushUrl(id)` com `google.script.history` (`replace` na 1ª nav, `push` nas demais); `setChangeHandler` para Voltar/Avançar; `_getSecaoUrl()` restaura módulo ao recarregar. |
-| @596 | SIS-13 (auditoria) | 5 campos "responsável" texto livre → `<select>` + `_carregarSelectUsuariosHelper`. `par-resp` (Parcerias) mantido como texto — contato externo |
-| @594 | SIS-10 (auditoria) | 3 modais com header scrollável corrigidos (`rece-modal`, `run-modal`, `bl-modal`) |
-| @593 | SIS-01 (auditoria) | `confirm()` inline migrado para `_conf`; bug motivo suspensão Contratados corrigido end-to-end |
+| @600 | SIDEBAR-04 (auditoria) | Seção MEMÓRIA consolidada: 4 itens do sidebar (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional". `view-memoria` com tab-bar + 4 painéis. `MemoriaUI` IIFE gerencia abas. Router.registrar internos dos 4 sub-módulos removidos. Sidebar ~17 itens visíveis. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria (em ordem):** SIDEBAR-04, FIN-19, FIN-20, CON-09
-- **Bugs prioritários:** FIN-19, FIN-20, CON-09
+- **Próximos bugs de auditoria (em ordem):** SIS-10 restante (carro-modal + modais Contratos Detail), FIN-19, FIN-20, CON-09
 
 ### Bugs ativos importantes (não corrigidos)
+- **SIS-10 restante** — `carro-modal` e modais do Contratos Detail (cd-meta-modal, cd-pes-modal, cd-indr-modal): mesmo padrão de header scrollável
 - **FIN-19** (Setor na Rubrica — decisão arquitetural)
 - **FIN-20** (flags de operação configuráveis por rubrica — decisão arquitetural)
 - **CON-09** (campo Atividade nas parcelas — texto livre desvinculado do Plano de Trabalho)
