@@ -54,7 +54,7 @@ function ctrl_taskhub_minha_caixa(params) {
         return d.status !== 'concluida' && d.status !== 'cancelada';
       }).forEach(function(d) {
         itens.push(_itemCaixa('demanda', d.id, d.titulo, d.dataLimite, d.urgencia, 'comunicacao', {
-          tipo: d.tipo, status: d.status, slaPct: _calcularSlaPct(d)
+          tipoDemanda: d.tipo, statusDemanda: d.status, slaPct: _calcularSlaPct(d)
         }));
       });
     } catch(e) { Logger.warn('taskhub', 'demandas', e.message); }
@@ -270,4 +270,70 @@ function _alertaSevToUrgencia(severidade) {
   if (severidade === 'URGENTE') return 'alta';
   if (severidade === 'ATENCAO') return 'media';
   return 'baixa';
+}
+
+/**
+ * Aniversariantes do mês atual + próximos 7 dias.
+ * Retorna lista de colaboradores ativos com dataNascimento no período.
+ */
+function ctrl_taskhub_aniversariantes() {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+
+    var orgId  = getOrgConfig().orgId;
+    var hoje   = new Date();
+    var mesAtual = hoje.getMonth() + 1;
+    var diaHoje  = hoje.getDate();
+
+    var todos;
+    try { todos = ColaboradorRepository.listar(orgId, {}); } catch(e) { todos = []; }
+
+    var resultado = todos
+      .filter(function(c) {
+        if (!c.dataNascimento || c.status === 'desligado') return false;
+        var partes = String(c.dataNascimento).slice(0, 10).split('-');
+        if (partes.length < 3) return false;
+        var mesNasc = parseInt(partes[1], 10);
+        var diaNasc = parseInt(partes[2], 10);
+        // Inclui: mesmo mês, ou próximos 7 dias (pode cruzar mês)
+        var nascHojeAno = new Date(hoje.getFullYear(), mesNasc - 1, diaNasc);
+        var diff = nascHojeAno - hoje;
+        // Se já passou no ano (diff < -86400000 * 1), tenta ano seguinte
+        if (diff < -86400000) {
+          nascHojeAno = new Date(hoje.getFullYear() + 1, mesNasc - 1, diaNasc);
+          diff = nascHojeAno - hoje;
+        }
+        return diff >= 0 && diff <= 7 * 86400000;
+      })
+      .map(function(c) {
+        var partes = String(c.dataNascimento).slice(0, 10).split('-');
+        var dia = parseInt(partes[2], 10);
+        var mes = parseInt(partes[1], 10);
+        var nascHojeAno = new Date(hoje.getFullYear(), mes - 1, dia);
+        if (nascHojeAno < hoje) nascHojeAno = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+        var ehHoje = nascHojeAno.toDateString() === hoje.toDateString();
+        var idade  = nascHojeAno.getFullYear() - parseInt(partes[0], 10);
+        return {
+          id:      c.id,
+          nome:    c.nome || '',
+          setor:   c.setor || '',
+          data:    String(c.dataNascimento).slice(0, 10),
+          dia:     dia,
+          mes:     mes,
+          idade:   idade,
+          ehHoje:  ehHoje
+        };
+      })
+      .sort(function(a, b) {
+        var dA = new Date(hoje.getFullYear(), a.mes - 1, a.dia);
+        var dB = new Date(hoje.getFullYear(), b.mes - 1, b.dia);
+        if (dA < hoje) dA = new Date(hoje.getFullYear() + 1, a.mes - 1, a.dia);
+        if (dB < hoje) dB = new Date(hoje.getFullYear() + 1, b.mes - 1, b.dia);
+        return dA - dB;
+      });
+
+    return { aniversariantes: resultado, total: resultado.length };
+  }, 'ctrl_taskhub_aniversariantes');
 }

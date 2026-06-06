@@ -2773,6 +2773,7 @@ select.form-control { cursor: pointer; }
                 </select>
               </div>
               <div class="form-group"><label class="form-label">Data de Admissão</label><input id="pf-admissao" class="form-input" type="date"></div>
+              <div class="form-group"><label class="form-label">Data de Nascimento</label><input id="pf-nascimento" class="form-input" type="date"></div>
               <div class="form-group"><label class="form-label">Salário Base (R$)</label><input id="pf-salario-base" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PessoasUI._recalcSalario()"></div>
             </div>
             <!-- Benefícios (exibidos quando vínculo = CLT) -->
@@ -6791,6 +6792,7 @@ select.form-control { cursor: pointer; }
             </button>
           </div>
           <div id="th-caixa-container"><p class="muted-text">Carregando pendências…</p></div>
+          <div id="th-aniversariantes-container" style="margin-top:20px;"></div>
         </div>
         <div id="th-tab-meuTime" class="oculto">
           <div id="th-time-container"><p class="muted-text">Carregando carga da equipe…</p></div>
@@ -9227,9 +9229,10 @@ var GAS = {
     excluir:      function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_balcao_excluir({id:id}); }
   },
   taskhub: {
-    minhaCaixa:    function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_minha_caixa(p||{}); },
-    meuTime:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_meu_time(p||{}); },
-    produtividade: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_produtividade(p||{}); }
+    minhaCaixa:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_minha_caixa(p||{}); },
+    meuTime:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_meu_time(p||{}); },
+    produtividade:    function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_produtividade(p||{}); },
+    aniversariantes:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_aniversariantes(); }
   },
   auditoria: {
     listar:           function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_auditoria_listar(f||{}); },
@@ -10225,6 +10228,7 @@ var PessoasUI = (function() {
     _popularSelectCargo(dados && dados.cargo || '');
     document.getElementById('pf-vinculo').value = dados && dados.tipoVinculo || 'clt';
     document.getElementById('pf-admissao').value = dados && dados.dataAdmissao || '';
+    if (document.getElementById('pf-nascimento')) document.getElementById('pf-nascimento').value = dados && dados.dataNascimento || '';
     // Campos de salário e benefícios
     var el = function(id){ return document.getElementById(id); };
     if (el('pf-salario-base'))      el('pf-salario-base').value      = fmtMoeda(dados && dados.salarioBase || 0);
@@ -10266,6 +10270,7 @@ var PessoasUI = (function() {
       cargo:               document.getElementById('pf-cargo').value.trim(),
       tipoVinculo:         document.getElementById('pf-vinculo').value,
       dataAdmissao:        document.getElementById('pf-admissao').value,
+      dataNascimento:      (document.getElementById('pf-nascimento')||{}).value || '',
       salarioBase:         parseMoeda((document.getElementById('pf-salario-base')||{}).value||'0') || 0,
       valeAlimentacao:     parseMoeda((document.getElementById('pf-alimentacao')||{}).value||'0') || 0,
       descontoAlimentacao: parseMoeda((document.getElementById('pf-desc-alimentacao')||{}).value||'0') || 0,
@@ -28897,6 +28902,7 @@ var TaskHubUI = (function() {
       _renderCaixa(resp.data);
       _carregado = true;
     }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
+    carregarAniversariantes();
   }
 
   function _renderCaixa(dados) {
@@ -28922,13 +28928,54 @@ var TaskHubUI = (function() {
     var ico = TIPO_ICO[item.tipo] || 'circle';
     var prazoStr = item.prazo ? _fmtData(item.prazo) : 'Sem prazo';
     var vencidoStr = item.vencido ? ' <span style="color:var(--color-error);font-weight:600;">VENCIDO</span>' : '';
+    var meta;
+    switch (item.tipo) {
+      case 'tarefa':
+        meta = escaparHtml(item.status || '') + ' · ' + escaparHtml(item.prioridade || 'media') + ' · ' + prazoStr; break;
+      case 'encaminhamento':
+        meta = 'Reunião: ' + escaparHtml(item.reuniaoTitulo || '—') + ' · ' + prazoStr; break;
+      case 'demanda':
+        meta = escaparHtml(item.tipoDemanda || '') + ' · SLA ' + (item.slaPct || 0) + '% · ' + prazoStr; break;
+      case 'aprovacao':
+        meta = 'Solicitante: ' + escaparHtml(item.solicitante || '—'); break;
+      case 'alerta':
+        meta = escaparHtml(item.severidade || '') + ' · ' + escaparHtml(item.modulo || ''); break;
+      case 'chave':
+        meta = 'Sala: ' + escaparHtml(item.salaId || '—') + ' · Devolver: ' + prazoStr; break;
+      default:
+        meta = escaparHtml(item.modulo || '') + ' · ' + prazoStr;
+    }
     return '<div class="th-item' + (item.vencido?' vencido':'') + '" onclick="TaskHubUI.abrirItem(\'' + escaparHtml(item.tipo) + '\',\'' + escaparHtml(item.id) + '\')">' +
       '<div class="th-item-tipo ' + escaparHtml(item.tipo) + '"><span class="ms" style="font-size:15px;">' + ico + '</span></div>' +
       '<div class="th-item-corpo">' +
         '<div class="th-item-titulo">' + escaparHtml(item.titulo) + vencidoStr + '</div>' +
-        '<div class="th-item-meta">' + escaparHtml(item.modulo || '') + ' · ' + prazoStr + '</div>' +
+        '<div class="th-item-meta">' + meta + '</div>' +
       '</div>' +
     '</div>';
+  }
+
+  function carregarAniversariantes() {
+    var el = document.getElementById('th-aniversariantes-container');
+    if (!el) return;
+    GAS.taskhub.aniversariantes(function(resp) {
+      if (!resp || !resp.ok || !resp.data || !resp.data.total) { el.innerHTML = ''; return; }
+      var lista = resp.data.aniversariantes || [];
+      var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      el.innerHTML = '<div class="th-grupo-label" style="margin-top:8px;">'
+        + '<span class="ms ms-sm" style="vertical-align:-2px;color:var(--color-accent);">cake</span> ANIVERSARIANTES (' + lista.length + ')</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">'
+        + lista.map(function(p) {
+            var diaStr = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+            var ehHoje = p.ehHoje;
+            return '<div style="display:flex;align-items:center;gap:8px;background:' + (ehHoje ? 'var(--color-accent)' : 'var(--surface2)') + ';'
+              + 'color:' + (ehHoje ? '#fff' : 'inherit') + ';border-radius:8px;padding:8px 12px;min-width:160px;">'
+              + '<span class="ms" style="font-size:20px;">' + (ehHoje ? 'celebration' : 'cake') + '</span>'
+              + '<div><div style="font-weight:600;font-size:13px;">' + escaparHtml(p.nome) + '</div>'
+              + '<div style="font-size:11px;opacity:.8;">' + diaStr + ' · ' + escaparHtml(p.setor || '—') + (p.idade ? ' · ' + p.idade + ' anos' : '') + '</div></div>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }, function() { el.innerHTML = ''; });
   }
 
   function abrirItem(tipo, id) {
@@ -28979,7 +29026,7 @@ var TaskHubUI = (function() {
     try { var p=String(d).slice(0,10).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; } catch(_){ return d; }
   }
 
-  return { aoAbrir, carregar, setTab, abrirItem, carregarTime, carregarProdutividade };
+  return { aoAbrir, carregar, setTab, abrirItem, carregarTime, carregarProdutividade, carregarAniversariantes };
 })();
 Router.registrar('taskhub', 'Meu Centro', TaskHubUI.aoAbrir);
 

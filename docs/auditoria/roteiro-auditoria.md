@@ -460,8 +460,8 @@
 | ~~HUB-08~~ | Meu Centro | ✅ CORRIGIDO @656 — botão "Nova Tarefa" adicionado no header do tab Meu Dia; navega para view-tarefas onde o form de criação está disponível. | — |
 | ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @643 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
 | ~~HUB-10~~ | Meu Centro | ✅ CORRIGIDO @648 — `.th-item`: padding `10px 14px` → `12px 16px`, margem `6px` → `8px`, transition → `var(--fast)`; ícone 30×30 → 32×32; CSS `.th-prod-*` morto removido (nunca usado — `_prodCard` usa `stat-card`) | — |
-| HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
-| HUB-12 | Meu Centro | Sem seção de aniversariantes | 🔴 |
+| ~~HUB-11~~ | Meu Centro | ✅ CORRIGIDO @657 — `_renderItem` enriquecido: metadados por tipo (tarefa→status+prioridade+prazo; encaminhamento→reuniaoTitulo; demanda→tipoDemanda+SLA%; aprovacao→solicitante; chave→salaId+prazo). Bug colateral corrigido: extras das demandas usavam chave `tipo` que sobrescrevia o `tipo` externo em `_itemCaixa`; renomeado para `tipoDemanda`/`statusDemanda`. | — |
+| ~~HUB-12~~ | Meu Centro | ✅ CORRIGIDO @657 — campo `dataNascimento` adicionado ao `ColaboradorRepository` (_HEADERS + _serializarIndice). Form de Pessoas ganha input `pf-nascimento`. `ctrl_taskhub_aniversariantes()` retorna colaboradores com aniversário nos próximos 7 dias. Seção exibida abaixo das pendências no Meu Dia com cards coloridos (hoje=cor accent). | — |
 | HUB-13 | Meu Centro | Sem workflow de dayoff de aniversário | 🔴 |
 
 ---
@@ -490,7 +490,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-11 (modelo heterogêneo), HUB-12 (aniversariantes), TAR-04 (gatilhos automáticos)
+- **Próximos bugs de auditoria:** TAR-04 (gatilhos automáticos), HUB-13 (dayoff aniversário)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)

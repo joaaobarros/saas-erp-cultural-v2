@@ -36,7 +36,7 @@ var ColaboradorRepository = (function () {
   var _HEADERS = [
     'ID', 'OrgId', 'Nome', 'EmailInstitucional', 'EmailPessoal',
     'Setor', 'Cargo', 'Status', 'TipoVinculo', 'DataAdmissao',
-    'CriadoEm', 'AtualizadoEm', 'CPF_Mascarado', 'Funcoes', 'Ativo'
+    'DataNascimento', 'CriadoEm', 'AtualizadoEm', 'CPF_Mascarado', 'Funcoes', 'Ativo'
   ];
 
   // ── Helpers internos ──────────────────────────────────────────────
@@ -90,6 +90,7 @@ var ColaboradorRepository = (function () {
       c.status           || '',
       c.tipoVinculo      || '',
       c.dataAdmissao     || '',
+      c.dataNascimento   || '',
       c.criadoEm         || '',
       c.atualizadoEm     || '',
       _mascaraCPF(c.cpf),
