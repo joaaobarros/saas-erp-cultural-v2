@@ -473,11 +473,9 @@
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem):**
-  1. `fase76_compras_prepararIndice()` — cria FINANCEIRO.SolicitacoesCompra
-  2. `fase76_compras_migrarDoMaster()` — migra dados MASTER → FINANCEIRO
-  3. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
-  4. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
-  5. `fase75_importar_consumiveis_v1()` — importar itens de estoque
+  1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
+  2. `fase75_inspecionar_estoque_v1()` — confirmar colunas mapeadas nos Logs
+  3. `fase75_importar_consumiveis_v1()` — importar itens de estoque
 - **Fase 78 — Integração de Materiais nas Reservas**
 
 ### Bugs ativos importantes (não corrigidos)
