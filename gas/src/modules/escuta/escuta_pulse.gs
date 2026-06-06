@@ -187,8 +187,10 @@ var EscutaPulseEngine = (function() {
   function _metaDimensao(orgId) {
     var total = 20; // fallback
     try {
-      var ativos = ColaboradorRepository.listar(orgId)
-        .filter(function(c){ return c.status === 'ativo'; });
+      // Usa AcessoService (usuarios_acesso.json) — fonte canônica de todos os usuários ativos,
+      // independente de terem registro formal em EQUIPES.Funcionarios.
+      var ativos = AcessoService.listarUsuarios()
+        .filter(function(u){ return u.status === 'ativo'; });
       if (ativos.length > 0) total = ativos.length;
     } catch(e) {}
     return Math.max(DEFAULTS.META_MIN,
@@ -405,18 +407,19 @@ var EscutaPulseEngine = (function() {
    * indicadores:null (protegido) para preservar anonimato.
    */
   function _calcPorSetor(orgId, respostas) {
-    var mapa = {};           // colaboradorId (email ou id) → setor
-    var totalPorSetor = {};  // setor → total de colaboradores ativos
+    var mapa = {};           // email → setor
+    var totalPorSetor = {};  // setor → total de usuários ativos
     try {
-      ColaboradorRepository.listar(orgId).forEach(function(c) {
-        var email = (c.emailInstitucional || c.email || '').toLowerCase();
-        var setor = c.setor || 'Sem setor';
-        if (email)  mapa[email] = setor;
-        if (c.id)   mapa[c.id]  = setor;
-        if (c.status === 'ativo') {
+      // AcessoService tem todos os usuários ativos com campo email e setor —
+      // é a fonte correta pois o colaboradorId nas respostas pulse é o email da sessão.
+      AcessoService.listarUsuarios()
+        .filter(function(u) { return u.status === 'ativo'; })
+        .forEach(function(u) {
+          var email = (u.email || '').toLowerCase().trim();
+          var setor = u.setor || 'Sem setor';
+          if (email) mapa[email] = setor;
           totalPorSetor[setor] = (totalPorSetor[setor] || 0) + 1;
-        }
-      });
+        });
     } catch(e) { return []; }
 
     // Agrupa respostas e participantes únicos por setor
@@ -513,8 +516,8 @@ var EscutaPulseEngine = (function() {
   function _calcConfianca(orgId, participantes) {
     var total = 20;
     try {
-      var ativos = ColaboradorRepository.listar(orgId)
-        .filter(function(c){ return c.status === 'ativo'; });
+      var ativos = AcessoService.listarUsuarios()
+        .filter(function(u){ return u.status === 'ativo'; });
       if (ativos.length > 0) total = ativos.length;
     } catch(e) {}
     var taxa = total > 0 ? participantes / total : 0;

@@ -571,15 +571,15 @@ function ctrl_escuta_pulse_monitoramento(params) {
     var totalAtivos        = 0;
     var totalSemAtividade  = 0;
     try {
-      var colaboradores = ColaboradorRepository.listar(ctx.orgId)
-        .filter(function(c) { return c.status === 'ativo'; });
+      // AcessoService é a fonte canônica de usuários ativos; o colaboradorId nas
+      // respostas pulse é o email da sessão, que coincide com u.email aqui.
+      var colaboradores = AcessoService.listarUsuarios()
+        .filter(function(u) { return u.status === 'ativo'; });
       totalAtivos       = colaboradores.length;
-      // Colaboradores têm emailInstitucional e/ou emailPessoal (sem campo "email" direto)
       totalSemAtividade = colaboradores
-        .filter(function(c) {
-          var eInst = String(c.emailInstitucional || '').toLowerCase().trim();
-          var ePess = String(c.emailPessoal       || '').toLowerCase().trim();
-          return (!eInst || !idsComAtividade[eInst]) && (!ePess || !idsComAtividade[ePess]);
+        .filter(function(u) {
+          var email = String(u.email || '').toLowerCase().trim();
+          return !email || !idsComAtividade[email];
         }).length;
     } catch(e) { /* não crítico */ }
 

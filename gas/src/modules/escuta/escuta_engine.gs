@@ -795,7 +795,7 @@ var EscutaEngine = (function() {
     var ptsDim = Math.round((dimComDados / DIMENSOES.length) * 25);
     pontos += ptsDim;
     detalhes.push({ fator: 'cobertura', pts: ptsDim,
-      msg: dimComDados + '/' + DIMENSOES.length + ' dimensões com dados.' });
+      msg: dimComDados + '/' + DIMENSOES.length + ' dimensões com dados (pesquisas formais).' });
 
     // Saturação (20 pts)
     var satStatus = null;
@@ -805,7 +805,7 @@ var EscutaEngine = (function() {
     var ptsSat = dimSat >= DIMENSOES.length ? 20 : dimSat >= 4 ? 10 : dimSat >= 2 ? 5 : 0;
     pontos += ptsSat;
     detalhes.push({ fator: 'saturacao', pts: ptsSat,
-      msg: dimSat + ' dimensões com coleta no período.' });
+      msg: dimSat + ' dimensões com coleta no período (pulse).' });
 
     // Escuta espontânea (20 pts)
     var espRes = null;

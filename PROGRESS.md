@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Pulse — multiplataforma + relatório por setor + fix anti-spam (2026-06-06)** — Deploy @609. (1) `_sincronizarPulse()` substituiu `_tentarMostrarPulse()` no boot: sem guard "FAB visível", roda a cada 5 min, fecha widget/FAB quando pergunta já foi respondida em outro dispositivo. (2) `_calcPorSetor()` em `escuta_pulse.gs`: agrupa respostas por setor, carrega colaboradores uma única vez, aplica threshold de anonimato (GRUPO_MINIMO=5). `carregarPulseDash` renderiza participação geral + por setor com barras semáforo e clima geral por setor. (3) Fix bug anti-spam: verificação mudou de `respostasHoje` para `respostasColab` — corrige falha na virada de meia-noite.
+**Fase atual**: **Pulse — fix fonte de usuários + marcadores metodológicos (2026-06-06)** — Deploy @616. 3 inconsistências visuais corrigidas: (1) `_calcConfianca`, `_metaDimensao` e `_calcPorSetor` trocaram `ColaboradorRepository` por `AcessoService.listarUsuarios()` — agora reflete os 9 usuários ativos, não apenas o(s) formal(is) em EQUIPES.Funcionarios; setor cruzado por `u.email`. (2) Monitoramento pulse: mesmo fix — `totalSemAtividade` usa `email` do AcessoService. (3) Marcadores metodológicos: labels `(pesquisas formais)` e `(pulse)` adicionados para eliminar contradição visual entre "0/8 dimensões com dados" e "8 dimensões com coleta".
+
+**Fase anterior**: **Pulse — multiplataforma + relatório por setor + fix anti-spam (2026-06-06)** — Deploy @609.
 
 **Fase anterior**: **Auditoria SIDEBAR-04 — Consolidação seção MEMÓRIA (2026-06-06)** — Deploy @614. 4 itens do menu (Agentes, Acervo, Voluntários, Parcerias) substituídos por 1 item "Memória Institucional" com tab-bar interna. `view-memoria` criada com painel para cada sub-módulo; `MemoriaUI` IIFE gerencia as abas. Sidebar total: ~17 itens visíveis.
 

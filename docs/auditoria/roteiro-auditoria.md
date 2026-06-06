@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @609 · 280 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @616 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -463,7 +463,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @614 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @616 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s30)
 
@@ -473,6 +473,7 @@
 | @601 | Pulse multiplataforma | `_sincronizarPulse()` com polling 5 min: fecha widget/FAB quando resposta já feita em outro dispositivo. Substitui `_tentarMostrarPulse()` no boot. |
 | @603 | Pulse por setor | `_calcPorSetor()` em `escuta_pulse.gs`: participação + clima por setor com threshold de anonimato (≥5 participantes). `carregarPulseDash` renderiza barras semáforo por setor. |
 | @609 | Fix anti-spam pulse | Bug: verificação de intervalo 4h usava `respostasHoje` — falhava na virada de meia-noite. Corrigido para `respostasColab` (todo o mês). |
+| @616 | Fix informações desconexas pulse | 3 inconsistências: (1) `_calcConfianca`/`_metaDimensao`/`_calcPorSetor` trocaram `ColaboradorRepository` → `AcessoService` (conta 9 usuários ativos, não 1); (2) monitoramento usa `u.email` em vez de `emailInstitucional/emailPessoal`; (3) marcadores metodológicos recebem labels `(pesquisas formais)` e `(pulse)` para eliminar contradição visual. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
