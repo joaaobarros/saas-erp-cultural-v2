@@ -450,15 +450,15 @@
 | CAR-12 | Veículo — Feature | Motorista configurável — não implementado | 🔴 |
 | CAR-13 | Veículo | Sem suporte a solicitação de voucher Uber | 🔴 |
 | CAR-14 | Veículo — Feature | Frota configurável — não implementado | 🔴 |
-| HUB-01 | Meu Centro | Stats sem MetricsToggle | 🟡 |
-| HUB-02 | Meu Centro | Estado vazio com emoji 🎉 | 🟡 |
+| ~~HUB-01~~ | Meu Centro | ✅ VERIFICADO @641 — aba Produtividade já tinha MetricsToggle.wrap(); abas Meu Dia/Meu Time não têm stats panel | — |
+| ~~HUB-02~~ | Meu Centro | ✅ VERIFICADO @641 — estado vazio usa Material Symbol `celebration`, não emoji literal; sem emoji unicode no HTML | — |
 | HUB-03 | Meu Centro | Meu Dia não agrega pendências dos módulos | 🔴 |
-| HUB-04 | Meu Centro | Meu Time sem estado vazio orientado | 🟡 |
-| HUB-05 | Meu Centro | Unidades embutidas no valor ("0h", "0d") | 🔵 |
-| HUB-06 | Meu Centro | Título "TaskHub" vaza para usuário final | 🟡 |
+| ~~HUB-04~~ | Meu Centro | ✅ CORRIGIDO @642 — empty state do Meu Time com orientação: explica o que fazer (criar tarefas / encaminhamentos) | — |
+| ~~HUB-05~~ | Meu Centro | ✅ CORRIGIDO @642 — unidade '(h)' movida para o label; valor de dias sem unidade embutida | — |
+| ~~HUB-06~~ | Meu Centro | ✅ VERIFICADO @641 — label sidebar "Meu Centro", view-title "Meu Centro de Controle"; "TaskHub" só em IDs internos | — |
 | HUB-07 | Meu Centro | Integração de fontes não implementada | 🔴 |
 | HUB-08 | Meu Centro | Sem botão de criação de tarefa | 🔴 |
-| HUB-09 | Meu Centro — Meu Time | Aba subutilizada — sem colaboradores com tarefas | 🔴 |
+| ~~HUB-09~~ | Meu Centro — Meu Time | ✅ CORRIGIDO @642 — backend enriquece com nome via `AcessoService.listarUsuarios()` (map bulk); frontend exibe `p.nome` com `title` mostrando email | — |
 | HUB-10 | Meu Centro | Cards com bordas e formato diferente do padrão | 🟡 |
 | HUB-11 | Meu Centro | Modelo de dados heterogêneo necessário | 🔴 |
 | HUB-12 | Meu Centro | Sem seção de aniversariantes | 🔴 |
@@ -466,11 +466,11 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 34 (2026-06-06) → SESSÃO 35
+## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @641 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @642 (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s34)
+### O que foi feito nesta sessão (s35)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
@@ -479,15 +479,17 @@
 | @638 | CAR-09 (auditoria) | Passageiros separados: internos (select colaboradores + chip tags `_passInternosData`) e externos (texto livre); `passageirosInternos/Externos` no backend; legado `passageiros[]` preservado. |
 | @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
 | @641 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |
+| @642 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** FIN-06 (integração Financeiro↔RH — avaliar escopo), CAR-12 (motorista configurável — feature), CAR-13 (voucher Uber), HUB-01 (MetricsToggle), HUB-06 (título "TaskHub")
+- **Próximos bugs de auditoria:** HUB-10 (cards formato diferente), HUB-03 (Meu Dia sem pendências reais), CAR-03 (métricas faltando), CAR-04 (select Vincular Ação preso)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
 - **CAR-12/13/14** (motorista configurável, voucher Uber, frota — features não implementadas)
-- **HUB-03/07/08/09** (Meu Centro: pendências, fontes, criação de tarefa, time)
+- **HUB-03/07/08** (Meu Centro: pendências reais, fontes, criação de tarefa)
+- **CAR-03/04/06/07** (métricas, select Ação, email vs nome, abreviatura aprovador)

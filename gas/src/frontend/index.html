@@ -28827,10 +28827,10 @@ var TaskHubUI = (function() {
     GAS.taskhub.meuTime({}, function(resp) {
       if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ou sem permissão.</p>'; return; }
       var pessoas = (resp.data && resp.data.pessoas) || [];
-      if (!pessoas.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span class="ms" style="font-size:48px;display:block;">group</span><p style="margin-top:12px;font-size:16px;font-weight:600;">Sua equipe está em dia</p><p style="font-size:13px;">Nenhum membro do seu setor tem tarefas ativas no momento.</p></div>'; return; }
+      if (!pessoas.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span class="ms" style="font-size:48px;display:block;">group</span><p style="margin-top:12px;font-size:16px;font-weight:600;">Equipe em dia</p><p style="font-size:13px;">Nenhuma tarefa, demanda ou encaminhamento em aberto para membros do seu setor.</p><p style="font-size:12px;margin-top:8px;">Para acompanhar a carga da equipe, crie tarefas em <strong>Tarefas</strong> ou encaminhamentos em <strong>Reuniões</strong>.</p></div>'; return; }
       el.innerHTML = '<table class="tabela-lista" style="width:100%;"><thead><tr><th>Pessoa</th><th>Tarefas</th><th>Demandas</th><th>Encaminhamentos</th><th>Atrasados</th></tr></thead><tbody>' +
         pessoas.map(function(p) {
-          return '<tr><td>' + escaparHtml(p.email) + '</td><td>' + p.tarefas + '</td><td>' + p.demandas + '</td><td>' + p.encaminhamentos + '</td>' +
+          return '<tr><td title="' + escaparHtml(p.email) + '">' + escaparHtml(p.nome || p.email) + '</td><td>' + p.tarefas + '</td><td>' + p.demandas + '</td><td>' + p.encaminhamentos + '</td>' +
             '<td style="color:' + (p.atrasados>0?'var(--color-error)':'var(--color-success)') + ';font-weight:600;">' + p.atrasados + '</td></tr>';
         }).join('') + '</tbody></table>';
     }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
@@ -28847,8 +28847,8 @@ var TaskHubUI = (function() {
         _prodCard(d.concluidas,        'Concluídas') +
         _prodCard(d.noPrazo,           'No Prazo') +
         _prodCard(d.taxaNoPrazo + '%', 'Taxa On-Time') +
-        _prodCard(d.mediaHoras + 'h',  'Tempo Médio') +
-        _prodCard(d.mediaDias  + 'd',  'Dias Médios') +
+        _prodCard(d.mediaHoras,        'Tempo Médio (h)') +
+        _prodCard(d.mediaDias,         'Dias Médios') +
       '</div>';
       if (typeof MetricsToggle !== 'undefined') MetricsToggle.wrap(document.getElementById('th-prod-stats'));
     }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });

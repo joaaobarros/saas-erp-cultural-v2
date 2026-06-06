@@ -142,7 +142,19 @@ function ctrl_taskhub_meu_time(params) {
       });
     } catch(e) { /* silencioso */ }
 
-    var resultado = Object.keys(carga).map(function(k) { return carga[k]; });
+    // Enriquecer com nomes via mapa bulk (evita N+1 calls)
+    var nomeMap = {};
+    try {
+      AcessoService.listarUsuarios().forEach(function(u) {
+        if (u.email) nomeMap[u.email] = u.nome || u.email;
+      });
+    } catch(e) { /* silencioso */ }
+
+    var resultado = Object.keys(carga).map(function(k) {
+      var p = carga[k];
+      p.nome = nomeMap[k] || k.replace(/@.*$/, '');
+      return p;
+    });
     resultado.sort(function(a, b) {
       var totalA = a.tarefas + a.demandas + a.encaminhamentos;
       var totalB = b.tarefas + b.demandas + b.encaminhamentos;
