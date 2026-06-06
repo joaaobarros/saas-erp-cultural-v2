@@ -417,8 +417,8 @@
 | BAL-16 | Balcão — FSM | Sem etapa de aprovação final do material | 🔴 |
 | BAL-18 | Balcão — Modal | Layout visual deficiente | 🔴 |
 | FIN-06 | Financeiro | Integração Financeiro↔RH inexistente | 🔴 |
-| ~~FIN-09~~ | Financeiro | ✅ CORRIGIDO @634 — aba "Fontes de Recurso" adicionada à view-financeiro; `FontesRecursoUI` → `FontesUI` corrigido | — |
-| ~~FIN-11~~ | Financeiro | ✅ CORRIGIDO @634 — aba "Execução" no painel do contrato: Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica | — |
+| ~~FIN-09~~ | Financeiro | ✅ CORRIGIDO @635 — aba "Fontes de Recurso" adicionada à view-financeiro; `FontesRecursoUI` → `FontesUI` corrigido | — |
+| ~~FIN-11~~ | Financeiro | ✅ CORRIGIDO @635 — aba "Execução" no painel do contrato: Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica | — |
 | FIN-12 | Financeiro | Histórico apenas metadados, sem diff nem reversão | 🔴 |
 | FIN-15 | Financeiro | Ícone `manage_accounts` ambíguo no card do contrato | 🔵 |
 | ~~FIN-18~~ | Financeiro — Rubricas | ✅ CORRIGIDO @631 — coberto por FIN-20 (flag `voucher_uber` implementado no form da rubrica) | — |
@@ -465,7 +465,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 32 (2026-06-06) → SESSÃO 33
 
-### Estado atual: ~274 bugs registrados · Deploy @634 (GAS) · Firebase live
+### Estado atual: ~274 bugs registrados · Deploy @635 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s32)
 
@@ -473,9 +473,9 @@
 |---|---|---|
 | @631 | PUL-07 (auditoria) | Pulse clima por setor: `_calcPorSetor` usa `u.setor \|\| u.setorDesejado` como fallback; usuários sem setor excluídos. Aprovação: `data-setor` + `aprovar(email, setor)` repassa setorDesejado. |
 | @633 | PUL-08 (auditoria) | Pulse setor por catálogo: `_calcPorSetor` cruza `u.setor` com `SistemaConfigService.getSetores()`. Modal `_modalAprovacao` com select de setores do catálogo. |
-| @634 | FIN-09 (auditoria) | Aba "Fontes de Recurso" adicionada à view-financeiro: tab button + div `data-tab="fontes"` com form `ff-*` + lista + métricas. Bug `FontesRecursoUI._confirmarMudarStatus()` → `FontesUI._confirmarMudarStatus()` corrigido. |
-| @634 | FIN-11 (auditoria) | Aba "Execução" no painel de detalhe do contrato: tab button + div `cd-tab-execucao`; `_tabs()` atualizado; `carregarExecucao()` cruza rubricas do PT com solicitações (`GAS.contratacoes.listar({contratoId})`) para exibir Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica. |
-| @634 | FIN-18 (auditoria) | Marcado como corrigido — coberto por FIN-20 (@631). |
+| @635 | FIN-09 (auditoria) | Aba "Fontes de Recurso" adicionada à view-financeiro: tab button + div `data-tab="fontes"` com form `ff-*` + lista + métricas. Bug `FontesRecursoUI._confirmarMudarStatus()` → `FontesUI._confirmarMudarStatus()` corrigido. |
+| @635 | FIN-11 (auditoria) | Aba "Execução" no painel de detalhe do contrato: tab button + div `cd-tab-execucao`; `_tabs()` atualizado; `carregarExecucao()` cruza rubricas do PT com solicitações (`GAS.contratacoes.listar({contratoId})`) para exibir Previsto × Comprometido × Executado × Saldo × barra de progresso por rubrica. |
+| @635 | FIN-18 (auditoria) | Marcado como corrigido — coberto por FIN-20 (@631). |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
