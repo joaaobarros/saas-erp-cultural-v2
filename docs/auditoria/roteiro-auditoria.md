@@ -466,9 +466,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
+## HANDOFF ATUAL — SESSÃO 36 (2026-06-06) → SESSÃO 37
 
-### Estado atual: ~270 bugs registrados · Deploy @650 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @658 (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s36)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @658 | Docs: manual.html | Seções `taskhub`, `tarefas`, `balcao`, `pessoas`, `reunioes` reescritas para refletir a implementação real (3 abas TaskHub, 6 fontes Meu Dia, grupos prioridade, aniversariantes, prazo/vínculo em Tarefas, Balcão como canal de comunicação com SLA + versões, dataNascimento em Pessoas, encaminhamentos em Reuniões). |
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
+  1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
+  2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
+  3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+- **Próximos bugs de auditoria:** TAR-04 (gatilhos automáticos), HUB-13 (dayoff aniversário)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 35 (2026-06-06) → SESSÃO 36
+
+### Estado anterior: ~270 bugs registrados · Deploy @650 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 

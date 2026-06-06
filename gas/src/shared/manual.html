@@ -397,8 +397,10 @@ var ManualUI = (function () {
           html += _h2('<span class="ms ms-sm">edit</span> Gerenciar cadastros')
             + _card('person_add', 'Novo colaborador', 'Preencha nome, cargo, setor, data de início e dados de contato.')
             + _card('edit', 'Editar informações', 'Atualize cargo, setor ou qualquer dado cadastral.')
+            + _card('cake', 'Data de nascimento', 'Campo opcional no formulário de cadastro. Quando preenchido, o colaborador aparece na seção de aniversariantes do Meu Centro nos 7 dias anteriores ao seu aniversário.')
             + _card('swap_horiz', 'Mudar status', 'Registre afastamentos, retornos ou desligamentos.');
         }
+        html += _calloutInfo('Colaboradores sem <strong>data de nascimento</strong> preenchida não aparecem na seção de aniversariantes do Meu Centro. Mantenha esse campo atualizado para que a equipe possa ser lembrada das datas.');
         if (feat && feat.ver_salario) {
           html += _h2('<span class="ms ms-sm">attach_money</span> Dados salariais')
             + _card('payments', 'Salário e carga horária', 'Visualize e edite o salário bruto, carga horária e benefícios.')
@@ -605,29 +607,59 @@ var ManualUI = (function () {
     // ── OPERAÇÃO ──────────────────────────────────────────────────────────
 
     { id:'taskhub', label:'Meu Centro', icone:'hub', modulo:null,
-      tags:['taskhub','hub','centro','minhas tarefas','resumo','painel pessoal'],
-      descricao:'Painel pessoal com suas tarefas, ações e solicitações pendentes',
+      tags:['taskhub','hub','centro','minhas tarefas','resumo','painel pessoal','meu dia','aniversariantes','produtividade'],
+      descricao:'Painel pessoal com pendências priorizadas, carga da equipe e métricas de produtividade',
       content: function(papel, feat) {
-        return _p('O Meu Centro é o seu painel pessoal: tudo o que precisa da sua atenção, reunido em um único lugar.')
-          + _card('task', 'Minhas tarefas', 'Todas as tarefas atribuídas a você, com prazo e status. Organize por prioridade ou data.')
-          + _card('event', 'Ações relacionadas', 'Ações culturais nas quais você está envolvido como responsável ou participante.')
-          + _card('pending_actions', 'Solicitações aguardando você', 'Reservas, aprovações ou qualquer item que precise da sua ação imediata.')
-          + _calloutInfo('Use o Meu Centro como ponto de partida do dia. Tudo que precisa de atenção aparece aqui.');
+        var ehGestor = ['gestor','admin','superadmin'].indexOf(papel) !== -1;
+        var html = _p('O Meu Centro é o ponto de partida do seu dia: todas as pendências que precisam da sua atenção reunidas em um único lugar, organizadas por urgência.')
+          + _h2('<span class="ms ms-sm">tab</span> As três abas')
+          + _card('today', 'Meu Dia', 'Suas pendências priorizadas, agregadas de todos os módulos do sistema. É a aba que abre por padrão.')
+          + (ehGestor ? _card('groups', 'Meu Time', 'Visão da carga de trabalho de cada membro da equipe. Identifique gargalos e redistribua tarefas. Disponível apenas para gestores e admins.') : '')
+          + _card('insights', 'Produtividade', 'Métricas de tarefas concluídas nos últimos 7, 30 e 90 dias — suas e, se você for gestor, da equipe.')
+          + _h2('<span class="ms ms-sm">filter_list</span> O que aparece no Meu Dia')
+          + _p('O Meu Dia agrega automaticamente seis fontes de pendências do sistema:')
+          + _ul([
+              '<strong>Tarefas atribuídas</strong> — tarefas em aberto com você como responsável',
+              '<strong>Encaminhamentos de reuniões</strong> — encaminhamentos pendentes em que você é o responsável',
+              '<strong>Demandas do Balcão</strong> — demandas de comunicação em que você é o executor',
+              '<strong>Aprovações de reserva</strong> — reservas de espaço aguardando sua análise (gestores/habilitadores)',
+              '<strong>Chaves com devolução atrasada</strong> — chaves retiradas que já ultrapassaram o prazo de devolução',
+              '<strong>Alertas não lidos</strong> — notificações do sistema que ainda não foram verificadas'
+            ])
+          + _h2('<span class="ms ms-sm">priority_high</span> Grupos de prioridade')
+          + _tabela(['Grupo','Quando aparece'],[
+              ['URGENTE / VENCIDO','Itens com prazo já passado ou marcados como urgentes'],
+              ['HOJE','Itens com prazo para o dia atual'],
+              ['ESTA SEMANA','Itens com prazo nos próximos 7 dias'],
+              ['MAIS TARDE','Demais itens sem urgência imediata']
+            ])
+          + _h2('<span class="ms ms-sm">cake</span> Aniversariantes')
+          + _card('cake', 'Próximos aniversários', 'Logo abaixo das pendências, o Meu Dia exibe os colaboradores que fazem aniversário nos próximos 7 dias. Quem faz aniversário hoje aparece com destaque especial.')
+          + _calloutInfo('Colaboradores sem data de nascimento cadastrada no módulo Colaboradores não aparecem nesta seção. Peça ao RH ou administrador para preencher esse campo.')
+          + _h2('<span class="ms ms-sm">open_in_new</span> Navegação rápida')
+          + _card('add_task', 'Botão "Nova Tarefa"', 'Atalho na aba Meu Dia que leva diretamente ao módulo Tarefas para criar uma nova tarefa sem sair do hub.')
+          + _card('touch_app', 'Clicar em um item', 'Cada pendência é clicável e navega diretamente para o módulo correspondente: tarefa → Tarefas; encaminhamento → Reuniões; demanda → Balcão; aprovação → Aprovações; chave → Espaços.');
+        return html;
       }
     },
 
     { id:'tarefas', label:'Tarefas', icone:'task_alt', modulo:'TAREFAS',
-      tags:['tarefa','pendente','concluída','atribuir','status','prioridade','equipe'],
+      tags:['tarefa','pendente','concluída','atribuir','status','prioridade','equipe','prazo','vínculo','ação','reserva','contrato'],
       descricao:'Gerenciamento de tarefas individuais e da equipe',
       content: function(papel, feat) {
         var html = _p('O módulo de Tarefas permite criar, acompanhar e concluir atividades — suas próprias e, dependendo do seu perfil, as da equipe.')
           + _h2('<span class="ms ms-sm">list</span> Minhas tarefas')
           + _card('task', 'Ver minhas tarefas', 'Lista de todas as tarefas atribuídas a você. Filtre por status: A fazer, Em progresso, Concluída.')
           + _card('edit', 'Atualizar status', 'Mova a tarefa para "Em progresso" quando começar e "Concluída" quando terminar.')
-          + _card('flag', 'Definir prioridade', 'Marque tarefas como urgentes para que elas apareçam destacadas no topo.');
+          + _card('flag', 'Definir prioridade', 'Marque tarefas como urgentes para que elas apareçam destacadas no topo.')
+          + _card('check_circle', 'Concluir direto na lista', 'Cada tarefa tem um botão de conclusão visível na própria lista — sem precisar abrir o detalhe.')
+          + _h2('<span class="ms ms-sm">calendar_today</span> Prazo e vínculo')
+          + _card('event', 'Prazo', 'Toda tarefa pode ter uma data de prazo definida no momento da criação. O prazo aparece no card da lista e alimenta os grupos de prioridade do Meu Centro.')
+          + _card('link', 'Vínculo com outros módulos', 'Ao criar uma tarefa, você pode vinculá-la a uma <strong>Ação Cultural</strong>, uma <strong>Reserva de Espaço</strong> ou um <strong>Contrato</strong>. Basta escolher o tipo de vínculo e selecionar o registro desejado na lista carregada dinamicamente.')
+          + _card('label', 'Badges na lista', 'Tarefas vinculadas exibem um badge colorido com ícone do tipo de vínculo (ação, reserva ou contrato) e o prazo — facilitando a identificação sem abrir o detalhe.');
         if (feat && feat.atribuir_tarefas) {
           html += _h2('<span class="ms ms-sm">person_add</span> Criar tarefas para a equipe')
-            + _card('add_task', 'Nova tarefa', 'Clique em "Nova Tarefa", defina título, descrição, prazo e responsável.')
+            + _card('add_task', 'Nova tarefa', 'Clique em "Nova Tarefa", defina título, descrição, prazo, vínculo (opcional) e responsável.')
             + _card('assignment_ind', 'Atribuir', 'Escolha um ou mais membros da equipe para receber a tarefa. Eles serão notificados.');
         }
         if (feat && feat.ver_tarefas_equipe) {
@@ -639,8 +671,8 @@ var ManualUI = (function () {
     },
 
     { id:'reunioes', label:'Reuniões', icone:'groups', modulo:'REUNIOES',
-      tags:['reunião','pauta','ata','decisão','arquivar','convidar','participante'],
-      descricao:'Registro de pautas, atas e decisões das reuniões institucionais',
+      tags:['reunião','pauta','ata','decisão','arquivar','convidar','participante','encaminhamento','responsável','prazo'],
+      descricao:'Registro de pautas, atas, decisões e encaminhamentos das reuniões institucionais',
       content: function(papel, feat) {
         var html = _p('O módulo de Reuniões registra pautas, participantes, discussões e decisões das reuniões do CCBJ, formando um histórico acessível a todos.')
           + _h2('<span class="ms ms-sm">visibility</span> Consultar reuniões')
@@ -652,6 +684,11 @@ var ManualUI = (function () {
             + _card('list', 'Adicionar pautas', 'Inclua os tópicos que serão discutidos. Participantes podem sugerir pautas antes da reunião.')
             + _card('edit_note', 'Registrar discussões', 'Durante ou após a reunião, registre o que foi discutido e as decisões tomadas em cada pauta.');
         }
+        html += _h2('<span class="ms ms-sm">assignment_turned_in</span> Encaminhamentos')
+          + _card('add_task', 'Adicionar encaminhamento', 'Durante o registro da reunião, adicione encaminhamentos informando a descrição da tarefa, o responsável e o prazo de conclusão.')
+          + _card('email', 'Notificação automática por e-mail', 'Ao salvar um encaminhamento, o responsável recebe um e-mail de notificação com os detalhes da tarefa e o prazo definido.')
+          + _card('hub', 'Meu Centro — Meu Dia', 'Encaminhamentos pendentes aparecem automaticamente na aba <strong>Meu Dia</strong> do Meu Centro. Clicar no item navega de volta para a reunião de origem.')
+          + _calloutInfo('Mantenha os encaminhamentos atualizados: quando o responsável conclui a tarefa no módulo de Tarefas, o encaminhamento é marcado como cumprido automaticamente.');
         if (feat && feat.fechar_reuniao) {
           html += _h2('<span class="ms ms-sm">task_alt</span> Finalizar reunião')
             + _card('check_circle', 'Encerrar e gerar ata', 'Ao finalizar, o sistema gera automaticamente a ata com todas as decisões registradas.')
@@ -688,17 +725,44 @@ var ManualUI = (function () {
     },
 
     { id:'balcao', label:'Balcão de Atendimento', icone:'support_agent', modulo:'COMUNICACAO',
-      tags:['balcão','atendimento','fila','suporte','solicitação','público'],
-      descricao:'Fila de atendimento ao público e colaboradores',
+      tags:['balcão','atendimento','comunicação','design','foto','vídeo','social','impresso','versão','revisão','sla','prazo','demanda'],
+      descricao:'Canal de solicitação de serviços de comunicação: design, foto, vídeo, texto e redes sociais',
       content: function(papel, feat) {
-        var html = _p('O Balcão gerencia a fila de atendimentos presenciais ou remotos — solicitações de informação, dúvidas e pedidos que chegam ao CCBJ.')
-          + _card('queue', 'Ver fila de atendimentos', 'Consulte os atendimentos em aberto, em andamento e encerrados.');
+        var html = _p('O Balcão é o canal interno para solicitar serviços da equipe de comunicação do CCBJ: criação de peças de design, registros fotográficos, vídeos, textos institucionais, posts para redes sociais e materiais impressos.')
+          + _h2('<span class="ms ms-sm">schema</span> Fluxo de uma demanda')
+          + _tabela(['Etapa','O que significa'],[
+              ['Rascunho','Demanda sendo preenchida. Ainda não foi enviada para análise.'],
+              ['Submetida','Enviada. Aguarda triagem da equipe de comunicação.'],
+              ['Em Análise','A equipe está avaliando escopo, prazo e recursos necessários.'],
+              ['Em Execução','Produção iniciada. O executor está trabalhando na demanda.'],
+              ['Revisão','Uma versão foi entregue e aguarda feedback do demandante.'],
+              ['Aprovada','O material foi aceito pelo demandante.'],
+              ['Concluída','Demanda encerrada. Material disponível para uso.']
+            ])
+          + _h2('<span class="ms ms-sm">timer</span> SLA por tipo de serviço')
+          + _p('Cada tipo de demanda tem um prazo automático calculado a partir da data de submissão:')
+          + _tabela(['Tipo de serviço','Prazo padrão'],[
+              ['Design (cartaz, banner, identidade)','72 horas'],
+              ['Vídeo (gravação + edição)','120 horas'],
+              ['Texto (release, artigo, comunicado)','24 horas'],
+              ['Redes sociais (post, story, legenda)','24 horas'],
+              ['Foto (cobertura de evento)','48 horas'],
+              ['Material impresso','72 horas']
+            ])
+          + _h2('<span class="ms ms-sm">history</span> Versões e revisões')
+          + _card('upload_file', 'O executor envia versões', 'A cada entrega parcial, o executor registra uma nova versão com o arquivo e uma descrição das mudanças.')
+          + _card('rate_review', 'O demandante revisa', 'O demandante visualiza a versão entregue e pode aprovar o material ou solicitar ajustes com comentários.')
+          + _card('chat', 'Aba de comentários', 'Demandante e executor se comunicam diretamente na aba de comentários da demanda — sem precisar de e-mail ou mensagem externa.');
         if (feat && feat.gerir_balcao) {
-          html += _h2('<span class="ms ms-sm">headset_mic</span> Gerenciar atendimentos')
-            + _card('add', 'Abrir atendimento', 'Registre uma nova solicitação com dados do solicitante, tipo e descrição do pedido.')
-            + _card('forward', 'Encaminhar', 'Se necessário, encaminhe o atendimento para outro setor responsável.')
-            + _card('check_circle', 'Encerrar', 'Registre como o atendimento foi resolvido e encerre para liberar a fila.');
+          html += _h2('<span class="ms ms-sm">manage_accounts</span> O que você pode fazer como gestor do Balcão')
+            + _card('swap_horiz', 'Mudar status', 'Avance a demanda pelo fluxo conforme o trabalho progride.')
+            + _card('upload_file', 'Enviar versão', 'Registre uma nova versão do material com arquivo e descrição.')
+            + _card('chat', 'Comentar', 'Adicione comentários para alinhar expectativas com o demandante.')
+            + _card('delete', 'Excluir demanda', 'Remove demandas duplicadas ou indevidas. A ação fica registrada na auditoria.');
         }
+        html += _h2('<span class="ms ms-sm">inbox</span> Lista de demandas — estados vazios')
+          + _card('add_circle', 'Sem filtros ativos', 'Quando não há nenhuma demanda cadastrada e nenhum filtro aplicado, a lista exibe um CTA "Nova Demanda" com uma explicação rápida sobre o Balcão.')
+          + _card('filter_alt_off', 'Com filtros ativos', 'Quando os filtros aplicados não retornam resultados, a lista exibe o botão "Limpar filtros" para facilitar a recuperação.');
         return html;
       }
     },
