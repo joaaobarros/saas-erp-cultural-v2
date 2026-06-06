@@ -299,7 +299,7 @@
 | SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🟡 |
 | ~~SIDEBAR-02~~ | Sidebar | ✅ CORRIGIDO @590 — Balcão removido do sidebar; cross-nav "Balcão" em view-comunicacao e "RECE" em view-balcao | — |
 | SIDEBAR-03 | Sidebar | Módulos inativos visíveis com badge | 🟡 |
-| ~~SIDEBAR-04~~ | Sidebar | ✅ CORRIGIDO @600 — seção MEMÓRIA consolidada: 4 itens (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional" com tab-bar interna; sidebar total ~17 itens | — |
+| ~~SIDEBAR-04~~ | Sidebar | ✅ CORRIGIDO @614 — seção MEMÓRIA consolidada: 4 itens (Agentes, Acervo, Voluntários, Parcerias) → 1 item "Memória Institucional" com tab-bar interna; sidebar total ~17 itens | — |
 | ~~SIDEBAR-05~~ | Sidebar | ✅ CORRIGIDO @590 — Meu Centro movido para posição #2 (após Início) | — |
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
 | TAR-02 | Tarefas | Responsável é texto livre | 🔴 |
@@ -463,7 +463,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 30 (2026-06-06) → SESSÃO 31
 
-### Estado atual: 280 bugs registrados · Deploy @609 (GAS) · Firebase live
+### Estado atual: 280 bugs registrados · Deploy @614 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s30)
 
