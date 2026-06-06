@@ -296,11 +296,11 @@
 | HOME-02 | Home | Acessos rápidos fixos — não se adaptam ao papel do usuário | 🟡 |
 | HOME-03 | Home | Sem informações contextuais (tarefas, reservas do dia, aprovações pendentes) | 🔴 |
 | HOME-04 | Home | Sem widget de resumo do Meu Centro | 🟡 |
-| SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🔴 |
-| SIDEBAR-02 | Sidebar | "Comunicação" e "Balcão" separados no menu | 🔴 |
+| SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🟡 |
+| ~~SIDEBAR-02~~ | Sidebar | ✅ CORRIGIDO @590 — Balcão removido do sidebar; cross-nav "Balcão" em view-comunicacao e "RECE" em view-balcao | — |
 | SIDEBAR-03 | Sidebar | Módulos inativos visíveis com badge | 🟡 |
-| SIDEBAR-04 | Sidebar | ~20 itens reduzíveis para ~10–11 (consolidação global necessária) | 🔴 |
-| SIDEBAR-05 | Sidebar | Meu Centro posicionado no meio do grupo — deve ser posição #2 | 🟡 |
+| SIDEBAR-04 | Sidebar | ~20 itens → parcialmente corrigido: -5 itens (pessoas, ponto, balcao, estrategia removidos do sidebar) | 🟡 |
+| ~~SIDEBAR-05~~ | Sidebar | ✅ CORRIGIDO @590 — Meu Centro movido para posição #2 (após Início) | — |
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
 | TAR-02 | Tarefas | Responsável é texto livre | 🔴 |
 | TAR-03 | Tarefas | Tarefas não se vinculam a Ações, Reservas, Contratos | 🔴 |
@@ -332,7 +332,7 @@
 | AFT-08 | Afastamentos | Sem tipo "Dayoff de Aniversário" | 🟡 |
 | OCO-02 | Ocorrências | Sem acompanhamento inteligente / contador no card | 🟡 |
 | OCO-03 | Ocorrências | Sem indicador de saúde profissional | 🟡 |
-| ESTR-01 | Pessoas/RH | "Pessoas" e "RH/DP" — dois menus sobrepostos, devem ser unificados | 🔴 |
+| ~~ESTR-01~~ | Pessoas/RH | ✅ CORRIGIDO @590 — `pessoas` e `ponto` removidos do sidebar; `rh` renomeado "Pessoas / RH"; cross-nav Fichas/Ponto em view-rh | — |
 | ESTR-02 | Sistema | Layout de abas inconsistente entre módulos | 🟡 |
 | PON-01 | Ponto | Sub-abas Custo CLT e Rescisão deslocadas | 🟡 |
 | PON-03 | Ponto | Sem exportação AFD | 🔴 |
@@ -469,7 +469,8 @@
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @588 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
+| @590 | SIDEBAR/ESTR (auditoria) | Sidebar: `pessoas`, `ponto`, `balcao`, `estrategia` removidos do menu (cross-nav nas views); `rh` → "Pessoas / RH"; `taskhub` → posição #2. Views ainda acessíveis via cross-nav e Router.registrar explícito |
+| @589 | APR-01 (auditoria) | Badge de contador adicionado à aba "Reservas de Espaço" em `view-aprovacoes`; `_atualizarBadgeReservas()` criada; `carregar()` não sobrescreve mais total do sidebar. APR-02 e APR-06 confirmados já corrigidos em versões anteriores |
 | @587 | limpeza | Remove `fase75_inspecionar_estoque_v1` e `fase75_importar_consumiveis_v1` — sem dados V1 para migrar |
 | @584 | 79 — Integração de Materiais nas Reservas | `ctrl_reservas_criar`: extrai `itensMateriais`, cria `SolicitacaoMaterial` via `EstoqueEngine.novaSolicitacao` com `reservaId`, retorna `solicitacaoCodigo` (best-effort). Frontend: `_carregarDisponibilidadeItens` migrado para `GAS.estoque.listarItens`; label → "Materiais necessários"; `salvar()` passa `itensMateriais`; toast exibe SOL-XXXX |
 | @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col. FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" |
