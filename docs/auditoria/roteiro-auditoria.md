@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @582 · 280 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @583 · 280 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -462,13 +462,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 26 (2026-06-05) → SESSÃO 27
 
-### Estado atual: 280 bugs registrados (ESTO-14 corrigido) · Deploy @582
+### Estado atual: 280 bugs registrados (ESTO-14 corrigido) · Deploy @583
 
 ### O que foi feito nesta sessão (s26)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @582 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col (NumeroPatrimonio + 9 campos patrimoniais). FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" no EstoqueUI. Tab EspacosUI redireciona |
+| @583 | 78 — Integração Patrimônio → Estoque | Schema 18→28 col (NumeroPatrimonio + 9 campos patrimoniais). FSM item_patrimonio. 6 ctrl_estoque_patrimônio_*. Migração ESPACOS.Ativos→ESTOQUE. Sub-aba "Patrimônio" no EstoqueUI. Tab EspacosUI redireciona |
 | @581 | 77 — Performance + Dashboard + Devolução | TextFinder no DataGateway; cache em _getSheet; ESTOQUE key definitiva no repositório; schema Tipo+Tombado; devolverSolicitacao; ctrl_*_dashboard (4 módulos) |
 
 ### Pendentes / próxima ação
