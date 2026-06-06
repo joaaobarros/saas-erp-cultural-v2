@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria CHV-07 + REU-13 (2026-06-06)** — Deploy @650. CHV-07 CORRIGIDO: `<input type="time" id="chv-hora-dev">` adicionado ao form de retirada de chaves; `salvar()` combina data+hora como `YYYY-MM-DDTHH:MM`; retrocompatível (display usa `.substring(0,10)`). REU-13 CORRIGIDO: `NotificationEngine.enviarNotificacaoEncaminhamento()` adicionado — template `encaminhamento_atribuido` com assunto+corpo; chamado em `ReuniaoEngine.adicionarEncaminhamento` com try/catch silencioso. Verificados e confirmados já corretos: TAR-02 (resp. é select), ACO-14 (resp. é select), ACV-02 (cancelar usa btn-ghost), BAL-13 (ghost toggle + primary submit), SIDEBAR-03 (inativos corretos).
+**Fase atual**: **Auditoria BAL-15 (2026-06-06)** — Deploy @651. BAL-15 CORRIGIDO: empty state da lista do Balcão agora orienta o usuário. Dois casos: (1) lista vazia sem filtros → ícone `support_agent` + texto explicando o Balcão + CTA "Nova Demanda"; (2) filtros sem resultado → ícone `filter_list_off` + botão "Limpar filtros" (chama `BalcaoUI.limparFiltros()` que zera busca + status + tipo e re-renderiza). `limparFiltros` exposto no return do módulo. Próximos: TAR-03 (vínculo tarefas), HUB-03 (Meu Dia real).
 
 **Fase anterior**: **Auditoria HUB-10 (2026-06-06)** — Deploy @648.
 

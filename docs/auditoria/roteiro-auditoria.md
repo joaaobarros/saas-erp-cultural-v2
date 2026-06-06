@@ -416,7 +416,7 @@
 | BAL-10 | Balcão — Modal | Campo "Release" ausente | 🔴 |
 | BAL-11 | Balcão — Modal | "Descrição" vs "Release" não diferenciados | 🔴 |
 | ~~BAL-13~~ | Balcão — Versões | ✅ VERIFICADO @648 — toggle usa `btn-ghost`; submit usa `btn-primary`; padrão correto (toggle expande, primary envia) | — |
-| BAL-15 | Balcão — Versões | Estado vazio sem orientação ao usuário | 🔵 |
+| ~~BAL-15~~ | Balcão — Lista | ✅ CORRIGIDO @651 — empty state: sem dados → ícone `support_agent` + texto orientado + CTA "Nova Demanda"; com filtros sem resultado → ícone `filter_list_off` + botão "Limpar filtros" (via `limparFiltros()`). | — |
 | BAL-16 | Balcão — FSM | Sem etapa de aprovação final do material | 🔴 |
 | BAL-18 | Balcão — Modal | Layout visual deficiente | 🔴 |
 | FIN-06 | Financeiro | Integração Financeiro↔RH inexistente — mudança arquitetural grande (fase futura) | 🔴 |
@@ -490,7 +490,7 @@
   1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
   2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
   3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
-- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-03 (tarefas sem vínculo a Ações/Reservas), BAL-15 (empty state sem orientação)
+- **Próximos bugs de auditoria:** HUB-03 (Meu Dia sem pendências reais — backend), TAR-03 (tarefas sem vínculo a Ações/Reservas)
 
 ### Bugs ativos importantes (não corrigidos)
 - **FIN-06** (Integração Financeiro↔RH — mudança arquitetural grande, avaliar escopo)
