@@ -381,7 +381,7 @@
 | ~~APR-02~~ | Aprovações | ✅ CORRIGIDO — `aprovacoes` usa `modulo:null` no menu; acesso não depende de ESPACOS | — |
 | APR-03 | Aprovações | Aba Permissões ausente como centralização de acessos | 🟡 |
 | ~~APR-06~~ | Aprovações | ✅ CORRIGIDO — `view-header/view-title/view-subtitle` já em uso | — |
-| ~~CHV-07~~ | Chaves — Retirada | ✅ CORRIGIDO @649 — adicionado `<input type="time" id="chv-hora-dev">` ao lado do date; `salvar()` combina data+hora como `YYYY-MM-DDTHH:MM`; `abrirForm()` reseta hora; display existente usa `.substring(0,10)` — retrocompatível | — |
+| ~~CHV-07~~ | Chaves — Retirada | ✅ CORRIGIDO @650 — adicionado `<input type="time" id="chv-hora-dev">` ao lado do date; `salvar()` combina data+hora como `YYYY-MM-DDTHH:MM`; `abrirForm()` reseta hora; display existente usa `.substring(0,10)` — retrocompatível | — |
 | CHV-08 | Chaves — Retirada | Sem auto-preenchimento por papel do usuário | 🔴 |
 | EMP-01 | Empréstimos | Desvinculado do fluxo de reserva | 🔴 |
 | EMP-02 | Empréstimos — Externo | Sem suporte a empréstimos externos | 🔴 |
@@ -431,7 +431,7 @@
 | REU-09 | Reuniões — Ata | Aprovação single-approver; desejado: coletiva por participante | 🔴 |
 | REU-10 | Reuniões — Ata | Sem auxílio de IA (geração de rascunho, revisão, extração encaminhamentos) | 🔴 |
 | REU-12 | Meu Centro | Sem botão "+ Tarefa Rápida" no inbox | 🟡 |
-| ~~REU-13~~ | Reuniões | ✅ CORRIGIDO @649 — `NotificationEngine.enviarNotificacaoEncaminhamento(enc, reuniao)` adicionado; template `encaminhamento_atribuido` com assunto + corpo; chamado em `adicionarEncaminhamento` com try/catch silencioso | — |
+| ~~REU-13~~ | Reuniões | ✅ CORRIGIDO @650 — `NotificationEngine.enviarNotificacaoEncaminhamento(enc, reuniao)` adicionado; template `encaminhamento_atribuido` com assunto + corpo; chamado em `adicionarEncaminhamento` com try/catch silencioso | — |
 | ESC-09 | Sistema Global | Sem área de perfil editável pelo usuário (nome social, pronomes, foto) | 🔴 |
 | ESC-13 | Escuta | Subtítulo com siglas sem explicação (SIS-08) | 🟡 |
 | ESC-14 | Escuta | Contradição nos Marcadores Metodológicos | 🟡 |
@@ -468,7 +468,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
-### Estado atual: ~270 bugs registrados · Deploy @649 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @650 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s35)
 
@@ -482,7 +482,7 @@
 | @643 | HUB-04/05/09 (auditoria) | HUB-04: empty state Meu Time orientado com CTA. HUB-05: unidade '(h)' movida para label. HUB-09: backend enriquece com nome via `AcessoService.listarUsuarios()` (bulk map); frontend exibe `p.nome` com tooltip email. HUB-01/02/06 verificados e confirmados corretos. |
 | @644 | CAR-06/07 (auditoria) | `ctrl_carro_dados` enriquece lista com `solicitanteNome` + `aprovadorNome` via bulk map; frontend: card exibe nome (email no title); aprovador: "Aprovado por: Nome" em vez de "Aprov: prefix". CAR-03/04 verificados corretos. |
 | @648 | HUB-10 (auditoria) | `.th-item`: padding alinhado com DS (`12px 16px`), margem `8px`, transition → `var(--fast)`, ícone 32×32; CSS morto `.th-prod-*` removido. |
-| @649 | CHV-07 + REU-13 (auditoria) | CHV-07: input hora adicionado ao form de chaves; salvar combina data+hora. REU-13: `NotificationEngine.enviarNotificacaoEncaminhamento` + template; chamado em `adicionarEncaminhamento`. Verificados corretos: TAR-02/ACO-14/ACV-02/BAL-13/SIDEBAR-03. |
+| @650 | CHV-07 + REU-13 (auditoria) | CHV-07: input hora adicionado ao form de chaves; salvar combina data+hora. REU-13: `NotificationEngine.enviarNotificacaoEncaminhamento` + template; chamado em `adicionarEncaminhamento`. Verificados corretos: TAR-02/ACO-14/ACV-02/BAL-13/SIDEBAR-03. |
 | @645 | Feature: click-to-reserve | Agenda: slot vazio → form (hora calculada por Y). Diagrama: área vazia → form (espaço+hora por X). Mapa: clique em `disponivel` → form direto (sem painel lateral). |
 
 ### Pendentes / próxima ação
