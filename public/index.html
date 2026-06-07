@@ -216,15 +216,14 @@
       <span class="ms">museum</span>
     </div>
 
-    <div class="org-name">CCBJ</div>
+    <div class="org-name" id="login-org-nome">…</div>
     <div class="tagline">TRAMAR — Sistema de Gestão Cultural</div>
 
     <div class="auth-notice">
       <span class="ms">info</span>
-      <div class="auth-notice-text">
+      <div class="auth-notice-text" id="login-auth-notice">
         <strong>Acesso restrito</strong>
-        Use sua conta <strong>@idm.org.br</strong> no Google.
-        Se estiver logado com outra conta, clique em "Trocar conta" abaixo.
+        Carregando configurações…
       </div>
     </div>
 
@@ -241,9 +240,9 @@
 
     <div class="divider"></div>
 
-    <div class="powered">
+    <div class="powered" id="login-powered">
       <span class="ms">lock</span>
-      Acesso exclusivo para colaboradores IDM
+      Sistema de Gestão Cultural
     </div>
 
   </div>
@@ -255,22 +254,61 @@
     var qs = window.location.search;
     var target = TARGET + (qs || '');
 
+    var _dominio = '';
+
     function entrar(e) {
       e.preventDefault();
       var btn = document.getElementById('btn-entrar');
       btn.classList.add('loading');
-      // Pequeno delay para o usuário ver o feedback antes de navegar
       setTimeout(function() { window.location.href = target; }, 350);
     }
 
     function trocarConta(e) {
       e.preventDefault();
-      // Abre o seletor de contas do Google, com hint de domínio IDM
       var loginUrl = 'https://accounts.google.com/AccountChooser'
         + '?continue=' + encodeURIComponent(target)
-        + '&hd=idm.org.br';
+        + (_dominio ? '&hd=' + encodeURIComponent(_dominio) : '');
       window.location.href = loginUrl;
     }
+
+    // Carrega config pública da org para remover qualquer hardcode desta página
+    (function() {
+      var cfgUrl = TARGET + '?secao=public_config';
+      fetch(cfgUrl)
+        .then(function(r) { return r.json(); })
+        .then(function(cfg) {
+          var elNome    = document.getElementById('login-org-nome');
+          var elNotice  = document.getElementById('login-auth-notice');
+          var elPowered = document.getElementById('login-powered');
+          if (elNome && cfg.nome) elNome.textContent = cfg.nome;
+          if (elNotice && cfg.nome) {
+            var domMsg = cfg.dominio
+              ? 'Use sua conta <strong>@' + cfg.dominio + '</strong> no Google. Se estiver logado com outra conta, clique em "Trocar conta" abaixo.'
+              : 'Acesse com a conta Google cadastrada na organização.';
+            elNotice.innerHTML = '<strong>Acesso restrito</strong> ' + domMsg;
+          }
+          if (elPowered && cfg.nome) {
+            elPowered.innerHTML = '<span class="ms">lock</span> Acesso exclusivo para colaboradores de ' + cfg.nome;
+          }
+          if (cfg.dominio) _dominio = cfg.dominio;
+          // Aplicar paleta de cores se disponível
+          if (cfg.paleta) {
+            var r = document.documentElement.style;
+            if (cfg.paleta.primaria)      r.setProperty('--brand',       cfg.paleta.primaria);
+            if (cfg.paleta.primariaClara) r.setProperty('--brand-light', cfg.paleta.secundaria || cfg.paleta.primariaClara);
+          }
+          // Logo
+          if (cfg.logoUrl) {
+            var elIcon = document.querySelector('.brand-icon');
+            if (elIcon) elIcon.innerHTML = '<img src="' + cfg.logoUrl + '" alt="' + (cfg.nome||'') + '" style="height:48px;object-fit:contain;">';
+          }
+        })
+        .catch(function() {
+          // Sem config disponível — mantém texto neutro
+          var elNome = document.getElementById('login-org-nome');
+          if (elNome && elNome.textContent === '…') elNome.textContent = 'Sistema';
+        });
+    })();
   </script>
 </body>
 </html>

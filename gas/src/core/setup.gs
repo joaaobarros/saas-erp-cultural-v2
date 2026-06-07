@@ -13,18 +13,20 @@
 
 // Chaves PropertiesService para IDs das planilhas
 var PROP_SHEETS = {
-  MASTER:      'SHEET_ID_MASTER',
-  ACOES:       'SHEET_ID_ACOES',
-  ESPACOS:     'SHEET_ID_ESPACOS',
-  PESSOAL:     'SHEET_ID_PESSOAL',
-  EQUIPES:     'SHEET_ID_EQUIPES',
-  FINANCEIRO:  'SHEET_ID_FINANCEIRO',
-  RELATORIOS:  'SHEET_ID_RELATORIOS',
-  REUNIOES:    'SHEET_ID_REUNIOES',
-  COMUNICACAO: 'SHEET_ID_COMUNICACAO',
-  PUBLICO:     'SHEET_ID_PUBLICO',
-  ESCUTA:      'SHEET_ID_ESCUTA',
-  ESTOQUE:     'SHEET_ID_ESTOQUE'
+  MASTER:        'SHEET_ID_MASTER',
+  ACOES:         'SHEET_ID_ACOES',
+  ESPACOS:       'SHEET_ID_ESPACOS',
+  PESSOAL:       'SHEET_ID_PESSOAL',
+  EQUIPES:       'SHEET_ID_EQUIPES',
+  FINANCEIRO:    'SHEET_ID_FINANCEIRO',
+  RELATORIOS:    'SHEET_ID_RELATORIOS',
+  REUNIOES:      'SHEET_ID_REUNIOES',
+  COMUNICACAO:   'SHEET_ID_COMUNICACAO',
+  PUBLICO:       'SHEET_ID_PUBLICO',
+  ESCUTA:        'SHEET_ID_ESCUTA',
+  ESTOQUE:       'SHEET_ID_ESTOQUE',
+  // Registro central de instituições (multi-tenant hub)
+  INSTITUICOES:  'SHEET_ID_INSTITUICOES'
 };
 
 // Schema de abas esperadas por planilha
@@ -32,7 +34,7 @@ var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
     'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
-    'Contratados', 'AgentesCulturais', 'Voluntarios'
+    'Contratados', 'AgentesCulturais', 'Voluntarios', 'Orgs'
   ],
   ESTOQUE: [
     'ItensEstoque', 'SaldoEstoque', 'MovimentacoesEstoque'
@@ -60,7 +62,9 @@ var SCHEMA_ABAS = {
   REUNIOES:   ['Reunioes', 'Encaminhamentos', 'Atas'],
   COMUNICACAO:['Demandas', 'Entregas', 'Versoes', 'AgendaRECE'],
   PUBLICO:    ['Inscricoes', 'Presencas', 'Pesquisas', 'Certificados'],
-  ESCUTA:     ['Pesquisas', 'Respostas', 'Indicadores']
+  ESCUTA:       ['Pesquisas', 'Respostas', 'Indicadores'],
+  // Hub multi-tenant: lista de instituições + seus Sheet IDs
+  INSTITUICOES: ['Instituicoes', 'SheetIds']
 };
 
 /**
@@ -271,10 +275,9 @@ function inicializarSistema() {
     }
   }
 
-  try { setup_espacos_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_espacos_iniciais: ' + e.message); }
-  try { setup_pccs_inicial(); }    catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_pccs_inicial: ' + e.message); }
-  try { setup_categorias_itens_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_categorias_itens: ' + e.message); }
-  try { setup_itens_almoxarifado_iniciais(); } catch(e) { Logger.warn('setup', 'inicializarSistema', 'setup_itens_almoxarifado: ' + e.message); }
+  // Seeds instituição-específicos removidos daqui.
+  // Para o CCBJ: chamar setupInicialCCBJ() no GAS Editor (setup_inicial.gs).
+  // Para nova instituição: configurar espaços, PCC e estoque manualmente via Admin.
 
   // Encargos trabalhistas — inicializa JSON e instala trigger anual
   try {
@@ -308,6 +311,22 @@ function inicializarSistema() {
   if (adminEmail && typeof AcessoService !== 'undefined') {
     AcessoService.registrarSuperAdmin(adminEmail);
     Logger.info('setup', 'inicializarSistema', 'SuperAdmin registrado: ' + adminEmail);
+  }
+
+  // Auto-registrar esta organização no hub de instituições com todos os Sheet IDs
+  try {
+    var _allSheetIds = {};
+    var _props = PropertiesService.getScriptProperties();
+    Object.keys(PROP_SHEETS).forEach(function(k) {
+      var v = _props.getProperty(PROP_SHEETS[k]);
+      if (v) _allSheetIds[k] = v;
+    });
+    OrgRegistryService.registrarOuAtualizar(org.orgId, org, {
+      sheetIds:   _allSheetIds,
+      adminEmail: adminEmail || ''
+    });
+  } catch(e) {
+    Logger.warn('setup', 'inicializarSistema', 'OrgRegistry auto-registro: ' + e.message);
   }
 
   Logger.info('setup', 'inicializarSistema', 'Sistema inicializado com sucesso.');
@@ -977,23 +996,27 @@ function fase9_prepararIndice() {
   // 1. Migrar orgId em todos os registros existentes
   var migRes = fase9_migrarOrgId();
 
-  // 2. Registrar esta org no registry
-  try { OrgRegistryService.registrarOuAtualizar(orgId, org); } catch(e) {
+  // 2. Registrar esta org no registry com todos os Sheet IDs
+  try {
+    var _shIds = {};
+    var _p9 = PropertiesService.getScriptProperties();
+    Object.keys(PROP_SHEETS).forEach(function(k) {
+      var v = _p9.getProperty(PROP_SHEETS[k]);
+      if (v) _shIds[k] = v;
+    });
+    OrgRegistryService.registrarOuAtualizar(orgId, org, {
+      sheetIds:   _shIds,
+      adminEmail: _p9.getProperty('ADMIN_EMAIL') || ''
+    });
+  } catch(e) {
     Logger.warn('setup', 'fase9_prepararIndice', 'OrgRegistry: ' + e.message);
   }
 
   // 3. Garantir aba MASTER.Orgs
   try {
-    var ss = _getSheet('SHEET_ID_MASTER', null);
-    if (!ss.getSheetByName('Orgs')) {
-      var aba = ss.insertSheet('Orgs');
-      aba.getRange(1, 1, 1, 6).setValues([[
-        'OrgId', 'Nome', 'NomeCompleto', 'Dominio', 'Status', 'ProvisionadoEm'
-      ]]);
-      aba.setFrozenRows(1);
-    }
+    recriarEstrutura(); // recria qualquer aba faltante incl. MASTER.Orgs
   } catch(e) {
-    Logger.warn('setup', 'fase9_prepararIndice', 'Aba Orgs: ' + e.message);
+    Logger.warn('setup', 'fase9_prepararIndice', 'recriarEstrutura: ' + e.message);
   }
 
   Logger.info('setup', 'fase9_prepararIndice',

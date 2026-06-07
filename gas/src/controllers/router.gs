@@ -58,6 +58,10 @@ function doGet(e) {
       case 'health':
         return _renderHealth();
 
+      // Configuração pública da organização — consumida por public/index.html
+      case 'public_config':
+        return _renderPublicConfig();
+
       default:
         return _render404();
     }
@@ -81,9 +85,12 @@ function _renderAppInterno(e) {
     case 'ativo':
       // Usuário aprovado — renderiza SPA normalmente
       var template = HtmlService.createTemplateFromFile('frontend/index');
-      template.orgConfig = getPublicOrgConfig();
+      template.orgConfig    = getPublicOrgConfig();
       template.usuarioEmail = email;
-      template.serviceUrl = ScriptApp.getService().getUrl();
+      template.serviceUrl   = ScriptApp.getService().getUrl();
+      // Template de planta: 'shared/mapa_ccbj' se configurado; senão placeholder
+      template.mapaTemplate = PropertiesService.getScriptProperties()
+                                .getProperty('ORG_MAPA_TEMPLATE') || 'shared/mapa_sem_planta';
       return template.evaluate()
         .setTitle(getOrgConfig().titulo)
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
@@ -189,6 +196,17 @@ function _renderHealth() {
   var status = verificarTodasAbas();
   return ContentService
     .createTextOutput(JSON.stringify({ ok: status.ok, percentual: status.percentual, timestamp: agora() }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Retorna configuração pública da organização como JSON.
+ * Consumido por public/index.html para exibir nome/domínio/logo sem hardcode.
+ */
+function _renderPublicConfig() {
+  var cfg = getPublicOrgConfig();
+  return ContentService
+    .createTextOutput(JSON.stringify(cfg))
     .setMimeType(ContentService.MimeType.JSON);
 }
 

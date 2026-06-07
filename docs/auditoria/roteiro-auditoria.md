@@ -466,9 +466,29 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 38 (2026-06-07) → SESSÃO 39
+## HANDOFF ATUAL — SESSÃO 39 (2026-06-07) → SESSÃO 40
 
-### Estado atual: ~270 bugs registrados · Deploy @673 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy pendente (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s39)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
+
+### Pendentes / próxima ação
+- **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.
+- **Executar no GAS Editor:**
+  1. `fase9_prepararIndice()` — registra CCBJ no hub com todos os Sheet IDs
+  2. `fase73_estoque_prepararIndice()` — cria abas ESTOQUE + seed dep-01/dep-02
+  3. `fase78_inspecionar_ativos_v1()` → `fase78_migrar_ativos_para_estoque()`
+- **Próximos bugs de auditoria:** TAR-04, HUB-13
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 38 (2026-06-07) → SESSÃO 39
+
+### Estado anterior: ~270 bugs registrados · Deploy @673 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s38)
 

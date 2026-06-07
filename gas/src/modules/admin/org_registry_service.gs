@@ -43,8 +43,6 @@ var OrgRegistryService = (function() {
 
   function _indexarSheet(org) {
     try {
-      var aba = _getSheet('SHEET_ID_MASTER', 'Orgs');
-      if (!aba) return;
       var linha = [
         org.orgId      || '',
         org.nome       || '',
@@ -57,18 +55,113 @@ var OrgRegistryService = (function() {
         org.adminEmail || '',
         org.versaoSistema || ''
       ];
-      // Garantir cabeçalho
-      if (aba.getLastRow() === 0) {
-        aba.getRange(1,1,1,10).setValues([[
-          'OrgId','Nome','NomeCompleto','Dominio','Status',
-          'Plano','ProvisionadoEm','UltimaAtividade','AdminEmail','VersaoSistema'
-        ]]);
-        aba.setFrozenRows(1);
-      }
       var atualizado = DataGateway.atualizarLinhaPorColuna('SHEET_ID_MASTER', 'Orgs', 0, org.orgId, linha);
-      if (!atualizado) DataGateway.salvarLinha('SHEET_ID_MASTER', 'Orgs', linha);
+      if (!atualizado) {
+        // Garantir cabeçalho na primeira linha
+        try {
+          var ss  = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID_MASTER'));
+          var aba = ss.getSheetByName('Orgs');
+          if (aba && aba.getLastRow() === 0) {
+            aba.getRange(1,1,1,10).setValues([[
+              'OrgId','Nome','NomeCompleto','Dominio','Status',
+              'Plano','ProvisionadoEm','UltimaAtividade','AdminEmail','VersaoSistema'
+            ]]);
+            aba.setFrozenRows(1);
+          }
+        } catch(_) {}
+        DataGateway.salvarLinha('SHEET_ID_MASTER', 'Orgs', linha);
+      }
     } catch(e) {
       Logger.warn('org_registry', '_indexarSheet', e.message);
+    }
+  }
+
+  /**
+   * Indexa no hub central (SHEET_ID_INSTITUICOES) — abas Instituicoes + SheetIds.
+   * Silencioso: se a planilha não existir, não lança exceção.
+   */
+  function _indexarCentral(org) {
+    try {
+      var centralId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_INSTITUICOES');
+      if (!centralId) return;
+      var ss = SpreadsheetApp.openById(centralId);
+
+      // ── Aba Instituicoes ──────────────────────────────────────────────────
+      var abaOrgs = ss.getSheetByName('Instituicoes');
+      if (!abaOrgs) {
+        abaOrgs = ss.insertSheet('Instituicoes');
+        abaOrgs.getRange(1,1,1,11).setValues([[
+          'OrgId','Nome','NomeCompleto','Dominio','DeploymentUrl',
+          'AdminEmail','Status','Plano','ProvisionadoEm','UltimaAtividade','VersaoSistema'
+        ]]);
+        abaOrgs.setFrozenRows(1);
+      }
+      var linhaOrg = [
+        org.orgId           || '',
+        org.nome            || '',
+        org.nomeCompleto    || '',
+        org.dominio         || '',
+        org.deploymentUrl   || '',
+        org.adminEmail      || '',
+        org.status          || STATUS_SETUP,
+        org.plano           || 'gratuito',
+        org.provisionadoEm  || '',
+        org.ultimaAtividadeEm || '',
+        org.versaoSistema   || ''
+      ];
+      var atOrg = false;
+      var nOrg  = abaOrgs.getLastRow();
+      if (nOrg > 1) {
+        var vals = abaOrgs.getRange(2, 1, nOrg - 1, 1).getValues();
+        for (var i = 0; i < vals.length; i++) {
+          if (String(vals[i][0]) === org.orgId) {
+            abaOrgs.getRange(i + 2, 1, 1, linhaOrg.length).setValues([linhaOrg]);
+            atOrg = true;
+            break;
+          }
+        }
+      }
+      if (!atOrg) abaOrgs.appendRow(linhaOrg);
+
+      // ── Aba SheetIds ──────────────────────────────────────────────────────
+      var abaIds = ss.getSheetByName('SheetIds');
+      if (!abaIds) {
+        abaIds = ss.insertSheet('SheetIds');
+        var cabIds = ['OrgId'];
+        Object.keys(org.sheetIds || {}).forEach(function(k) { cabIds.push(k); });
+        abaIds.getRange(1, 1, 1, cabIds.length).setValues([cabIds]);
+        abaIds.setFrozenRows(1);
+      }
+      // Monta cabeçalho existente para mapear colunas
+      var nIds     = abaIds.getLastRow();
+      var cabExist = nIds > 0 ? abaIds.getRange(1, 1, 1, abaIds.getLastColumn()).getValues()[0] : ['OrgId'];
+      // Garante colunas para todos os sheetIds novos
+      var shIdKeys = Object.keys(org.sheetIds || {});
+      shIdKeys.forEach(function(k) {
+        if (cabExist.indexOf(k) === -1) { cabExist.push(k); }
+      });
+      if (cabExist.length > abaIds.getLastColumn()) {
+        abaIds.getRange(1, 1, 1, cabExist.length).setValues([cabExist]);
+      }
+      var linhaIds = cabExist.map(function(col) {
+        if (col === 'OrgId') return org.orgId || '';
+        return (org.sheetIds || {})[col] || '';
+      });
+      var atIds = false;
+      if (nIds > 1) {
+        var vIds = abaIds.getRange(2, 1, nIds - 1, 1).getValues();
+        for (var j = 0; j < vIds.length; j++) {
+          if (String(vIds[j][0]) === org.orgId) {
+            abaIds.getRange(j + 2, 1, 1, linhaIds.length).setValues([linhaIds]);
+            atIds = true;
+            break;
+          }
+        }
+      }
+      if (!atIds) abaIds.appendRow(linhaIds);
+
+    } catch(e) {
+      Logger.warn('org_registry', '_indexarCentral', e.message);
     }
   }
 
@@ -90,6 +183,7 @@ var OrgRegistryService = (function() {
       nomeCompleto:     cfg.nomeCompleto      || extras.nomeCompleto || '',
       dominio:          cfg.dominio           || extras.dominio   || '',
       adminEmail:       extras.adminEmail     || '',
+      deploymentUrl:    extras.deploymentUrl  || '',
       status:           extras.status         || STATUS_PROVISIONED,
       plano:            extras.plano          || 'gratuito',
       provisionadoEm:   extras.provisionadoEm || agora_,
@@ -97,6 +191,7 @@ var OrgRegistryService = (function() {
       versaoSistema:    '9.0',
       modulosAtivos:    extras.modulosAtivos  || [],
       usuariosCount:    extras.usuariosCount  || 0,
+      sheetIds:         extras.sheetIds       || {},
       atualizadoEm:     agora_
     };
 
@@ -114,6 +209,7 @@ var OrgRegistryService = (function() {
     });
 
     _indexarSheet(registro);
+    _indexarCentral(registro);
     Logger.info('org_registry', 'registrarOuAtualizar', 'Org registrada: ' + orgId);
     return registro;
   }

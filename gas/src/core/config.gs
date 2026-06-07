@@ -28,13 +28,13 @@ function getOrgConfig() {
 
   var props = PropertiesService.getScriptProperties();
   var orgId = props.getProperty('ORG_ID') || _gerarEPersistirOrgId(props);
-  var nome  = props.getProperty('ORG_NOME') || 'CCBJ';
+  var nome  = props.getProperty('ORG_NOME') || '';
 
   _orgConfigCache = {
     orgId:          orgId,
     nome:           nome,
-    nomeCompleto:   props.getProperty('ORG_NOME_COMPLETO')    || 'Centro Cultural Bom Jardim',
-    titulo:         props.getProperty('ORG_SISTEMA_TITULO')   || 'Sistema ' + nome,
+    nomeCompleto:   props.getProperty('ORG_NOME_COMPLETO')    || '',
+    titulo:         props.getProperty('ORG_SISTEMA_TITULO')   || (nome ? 'Sistema ' + nome : 'ERP Cultural'),
     dataFolder:     props.getProperty('ORG_DATA_FOLDER')      || (orgId + '_DATA'),
     logoUrl:        props.getProperty('ORG_LOGO_URL')         || '',
     dominio:        props.getProperty('ORG_DOMINIO')          || '',

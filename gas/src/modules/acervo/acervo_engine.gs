@@ -17,7 +17,10 @@
 
 var AcervoEngine = (function () {
 
-  var _PASTA_BASE = 'CCBJ_Acervo';
+  function _getPastaBase() {
+    var nome = getOrgConfig().nome || 'ORG';
+    return nome + '_Acervo';
+  }
 
   // ─── Upload ───────────────────────────────────────────────────────────────
 
@@ -194,7 +197,7 @@ var AcervoEngine = (function () {
   }
 
   function _obterOuCriarPasta(orgId, acaoId) {
-    var nomePastaBase = _PASTA_BASE + '_' + orgId;
+    var nomePastaBase = _getPastaBase() + '_' + orgId;
     var pastasBase    = DriveApp.getFoldersByName(nomePastaBase);
     var pastaBase     = pastasBase.hasNext() ? pastasBase.next() : DriveApp.createFolder(nomePastaBase);
     var nomePastaAcao = 'Acao_' + acaoId;

@@ -38,7 +38,7 @@ function autorizarDrive() {
 function setupInicialCCBJ() {
   var props = PropertiesService.getScriptProperties();
 
-  // ── 1. Definir propriedades organizacionais ─────────────────────────────
+  // ── 1. Definir propriedades organizacionais CCBJ ───────────────────────
   var config = {
     'ORG_NOME':           'CCBJ',
     'ORG_NOME_COMPLETO':  'Centro Cultural Bom Jardim',
@@ -47,6 +47,8 @@ function setupInicialCCBJ() {
     'ADMIN_EMAIL':        'joao.barros@idm.org.br',
     'IA_ASSISTENTE_NOME': 'Bêjotinha',
     'ORG_TIMEZONE':       'America/Fortaleza',
+    // Template de planta arquitetônica do campus CCBJ
+    'ORG_MAPA_TEMPLATE':  'shared/mapa_ccbj',
     // ORG_LOGO_URL e GROQ_API_KEY: definir manualmente depois
   };
 
@@ -79,7 +81,30 @@ function setupInicialCCBJ() {
     console.warn('[setup] verificarTodasAbas() falhou: ' + e.message);
   }
 
-  console.log('[setup] ✅ Setup inicial concluído.');
+  // ── 4. Seeds específicos do CCBJ ──────────────────────────────────────
+  // Esses seeds são exclusivos do CCBJ e não fazem parte do inicializarSistema()
+  // genérico. Idempotentes: ignoram registros já existentes.
+  console.log('[setup] Aplicando seeds CCBJ...');
+  try { setup_espacos_iniciais();             console.log('[setup] ✅ Espaços do campus.'); }
+  catch(e) { console.warn('[setup] Espaços: ' + e.message); }
+  try { setup_pccs_inicial();                 console.log('[setup] ✅ PCC/IDM 2025.'); }
+  catch(e) { console.warn('[setup] PCC: ' + e.message); }
+  try { setup_categorias_itens_iniciais();    console.log('[setup] ✅ Categorias de itens.'); }
+  catch(e) { console.warn('[setup] Categorias: ' + e.message); }
+  try { setup_itens_almoxarifado_iniciais();  console.log('[setup] ✅ Itens de almoxarifado.'); }
+  catch(e) { console.warn('[setup] Almoxarifado: ' + e.message); }
+
+  console.log('[setup] ✅ Setup inicial CCBJ concluído.');
+}
+
+/**
+ * Define ORG_MAPA_TEMPLATE para o CCBJ (idempotente).
+ * Executar no GAS Editor uma vez após este deploy para ativar o mapa.
+ */
+function setarMapaTemplateCCBJ() {
+  PropertiesService.getScriptProperties().setProperty('ORG_MAPA_TEMPLATE', 'shared/mapa_ccbj');
+  console.log('[setup] ORG_MAPA_TEMPLATE = shared/mapa_ccbj');
+  return { ok: true };
 }
 
 /**
