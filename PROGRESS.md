@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Docs: manual corrigido pós-investigação (2026-06-06)** — Deploy @662. Investigação sistemática confirmou 17/19 itens corretos. 2 divergências corrigidas: (1) Meu Time agora descreve que a aba é visível para todos mas o conteúdo é bloqueado no backend — e inclui "coordenador" no rol de papéis autorizados. (2) Aprovações no Meu Dia: texto corrigido de "gestores/habilitadores" para "gestores, admins e superadmins" (habilitador não está no código do controller).
+**Fase atual**: **Fix: manual sidebar — texto ativo invisível (2026-06-06)** — Deploy @663. `.manual-nav-item.ativo` usava `background: var(--sidebar-active)` (rgba branco transparente, projetado para a sidebar escura) + `color: #fff`, deixando o texto sumido no fundo claro do painel do manual. Corrigido para `background: var(--color-primary-lt)` + `color: var(--color-primary)`.
+
+**Fase anterior**: **Docs: manual corrigido pós-investigação (2026-06-06)** — Deploy @662. Investigação sistemática confirmou 17/19 itens corretos. 2 divergências corrigidas: (1) Meu Time agora descreve que a aba é visível para todos mas o conteúdo é bloqueado no backend — e inclui "coordenador" no rol de papéis autorizados. (2) Aprovações no Meu Dia: texto corrigido de "gestores/habilitadores" para "gestores, admins e superadmins" (habilitador não está no código do controller).
 
 **Fase anterior**: **Docs: manual atualizado (2026-06-06)** — Deploy @661. Seções `taskhub`, `tarefas`, `balcao`, `pessoas` e `reunioes` do `manual.html` reescritas para refletir a implementação real: TaskHub com 3 abas + 6 fontes Meu Dia + grupos de prioridade + aniversariantes + navegação por clique; Tarefas com campo prazo, vínculo dinâmico (Ação/Reserva/Contrato), badges na lista e botão Concluir direto; Balcão reescrito como canal de serviços de comunicação (fluxo 7 etapas, SLA por tipo, versões, comentários, empty states); Pessoas com campo dataNascimento e callout de aniversariantes; Reuniões com seção de encaminhamentos (responsável + prazo + e-mail + integração Meu Dia).
 

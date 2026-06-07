@@ -476,6 +476,7 @@
 |---|---|---|
 | @661 | Docs: manual.html | Seções `taskhub`, `tarefas`, `balcao`, `pessoas`, `reunioes` reescritas para refletir a implementação real (3 abas TaskHub, 6 fontes Meu Dia, grupos prioridade, aniversariantes, prazo/vínculo em Tarefas, Balcão como canal de comunicação com SLA + versões, dataNascimento em Pessoas, encaminhamentos em Reuniões). |
 | @662 | Docs: manual.html (correções pós-investigação) | Meu Time: aba visível para todos; conteúdo bloqueado no backend para gestor/coordenador/admin/superadmin; "coordenador" adicionado ao texto. Aprovações Meu Dia: habilitador removido — apenas gestor/admin/superadmin recebem esse item no controller. |
+| @663 | Fix: manual sidebar — item ativo com texto invisível | `.manual-nav-item.ativo` usava `--sidebar-active` (transparente, feito para sidebar escura) + `color:#fff` → texto branco sumia no fundo claro. Corrigido: `background: var(--color-primary-lt)` + `color: var(--color-primary)`. |
 
 ### Pendentes / próxima ação
 - **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
