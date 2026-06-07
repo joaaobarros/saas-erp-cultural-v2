@@ -466,9 +466,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 36 (2026-06-06) → SESSÃO 37
+## HANDOFF ATUAL — SESSÃO 37 (2026-06-06) → SESSÃO 38
 
-### Estado atual: ~270 bugs registrados · Deploy @658 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @668 (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s37)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @668 | Docs: manual.html — auditoria lote 2 (13 seções) | **estrategia**: eixos→horizonte (curto/médio/longo prazo), KPIs e riscos auto-calculados, form sem campo eixo. **reservas-carro**: campos reais (setor, passageiros, localização com mapa). **ponto**: registro ponto removido do gate feat.editar — disponível a todos. **rh**: PCC→PCCS (Plano de Cargos, Carreiras e Salários), todas as 10 abas documentadas. **contratacoes**: FSM real (rascunho/submetida/devolvida/aprovada_gestor/aguard_cotacoes/cotacoes_recebidas/aprovada_financeiro/em_instrucao/em_execucao/concluida/rejeitada/cancelada) + tipos (serviço/compra/bolsa). **escuta-lgpd**: CORRETO sem alteração. **financeiro**: Rubricas→Fontes de Recurso, add Aditivos+Exportações, remove bloco gerar_holerite morto (feature PESSOAS, não FINANCEIRO). **comunicacao**: CORRETO sem alteração. **voluntarios**: campos reais (nome/email/telefone/competências), aba Alocações documentada, convite por email. **agentes**: campos reais (tipo/CPF/nomeArtístico/áreas/linguagens), removido "links de portfólio" (não existe no form). **relatorios**: sem view dedicada — exports distribuídos por módulo (CODIP/Financeiro/Ponto/Escuta/Estoque). **admin**: add abas Cadastros Base (Features, Identidade Visual, Banco de Dados, Ferramentas/Provisionamento). **fix**: badges Vermelho/Amarelo no manual tinham cores indistinguíveis — CSS corrigido. |
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
+  1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
+  2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
+  3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+- **Próximos bugs de auditoria:** TAR-04 (gatilhos automáticos), HUB-13 (dayoff aniversário)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 36 (2026-06-06) → SESSÃO 37
+
+### Estado anterior: ~270 bugs registrados · Deploy @658 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s36)
 

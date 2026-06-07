@@ -117,7 +117,7 @@ var ManualUI = (function () {
   }
 
   function _badge(label, cor) {
-    var cores = { verde: '#dcfce7:#166534', azul: '#dbeafe:#1e40af', roxo: '#ede9fe:#6b21a8', laranja: '#fef3c7:#92400e', cinza: '#f1f5f9:#475569' };
+    var cores = { verde: '#dcfce7:#166534', azul: '#dbeafe:#1e40af', roxo: '#ede9fe:#6b21a8', laranja: '#fef3c7:#92400e', vermelho: '#fee2e2:#991b1b', cinza: '#f1f5f9:#475569' };
     var c = (cores[cor] || cores.cinza).split(':');
     return '<span style="display:inline-block;background:' + c[0] + ';color:' + c[1] + ';border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;margin:2px;">' + label + '</span>';
   }
@@ -149,7 +149,7 @@ var ManualUI = (function () {
           + _p('Avisos aparecem no canto inferior direito da tela por alguns segundos:')
           + _ul([
               _badge('Verde','verde') + ' — ação concluída com sucesso',
-              _badge('Vermelho','laranja') + ' — erro que precisa de atenção',
+              _badge('Vermelho','vermelho') + ' — erro que precisa de atenção',
               _badge('Amarelo','laranja') + ' — atenção: verifique antes de continuar',
               _badge('Azul','azul') + ' — informação geral'
             ]);
@@ -362,7 +362,7 @@ var ManualUI = (function () {
         var html = _p('Este módulo controla o uso do veículo institucional do CCBJ, garantindo que não haja conflitos de agenda.');
         if (feat && feat.reservar_carro) {
           html += _h2('<span class="ms ms-sm">car_rental</span> Solicitar veículo')
-            + _card('add', 'Nova solicitação', 'Informe a data, horário de saída e retorno, destino e finalidade da viagem.')
+            + _card('add', 'Nova solicitação', 'Preencha data, setor, horários de saída e chegada, local de saída, destino (com pré-visualização de mapa), passageiros internos/externos, ação vinculada e observações. Paradas intermediárias são opcionais.')
             + _card('schedule', 'Aguardar aprovação', 'Sua solicitação fica "Pendente" até ser avaliada. Você será avisado quando for aprovada ou recusada.')
             + _calloutAviso('Não retire o veículo antes da aprovação formal. Em caso de urgência, contate diretamente um aprovador.');
         }
@@ -414,12 +414,10 @@ var ManualUI = (function () {
         var html = _p('Este módulo cuida do controle de frequência e das escalas de trabalho da equipe.')
           + _h2('<span class="ms ms-sm">calendar_month</span> Escala de trabalho')
           + _card('view_week', 'Ver sua escala', 'Consulte seus dias e horários de trabalho do mês atual e dos próximos meses.')
-          + _card('event_busy', 'Solicitar férias', 'Registre uma solicitação de férias informando o período desejado. Aguarde aprovação.');
-        if (feat && feat.editar) {
-          html += _h2('<span class="ms ms-sm">fingerprint</span> Registro de ponto')
-            + _card('login', 'Registrar entrada/saída', 'Lance seu horário de entrada, intervalo e saída. Faça isso no mesmo dia para evitar divergências.')
-            + _card('sick', 'Lançar afastamento', 'Registre faltas justificadas, licenças médicas ou outros tipos de afastamento com o documento de suporte.');
-        }
+          + _card('event_busy', 'Solicitar férias', 'Registre uma solicitação de férias informando o período desejado. Aguarde aprovação.')
+          + _h2('<span class="ms ms-sm">fingerprint</span> Registro de ponto')
+          + _card('login', 'Registrar entrada/saída', 'Use o botão "Registrar Ponto" para lançar entrada, intervalo ou saída. Faça isso no mesmo dia para evitar divergências.')
+          + _card('sick', 'Lançar afastamento', 'Registre faltas justificadas, licenças médicas ou outros tipos de afastamento com o documento de suporte.');
         if (feat && feat.aprovar_ferias) {
           html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar férias e afastamentos')
             + _card('inbox', 'Solicitações pendentes', 'Veja as solicitações da equipe aguardando sua análise.')
@@ -435,15 +433,20 @@ var ManualUI = (function () {
 
     { id:'rh', label:'Pessoas / RH — Configurações', icone:'work', modulo:'PESSOAS',
       tags:['rh','cargo','pcc','plano de cargos','setor','escala','turno','departamento'],
-      descricao:'Configurações de RH: cargos, plano de carreiras e escalas',
+      descricao:'Gestão de pessoas: equipe, PCCS, escalas, férias, folha e indicadores de RH',
       content: function(papel, feat) {
-        return _p('O módulo de RH centraliza as definições estruturais da gestão de pessoas: cargos, plano de carreiras e configurações de turnos.')
-          + _h2('<span class="ms ms-sm">work</span> Cargos e carreiras')
-          + _card('badge', 'Cargos cadastrados', 'Lista de todos os cargos da instituição com nível, área e carga horária esperada.')
-          + _card('trending_up', 'Plano de Cargos e Carreiras (PCC)', 'Estrutura de progressão: como um colaborador avança entre os níveis ao longo do tempo. Use como referência para promoções.')
-          + _h2('<span class="ms ms-sm">schedule</span> Escalas e turnos')
+        return _p('O módulo de RH centraliza toda a gestão de pessoas da instituição, organizado em abas: Equipe, PCCS, Histórico, Avaliações, Escalas, Documentos, Férias, Folha, Rescisão e Indicadores.')
+          + _h2('<span class="ms ms-sm">group</span> Equipe')
+          + _card('badge', 'Lista da equipe', 'Veja todos os colaboradores ativos, seus cargos, setores e situação no PCCS.')
+          + _h2('<span class="ms ms-sm">schema</span> PCCS — Plano de Cargos, Carreiras e Salários')
+          + _card('trending_up', 'Estrutura de progressão', 'Define as tabelas salariais e os níveis de carreira. Cada colaborador é enquadrado em uma posição do PCCS ativo. Use como referência para promoções e reajustes.')
+          + _h2('<span class="ms ms-sm">schedule</span> Escalas')
           + _card('view_week', 'Configurar escalas', 'Defina os padrões de escala (ex: segunda a sexta, 08h–17h) e aplique a cada colaborador.')
-          + _calloutInfo('As escalas definidas aqui são usadas automaticamente para calcular frequência e gerar alertas de atraso.');
+          + _h2('<span class="ms ms-sm">star</span> Avaliações · Documentos · Folha · Rescisão')
+          + _card('star', 'Avaliações de desempenho', 'Registre e consulte avaliações periódicas de cada colaborador.')
+          + _card('folder', 'Documentos', 'Centralize documentos de RH de cada colaborador (contratos, atestados, etc.).')
+          + _card('payments', 'Folha e Rescisão', 'Visualize a folha de pagamento e calcule rescisões com base no PCCS e nas marcações de ponto.')
+          + _calloutInfo('As escalas definidas aqui são usadas automaticamente para calcular frequência e gerar alertas de atraso no espelho de ponto.');
       }
     },
 
@@ -451,26 +454,32 @@ var ManualUI = (function () {
       tags:['contratação','habilitação','prestador','proposta','contrato','análise'],
       descricao:'Processo de habilitação e contratação de prestadores de serviço',
       content: function(papel, feat) {
-        var html = _p('Este módulo gerencia o processo de contratação de prestadores externos: desde o envio da proposta até a assinatura do contrato.')
+        var html = _p('Este módulo gerencia solicitações de contratação de prestadores externos (serviços, compras e bolsas): desde o rascunho até a conclusão.')
           + _h2('<span class="ms ms-sm">schema</span> Etapas do processo')
-          + _tabela(['Etapa','O que acontece'],[
-              ['Proposta enviada','O prestador submeteu os dados e está aguardando análise.'],
-              ['Em análise','Um habilitador ou gestor está avaliando a proposta.'],
-              ['Aprovada','Proposta aceita. Contrato sendo elaborado.'],
-              ['Reprovada','Proposta recusada. Veja a justificativa para entender o motivo.'],
-              ['Contratado','Contrato assinado. Prestador ativo.']
+          + _tabela(['Status','O que acontece'],[
+              ['Rascunho','Solicitação criada mas ainda não submetida para análise.'],
+              ['Submetida','Solicitação enviada. Aguardando aprovação do gestor.'],
+              ['Devolvida','Gestor devolveu para correção. Ajuste e resubmeta.'],
+              ['Aprovada — gestor','Gestor aprovou. Para compras, aguarda cotações; para serviços, vai para o financeiro.'],
+              ['Aguard. cotações','(Compras) Aguardando ao menos 3 cotações de fornecedores.'],
+              ['Cotações recebidas','(Compras) Cotações recebidas. Aguardando aprovação financeira.'],
+              ['Aprovada — financeiro','Financeiro aprovou. Em instrução para execução.'],
+              ['Em execução','Serviço/compra em andamento.'],
+              ['Concluída','Entrega confirmada e pagamento registrado.'],
+              ['Rejeitada','Solicitação recusada. Veja a justificativa.'],
+              ['Cancelada','Solicitação cancelada pelo solicitante ou pelo gestor.']
             ]);
-        html += _card('visibility', 'Acompanhar contratos', 'Veja o status de cada contrato e o histórico de interações.');
-        var podeAnalisar = ['habilitador','gestor','admin','superadmin'].indexOf(papel) !== -1;
+        html += _card('visibility', 'Acompanhar solicitações', 'Veja o status de cada solicitação e o histórico de interações.');
+        var podeAnalisar = ['habilitador','gestor','admin','superadmin','financeiro'].indexOf(papel) !== -1;
         if (podeAnalisar) {
-          html += _h2('<span class="ms ms-sm">fact_check</span> Analisar proposta')
-            + _card('rate_review', 'Revisar documentos', 'Confira os documentos e dados enviados pelo prestador.')
-            + _card('check_circle', 'Aprovar ou reprovar', 'Registre sua decisão com justificativa. O prestador é notificado.');
+          html += _h2('<span class="ms ms-sm">fact_check</span> Analisar solicitação')
+            + _card('rate_review', 'Revisar documentos', 'Confira os dados, natureza do serviço e valor solicitado.')
+            + _card('check_circle', 'Aprovar, devolver ou rejeitar', 'Registre sua decisão com parecer. O solicitante é notificado automaticamente.');
         }
         if (feat && feat.editar) {
-          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar contratos')
-            + _card('add', 'Novo contrato', 'Cadastre um novo processo de habilitação vinculando ao prestador, serviço e valor.')
-            + _card('edit', 'Atualizar informações', 'Edite dados do contrato conforme o processo avança.');
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar solicitações')
+            + _card('add', 'Nova solicitação', 'Cadastre o tipo (serviço, compra ou bolsa), natureza, prestador, valor e rubrica orçamentária.')
+            + _card('edit', 'Atualizar informações', 'Edite dados da solicitação enquanto estiver em rascunho ou devolvida.');
         }
         return html;
       }
@@ -568,16 +577,13 @@ var ManualUI = (function () {
       tags:['financeiro','contrato','rubrica','orçamento','holerite','folha','pagamento','movimentação'],
       descricao:'Contratos, rubricas, orçamento e processamento financeiro',
       content: function(papel, feat) {
-        var html = _p('O módulo Financeiro centraliza a gestão de contratos, rubricas orçamentárias e movimentações financeiras da instituição.')
+        var html = _p('O módulo Financeiro centraliza a gestão de contratos, fontes de recurso, remanejamentos e exportações financeiras da instituição. Organizado em abas: Contratos, Remanejamentos, Aditivos, Exportações e Fontes de Recurso.')
           + _h2('<span class="ms ms-sm">description</span> O que você vê')
           + _card('description', 'Contratos', 'Lista de contratos ativos e encerrados: prestadores, valores, vigência e status.')
-          + _card('category', 'Rubricas', 'Categorias orçamentárias que organizam para onde vai cada real do orçamento.')
-          + _card('account_balance_wallet', 'Orçamento', 'Visão do orçamento aprovado e do quanto já foi executado por rubrica e período.');
-        if (feat && feat.editar) {
-          html += _h2('<span class="ms ms-sm">edit</span> Lançar movimentações')
-            + _card('add', 'Nova movimentação', 'Registre uma entrada ou saída financeira vinculada a uma rubrica e contrato.')
-            + _card('receipt', 'Anexar comprovante', 'Anexe o documento de suporte (nota fiscal, recibo, etc.) diretamente à movimentação.');
-        }
+          + _card('account_balance', 'Fontes de Recurso', 'Fontes orçamentárias que financiam os contratos (ex: Contrato de Gestão, Lei Rouanet, editais). Cada fonte tem seu saldo e execução rastreados.')
+          + _card('swap_horiz', 'Remanejamentos', 'Histórico de transferências de saldo entre fontes de recurso.')
+          + _card('add_circle', 'Aditivos', 'Aditivos de prazo ou valor vinculados a contratos existentes.')
+          + _card('download', 'Exportações', 'Exportação de dados financeiros em CSV para prestação de contas e relatórios externos.');
         if (feat && feat.aprovar_contrato) {
           html += _h2('<span class="ms ms-sm">gavel</span> Aprovar contratos')
             + _card('task_alt', 'Analisar proposta de contrato', 'Revise os termos, valores e prazo. Aprove ou recuse com justificativa registrada.')
@@ -585,17 +591,11 @@ var ManualUI = (function () {
         }
         if (feat && feat.aprovar_orcamento) {
           html += _h2('<span class="ms ms-sm">swap_horiz</span> Remanejar orçamento')
-            + _card('swap_horiz', 'Transferir entre rubricas', 'Quando o orçamento de uma rubrica está sobrando e outra precisa de mais recursos, faça o remanejamento com justificativa registrada.');
+            + _card('swap_horiz', 'Transferir entre fontes', 'Quando o saldo de uma fonte de recurso está sobrando e outra precisa de mais recursos, faça o remanejamento com justificativa registrada.');
         }
         if (feat && feat.ver_relatorio_completo) {
           html += _h2('<span class="ms ms-sm">summarize</span> Relatório financeiro completo')
-            + _card('bar_chart', 'Relatório detalhado', 'Acesse o relatório completo com todos os valores, por período, rubrica, contrato e responsável. Exportável para planilha.');
-        }
-        if (feat && feat.gerar_holerite) {
-          html += _h2('<span class="ms ms-sm">receipt_long</span> Holerites')
-            + _card('receipt_long', 'Gerar holerite', 'Processe a folha do mês para gerar holerites individuais de todos os colaboradores.')
-            + _card('send', 'Enviar para colaboradores', 'Após gerar, os holerites ficam disponíveis para cada colaborador visualizar no sistema.')
-            + _calloutAviso('Verifique todos os lançamentos de ponto e afastamentos antes de processar a folha. Correções após o processamento exigem reprocessamento.');
+            + _card('bar_chart', 'Relatório detalhado', 'Acesse o relatório completo com todos os valores, por período, fonte de recurso, contrato e responsável. Exportável para planilha.');
         }
         return html;
       }
@@ -770,11 +770,12 @@ var ManualUI = (function () {
       tags:['voluntário','voluntariado','colaboração','parceiro','externo'],
       descricao:'Cadastro e acompanhamento de voluntários da instituição',
       content: function(papel, feat) {
-        var html = _p('O módulo de Voluntários registra todas as pessoas que contribuem com o CCBJ de forma voluntária, sem vínculo empregatício.')
-          + _card('list', 'Lista de voluntários', 'Nome, área de atuação, disponibilidade e ações nas quais participou.')
-          + _card('link', 'Vínculo com ações', 'Cada voluntário pode ser vinculado às ações em que participou para formar um histórico.');
+        var html = _p('O módulo de Voluntários registra todas as pessoas que contribuem com o CCBJ de forma voluntária, sem vínculo empregatício. Organizado em duas abas: Cadastro e Alocações.')
+          + _card('list', 'Cadastro', 'Lista de voluntários com nome, e-mail, telefone e competências.')
+          + _card('event_available', 'Alocações', 'Vínculos dos voluntários com ações culturais: função, horário e status da participação (convidado, confirmado, presente, concluído).');
         if (feat && feat.editar) {
-          html += _card('person_add', 'Cadastrar voluntário', 'Informe nome, contato, área de interesse e disponibilidade de dias e horários.');
+          html += _card('person_add', 'Cadastrar voluntário', 'Informe nome, e-mail, telefone e competências (separadas por vírgula).')
+            + _card('link', 'Alocar em uma ação', 'Vincule o voluntário a uma ação, defina função e horário. O sistema envia um convite por e-mail para que o voluntário confirme a participação.');
         }
         return html;
       }
@@ -785,10 +786,10 @@ var ManualUI = (function () {
       descricao:'Cadastro de agentes e produtores culturais parceiros',
       content: function(papel, feat) {
         var html = _p('Os Agentes Culturais são artistas, produtores e outros profissionais da cultura com os quais o CCBJ mantém relação. Diferente de colaboradores, não têm vínculo empregatício com a instituição.')
-          + _card('person_pin', 'Lista de agentes', 'Cadastro completo com área de atuação, contato, portfólio e ações vinculadas.')
+          + _card('person_pin', 'Lista de agentes', 'Cadastro com nome, nome artístico, áreas artísticas, linguagens/especialidades e contato. Filtros por área e status (rascunho, ativo, suspenso).')
           + _card('event', 'Histórico de ações', 'Veja em quais ações cada agente participou como artista, palestrante ou produtor.');
         if (feat && feat.editar) {
-          html += _card('person_add', 'Novo agente', 'Preencha nome, área de atuação, links de portfólio e dados de contato.');
+          html += _card('person_add', 'Novo agente', 'Preencha tipo (PF/PJ), CPF/CNPJ, nome, nome artístico, e-mail, telefone, áreas artísticas, linguagens/especialidades e observações.');
         }
         return html;
       }
@@ -800,10 +801,12 @@ var ManualUI = (function () {
       tags:['relatório','exportar','dados','análise','planilha'],
       descricao:'Relatórios gerenciais disponíveis conforme o seu perfil',
       content: function(papel, feat) {
-        return _p('O módulo de Relatórios consolida dados do sistema em formatos prontos para análise e prestação de contas.')
-          + _card('bar_chart', 'Relatórios disponíveis', 'Os relatórios que aparecem para você dependem do seu perfil de acesso. Gestores e Admins têm acesso a relatórios gerenciais completos.')
-          + _card('download', 'Exportar', 'Todos os relatórios podem ser exportados em formato de planilha (CSV ou Excel) para uso externo.')
-          + _card('filter_list', 'Filtrar por período', 'Defina o período desejado antes de gerar o relatório para obter dados mais precisos.');
+        return _p('Os relatórios e exportações estão disponíveis dentro de cada módulo — não em uma tela central. Acesse o módulo correspondente para exportar os dados que precisa.')
+          + _card('groups', 'Público — CODIP', 'Relatório mensal de público (CODIP/Secult-CE). Disponível na aba Exportações do módulo Público.')
+          + _card('account_balance', 'Financeiro — CSV/Excel', 'Exportação dos dados financeiros por período e fonte de recurso. Disponível na aba Exportações do módulo Financeiro.')
+          + _card('schedule', 'Ponto — AFD e CSV', 'Espelho de ponto e exportação no formato AFD (Colabore) ou CSV. Disponível nas abas do módulo Ponto & RH.')
+          + _card('bar_chart', 'Escuta — relatório climático', 'Relatório de clima organizacional por período, dimensão e setor. Disponível na aba Relatórios do módulo Escuta.')
+          + _card('inventory_2', 'Estoque — saídas', 'Relatório de movimentações de saída do almoxarifado. Disponível na aba Relatórios do módulo Estoque.');
       }
     },
 
@@ -819,11 +822,18 @@ var ManualUI = (function () {
           + _card('edit', 'Editar perfil de acesso', 'Mude o nível de acesso de qualquer usuário. A mudança entra em vigor imediatamente no próximo login.')
           + _card('block', 'Revogar acesso', 'Remova o acesso de um colaborador desligado ou afastado. O usuário não consegue mais entrar no sistema.')
           + _calloutAviso('Ao trocar o perfil de acesso de um usuário, o sistema reapresenta o manual automaticamente para que ele entenda o que mudou.')
-          + _h2('<span class="ms ms-sm">widgets</span> Configurar módulos')
-          + _card('toggle_on', 'Ativar / desativar módulos', 'Controle quais módulos estão disponíveis na sua organização. Módulos desativados ficam invisíveis para os usuários.')
+          + _h2('<span class="ms ms-sm">settings</span> Cadastros Base — abas do painel')
+          + _card('meeting_room', 'Espaços', 'Cadastre e edite os espaços físicos disponíveis para reserva.')
+          + _card('corporate_fare', 'Setores', 'Gerencie os setores da organização usados em escalas, aprovações e relatórios.')
+          + _card('category', 'Categ. Itens', 'Categorias do almoxarifado/estoque.')
+          + _card('toggle_on', 'Módulos', 'Ative ou desative módulos para a organização. Módulos desativados ficam invisíveis para os usuários.')
+          + _card('tune', 'Features', 'Sobrescreva features individuais por usuário (ex: permitir acesso a uma função específica sem mudar o papel global).')
+          + _card('palette', 'Identidade Visual', 'Personalize cores e tema da interface para a organização.')
+          + _card('storage', 'Banco de Dados', 'Painel de diagnóstico das planilhas e consistência dos dados.')
+          + _card('people', 'Usuários', 'Lista completa de usuários com papel, status e opções de editar ou revogar acesso.')
           + _h2('<span class="ms ms-sm">business</span> Configurações da organização')
           + _card('apartment', 'Dados da instituição', 'Nome, logo e domínio de e-mail autorizado para acesso.')
-          + _card('schedule', 'Expediente e turnos', 'Configure os horários de funcionamento e os turnos de trabalho para uso no controle de ponto.')
+          + _card('schedule', 'Turnos de trabalho', 'Configure os turnos de trabalho para uso no controle de ponto.')
           + _h2('<span class="ms ms-sm">manage_search</span> Auditoria')
           + _card('history', 'Histórico de todas as ações', 'Cada criação, edição ou exclusão no sistema é registrada com usuário, data e hora. Consulte para identificar quem fez o quê.')
           + (papel === 'superadmin' ? _h2('<span class="ms ms-sm">corporate_fare</span> Painel de organizações (SuperAdmin)')
