@@ -180,34 +180,33 @@ var ManualUI = (function () {
       tags:['ação','evento','cultural','criar','editar','aprovar','agenda','publicar','mapa'],
       descricao:'Planejamento, execução e acompanhamento de ações culturais',
       content: function(papel, feat) {
-        var html = _p('Uma <strong>Ação Cultural</strong> é qualquer evento, projeto ou atividade realizada pelo CCBJ. Cada ação passa por um fluxo de aprovação antes de entrar em execução.')
+        var html = _p('Uma <strong>Ação Cultural</strong> é qualquer evento, projeto ou atividade realizada pelo CCBJ. Cada ação evolui por um fluxo de produção antes de entrar em execução.')
           + _h2('<span class="ms ms-sm">schema</span> Fluxo de uma ação')
-          + _tabela(['Etapa','O que significa'],[
-              ['Rascunho','Ação criada, ainda sendo preenchida. Só o criador pode ver.'],
-              ['Em análise','Enviada para aprovação. Aguarda avaliação.'],
-              ['Aprovada','Pronta para execução. Pode aparecer na agenda pública.'],
+          + _tabela(['Status','O que significa'],[
+              ['Planejada','Ação criada e em fase de planejamento. Responsáveis definindo detalhes.'],
+              ['Em Produção','Produção em andamento: materiais, equipe e recursos sendo preparados.'],
               ['Em execução','Acontecendo agora. Equipe e recursos alocados.'],
               ['Concluída','Encerrada. Dados disponíveis para relatórios.'],
               ['Arquivada','Guardada para referência histórica.']
             ])
           + _h2('<span class="ms ms-sm">visibility</span> O que você pode ver')
           + _card('list', 'Lista de ações', 'Todas as ações do CCBJ com filtros por status, período e responsável.')
-          + _card('calendar_month', 'Cronograma', 'Visualize as ações em formato de agenda ou linha do tempo.');
+          + _card('view_kanban', 'Kanban', 'Visualize as ações organizadas por status em colunas de quadro Kanban.');
         if (feat && feat.editar) {
           html += _h2('<span class="ms ms-sm">edit</span> Criar e editar ações')
-            + _card('add_circle', 'Nova ação', 'Clique em "Nova Ação", preencha título, data, espaço, equipe envolvida e envie para aprovação.')
-            + _card('edit', 'Editar ação', 'Ações em rascunho ou devolvidas podem ser editadas. Ações aprovadas precisam de revisão antes de alterar.')
+            + _card('add_circle', 'Nova ação', 'Clique em "Nova Ação", preencha título, data, espaço, equipe envolvida e salve.')
+            + _card('edit', 'Editar ação', 'Ações podem ser editadas enquanto ainda estão em planejamento ou produção.')
             + _card('map', 'Mapa de ação', 'Planeje recursos, atividades e cronograma detalhado da ação usando o editor visual.');
         }
         if (feat && feat.publicar_agenda) {
           html += _h2('<span class="ms ms-sm">public</span> Publicar na agenda pública')
-            + _card('share', 'Publicar', 'Ações aprovadas podem ser publicadas na agenda pública do CCBJ para divulgação ao público externo.')
+            + _card('share', 'Publicar', 'Ações em execução podem ser publicadas na agenda pública do CCBJ para divulgação ao público externo.')
             + _calloutAviso('Verifique todas as informações antes de publicar. Datas, local e descrição ficam visíveis para qualquer pessoa.');
         }
         if (feat && feat.aprovar_acao) {
-          html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar ações')
-            + _card('thumb_up', 'Aprovar', 'Acesse "Aprovações" no menu para ver as ações aguardando análise. Revise e aprove ou recuse com justificativa.')
-            + _card('thumb_down', 'Recusar', 'A ação volta ao criador com sua justificativa para que ele faça os ajustes necessários.');
+          html += _h2('<span class="ms ms-sm">task_alt</span> Avançar ou recusar etapas')
+            + _card('play_circle', 'Iniciar Produção', 'Move a ação de Planejada para Em Produção. Use quando os preparativos tiverem começado.')
+            + _card('cancel', 'Cancelar', 'Cancela a ação em qualquer etapa. Registre o motivo para histórico.');
         }
         return html;
       }
@@ -244,7 +243,8 @@ var ManualUI = (function () {
           + _card('workspace_premium', 'Certificados', 'Certificados emitidos automaticamente para quem atingiu o mínimo de presença.');
         if (feat && feat.editar) {
           html += _h2('<span class="ms ms-sm">edit</span> Gerenciar participantes')
-            + _card('check_circle', 'Confirmar presença', 'Marque a presença de cada participante por sessão. Participantes com presença suficiente recebem certificado automaticamente.')
+            + _card('check_circle', 'Confirmar presença', 'Marque a presença de cada participante por sessão. O sistema calcula a frequência acumulada de cada inscrito.')
+            + _card('workspace_premium', 'Gerar certificado', 'Após confirmar as presenças, gere o certificado de cada participante que atingiu a frequência mínima (padrão: 75%). O sistema bloqueia a geração se a frequência for insuficiente.')
             + _card('pending_actions', 'Promover da fila de espera', 'Quando um inscrito cancela, o próximo da fila de espera é promovido automaticamente.')
             + _card('send', 'Enviar pesquisa de satisfação', 'Dispare a pesquisa pós-evento para todos os participantes confirmados.');
         }
@@ -343,18 +343,19 @@ var ManualUI = (function () {
     },
 
     { id:'aprovacoes', label:'Aprovações', icone:'task_alt', modulo:'ESPACOS',
-      tags:['aprovação','pendente','reserva','solicitação','recusar','aceitar'],
-      descricao:'Central de solicitações de reservas e ações aguardando análise',
+      tags:['aprovação','pendente','reserva','solicitação','recusar','aceitar','acesso','carro','permissão'],
+      descricao:'Central de solicitações aguardando análise: reservas, acessos, veículos e permissões',
       content: function(papel, feat) {
-        return _p('A central de Aprovações reúne todas as solicitações que precisam da sua avaliação antes de serem confirmadas.')
-          + _h2('<span class="ms ms-sm">inbox</span> O que aparece aqui')
-          + _card('meeting_room', 'Reservas de espaço', 'Solicitações de uso de espaços físicos aguardando aprovação.')
-          + _card('event', 'Ações culturais', 'Propostas de novas ações enviadas para análise.')
+        return _p('A central de Aprovações reúne as solicitações que precisam da sua avaliação, organizadas em abas por tipo.')
+          + _h2('<span class="ms ms-sm">tab</span> As abas')
+          + _card('meeting_room', 'Reservas', 'Solicitações de uso de espaços físicos aguardando aprovação ou recusa.')
+          + _card('person_check', 'Acessos', 'Novos usuários do domínio aguardando que você defina o perfil de acesso deles ao sistema.')
+          + _card('directions_car', 'Carros', 'Solicitações de uso do veículo institucional aguardando aprovação.')
+          + _card('manage_accounts', 'Permissões', 'Solicitações de elevação de permissão de acesso de colaboradores já cadastrados.')
           + _h2('<span class="ms ms-sm">how_to_vote</span> Como analisar')
-          + _card('visibility', '1. Revisar a solicitação', 'Leia todos os detalhes: solicitante, espaço/ação, data, propósito e observações.')
+          + _card('visibility', '1. Revisar a solicitação', 'Leia todos os detalhes: solicitante, espaço/veículo, data, propósito e observações.')
           + _card('check_circle', '2. Aprovar', 'Clique em Aprovar para confirmar. A pessoa é notificada imediatamente.')
-          + _card('cancel', '3. Recusar com justificativa', 'Se houver conflito ou problema, recuse e escreva o motivo. A pessoa poderá ajustar e reenviar.')
-          + _calloutInfo('Solicitações pendentes há mais de 48h aparecem destacadas. Tente analisar sempre dentro desse prazo.');
+          + _card('cancel', '3. Recusar com justificativa', 'Se houver conflito ou problema, recuse e escreva o motivo. A pessoa poderá ajustar e reenviar.');
       }
     },
 
