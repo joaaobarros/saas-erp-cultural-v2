@@ -47,7 +47,7 @@ var ManualUI = (function () {
     'reservas-carro': 'reservas-carro',
     'pessoas':        'pessoas',
     'ponto':          'ponto',
-    'rh':             'rh',
+    'rh':             'pessoas',
     'contratacoes':   'contratacoes',
     'escuta':         'escuta',
     'financeiro':     'financeiro',
@@ -125,15 +125,11 @@ var ManualUI = (function () {
   // ─── Definição das seções ─────────────────────────────────────────────────
 
   var _GRUPOS = [
-    { label: 'GERAL',         ids: ['home','dashboard'] },
-    { label: 'PROGRAMAÇÃO',   ids: ['acoes','estrategia','publico','parcerias','acervo'] },
-    { label: 'ESPAÇOS',       ids: ['espacos','aprovacoes','reservas-carro'] },
-    { label: 'PESSOAS & RH',  ids: ['pessoas','ponto','rh','contratacoes','escuta','escuta-lgpd'] },
-    { label: 'FINANCEIRO',    ids: ['financeiro'] },
-    { label: 'OPERAÇÃO',      ids: ['taskhub','tarefas','reunioes'] },
-    { label: 'COMUNICAÇÃO',   ids: ['comunicacao','balcao'] },
-    { label: 'VOLUNTARIADO',  ids: ['voluntarios','agentes'] },
-    { label: 'SISTEMA',       ids: ['relatorios','admin'] }
+    { label: 'PRINCIPAL',    ids: ['home','dashboard','taskhub','acoes','estrategia','parcerias','acervo','publico','espacos','aprovacoes','reservas-carro'] },
+    { label: 'GESTÃO',       ids: ['rh','pessoas','ponto','escuta','escuta-lgpd','contratacoes','financeiro','tarefas','reunioes'] },
+    { label: 'OPERACIONAL',  ids: ['comunicacao','balcao','relatorios'] },
+    { label: 'VOLUNTARIADO', ids: ['voluntarios','agentes'] },
+    { label: 'SISTEMA',      ids: ['admin'] }
   ];
 
   var _SECOES_DEF = [
@@ -176,7 +172,7 @@ var ManualUI = (function () {
 
     // ── PROGRAMAÇÃO ───────────────────────────────────────────────────────
 
-    { id:'acoes', label:'Ações Culturais', icone:'event', modulo:'ACOES',
+    { id:'acoes', label:'Ações', icone:'event', modulo:'ACOES',
       tags:['ação','evento','cultural','criar','editar','aprovar','agenda','publicar','mapa'],
       descricao:'Planejamento, execução e acompanhamento de ações culturais',
       content: function(papel, feat) {
@@ -218,20 +214,20 @@ var ManualUI = (function () {
       content: function(papel, feat) {
         var html = _p('O módulo de Estratégia conecta o planejamento de longo prazo com a execução do dia a dia por meio de objetivos mensuráveis.')
           + _h2('<span class="ms ms-sm">flag</span> O que você encontra aqui')
-          + _card('flag', 'Objetivos estratégicos', 'Os grandes objetivos da instituição, organizados por eixos temáticos.')
-          + _card('bar_chart', 'Indicadores (KPIs)', 'Métricas que mostram se os objetivos estão sendo atingidos. Cada indicador tem meta e prazo definidos.')
-          + _card('warning', 'Riscos', 'Ameaças mapeadas para cada objetivo, com probabilidade, impacto e plano de mitigação.')
-          + _card('calendar_month', 'Calendário estratégico', 'Visão de todos os marcos e entregas planejados ao longo do ano.');
+          + _card('flag', 'Objetivos estratégicos', 'Os grandes objetivos da instituição, organizados por horizonte de planejamento: curto prazo (1 ano), médio prazo (3 anos) ou longo prazo (5 anos).')
+          + _card('bar_chart', 'KPIs Reais', 'Métricas calculadas automaticamente a partir dos dados do sistema: taxa de ocupação de espaços, conclusão de ações no prazo, custo por ação, satisfação do público, execução orçamentária e renovação de agentes.')
+          + _card('warning', 'Riscos do Mês', 'Alertas gerados automaticamente a partir de dados reais: ações com prazo vencido, objetivos sem ações vinculadas, contratos vencendo em 30 dias e índice de clima organizacional baixo.')
+          + _card('calendar_month', 'Calendário estratégico', 'Visão cronológica de todos os objetivos e suas ações vinculadas, com datas de início e prazo final.');
         if (feat && feat.editar) {
           html += _h2('<span class="ms ms-sm">edit</span> Gerenciar a estratégia')
-            + _card('add', 'Criar objetivo', 'Defina título, eixo, responsável e prazo. Vincule indicadores para medir o avanço.')
-            + _card('trending_up', 'Atualizar indicadores', 'Registre o valor atual de cada KPI para manter o painel sempre atualizado.');
+            + _card('add', 'Criar objetivo', 'Defina título, horizonte de planejamento, responsável e prazo. Vincule ações culturais ao objetivo para acompanhar o avanço estratégico.')
+            + _card('link', 'Vincular ações', 'Associe ações culturais existentes ao objetivo estratégico. O calendário e os KPIs são recalculados automaticamente.');
         }
         return html;
       }
     },
 
-    { id:'publico', label:'Público & Inscrições', icone:'groups', modulo:'PUBLICO',
+    { id:'publico', label:'Público', icone:'groups', modulo:'PUBLICO',
       tags:['público','inscrição','presença','certificado','pesquisa','satisfação','lista espera'],
       descricao:'Inscrições de participantes, presenças, pesquisas e certificados',
       content: function(papel, feat) {
@@ -292,7 +288,7 @@ var ManualUI = (function () {
 
     // ── ESPAÇOS ───────────────────────────────────────────────────────────
 
-    { id:'espacos', label:'Espaços & Reservas', icone:'meeting_room', modulo:'ESPACOS',
+    { id:'espacos', label:'Infraestrutura', icone:'meeting_room', modulo:'ESPACOS',
       tags:['espaço','sala','reserva','disponibilidade','calendário','chave','ativo','inventário'],
       descricao:'Consulta e reserva de espaços físicos do CCBJ',
       content: function(papel, feat) {
@@ -437,7 +433,7 @@ var ManualUI = (function () {
       }
     },
 
-    { id:'rh', label:'Recursos Humanos', icone:'work', modulo:'PESSOAS',
+    { id:'rh', label:'Pessoas / RH — Configurações', icone:'work', modulo:'PESSOAS',
       tags:['rh','cargo','pcc','plano de cargos','setor','escala','turno','departamento'],
       descricao:'Configurações de RH: cargos, plano de carreiras e escalas',
       content: function(papel, feat) {
@@ -480,7 +476,7 @@ var ManualUI = (function () {
       }
     },
 
-    { id:'escuta', label:'Escuta Institucional', icone:'psychology', modulo:'PESSOAS',
+    { id:'escuta', label:'Escuta', icone:'psychology', modulo:'PESSOAS',
       tags:['escuta','clima','pesquisa','pulse','bem-estar','anônimo','responder','satisfação'],
       descricao:'Pesquisa de clima organizacional e canal de escuta contínua',
       content: function(papel, feat) {
@@ -568,7 +564,7 @@ var ManualUI = (function () {
 
     // ── FINANCEIRO ────────────────────────────────────────────────────────
 
-    { id:'financeiro', label:'Financeiro & Contratos', icone:'account_balance', modulo:'FINANCEIRO',
+    { id:'financeiro', label:'Financeiro', icone:'account_balance', modulo:'FINANCEIRO',
       tags:['financeiro','contrato','rubrica','orçamento','holerite','folha','pagamento','movimentação'],
       descricao:'Contratos, rubricas, orçamento e processamento financeiro',
       content: function(papel, feat) {
@@ -701,7 +697,7 @@ var ManualUI = (function () {
 
     // ── COMUNICAÇÃO ───────────────────────────────────────────────────────
 
-    { id:'comunicacao', label:'Comunicação & RECE', icone:'campaign', modulo:'COMUNICACAO',
+    { id:'comunicacao', label:'Comunicação', icone:'campaign', modulo:'COMUNICACAO',
       tags:['comunicação','rece','demanda','entrega','evento externo','divulgação','comunicado','email'],
       descricao:'Demandas de comunicação, entregas e registro de eventos para divulgação',
       content: function(papel, feat) {

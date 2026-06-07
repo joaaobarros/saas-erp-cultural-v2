@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix: manual — divergências passo a passo (2026-06-06)** — Deploy @665. 4 divergências corrigidas: (1) Ações Culturais: FSM reescrito com estados reais (Planejada → Em Produção → Em execução → Concluída → Arquivada); "Rascunho/Em análise/Aprovada" removidos. (2) Aprovações: tabs reais descritas (Reservas/Acessos/Carros/Permissões); "Ações culturais" e afirmação de 48h removidos. (3) Público: certificado agora descrito como ação explícita (frequência mínima 75%), não automática.
+**Fase atual**: **Fix: manual sidebar — incompatível com sidebar do sistema (2026-06-06)** — Deploy @667. `_GRUPOS` reestruturado para espelhar exatamente os grupos do `_MODULOS_MENU` do sistema (PRINCIPAL/GESTÃO/OPERACIONAL/VOLUNTARIADO/SISTEMA). Labels alinhados: "Ações Culturais"→"Ações", "Público & Inscrições"→"Público", "Espaços & Reservas"→"Infraestrutura", "Recursos Humanos"→"Pessoas / RH — Configurações", "Escuta Institucional"→"Escuta", "Financeiro & Contratos"→"Financeiro", "Comunicação & RECE"→"Comunicação". Rota 'rh' remapeada para seção 'pessoas' (Colaboradores = primeira aba).
+
+**Fase anterior**: **Fix: manual — divergências passo a passo (2026-06-06)** — Deploy @665. 4 divergências corrigidas: (1) Ações Culturais: FSM reescrito com estados reais (Planejada → Em Produção → Em execução → Concluída → Arquivada); "Rascunho/Em análise/Aprovada" removidos. (2) Aprovações: tabs reais descritas (Reservas/Acessos/Carros/Permissões); "Ações culturais" e afirmação de 48h removidos. (3) Público: certificado agora descrito como ação explícita (frequência mínima 75%), não automática.
 
 **Fase anterior**: **Fix: manual sidebar — texto ativo invisível (2026-06-06)** — Deploy @663. `.manual-nav-item.ativo` usava `background: var(--sidebar-active)` (rgba branco transparente, projetado para a sidebar escura) + `color: #fff`, deixando o texto sumido no fundo claro do painel do manual. Corrigido para `background: var(--color-primary-lt)` + `color: var(--color-primary)`.
 
