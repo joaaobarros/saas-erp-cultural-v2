@@ -466,9 +466,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 37 (2026-06-06) → SESSÃO 38
+## HANDOFF ATUAL — SESSÃO 38 (2026-06-07) → SESSÃO 39
 
-### Estado atual: ~270 bugs registrados · Deploy @668 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @673 (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s38)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @673 | Fix: botões externos — `ScriptApp.getService().getUrl()` | 4 links que abriam `googleusercontent.com` em vez do URL `/exec` de produção corrigidos. Causa raiz: dentro do iframe GAS, `window.location.href` e URLs relativas resolvem para o host do iframe. Solução: `template.serviceUrl = ScriptApp.getService().getUrl()` no `_renderAppInterno` de `router.gs`; `index.html` usa `<?= serviceUrl ?>` nos 4 pontos: botão "Visualizar Cadastro" (Admin), link "Abrir Wizard de Setup", link "Portal Público" (Agentes), hint do checklist de provisionamento. |
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (nesta ordem) — pendentes de sessões anteriores:**
+  1. `fase73_estoque_prepararIndice()` — cria abas **ESTOQUE** (não MASTER) + seed dep-01/dep-02
+  2. `fase78_inspecionar_ativos_v1()` — confirmar campos ESPACOS.Ativos
+  3. `fase78_migrar_ativos_para_estoque()` — migrar bens patrimoniais
+- **Próximos bugs de auditoria:** TAR-04 (gatilhos automáticos), HUB-13 (dayoff aniversário)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 37 (2026-06-06) → SESSÃO 38
+
+### Estado anterior: ~270 bugs registrados · Deploy @668 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s37)
 

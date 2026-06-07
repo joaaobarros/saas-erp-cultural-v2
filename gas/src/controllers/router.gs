@@ -83,6 +83,7 @@ function _renderAppInterno(e) {
       var template = HtmlService.createTemplateFromFile('frontend/index');
       template.orgConfig = getPublicOrgConfig();
       template.usuarioEmail = email;
+      template.serviceUrl = ScriptApp.getService().getUrl();
       return template.evaluate()
         .setTitle(getOrgConfig().titulo)
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
