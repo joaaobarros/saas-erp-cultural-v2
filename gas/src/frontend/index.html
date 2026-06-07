@@ -6771,9 +6771,14 @@ select.form-control { cursor: pointer; }
             <h1 class="view-title">Meu Centro de Controle</h1>
             <p class="view-subtitle">Todas as suas pendências em um só lugar, priorizadas por urgência</p>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="TaskHubUI.carregar()" data-bg-skip="1">
-            <span class="ms" style="font-size:16px">refresh</span> Atualizar
-          </button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary btn-sm" onclick="Router.navegar('tarefas')" data-bg-skip="1">
+              <span class="ms ms-sm">add_task</span> Tarefas
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="TaskHubUI.carregar()" data-bg-skip="1">
+              <span class="ms" style="font-size:16px">refresh</span> Atualizar
+            </button>
+          </div>
         </div>
         <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:16px;">
@@ -9970,31 +9975,117 @@ var TarefasUI = (function() {
         + '<p style="font-size:13px;color:var(--muted)">Nenhuma tarefa cadastrada.</p></div>';
       return;
     }
+
+    var _PRIORIDADE_CORES = { critica:'#ef4444', alta:'#f59e0b', media:'var(--color-primary)', baixa:'#94a3b8' };
+    var _STATUS_PROX = { pendente:'em_andamento', em_andamento:'bloqueada', bloqueada:'pendente' };
+    var _STATUS_PROX_LABEL = { pendente:'Iniciar', em_andamento:'Bloquear', bloqueada:'Reabrir' };
+
     el.innerHTML = lista.map(function(t) {
-      var concluir = t.status !== 'concluida' && t.status !== 'cancelada'
-        ? '<button class="btn btn-ghost btn-sm btn-concluir-tarefa" data-id="'+escaparHtml(t.id)+'"><span class="ms ms-sm">check</span> Concluir</button>'
+      var sid      = escaparHtml(t.id || '');
+      var ativo    = t.status !== 'concluida' && t.status !== 'cancelada';
+      var cor      = _PRIORIDADE_CORES[t.prioridade] || 'var(--color-primary)';
+
+      // Pill de vínculo
+      var vinculoTipo  = t.acaoId ? 'acao' : t.reservaId ? 'reserva' : t.contratoId ? 'contrato' : '';
+      var vinculoId    = t.acaoId || t.reservaId || t.contratoId || '';
+      var vinculoIcone = { acao:'campaign', reserva:'event_available', contrato:'description' }[vinculoTipo] || '';
+      var vinculoLabel = { acao:'Ação', reserva:'Reserva', contrato:'Contrato' }[vinculoTipo] || '';
+      var vinculoPill  = vinculoTipo
+        ? '<button class="btn btn-ghost btn-sm btn-ir-vinculo" data-tipo="'+vinculoTipo+'" data-id="'+escaparHtml(vinculoId)+'" style="font-size:11px;padding:2px 8px;gap:3px;">'
+            + '<span class="ms ms-sm">'+vinculoIcone+'</span>'+vinculoLabel+'</button>'
+        : '<span style="font-size:11px;color:var(--muted);">— sem vínculo —</span>';
+
+      var prazoTxt = t.prazo ? fmtDataPtBR((t.prazo||'').slice(0,10)) : '—';
+      var hoje     = new Date().toISOString().slice(0,10);
+      var atrasada = t.prazo && t.prazo.slice(0,10) < hoje && ativo;
+      var prazoStyle = atrasada ? 'color:#ef4444;font-weight:600;' : 'color:var(--muted);';
+
+      var btnConcluir = ativo
+        ? '<button class="btn btn-ghost btn-sm btn-concluir-tarefa" data-id="'+sid+'" style="white-space:nowrap;">'
+            + '<span class="ms ms-sm">check_circle</span> Concluir</button>'
         : '';
-      var vinculo = t.acaoId
-        ? '<span style="font-size:11px;color:var(--color-accent);font-weight:600;"><span class="ms ms-sm">campaign</span> Ação</span>'
-        : t.reservaId
-        ? '<span style="font-size:11px;color:var(--color-info);font-weight:600;"><span class="ms ms-sm">event_available</span> Reserva</span>'
-        : t.contratoId
-        ? '<span style="font-size:11px;color:var(--color-success);font-weight:600;"><span class="ms ms-sm">description</span> Contrato</span>'
+      var btnProxStatus = ativo && _STATUS_PROX[t.status]
+        ? '<button class="btn btn-ghost btn-sm btn-prox-status" data-id="'+sid+'" data-prox="'+_STATUS_PROX[t.status]+'" style="white-space:nowrap;font-size:11px;">'
+            + '<span class="ms ms-sm">arrow_forward</span>'+(_STATUS_PROX_LABEL[t.status]||'Avançar')+'</button>'
         : '';
-      var prazo = t.prazo ? '<span style="font-size:11px;color:var(--muted);"><span class="ms ms-sm">schedule</span> ' + fmtDataPtBR(t.prazo.slice(0,10)) + '</span>' : '';
-      return '<div class="pendente-item">'
-        + '<div class="pendente-info">'
-        + '<div class="pendente-nome">'+escaparHtml(t.titulo)+'</div>'
-        + '<div class="pendente-meta" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-        + '<span>'+escaparHtml(t.responsavel || 'sem responsável')+' · '+escaparHtml(t.prioridade || 'media')+'</span>'
-        + prazo + vinculo
+
+      var descricao = t.descricao ? '<p style="font-size:12px;color:var(--muted);margin:0;line-height:1.5;">'+escaparHtml(t.descricao)+'</p>' : '';
+      var detalheId = 'tf-det-' + sid;
+
+      return '<div class="tf-card" style="border-left:3px solid '+cor+';border-radius:0 8px 8px 0;background:var(--surface);margin-bottom:4px;overflow:hidden;">'
+        // ── Cabeçalho clicável ──────────────────────────────────────────────
+        + '<div class="tf-header" data-id="'+sid+'" onclick="TarefasUI.toggleDetalhe(\''+detalheId+'\')" '
+            + 'style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;'
+            + 'border-bottom:1px solid transparent;transition:background .15s;user-select:none;"'
+            + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+          + '<span class="ms ms-sm" style="color:'+cor+';flex-shrink:0;">'
+            + (t.status==='concluida'?'check_circle':t.status==='cancelada'?'cancel':'radio_button_unchecked')+'</span>'
+          + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+              + (t.status==='concluida'?'text-decoration:line-through;color:var(--muted);':'')+'">'+escaparHtml(t.titulo)+'</div>'
+            + '<div style="font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:1px;">'
+              + '<span>'+escaparHtml(t.responsavel||'sem responsável')+'</span>'
+              + (atrasada ? '<span style="color:#ef4444;font-weight:600;"><span class="ms ms-sm">warning</span>Atrasada</span>' : '')
+              + '</div>'
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'
+            + _badge(t.status)
+            + '<span class="ms" style="font-size:16px;color:var(--muted);transition:transform .2s;" id="'+detalheId+'-chev">expand_more</span>'
+          + '</div>'
         + '</div>'
-        + '</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-        + _badge(t.status) + concluir + '</div></div>';
+        // ── Painel expandível ────────────────────────────────────────────────
+        + '<div id="'+detalheId+'" style="display:none;padding:12px 14px 14px 32px;background:var(--bg);border-top:1px solid var(--border);">'
+          + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px;">'
+            + '<div><div style="font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px;">Prazo</div>'
+              + '<div style="font-size:13px;'+prazoStyle+'"><span class="ms ms-sm">schedule</span> '+prazoTxt+'</div></div>'
+            + '<div><div style="font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px;">Prioridade</div>'
+              + '<div style="font-size:13px;color:'+cor+';font-weight:600;">'+escaparHtml(t.prioridade||'media')+'</div></div>'
+            + '<div><div style="font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px;">Vínculo</div>'
+              + vinculoPill+'</div>'
+          + '</div>'
+          + (descricao ? '<div style="margin-bottom:10px;">'+descricao+'</div>' : '')
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+            + btnConcluir + btnProxStatus
+          + '</div>'
+        + '</div>'
+      + '</div>';
     }).join('');
+
+    // Delegação de eventos
     Array.prototype.slice.call(el.querySelectorAll('.btn-concluir-tarefa')).forEach(function(btn) {
-      btn.addEventListener('click', function() { concluir(this.getAttribute('data-id'), this); });
+      btn.addEventListener('click', function(e) { e.stopPropagation(); concluir(this.getAttribute('data-id'), this); });
     });
+    Array.prototype.slice.call(el.querySelectorAll('.btn-prox-status')).forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        var prox = this.getAttribute('data-prox');
+        BtnGuard.wrap(this, 'Atualizando…', function(done) {
+          GAS.tarefas.mudarStatus(id, prox, '', function(r) {
+            done();
+            if (!r || !r.ok) { Toast.erro('Erro ao atualizar status.'); return; }
+            carregar();
+          }, function(err) { done(); Toast.erro(err.message||err); });
+        });
+      });
+    });
+    Array.prototype.slice.call(el.querySelectorAll('.btn-ir-vinculo')).forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tipo = this.getAttribute('data-tipo');
+        var rota = { acao:'acoes', reserva:'espacos', contrato:'financeiro' }[tipo] || tipo;
+        Router.navegar(rota);
+      });
+    });
+  }
+
+  function toggleDetalhe(id) {
+    var el   = document.getElementById(id);
+    var chev = document.getElementById(id + '-chev');
+    if (!el) return;
+    var aberto = el.style.display !== 'none';
+    el.style.display  = aberto ? 'none' : 'block';
+    if (chev) chev.style.transform = aberto ? '' : 'rotate(180deg)';
   }
 
   function carregar() {
@@ -10086,7 +10177,7 @@ var TarefasUI = (function() {
     _carregarSelectUsuariosHelper('tf-responsavel', (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '', '— Responsável —');
   }
 
-  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir, atualizarVinculo: atualizarVinculo };
+  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir, atualizarVinculo: atualizarVinculo, toggleDetalhe: toggleDetalhe };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -25247,6 +25338,7 @@ var App = (function() {
     { secao:'PRINCIPAL' },
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
     { id:'taskhub',     label:'Meu Centro',      icone:'hub',                     modulo:null },
+    { id:'tarefas',     label:'Tarefas',         icone:'task_alt',                modulo:'TAREFAS' },
     { id:'dashboard',   label:'Dashboard',      icone:'dashboard',              modulo:null },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
@@ -25258,7 +25350,6 @@ var App = (function() {
     { id:'escuta',        label:'Escuta',          icone:'hearing',  badge:'badgeEscutaAtiva', modulo:'PESSOAS' },
     { id:'contratacoes',  label:'Contratações',    icone:'handshake',               modulo:'PESSOAS' },
     { id:'financeiro',    label:'Financeiro',      icone:'account_balance_wallet',  modulo:'FINANCEIRO' },
-    { id:'tarefas',     label:'Tarefas',         icone:'task_alt',                modulo:'TAREFAS' },
     { id:'reunioes',    label:'Reuniões',         icone:'groups',                  modulo:'REUNIOES' },
     { secao:'OPERACIONAL' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },

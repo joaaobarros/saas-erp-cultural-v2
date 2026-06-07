@@ -476,6 +476,7 @@
 |---|---|---|
 | @675 | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
 | @677 | HOME-01/02/03/04 — Home contextual por papel | `_renderizarHome()` bifurcada em `_renderHomeAdmin()` (stats de sistema para superadmin/admin) e `_renderHomeContextual()` (cards async de tarefas/encaminhamentos/urgentes/aprovações via `ctrl_taskhub_minha_caixa()`; acesso rápido por papel; widget "Aniversariantes da Semana" via `ctrl_taskhub_aniversariantes()`). Novo `#home-aniversariantes` no HTML. |
+| @676 | Fix: Tarefas + Meu Centro + cards expandíveis | Tarefas movida para PRINCIPAL no sidebar (após Meu Centro); botão "Tarefas" no header do Meu Centro; TarefasUI com cards click-to-expand (painel detalhe: prazo, prioridade, vínculo, Concluir + avançar status); borda colorida por prioridade; atrasadas em vermelho; títulos auto-criados sem ID bruto da reserva. |
 
 ### Pendentes / próxima ação
 - **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.

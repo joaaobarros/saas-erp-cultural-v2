@@ -26,7 +26,7 @@ var EventHandlerRegistry = (function () {
         try {
           var ctx = typeof evt.contexto === 'string' ? JSON.parse(evt.contexto || '{}') : (evt.contexto || {});
           TarefaEngine.criarAutomatica('reserva_aprovada', evt.entidadeId, evt.orgId, 'sistema', {
-            titulo: 'Preparar espaço para reserva: ' + (ctx.salaNome || evt.entidadeId),
+            titulo: 'Preparar espaço para reserva' + (ctx.salaNome ? ': ' + ctx.salaNome : ''),
             descricao: 'Reserva confirmada em ' + (ctx.salaNome || '') +
                        '. Data: ' + (ctx.data || '') +
                        '. Responsável: ' + (evt.usuario || ''),
