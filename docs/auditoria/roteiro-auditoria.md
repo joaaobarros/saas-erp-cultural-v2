@@ -474,7 +474,7 @@
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| pendente | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
+| @675 | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
 
 ### Pendentes / próxima ação
 - **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.
