@@ -466,17 +466,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 39 (2026-06-07) → SESSÃO 40
+## HANDOFF ATUAL — SESSÃO 40 (2026-06-07) → SESSÃO 41
 
 ### Estado atual: ~270 bugs registrados · Deploy pendente (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s39)
+### O que foi feito nesta sessão (s40)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @675 | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
+| pendente | Fix: Tarefas como 4ª aba do Meu Centro | `#th-tab-tarefas` criada dentro de `#view-taskhub` com todo o conteúdo do formulário Nova Tarefa + lista expandível. `TaskHubUI.setTab()` ampliado para 4 abas; botão ativo por `data-tab`; chama `TarefasUI.aoAbrir()` ao ativar. `abrirItem('tarefa',...)` → `setTab('tarefas', null)` em vez de Router.navegar. Entrada `tarefas` removida do `_MODULOS_MENU`. `Router.registrar('tarefas', ...)` redireciona para taskhub+aba (compatibilidade cross-nav). Botões "Tarefas" no header e "Nova Tarefa" no meuDia removidos. `#view-tarefas` mantido vazio como stub. |
 | @677 | HOME-01/02/03/04 — Home contextual por papel | `_renderizarHome()` bifurcada em `_renderHomeAdmin()` (stats de sistema para superadmin/admin) e `_renderHomeContextual()` (cards async de tarefas/encaminhamentos/urgentes/aprovações via `ctrl_taskhub_minha_caixa()`; acesso rápido por papel; widget "Aniversariantes da Semana" via `ctrl_taskhub_aniversariantes()`). Novo `#home-aniversariantes` no HTML. |
-| @676 | Fix: Tarefas + Meu Centro + cards expandíveis | Tarefas movida para PRINCIPAL no sidebar (após Meu Centro); botão "Tarefas" no header do Meu Centro; TarefasUI com cards click-to-expand (painel detalhe: prazo, prioridade, vínculo, Concluir + avançar status); borda colorida por prioridade; atrasadas em vermelho; títulos auto-criados sem ID bruto da reserva. |
+| @676 | Fix: Tarefas + Meu Centro + cards expandíveis | Tarefas movida para PRINCIPAL no sidebar (após Meu Centro); botão "Tarefas" no header do Meu Centro; TarefasUI com cards click-to-expand; borda colorida por prioridade; atrasadas em vermelho; títulos auto-criados sem ID bruto da reserva. |
+| @675 | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico. |
 
 ### Pendentes / próxima ação
 - **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.

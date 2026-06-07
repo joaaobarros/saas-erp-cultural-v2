@@ -2648,81 +2648,7 @@ select.form-control { cursor: pointer; }
       </div><!-- /view-reservas-carro -->
 
       <!-- VIEW: Tarefas -->
-      <div id="view-tarefas" class="view">
-        <div class="view-header">
-          <div>
-            <h1 class="view-title">Tarefas</h1>
-            <p class="view-subtitle">Centro operacional de tarefas da equipe</p>
-          </div>
-        </div>
-
-        <div class="stats-grid" id="tarefas-metricas"></div>
-
-        <div class="card">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">add_task</span> Nova Tarefa
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Título *</label>
-              <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Responsável</label>
-              <select id="tf-responsavel" class="form-control"><option value="">— Responsável —</option></select>
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Prioridade</label>
-              <select id="tf-prioridade" class="form-control">
-                <option value="media">Média</option>
-                <option value="alta">Alta</option>
-                <option value="critica">Crítica</option>
-                <option value="baixa">Baixa</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Prazo</label>
-              <input id="tf-prazo" class="form-control" type="date">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Vínculo</label>
-              <div style="display:flex;gap:6px;">
-                <select id="tf-vinculo-tipo" class="select-sm" style="min-width:110px;" onchange="TarefasUI.atualizarVinculo()">
-                  <option value="">— Nenhum —</option>
-                  <option value="acao">Ação</option>
-                  <option value="reserva">Reserva</option>
-                  <option value="contrato">Contrato</option>
-                </select>
-                <select id="tf-vinculo-id" class="form-control" style="display:none;"><option value="">Carregando…</option></select>
-              </div>
-            </div>
-            <button class="btn btn-primary" id="btn-tarefa-criar" onclick="TarefasUI.criar()" style="white-space:nowrap;">
-              <span class="ms ms-sm">save</span> Criar Tarefa
-            </button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div class="card-titulo">
-              <span class="ms">task_alt</span> Lista de Tarefas
-            </div>
-            <button class="btn btn-ghost btn-sm" id="btn-tarefas-recarregar" onclick="TarefasUI.carregar()">
-              <span class="ms ms-sm">refresh</span> Atualizar
-            </button>
-          </div>
-          <div id="tarefas-lista">
-            <div class="empty-state" style="min-height:120px;padding:20px;">
-              <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
-              <p style="font-size:13px;color:var(--muted)">Carregando tarefas…</p>
-            </div>
-          </div>
-        </div>
-      </div><!-- /view-tarefas -->
+      <div id="view-tarefas" class="view"><!-- conteúdo movido para #th-tab-tarefas no TaskHub --></div>
 
       <!-- VIEW: Pessoas — Fase 3 (tabs: Colaboradores | Afastamentos | Ocorrências) -->
       <div id="view-pessoas" class="view">
@@ -2761,7 +2687,9 @@ select.form-control { cursor: pointer; }
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
               <div class="form-group"><label class="form-label">Nome completo *</label><input id="pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
               <div class="form-group"><label class="form-label">E-mail institucional</label><input id="pf-email-inst" class="form-input" type="email" placeholder="nome@org.br"></div>
-              <div class="form-group"><label class="form-label">Setor</label><input id="pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
+              <div class="form-group"><label class="form-label">Setor</label>
+                <select id="pf-setor" class="form-input"><option value="">Selecione o setor…</option></select>
+              </div>
               <div class="form-group"><label class="form-label">Cargo</label>
                 <select id="pf-cargo" class="form-input">
                   <option value="">Selecione o cargo…</option>
@@ -6772,9 +6700,6 @@ select.form-control { cursor: pointer; }
             <p class="view-subtitle">Todas as suas pendências em um só lugar, priorizadas por urgência</p>
           </div>
           <div style="display:flex;gap:6px;">
-            <button class="btn btn-primary btn-sm" onclick="Router.navegar('tarefas')" data-bg-skip="1">
-              <span class="ms ms-sm">add_task</span> Tarefas
-            </button>
             <button class="btn btn-secondary btn-sm" onclick="TaskHubUI.carregar()" data-bg-skip="1">
               <span class="ms" style="font-size:16px">refresh</span> Atualizar
             </button>
@@ -6782,22 +6707,20 @@ select.form-control { cursor: pointer; }
         </div>
         <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:16px;">
-          <button class="tab-btn ativa" onclick="TaskHubUI.setTab('meuDia',this)" data-bg-skip="1">
+          <button class="tab-btn ativa" onclick="TaskHubUI.setTab('meuDia',this)" data-tab="meuDia" data-bg-skip="1">
             <span class="ms" style="font-size:15px;vertical-align:-3px">today</span> Meu Dia
           </button>
-          <button class="tab-btn" onclick="TaskHubUI.setTab('meuTime',this)" data-bg-skip="1">
+          <button class="tab-btn" onclick="TaskHubUI.setTab('meuTime',this)" data-tab="meuTime" data-bg-skip="1">
             <span class="ms" style="font-size:15px;vertical-align:-3px">group</span> Meu Time
           </button>
-          <button class="tab-btn" onclick="TaskHubUI.setTab('produtividade',this)" data-bg-skip="1">
+          <button class="tab-btn" onclick="TaskHubUI.setTab('produtividade',this)" data-tab="produtividade" data-bg-skip="1">
             <span class="ms" style="font-size:15px;vertical-align:-3px">insights</span> Produtividade
+          </button>
+          <button class="tab-btn" onclick="TaskHubUI.setTab('tarefas',this)" data-tab="tarefas" data-bg-skip="1">
+            <span class="ms" style="font-size:15px;vertical-align:-3px">task_alt</span> Tarefas
           </button>
         </div>
         <div id="th-tab-meuDia">
-          <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-            <button class="btn btn-primary btn-sm" onclick="Router.navegar('tarefas')" data-bg-skip="1">
-              <span class="ms ms-sm">add_task</span> Nova Tarefa
-            </button>
-          </div>
           <div id="th-caixa-container"><p class="muted-text">Carregando pendências…</p></div>
           <div id="th-aniversariantes-container" style="margin-top:20px;"></div>
         </div>
@@ -6814,6 +6737,72 @@ select.form-control { cursor: pointer; }
             </select>
           </div>
           <div id="th-prod-container"><p class="muted-text">Carregando indicadores…</p></div>
+        </div>
+        <div id="th-tab-tarefas" class="oculto">
+          <div class="stats-grid" id="tarefas-metricas"></div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo">
+                <span class="ms">add_task</span> Nova Tarefa
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Título *</label>
+                <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Responsável</label>
+                <select id="tf-responsavel" class="form-control"><option value="">— Responsável —</option></select>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Prioridade</label>
+                <select id="tf-prioridade" class="form-control">
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                  <option value="baixa">Baixa</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Prazo</label>
+                <input id="tf-prazo" class="form-control" type="date">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Vínculo</label>
+                <div style="display:flex;gap:6px;">
+                  <select id="tf-vinculo-tipo" class="select-sm" style="min-width:110px;" onchange="TarefasUI.atualizarVinculo()">
+                    <option value="">— Nenhum —</option>
+                    <option value="acao">Ação</option>
+                    <option value="reserva">Reserva</option>
+                    <option value="contrato">Contrato</option>
+                  </select>
+                  <select id="tf-vinculo-id" class="form-control" style="display:none;"><option value="">Carregando…</option></select>
+                </div>
+              </div>
+              <button class="btn btn-primary" id="btn-tarefa-criar" onclick="TarefasUI.criar()" style="white-space:nowrap;">
+                <span class="ms ms-sm">save</span> Criar Tarefa
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-titulo">
+                <span class="ms">task_alt</span> Lista de Tarefas
+              </div>
+              <button class="btn btn-ghost btn-sm" id="btn-tarefas-recarregar" onclick="TarefasUI.carregar()">
+                <span class="ms ms-sm">refresh</span> Atualizar
+              </button>
+            </div>
+            <div id="tarefas-lista">
+              <div class="empty-state" style="min-height:120px;padding:20px;">
+                <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
+                <p style="font-size:13px;color:var(--muted)">Carregando tarefas…</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div><!-- /view-taskhub -->
 
@@ -8057,7 +8046,9 @@ select.form-control { cursor: pointer; }
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label class="form-label">Nome completo *</label><input id="rh-pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
                 <div class="form-group"><label class="form-label">E-mail institucional</label><input id="rh-pf-email" class="form-input" type="email" placeholder="nome@org.br"></div>
-                <div class="form-group"><label class="form-label">Setor</label><input id="rh-pf-setor" class="form-input" type="text" placeholder="Ex: Comunicação"></div>
+                <div class="form-group"><label class="form-label">Setor</label>
+                  <select id="rh-pf-setor" class="form-input"><option value="">Selecione o setor…</option></select>
+                </div>
                 <div class="form-group"><label class="form-label">Cargo</label><select id="rh-pf-cargo" class="form-input"><option value="">Selecione…</option></select></div>
                 <div class="form-group"><label class="form-label">Vínculo</label>
                   <select id="rh-pf-vinculo" class="form-input">
@@ -10317,7 +10308,18 @@ var PessoasUI = (function() {
     document.getElementById('pf-id').value = dados && dados.id || '';
     document.getElementById('pf-nome').value = dados && dados.nome || '';
     document.getElementById('pf-email-inst').value = dados && dados.emailInstitucional || '';
-    document.getElementById('pf-setor').value = dados && dados.setor || '';
+    (function() {
+      var selS   = document.getElementById('pf-setor');
+      var _boot  = (App.getBoot && App.getBoot()) || {};
+      var sts    = _boot.setores || [];
+      var cur    = (dados && dados.setor) || '';
+      selS.innerHTML = '<option value="">Selecione o setor…</option>' +
+        sts.map(function(s) {
+          var id = s.id || s; var lbl = s.nome || s.label || s;
+          return '<option value="'+escaparHtml(id)+'"'+(cur===id?' selected':'')+'>'+escaparHtml(lbl)+'</option>';
+        }).join('');
+      if (cur && !sts.length) selS.innerHTML += '<option value="'+escaparHtml(cur)+'" selected>'+escaparHtml(cur)+'</option>';
+    })();
     _popularSelectCargo(dados && dados.cargo || '');
     document.getElementById('pf-vinculo').value = dados && dados.tipoVinculo || 'clt';
     document.getElementById('pf-admissao').value = dados && dados.dataAdmissao || '';
@@ -12055,7 +12057,14 @@ var ComprasUI = (function() {
   }
 
   function abrirNova() {
-    var boot = window._BOOT_DATA || {};
+    var _boot    = (App.getBoot && App.getBoot()) || {};
+    var setores  = _boot.setores || [];
+    var meuSetor = _boot.usuarioSetor || '';
+    var optsSetor = '<option value="">Setor solicitante…</option>' +
+      setores.map(function(s) {
+        var id = s.id || s; var lbl = s.nome || s.label || s;
+        return '<option value="'+escaparHtml(id)+'"'+(meuSetor===id?' selected':'')+'>'+escaparHtml(lbl)+'</option>';
+      }).join('');
     _abrirModalSimples(
       '<div style="padding:20px;max-width:520px;">'
       +'<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;color:var(--text);">Nova Solicitação de Compra</h3>'
@@ -12071,7 +12080,7 @@ var ComprasUI = (function() {
       +'<div class="form-group"><label class="form-label">Valor Unit. Estimado (R$)</label>'
       +'<input type="text" id="cmp-valor" class="form-input" placeholder="0,00"></div>'
       +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Departamento</label>'
-      +'<input type="text" id="cmp-depto" class="form-input" placeholder="Setor solicitante"></div>'
+      +'<select id="cmp-depto" class="form-input">'+optsSetor+'</select></div>'
       +'<div class="form-group" style="grid-column:1/-1"><label class="form-label">Justificativa</label>'
       +'<input type="text" id="cmp-just" class="form-input" placeholder="Motivo da aquisição"></div>'
       +'</div>'
@@ -24344,17 +24353,16 @@ var AcoesUI = (function() {
 
     // Popular select de setores (do boot) — pré-seleciona setor do usuário em nova ação
     var selSetor = document.getElementById('acao-setor');
-    if (selSetor && window._boot && window._boot.setores) {
-      var setores = window._boot.setores || [];
-      var setorPadrao = acao ? (acao.setor || '') : ((_boot.usuarioSetor) || '');
+    if (selSetor) {
+      var _acooBoot   = (App.getBoot && App.getBoot()) || {};
+      var setores     = _acooBoot.setores || [];
+      var setorPadrao = acao ? (acao.setor || '') : (_acooBoot.usuarioSetor || '');
       selSetor.innerHTML = '<option value="">Selecionar setor…</option>' +
         setores.map(function(s) {
           var id    = s.id || s;
           var label = s.nome || s.label || s;
           return '<option value="'+escaparHtml(id)+'"'+(setorPadrao===id?' selected':'')+'>'+escaparHtml(label)+'</option>';
         }).join('');
-    } else if (selSetor && acao && acao.setor) {
-      selSetor.innerHTML = '<option value="'+escaparHtml(acao.setor)+'" selected>'+escaparHtml(acao.setor)+'</option>';
     }
 
     var erroEl = document.getElementById('acao-form-erro');
@@ -25338,7 +25346,6 @@ var App = (function() {
     { secao:'PRINCIPAL' },
     { id:'home',        label:'Início',         icone:'home',                   modulo:null },
     { id:'taskhub',     label:'Meu Centro',      icone:'hub',                     modulo:null },
-    { id:'tarefas',     label:'Tarefas',         icone:'task_alt',                modulo:'TAREFAS' },
     { id:'dashboard',   label:'Dashboard',      icone:'dashboard',              modulo:null },
     { id:'acoes',       label:'Ações',           icone:'theater_comedy',          modulo:'ACOES' },
     { id:'publico',     label:'Público',          icone:'groups',                  modulo:'PUBLICO' },
@@ -25629,7 +25636,6 @@ var App = (function() {
           Router.registrar(id, label,
             id === 'admin'        ? function(){ AdminCadastrosUI.aoAbrir(); }
             : id === 'aprovacoes' ? function(){ AprovacaoReservaUI.aoAbrir(); }
-            : id === 'tarefas'    ? function(){ TarefasUI.aoAbrir(); }
             : id === 'pessoas'    ? function(){ PessoasTabs.aoAbrir(); }
             : id === 'contratacoes'?function(){ ContratacoesTabs.aoAbrir(); }
             : id === 'financeiro' ? function(){ FinanceiroTabs.aoAbrir(); }
@@ -25663,6 +25669,7 @@ var App = (function() {
       Router.registrar('ponto',      'Ponto & RH',           function(){ PontoUI.aoAbrir(); });
       Router.registrar('balcao',     'Balcão',               function(){ BalcaoUI.aoAbrir(); });
       Router.registrar('estrategia', 'Estratégia',           function(){ EstrategiaUI.aoAbrir(); });
+      Router.registrar('tarefas',    'Tarefas',              function(){ Router.navegar('taskhub'); TaskHubUI.setTab('tarefas', null); });
       var _papelMudou = typeof ManualUI !== 'undefined' && ManualUI.verificarMudancaPermissao(_boot.usuarioPapel);
       if (_papelMudou) {
         ManualUI.setPapelAnterior(_papelMudou);
@@ -29069,14 +29076,16 @@ var TaskHubUI = (function() {
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['meuDia','meuTime','produtividade'].forEach(function(t) {
+    ['meuDia','meuTime','produtividade','tarefas'].forEach(function(t) {
       document.getElementById('th-tab-' + t).classList.toggle('oculto', t !== tab);
     });
     document.querySelectorAll('#view-taskhub .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
+    if (!btn) btn = document.querySelector('#view-taskhub .tab-bar .tab-btn[data-tab="' + tab + '"]');
     if (btn) btn.classList.add('ativa');
     if (tab === 'meuDia')        carregar();
     if (tab === 'meuTime')       carregarTime();
     if (tab === 'produtividade') carregarProdutividade();
+    if (tab === 'tarefas')       TarefasUI.aoAbrir();
   }
 
   function carregar() {
@@ -29164,7 +29173,8 @@ var TaskHubUI = (function() {
   }
 
   function abrirItem(tipo, id) {
-    var rotas = { tarefa:'tarefas', encaminhamento:'reunioes', demanda:'balcao', aprovacao:'aprovacoes', alerta:'sistema-metricas', chave:'espacos' };
+    if (tipo === 'tarefa') { setTab('tarefas', null); return; }
+    var rotas = { encaminhamento:'reunioes', demanda:'balcao', aprovacao:'aprovacoes', alerta:'sistema-metricas', chave:'espacos' };
     var rota  = rotas[tipo];
     if (rota) Router.navegar(rota);
   }
@@ -31556,7 +31566,18 @@ var RhUI = (function() {
   function abrirFormColab(colab) {
     document.getElementById('rh-pf-nome').value     = colab?(colab.nome||''):'';
     document.getElementById('rh-pf-email').value    = colab?(colab.emailInstitucional||colab.email||''):'';
-    document.getElementById('rh-pf-setor').value    = colab?(colab.setor||''):'';
+    (function() {
+      var selS  = document.getElementById('rh-pf-setor');
+      var _boot = (App.getBoot && App.getBoot()) || {};
+      var sts   = _boot.setores || [];
+      var cur   = colab ? (colab.setor || '') : '';
+      selS.innerHTML = '<option value="">Selecione o setor…</option>' +
+        sts.map(function(s) {
+          var id = s.id || s; var lbl = s.nome || s.label || s;
+          return '<option value="'+escaparHtml(id)+'"'+(cur===id?' selected':'')+'>'+escaparHtml(lbl)+'</option>';
+        }).join('');
+      if (cur && !sts.length) selS.innerHTML += '<option value="'+escaparHtml(cur)+'" selected>'+escaparHtml(cur)+'</option>';
+    })();
     document.getElementById('rh-pf-admissao').value = colab?((colab.dataAdmissao||'').slice(0,10)):'';
     document.getElementById('rh-pf-id').value       = colab?(colab.id||''):'';
     if (colab&&colab.vinculo) document.getElementById('rh-pf-vinculo').value = colab.vinculo;
