@@ -297,10 +297,10 @@
 
 | ID | Módulo | Problema | Grav. |
 |---|---|---|---|
-| HOME-01 | Home | Informações exibidas (espaços/setores/módulos/status) úteis apenas para admin | 🟡 |
-| HOME-02 | Home | Acessos rápidos fixos — não se adaptam ao papel do usuário | 🟡 |
-| HOME-03 | Home | Sem informações contextuais (tarefas, reservas do dia, aprovações pendentes) | 🔴 |
-| HOME-04 | Home | Sem widget de resumo do Meu Centro | 🟡 |
+| ~~HOME-01~~ | Home | ✅ CORRIGIDO — stats de sistema (espaços/setores/módulos/status) exibidas apenas para superadmin/admin; demais papéis veem cards contextuais | — |
+| ~~HOME-02~~ | Home | ✅ CORRIGIDO — acesso rápido por papel: gestor/coordenador (Centro/Aprovações/Reuniões/Relatórios); colaborador (Centro/Tarefas/Reservar/Reuniões); admin (Nova Ação/Infraestrutura/Financeiro/Relatórios) | — |
+| ~~HOME-03~~ | Home | ✅ CORRIGIDO — cards contextuais async: tarefas abertas, encaminhamentos pendentes, urgentes/vencidos, aprovações (gestor) ou alertas (colaborador); todos clicáveis navegando para a view correta | — |
+| ~~HOME-04~~ | Home | ✅ CORRIGIDO — widget "Aniversariantes da Semana" exibido na home para todos exceto admin/superadmin; reutiliza `ctrl_taskhub_aniversariantes()` | — |
 | SIDEBAR-01 | Sidebar | Menu muito extenso sem agrupamento semântico | 🟡 |
 | ~~SIDEBAR-02~~ | Sidebar | ✅ CORRIGIDO @590 — Balcão removido do sidebar; cross-nav "Balcão" em view-comunicacao e "RECE" em view-balcao | — |
 | ~~SIDEBAR-03~~ | Sidebar | ✅ VERIFICADO @648 — inativos ocultos para usuários comuns; superadmin vê com opacity .5 + tag "inativo"; badge começa `oculto` — nunca exibido sem dados reais | — |
@@ -475,6 +475,7 @@
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
 | @675 | Arq: multi-tenant + remoção de hardcodes institucionais | `SHEET_ID_INSTITUICOES` no hub central; `OrgRegistryService._indexarCentral()`; seeds CCBJ movidos para `setupInicialCCBJ()`; `config.gs` sem defaults hardcoded; `?secao=public_config` endpoint; `public/index.html` dinâmico; `portal_processo.html` com `orgConfig.nome`; `acervo_engine.gs` dinâmico; mapa condicional via `ORG_MAPA_TEMPLATE`; `shared/mapa_sem_planta.html` criado. |
+| pendente | HOME-01/02/03/04 — Home contextual por papel | `_renderizarHome()` bifurcada em `_renderHomeAdmin()` (stats de sistema para superadmin/admin) e `_renderHomeContextual()` (cards async de tarefas/encaminhamentos/urgentes/aprovações via `ctrl_taskhub_minha_caixa()`; acesso rápido por papel; widget "Aniversariantes da Semana" via `ctrl_taskhub_aniversariantes()`). Novo `#home-aniversariantes` no HTML. |
 
 ### Pendentes / próxima ação
 - **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.

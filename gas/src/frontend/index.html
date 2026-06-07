@@ -1962,6 +1962,8 @@ select.form-control { cursor: pointer; }
 
         <div id="home-quick-actions"></div>
 
+        <div id="home-aniversariantes"></div>
+
         <div id="home-alertas"></div>
 
       </div><!-- /view-home -->
@@ -25594,44 +25596,136 @@ var App = (function() {
     document.getElementById('home-subtitulo').textContent =
       nomeExib + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
-    // Stat cards
+    var papel  = _boot.usuarioPapel || 'colaborador';
+    var ativos = (_boot.modulosAtivos || []).map(function(m) { return String(m).toUpperCase(); });
+
+    if (papel === 'superadmin' || papel === 'admin') {
+      _renderHomeAdmin(ativos);
+    } else {
+      _renderHomeContextual(papel, ativos);
+    }
+  }
+
+  function _renderHomeAdmin(ativos) {
     var stats = [
-      { valor:(_boot.espacos||[]).length,       label:'Espaços cadastrados', icone:'museum',                   classe:'primary' },
-      { valor:(_boot.setores||[]).length,        label:'Setores ativos',      icone:'category',                 classe:'success' },
-      { valor:(_boot.modulosAtivos||[]).length,  label:'Módulos ativos',      icone:'widgets',                  classe:'accent'  },
-      { valor:_boot.orgId ? 'Ativo' : 'Pendente', label:'Status do sistema', icone:'verified',                 classe:'info'    }
+      { valor:(_boot.espacos||[]).length,        label:'Espaços cadastrados', icone:'museum',   classe:'primary' },
+      { valor:(_boot.setores||[]).length,         label:'Setores ativos',      icone:'category', classe:'success' },
+      { valor:(_boot.modulosAtivos||[]).length,   label:'Módulos ativos',      icone:'widgets',  classe:'accent'  },
+      { valor:_boot.orgId ? 'Ativo':'Pendente',   label:'Status do sistema',   icone:'verified', classe:'info'    }
     ];
     document.getElementById('home-stats').innerHTML = stats.map(function(s) {
       return '<div class="stat-card">' +
-        '<div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>' +
+        '<div class="stat-icon ' + s.classe + '"><span class="ms ms-lg">' + s.icone + '</span></div>' +
         '<div class="stat-info">' +
-          '<div class="stat-valor">'+escaparHtml(s.valor)+'</div>' +
-          '<div class="stat-label">'+escaparHtml(s.label)+'</div>' +
+          '<div class="stat-valor">' + escaparHtml(s.valor) + '</div>' +
+          '<div class="stat-label">' + escaparHtml(s.label) + '</div>' +
         '</div></div>';
     }).join('');
 
-    // Quick actions
-    var ativos = (_boot.modulosAtivos||[]).map(function(m){return String(m).toUpperCase();});
     var qas = [
-      { label:'Nova Ação',    icone:'theater_comedy',  modulo:'ACOES',     view:'acoes' },
-      { label:'Infraestrutura', icone:'museum',          modulo:'ESPACOS',   view:'espacos' },
-      { label:'Financeiro',   icone:'payments',        modulo:'FINANCEIRO',view:'financeiro' },
-      { label:'Relatórios',   icone:'bar_chart',       modulo:'RELATORIOS',view:'relatorios' }
-    ].filter(function(q){ return ativos.indexOf(q.modulo) !== -1; });
+      { label:'Nova Ação',      icone:'theater_comedy', modulo:'ACOES',      view:'acoes'      },
+      { label:'Infraestrutura', icone:'museum',          modulo:'ESPACOS',    view:'espacos'    },
+      { label:'Financeiro',     icone:'payments',        modulo:'FINANCEIRO', view:'financeiro' },
+      { label:'Relatórios',     icone:'bar_chart',       modulo:'RELATORIOS', view:'relatorios' }
+    ].filter(function(q) { return ativos.indexOf(q.modulo) !== -1; });
+    _renderHomeQuickActions(qas);
+  }
 
-    if(qas.length) {
-      document.getElementById('home-quick-actions').innerHTML =
-        '<div class="card" style="margin-bottom:24px;">' +
-          '<div class="card-titulo" style="margin-bottom:14px;"><span class="ms">bolt</span> Acesso Rápido</div>' +
-          '<div class="quick-actions">' +
-          qas.map(function(q){
-            return '<button class="qa-btn" onclick="Router.navegar(\''+q.view+'\')" data-bg-skip="1">' +
-              '<span class="ms">'+q.icone+'</span>' +
-              '<span>'+escaparHtml(q.label)+'</span>' +
-            '</button>';
-          }).join('') +
+  function _renderHomeContextual(papel, ativos) {
+    var el = document.getElementById('home-stats');
+    el.innerHTML = '<p class="muted-text" style="padding:16px 0 8px;">Carregando seu painel…</p>';
+
+    GAS.taskhub.minhaCaixa({}, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = ''; return; }
+      var d     = resp.data;
+      var itens = d.itens || [];
+      var nTar  = itens.filter(function(i) { return i.tipo === 'tarefa'; }).length;
+      var nEnc  = itens.filter(function(i) { return i.tipo === 'encaminhamento'; }).length;
+      var nApr  = itens.filter(function(i) { return i.tipo === 'aprovacao'; }).length;
+      var nUrg  = d.urgente || 0;
+
+      var stats = [
+        { valor: nTar, label: 'Tarefas abertas',          icone: 'task_alt',            classe: nTar > 0 ? 'accent'   : 'success', view: 'tarefas'    },
+        { valor: nEnc, label: 'Encaminhamentos pendentes', icone: 'format_list_bulleted', classe: nEnc > 0 ? 'primary'  : 'success', view: 'taskhub'    },
+        { valor: nUrg, label: 'Urgentes / vencidos',       icone: 'error',               classe: nUrg > 0 ? 'error'    : 'success', view: 'taskhub'    }
+      ];
+      if (['gestor', 'coordenador'].indexOf(papel) !== -1) {
+        stats.push({ valor: nApr, label: 'Aprovações pendentes', icone: 'approval', classe: nApr > 0 ? 'warning' : 'success', view: 'aprovacoes' });
+      } else {
+        var nAlt = itens.filter(function(i) { return i.tipo === 'alerta'; }).length;
+        stats.push({ valor: nAlt, label: 'Alertas ativos', icone: 'warning', classe: nAlt > 0 ? 'warning' : 'success', view: 'taskhub' });
+      }
+
+      el.innerHTML = stats.map(function(s) {
+        return '<div class="stat-card" style="cursor:pointer;" onclick="Router.navegar(\'' + s.view + '\')">' +
+          '<div class="stat-icon ' + s.classe + '"><span class="ms ms-lg">' + s.icone + '</span></div>' +
+          '<div class="stat-info">' +
+            '<div class="stat-valor">' + escaparHtml(String(s.valor)) + '</div>' +
+            '<div class="stat-label">' + escaparHtml(s.label) + '</div>' +
           '</div></div>';
-    }
+      }).join('');
+    }, function() { el.innerHTML = ''; });
+
+    var qasGestor = [
+      { label: 'Meu Centro',  icone: 'hub',       modulo: null,         view: 'taskhub'    },
+      { label: 'Aprovações',  icone: 'approval',  modulo: 'ESPACOS',    view: 'aprovacoes' },
+      { label: 'Reuniões',    icone: 'groups',     modulo: 'REUNIOES',   view: 'reunioes'   },
+      { label: 'Relatórios',  icone: 'bar_chart',  modulo: 'RELATORIOS', view: 'relatorios' }
+    ];
+    var qasColaborador = [
+      { label: 'Meu Centro',  icone: 'hub',            modulo: null,       view: 'taskhub' },
+      { label: 'Tarefas',     icone: 'task_alt',        modulo: 'TAREFAS',  view: 'tarefas' },
+      { label: 'Reservar',    icone: 'event_available', modulo: 'ESPACOS',  view: 'espacos' },
+      { label: 'Reuniões',    icone: 'groups',          modulo: 'REUNIOES', view: 'reunioes'}
+    ];
+    var qasBase = (['gestor', 'coordenador'].indexOf(papel) !== -1) ? qasGestor : qasColaborador;
+    var qas = qasBase.filter(function(q) { return !q.modulo || ativos.indexOf(q.modulo) !== -1; });
+    _renderHomeQuickActions(qas);
+
+    _renderHomeAniversariantes();
+  }
+
+  function _renderHomeAniversariantes() {
+    var el = document.getElementById('home-aniversariantes');
+    if (!el) return;
+    GAS.taskhub.aniversariantes(function(resp) {
+      if (!resp || !resp.ok || !resp.data || !resp.data.total) { el.innerHTML = ''; return; }
+      var lista = resp.data.aniversariantes || [];
+      var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      el.innerHTML = '<div class="card" style="margin-bottom:24px;">' +
+        '<div class="card-titulo" style="margin-bottom:14px;">' +
+          '<span class="ms">cake</span> Aniversariantes da Semana' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+        lista.map(function(p) {
+          var diaStr = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+          return '<div style="display:flex;align-items:center;gap:8px;background:' +
+            (p.ehHoje ? 'var(--color-accent)' : 'var(--surface2)') + ';' +
+            'color:' + (p.ehHoje ? '#fff' : 'inherit') + ';border-radius:8px;padding:8px 12px;min-width:160px;">' +
+            '<span class="ms" style="font-size:20px;">' + (p.ehHoje ? 'celebration' : 'cake') + '</span>' +
+            '<div>' +
+              '<div style="font-weight:600;font-size:13px;">' + escaparHtml(p.nome) + '</div>' +
+              '<div style="font-size:11px;opacity:.8;">' + diaStr + (p.setor ? ' · ' + escaparHtml(p.setor) : '') + '</div>' +
+            '</div></div>';
+        }).join('') +
+        '</div></div>';
+    }, function() { el.innerHTML = ''; });
+  }
+
+  function _renderHomeQuickActions(qas) {
+    var el = document.getElementById('home-quick-actions');
+    if (!qas.length) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<div class="card" style="margin-bottom:24px;">' +
+        '<div class="card-titulo" style="margin-bottom:14px;"><span class="ms">bolt</span> Acesso Rápido</div>' +
+        '<div class="quick-actions">' +
+        qas.map(function(q) {
+          return '<button class="qa-btn" onclick="Router.navegar(\'' + q.view + '\')" data-bg-skip="1">' +
+            '<span class="ms">' + q.icone + '</span>' +
+            '<span>' + escaparHtml(q.label) + '</span>' +
+          '</button>';
+        }).join('') +
+        '</div></div>';
   }
 
   function _mostrarErroBoot(msg) {
