@@ -128,7 +128,7 @@ var ColaboradorRepository = (function () {
     var todos = lerJSON(_ARQUIVO_COLABORADORES) || [];
     var lista = todos.filter(function (c) {
       if (c.orgId && c.orgId !== orgId) return false;
-      if (filtros.status  && c.status  !== filtros.status)  return false;
+      if (filtros.status  && c.status  && c.status !== filtros.status)  return false;
       if (filtros.setor   && c.setor   !== filtros.setor)   return false;
       if (filtros.cargo   && c.cargo   !== filtros.cargo)   return false;
       if (filtros.ativo !== undefined && c.ativo !== filtros.ativo) return false;
@@ -188,6 +188,10 @@ var ColaboradorRepository = (function () {
         if (lista[i].id === dados.id) { idx = i; break; }
       }
       if (idx >= 0) {
+        var prev = lista[idx];
+        if (dados.status   === undefined || dados.status   === null) dados.status   = prev.status   || 'ativo';
+        if (dados.ativo    === undefined)                             dados.ativo    = prev.ativo !== false;
+        if (!dados.criadoEm)                                          dados.criadoEm = prev.criadoEm;
         lista[idx] = dados;
       } else {
         lista.push(dados);

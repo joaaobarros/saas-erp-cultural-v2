@@ -31887,7 +31887,7 @@ var RhUI = (function() {
   }
 
   function abrirFormColab(colab) {
-    var addr = colab && (colab.endereco || {});
+    var addr = (colab && colab.endereco) || {};
     document.getElementById('rh-pf-nome').value         = colab?(colab.nome||''):'';
     document.getElementById('rh-pf-admissao').value     = colab?((colab.dataAdmissao||'').slice(0,10)):'';
     document.getElementById('rh-pf-id').value           = colab?(colab.id||''):'';
@@ -31958,7 +31958,11 @@ var RhUI = (function() {
         uf:          document.getElementById('rh-pf-uf').value.trim()
       }
     };
-    if (id) dados.id = id;
+    if (id) {
+      dados.id = id;
+      var _colabAtual = _colaboradores.find(function(x){ return x.id === id; });
+      if (_colabAtual && _colabAtual.status) dados.status = _colabAtual.status;
+    }
     BtnGuard.wrap('rh-btn-salvar-colab','Salvando…',function(done){
       GAS.pessoas.salvar(dados,function(resp){
         done();
