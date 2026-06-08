@@ -78,6 +78,7 @@ var TarefaEngine = (function () {
       tipo: String(dados.tipo || 'operacional').trim(),
       prazo: dados.prazo || '',
       concluidoEm: '',
+      atrasoNotificadoEm: '',
       acaoId: dados.acaoId || dados.idAcao || '',
       processoId: dados.processoId || '',
       reservaId: dados.reservaId || '',
@@ -146,7 +147,7 @@ var TarefaEngine = (function () {
     _validarTarefa(tarefa);
     tarefa = TarefaRepository.salvar(tarefa.orgId, tarefa);
     _emitir(SystemEventTypes.TASK_CREATED || 'TASK_CREATED', tarefa, emailCriador);
-    _emitir(SystemEventTypes.TAREFA_CRIADA || 'TAREFA_CRIADA', tarefa, emailCriador);
+    _emitir(SystemEventTypes.TAREFA_CRIADA || 'TAREFA_CRIADA', tarefa, emailCriador, { responsavel: tarefa.responsavel });
     _registrarAuditoria('TAREFA_CRIADA', tarefa, emailCriador);
     return tarefa;
   }
@@ -236,6 +237,30 @@ var TarefaEngine = (function () {
     });
     tarefa.atualizadoEm = agora();
     return TarefaRepository.salvar(orgId, tarefa);
+  }
+
+  function verificarPrazos(orgId) {
+    orgId = orgId || _orgId();
+    var atrasadas = TarefaRepository.listarAtrasadas(orgId);
+    var hoje = new Date().toISOString().substring(0, 10);
+    var novasNotificadas = 0;
+
+    atrasadas.forEach(function(tarefa) {
+      if (tarefa.atrasoNotificadoEm) return;
+      tarefa.atrasoNotificadoEm = hoje;
+      tarefa.atualizadoEm = agora();
+      TarefaRepository.salvar(orgId, tarefa);
+      _emitir(SystemEventTypes.TASK_DELAYED || 'TASK_DELAYED', tarefa, 'sistema', {
+        prazo: tarefa.prazo,
+        responsavel: tarefa.responsavel,
+        diasAtraso: Math.round((Date.now() - new Date(tarefa.prazo).getTime()) / 86400000)
+      });
+      novasNotificadas++;
+    });
+
+    Logger.info('tarefa_engine', 'verificarPrazos',
+      'Atrasadas: ' + atrasadas.length + '; novas notificadas: ' + novasNotificadas);
+    return { verificadas: atrasadas.length, novasNotificadas: novasNotificadas };
   }
 
   function criarAutomatica(tipo, entidadeId, orgId, emailAtor, dados) {
@@ -336,6 +361,7 @@ var TarefaEngine = (function () {
     aplicarTransicao: mudarStatus,
     comentar: comentar,
     criarAutomatica: criarAutomatica,
+    verificarPrazos: verificarPrazos,
     listarVisiveis: listarVisiveis,
     obterMetricas: obterMetricas,
     migrarSheetParaJson: migrarSheetParaJson

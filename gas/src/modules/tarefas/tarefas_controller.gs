@@ -165,6 +165,16 @@ function ctrl_tarefas_gestao() {
   }, 'ctrl_tarefas_gestao');
 }
 
+function ctrl_tarefas_verificar_prazos() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctrlTarefasContexto();
+    if (['admin', 'superadmin'].indexOf(ctx.papel) === -1) {
+      throw new Error('Apenas administradores podem executar esta ação.');
+    }
+    return TarefaEngine.verificarPrazos(ctx.orgId);
+  }, 'ctrl_tarefas_verificar_prazos');
+}
+
 function ctrl_tarefas_migrar_sheet_para_json() {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();

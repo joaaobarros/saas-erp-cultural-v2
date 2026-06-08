@@ -97,6 +97,54 @@ var EventHandlerRegistry = (function () {
       }
     ],
 
+    // TASK_DELAYED: notificar responsável sobre prazo vencido (disparado por verificarPrazosTarefas)
+    'TASK_DELAYED': [
+      function(evt) {
+        try {
+          var ctx = evt.contexto || {};
+          var responsavel = String(ctx.responsavel || '');
+          if (!responsavel || responsavel.indexOf('@') === -1) return;
+          var org = _getNomeOrg();
+          var appUrl = _getAppUrl();
+          var titulo = String(ctx.titulo || evt.entidadeId);
+          var prazo = ctx.prazo ? String(ctx.prazo).substring(0, 10).split('-').reverse().join('/') : '—';
+          GmailApp.sendEmail(
+            responsavel,
+            '[' + org + '] Tarefa atrasada: ' + titulo,
+            'A tarefa "' + titulo + '" está com prazo vencido desde ' + prazo + '.\n\n' +
+            'Acesse o sistema para atualizar o status:\n' + appUrl + '\n\n— ' + org
+          );
+          Logger.info('event_handler_registry', 'TASK_DELAYED', 'Notificado: ' + responsavel);
+        } catch(e) {
+          Logger.warn('event_handler_registry', 'TASK_DELAYED', e.message);
+        }
+      }
+    ],
+
+    // TAREFA_CRIADA: notificar responsável quando tarefa é atribuída a outra pessoa
+    'TAREFA_CRIADA': [
+      function(evt) {
+        try {
+          var ctx = evt.contexto || {};
+          var responsavel = String(ctx.responsavel || '');
+          if (!responsavel || responsavel.indexOf('@') === -1) return;
+          if (responsavel === evt.usuario) return; // criador = responsável — não notificar
+          var org = _getNomeOrg();
+          var appUrl = _getAppUrl();
+          var titulo = String(ctx.titulo || evt.entidadeId);
+          GmailApp.sendEmail(
+            responsavel,
+            '[' + org + '] Nova tarefa atribuída a você: ' + titulo,
+            'Uma nova tarefa foi atribuída a você:\n\n"' + titulo + '"\n\n' +
+            'Acesse o sistema para ver os detalhes:\n' + appUrl + '\n\n— ' + org
+          );
+          Logger.info('event_handler_registry', 'TAREFA_CRIADA', 'Notificado: ' + responsavel);
+        } catch(e) {
+          Logger.warn('event_handler_registry', 'TAREFA_CRIADA', e.message);
+        }
+      }
+    ],
+
     // TASK_COMPLETED: verificar avanço de processo vinculado
     'TASK_COMPLETED': [
       function(evt) {
@@ -255,6 +303,38 @@ function _alertarFilaGrande(total, orgId) {
       } catch(_) {}
     });
   } catch(e) { Logger.warn('event_handler_registry', '_alertarFilaGrande', e.message); }
+}
+
+/**
+ * Verifica tarefas com prazo vencido e emite TASK_DELAYED para as ainda não notificadas.
+ * Chamada diariamente pelo trigger configurado em criarTriggerVerificacaoPrazos().
+ * Também pode ser executada manualmente no GAS Editor.
+ */
+function verificarPrazosTarefas() {
+  try {
+    var result = TarefaEngine.verificarPrazos();
+    Logger.info('event_handler_registry', 'verificarPrazosTarefas', JSON.stringify(result));
+  } catch(e) {
+    Logger.error('event_handler_registry', 'verificarPrazosTarefas', e.message);
+  }
+}
+
+/**
+ * Cria o trigger diário de verificação de prazos de tarefas (08:00).
+ * Executar uma vez no GAS Editor após o deploy.
+ */
+function criarTriggerVerificacaoPrazos() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'verificarPrazosTarefas') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('verificarPrazosTarefas')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+  Logger.info('event_handler_registry', 'criarTriggerVerificacaoPrazos', 'Trigger diário criado (08:00).');
 }
 
 /**

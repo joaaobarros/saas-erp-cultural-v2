@@ -309,7 +309,7 @@
 | TAR-01 | Tarefas | Formulário com campos insuficientes | 🟡 |
 | ~~TAR-02~~ | Tarefas | ✅ VERIFICADO @648 — `tf-responsavel` é `<select>` populado por `_carregarSelectUsuariosHelper` em `aoAbrir()`; nunca foi texto livre na v2 | — |
 | ~~TAR-03~~ | Tarefas | ✅ CORRIGIDO @654 — form ganha campos Prazo + Vínculo (select tipo: Ação/Reserva/Contrato; select ID dinâmico carregado por `atualizarVinculo()` com cache). `criar()` passa `acaoId`/`reservaId`/`contratoId` ao backend. Engine + repository recebem os dois novos campos (`reservaId`, `contratoId`). Lista exibe badges de vínculo (Ação/Reserva/Contrato) e prazo. Header migrado para `view-header` DS. | — |
-| TAR-04 | Tarefas | Sem gatilhos automáticos | 🔴 |
+| ~~TAR-04~~ | Tarefas | ✅ CORRIGIDO — `TarefaEngine.verificarPrazos()` + trigger diário 08:00 (`criarTriggerVerificacaoPrazos()`); `TASK_DELAYED` notifica responsável por e-mail (uma vez por tarefa, via `atrasoNotificadoEm`); `TAREFA_CRIADA` notifica responsável ao ser atribuído por outra pessoa | — |
 | TAR-05 | Tarefas | Sem alertas para vencimento | 🟡 |
 | PFANTASMA | Admin | "Perfis Fantasma" solicitado mas não implementado | 🔴 |
 | PREVIEW-01 | Admin | Preview de Primeiro Acesso com comportamento incerto | 🟡 |
@@ -466,14 +466,16 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 40 (2026-06-08) → SESSÃO 41
+## HANDOFF ATUAL — SESSÃO 41 (2026-06-08) → SESSÃO 42
 
 ### Estado atual: ~270 bugs registrados · Deploy pendente (GAS) · Firebase live
 
-### O que foi feito nesta sessão (s40)
+### O que foi feito nesta sessão (s41)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
+| pendente | TAR-04 — Gatilhos automáticos de tarefas | `TarefaEngine.verificarPrazos(orgId)`: lista atrasadas, marca `atrasoNotificadoEm` (notificação única), emite `TASK_DELAYED`. Handler `TASK_DELAYED`: e-mail ao responsável. Handler `TAREFA_CRIADA`: e-mail ao responsável quando atribuído por outra pessoa. `verificarPrazosTarefas()` + `criarTriggerVerificacaoPrazos()` (diário 08:00). `ctrl_tarefas_verificar_prazos()` para admin. |
+| pendente | Fix: Gestão de tarefas — cards expandíveis + modal de exclusão | Cards da sub-tab Gestão com painel expandível: detalhe (prazo/prioridade/vínculo), botões Concluir / Próximo Status / Excluir. `confirm()` nativo substituído por `_abrirModalConfirmar()` em toda exclusão de tarefa. `_pendExcluirDeGestao` flag para recarregar gestão após exclusão. `_confirmarExcluir()` exposto no return do IIFE. |
 | pendente | Fix: Tarefas — visibilidade, auto-criação e gestão | Auto-task removida de RESERVATION_CREATED / KEY_PROTOCOL_DELAYED / ITEM_NOT_RETURNED. Gestor vê apenas tarefas do seu setor + próprias. `ctrl_tarefas_gestao` agrupa por setor/responsável. Sub-tab "Gestão" com barra de progresso e dois modos. Responsável obrigatório na criação. |
 | @689 | Fix: exclusão de tarefas | Botão "Excluir" no painel expansível de cada tarefa (cor error, alinhado à direita). `GAS.tarefas.excluir` mapeado para `ctrl_tarefas_excluir`. `confirm()` antes de deletar; lista recarregada após sucesso. |
 | @688 | Fix: Tarefas como 4ª aba do Meu Centro | `#th-tab-tarefas` criada dentro de `#view-taskhub` com todo o conteúdo do formulário Nova Tarefa + lista expandível. `TaskHubUI.setTab()` ampliado para 4 abas; botão ativo por `data-tab`; chama `TarefasUI.aoAbrir()` ao ativar. `abrirItem('tarefa',...)` → `setTab('tarefas', null)` em vez de Router.navegar. Entrada `tarefas` removida do `_MODULOS_MENU`. `Router.registrar('tarefas', ...)` redireciona para taskhub+aba (compatibilidade cross-nav). Botões "Tarefas" no header e "Nova Tarefa" no meuDia removidos. `#view-tarefas` mantido vazio como stub. |
@@ -483,11 +485,12 @@
 
 ### Pendentes / próxima ação
 - **URGENTE após deploy: executar `setarMapaTemplateCCBJ()` no GAS Editor** — garante que o mapa do CCBJ continue aparecendo.
-- **Executar no GAS Editor:**
-  1. `fase9_prepararIndice()` — registra CCBJ no hub com todos os Sheet IDs
-  2. `fase73_estoque_prepararIndice()` — cria abas ESTOQUE + seed dep-01/dep-02
-  3. `fase78_inspecionar_ativos_v1()` → `fase78_migrar_ativos_para_estoque()`
-- **Próximos bugs de auditoria:** TAR-04, HUB-13
+- **Executar no GAS Editor (uma vez, após deploy):**
+  1. `criarTriggerVerificacaoPrazos()` — instala trigger diário 08:00 para TAR-04
+  2. `fase9_prepararIndice()` — registra CCBJ no hub com todos os Sheet IDs
+  3. `fase73_estoque_prepararIndice()` — cria abas ESTOQUE + seed dep-01/dep-02
+  4. `fase78_inspecionar_ativos_v1()` → `fase78_migrar_ativos_para_estoque()`
+- **Próximo bug de auditoria:** HUB-13 (dayoff de aniversário)
 
 ---
 
