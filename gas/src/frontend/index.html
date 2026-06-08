@@ -7896,7 +7896,8 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn tab-ativa" onclick="PontoUI.setTab('espelho',this)" data-bg-skip="1">Espelho de Ponto</button>
           <button class="tab-btn" onclick="PontoUI.setTab('custo',this)" data-bg-skip="1">Custo CLT</button>
           <button class="tab-btn" onclick="PontoUI.setTab('rescisao',this)" data-bg-skip="1">Rescisão</button>
-          <button class="tab-btn" onclick="PontoUI.setTab('importexport',this)" data-bg-skip="1">Colabore AFD</button>
+          <button class="tab-btn" onclick="PontoUI.setTab('importexport',this)" data-bg-skip="1">AFD</button>
+          <button class="tab-btn" onclick="PontoUI.setTab('sessoes',this);PontoUI.carregarSessoes();" data-bg-skip="1">Sessões</button>
         </div>
 
         <!-- Tab: Espelho de Ponto -->
@@ -7967,7 +7968,7 @@ select.form-control { cursor: pointer; }
           <div id="ponto-rescisao-resultado" style="margin-top:20px;"></div>
         </div>
 
-        <!-- Tab: Colabore AFD -->
+        <!-- Tab: AFD (Importação e Exportação) -->
         <div id="ponto-tab-importexport" class="oculto">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
             <!-- Exportar -->
@@ -7992,29 +7993,31 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
 
-            <!-- Importar -->
+            <!-- Importar AFD — novo fluxo modal em 3 passos -->
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;">
-              <h4 style="margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">download</span> Importar</h4>
-              <div class="form-group">
-                <label class="form-label">Formato</label>
-                <select id="imp-formato" class="form-control" style="margin-bottom:8px;">
-                  <option value="afd">AFD (Portaria 1510/2009)</option>
-                  <option value="csv">CSV Colabore</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Colar conteúdo do arquivo</label>
-                <textarea id="imp-conteudo" class="form-control" rows="5"
-                          placeholder="Cole aqui o conteúdo do arquivo AFD ou CSV…"
-                          style="font-family:monospace;font-size:12px;"></textarea>
-              </div>
-              <button id="btn-importar" class="btn btn-primary btn-sm"
-                      onclick="BtnGuard.wrap('btn-importar','Importando…',PontoUI.importar)">
-                Importar
+              <h4 style="margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">download</span> Importar AFD</h4>
+              <p style="font-size:13px;color:var(--text2);margin:0 0 16px;line-height:1.5;">Importe um arquivo TXT do relógio de ponto. O sistema detecta o layout, exibe uma prévia e só confirma após sua revisão.</p>
+              <button id="btn-importar-afd" class="btn btn-primario"
+                      onclick="BtnGuard.wrap('btn-importar-afd','Abrindo…',PontoUI.abrirModalImportarAfd)">
+                <span class="ms ms-sm">upload_file</span> Importar AFD
               </button>
-              <div id="ponto-import-resultado" style="margin-top:8px;font-size:13px;"></div>
+              <p style="font-size:12px;color:var(--text2);margin-top:14px;display:flex;align-items:flex-start;gap:4px;">
+                <span class="ms ms-sm" style="font-size:14px;flex-shrink:0;">info</span>
+                Histórico de importações disponível na aba <strong>Sessões</strong>.
+              </p>
             </div>
           </div>
+        </div>
+
+        <!-- Tab: Sessões de Importação AFD -->
+        <div id="ponto-tab-sessoes" class="oculto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h4 style="margin:0;font-size:15px;">Histórico de Importações AFD</h4>
+            <button class="btn btn-ghost btn-sm" onclick="PontoUI.carregarSessoes()" data-bg-skip="1">
+              <span class="ms ms-sm">refresh</span> Atualizar
+            </button>
+          </div>
+          <div id="ponto-sessoes-conteudo"><p class="muted-text">⏳ Carregando sessões…</p></div>
         </div>
       </div><!-- /view-ponto -->
 
@@ -9367,7 +9370,15 @@ var GAS = {
     exportarAFD:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_exportar_afd(d||{}); },
     exportarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_exportar_csv_colabore(d||{}); },
     importarAFD:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_importar_afd(d||{}); },
-    importarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_importar_csv_colabore(d||{}); }
+    importarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_importar_csv_colabore(d||{}); },
+    previewAfd:          function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_preview_afd(d||{}); },
+    iniciarImportacao:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_iniciar_importacao_afd(d||{}); },
+    confirmarImportacao: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_confirmar_importacao(d||{}); },
+    cancelarImportacao:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_cancelar_importacao(d||{}); },
+    listarLayouts:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_layouts(d||{}); },
+    listarSessoes:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sessoes(d||{}); },
+    espelhoMensal:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_espelho_mensal(d||{}); },
+    processarJornada:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_processar_jornada(d||{}); }
   },
   encargos: {
     listar:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_listar(); },
@@ -31493,7 +31504,7 @@ var PontoUI = (function() {
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['espelho','custo','rescisao','importexport'].forEach(function(t) {
+    ['espelho','custo','rescisao','importexport','sessoes'].forEach(function(t) {
       var el = document.getElementById('ponto-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -31546,19 +31557,65 @@ var PontoUI = (function() {
     var partes = mesEl.value.split('-');
     var dados  = { ano: Number(partes[0]), mes: Number(partes[1]) };
     if (colEl && colEl.value.trim()) dados.colaboradorId = colEl.value.trim();
-    GAS.ponto.mensal(dados, function(r) {
+    GAS.ponto.espelhoMensal(dados, function(r) {
       _carregado = true;
       if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar espelho.</p>'; return; }
-      var m = r.data;
+      var m   = r.data;
+      var res = m.resumo || {};
       var toHM = function(min) { if(!min) return '0h00'; return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0'); };
-      if (el) el.innerHTML = '<div class="stats-strip" style="gap:14px;margin-bottom:16px;">' +
-        '<div class="stat-card"><div class="stat-valor">' + (m.diasTrabalhados||0) + '</div><div class="stat-label">Dias trabalhados</div></div>' +
-        '<div class="stat-card"><div class="stat-valor">' + toHM(m.totalMinutos||0) + '</div><div class="stat-label">Horas totais</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" style="color:' + (m.totalExtras>0?'var(--success)':'var(--text)') + '">' + toHM(m.totalExtras||0) + '</div><div class="stat-label">Horas extras</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" style="color:' + (m.totalFaltas>0?'var(--danger)':'var(--text)') + '">' + toHM(m.totalFaltas||0) + '</div><div class="stat-label">Horas em falta</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" style="color:' + (m.saldoBH>0?'var(--success)':m.saldoBH<0?'var(--danger)':'var(--text)') + '">' + toHM(Math.abs(m.saldoBH||0)) + '</div><div class="stat-label">Banco de horas</div></div>' +
-      '</div>' +
-      '<p style="font-size:12px;color:var(--text2);">Período: ' + (m.periodo||'') + ' · Colaborador: ' + (dados.colaboradorId||'você') + '</p>';
+      var STATUS_COR   = { completa:'var(--success)', incompleta:'var(--warning)', inconsistente:'var(--danger)', ausente:'var(--muted)', folga:'var(--text2)' };
+      var STATUS_LABEL = { completa:'Completa', incompleta:'Incompleta', inconsistente:'Inconsistente', ausente:'Ausente', folga:'Folga' };
+      var DIAS_SEMANA  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+      // Stats strip
+      var html = '<div class="stats-strip" style="gap:14px;margin-bottom:16px;">' +
+        '<div class="stat-card"><div class="stat-valor">' + (res.diasTrabalhados||0) + '</div><div class="stat-label">Dias trabalhados</div></div>' +
+        '<div class="stat-card"><div class="stat-valor">' + toHM(res.totalMinutos||0) + '</div><div class="stat-label">Horas totais</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:' + ((res.totalExtras||0)>0?'var(--success)':'var(--text)') + '">' + toHM(res.totalExtras||0) + '</div><div class="stat-label">Horas extras</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:' + ((res.totalFaltantes||0)>0?'var(--danger)':'var(--text)') + '">' + toHM(res.totalFaltantes||0) + '</div><div class="stat-label">Horas em falta</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:' + ((m.saldoBH||0)>0?'var(--success)':(m.saldoBH||0)<0?'var(--danger)':'var(--text)') + '">' + toHM(Math.abs(m.saldoBH||0)) + '</div><div class="stat-label">Banco de horas</div></div>' +
+      '</div>';
+
+      // Tabela de dias
+      var dias    = m.dias || {};
+      var datasOrd = Object.keys(dias).sort();
+      if (datasOrd.length > 0) {
+        html += '<div style="overflow-x:auto;">' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+          '<thead><tr style="background:var(--surface2,#f5f5f5);">' +
+            '<th style="padding:6px 8px;text-align:left;font-weight:600;white-space:nowrap;">Data</th>' +
+            '<th style="padding:6px 8px;text-align:center;font-weight:600;">Dia</th>' +
+            '<th style="padding:6px 8px;text-align:center;font-weight:600;">Entrada</th>' +
+            '<th style="padding:6px 8px;text-align:center;font-weight:600;">Saída</th>' +
+            '<th style="padding:6px 8px;text-align:center;font-weight:600;">Batidas</th>' +
+            '<th style="padding:6px 8px;text-align:right;font-weight:600;">Trabalhado</th>' +
+            '<th style="padding:6px 8px;text-align:center;font-weight:600;">Status</th>' +
+          '</tr></thead><tbody>';
+
+        datasOrd.forEach(function(iso) {
+          var d    = dias[iso];
+          var st   = d.statusJornada || 'ausente';
+          var dow  = new Date(iso + 'T00:00:00').getDay();
+          var isFolga = (st === 'folga');
+          var cor  = STATUS_COR[st]   || 'var(--text)';
+          var lbl  = STATUS_LABEL[st] || st;
+          var rowBg = isFolga ? 'background:#f8f8f8;' : '';
+          html += '<tr style="border-bottom:1px solid var(--border);' + rowBg + '">' +
+            '<td style="padding:5px 8px;white-space:nowrap;">' + fmtDataPtBR(iso) + '</td>' +
+            '<td style="padding:5px 8px;text-align:center;color:var(--text2);">' + DIAS_SEMANA[dow] + '</td>' +
+            '<td style="padding:5px 8px;text-align:center;font-family:monospace;">' + (d.horaEntrada || '—') + '</td>' +
+            '<td style="padding:5px 8px;text-align:center;font-family:monospace;">' + (d.horaSaida   || '—') + '</td>' +
+            '<td style="padding:5px 8px;text-align:center;">' + (d.numBatidas||0) + '</td>' +
+            '<td style="padding:5px 8px;text-align:right;font-weight:600;">' + (d.minutosTrabalho ? toHM(d.minutosTrabalho) : '—') + '</td>' +
+            '<td style="padding:5px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:' + cor + ';">' + lbl + '</span></td>' +
+          '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+      } else {
+        html += '<p style="font-size:12px;color:var(--text2);">Período: ' + (m.periodo||'') + ' · Colaborador: ' + _esc(dados.colaboradorId||'você') + '</p>';
+      }
+      if (el) el.innerHTML = html;
       if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('ponto-espelho-conteudo');
     }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc((e&&e.message)||e) + '</p>'; });
   }
@@ -31678,7 +31735,282 @@ var PontoUI = (function() {
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, calcularCLT, calcularRescisao, exportar, importar };
+  // ── Estado do modal de importação AFD ──────────────────────────────────────
+  var _afdConteudo = '';
+  var _afdLayoutId = null;
+
+  function abrirModalImportarAfd(done) {
+    if (document.getElementById('modal-importar-afd')) { if(done) done(); return; }
+    var overlay = document.createElement('div');
+    overlay.id  = 'modal-importar-afd';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1100;display:flex;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.52);padding:20px;overflow-y:auto;';
+    var box = document.createElement('div');
+    box.id  = 'modal-afd-box';
+    box.style.cssText = 'background:var(--surface);border-radius:16px;border-top:3px solid var(--color-primary);padding:24px 28px;width:100%;max-width:700px;box-shadow:0 24px 80px rgba(0,0,0,.20);margin:auto;';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e){ if(e.target===overlay){ overlay.remove(); } });
+    _afdConteudo = '';
+    _afdLayoutId = null;
+    _renderAfdPasso1();
+    if (done) done();
+  }
+
+  function _renderAfdPasso1() {
+    var box = document.getElementById('modal-afd-box');
+    if (!box) return;
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">' +
+        '<div><h3 style="margin:0;font-size:16px;">Importar AFD</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text2);">Passo 1 de 3 — Selecionar arquivo e layout</p></div>' +
+      '</div>' +
+      '<div class="form-group" style="margin-bottom:16px;">' +
+        '<label class="form-label">Arquivo TXT (AFD do relógio de ponto)</label>' +
+        '<input type="file" id="afd-file-input" accept=".txt,.AFD" ' +
+          'style="display:block;width:100%;padding:10px;border:2px dashed var(--border);border-radius:8px;font-size:13px;cursor:pointer;box-sizing:border-box;" ' +
+          'onchange="PontoUI._afdAoSelecionarArquivo(this)">' +
+        '<div id="afd-nome-arquivo" style="font-size:12px;color:var(--text2);margin-top:6px;min-height:16px;"></div>' +
+      '</div>' +
+      '<div class="form-group" style="margin-bottom:20px;">' +
+        '<label class="form-label">Layout do relógio</label>' +
+        '<select id="afd-layout-sel" class="form-control">' +
+          '<option value="">⏳ Carregando layouts…</option>' +
+        '</select>' +
+        '<p style="font-size:12px;color:var(--text2);margin:4px 0 0;">Deixe em "Auto-detectar" para que o sistema identifique o formato automaticamente.</p>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button onclick="document.getElementById(\'modal-importar-afd\').remove()" ' +
+          'style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;" data-bg-skip="1">Cancelar</button>' +
+        '<button id="btn-afd-preview" class="btn btn-primario" style="opacity:.4;pointer-events:none;" ' +
+          'onclick="BtnGuard.wrap(\'btn-afd-preview\',\'Analisando…\',PontoUI._executarPreviewAfd)">Pré-visualizar</button>' +
+      '</div>';
+
+    GAS.ponto.listarLayouts({}, function(r) {
+      var sel = document.getElementById('afd-layout-sel');
+      if (!sel) return;
+      var layouts = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      sel.innerHTML = '<option value="">🔍 Auto-detectar</option>' +
+        layouts.map(function(l){ return '<option value="' + _esc(l.id||'') + '">' + _esc(l.nome||'') + '</option>'; }).join('');
+    }, function() {
+      var sel = document.getElementById('afd-layout-sel');
+      if (sel) sel.innerHTML = '<option value="">🔍 Auto-detectar</option>';
+    });
+  }
+
+  function _afdAoSelecionarArquivo(input) {
+    var file = input && input.files && input.files[0];
+    if (!file) return;
+    var nomeEl = document.getElementById('afd-nome-arquivo');
+    if (nomeEl) nomeEl.textContent = '📄 ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      _afdConteudo = e.target.result || '';
+      var btn = document.getElementById('btn-afd-preview');
+      if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    };
+    reader.onerror = function() { Toast.erro('Não foi possível ler o arquivo.'); };
+    reader.readAsText(file, 'ISO-8859-1');
+  }
+
+  function _executarPreviewAfd(done) {
+    if (!_afdConteudo.trim()) { Toast.aviso('Selecione um arquivo AFD primeiro.'); if(done) done(); return; }
+    _afdLayoutId = (document.getElementById('afd-layout-sel') || {}).value || null;
+    var params = { conteudo: _afdConteudo };
+    if (_afdLayoutId) params.layoutId = _afdLayoutId;
+    GAS.ponto.previewAfd(params,
+      function(r) {
+        if (done) done();
+        if (!r || !r.ok) {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao analisar o arquivo.');
+          return;
+        }
+        _renderAfdPasso2(r.data);
+      },
+      function(e) { if(done) done(); Toast.erro((e && e.message) || 'Erro na análise.'); }
+    );
+  }
+
+  function _renderAfdPasso2(preview) {
+    var box = document.getElementById('modal-afd-box');
+    if (!box) return;
+    var res    = preview.resumo || {};
+    var batidas = preview.amostraBatidas || [];
+    var validos = (res.batidas||0) - (res.pisNaoEncontrados||0) - (res.duplicados||0) - (res.erros||0);
+    if (validos < 0) validos = 0;
+
+    var statsHtml =
+      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">' +
+        _afdStat(res.batidas||0, 'Batidas', 'var(--primario)') +
+        _afdStat(validos,       'Válidas',  'var(--success)') +
+        _afdStat(res.pisNaoEncontrados||0, 'Sem colab.', '#f59e0b') +
+        _afdStat(res.duplicados||0,        'Duplicadas', 'var(--muted)') +
+        _afdStat(res.erros||0,             'Erros',      'var(--danger)') +
+      '</div>';
+
+    var avisoHtml = '';
+    if ((res.pisNaoEncontrados||0) > 0 || (res.erros||0) > 0) {
+      avisoHtml = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:12px;">' +
+        '⚠️ ' + (res.pisNaoEncontrados||0) + ' batida(s) sem colaborador vinculado e ' + (res.erros||0) + ' erro(s) de parse serão ignorados.' +
+      '</div>';
+    }
+
+    var tabelaHtml = '';
+    if (batidas.length > 0) {
+      var amostra = batidas.slice(0, 20);
+      tabelaHtml = '<div style="margin-bottom:14px;">' +
+        '<p style="font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px;">Amostra das primeiras ' + amostra.length + ' batidas:</p>' +
+        '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+            '<thead style="position:sticky;top:0;background:var(--surface2,#f5f5f5);">' +
+              '<tr>' +
+                '<th style="padding:5px 8px;text-align:left;">NSR</th>' +
+                '<th style="padding:5px 8px;text-align:left;">Data</th>' +
+                '<th style="padding:5px 8px;text-align:left;">Hora</th>' +
+                '<th style="padding:5px 8px;text-align:left;">PIS</th>' +
+                '<th style="padding:5px 8px;text-align:left;">Status</th>' +
+              '</tr>' +
+            '</thead><tbody>' +
+            amostra.map(function(b) {
+              var cor = b.duplicado ? 'var(--muted)' : b.semColaborador ? '#f59e0b' : 'var(--success)';
+              var lbl = b.duplicado ? '⚠ Duplicado' : b.semColaborador ? '? Sem colab.' : '✓ Válido';
+              return '<tr style="border-bottom:1px solid var(--border);">' +
+                '<td style="padding:4px 8px;font-family:monospace;">' + _esc(String(b.nsr||'')) + '</td>' +
+                '<td style="padding:4px 8px;">' + fmtDataPtBR(b.data||'') + '</td>' +
+                '<td style="padding:4px 8px;font-family:monospace;">' + _esc(b.hora||'') + '</td>' +
+                '<td style="padding:4px 8px;font-family:monospace;">' + _esc(b.pis||'') + '</td>' +
+                '<td style="padding:4px 8px;font-weight:600;color:' + cor + ';">' + lbl + '</td>' +
+              '</tr>';
+            }).join('') +
+            '</tbody></table>' +
+        '</div></div>';
+    }
+
+    box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+        '<div><h3 style="margin:0;font-size:16px;">Importar AFD</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text2);">Passo 2 de 3 — Revisar prévia</p></div>' +
+        '<span style="font-size:11px;padding:2px 8px;background:var(--surface2,#f0f0f0);border-radius:4px;color:var(--text2);">' + _esc(preview.layoutNome||'') + '</span>' +
+      '</div>' +
+      statsHtml + avisoHtml + tabelaHtml +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button onclick="document.getElementById(\'modal-importar-afd\').remove()" ' +
+          'style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;" data-bg-skip="1">Cancelar</button>' +
+        '<button id="btn-afd-confirmar" class="btn btn-primario" ' +
+          'onclick="BtnGuard.wrap(\'btn-afd-confirmar\',\'Importando…\',PontoUI._executarImportacaoAfd)">' +
+          'Confirmar Importação (' + validos + ' válidos)' +
+        '</button>' +
+      '</div>';
+  }
+
+  function _afdStat(val, label, cor) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center;">' +
+      '<div style="font-size:18px;font-weight:700;color:' + cor + ';">' + val + '</div>' +
+      '<div style="font-size:11px;color:var(--text2);">' + label + '</div>' +
+    '</div>';
+  }
+
+  function _executarImportacaoAfd(done) {
+    if (!_afdConteudo.trim()) { Toast.erro('Arquivo não encontrado. Reinicie o processo.'); if(done) done(); return; }
+    var params = { conteudo: _afdConteudo };
+    if (_afdLayoutId) params.layoutId = _afdLayoutId;
+    GAS.ponto.iniciarImportacao(params,
+      function(r1) {
+        if (!r1 || !r1.ok) {
+          if(done) done();
+          Toast.erro((r1 && r1.error && r1.error.message) || 'Erro ao iniciar importação.');
+          return;
+        }
+        var sessaoId = r1.data && r1.data.sessaoId;
+        if (!sessaoId) { if(done) done(); Toast.erro('sessaoId não retornado.'); return; }
+        GAS.ponto.confirmarImportacao({ sessaoId: sessaoId },
+          function(r2) {
+            if(done) done();
+            if (!r2 || !r2.ok) {
+              Toast.erro((r2 && r2.error && r2.error.message) || 'Erro ao confirmar importação.');
+              return;
+            }
+            _renderAfdPasso3(r2.data);
+            _carregado = false;
+          },
+          function(e) { if(done) done(); Toast.erro((e && e.message) || 'Erro ao confirmar.'); }
+        );
+      },
+      function(e) { if(done) done(); Toast.erro((e && e.message) || 'Erro ao iniciar.'); }
+    );
+  }
+
+  function _renderAfdPasso3(resultado) {
+    var box = document.getElementById('modal-afd-box');
+    if (!box) return;
+    var imp = resultado.importados || 0;
+    var ok  = imp > 0;
+    box.innerHTML =
+      '<div style="text-align:center;padding:8px 0 20px;">' +
+        '<div style="font-size:52px;margin-bottom:10px;">' + (ok ? '✅' : '⚠️') + '</div>' +
+        '<h3 style="margin:0 0 4px;font-size:18px;">Importação ' + (ok ? 'Concluída!' : 'sem novos registros') + '</h3>' +
+        '<p style="font-size:13px;color:var(--text2);margin:0 0 20px;">As jornadas foram processadas automaticamente.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:440px;margin:0 auto 20px;">' +
+          _afdStat(resultado.importados||0,        'Importados',  'var(--success)') +
+          _afdStat(resultado.jornadasProcessadas||0,'Jornadas',   'var(--primario)') +
+          _afdStat(resultado.duplicados||0,         'Duplicados',  'var(--muted)') +
+          _afdStat(resultado.erros||0,              'Erros',       'var(--danger)') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:center;">' +
+        '<button class="btn btn-secondary" data-bg-skip="1" ' +
+          'onclick="document.getElementById(\'modal-importar-afd\').remove();' +
+          'PontoUI.setTab(\'sessoes\',null);PontoUI.carregarSessoes();">Ver Histórico</button>' +
+        '<button class="btn btn-primario" data-bg-skip="1" ' +
+          'onclick="document.getElementById(\'modal-importar-afd\').remove();PontoUI.carregarEspelho();">Ver Espelho</button>' +
+      '</div>';
+  }
+
+  // ── Histórico de Sessões ───────────────────────────────────────────────────
+
+  function carregarSessoes() {
+    var el = document.getElementById('ponto-sessoes-conteudo');
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando sessões…</p>';
+    GAS.ponto.listarSessoes({}, function(r) {
+      if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar sessões.</p>'; return; }
+      var sessoes = Array.isArray(r.data) ? r.data : [];
+      if (!el) return;
+      if (sessoes.length === 0) {
+        el.innerHTML = '<p class="muted-text">Nenhuma importação encontrada.</p>' +
+          '<p style="font-size:13px;color:var(--text2);">Use a aba <strong>AFD</strong> para importar seu primeiro arquivo.</p>';
+        return;
+      }
+      var ST_COR   = { pendente:'#f59e0b', confirmada:'var(--success)', cancelada:'var(--muted)', revertida:'var(--danger)' };
+      var ST_LABEL = { pendente:'Pendente', confirmada:'Confirmada', cancelada:'Cancelada', revertida:'Revertida' };
+      el.innerHTML =
+        '<div style="overflow-x:auto;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+          '<thead><tr style="background:var(--surface2,#f5f5f5);">' +
+            '<th style="padding:8px;text-align:left;font-weight:600;">Data</th>' +
+            '<th style="padding:8px;text-align:left;font-weight:600;">Arquivo</th>' +
+            '<th style="padding:8px;text-align:left;font-weight:600;">Layout</th>' +
+            '<th style="padding:8px;text-align:center;font-weight:600;">Batidas</th>' +
+            '<th style="padding:8px;text-align:center;font-weight:600;">Erros</th>' +
+            '<th style="padding:8px;text-align:center;font-weight:600;">Status</th>' +
+            '<th style="padding:8px;text-align:left;font-weight:600;">Importado por</th>' +
+          '</tr></thead><tbody>' +
+        sessoes.map(function(s) {
+          var st  = s.status || 'pendente';
+          var cor = ST_COR[st]   || 'var(--text)';
+          var lbl = ST_LABEL[st] || st;
+          var dt  = s.criadoEm ? fmtDataPtBR(s.criadoEm.slice(0,10)) + ' ' + (s.criadoEm.slice(11,16)||'') : '—';
+          return '<tr style="border-bottom:1px solid var(--border);">' +
+            '<td style="padding:7px 8px;white-space:nowrap;">' + _esc(dt) + '</td>' +
+            '<td style="padding:7px 8px;">' + _esc(s.nomeArquivo||'—') + '</td>' +
+            '<td style="padding:7px 8px;">' + _esc(s.layoutId||'—') + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + (s.registrosBrutos||0) + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;color:' + ((s.erros||0)>0?'var(--danger)':'var(--text)') + ';">' + (s.erros||0) + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:' + cor + ';">' + lbl + '</span></td>' +
+            '<td style="padding:7px 8px;font-size:12px;color:var(--text2);">' + _esc(s.importadoPor||'—') + '</td>' +
+          '</tr>';
+        }).join('') +
+        '</tbody></table></div>';
+    }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc((e&&e.message)||e) + '</p>'; });
+  }
+
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 

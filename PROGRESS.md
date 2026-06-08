@@ -39,32 +39,28 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Motor AFD flexível — Fases 2-4 do módulo Ponto/RH (2026-06-08)** — Backend completo. PRÓXIMO: Fase 5 (UI upload → preview → confirmar) + Fase 7 (exportações configuráveis). Ver prompt de continuação no final deste arquivo.
+**Fase atual**: **Motor AFD flexível — Fase 5 (UI importação) — Deploy @700 (2026-06-08)** — UI completa do fluxo de importação AFD em `index.html`. PRÓXIMO: Fase 6 (editor visual de layouts) + Fase 7 (exportações configuráveis).
 
-Arquivos novos/modificados nesta sessão:
-- `gas/src/modules/pessoas/afd_layout_repository.gs` (NOVO) — layouts de parse, builtin iDClass Bio Prox v1
-- `gas/src/modules/pessoas/ponto_bruto_repository.gs` (NOVO) — sessões de importação reversíveis + registros brutos
-- `gas/src/modules/pessoas/afd_parser_engine.gs` (NOVO) — parser flexível em 2 etapas (iniciar→confirmar)
-- `gas/src/modules/pessoas/jornada_repository.gs` (NOVO) — jornadas processadas (jornadas.json)
-- `gas/src/modules/pessoas/jornada_engine.gs` (NOVO) — algoritmo E/I/R/S + espelho mensal
-- `gas/src/modules/pessoas/ponto_repository.gs` (MOD) — → ponto_normalizado.json; atualizarTipo(); nsrJaExiste(); reverterImportacao()
-- `gas/src/modules/pessoas/ponto_controller.gs` (MOD) — 14 novos endpoints (layouts, importação, jornadas)
-- `gas/src/core/setup.gs` (MOD) — 4 novos prepararIndice() + 'PontoBruto','PontoImportacoes','Jornadas' no SCHEMA_ABAS
+Arquivos modificados nesta sessão (Fase 5):
+- `gas/src/frontend/index.html` (MOD) — Fase 5 UI importação AFD:
+  - `GAS.ponto`: +8 bindings (previewAfd, iniciarImportacao, confirmarImportacao, cancelarImportacao, listarLayouts, listarSessoes, espelhoMensal, processarJornada)
+  - Tab "Colabore AFD" → "AFD" + nova aba "Sessões"
+  - Aba AFD: seção Importar substituída por botão "Importar AFD" (abre wizard modal)
+  - Nova aba Sessões: tabela de histórico de importações
+  - `PontoUI.carregarEspelho()` → usa `espelhoMensal` (jornadas.json) com tabela dia-a-dia (data, entrada, saída, batidas, trabalhado, status)
+  - Modal wizard 3 passos: Passo 1 (arquivo+layout) → Passo 2 (prévia: stats+amostra 20 batidas) → Passo 3 (resultado: importados, jornadas, duplicados, erros)
+  - `PontoUI.carregarSessoes()`: tabela de sessões (data, arquivo, layout, batidas, erros, status, importado por)
 
-JSONs novos (criados ao primeiro uso):
-- `afd_layouts.json` — layout iDClass Bio Prox v1 pré-seeded
-- `ponto_importacoes.json` — histórico de sessões
-- `ponto_bruto.json` — registros brutos com linha original
-- `ponto_normalizado.json` — substitui ponto.json (novo schema)
-- `jornadas.json` — jornadas reconstituídas E/I/R/S
+**Antes de testar** — executar no GAS Editor (uma vez, na ordem):
+1. `AfdLayoutRepository.prepararIndice()` — instala layout iDClass builtin
+2. `PontoBrutoRepository.prepararIndice()` — cria abas PontoBruto + PontoImportacoes
+3. `JornadaRepository.prepararIndice()` — cria aba Jornadas
 
 Fases pendentes do motor AFD:
-- Fase 5: UI do fluxo de importação (modal upload → preview → confirmar → espelho)
 - Fase 6: Editor visual de layouts (arrastar colunas, ativar/desativar campos)
 - Fase 7: Exportações configuráveis (Excel/CSV/TXT/Espelho por template)
 - Fase 8: Banco de horas com rollback por sessão
-- Fase 9: Espelho de ponto refinado (renderização visual por jornada)
-- Fase 10: Testes + validação com arquivo iDClass real
+- Fase 9: Testes + validação com arquivo iDClass real
 
 **Fase anterior**: **UX: PCCS chevron+busca rápida; Equipe email vinculado+cargos A-Z (2026-06-08)** — PCCS: cabeçalho de cada plano clicável (chevron `expand_more` com toggle collapse do body). Campo de busca acima da tabela de cargos com filtro em tempo real (oculta linhas e cabeçalhos de área vazios). Equipe: `<input type="email">` substituído por `<select>` populado via `_carregarSelectUsuariosHelper` (lista `ctrl_admin_listarUsuariosAtivos`). Dropdown de cargos ordenado alfabeticamente com `localeCompare('pt-BR')`.
 

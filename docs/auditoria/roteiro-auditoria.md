@@ -577,6 +577,39 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ATUAL — SESSÃO 37 (2026-06-08) → SESSÃO 38
+
+### Estado: Deploy @700 · Motor AFD Flexível Fase 5 concluída
+
+### O que foi feito nesta sessão (s37)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @699 | Motor AFD Fases 2-4 (backend) | `afd_layout_repository.gs`, `ponto_bruto_repository.gs`, `afd_parser_engine.gs`, `jornada_repository.gs`, `jornada_engine.gs` (NOVOS). `ponto_repository.gs` + `ponto_controller.gs` + `setup.gs` (MOD). 14 endpoints novos. |
+| @700 | Fase 5 — UI importação AFD | `index.html`: 8 novos bindings GAS.ponto; aba "AFD"+"Sessões"; wizard modal 3 passos (arquivo→prévia→resultado); `carregarEspelho` migrado para `espelhoMensal` + tabela dia-a-dia; `carregarSessoes()`. |
+
+### Checklist de auditoria — Fase 5
+```
+[x] prompt()/confirm() — não usados na Fase 5
+[x] GAS.* namespace — 8 novos bindings adicionados (previewAfd, iniciarImportacao, confirmarImportacao, cancelarImportacao, listarLayouts, listarSessoes, espelhoMensal, processarJornada)
+[x] CSS — zero classes novas; usa apenas classes existentes do DS
+[x] IDs de DOM — modal-importar-afd, modal-afd-box, afd-file-input, afd-layout-sel, afd-nome-arquivo, btn-afd-preview, btn-afd-confirmar — todos únicos
+[x] FsmGuardian — não há transições de status na Fase 5
+[x] Modais — background:var(--surface); overlay rgba(0,0,0,.52)
+[x] BtnGuard — btn-importar-afd, btn-afd-preview, btn-afd-confirmar têm BtnGuard.wrap; navegação pura com data-bg-skip="1"
+[x] Datas — fmtDataPtBR() em todas as datas visíveis (espelho + amostra + sessões)
+```
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (antes de testar AFD):**
+  1. `AfdLayoutRepository.prepararIndice()` — seed layout iDClass
+  2. `PontoBrutoRepository.prepararIndice()` — cria abas PontoBruto + PontoImportacoes
+  3. `JornadaRepository.prepararIndice()` — cria aba Jornadas
+- **Próximas fases AFD:** Fase 6 (editor visual layouts) + Fase 7 (exportações configuráveis)
+- **Bugs auditoria pendentes:** TAR-04 (gatilhos automáticos), HUB-13 (dayoff aniversário), FIN-06 (integração Financeiro↔RH)
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 35 (2026-06-06) → SESSÃO 36
 
 ### Estado anterior: ~270 bugs registrados · Deploy @650 (GAS) · Firebase live
