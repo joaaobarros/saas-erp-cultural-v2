@@ -18,6 +18,7 @@ var PROP_SHEETS = {
   ESPACOS:       'SHEET_ID_ESPACOS',
   PESSOAL:       'SHEET_ID_PESSOAL',
   EQUIPES:       'SHEET_ID_EQUIPES',
+  PONTO:         'SHEET_ID_PONTO',
   FINANCEIRO:    'SHEET_ID_FINANCEIRO',
   RELATORIOS:    'SHEET_ID_RELATORIOS',
   REUNIOES:      'SHEET_ID_REUNIOES',
@@ -51,7 +52,9 @@ var SCHEMA_ABAS = {
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
     'Funcionarios', 'Vinculos', 'Escalas', 'Ferias', 'Ocorrencias',
-    'Afastamentos', 'ParametrosRH', 'Avaliacoes', 'Holerites',
+    'Afastamentos', 'ParametrosRH', 'Avaliacoes', 'Holerites'
+  ],
+  PONTO: [
     'Ponto', 'PontoBruto', 'PontoImportacoes', 'Jornadas'
   ],
   FINANCEIRO: [
@@ -237,7 +240,7 @@ function inicializarSistema() {
     }
   }
 
-  // Fase 11.4c — Ponto Bruto: garante abas EQUIPES.PontoBruto e EQUIPES.PontoImportacoes
+  // Fase 11.4c — Ponto Bruto: garante abas PONTO.PontoBruto e PONTO.PontoImportacoes
   if (typeof PontoBrutoRepository !== 'undefined' &&
       typeof PontoBrutoRepository.prepararIndice === 'function') {
     try { PontoBrutoRepository.prepararIndice(); } catch(e) {
@@ -245,7 +248,7 @@ function inicializarSistema() {
     }
   }
 
-  // Fase 11.4d — Jornadas: garante aba EQUIPES.Jornadas
+  // Fase 11.4d — Jornadas: garante aba PONTO.Jornadas
   if (typeof JornadaRepository !== 'undefined' &&
       typeof JornadaRepository.prepararIndice === 'function') {
     try { JornadaRepository.prepararIndice(); } catch(e) {
@@ -1543,3 +1546,4 @@ function setup_depositos_iniciais() {
     'Depósitos: ' + criados + ' criados, ' + jaExistiam + ' já existiam.');
   return { criados: criados, ja_existiam: jaExistiam };
 }
+

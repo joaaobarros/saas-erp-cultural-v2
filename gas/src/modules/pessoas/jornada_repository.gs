@@ -9,7 +9,7 @@
  *   faltantes, inconsistências e status da jornada.
  *
  *   JSON canônico: jornadas.json
- *   Índice Sheet:  EQUIPES.Jornadas
+ *   Índice Sheet:  Jornadas
  *
  *   Modelo de dados:
  *   {
@@ -33,7 +33,7 @@
 var JornadaRepository = (function() {
 
   var ARQUIVO     = 'jornadas.json';
-  var ABA_JORNADA = 'EQUIPES.Jornadas';
+  var ABA_JORNADA = 'Jornadas';
   var HEADERS     = [
     'id', 'colaboradorId', 'data', 'numBatidas',
     'minutosTrabalho', 'minutosExtras', 'minutosFaltantes', 'minutosIntervalo',
@@ -94,8 +94,8 @@ var JornadaRepository = (function() {
 
   function prepararIndice() {
     try {
-      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_EQUIPES');
-      if (!sheetId) return { ok: false, motivo: 'SHEET_ID_EQUIPES não configurado' };
+      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_PONTO');
+      if (!sheetId) return { ok: false, motivo: 'SHEET_ID_PONTO não configurado' };
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName(ABA_JORNADA);
       if (!aba) {
@@ -103,7 +103,7 @@ var JornadaRepository = (function() {
         aba.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
         aba.setFrozenRows(1);
       }
-      Logger.info('jornada_repository', 'prepararIndice', 'Índice EQUIPES.Jornadas OK.');
+      Logger.info('jornada_repository', 'prepararIndice', 'Índice Jornadas OK.');
     } catch(e) {
       Logger.warn('jornada_repository', 'prepararIndice', e.message);
     }

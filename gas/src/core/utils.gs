@@ -98,6 +98,12 @@ var ABA_PARA_MODULO = {
     Pesquisas:   'Pesquisas',
     Respostas:   'Respostas',
     Indicadores: 'Indicadores'
+  },
+  PONTO: {
+    Ponto:            'Ponto',
+    PontoBruto:       'PontoBruto',
+    PontoImportacoes: 'PontoImportacoes',
+    Jornadas:         'Jornadas'
   }
 };
 

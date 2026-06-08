@@ -577,7 +577,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 37 (2026-06-08) → SESSÃO 38
+## HANDOFF ATUAL — SESSÃO 37 (2026-06-08) → SESSÃO 38 [ATUALIZADO]
 
 ### Estado: Deploy @700 · Motor AFD Flexível Fase 5 concluída
 
@@ -587,6 +587,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 |---|---|---|
 | @699 | Motor AFD Fases 2-4 (backend) | `afd_layout_repository.gs`, `ponto_bruto_repository.gs`, `afd_parser_engine.gs`, `jornada_repository.gs`, `jornada_engine.gs` (NOVOS). `ponto_repository.gs` + `ponto_controller.gs` + `setup.gs` (MOD). 14 endpoints novos. |
 | @700 | Fase 5 — UI importação AFD | `index.html`: 8 novos bindings GAS.ponto; aba "AFD"+"Sessões"; wizard modal 3 passos (arquivo→prévia→resultado); `carregarEspelho` migrado para `espelhoMensal` + tabela dia-a-dia; `carregarSessoes()`. |
+| @701 | Ponto — planilha dedicada | `SHEET_ID_PONTO` adicionado a `PROP_SHEETS`; `PONTO: ['Ponto','PontoBruto','PontoImportacoes','Jornadas']` em `SCHEMA_ABAS`; abas removidas de `EQUIPES`; `ABA_PARA_MODULO.PONTO` em `utils.gs`; `ponto_repository`, `ponto_bruto_repository`, `jornada_repository` migrados de `SHEET_ID_EQUIPES` → `SHEET_ID_PONTO` com nomes de aba simplificados. |
 
 ### Checklist de auditoria — Fase 5
 ```

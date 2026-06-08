@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Motor AFD flexível — Fase 5 (UI importação) — Deploy @700 (2026-06-08)** — UI completa do fluxo de importação AFD em `index.html`. PRÓXIMO: Fase 6 (editor visual de layouts) + Fase 7 (exportações configuráveis).
+**Fase atual**: **Ponto — planilha dedicada SHEET_ID_PONTO — Deploy @701 (2026-06-08)** — Módulo Ponto extraído da planilha EQUIPES para planilha própria. PRÓXIMO: executar `fase11_4_prepararIndice()` + `AfdLayoutRepository.prepararIndice()` no GAS Editor para criar a nova planilha PONTO. Fase 6 (editor layouts) + Fase 7 (exportações) seguem.
 
 Arquivos modificados nesta sessão (Fase 5):
 - `gas/src/frontend/index.html` (MOD) — Fase 5 UI importação AFD:

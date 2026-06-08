@@ -17,7 +17,7 @@
  *     status           — 'ativo' | 'revertido'
  *
  *   Banco de horas: banco_horas.json (saldo acumulado + histórico reversível).
- *   Índice Sheet: EQUIPES.Ponto
+ *   Índice Sheet: Ponto
  *
  * @depends data_layer.gs, data_gateway.gs
  */
@@ -25,7 +25,7 @@
 var PontoRepository = (function() {
   var ARQUIVO_PONTO      = 'ponto_normalizado.json';
   var ARQUIVO_BH         = 'banco_horas.json';
-  var ABA_PONTO          = 'EQUIPES.Ponto';
+  var ABA_PONTO          = 'Ponto';
   var HEADERS_PONTO      = [
     'id','colaboradorId','nome','pis','data','hora','tipo',
     'datetimeOriginal','importacaoId','brutoId','equipamento',
@@ -174,8 +174,8 @@ var PontoRepository = (function() {
 
   function _garantirCabecalho() {
     try {
-      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_EQUIPES');
-      if (!sheetId) { Logger.warn('ponto_repository', '_garantirCabecalho', 'SHEET_ID_EQUIPES não configurado'); return; }
+      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_PONTO');
+      if (!sheetId) { Logger.warn('ponto_repository', '_garantirCabecalho', 'SHEET_ID_PONTO não configurado'); return; }
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName(ABA_PONTO);
       if (!aba) {
@@ -198,13 +198,13 @@ var PontoRepository = (function() {
 
   function prepararIndice() {
     _garantirCabecalho();
-    Logger.info('ponto_repository', 'prepararIndice', 'Índice EQUIPES.Ponto OK.');
+    Logger.info('ponto_repository', 'prepararIndice', 'Índice Ponto OK.');
     return { ok: true };
   }
 
   function sincronizarRegistroSheet(orgId, registro, nomeColaborador, pisColaborador) {
     try {
-      var aba = _getSheet('SHEET_ID_EQUIPES', ABA_PONTO);
+      var aba = _getSheet('SHEET_ID_PONTO', ABA_PONTO);
       if (!aba) return;
       aba.appendRow([
         registro.id, registro.colaboradorId,

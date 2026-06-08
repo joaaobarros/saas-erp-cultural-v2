@@ -22,8 +22,8 @@
  *   normalizados como 'revertido' para reconstituição sem re-importar o arquivo.
  *
  *   Índices Sheet:
- *     EQUIPES.PontoBruto         — resumo de registros para BI/auditoria
- *     EQUIPES.PontoImportacoes   — histórico de sessões de importação
+ *     PontoBruto         — resumo de registros para BI/auditoria
+ *     PontoImportacoes   — histórico de sessões de importação
  *
  * @depends data_layer.gs, data_gateway.gs
  */
@@ -32,8 +32,8 @@ var PontoBrutoRepository = (function() {
 
   var ARQUIVO_BRUTO       = 'ponto_bruto.json';
   var ARQUIVO_IMPORTACOES = 'ponto_importacoes.json';
-  var ABA_BRUTO           = 'EQUIPES.PontoBruto';
-  var ABA_IMPORTACOES     = 'EQUIPES.PontoImportacoes';
+  var ABA_BRUTO           = 'PontoBruto';
+  var ABA_IMPORTACOES     = 'PontoImportacoes';
 
   var HEADERS_BRUTO = [
     'id', 'importacaoId', 'layoutId', 'nsr', 'tipoRegistro',
@@ -200,7 +200,7 @@ var PontoBrutoRepository = (function() {
 
   function _garantirCabecalho(nomeAba, headers) {
     try {
-      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_EQUIPES');
+      var sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID_PONTO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName(nomeAba);
@@ -224,7 +224,7 @@ var PontoBrutoRepository = (function() {
 
   function _sincronizarSessaoSheet(orgId, sessao) {
     try {
-      var aba = _getSheet('SHEET_ID_EQUIPES', ABA_IMPORTACOES);
+      var aba = _getSheet('SHEET_ID_PONTO', ABA_IMPORTACOES);
       if (!aba) return;
       aba.appendRow([
         sessao.id, sessao.layoutId, sessao.nomeArquivo, sessao.status,
