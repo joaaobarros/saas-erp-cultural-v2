@@ -466,7 +466,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 44 (2026-06-08) → SESSÃO 45
+## HANDOFF ATUAL — SESSÃO 45 (2026-06-08) → SESSÃO 46
+
+### Estado atual: ~267 bugs registrados · Deploy @704 (GAS)
+
+### O que foi feito nesta sessão (s45)
+
+Fuzzy name matching + aceitar AFD sem cadastro.
+
+| Arquivo | Mudança |
+|---|---|
+| `afd_parser_engine.gs` | `_normalizarNome`, `_construirMapaNomes`, `_buscarColabPorNome` (75% palavras); `gerarPreview` + `iniciarImportacao`: fallback nome; `sem_cadastro` salvo como bruto; `confirmarImportacao`: só `valido` vira normalizado, retorna `semCadastro` |
+| `index.html` | 6 stats; botão sempre ativo; coluna matchBy na tabela; passo-3 mostra Pendentes |
+
+### Próxima sessão
+
+1. Testar com arquivo real: verificar se names match funciona para colaboradores cadastrados
+2. Criar funcionalidade de "vincular pendentes" — listar brutos sem_cadastro e associar a colaborador
+3. Preencher campo PIS nos colaboradores do sistema para evitar dependência de name matching
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 44 (2026-06-08) → SESSÃO 45
 
 ### Estado atual: ~267 bugs registrados · Deploy @703 (GAS)
 

@@ -31780,13 +31780,17 @@ var PontoUI = (function() {
     var validos = (res.batidas||0) - (res.pisNaoEncontrados||0) - (res.duplicados||0) - (res.erros||0);
     if (validos < 0) validos = 0;
 
+    var validosPIS  = res.validosPIS  || 0;
+    var validosNome = res.validosNome || 0;
+    var semCad      = res.semCadastro || res.pisNaoEncontrados || 0;
     var statsHtml =
-      '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">' +
-        _afdStat(res.batidas||0, 'Batidas', 'var(--primario)') +
-        _afdStat(validos,       'Válidas',  'var(--success)') +
-        _afdStat(res.pisNaoEncontrados||0, 'Sem colab.', '#f59e0b') +
-        _afdStat(res.duplicados||0,        'Duplicadas', 'var(--muted)') +
-        _afdStat(res.erros||0,             'Erros',      'var(--danger)') +
+      '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;">' +
+        _afdStat(res.batidas||0, 'Batidas',    'var(--primario)') +
+        _afdStat(validosPIS,     'Via PIS',    'var(--success)') +
+        _afdStat(validosNome,    'Via Nome',   '#06b6d4') +
+        _afdStat(semCad,         'Sem cad.',   '#f59e0b') +
+        _afdStat(res.duplicados||0,'Dup.',     'var(--muted)') +
+        _afdStat(res.erros||0,   'Erros',      'var(--danger)') +
       '</div>';
 
     // Seção: colaboradores do arquivo com status de cadastro no sistema
@@ -31811,13 +31815,14 @@ var PontoUI = (function() {
               '</tr>' +
             '</thead><tbody>' +
             colabs.map(function(c) {
-              var noSis = c.noSistema;
+              var cor, lbl;
+              if      (c.matchBy === 'pis')  { cor = 'var(--success)'; lbl = '✓ Via PIS'; }
+              else if (c.matchBy === 'nome') { cor = '#06b6d4';        lbl = '✓ Via Nome'; }
+              else                           { cor = '#f59e0b';        lbl = '○ Sem cadastro'; }
               return '<tr style="border-bottom:1px solid var(--border);">' +
-                '<td style="padding:4px 8px;font-weight:' + (noSis ? '400' : '600') + ';color:' + (noSis ? 'var(--text)' : '#f59e0b') + ';">' +
-                  _esc(c.nome || '—') + '</td>' +
+                '<td style="padding:4px 8px;font-weight:600;">' + _esc(c.nome || '—') + '</td>' +
                 '<td style="padding:4px 8px;font-family:monospace;color:var(--text2);">' + _esc(c.pis||'') + '</td>' +
-                '<td style="padding:4px 8px;font-weight:600;color:' + (noSis ? 'var(--success)' : 'var(--danger)') + ';">' +
-                  (noSis ? '✓ Cadastrado' : '✗ Não cadastrado') + '</td>' +
+                '<td style="padding:4px 8px;font-weight:600;color:' + cor + ';">' + lbl + '</td>' +
               '</tr>';
             }).join('') +
           '</tbody></table>' +
@@ -31826,11 +31831,13 @@ var PontoUI = (function() {
         '</div>';
     }
 
+    var totalValidos = validosPIS + validosNome;
     var avisoHtml = '';
-    if ((res.pisNaoEncontrados||0) > 0 || (res.erros||0) > 0) {
+    if (semCad > 0 || (res.erros||0) > 0) {
       avisoHtml = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:12px;">' +
-        '⚠️ ' + (res.pisNaoEncontrados||0) + ' batida(s) sem colaborador vinculado e ' + (res.erros||0) + ' erro(s) de parse serão ignorados.' +
-        (validos === 0 ? '<br><strong>Nenhuma batida válida encontrada.</strong> Verifique se os colaboradores estão cadastrados no sistema com o PIS correto.' : '') +
+        (semCad > 0 ? '⚠️ ' + semCad + ' batida(s) sem colaborador cadastrado serão salvas e poderão ser vinculadas no futuro.' : '') +
+        ((res.erros||0) > 0 ? '<br>❌ ' + (res.erros||0) + ' linha(s) com erro de parse serão ignoradas.' : '') +
+        (totalValidos === 0 && semCad > 0 ? '<br><strong>Dica:</strong> Preencha o campo PIS nos cadastros dos colaboradores para vinculação automática nas próximas importações.' : '') +
       '</div>';
     }
 
@@ -31852,9 +31859,10 @@ var PontoUI = (function() {
             '</thead><tbody>' +
             amostra.map(function(b) {
               var cor, lbl;
-              if (b.duplicado)      { cor = 'var(--muted)';    lbl = '⚠ Duplicado'; }
-              else if (b.semColaborador) { cor = 'var(--danger)'; lbl = '✗ Não cadastrado'; }
-              else                  { cor = 'var(--success)';  lbl = '✓ Válido'; }
+              if (b.duplicado)           { cor = 'var(--muted)';  lbl = '⚠ Duplicado'; }
+              else if (b.matchBy==='pis') { cor = 'var(--success)'; lbl = '✓ Via PIS'; }
+              else if (b.matchBy==='nome'){ cor = '#06b6d4';       lbl = '✓ Via Nome'; }
+              else                        { cor = '#f59e0b';       lbl = '○ Sem cad.'; }
               return '<tr style="border-bottom:1px solid var(--border);">' +
                 '<td style="padding:4px 8px;font-family:monospace;">' + _esc(String(b.nsr||'')) + '</td>' +
                 '<td style="padding:4px 8px;font-weight:' + (b.nomeAfd ? '600' : '400') + ';color:' + (b.nomeAfd ? 'var(--text)' : 'var(--text2)') + ';">' +
@@ -31879,7 +31887,8 @@ var PontoUI = (function() {
           'style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;" data-bg-skip="1">Cancelar</button>' +
         '<button id="btn-afd-confirmar" class="btn btn-primario" ' +
           'onclick="BtnGuard.wrap(\'btn-afd-confirmar\',\'Importando…\',PontoUI._executarImportacaoAfd)">' +
-          'Confirmar Importação (' + validos + ' válidos)' +
+          'Confirmar Importação' +
+          (totalValidos > 0 ? ' (' + totalValidos + ' vinculados' + (semCad > 0 ? ' + ' + semCad + ' pendentes' : '') + ')' : ' (' + semCad + ' pendentes)') +
         '</button>' +
       '</div>';
   }
@@ -31931,12 +31940,14 @@ var PontoUI = (function() {
         '<div style="font-size:52px;margin-bottom:10px;">' + (ok ? '✅' : '⚠️') + '</div>' +
         '<h3 style="margin:0 0 4px;font-size:18px;">Importação ' + (ok ? 'Concluída!' : 'sem novos registros') + '</h3>' +
         '<p style="font-size:13px;color:var(--text2);margin:0 0 20px;">As jornadas foram processadas automaticamente.</p>' +
-        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:440px;margin:0 auto 20px;">' +
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:540px;margin:0 auto 20px;">' +
           _afdStat(resultado.importados||0,        'Importados',  'var(--success)') +
           _afdStat(resultado.jornadasProcessadas||0,'Jornadas',   'var(--primario)') +
+          _afdStat(resultado.semCadastro||0,        'Pendentes',   '#f59e0b') +
           _afdStat(resultado.duplicados||0,         'Duplicados',  'var(--muted)') +
           _afdStat(resultado.erros||0,              'Erros',       'var(--danger)') +
         '</div>' +
+        (resultado.semCadastro > 0 ? '<p style="font-size:12px;color:#f59e0b;max-width:400px;margin:0 auto 12px;">⚠ ' + resultado.semCadastro + ' batida(s) salvas sem vínculo — cadastre os colaboradores e reimporte para vincular.</p>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:center;">' +
         '<button class="btn btn-secondary" data-bg-skip="1" ' +

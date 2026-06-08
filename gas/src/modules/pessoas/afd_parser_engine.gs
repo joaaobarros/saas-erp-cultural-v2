@@ -131,6 +131,68 @@ var AfdParserEngine = (function() {
     return pis ? String(pis).replace(/\D/g, '') : '';
   }
 
+  // ─── Correspondência por nome (fallback ao PIS) ──────────────────────────────
+
+  var _PARTICULAS = { 'DE':1,'DA':1,'DO':1,'DOS':1,'DAS':1,'E':1,'EM':1,'A':1 };
+
+  function _normalizarNome(nome) {
+    if (!nome) return '';
+    var s = nome.toUpperCase()
+      .replace(/[ÁÀÂÃÄ]/g,'A').replace(/[ÉÈÊË]/g,'E')
+      .replace(/[ÍÌÎÏ]/g,'I').replace(/[ÓÒÔÕÖ]/g,'O')
+      .replace(/[ÚÙÛÜ]/g,'U').replace(/Ç/g,'C').replace(/Ñ/g,'N')
+      .replace(/[^A-Z\s]/g,'');
+    return s.split(/\s+/)
+      .filter(function(w){ return w.length > 1 && !_PARTICULAS[w]; })
+      .sort()   // ordena para tornar comparação independente de ordem
+      .join(' ').trim();
+  }
+
+  function _construirMapaNomes(orgId) {
+    var mapa = {};
+    try {
+      var colabs = lerJSON('colaboradores.json') || [];
+      colabs.filter(function(c){ return c.orgId === orgId && c.nome; }).forEach(function(c) {
+        var norm = _normalizarNome(c.nome);
+        if (norm) mapa[norm] = c.id;
+      });
+    } catch(e) {
+      Logger.warn('afd_parser_engine', '_construirMapaNomes', e.message);
+    }
+    return mapa;
+  }
+
+  /**
+   * Tenta encontrar um colabId pelo nome do AFD contra os nomes do sistema.
+   * Usa correspondência por palavras significativas (≥ 75% das palavras menores
+   * presentes nas palavras maiores), independente de ordem, acentuação ou partículas.
+   * @returns {string|null} colabId ou null se não encontrado
+   */
+  function _buscarColabPorNome(afdNome, mapaNomes) {
+    if (!afdNome || !mapaNomes) return null;
+    var normAfd = _normalizarNome(afdNome);
+    if (!normAfd) return null;
+
+    // Correspondência exata normalizada
+    if (mapaNomes[normAfd]) return mapaNomes[normAfd];
+
+    // Correspondência parcial: palavras do nome menor presentes no maior
+    var wordsAfd = normAfd.split(' ');
+    var melhor = null, melhorScore = 0;
+    Object.keys(mapaNomes).forEach(function(normSis) {
+      var wordsSis = normSis.split(' ');
+      var menor = wordsAfd.length <= wordsSis.length ? wordsAfd : wordsSis;
+      var maior = wordsAfd.length <= wordsSis.length ? wordsSis : wordsAfd;
+      var comuns = menor.filter(function(w){ return maior.indexOf(w) >= 0; });
+      var score = comuns.length / menor.length;
+      if (score >= 0.75 && score > melhorScore) {
+        melhorScore = score;
+        melhor = mapaNomes[normSis];
+      }
+    });
+    return melhor;
+  }
+
   // ─── Resolução de layout ─────────────────────────────────────────────────────
 
   function _resolverLayout(orgId, layoutId, conteudo) {
@@ -157,9 +219,10 @@ var AfdParserEngine = (function() {
    * @returns {{ ok, layoutId, layoutNome, resumo, amostraBatidas[], amostraCadastros[], erros[] }}
    */
   function gerarPreview(orgId, conteudo, layoutId) {
-    var layout  = _resolverLayout(orgId, layoutId, conteudo);
-    var linhas  = conteudo.split(/\r?\n/);
-    var mapaPIS = _construirMapaPIS(orgId);
+    var layout     = _resolverLayout(orgId, layoutId, conteudo);
+    var linhas     = conteudo.split(/\r?\n/);
+    var mapaPIS    = _construirMapaPIS(orgId);
+    var mapaNomes  = _construirMapaNomes(orgId);
 
     // Pre-carrega todos os NSRs existentes (1 leitura) para lookup O(1) por linha
     var nsrsExistentes = {};
@@ -168,8 +231,7 @@ var AfdParserEngine = (function() {
       _brutos.forEach(function(b){ if (b.nsr) nsrsExistentes[String(b.nsr)] = true; });
     } catch(_) {}
 
-    // Passo 0: varredura rápida para construir mapa PIS → nome do próprio arquivo AFD
-    // (registros de cadastro/tipo-5 geralmente vêm antes das batidas)
+    // Passo 0: varredura para construir mapa PIS → nome do próprio arquivo AFD
     var mapaAFDNomes = {};
     linhas.forEach(function(linha) {
       if (!linha || !linha.trim()) return;
@@ -183,19 +245,21 @@ var AfdParserEngine = (function() {
     });
 
     var resumo = {
-      totalLinhas:        linhas.length,
-      batidas:            0,
-      cadastros:          0,
-      ignoradas:          0,
-      erros:              0,
-      pisNaoEncontrados:  0,
-      duplicados:         0
+      totalLinhas:       linhas.length,
+      batidas:           0,
+      cadastros:         0,
+      ignoradas:         0,
+      erros:             0,
+      validosPIS:        0,
+      validosNome:       0,
+      semCadastro:       0,
+      duplicados:        0
     };
 
     var amostraBatidas   = [];
     var amostraCadastros = [];
     var erros            = [];
-    var pisNoArquivo     = {};   // PIS → { nome, noSistema } — todos os PIDs distintos do arquivo
+    var pisNoArquivo     = {};
 
     linhas.forEach(function(linha, idx) {
       if (!linha || !linha.trim()) { resumo.ignoradas++; return; }
@@ -213,30 +277,42 @@ var AfdParserEngine = (function() {
 
       if (parsed.esBatida) {
         resumo.batidas++;
-        var pisNorm = _normalizarPIS(parsed.pis);
-        var colabId = pisNorm ? (mapaPIS[pisNorm] || null) : null;
-        var isDup   = !!nsrsExistentes[String(parsed.nsr)];
+        var pisNorm  = _normalizarPIS(parsed.pis);
+        var afdNome  = pisNorm ? (mapaAFDNomes[pisNorm] || null) : null;
+        var colabId  = pisNorm ? (mapaPIS[pisNorm] || null) : null;
+        var matchBy  = colabId ? 'pis' : null;
 
-        if (!colabId) resumo.pisNaoEncontrados++;
-        if (isDup)    resumo.duplicados++;
+        // Fallback: correspondência por nome quando PIS não casa
+        if (!colabId && afdNome) {
+          colabId = _buscarColabPorNome(afdNome, mapaNomes);
+          if (colabId) matchBy = 'nome';
+        }
 
-        // Rastreia todos os PIDs distintos (sem limite de amostra)
+        var isDup = !!nsrsExistentes[String(parsed.nsr)];
+
+        if      (isDup)          resumo.duplicados++;
+        else if (matchBy==='pis') resumo.validosPIS++;
+        else if (matchBy==='nome') resumo.validosNome++;
+        else                     resumo.semCadastro++;
+
         if (pisNorm && !pisNoArquivo[pisNorm]) {
           pisNoArquivo[pisNorm] = {
             pis:      pisNorm,
-            nome:     mapaAFDNomes[pisNorm] || null,
-            noSistema: !!colabId
+            nome:     afdNome,
+            colabId:  colabId,
+            matchBy:  matchBy
           };
         }
 
         if (amostraBatidas.length < 50) {
           amostraBatidas.push({
-            nsr:           parsed.nsr,
-            data:          parsed.data,
-            hora:          parsed.hora,
-            pis:           pisNorm,
-            nomeAfd:       mapaAFDNomes[pisNorm] || null,
-            colabId:       colabId,
+            nsr:     parsed.nsr,
+            data:    parsed.data,
+            hora:    parsed.hora,
+            pis:     pisNorm,
+            nomeAfd: afdNome,
+            colabId: colabId,
+            matchBy: matchBy,
             duplicado:     isDup,
             semColaborador: !colabId
           });
@@ -254,7 +330,6 @@ var AfdParserEngine = (function() {
       }
     });
 
-    // Lista de colaboradores distintos no arquivo (máx. 100 para não estourar payload)
     var colaboradoresAfd = Object.keys(pisNoArquivo).slice(0, 100).map(function(pis) {
       return pisNoArquivo[pis];
     });
@@ -286,9 +361,10 @@ var AfdParserEngine = (function() {
    * @returns {{ ok, sessaoId, layoutId, resumo }}
    */
   function iniciarImportacao(orgId, conteudo, layoutId, nomeArquivo, emailAdmin) {
-    var layout  = _resolverLayout(orgId, layoutId, conteudo);
-    var linhas  = conteudo.split(/\r?\n/);
-    var mapaPIS = _construirMapaPIS(orgId);
+    var layout    = _resolverLayout(orgId, layoutId, conteudo);
+    var linhas    = conteudo.split(/\r?\n/);
+    var mapaPIS   = _construirMapaPIS(orgId);
+    var mapaNomes = _construirMapaNomes(orgId);
 
     // Pre-carrega todos os NSRs existentes (1 leitura) para lookup O(1) por linha
     var nsrsExistentes = {};
@@ -296,6 +372,19 @@ var AfdParserEngine = (function() {
       var _brutos = PontoBrutoRepository.listarBrutoPorPeriodo(orgId, '1900-01-01', '2999-12-31');
       _brutos.forEach(function(b){ if (b.nsr) nsrsExistentes[String(b.nsr)] = true; });
     } catch(_) {}
+
+    // Passo 0: mapa PIS → nome do próprio arquivo AFD
+    var mapaAFDNomes = {};
+    linhas.forEach(function(linha) {
+      if (!linha || !linha.trim()) return;
+      try {
+        var p = _parsearLinha(linha, layout);
+        if (p && !p.ignorado && p.esCadastro && p.pis) {
+          var pn = _normalizarPIS(p.pis);
+          if (pn && p.nome) mapaAFDNomes[pn] = p.nome.trim();
+        }
+      } catch(_) {}
+    });
 
     // Cria sessão como pendente
     var sessaoId = PontoBrutoRepository.criarSessao(orgId, {
@@ -307,14 +396,16 @@ var AfdParserEngine = (function() {
 
     var lote = [];
     var resumo = {
-      totalLinhas:        linhas.length,
-      batidas:            0,
-      cadastros:          0,
-      ignoradas:          0,
-      erros:              0,
-      duplicados:         0,
-      pisNaoEncontrados:  0,
-      detalheErros:       []
+      totalLinhas:    linhas.length,
+      batidas:        0,
+      cadastros:      0,
+      ignoradas:      0,
+      erros:          0,
+      validosPIS:     0,
+      validosNome:    0,
+      semCadastro:    0,
+      duplicados:     0,
+      detalheErros:   []
     };
 
     linhas.forEach(function(linha, idx) {
@@ -328,13 +419,8 @@ var AfdParserEngine = (function() {
         var motErr = 'Erro de parse: ' + e.message;
         resumo.detalheErros.push({ linhaNumero: idx + 1, motivo: motErr });
         lote.push({
-          nsr:           null,
-          tipoRegistro:  '?',
-          linhaOriginal: linha,
-          linhaNumero:   idx + 1,
-          layoutId:      layout.id,
-          status:        'erro',
-          motivo:        motErr
+          nsr: null, tipoRegistro: '?', linhaOriginal: linha,
+          linhaNumero: idx + 1, layoutId: layout.id, status: 'erro', motivo: motErr
         });
         return;
       }
@@ -344,19 +430,30 @@ var AfdParserEngine = (function() {
       if (parsed.esBatida) {
         resumo.batidas++;
         var pisNorm = _normalizarPIS(parsed.pis);
+        var afdNome = pisNorm ? (mapaAFDNomes[pisNorm] || null) : null;
         var colabId = pisNorm ? (mapaPIS[pisNorm] || null) : null;
-        var status  = 'valido';
-        var motivo  = '';
+        var matchBy = colabId ? 'pis' : null;
 
-        if (!colabId) {
-          status = 'pis_nao_encontrado';
-          motivo = 'PIS ' + pisNorm + ' não vinculado a nenhum colaborador';
-          resumo.pisNaoEncontrados++;
-          resumo.detalheErros.push({ linhaNumero: idx + 1, nsr: parsed.nsr, motivo: motivo });
-        } else if (!!nsrsExistentes[String(parsed.nsr)]) {
+        // Fallback: correspondência por nome quando PIS não casa
+        if (!colabId && afdNome) {
+          colabId = _buscarColabPorNome(afdNome, mapaNomes);
+          if (colabId) matchBy = 'nome';
+        }
+
+        var status = 'valido', motivo = '';
+        if (!!nsrsExistentes[String(parsed.nsr)]) {
           status = 'duplicado';
-          motivo = 'NSR ' + parsed.nsr + ' já existe em importação anterior';
+          motivo = 'NSR ' + parsed.nsr + ' já existe';
           resumo.duplicados++;
+        } else if (!colabId) {
+          // Aceita o bruto sem colaborador; fica pendente para vinculação futura
+          status = 'sem_cadastro';
+          motivo = (afdNome || pisNorm) + ' não encontrado no sistema';
+          resumo.semCadastro++;
+        } else if (matchBy === 'nome') {
+          resumo.validosNome++;
+        } else {
+          resumo.validosPIS++;
         }
 
         lote.push({
@@ -366,7 +463,9 @@ var AfdParserEngine = (function() {
           data:             parsed.data  || '',
           hora:             parsed.hora  || '',
           pis:              pisNorm,
+          nomeAfd:          afdNome || '',
           colaboradorId:    colabId,
+          matchBy:          matchBy || '',
           hash:             parsed.hash  || '',
           linhaOriginal:    linha,
           linhaNumero:      idx + 1,
@@ -389,28 +488,29 @@ var AfdParserEngine = (function() {
           linhaOriginal:    linha,
           linhaNumero:      idx + 1,
           layoutId:         layout.id,
-          status:           'cadastro'   // registros tipo 5 — não viram normalizados
+          status:           'cadastro'
         });
       }
     });
 
-    // Persiste lote de brutos na sessão
     PontoBrutoRepository.salvarLoteBruto(orgId, sessaoId, lote);
 
-    // Atualiza contadores da sessão
+    var totalNaoValidos = resumo.erros + resumo.duplicados + resumo.semCadastro;
     PontoBrutoRepository.atualizarSessao(orgId, sessaoId, {
       registrosBrutos:    lote.length,
       registrosIgnorados: resumo.ignoradas,
-      erros:              resumo.erros + resumo.duplicados + resumo.pisNaoEncontrados,
+      erros:              totalNaoValidos,
       detalheErros:       resumo.detalheErros
     });
 
     AuditoriaService.registrar('PONTO_IMPORTACAO_INICIADA', 'ponto', {
-      sessaoId:  sessaoId,
-      layoutId:  layout.id,
-      arquivo:   nomeArquivo || '',
-      batidas:   resumo.batidas,
-      erros:     resumo.erros + resumo.duplicados + resumo.pisNaoEncontrados
+      sessaoId:    sessaoId,
+      layoutId:    layout.id,
+      arquivo:     nomeArquivo || '',
+      batidas:     resumo.batidas,
+      validosPIS:  resumo.validosPIS,
+      validosNome: resumo.validosNome,
+      semCadastro: resumo.semCadastro
     }, emailAdmin || '');
 
     return { ok: true, sessaoId: sessaoId, layoutId: layout.id, resumo: resumo };
@@ -436,6 +536,8 @@ var AfdParserEngine = (function() {
 
     var layout  = AfdLayoutRepository.obter(sessao.layoutId);
     var brutos  = PontoBrutoRepository.listarBrutoPorSessao(orgId, sessaoId);
+    // Apenas 'valido' (PIS ou nome matched) vira normalizado
+    // 'sem_cadastro' permanece como bruto aguardando vinculação futura
     var validos = brutos.filter(function(b){ return b.status === 'valido'; });
 
     var importados = 0, erros = 0;
@@ -492,7 +594,7 @@ var AfdParserEngine = (function() {
       importados:       importados,
       erros:            erros,
       duplicados:       brutos.filter(function(b){ return b.status === 'duplicado'; }).length,
-      pisNaoEncontrados:brutos.filter(function(b){ return b.status === 'pis_nao_encontrado'; }).length,
+      semCadastro:      brutos.filter(function(b){ return b.status === 'sem_cadastro'; }).length,
       cadastros:        brutos.filter(function(b){ return b.status === 'cadastro'; }).length,
       jornadasProcessadas: resultadoJornadas.processadas,
       jornadasErros:       resultadoJornadas.erros
