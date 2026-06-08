@@ -568,7 +568,13 @@ function ctrl_admin_listarUsuariosAtivos() {
     if (!_auAcesso || _auAcesso.status !== 'ativo') throw new Error('Acesso negado.');
     return AcessoService.listarUsuarios()
       .filter(function(u) { return u.status !== 'pendente'; })
-      .map(function(u) { return { email: u.email, nome: u.nome || u.email }; });
+      .map(function(u) { return {
+        email:       u.email,
+        nome:        u.nome        || u.email,
+        nomeApelido: u.nomeApelido || '',
+        pronomes:    u.pronomes    || '',
+        setor:       u.setor       || ''
+      }; });
   }, 'ctrl_admin_listarUsuariosAtivos');
 }
 

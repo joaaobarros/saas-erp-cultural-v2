@@ -160,6 +160,24 @@ function ctrl_pessoas_salvar(dados) {
     if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
       throw new Error('Apenas RH e administradores podem cadastrar colaboradores.');
     var id = PessoasEngine.salvar(dados || {}, ctx.email, ctx.orgId);
+    // Sync setor/nomeApelido/pronomes para o registro de usuário vinculado
+    var emailInst = String((dados||{}).emailInstitucional || '').toLowerCase().trim();
+    if (emailInst) {
+      try {
+        modifyJSON('usuarios_acesso.json', function(lista) {
+          if (!Array.isArray(lista)) return lista;
+          var usr = lista.find(function(u){ return (u.email||'').toLowerCase() === emailInst; });
+          if (!usr) return lista;
+          if (dados.setor       !== undefined) usr.setor       = dados.setor || usr.setor;
+          if (dados.nomeApelido !== undefined) usr.nomeApelido = dados.nomeApelido;
+          if (dados.pronomes    !== undefined) usr.pronomes    = dados.pronomes;
+          if (dados.nome        && !usr.nome)  usr.nome        = dados.nome;
+          usr.atualizadoEm = new Date().toISOString();
+          return lista;
+        });
+        try { BootService.limparCache(emailInst); } catch(_e) {}
+      } catch(_e) { Logger.warn('ctrl_pessoas_salvar', 'sync_usuario', _e.message); }
+    }
     return { id: id };
   }, 'ctrl_pessoas_salvar');
 }

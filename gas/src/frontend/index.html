@@ -8070,13 +8070,12 @@ select.form-control { cursor: pointer; }
                 <button class="btn btn-primario btn-sm" id="rh-btn-novo-colab" onclick="RhUI.abrirFormColab()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Novo</button>
               </div>
             </div>
-            <div id="rh-colab-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div id="rh-colab-form" style="display:none;border-top:1px solid var(--border);padding:16px 20px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Profissionais</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Nome completo *</label><input id="rh-pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
-                <div class="form-group"><label class="form-label">E-mail institucional</label><select id="rh-pf-email" class="form-input"><option value="">Selecione o usuário…</option></select></div>
-                <div class="form-group"><label class="form-label">Setor</label>
-                  <select id="rh-pf-setor" class="form-input"><option value="">Selecione o setor…</option></select>
-                </div>
+                <div class="form-group"><label class="form-label">E-mail institucional</label><select id="rh-pf-email" class="form-input" onchange="RhUI._preencherDeUsuario(this.value)"><option value="">Selecione o usuário…</option></select></div>
+                <div class="form-group"><label class="form-label">Setor</label><select id="rh-pf-setor" class="form-input"><option value="">Selecione o setor…</option></select></div>
                 <div class="form-group"><label class="form-label">Cargo</label><select id="rh-pf-cargo" class="form-input"><option value="">Selecione…</option></select></div>
                 <div class="form-group"><label class="form-label">Vínculo</label>
                   <select id="rh-pf-vinculo" class="form-input">
@@ -8086,6 +8085,26 @@ select.form-control { cursor: pointer; }
                   </select>
                 </div>
                 <div class="form-group"><label class="form-label">Data Admissão</label><input id="rh-pf-admissao" class="form-input" type="date"></div>
+                <div class="form-group"><label class="form-label">Nº de Registro</label><input id="rh-pf-registro" class="form-input" type="text" placeholder="Auto-gerado"></div>
+              </div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Pessoais</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                <div class="form-group"><label class="form-label">Como deseja ser chamado(a)</label><input id="rh-pf-apelido" class="form-input" type="text" placeholder="Apelido ou nome social"></div>
+                <div class="form-group"><label class="form-label">Pronomes</label><input id="rh-pf-pronomes" class="form-input" type="text" placeholder="ex: ela/dela, ele/dele"></div>
+                <div class="form-group"><label class="form-label">E-mail pessoal</label><input id="rh-pf-email-pessoal" class="form-input" type="email" placeholder="email@pessoal.com"></div>
+                <div class="form-group"><label class="form-label">Data de nascimento</label><input id="rh-pf-nascimento" class="form-input" type="date"></div>
+              </div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
+              <div style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
+                <div class="form-group"><label class="form-label">CEP</label><input id="rh-pf-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9"></div>
+                <div class="form-group"><label class="form-label">Logradouro</label><input id="rh-pf-logradouro" class="form-input" type="text" placeholder="Rua, Av.…"></div>
+                <div class="form-group"><label class="form-label">Número</label><input id="rh-pf-num-end" class="form-input" type="text" placeholder="Nº"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:10px;margin-bottom:16px;">
+                <div class="form-group"><label class="form-label">Complemento</label><input id="rh-pf-complemento" class="form-input" type="text" placeholder="Apto, sala…"></div>
+                <div class="form-group"><label class="form-label">Bairro</label><input id="rh-pf-bairro" class="form-input" type="text"></div>
+                <div class="form-group"><label class="form-label">Cidade</label><input id="rh-pf-cidade" class="form-input" type="text"></div>
+                <div class="form-group"><label class="form-label">UF</label><input id="rh-pf-uf" class="form-input" type="text" maxlength="2" placeholder="CE"></div>
               </div>
               <input type="hidden" id="rh-pf-id">
               <div style="display:flex;gap:8px;margin-top:8px;">
@@ -31667,10 +31686,11 @@ Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 // RhUI — Módulo unificado RH / Depto. Pessoal (Fase 14)
 // ═══════════════════════════════════════════════════════════
 var RhUI = (function() {
-  var _carregado     = false;
-  var _abaAtiva      = 'equipe';
-  var _colaboradores = [];
-  var _pccsList      = [];
+  var _carregado      = false;
+  var _abaAtiva       = 'equipe';
+  var _colaboradores  = [];
+  var _pccsList       = [];
+  var _usuariosAtivos = [];
 
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
@@ -31761,6 +31781,7 @@ var RhUI = (function() {
     if (pane) { pane.style.display=''; pane.classList.add('ativa'); }
     if (btn) btn.classList.add('tab-ativa');
     else document.querySelectorAll('[data-rh-tab="'+tab+'"]').forEach(function(b){ b.classList.add('tab-ativa'); });
+    if (tab==='equipe')      carregarEquipe();
     if (tab==='pccs')        carregarPccs();
     if (tab==='historico')   carregarHistorico();
     if (tab==='avaliacoes')  carregarAvaliacoes();
@@ -31816,24 +31837,70 @@ var RhUI = (function() {
     }, function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
   }
 
+  function _popularSetorColab(cur) {
+    var selS  = document.getElementById('rh-pf-setor');
+    if (!selS) return;
+    var _boot = (App.getBoot && App.getBoot()) || {};
+    var sts   = _boot.setores || [];
+    selS.innerHTML = '<option value="">Selecione o setor…</option>' +
+      sts.map(function(s) {
+        var id = s.id || s; var lbl = s.nome || s.label || s;
+        return '<option value="'+escaparHtml(id)+'"'+(cur===id?' selected':'')+'>'+escaparHtml(lbl)+'</option>';
+      }).join('');
+    if (cur && !sts.length) selS.innerHTML += '<option value="'+escaparHtml(cur)+'" selected>'+escaparHtml(cur)+'</option>';
+    if (cur) selS.value = cur;
+  }
+
+  function _preencherDeUsuario(email) {
+    if (!email) return;
+    var u = _usuariosAtivos.find(function(x){ return x.email === email; });
+    if (!u) return;
+    if (u.nome) { var el = document.getElementById('rh-pf-nome'); if (el && !el.value) el.value = u.nome; }
+    if (u.nomeApelido) { var el2 = document.getElementById('rh-pf-apelido'); if (el2) el2.value = u.nomeApelido; }
+    if (u.pronomes)    { var el3 = document.getElementById('rh-pf-pronomes'); if (el3) el3.value = u.pronomes; }
+    if (u.setor)       _popularSetorColab(u.setor);
+  }
+
+  function _carregarEmailColab(emailAtual) {
+    var sel = document.getElementById('rh-pf-email');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Selecione o usuário…</option><option disabled>Carregando…</option>';
+    if (_usuariosAtivos.length) {
+      sel.innerHTML = '<option value="">Selecione o usuário…</option>' +
+        _usuariosAtivos.map(function(u){ return '<option value="'+escaparHtml(u.email)+'">'+escaparHtml(u.email)+(u.nome?' ('+u.nome+')':'')+'</option>'; }).join('');
+      if (emailAtual) sel.value = emailAtual;
+      return;
+    }
+    GAS.admin.listarUsuariosAtivos(function(resp) {
+      _usuariosAtivos = (resp && resp.ok) ? resp.data : [];
+      sel.innerHTML = '<option value="">Selecione o usuário…</option>' +
+        _usuariosAtivos.map(function(u){ return '<option value="'+escaparHtml(u.email)+'">'+escaparHtml(u.email)+(u.nome?' ('+u.nome+')':'')+'</option>'; }).join('');
+      if (emailAtual) sel.value = emailAtual;
+    }, function(){ sel.innerHTML = '<option value="">Selecione o usuário…</option>'; });
+  }
+
   function abrirFormColab(colab) {
-    document.getElementById('rh-pf-nome').value     = colab?(colab.nome||''):'';
-    _carregarSelectUsuariosHelper('rh-pf-email', colab?(colab.emailInstitucional||colab.email||''):'', 'Selecione o usuário…');
-    (function() {
-      var selS  = document.getElementById('rh-pf-setor');
-      var _boot = (App.getBoot && App.getBoot()) || {};
-      var sts   = _boot.setores || [];
-      var cur   = colab ? (colab.setor || '') : '';
-      selS.innerHTML = '<option value="">Selecione o setor…</option>' +
-        sts.map(function(s) {
-          var id = s.id || s; var lbl = s.nome || s.label || s;
-          return '<option value="'+escaparHtml(id)+'"'+(cur===id?' selected':'')+'>'+escaparHtml(lbl)+'</option>';
-        }).join('');
-      if (cur && !sts.length) selS.innerHTML += '<option value="'+escaparHtml(cur)+'" selected>'+escaparHtml(cur)+'</option>';
-    })();
-    document.getElementById('rh-pf-admissao').value = colab?((colab.dataAdmissao||'').slice(0,10)):'';
-    document.getElementById('rh-pf-id').value       = colab?(colab.id||''):'';
+    var addr = colab && (colab.endereco || {});
+    document.getElementById('rh-pf-nome').value         = colab?(colab.nome||''):'';
+    document.getElementById('rh-pf-admissao').value     = colab?((colab.dataAdmissao||'').slice(0,10)):'';
+    document.getElementById('rh-pf-id').value           = colab?(colab.id||''):'';
+    document.getElementById('rh-pf-apelido').value      = colab?(colab.nomeApelido||colab.apelido||''):'';
+    document.getElementById('rh-pf-pronomes').value     = colab?(colab.pronomes||''):'';
+    document.getElementById('rh-pf-email-pessoal').value= colab?(colab.emailPessoal||''):'';
+    document.getElementById('rh-pf-nascimento').value   = colab?((colab.dataNascimento||'').slice(0,10)):'';
+    document.getElementById('rh-pf-cep').value          = addr.cep||'';
+    document.getElementById('rh-pf-logradouro').value   = addr.logradouro||'';
+    document.getElementById('rh-pf-num-end').value      = addr.numero||'';
+    document.getElementById('rh-pf-complemento').value  = addr.complemento||'';
+    document.getElementById('rh-pf-bairro').value       = addr.bairro||'';
+    document.getElementById('rh-pf-cidade').value       = addr.cidade||'';
+    document.getElementById('rh-pf-uf').value           = addr.uf||'';
+    // Nº de registro: se novo, gera automático
+    var regEl = document.getElementById('rh-pf-registro');
+    if (regEl) regEl.value = colab?(colab.numRegistro||''):('RH-'+new Date().getFullYear()+'-'+String(_colaboradores.length+1).padStart(4,'0'));
     if (colab&&colab.vinculo) document.getElementById('rh-pf-vinculo').value = colab.vinculo;
+    _popularSetorColab(colab ? (colab.setor||'') : '');
+    _carregarEmailColab(colab?(colab.emailInstitucional||colab.email||''):'');
     GAS.rh.listarCargos(function(resp){
       var sel = document.getElementById('rh-pf-cargo');
       if (!sel) return;
@@ -31866,7 +31933,24 @@ var RhUI = (function() {
     var admissao= document.getElementById('rh-pf-admissao').value;
     var id      = document.getElementById('rh-pf-id').value;
     if (!nome) { Toast.aviso('Nome é obrigatório.'); return; }
-    var dados = { nome:nome, emailInstitucional:email, setor:setor, cargo:cargo, vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao };
+    var dados = {
+      nome:nome, emailInstitucional:email, setor:setor, cargo:cargo,
+      vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao,
+      nomeApelido: document.getElementById('rh-pf-apelido').value.trim(),
+      pronomes:    document.getElementById('rh-pf-pronomes').value.trim(),
+      emailPessoal:document.getElementById('rh-pf-email-pessoal').value.trim(),
+      dataNascimento: document.getElementById('rh-pf-nascimento').value,
+      numRegistro: document.getElementById('rh-pf-registro').value.trim(),
+      endereco: {
+        cep:         document.getElementById('rh-pf-cep').value.trim(),
+        logradouro:  document.getElementById('rh-pf-logradouro').value.trim(),
+        numero:      document.getElementById('rh-pf-num-end').value.trim(),
+        complemento: document.getElementById('rh-pf-complemento').value.trim(),
+        bairro:      document.getElementById('rh-pf-bairro').value.trim(),
+        cidade:      document.getElementById('rh-pf-cidade').value.trim(),
+        uf:          document.getElementById('rh-pf-uf').value.trim()
+      }
+    };
     if (id) dados.id = id;
     BtnGuard.wrap('rh-btn-salvar-colab','Salvando…',function(done){
       GAS.pessoas.salvar(dados,function(resp){
@@ -31939,14 +32023,14 @@ var RhUI = (function() {
         // ── Linhas da tabela de cargos ──
         var cargosRows = '';
         Object.keys(areas).forEach(function(area){
-          cargosRows += '<tr data-area-header="1" style="background:var(--surface2);"><td colspan="5" style="padding:5px 14px;font-size:10px;'+
-            'font-weight:700;text-transform:uppercase;color:var(--text2);letter-spacing:.06em;">'+_esc(area)+'</td></tr>';
+          var areaKey = 'ar_'+(area||'').replace(/\W/g,'_');
+          cargosRows += '<tr data-area-header="1" data-area-id="'+areaKey+'" style="background:var(--surface2);cursor:pointer;" onclick="RhUI._pccsToggleArea(\''+_esc(p.id)+'\',\''+areaKey+'\')"><td colspan="5" style="padding:5px 14px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);letter-spacing:.06em;user-select:none;"><span id="pccs-achev-'+p.id+'-'+areaKey+'" class="ms" style="font-size:14px;vertical-align:middle;margin-right:4px;transition:transform .15s;">expand_more</span>'+_esc(area)+'</td></tr>';
           areas[area].forEach(function(c){
             var tab=c.tabela||[]; var step1=tab[0]?tab[0].salarioBase:0; var stepN=tab.length>1?tab[tab.length-1].salarioBase:0;
             var faixaTxt=step1?'R$ '+_fmtMoeda(step1)+(stepN&&stepN!==step1?' – R$ '+_fmtMoeda(stepN):''):'—';
             var tipoClasse=tab[0]?(tab[0].nivel||'—'):'—'; var classe=tab[0]?(tab[0].classe||'—'):'—'; var nSteps=tab.length;
             var stepsDetail=nSteps>0?tab.map(function(s,i){return '<span style="font-size:10px;color:var(--muted);">R'+(i+1)+':R$'+_fmtMoeda(s.salarioBase)+'</span>';}).join(' · '):'';
-            cargosRows += '<tr data-cargo-nome="'+_esc((c.nome||'').toLowerCase())+'" style="border-bottom:1px solid var(--border);">'+
+            cargosRows += '<tr data-cargo-nome="'+_esc((c.nome||'').toLowerCase())+'" data-area-group="'+areaKey+'" style="border-bottom:1px solid var(--border);">'+
               '<td style="padding:7px 14px;font-size:13px;"><div style="font-weight:600;">'+_esc(c.nome||'—')+'</div>'+
                 (stepsDetail?'<div style="margin-top:2px;">'+stepsDetail+'</div>':'')+'</td>'+
               '<td style="padding:7px 10px;">'+_badgeGrupo(c.grupo||'')+'</td>'+
@@ -31978,40 +32062,36 @@ var RhUI = (function() {
           ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#dcfce7;color:#166534;font-weight:700;">ATIVO</span>' : '';
 
         return '<div style="margin-bottom:'+(idx<lista.length-1?'20px':'0')+';border:1px solid var(--border);border-radius:12px;overflow:hidden;">'+
-          // ── Cabeçalho do plano (clicável para colapsar)
-          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);cursor:pointer;" onclick="RhUI._pccsToggleBody(\''+_esc(p.id)+'\')">'+
+          // ── Cabeçalho do plano
+          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">'+
             '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
-              '<span id="pccs-chev-'+p.id+'" class="ms" style="font-size:20px;color:var(--text2);transition:transform .2s;">expand_more</span>'+
               '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+activoTag+
               '<span style="font-size:12px;color:var(--text2);">'+_esc(vigTxt)+' · '+totCargos+' cargo'+(totCargos!==1?'s':'')+'</span>'+
             '</div>'+
-            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="event.stopPropagation();RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
           '</div>'+
-          // ── Body colapsável
-          '<div id="pccs-body-'+p.id+'">'+
-            // ── Sub-nav (abas V1-style)
-            '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
-              _navTab('cargos','group','Cargos ('+totCargos+')',true)+
-              _navTab('tabela','table_chart','Tabela Salarial',false)+
-              _navTab('params','tune','Parâmetros & Reajuste',false)+
-            '</div>'+
-            // ── Painel Cargos (visível por padrão)
-            '<div id="pccs-panel-'+p.id+'-cargos">'+
-              '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">'+
-                '<span class="ms ms-sm" style="color:var(--muted);">search</span>'+
-                '<input type="text" id="pccs-busca-'+p.id+'" class="form-input" placeholder="Filtrar cargos…" style="flex:1;max-width:300px;" oninput="RhUI._pccsFiltrarCargos(\''+_esc(p.id)+'\',this.value)">'+
-              '</div>'+
-              cargosContent+
-              '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
-                '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
-                  '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
-              '</div>'+
-            '</div>'+
-            // ── Painel Tabela Salarial (lazy, escondido)
-            '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
-            // ── Painel Parâmetros & Reajuste (lazy, escondido)
-            '<div id="pccs-panel-'+p.id+'-params" style="display:none;"></div>'+
+          // ── Sub-nav (abas V1-style)
+          '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
+            _navTab('cargos','group','Cargos ('+totCargos+')',true)+
+            _navTab('tabela','table_chart','Tabela Salarial',false)+
+            _navTab('params','tune','Parâmetros & Reajuste',false)+
           '</div>'+
+          // ── Painel Cargos (visível por padrão)
+          '<div id="pccs-panel-'+p.id+'-cargos">'+
+            '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">'+
+              '<span class="ms ms-sm" style="color:var(--muted);">search</span>'+
+              '<input type="text" id="pccs-busca-'+p.id+'" class="form-input" placeholder="Filtrar cargos…" style="flex:1;max-width:300px;" oninput="RhUI._pccsFiltrarCargos(\''+_esc(p.id)+'\',this.value)">'+
+            '</div>'+
+            cargosContent+
+            '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
+              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
+                '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
+            '</div>'+
+          '</div>'+
+          // ── Painel Tabela Salarial (lazy, escondido)
+          '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
+          // ── Painel Parâmetros & Reajuste (lazy, escondido)
+          '<div id="pccs-panel-'+p.id+'-params" style="display:none;"></div>'+
         '</div>';
       }).join('');
     },function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
@@ -32029,12 +32109,14 @@ var RhUI = (function() {
     if(aba==='params'){ var pp=document.getElementById('pccs-panel-'+pccsId+'-params'); if(pp&&!pp.dataset.rendered){_renderParamsEmPanel(pccsId,pp);pp.dataset.rendered='1';} }
   }
 
-  function _pccsToggleBody(pccsId) {
-    var body = document.getElementById('pccs-body-'+pccsId);
-    var chev = document.getElementById('pccs-chev-'+pccsId);
-    if (!body) return;
-    var collapsed = body.style.display === 'none';
-    body.style.display = collapsed ? '' : 'none';
+  function _pccsToggleArea(pccsId, areaKey) {
+    var tbody = document.querySelector('#pccs-panel-'+pccsId+'-cargos tbody');
+    if (!tbody) return;
+    var chev = document.getElementById('pccs-achev-'+pccsId+'-'+areaKey);
+    var collapsed = chev && chev.style.transform === 'rotate(-90deg)';
+    tbody.querySelectorAll('tr[data-area-group="'+areaKey+'"]').forEach(function(tr) {
+      tr.style.display = collapsed ? '' : 'none';
+    });
     if (chev) chev.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
   }
 
@@ -32043,11 +32125,15 @@ var RhUI = (function() {
     if (!tbody) return;
     var q2 = (q || '').toLowerCase().trim();
     var rows = tbody.querySelectorAll('tr');
-    var lastAreaRow = null, lastAreaVisible = false;
+    var lastAreaRow = null, lastAreaVisible = false, lastAreaKey = null;
     rows.forEach(function(tr) {
       if (tr.dataset.areaHeader) {
         if (lastAreaRow) lastAreaRow.style.display = lastAreaVisible ? '' : 'none';
-        lastAreaRow = tr; lastAreaVisible = false;
+        lastAreaRow = tr; lastAreaVisible = false; lastAreaKey = tr.dataset.areaId || null;
+        if (q2 && lastAreaKey) {
+          var chev = document.getElementById('pccs-achev-'+pccsId+'-'+lastAreaKey);
+          if (chev) chev.style.transform = 'rotate(0deg)';
+        }
       } else {
         var show = !q2 || (tr.dataset.cargoNome || '').indexOf(q2) !== -1;
         tr.style.display = show ? '' : 'none';
@@ -33320,12 +33406,13 @@ var RhUI = (function() {
   return {
     aoAbrir:aoAbrir, setTab:setTab,
     carregarEquipe:carregarEquipe, abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
-    editarColab:editarColab, salvarColab:salvarColab,
+    editarColab:editarColab, salvarColab:salvarColab, _preencherDeUsuario:_preencherDeUsuario,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,
     abrirModalReajuste:abrirModalReajuste, _aplicarReajustePccs:_aplicarReajustePccs,
     abrirModalTabelaSalarial:abrirModalTabelaSalarial, _pccsSetSubAba:_pccsSetSubAba,
+    _pccsToggleArea:_pccsToggleArea, _pccsFiltrarCargos:_pccsFiltrarCargos,
     _pccsRecalcRow:_pccsRecalcRow, _pccsRecalcTodos:_pccsRecalcTodos, _salvarTabelaSalarial:_salvarTabelaSalarial,
     _aplicarReajustePccsInline:_aplicarReajustePccsInline,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
