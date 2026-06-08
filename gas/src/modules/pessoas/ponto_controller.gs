@@ -1,10 +1,23 @@
 /**
  * @file ponto_controller.gs
  * @layer controller
- * @description Controllers de Ponto Eletrônico, Custo CLT e Compatibilidade Colabore.
- *   RBAC: registrar = próprio colaborador ou rh+; consultas = rh/gestor/admin+;
- *         custo CLT = rh/financeiro/admin+; import/export = admin+.
- * @depends ponto_engine.gs, ponto_repository.gs, acesso_service.gs, response.gs
+ * @description Controllers de Ponto Eletrônico, Custo CLT e motor flexível AFD.
+ *
+ *   RBAC:
+ *     registrar         = próprio colaborador ou rh+
+ *     consultas         = rh/gestor/admin+
+ *     custo CLT         = rh/financeiro/admin+
+ *     import/export AFD = rh/admin+
+ *     layouts / sessões = rh/admin+
+ *
+ *   Fluxo de importação AFD em 2 etapas (motor flexível):
+ *     1. ctrl_ponto_iniciar_importacao_afd  → parse + brutos (sessão pendente)
+ *     2. ctrl_ponto_confirmar_importacao    → cria normalizados (sessão confirmada)
+ *     ctrl_ponto_cancelar_importacao  → cancela sessão pendente
+ *     ctrl_ponto_reverter_importacao  → reverte sessão confirmada
+ *
+ * @depends ponto_engine.gs, afd_parser_engine.gs, ponto_bruto_repository.gs,
+ *          afd_layout_repository.gs, ponto_repository.gs, acesso_service.gs, response.gs
  */
 
 function _ctxPonto() {
@@ -227,4 +240,250 @@ function ctrl_ponto_importar_csv_colabore(params) {
     if (!params.conteudo) throw new Error('Conteúdo do arquivo CSV obrigatório.');
     return PontoEngine.importarCSVColabore(ctx.orgId, params.conteudo, ctx.email);
   }, 'ctrl_ponto_importar_csv_colabore');
+}
+
+// ─── Motor flexível AFD — Layouts ────────────────────────────────────────────
+
+/**
+ * Lista os layouts de importação disponíveis para a org.
+ */
+function ctrl_ponto_listar_layouts(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    return AfdLayoutRepository.listar(ctx.orgId);
+  }, 'ctrl_ponto_listar_layouts');
+}
+
+/**
+ * Duplica um layout existente para personalização.
+ * @param {object} params — { layoutId, nome }
+ */
+function ctrl_ponto_duplicar_layout(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — apenas admin+.');
+    if (!params.layoutId) throw new Error('layoutId obrigatório.');
+    var novoId = AfdLayoutRepository.duplicar(ctx.orgId, params.layoutId, params.nome);
+    return { ok: true, id: novoId };
+  }, 'ctrl_ponto_duplicar_layout');
+}
+
+/**
+ * Salva alterações em um layout customizado (não-builtin).
+ * @param {object} params — objeto do layout com id
+ */
+function ctrl_ponto_salvar_layout(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — apenas admin+.');
+    if (!params.id) throw new Error('id do layout obrigatório.');
+    var id = AfdLayoutRepository.salvar(ctx.orgId, params);
+    return { ok: true, id: id };
+  }, 'ctrl_ponto_salvar_layout');
+}
+
+// ─── Motor flexível AFD — Importação em 2 etapas ─────────────────────────────
+
+/**
+ * Etapa 0 (opcional): gera prévia do arquivo sem escrever no banco.
+ * @param {object} params — { conteudo, layoutId? }
+ */
+function ctrl_ponto_preview_afd(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.conteudo) throw new Error('conteudo obrigatório.');
+    return AfdParserEngine.gerarPreview(ctx.orgId, params.conteudo, params.layoutId || null);
+  }, 'ctrl_ponto_preview_afd');
+}
+
+/**
+ * Etapa 1: parseia o arquivo, cria sessão pendente e salva registros brutos.
+ * Não cria registros normalizados. Retorna resumo para revisão.
+ * @param {object} params — { conteudo, layoutId?, nomeArquivo? }
+ */
+function ctrl_ponto_iniciar_importacao_afd(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.conteudo) throw new Error('conteudo obrigatório.');
+    return AfdParserEngine.iniciarImportacao(
+      ctx.orgId,
+      params.conteudo,
+      params.layoutId   || null,
+      params.nomeArquivo || '',
+      ctx.email
+    );
+  }, 'ctrl_ponto_iniciar_importacao_afd');
+}
+
+/**
+ * Etapa 2: confirma a sessão e cria os registros normalizados.
+ * @param {object} params — { sessaoId }
+ */
+function ctrl_ponto_confirmar_importacao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.sessaoId) throw new Error('sessaoId obrigatório.');
+    return AfdParserEngine.confirmarImportacao(ctx.orgId, params.sessaoId, ctx.email);
+  }, 'ctrl_ponto_confirmar_importacao');
+}
+
+/**
+ * Cancela uma sessão PENDENTE (antes de confirmar).
+ * @param {object} params — { sessaoId }
+ */
+function ctrl_ponto_cancelar_importacao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.sessaoId) throw new Error('sessaoId obrigatório.');
+    return AfdParserEngine.cancelarImportacao(ctx.orgId, params.sessaoId, ctx.email);
+  }, 'ctrl_ponto_cancelar_importacao');
+}
+
+/**
+ * Reverte uma sessão CONFIRMADA (marca normalizados como revertido).
+ * @param {object} params — { sessaoId }
+ */
+function ctrl_ponto_reverter_importacao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — apenas admin+ pode reverter importações.');
+    if (!params.sessaoId) throw new Error('sessaoId obrigatório.');
+    return AfdParserEngine.reverterImportacao(ctx.orgId, params.sessaoId, ctx.email);
+  }, 'ctrl_ponto_reverter_importacao');
+}
+
+// ─── Motor flexível AFD — Consulta de sessões ─────────────────────────────────
+
+/**
+ * Lista sessões de importação da org (mais recentes primeiro).
+ * @param {object} params — { status? }
+ */
+function ctrl_ponto_listar_sessoes(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    return PontoBrutoRepository.listarSessoes(ctx.orgId, { status: params.status || null });
+  }, 'ctrl_ponto_listar_sessoes');
+}
+
+/**
+ * Retorna uma sessão com seus registros brutos paginados.
+ * @param {object} params — { sessaoId, pagina?, itensPorPagina? }
+ */
+function ctrl_ponto_detalhe_sessao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.sessaoId) throw new Error('sessaoId obrigatório.');
+    var sessao  = PontoBrutoRepository.obterSessao(ctx.orgId, params.sessaoId);
+    if (!sessao) throw new Error('Sessão não encontrada.');
+    var brutos  = PontoBrutoRepository.listarBrutoPorSessao(ctx.orgId, params.sessaoId);
+    var pg      = Number(params.pagina || 1);
+    var porPg   = Number(params.itensPorPagina || 100);
+    var inicio  = (pg - 1) * porPg;
+    return {
+      sessao:     sessao,
+      brutos:     brutos.slice(inicio, inicio + porPg),
+      total:      brutos.length,
+      pagina:     pg,
+      paginas:    Math.ceil(brutos.length / porPg)
+    };
+  }, 'ctrl_ponto_detalhe_sessao');
+}
+
+// ─── Jornadas ────────────────────────────────────────────────────────────────
+
+/**
+ * Processa a jornada de um colaborador em uma data específica.
+ * Recalcula tipos E/I/R/S, tempos trabalhados, extras e faltantes.
+ * @param {object} params — { colaboradorId?, data }
+ */
+function ctrl_ponto_processar_jornada(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    var colabId = params.colaboradorId || ctx.email;
+    if (!params.data) throw new Error('data obrigatória (YYYY-MM-DD).');
+    var jornadaId = JornadaEngine.processarDia(ctx.orgId, colabId, params.data);
+    return { ok: true, jornadaId: jornadaId };
+  }, 'ctrl_ponto_processar_jornada');
+}
+
+/**
+ * Processa todas as jornadas de um colaborador em um período.
+ * @param {object} params — { colaboradorId?, dataInicio, dataFim }
+ */
+function ctrl_ponto_processar_periodo(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    var colabId = params.colaboradorId || ctx.email;
+    if (!params.dataInicio || !params.dataFim)
+      throw new Error('dataInicio e dataFim obrigatórios.');
+    return JornadaEngine.processarPeriodo(ctx.orgId, colabId, params.dataInicio, params.dataFim);
+  }, 'ctrl_ponto_processar_periodo');
+}
+
+/**
+ * Retorna o espelho de ponto mensal de um colaborador.
+ * Cada dia do mês com batidas, tipos derivados, status e horas.
+ * @param {object} params — { colaboradorId?, ano?, mes? }
+ */
+function ctrl_ponto_espelho_mensal(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    var colabId = params.colaboradorId || ctx.email;
+    if (colabId !== ctx.email && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    var agora = new Date();
+    var ano   = Number(params.ano  || agora.getFullYear());
+    var mes   = Number(params.mes  || agora.getMonth() + 1);
+    return JornadaEngine.calcularEspelho(ctx.orgId, colabId, ano, mes);
+  }, 'ctrl_ponto_espelho_mensal');
+}
+
+/**
+ * Retorna jornada de um dia específico (já processada).
+ * @param {object} params — { colaboradorId?, data }
+ */
+function ctrl_ponto_obter_jornada(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    var colabId = params.colaboradorId || ctx.email;
+    if (colabId !== ctx.email && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.data) throw new Error('data obrigatória.');
+    return JornadaRepository.obterPorColaboradorData(ctx.orgId, colabId, params.data);
+  }, 'ctrl_ponto_obter_jornada');
 }

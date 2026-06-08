@@ -466,7 +466,29 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 41 (2026-06-08) → SESSÃO 42
+## HANDOFF ATUAL — SESSÃO 42 (2026-06-08) → SESSÃO 43
+
+### Estado atual: ~270 bugs registrados · Deploy @695 (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s42)
+
+Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações em index.html.
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @695 | Auditoria + Modelagem (F1+F2) | Auditoria completa do módulo Ponto: 6 bugs identificados (parser formato errado, tipo perdido, jornada frágil, sem duplicatas, sem prévia, bypass de repositório). Modelagem das 3 camadas: `afd_layout_repository.gs` (NOVO, layout iDClass Bio Prox v1 pré-seeded com posições exatas dos campos), `ponto_bruto_repository.gs` (NOVO, sessões de importação reversíveis + registros brutos), `ponto_repository.gs` migrado para `ponto_normalizado.json` com `nsrJaExiste()`/`reverterImportacao()`/`atualizarTipo()`, `setup.gs` com 4 novos `prepararIndice()` + abas PontoBruto/PontoImportacoes/Jornadas no SCHEMA_ABAS. |
+| @695 | AfdParserEngine (F3) | `afd_parser_engine.gs` (NOVO): parser flexível em 2 etapas. Etapa 1 `iniciarImportacao()`: lê layout → parseia linha por linha → cria sessão pendente → salva brutos com status (valido/duplicado/pis_nao_encontrado/cadastro/erro). Etapa 2 `confirmarImportacao()`: cria normalizados → aciona JornadaEngine automaticamente. + `cancelarImportacao()` / `reverterImportacao()` / `gerarPreview()`. 10 novos endpoints no `ponto_controller.gs` (layouts, importação, sessões). |
+| @695 | JornadaEngine (F4) | `jornada_engine.gs` (NOVO) + `jornada_repository.gs` (NOVO): algoritmo de derivação E/I/R/S por posição ordinal (posição 0=E, última=S, ímpar=I, par=R). `processarDia()` detecta inconsistências (fora_de_ordem/batidas_simultaneas/intervalo_curto), classifica jornada (completa/incompleta/inconsistente). `calcularEspelho()` monta espelho mensal com dias folga/ausente inferidos. Reprocessamento idempotente. Atualiza `tipo` nos normalizados após derivação. 4 novos endpoints (processar_jornada, processar_periodo, espelho_mensal, obter_jornada). |
+
+### Próxima sessão deve começar por
+
+1. `clasp push` + executar no GAS Editor: `AfdLayoutRepository.prepararIndice()`, `PontoBrutoRepository.prepararIndice()`, `JornadaRepository.prepararIndice()`
+2. Fase 5 — UI do fluxo de importação: modal upload → prévia → confirmar → espelho
+3. Fase 7 — Exportações configuráveis (Excel/CSV/TXT por template de layout)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 41 (2026-06-08) → SESSÃO 42
 
 ### Estado atual: ~270 bugs registrados · Deploy @694 (GAS) · Firebase live
 

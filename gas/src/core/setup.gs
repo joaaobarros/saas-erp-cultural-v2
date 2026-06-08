@@ -51,7 +51,8 @@ var SCHEMA_ABAS = {
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
     'Funcionarios', 'Vinculos', 'Escalas', 'Ferias', 'Ocorrencias',
-    'Afastamentos', 'ParametrosRH', 'Avaliacoes', 'Holerites'
+    'Afastamentos', 'ParametrosRH', 'Avaliacoes', 'Holerites',
+    'Ponto', 'PontoBruto', 'PontoImportacoes', 'Jornadas'
   ],
   FINANCEIRO: [
     'Contratos', 'ContratosVersoes', 'Rubricas', 'Pagamentos',
@@ -225,6 +226,30 @@ function inicializarSistema() {
       typeof PontoRepository.prepararIndice === 'function') {
     try { PontoRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'PontoRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 11.4b — Layouts AFD: instala layout builtin iDClass Bio Prox
+  if (typeof AfdLayoutRepository !== 'undefined' &&
+      typeof AfdLayoutRepository.prepararIndice === 'function') {
+    try { AfdLayoutRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'AfdLayoutRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 11.4c — Ponto Bruto: garante abas EQUIPES.PontoBruto e EQUIPES.PontoImportacoes
+  if (typeof PontoBrutoRepository !== 'undefined' &&
+      typeof PontoBrutoRepository.prepararIndice === 'function') {
+    try { PontoBrutoRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'PontoBrutoRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 11.4d — Jornadas: garante aba EQUIPES.Jornadas
+  if (typeof JornadaRepository !== 'undefined' &&
+      typeof JornadaRepository.prepararIndice === 'function') {
+    try { JornadaRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'JornadaRepository.prepararIndice: ' + e.message);
     }
   }
 

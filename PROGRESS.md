@@ -39,7 +39,34 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **UX: PCCS chevron+busca rápida; Equipe email vinculado+cargos A-Z (2026-06-08)** — PCCS: cabeçalho de cada plano clicável (chevron `expand_more` com toggle collapse do body). Campo de busca acima da tabela de cargos com filtro em tempo real (oculta linhas e cabeçalhos de área vazios). Equipe: `<input type="email">` substituído por `<select>` populado via `_carregarSelectUsuariosHelper` (lista `ctrl_admin_listarUsuariosAtivos`). Dropdown de cargos ordenado alfabeticamente com `localeCompare('pt-BR')`.
+**Fase atual**: **Motor AFD flexível — Fases 2-4 do módulo Ponto/RH (2026-06-08)** — Backend completo. PRÓXIMO: Fase 5 (UI upload → preview → confirmar) + Fase 7 (exportações configuráveis). Ver prompt de continuação no final deste arquivo.
+
+Arquivos novos/modificados nesta sessão:
+- `gas/src/modules/pessoas/afd_layout_repository.gs` (NOVO) — layouts de parse, builtin iDClass Bio Prox v1
+- `gas/src/modules/pessoas/ponto_bruto_repository.gs` (NOVO) — sessões de importação reversíveis + registros brutos
+- `gas/src/modules/pessoas/afd_parser_engine.gs` (NOVO) — parser flexível em 2 etapas (iniciar→confirmar)
+- `gas/src/modules/pessoas/jornada_repository.gs` (NOVO) — jornadas processadas (jornadas.json)
+- `gas/src/modules/pessoas/jornada_engine.gs` (NOVO) — algoritmo E/I/R/S + espelho mensal
+- `gas/src/modules/pessoas/ponto_repository.gs` (MOD) — → ponto_normalizado.json; atualizarTipo(); nsrJaExiste(); reverterImportacao()
+- `gas/src/modules/pessoas/ponto_controller.gs` (MOD) — 14 novos endpoints (layouts, importação, jornadas)
+- `gas/src/core/setup.gs` (MOD) — 4 novos prepararIndice() + 'PontoBruto','PontoImportacoes','Jornadas' no SCHEMA_ABAS
+
+JSONs novos (criados ao primeiro uso):
+- `afd_layouts.json` — layout iDClass Bio Prox v1 pré-seeded
+- `ponto_importacoes.json` — histórico de sessões
+- `ponto_bruto.json` — registros brutos com linha original
+- `ponto_normalizado.json` — substitui ponto.json (novo schema)
+- `jornadas.json` — jornadas reconstituídas E/I/R/S
+
+Fases pendentes do motor AFD:
+- Fase 5: UI do fluxo de importação (modal upload → preview → confirmar → espelho)
+- Fase 6: Editor visual de layouts (arrastar colunas, ativar/desativar campos)
+- Fase 7: Exportações configuráveis (Excel/CSV/TXT/Espelho por template)
+- Fase 8: Banco de horas com rollback por sessão
+- Fase 9: Espelho de ponto refinado (renderização visual por jornada)
+- Fase 10: Testes + validação com arquivo iDClass real
+
+**Fase anterior**: **UX: PCCS chevron+busca rápida; Equipe email vinculado+cargos A-Z (2026-06-08)** — PCCS: cabeçalho de cada plano clicável (chevron `expand_more` com toggle collapse do body). Campo de busca acima da tabela de cargos com filtro em tempo real (oculta linhas e cabeçalhos de área vazios). Equipe: `<input type="email">` substituído por `<select>` populado via `_carregarSelectUsuariosHelper` (lista `ctrl_admin_listarUsuariosAtivos`). Dropdown de cargos ordenado alfabeticamente com `localeCompare('pt-BR')`.
 
 **Fase anterior**: **TAR-04 — Gatilhos automáticos de tarefas (2026-06-08)** — Deploy @694. (1) `TarefaEngine.verificarPrazos(orgId)`: usa `TarefaRepository.listarAtrasadas()`, marca `atrasoNotificadoEm=hoje` nas novas atrasadas, emite `TASK_DELAYED` — notificação única por tarefa. (2) `event_handler_registry.gs`: handler `TASK_DELAYED` envia e-mail ao responsável com prazo e link; handler `TAREFA_CRIADA` notifica responsável quando tarefa é atribuída por outra pessoa. (3) `verificarPrazosTarefas()` global + `criarTriggerVerificacaoPrazos()` — trigger diário 08:00. (4) `ctrl_tarefas_verificar_prazos()` — entrada manual (admin/superadmin). (5) index.html: view de Gestão com cards expandíveis completos (detalhe, Concluir, Próximo Status, Excluir via modal) + `confirm()` nativo substituído por `_abrirModalConfirmar()`.
 
