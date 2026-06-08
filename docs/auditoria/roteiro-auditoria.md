@@ -466,7 +466,27 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 43 (2026-06-08) → SESSÃO 44
+## HANDOFF ATUAL — SESSÃO 44 (2026-06-08) → SESSÃO 45
+
+### Estado atual: ~267 bugs registrados · Deploy @703 (GAS)
+
+### O que foi feito nesta sessão (s44)
+
+Preview AFD enriquecido com nome e status de cadastro.
+
+| Arquivo | Mudança |
+|---|---|
+| `afd_parser_engine.gs` | `gerarPreview`: passe-0 coleta PIS→nome de registros cadastro; `nomeAfd` em cada batida da amostra; `colaboradoresAfd[]` (distintos, máx. 100) + `totalColabAfd` |
+| `index.html` | `_renderAfdPasso2`: seção "Pessoas no arquivo" com ✓/✗ cadastro; batidas com coluna Nome; aviso "Nenhuma batida válida" quando validos=0 |
+
+### Próxima sessão deve começar por
+
+1. Testar preview AFD: verificar se nomes aparecem e se a seção de colaboradores está correta
+2. Se todos são "Não cadastrado": orientar usuário a preencher campo PIS nos colaboradores do sistema
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 43 (2026-06-08) → SESSÃO 44
 
 ### Estado atual: ~267 bugs registrados · Deploy @701 (GAS) + fix pendente
 

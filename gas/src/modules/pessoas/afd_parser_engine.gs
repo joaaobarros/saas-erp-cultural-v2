@@ -168,6 +168,20 @@ var AfdParserEngine = (function() {
       _brutos.forEach(function(b){ if (b.nsr) nsrsExistentes[String(b.nsr)] = true; });
     } catch(_) {}
 
+    // Passo 0: varredura rápida para construir mapa PIS → nome do próprio arquivo AFD
+    // (registros de cadastro/tipo-5 geralmente vêm antes das batidas)
+    var mapaAFDNomes = {};
+    linhas.forEach(function(linha) {
+      if (!linha || !linha.trim()) return;
+      try {
+        var p = _parsearLinha(linha, layout);
+        if (p && !p.ignorado && p.esCadastro && p.pis) {
+          var pn = _normalizarPIS(p.pis);
+          if (pn && p.nome) mapaAFDNomes[pn] = p.nome.trim();
+        }
+      } catch(_) {}
+    });
+
     var resumo = {
       totalLinhas:        linhas.length,
       batidas:            0,
@@ -181,6 +195,7 @@ var AfdParserEngine = (function() {
     var amostraBatidas   = [];
     var amostraCadastros = [];
     var erros            = [];
+    var pisNoArquivo     = {};   // PIS → { nome, noSistema } — todos os PIDs distintos do arquivo
 
     linhas.forEach(function(linha, idx) {
       if (!linha || !linha.trim()) { resumo.ignoradas++; return; }
@@ -205,14 +220,24 @@ var AfdParserEngine = (function() {
         if (!colabId) resumo.pisNaoEncontrados++;
         if (isDup)    resumo.duplicados++;
 
+        // Rastreia todos os PIDs distintos (sem limite de amostra)
+        if (pisNorm && !pisNoArquivo[pisNorm]) {
+          pisNoArquivo[pisNorm] = {
+            pis:      pisNorm,
+            nome:     mapaAFDNomes[pisNorm] || null,
+            noSistema: !!colabId
+          };
+        }
+
         if (amostraBatidas.length < 50) {
           amostraBatidas.push({
-            nsr:          parsed.nsr,
-            data:         parsed.data,
-            hora:         parsed.hora,
-            pis:          pisNorm,
-            colabId:      colabId,
-            duplicado:    isDup,
+            nsr:           parsed.nsr,
+            data:          parsed.data,
+            hora:          parsed.hora,
+            pis:           pisNorm,
+            nomeAfd:       mapaAFDNomes[pisNorm] || null,
+            colabId:       colabId,
+            duplicado:     isDup,
             semColaborador: !colabId
           });
         }
@@ -229,6 +254,11 @@ var AfdParserEngine = (function() {
       }
     });
 
+    // Lista de colaboradores distintos no arquivo (máx. 100 para não estourar payload)
+    var colaboradoresAfd = Object.keys(pisNoArquivo).slice(0, 100).map(function(pis) {
+      return pisNoArquivo[pis];
+    });
+
     return {
       ok:               true,
       layoutId:         layout.id,
@@ -236,6 +266,8 @@ var AfdParserEngine = (function() {
       resumo:           resumo,
       amostraBatidas:   amostraBatidas,
       amostraCadastros: amostraCadastros,
+      colaboradoresAfd: colaboradoresAfd,
+      totalColabAfd:    Object.keys(pisNoArquivo).length,
       erros:            erros
     };
   }

@@ -31776,6 +31776,7 @@ var PontoUI = (function() {
     if (!box) return;
     var res    = preview.resumo || {};
     var batidas = preview.amostraBatidas || [];
+    var colabs  = preview.colaboradoresAfd || [];
     var validos = (res.batidas||0) - (res.pisNaoEncontrados||0) - (res.duplicados||0) - (res.erros||0);
     if (validos < 0) validos = 0;
 
@@ -31788,10 +31789,48 @@ var PontoUI = (function() {
         _afdStat(res.erros||0,             'Erros',      'var(--danger)') +
       '</div>';
 
+    // Seção: colaboradores do arquivo com status de cadastro no sistema
+    var colabsHtml = '';
+    if (colabs.length > 0) {
+      var totalColab  = preview.totalColabAfd || colabs.length;
+      var noCadastro  = colabs.filter(function(c){ return !c.noSistema; }).length;
+      var totalNoCad  = noCadastro + Math.max(0, totalColab - colabs.length); // aprox. se cortado em 100
+      colabsHtml =
+        '<div style="margin-bottom:14px;">' +
+        '<p style="font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px;">' +
+          'Pessoas no arquivo (' + totalColab + '):' +
+          (totalNoCad > 0 ? ' <span style="color:#f59e0b;font-weight:700;">' + totalNoCad + ' não cadastradas no sistema</span>' : '') +
+        '</p>' +
+        '<div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+            '<thead style="position:sticky;top:0;background:var(--surface2,#f5f5f5);">' +
+              '<tr>' +
+                '<th style="padding:5px 8px;text-align:left;">Nome (no arquivo)</th>' +
+                '<th style="padding:5px 8px;text-align:left;">PIS</th>' +
+                '<th style="padding:5px 8px;text-align:left;">Sistema</th>' +
+              '</tr>' +
+            '</thead><tbody>' +
+            colabs.map(function(c) {
+              var noSis = c.noSistema;
+              return '<tr style="border-bottom:1px solid var(--border);">' +
+                '<td style="padding:4px 8px;font-weight:' + (noSis ? '400' : '600') + ';color:' + (noSis ? 'var(--text)' : '#f59e0b') + ';">' +
+                  _esc(c.nome || '—') + '</td>' +
+                '<td style="padding:4px 8px;font-family:monospace;color:var(--text2);">' + _esc(c.pis||'') + '</td>' +
+                '<td style="padding:4px 8px;font-weight:600;color:' + (noSis ? 'var(--success)' : 'var(--danger)') + ';">' +
+                  (noSis ? '✓ Cadastrado' : '✗ Não cadastrado') + '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table>' +
+        '</div>' +
+        (totalColab > colabs.length ? '<p style="font-size:11px;color:var(--text2);margin:4px 0 0;">… e mais ' + (totalColab - colabs.length) + ' pessoas (exibindo os 100 primeiros PIDs)</p>' : '') +
+        '</div>';
+    }
+
     var avisoHtml = '';
     if ((res.pisNaoEncontrados||0) > 0 || (res.erros||0) > 0) {
       avisoHtml = '<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:12px;">' +
         '⚠️ ' + (res.pisNaoEncontrados||0) + ' batida(s) sem colaborador vinculado e ' + (res.erros||0) + ' erro(s) de parse serão ignorados.' +
+        (validos === 0 ? '<br><strong>Nenhuma batida válida encontrada.</strong> Verifique se os colaboradores estão cadastrados no sistema com o PIS correto.' : '') +
       '</div>';
     }
 
@@ -31800,25 +31839,28 @@ var PontoUI = (function() {
       var amostra = batidas.slice(0, 20);
       tabelaHtml = '<div style="margin-bottom:14px;">' +
         '<p style="font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px;">Amostra das primeiras ' + amostra.length + ' batidas:</p>' +
-        '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">' +
+        '<div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">' +
           '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
             '<thead style="position:sticky;top:0;background:var(--surface2,#f5f5f5);">' +
               '<tr>' +
                 '<th style="padding:5px 8px;text-align:left;">NSR</th>' +
+                '<th style="padding:5px 8px;text-align:left;">Nome (arquivo)</th>' +
                 '<th style="padding:5px 8px;text-align:left;">Data</th>' +
                 '<th style="padding:5px 8px;text-align:left;">Hora</th>' +
-                '<th style="padding:5px 8px;text-align:left;">PIS</th>' +
                 '<th style="padding:5px 8px;text-align:left;">Status</th>' +
               '</tr>' +
             '</thead><tbody>' +
             amostra.map(function(b) {
-              var cor = b.duplicado ? 'var(--muted)' : b.semColaborador ? '#f59e0b' : 'var(--success)';
-              var lbl = b.duplicado ? '⚠ Duplicado' : b.semColaborador ? '? Sem colab.' : '✓ Válido';
+              var cor, lbl;
+              if (b.duplicado)      { cor = 'var(--muted)';    lbl = '⚠ Duplicado'; }
+              else if (b.semColaborador) { cor = 'var(--danger)'; lbl = '✗ Não cadastrado'; }
+              else                  { cor = 'var(--success)';  lbl = '✓ Válido'; }
               return '<tr style="border-bottom:1px solid var(--border);">' +
                 '<td style="padding:4px 8px;font-family:monospace;">' + _esc(String(b.nsr||'')) + '</td>' +
+                '<td style="padding:4px 8px;font-weight:' + (b.nomeAfd ? '600' : '400') + ';color:' + (b.nomeAfd ? 'var(--text)' : 'var(--text2)') + ';">' +
+                  _esc(b.nomeAfd || '(sem nome no arquivo)') + '</td>' +
                 '<td style="padding:4px 8px;">' + fmtDataPtBR(b.data||'') + '</td>' +
                 '<td style="padding:4px 8px;font-family:monospace;">' + _esc(b.hora||'') + '</td>' +
-                '<td style="padding:4px 8px;font-family:monospace;">' + _esc(b.pis||'') + '</td>' +
                 '<td style="padding:4px 8px;font-weight:600;color:' + cor + ';">' + lbl + '</td>' +
               '</tr>';
             }).join('') +
@@ -31831,7 +31873,7 @@ var PontoUI = (function() {
         '<div><h3 style="margin:0;font-size:16px;">Importar AFD</h3><p style="margin:2px 0 0;font-size:12px;color:var(--text2);">Passo 2 de 3 — Revisar prévia</p></div>' +
         '<span style="font-size:11px;padding:2px 8px;background:var(--surface2,#f0f0f0);border-radius:4px;color:var(--text2);">' + _esc(preview.layoutNome||'') + '</span>' +
       '</div>' +
-      statsHtml + avisoHtml + tabelaHtml +
+      statsHtml + colabsHtml + avisoHtml + tabelaHtml +
       '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
         '<button onclick="document.getElementById(\'modal-importar-afd\').remove()" ' +
           'style="padding:8px 16px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;" data-bg-skip="1">Cancelar</button>' +
