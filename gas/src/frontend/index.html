@@ -8834,6 +8834,7 @@ var GAS = {
     listar:      function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_listar(f||{}); },
     salvar:      function(d,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_salvar(d); },
     mudarStatus: function(id,s,c,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_mudar_status(id,s,c||''); },
+    excluir:     function(id,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_excluir(id); },
     metricas:    function(cb,err)           { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_metricas(); },
     dashboard:   function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_dashboard(f||{}); }
   },
@@ -10035,8 +10036,10 @@ var TarefasUI = (function() {
               + vinculoPill+'</div>'
           + '</div>'
           + (descricao ? '<div style="margin-bottom:10px;">'+descricao+'</div>' : '')
-          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
             + btnConcluir + btnProxStatus
+            + '<button class="btn btn-ghost btn-sm btn-excluir-tarefa" data-id="'+sid+'" style="white-space:nowrap;color:var(--color-error,#ef4444);margin-left:auto;">'
+              + '<span class="ms ms-sm">delete</span> Excluir</button>'
           + '</div>'
         + '</div>'
       + '</div>';
@@ -10066,6 +10069,21 @@ var TarefasUI = (function() {
         var tipo = this.getAttribute('data-tipo');
         var rota = { acao:'acoes', reserva:'espacos', contrato:'financeiro' }[tipo] || tipo;
         Router.navegar(rota);
+      });
+    });
+    Array.prototype.slice.call(el.querySelectorAll('.btn-excluir-tarefa')).forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        if (!confirm('Excluir esta tarefa? Esta ação não pode ser desfeita.')) return;
+        BtnGuard.wrap(this, 'Excluindo…', function(done) {
+          GAS.tarefas.excluir(id, function(r) {
+            done();
+            if (!r || !r.ok) { Toast.erro('Erro ao excluir tarefa.'); return; }
+            Toast.sucesso('Tarefa excluída.');
+            carregar();
+          }, function(err) { done(); Toast.erro(err.message || err); });
+        });
       });
     });
   }
