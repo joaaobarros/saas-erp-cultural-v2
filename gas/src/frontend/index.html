@@ -31737,10 +31737,9 @@ var RhUI = (function() {
     if (!_carregado) {
       _carregarMetricas();
       _popularAnoSelect();
-      carregarEquipe();
       _carregado = true;
     }
-    setTab(_abaAtiva);
+    setTab(_abaAtiva); // setTab carrega os dados da aba ativa (equipe → carregarEquipe, etc.)
   }
 
   function _carregarMetricas() {
@@ -31813,28 +31812,36 @@ var RhUI = (function() {
   // ─── EQUIPE ─────────────────────────────────────────────────
   function carregarEquipe() {
     var el = document.getElementById('rh-eq-lista');
-    if (!el) return;
+    if (!el) { console.warn('[RhUI] rh-eq-lista not found'); return; }
     el.innerHTML = _empty('Carregando…');
-    var status = (document.getElementById('rh-eq-filtro-status')||{}).value||'';
-    var filtros = status ? {status:status} : {};
+    var filtroEl = document.getElementById('rh-eq-filtro-status');
+    var status   = filtroEl ? (filtroEl.value || '') : 'ativo';
+    var filtros  = status ? {status:status} : {};
     GAS.pessoas.listar(filtros, function(resp) {
-      var lista = (resp&&resp.ok)?resp.data:[];
-      _colaboradores = lista;
-      if (!lista.length) { el.innerHTML = _empty('Nenhum colaborador encontrado.'); return; }
-      el.innerHTML = '<table class="tabela"><thead><tr><th>Nome</th><th>Setor</th><th>Cargo</th><th>Vínculo</th><th>Admissão</th><th>Status</th><th></th></tr></thead><tbody>'+
-        lista.map(function(c){
-          return '<tr>'+
-            '<td><strong>'+_esc(c.nome||'—')+'</strong><br><span style="font-size:11px;color:var(--text2)">'+_esc(c.emailInstitucional||c.email||'')+'</span></td>'+
-            '<td>'+_esc(c.setor||'—')+'</td>'+
-            '<td>'+_esc(c.cargo||'—')+'</td>'+
-            '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
-            '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
-            '<td>'+_badge(c.status||'')+'</td>'+
-            '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.editarColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button></td>'+
-            '</tr>';
-        }).join('')+'</tbody></table>';
-      _popularSelectColaboradores('rh-hist-colab');
-    }, function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
+      try {
+        var lista = (resp&&resp.ok&&Array.isArray(resp.data)) ? resp.data : [];
+        _colaboradores = lista;
+        if (!lista.length) { el.innerHTML = _empty('Nenhum colaborador encontrado.'); return; }
+        el.innerHTML = '<table class="tabela"><thead><tr>'+
+          '<th>Nome</th><th>Setor</th><th>Cargo</th><th>Vínculo</th><th>Admissão</th><th>Status</th><th></th>'+
+          '</tr></thead><tbody>'+
+          lista.map(function(c){
+            return '<tr>'+
+              '<td><strong>'+_esc(c.nome||'—')+'</strong><br><span style="font-size:11px;color:var(--text2)">'+_esc(c.emailInstitucional||c.email||'')+'</span></td>'+
+              '<td>'+_esc(c.setor||'—')+'</td>'+
+              '<td>'+_esc(c.cargo||'—')+'</td>'+
+              '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
+              '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
+              '<td>'+_badge(c.status||'ativo')+'</td>'+
+              '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.editarColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button></td>'+
+              '</tr>';
+          }).join('')+'</tbody></table>';
+        _popularSelectColaboradores('rh-hist-colab');
+      } catch(ex) {
+        el.innerHTML = _empty('Erro ao renderizar: '+ex.message);
+        console.error('[RhUI] carregarEquipe callback error', ex);
+      }
+    }, function(e){ el.innerHTML = _empty('Erro: '+((e&&e.message)||String(e))); });
   }
 
   function _popularSetorColab(cur) {
