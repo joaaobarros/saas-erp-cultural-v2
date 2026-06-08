@@ -322,6 +322,9 @@ var JornadaEngine = (function() {
     var jornadasMap = {};
     jornadas.forEach(function(j){ jornadasMap[j.data] = j; });
 
+    var _cfg      = _getParametrosRH(orgId);
+    var diasFolga = Array.isArray(_cfg.dias_folga) ? _cfg.dias_folga : [];
+
     var dias = {};
     var d    = new Date(ano, mes - 1, 1);
     var fim_ = new Date(ano, mes, 0);
@@ -329,7 +332,7 @@ var JornadaEngine = (function() {
     while (d <= fim_) {
       var iso  = d.toISOString().split('T')[0];
       var dow  = d.getDay();   // 0=Dom, 6=Sab
-      var folga = (dow === 0 || dow === 6);
+      var folga = diasFolga.length > 0 && diasFolga.indexOf(dow) >= 0;
 
       if (jornadasMap[iso]) {
         dias[iso] = jornadasMap[iso];

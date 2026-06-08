@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Ponto — planilha dedicada SHEET_ID_PONTO — Deploy @701 (2026-06-08)** — Módulo Ponto extraído da planilha EQUIPES para planilha própria. PRÓXIMO: executar `fase11_4_prepararIndice()` + `AfdLayoutRepository.prepararIndice()` no GAS Editor para criar a nova planilha PONTO. Fase 6 (editor layouts) + Fase 7 (exportações) seguem.
+**Fase atual**: **Fix Ponto — 3 bugs de UX/performance (2026-06-08)** — (1) Abas "Custo CLT" e "Rescisão" removidas do módulo Ponto (pertencem ao RH/DP). (2) Folga de Sáb/Dom agora configurável via `parametros_rh.dias_folga` (array de números 0=Dom…6=Sáb); sem configuração, nenhum dia é automaticamente folga. (3) Loading eterno ao importar AFD grande: `nsrJaExiste` chamava `readJSON` N vezes por linha — substituído por pre-loading único dos NSRs em `gerarPreview` e `iniciarImportacao`. PRÓXIMO: executar `fase11_4_prepararIndice()` + `AfdLayoutRepository.prepararIndice()` no GAS Editor para criar a nova planilha PONTO.
+
+**Fase anterior**: **Ponto — planilha dedicada SHEET_ID_PONTO — Deploy @701 (2026-06-08)** — Módulo Ponto extraído da planilha EQUIPES para planilha própria.
 
 Arquivos modificados nesta sessão (Fase 5):
 - `gas/src/frontend/index.html` (MOD) — Fase 5 UI importação AFD:

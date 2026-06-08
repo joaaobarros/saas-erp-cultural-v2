@@ -161,6 +161,13 @@ var AfdParserEngine = (function() {
     var linhas  = conteudo.split(/\r?\n/);
     var mapaPIS = _construirMapaPIS(orgId);
 
+    // Pre-carrega todos os NSRs existentes (1 leitura) para lookup O(1) por linha
+    var nsrsExistentes = {};
+    try {
+      var _brutos = PontoBrutoRepository.listarBrutoPorPeriodo(orgId, '1900-01-01', '2999-12-31');
+      _brutos.forEach(function(b){ if (b.nsr) nsrsExistentes[String(b.nsr)] = true; });
+    } catch(_) {}
+
     var resumo = {
       totalLinhas:        linhas.length,
       batidas:            0,
@@ -193,7 +200,7 @@ var AfdParserEngine = (function() {
         resumo.batidas++;
         var pisNorm = _normalizarPIS(parsed.pis);
         var colabId = pisNorm ? (mapaPIS[pisNorm] || null) : null;
-        var isDup   = PontoBrutoRepository.nsrJaExiste(orgId, parsed.nsr);
+        var isDup   = !!nsrsExistentes[String(parsed.nsr)];
 
         if (!colabId) resumo.pisNaoEncontrados++;
         if (isDup)    resumo.duplicados++;
@@ -251,6 +258,13 @@ var AfdParserEngine = (function() {
     var linhas  = conteudo.split(/\r?\n/);
     var mapaPIS = _construirMapaPIS(orgId);
 
+    // Pre-carrega todos os NSRs existentes (1 leitura) para lookup O(1) por linha
+    var nsrsExistentes = {};
+    try {
+      var _brutos = PontoBrutoRepository.listarBrutoPorPeriodo(orgId, '1900-01-01', '2999-12-31');
+      _brutos.forEach(function(b){ if (b.nsr) nsrsExistentes[String(b.nsr)] = true; });
+    } catch(_) {}
+
     // Cria sessão como pendente
     var sessaoId = PontoBrutoRepository.criarSessao(orgId, {
       layoutId:     layout.id,
@@ -307,7 +321,7 @@ var AfdParserEngine = (function() {
           motivo = 'PIS ' + pisNorm + ' não vinculado a nenhum colaborador';
           resumo.pisNaoEncontrados++;
           resumo.detalheErros.push({ linhaNumero: idx + 1, nsr: parsed.nsr, motivo: motivo });
-        } else if (PontoBrutoRepository.nsrJaExiste(orgId, parsed.nsr)) {
+        } else if (!!nsrsExistentes[String(parsed.nsr)]) {
           status = 'duplicado';
           motivo = 'NSR ' + parsed.nsr + ' já existe em importação anterior';
           resumo.duplicados++;

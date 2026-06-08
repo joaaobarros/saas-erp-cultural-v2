@@ -7894,8 +7894,6 @@ select.form-control { cursor: pointer; }
 
         <div class="tab-bar" style="margin-bottom:16px;">
           <button class="tab-btn tab-ativa" onclick="PontoUI.setTab('espelho',this)" data-bg-skip="1">Espelho de Ponto</button>
-          <button class="tab-btn" onclick="PontoUI.setTab('custo',this)" data-bg-skip="1">Custo CLT</button>
-          <button class="tab-btn" onclick="PontoUI.setTab('rescisao',this)" data-bg-skip="1">Rescisão</button>
           <button class="tab-btn" onclick="PontoUI.setTab('importexport',this)" data-bg-skip="1">AFD</button>
           <button class="tab-btn" onclick="PontoUI.setTab('sessoes',this);PontoUI.carregarSessoes();" data-bg-skip="1">Sessões</button>
         </div>
@@ -7910,62 +7908,6 @@ select.form-control { cursor: pointer; }
                    oninput="PontoUI.carregarEspelho()">
           </div>
           <div id="ponto-espelho-conteudo"><p class="muted-text">⏳ Carregando espelho…</p></div>
-        </div>
-
-        <!-- Tab: Custo CLT -->
-        <div id="ponto-tab-custo" class="oculto">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">
-            <div class="form-group">
-              <label class="form-label">Salário Bruto (R$)</label>
-              <input type="text" inputmode="decimal" id="clt-salario" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);PontoUI.calcularCLT()">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Horas Semanais</label>
-              <input type="number" id="clt-horas" class="form-control" value="40" oninput="PontoUI.calcularCLT()">
-            </div>
-            <div class="form-group" style="display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" id="clt-vt" checked onchange="PontoUI.calcularCLT()">
-              <label style="font-size:13px;">Vale Transporte</label>
-            </div>
-            <div class="form-group" style="display:flex;align-items:center;gap:8px;">
-              <input type="checkbox" id="clt-va" checked onchange="PontoUI.calcularCLT()">
-              <label style="font-size:13px;">Vale Alimentação</label>
-            </div>
-          </div>
-          <div id="ponto-clt-resultado" style="margin-top:20px;"></div>
-        </div>
-
-        <!-- Tab: Rescisão -->
-        <div id="ponto-tab-rescisao" class="oculto">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">
-            <div class="form-group">
-              <label class="form-label">Salário Bruto (R$)</label>
-              <input type="text" inputmode="decimal" id="resc-salario" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this)">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Meses Trabalhados</label>
-              <input type="number" id="resc-meses" class="form-control" placeholder="24">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Tipo de Rescisão</label>
-              <select id="resc-tipo" class="form-control">
-                <option value="sem_justa_causa">Demissão sem Justa Causa</option>
-                <option value="pedido_demissao">Pedido de Demissão</option>
-                <option value="culpa_reciproca">Culpa Recíproca</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Economia esperada/mês (R$)</label>
-              <input type="text" inputmode="decimal" id="resc-economia" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this)">
-            </div>
-          </div>
-          <div style="margin-top:12px;">
-            <button id="btn-calc-rescisao" class="btn btn-primary"
-                    onclick="BtnGuard.wrap('btn-calc-rescisao','Calculando…',PontoUI.calcularRescisao)">
-              Calcular Rescisão
-            </button>
-          </div>
-          <div id="ponto-rescisao-resultado" style="margin-top:20px;"></div>
         </div>
 
         <!-- Tab: AFD (Importação e Exportação) -->
@@ -31504,7 +31446,7 @@ var PontoUI = (function() {
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['espelho','custo','rescisao','importexport','sessoes'].forEach(function(t) {
+    ['espelho','importexport','sessoes'].forEach(function(t) {
       var el = document.getElementById('ponto-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });

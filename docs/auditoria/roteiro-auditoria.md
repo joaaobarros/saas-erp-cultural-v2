@@ -339,7 +339,7 @@
 | OCO-03 | Ocorrências | Sem indicador de saúde profissional | 🟡 |
 | ~~ESTR-01~~ | Pessoas/RH | ✅ CORRIGIDO @590 — `pessoas` e `ponto` removidos do sidebar; `rh` renomeado "Pessoas / RH"; cross-nav Fichas/Ponto em view-rh | — |
 | ESTR-02 | Sistema | Layout de abas inconsistente entre módulos | 🟡 |
-| PON-01 | Ponto | Sub-abas Custo CLT e Rescisão deslocadas | 🟡 |
+| ~~PON-01~~ | Ponto | ✅ CORRIGIDO — Abas "Custo CLT" e "Rescisão" removidas do módulo Ponto (pertencem ao RH/DP via RhUI) | — |
 | PON-03 | Ponto | Sem exportação AFD | 🔴 |
 | PON-04 | Ponto | Sem vínculo com escala | 🔴 |
 | ESC-01 | Escalas | Escalas simples — sem escala completa por colaborador | 🔴 |
@@ -466,7 +466,29 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 42 (2026-06-08) → SESSÃO 43
+## HANDOFF ATUAL — SESSÃO 43 (2026-06-08) → SESSÃO 44
+
+### Estado atual: ~267 bugs registrados · Deploy @701 (GAS) + fix pendente
+
+### O que foi feito nesta sessão (s43)
+
+3 bugs corrigidos no módulo Ponto — sem novo deploy ainda (pendente clasp push).
+
+| Bug | Arquivo | Correção |
+|---|---|---|
+| PON-01: abas CLT/Rescisão no Ponto | `index.html` | Botões de tab removidos; divs custo/rescisão removidas; setTab array atualizado |
+| Folga hardcoded Sáb/Dom | `jornada_engine.gs` | `(dow===0\|\|dow===6)` → lê `parametros_rh.dias_folga[]` (configurável); sem config = nenhum dia é folga automático |
+| Loading eterno AFD 1MB | `afd_parser_engine.gs` | `nsrJaExiste` chamava readJSON N vezes por batida → pre-loading único de NSRs em mapa; fix aplicado em `gerarPreview` e `iniciarImportacao` |
+
+### Próxima sessão deve começar por
+
+1. `clasp push` + `clasp deploy` com deploymentId fixo
+2. Testar: aba Ponto → sem tabs CLT/Rescisão; espelho de jun/2026 sem Sáb/Dom marcados como Folga; importar AFD grande sem loading eterno
+3. Para habilitar folga por config: adicionar `dias_folga: [0, 6]` em `parametros_rh.json` (0=Dom, 6=Sáb) se necessário
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 42 (2026-06-08) → SESSÃO 43
 
 ### Estado atual: ~270 bugs registrados · Deploy @695 (GAS) · Firebase live
 
