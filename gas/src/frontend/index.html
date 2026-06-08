@@ -8073,7 +8073,7 @@ select.form-control { cursor: pointer; }
             <div id="rh-colab-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label class="form-label">Nome completo *</label><input id="rh-pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
-                <div class="form-group"><label class="form-label">E-mail institucional</label><input id="rh-pf-email" class="form-input" type="email" placeholder="nome@org.br"></div>
+                <div class="form-group"><label class="form-label">E-mail institucional</label><select id="rh-pf-email" class="form-input"><option value="">Selecione o usuário…</option></select></div>
                 <div class="form-group"><label class="form-label">Setor</label>
                   <select id="rh-pf-setor" class="form-input"><option value="">Selecione o setor…</option></select>
                 </div>
@@ -31818,7 +31818,7 @@ var RhUI = (function() {
 
   function abrirFormColab(colab) {
     document.getElementById('rh-pf-nome').value     = colab?(colab.nome||''):'';
-    document.getElementById('rh-pf-email').value    = colab?(colab.emailInstitucional||colab.email||''):'';
+    _carregarSelectUsuariosHelper('rh-pf-email', colab?(colab.emailInstitucional||colab.email||''):'', 'Selecione o usuário…');
     (function() {
       var selS  = document.getElementById('rh-pf-setor');
       var _boot = (App.getBoot && App.getBoot()) || {};
@@ -31838,6 +31838,7 @@ var RhUI = (function() {
       var sel = document.getElementById('rh-pf-cargo');
       if (!sel) return;
       var cargos = (resp&&resp.ok)?resp.data:[];
+      cargos.sort(function(a,b){ var na=a.titulo||a.nome||''; var nb=b.titulo||b.nome||''; return na.localeCompare(nb,'pt-BR'); });
       sel.innerHTML = '<option value="">Selecione…</option>'+
         cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
       if (colab&&colab.cargo) sel.value = colab.cargo;
@@ -31938,14 +31939,14 @@ var RhUI = (function() {
         // ── Linhas da tabela de cargos ──
         var cargosRows = '';
         Object.keys(areas).forEach(function(area){
-          cargosRows += '<tr style="background:var(--surface2);"><td colspan="5" style="padding:5px 14px;font-size:10px;'+
+          cargosRows += '<tr data-area-header="1" style="background:var(--surface2);"><td colspan="5" style="padding:5px 14px;font-size:10px;'+
             'font-weight:700;text-transform:uppercase;color:var(--text2);letter-spacing:.06em;">'+_esc(area)+'</td></tr>';
           areas[area].forEach(function(c){
             var tab=c.tabela||[]; var step1=tab[0]?tab[0].salarioBase:0; var stepN=tab.length>1?tab[tab.length-1].salarioBase:0;
             var faixaTxt=step1?'R$ '+_fmtMoeda(step1)+(stepN&&stepN!==step1?' – R$ '+_fmtMoeda(stepN):''):'—';
             var tipoClasse=tab[0]?(tab[0].nivel||'—'):'—'; var classe=tab[0]?(tab[0].classe||'—'):'—'; var nSteps=tab.length;
             var stepsDetail=nSteps>0?tab.map(function(s,i){return '<span style="font-size:10px;color:var(--muted);">R'+(i+1)+':R$'+_fmtMoeda(s.salarioBase)+'</span>';}).join(' · '):'';
-            cargosRows += '<tr style="border-bottom:1px solid var(--border);">'+
+            cargosRows += '<tr data-cargo-nome="'+_esc((c.nome||'').toLowerCase())+'" style="border-bottom:1px solid var(--border);">'+
               '<td style="padding:7px 14px;font-size:13px;"><div style="font-weight:600;">'+_esc(c.nome||'—')+'</div>'+
                 (stepsDetail?'<div style="margin-top:2px;">'+stepsDetail+'</div>':'')+'</td>'+
               '<td style="padding:7px 10px;">'+_badgeGrupo(c.grupo||'')+'</td>'+
@@ -31977,32 +31978,40 @@ var RhUI = (function() {
           ? '<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:#dcfce7;color:#166534;font-weight:700;">ATIVO</span>' : '';
 
         return '<div style="margin-bottom:'+(idx<lista.length-1?'20px':'0')+';border:1px solid var(--border);border-radius:12px;overflow:hidden;">'+
-          // ── Cabeçalho do plano
-          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">'+
+          // ── Cabeçalho do plano (clicável para colapsar)
+          '<div style="background:var(--surface2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);cursor:pointer;" onclick="RhUI._pccsToggleBody(\''+_esc(p.id)+'\')">'+
             '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'+
+              '<span id="pccs-chev-'+p.id+'" class="ms" style="font-size:20px;color:var(--text2);transition:transform .2s;">expand_more</span>'+
               '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+activoTag+
               '<span style="font-size:12px;color:var(--text2);">'+_esc(vigTxt)+' · '+totCargos+' cargo'+(totCargos!==1?'s':'')+'</span>'+
             '</div>'+
-            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="event.stopPropagation();RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
           '</div>'+
-          // ── Sub-nav (abas V1-style)
-          '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
-            _navTab('cargos','group','Cargos ('+totCargos+')',true)+
-            _navTab('tabela','table_chart','Tabela Salarial',false)+
-            _navTab('params','tune','Parâmetros & Reajuste',false)+
-          '</div>'+
-          // ── Painel Cargos (visível por padrão)
-          '<div id="pccs-panel-'+p.id+'-cargos">'+
-            cargosContent+
-            '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
-              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
-                '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
+          // ── Body colapsável
+          '<div id="pccs-body-'+p.id+'">'+
+            // ── Sub-nav (abas V1-style)
+            '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
+              _navTab('cargos','group','Cargos ('+totCargos+')',true)+
+              _navTab('tabela','table_chart','Tabela Salarial',false)+
+              _navTab('params','tune','Parâmetros & Reajuste',false)+
             '</div>'+
+            // ── Painel Cargos (visível por padrão)
+            '<div id="pccs-panel-'+p.id+'-cargos">'+
+              '<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">'+
+                '<span class="ms ms-sm" style="color:var(--muted);">search</span>'+
+                '<input type="text" id="pccs-busca-'+p.id+'" class="form-input" placeholder="Filtrar cargos…" style="flex:1;max-width:300px;" oninput="RhUI._pccsFiltrarCargos(\''+_esc(p.id)+'\',this.value)">'+
+              '</div>'+
+              cargosContent+
+              '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
+                '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
+                  '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
+              '</div>'+
+            '</div>'+
+            // ── Painel Tabela Salarial (lazy, escondido)
+            '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
+            // ── Painel Parâmetros & Reajuste (lazy, escondido)
+            '<div id="pccs-panel-'+p.id+'-params" style="display:none;"></div>'+
           '</div>'+
-          // ── Painel Tabela Salarial (lazy, escondido)
-          '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
-          // ── Painel Parâmetros & Reajuste (lazy, escondido)
-          '<div id="pccs-panel-'+p.id+'-params" style="display:none;"></div>'+
         '</div>';
       }).join('');
     },function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
@@ -32018,6 +32027,34 @@ var RhUI = (function() {
     });
     if(aba==='tabela'){ var pt=document.getElementById('pccs-panel-'+pccsId+'-tabela'); if(pt&&!pt.dataset.rendered){_renderTabelaEmPanel(pccsId,pt);pt.dataset.rendered='1';} }
     if(aba==='params'){ var pp=document.getElementById('pccs-panel-'+pccsId+'-params'); if(pp&&!pp.dataset.rendered){_renderParamsEmPanel(pccsId,pp);pp.dataset.rendered='1';} }
+  }
+
+  function _pccsToggleBody(pccsId) {
+    var body = document.getElementById('pccs-body-'+pccsId);
+    var chev = document.getElementById('pccs-chev-'+pccsId);
+    if (!body) return;
+    var collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? '' : 'none';
+    if (chev) chev.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+  }
+
+  function _pccsFiltrarCargos(pccsId, q) {
+    var tbody = document.querySelector('#pccs-panel-'+pccsId+'-cargos tbody');
+    if (!tbody) return;
+    var q2 = (q || '').toLowerCase().trim();
+    var rows = tbody.querySelectorAll('tr');
+    var lastAreaRow = null, lastAreaVisible = false;
+    rows.forEach(function(tr) {
+      if (tr.dataset.areaHeader) {
+        if (lastAreaRow) lastAreaRow.style.display = lastAreaVisible ? '' : 'none';
+        lastAreaRow = tr; lastAreaVisible = false;
+      } else {
+        var show = !q2 || (tr.dataset.cargoNome || '').indexOf(q2) !== -1;
+        tr.style.display = show ? '' : 'none';
+        if (show) lastAreaVisible = true;
+      }
+    });
+    if (lastAreaRow) lastAreaRow.style.display = lastAreaVisible ? '' : 'none';
   }
 
   function _renderTabelaEmPanel(pccsId, panel) {
