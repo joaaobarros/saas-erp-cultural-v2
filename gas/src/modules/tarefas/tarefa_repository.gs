@@ -17,7 +17,7 @@ var TarefaRepository = (function () {
     'Status', 'CriadoEm', 'Prazo', 'ConcluidoEm', 'AcaoId', 'ProcessoId',
     'ReservaId', 'ContratoId', 'Modulo', 'Tipo', 'AtualizadoEm', 'Versao'
   ];
-  var _NIVEIS_AMPLOS = ['admin', 'superadmin', 'gestor'];
+  var _NIVEIS_AMPLOS = ['admin', 'superadmin'];
 
   function _orgIdPadrao(orgId) {
     return orgId || getOrgConfig().orgId;
@@ -153,16 +153,24 @@ var TarefaRepository = (function () {
     return removido;
   }
 
-  function listarParaUsuario(orgId, email, papel, filtros) {
+  function listarParaUsuario(orgId, email, papel, filtros, setorGestor) {
     var lista = listar(orgId, filtros);
     papel = String(papel || '').toLowerCase();
     if (_NIVEIS_AMPLOS.indexOf(papel) !== -1) return lista;
+    // gestor: vê tarefas do seu setor + as que criou + as que é responsável
+    if (papel === 'gestor') {
+      return lista.filter(function(t) {
+        if (_pertenceAoUsuario(t, email)) return true;
+        return setorGestor && String(t.setor || '').trim() === String(setorGestor).trim();
+      });
+    }
     return lista.filter(function (t) { return _pertenceAoUsuario(t, email); });
   }
 
-  function podeVisualizar(tarefa, email, papel) {
+  function podeVisualizar(tarefa, email, papel, setorGestor) {
     papel = String(papel || '').toLowerCase();
     if (_NIVEIS_AMPLOS.indexOf(papel) !== -1) return true;
+    if (papel === 'gestor' && setorGestor && String(tarefa.setor || '').trim() === String(setorGestor).trim()) return true;
     return _pertenceAoUsuario(tarefa, email);
   }
 

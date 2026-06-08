@@ -8,17 +8,20 @@ function _ctrlTarefasContexto() {
   var email = getEmailSessao();
   var acesso = AcessoService.verificar(email);
   if (acesso.status !== 'ativo') throw new Error('Acesso negado.');
-  return {
-    email: email,
-    papel: acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador',
-    orgId: getOrgConfig().orgId
-  };
+  var papel = acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador';
+  var orgId = getOrgConfig().orgId;
+  var setor = '';
+  try {
+    var colab = ColaboradorRepository.buscarPorEmail(orgId, email);
+    setor = colab ? (colab.setor || '') : '';
+  } catch(e) {}
+  return { email: email, papel: papel, orgId: orgId, setor: setor };
 }
 
 function ctrl_tarefas_listar(filtros) {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {});
+    return TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {}, ctx.setor);
   }, 'ctrl_tarefas_listar');
 }
 
@@ -27,7 +30,7 @@ function ctrl_tarefas_obter(id) {
     var ctx = _ctrlTarefasContexto();
     var tarefa = TarefaRepository.buscarPorId(ctx.orgId, id);
     if (!tarefa) throw new Error('Tarefa nao encontrada.');
-    if (!TarefaRepository.podeVisualizar(tarefa, ctx.email, ctx.papel)) {
+    if (!TarefaRepository.podeVisualizar(tarefa, ctx.email, ctx.papel, ctx.setor)) {
       throw new Error('Sem permissao para visualizar esta tarefa.');
     }
     return tarefa;
@@ -89,7 +92,7 @@ function ctrl_tarefas_metricas() {
 function ctrl_tarefas_dashboard(filtros) {
   return GasResponse.wrap(function () {
     var ctx  = _ctrlTarefasContexto();
-    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {});
+    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {}, ctx.setor);
     var now   = Date.now();
     var abertas = lista.filter(function(t) {
       return t.status !== 'concluida' && t.status !== 'cancelada';
@@ -103,6 +106,63 @@ function ctrl_tarefas_dashboard(filtros) {
     };
     return { lista: lista, metricas: metricas };
   }, 'ctrl_tarefas_dashboard');
+}
+
+/**
+ * Retorna tarefas agrupadas por setor e por responsável para a view de gestão.
+ * Acesso: gestor (vê seu setor), admin e superadmin (veem tudo).
+ */
+function ctrl_tarefas_gestao() {
+  return GasResponse.wrap(function () {
+    var ctx = _ctrlTarefasContexto();
+    var papeisPermitidos = ['gestor', 'admin', 'superadmin'];
+    if (papeisPermitidos.indexOf(ctx.papel) === -1) throw new Error('Sem permissao para visao de gestao.');
+
+    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, {}, ctx.setor);
+    var now   = Date.now();
+
+    function _metricas(tarefas) {
+      var abertas = tarefas.filter(function(t) { return t.status !== 'concluida' && t.status !== 'cancelada'; });
+      return {
+        total:     tarefas.length,
+        abertas:   abertas.length,
+        atrasadas: abertas.filter(function(t) { return t.prazo && new Date(t.prazo).getTime() < now; }).length,
+        concluidas: tarefas.filter(function(t) { return t.status === 'concluida'; }).length
+      };
+    }
+
+    // Agrupar por setor
+    var setorMap = {};
+    lista.forEach(function(t) {
+      var s = t.setor || '— sem setor —';
+      if (!setorMap[s]) setorMap[s] = [];
+      setorMap[s].push(t);
+    });
+    var porSetor = Object.keys(setorMap).sort().map(function(s) {
+      return Object.assign({ setor: s, tarefas: setorMap[s] }, _metricas(setorMap[s]));
+    });
+
+    // Agrupar por responsável
+    var respMap = {};
+    lista.forEach(function(t) {
+      var r = t.responsavel || '— sem responsável —';
+      if (!respMap[r]) respMap[r] = [];
+      respMap[r].push(t);
+    });
+
+    // Enriquecer nomes via AcessoService (best-effort)
+    var nomeMap = {};
+    try {
+      var usuarios = AcessoService.listarUsuarios(ctx.orgId) || [];
+      usuarios.forEach(function(u) { if (u.email) nomeMap[u.email] = u.nome || u.email; });
+    } catch(e) {}
+
+    var porResponsavel = Object.keys(respMap).sort().map(function(r) {
+      return Object.assign({ email: r, nome: nomeMap[r] || r, tarefas: respMap[r] }, _metricas(respMap[r]));
+    });
+
+    return { porSetor: porSetor, porResponsavel: porResponsavel, total: lista.length };
+  }, 'ctrl_tarefas_gestao');
 }
 
 function ctrl_tarefas_migrar_sheet_para_json() {

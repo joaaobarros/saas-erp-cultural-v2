@@ -20,24 +20,8 @@ var EventHandlerRegistry = (function () {
 
   var _handlers = {
 
-    // RESERVATION_CREATED: criar tarefa de preparação de espaço + notificar RECE
+    // RESERVATION_CREATED: notificar RECE (tarefas NÃO são criadas automaticamente — apenas via vínculo explícito)
     'RESERVATION_CREATED': [
-      function(evt) {
-        try {
-          var ctx = typeof evt.contexto === 'string' ? JSON.parse(evt.contexto || '{}') : (evt.contexto || {});
-          TarefaEngine.criarAutomatica('reserva_aprovada', evt.entidadeId, evt.orgId, 'sistema', {
-            titulo: 'Preparar espaço para reserva' + (ctx.salaNome ? ': ' + ctx.salaNome : ''),
-            descricao: 'Reserva confirmada em ' + (ctx.salaNome || '') +
-                       '. Data: ' + (ctx.data || '') +
-                       '. Responsável: ' + (evt.usuario || ''),
-            prioridade: 'alta',
-            modulo: 'espacos'
-          });
-          Logger.info('event_handler_registry', 'RESERVATION_CREATED', 'Tarefa de preparação criada: ' + evt.entidadeId);
-        } catch (e) {
-          Logger.warn('event_handler_registry', 'RESERVATION_CREATED[tarefa]', e.message);
-        }
-      },
       function(evt) {
         // Notificar equipe RECE se reserva for de Ação pública (Fase 6.5)
         try {
@@ -126,43 +110,17 @@ var EventHandlerRegistry = (function () {
       }
     ],
 
-    // KEY_PROTOCOL_DELAYED: criar tarefa de cobrança de chave
+    // KEY_PROTOCOL_DELAYED: log apenas (tarefas de chave NÃO são criadas automaticamente)
     'KEY_PROTOCOL_DELAYED': [
       function(evt) {
-        try {
-          var ctx = typeof evt.contexto === 'string' ? JSON.parse(evt.contexto || '{}') : (evt.contexto || {});
-          TarefaEngine.criarAutomatica('chave_atrasada', evt.entidadeId, evt.orgId, 'sistema', {
-            titulo: 'Cobrar devolução de chave: ' + (ctx.colaborador || evt.entidadeId),
-            descricao: 'Protocolo de chave ' + evt.entidadeId + ' está atrasado. ' +
-                       'Colaborador: ' + (ctx.colaborador || '') + '. Sala: ' + (ctx.sala || ''),
-            prioridade: 'alta',
-            prazo: _dataMaisDias(2),
-            modulo: 'espacos'
-          });
-          Logger.info('event_handler_registry', 'KEY_PROTOCOL_DELAYED', 'Tarefa de cobrança criada: ' + evt.entidadeId);
-        } catch (e) {
-          Logger.warn('event_handler_registry', 'KEY_PROTOCOL_DELAYED', e.message);
-        }
+        Logger.info('event_handler_registry', 'KEY_PROTOCOL_DELAYED', 'Protocolo de chave atrasado: ' + evt.entidadeId);
       }
     ],
 
-    // ITEM_NOT_RETURNED: criar tarefa de cobrança de item de almoxarifado
+    // ITEM_NOT_RETURNED: log apenas (tarefas de item NÃO são criadas automaticamente)
     'ITEM_NOT_RETURNED': [
       function(evt) {
-        try {
-          var ctx = typeof evt.contexto === 'string' ? JSON.parse(evt.contexto || '{}') : (evt.contexto || {});
-          TarefaEngine.criarAutomatica('item_nao_devolvido', evt.entidadeId, evt.orgId, 'sistema', {
-            titulo: 'Cobrar devolução de item: ' + (ctx.item || evt.entidadeId),
-            descricao: 'Item ' + (ctx.item || evt.entidadeId) + ' não foi devolvido no prazo. ' +
-                       'Responsável: ' + (ctx.responsavel || evt.usuario || ''),
-            prioridade: 'alta',
-            prazo: _dataMaisDias(3),
-            modulo: 'espacos'
-          });
-          Logger.info('event_handler_registry', 'ITEM_NOT_RETURNED', 'Tarefa de cobrança criada: ' + evt.entidadeId);
-        } catch (e) {
-          Logger.warn('event_handler_registry', 'ITEM_NOT_RETURNED', e.message);
-        }
+        Logger.info('event_handler_registry', 'ITEM_NOT_RETURNED', 'Item não devolvido: ' + evt.entidadeId);
       }
     ]
   };

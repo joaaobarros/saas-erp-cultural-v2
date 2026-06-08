@@ -35,18 +35,7 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'reserva', entidadeId: reservaId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onReservaConfirmada'
       });
-      // Criar tarefa de preparação de espaço (best-effort: falha não cancela reserva)
-      try {
-        if (typeof TarefaEngine !== 'undefined') {
-          TarefaEngine.criarAutomatica('reserva_aprovada', reservaId, orgId, email, {
-            titulo: 'Preparar espaço para reserva',
-            modulo: 'espacos',
-            prioridade: 'alta'
-          });
-        }
-      } catch (eTarefa) {
-        Logger.warn('integracao_orquestrador', 'onReservaConfirmada:tarefa', eTarefa.message);
-      }
+      // Tarefas de reserva NÃO são criadas automaticamente — apenas via vínculo explícito pelo usuário.
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onReservaConfirmada', e.message);
     }
@@ -156,16 +145,7 @@ var IntegracaoOrquestrador = (function () {
         entidade: 'protocolo_chave', entidadeId: protocoloId, usuario: email, orgId: orgId,
         origem: 'IntegracaoOrquestrador.onProtocoloChaveAtrasado'
       });
-      // Criar tarefa de cobrança (best-effort)
-      try {
-        if (typeof TarefaEngine !== 'undefined') {
-          TarefaEngine.criarAutomatica('chave_atrasada', protocoloId, orgId, email, {
-            modulo: 'espacos', prioridade: 'alta'
-          });
-        }
-      } catch (eTarefa) {
-        Logger.warn('integracao_orquestrador', 'onProtocoloChaveAtrasado:tarefa', eTarefa.message);
-      }
+      // Tarefas de chave atrasada NÃO são criadas automaticamente — apenas via vínculo explícito.
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onProtocoloChaveAtrasado', e.message);
     }

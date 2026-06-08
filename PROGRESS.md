@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix: exclusão de tarefas (2026-06-08)** — Deploy pendente. Botão "Excluir" adicionado ao painel expansível de cada tarefa; `GAS.tarefas.excluir` mapeado para `ctrl_tarefas_excluir`; confirmação via `confirm()` antes de deletar; lista recarregada após sucesso.
+**Fase atual**: **Fix: Tarefas — visibilidade, auto-criação e view de gestão (2026-06-08)** — Deploy pendente. (1) Auto-task removida de `RESERVATION_CREATED`, `KEY_PROTOCOL_DELAYED` e `ITEM_NOT_RETURNED` (event_handler_registry + integracao_orquestrador). (2) Visibilidade de gestor corrigida: gestor vê tarefas do seu setor + as que criou/é responsável (não mais todas). (3) `ctrl_tarefas_gestao` retorna tarefas agrupadas por setor ou responsável. (4) Sub-tab "Gestão" no #th-tab-tarefas (visível para gestor/admin/superadmin): dois modos — por Setor e por Responsável — com barra de progresso e lista prévia. (5) Responsável obrigatório na criação de tarefa.
+
+**Fase anterior**: **Fix: exclusão de tarefas (2026-06-08)** — Deploy @689. Botão "Excluir" adicionado ao painel expansível de cada tarefa; `GAS.tarefas.excluir` mapeado para `ctrl_tarefas_excluir`; confirmação via `confirm()` antes de deletar; lista recarregada após sucesso.
 
 **Fase anterior**: **Fix: selects de setor vinculados ao catálogo (2026-06-07)** — Deploy @681. Quatro pontos corrigidos: (1) `AcoesUI.abrirForm()`: `window._boot` → `App.getBoot()` para popular `#acao-setor` (select estava sempre vazio). (2) `PessoasUI`: `#pf-setor` convertido de `<input type="text">` para `<select>` populado via boot; `abrirForm()` injeta opções do catálogo de setores. (3) `RhUI.abrirFormColab()`: `#rh-pf-setor` idem, convertido e populado. (4) `ComprasUI.abrirNova()`: `window._BOOT_DATA` → `App.getBoot()`; `#cmp-depto` convertido de text input para `<select>` com pré-seleção do setor do usuário logado.
 

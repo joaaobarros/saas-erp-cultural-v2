@@ -6739,69 +6739,97 @@ select.form-control { cursor: pointer; }
           <div id="th-prod-container"><p class="muted-text">Carregando indicadores…</p></div>
         </div>
         <div id="th-tab-tarefas" class="oculto">
-          <div class="stats-grid" id="tarefas-metricas"></div>
-          <div class="card">
-            <div class="card-header">
-              <div class="card-titulo">
-                <span class="ms">add_task</span> Nova Tarefa
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Título *</label>
-                <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Responsável</label>
-                <select id="tf-responsavel" class="form-control"><option value="">— Responsável —</option></select>
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Prioridade</label>
-                <select id="tf-prioridade" class="form-control">
-                  <option value="media">Média</option>
-                  <option value="alta">Alta</option>
-                  <option value="critica">Crítica</option>
-                  <option value="baixa">Baixa</option>
-                </select>
-              </div>
-            </div>
-            <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Prazo</label>
-                <input id="tf-prazo" class="form-control" type="date">
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Vínculo</label>
-                <div style="display:flex;gap:6px;">
-                  <select id="tf-vinculo-tipo" class="select-sm" style="min-width:110px;" onchange="TarefasUI.atualizarVinculo()">
-                    <option value="">— Nenhum —</option>
-                    <option value="acao">Ação</option>
-                    <option value="reserva">Reserva</option>
-                    <option value="contrato">Contrato</option>
-                  </select>
-                  <select id="tf-vinculo-id" class="form-control" style="display:none;"><option value="">Carregando…</option></select>
+          <!-- Sub-tabs: Minhas Tarefas | Gestão (só visível para gestor/admin/superadmin) -->
+          <div class="tab-bar" id="tf-subtabs" style="margin-bottom:16px;">
+            <button class="tab-btn ativa" onclick="TarefasUI.setSubTab('minhas',this)" data-bg-skip="1">
+              <span class="ms" style="font-size:14px;vertical-align:-2px">task_alt</span> Minhas Tarefas
+            </button>
+            <button class="tab-btn" id="tf-btn-gestao" onclick="TarefasUI.setSubTab('gestao',this)" data-bg-skip="1" style="display:none;">
+              <span class="ms" style="font-size:14px;vertical-align:-2px">bar_chart</span> Gestão
+            </button>
+          </div>
+          <!-- Sub-tab: Minhas Tarefas -->
+          <div id="tf-sub-minhas">
+            <div class="stats-grid" id="tarefas-metricas"></div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-titulo">
+                  <span class="ms">add_task</span> Nova Tarefa
                 </div>
               </div>
-              <button class="btn btn-primary" id="btn-tarefa-criar" onclick="TarefasUI.criar()" style="white-space:nowrap;">
-                <span class="ms ms-sm">save</span> Criar Tarefa
-              </button>
+              <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Título *</label>
+                  <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Responsável *</label>
+                  <select id="tf-responsavel" class="form-control"><option value="">— Selecionar —</option></select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Prioridade</label>
+                  <select id="tf-prioridade" class="form-control">
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="critica">Crítica</option>
+                    <option value="baixa">Baixa</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Prazo</label>
+                  <input id="tf-prazo" class="form-control" type="date">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label">Vínculo</label>
+                  <div style="display:flex;gap:6px;">
+                    <select id="tf-vinculo-tipo" class="select-sm" style="min-width:110px;" onchange="TarefasUI.atualizarVinculo()">
+                      <option value="">— Nenhum —</option>
+                      <option value="acao">Ação</option>
+                      <option value="reserva">Reserva</option>
+                      <option value="contrato">Contrato</option>
+                    </select>
+                    <select id="tf-vinculo-id" class="form-control" style="display:none;"><option value="">Carregando…</option></select>
+                  </div>
+                </div>
+                <button class="btn btn-primary" id="btn-tarefa-criar" onclick="TarefasUI.criar()" style="white-space:nowrap;">
+                  <span class="ms ms-sm">save</span> Criar Tarefa
+                </button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-titulo">
+                  <span class="ms">task_alt</span> Lista de Tarefas
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-tarefas-recarregar" onclick="TarefasUI.carregar()">
+                  <span class="ms ms-sm">refresh</span> Atualizar
+                </button>
+              </div>
+              <div id="tarefas-lista">
+                <div class="empty-state" style="min-height:120px;padding:20px;">
+                  <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
+                  <p style="font-size:13px;color:var(--muted)">Carregando tarefas…</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <div class="card-titulo">
-                <span class="ms">task_alt</span> Lista de Tarefas
-              </div>
-              <button class="btn btn-ghost btn-sm" id="btn-tarefas-recarregar" onclick="TarefasUI.carregar()">
+          <!-- Sub-tab: Gestão -->
+          <div id="tf-sub-gestao" style="display:none;">
+            <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:13px;font-weight:500;color:var(--muted);">Agrupar por:</span>
+              <button class="btn btn-secondary btn-sm tf-grupo-btn ativa" onclick="TarefasUI.setGrupoGestao('setor',this)" data-bg-skip="1">
+                <span class="ms ms-sm">category</span> Setor
+              </button>
+              <button class="btn btn-ghost btn-sm tf-grupo-btn" onclick="TarefasUI.setGrupoGestao('responsavel',this)" data-bg-skip="1">
+                <span class="ms ms-sm">person</span> Responsável
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-gestao-recarregar" onclick="TarefasUI.carregarGestao()" style="margin-left:auto;" data-bg-skip="1">
                 <span class="ms ms-sm">refresh</span> Atualizar
               </button>
             </div>
-            <div id="tarefas-lista">
-              <div class="empty-state" style="min-height:120px;padding:20px;">
-                <span class="ms" style="font-size:32px;color:var(--muted)">hourglass_empty</span>
-                <p style="font-size:13px;color:var(--muted)">Carregando tarefas…</p>
-              </div>
-            </div>
+            <div id="tf-gestao-container"><p class="muted-text">Carregando…</p></div>
           </div>
         </div>
       </div><!-- /view-taskhub -->
@@ -8836,7 +8864,8 @@ var GAS = {
     mudarStatus: function(id,s,c,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_mudar_status(id,s,c||''); },
     excluir:     function(id,cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_excluir(id); },
     metricas:    function(cb,err)           { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_metricas(); },
-    dashboard:   function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_dashboard(f||{}); }
+    dashboard:   function(f,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_dashboard(f||{}); },
+    gestao:      function(cb,err)           { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_gestao(); }
   },
   pessoas: {
     listar:               function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar(f||{}); },
@@ -9923,7 +9952,7 @@ var Skeleton = (function() {
 // TAREFAS — Fase 1.1
 // ═══════════════════════════════════════════════════════════
 var TarefasUI = (function() {
-  var _carregado = false;
+  var _carregado = false, _gestaoCarregado = false, _grupoGestao = 'setor';
   var _vinculoCache = { acao: null, reserva: null, contrato: null };
 
   function _statusLabel(status) {
@@ -10151,6 +10180,7 @@ var TarefasUI = (function() {
     var vinculoTipo = (document.getElementById('tf-vinculo-tipo')||{}).value || '';
     var vinculoId   = (document.getElementById('tf-vinculo-id')||{}).value || '';
     if (!titulo) { Toast.aviso('Informe o título da tarefa.'); return; }
+    if (!responsavel) { Toast.aviso('Informe o responsável pela tarefa.'); return; }
     var dados = { titulo: titulo, responsavel: responsavel, prioridade: prioridade, prazo: prazo };
     if (vinculoTipo === 'acao'     && vinculoId) dados.acaoId     = vinculoId;
     if (vinculoTipo === 'reserva'  && vinculoId) dados.reservaId  = vinculoId;
@@ -10181,12 +10211,95 @@ var TarefasUI = (function() {
     });
   }
 
-  function aoAbrir() {
-    if (!_carregado) carregar();
-    _carregarSelectUsuariosHelper('tf-responsavel', (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '', '— Responsável —');
+  function setSubTab(tab, btn) {
+    document.getElementById('tf-sub-minhas').style.display  = tab === 'minhas'  ? '' : 'none';
+    document.getElementById('tf-sub-gestao').style.display  = tab === 'gestao'  ? '' : 'none';
+    document.querySelectorAll('#tf-subtabs .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
+    if (btn) btn.classList.add('ativa');
+    if (tab === 'gestao' && !_gestaoCarregado) carregarGestao();
   }
 
-  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir, atualizarVinculo: atualizarVinculo, toggleDetalhe: toggleDetalhe };
+  function setGrupoGestao(grupo, btn) {
+    _grupoGestao = grupo;
+    document.querySelectorAll('.tf-grupo-btn').forEach(function(b) {
+      b.classList.toggle('ativa', b === btn);
+      b.className = b.className.replace('btn-secondary','btn-ghost').replace('btn-ghost btn-ghost','btn-ghost');
+    });
+    if (btn) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-secondary'); }
+    _renderGestao(window._tfGestaoData);
+  }
+
+  function carregarGestao() {
+    var el = document.getElementById('tf-gestao-container');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.tarefas.gestao(function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ao carregar.</p>'; return; }
+      window._tfGestaoData = resp.data;
+      _gestaoCarregado = true;
+      _renderGestao(resp.data);
+    }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message||e) + '</p>'; });
+  }
+
+  function _renderGestao(dados) {
+    if (!dados) return;
+    var el = document.getElementById('tf-gestao-container');
+    var grupos = _grupoGestao === 'setor' ? dados.porSetor : dados.porResponsavel;
+    if (!grupos || !grupos.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:32px;"><span class="ms" style="font-size:32px;color:var(--muted)">task_alt</span><p style="font-size:13px;color:var(--muted)">Nenhuma tarefa visível.</p></div>';
+      return;
+    }
+    var _PRIORIDADE_CORES = { critica:'#ef4444', alta:'#f59e0b', media:'var(--color-primary)', baixa:'#94a3b8' };
+    var html = grupos.map(function(g) {
+      var titulo = _grupoGestao === 'setor' ? escaparHtml(g.setor) : escaparHtml(g.nome || g.email);
+      var pct = g.total > 0 ? Math.round((g.concluidas / g.total) * 100) : 0;
+      var itens = (g.tarefas || []).slice(0, 5).map(function(t) {
+        var cor = _PRIORIDADE_CORES[t.prioridade] || 'var(--color-primary)';
+        var prazoStr = t.prazo ? fmtDataPtBR(t.prazo.slice(0,10)) : '—';
+        var hoje = new Date().toISOString().slice(0,10);
+        var atrasada = t.prazo && t.prazo.slice(0,10) < hoje && t.status !== 'concluida' && t.status !== 'cancelada';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
+          + '<span style="width:3px;height:32px;background:'+cor+';border-radius:2px;flex-shrink:0;"></span>'
+          + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escaparHtml(t.titulo)+'</div>'
+            + '<div style="font-size:11px;color:var(--muted);">'
+              + escaparHtml(t.responsavel||'—') + ' · '
+              + (_grupoGestao === 'setor' ? '' : escaparHtml(t.setor||'—') + ' · ')
+              + '<span style="'+(atrasada?'color:#ef4444;font-weight:600;':'')+'">'+prazoStr+'</span>'
+            + '</div>'
+          + '</div>'
+          + '<span class="badge badge-'+(t.status==='concluida'?'success':t.status==='bloqueada'?'warning':t.status==='cancelada'?'error':'primary')+'" style="font-size:10px;">'+escaparHtml(_statusLabel(t.status))+'</span>'
+          + '</div>';
+      }).join('');
+      var mais = g.tarefas.length > 5 ? '<div style="font-size:11px;color:var(--muted);padding:4px 0;">+ '+(g.tarefas.length-5)+' tarefas…</div>' : '';
+      return '<div class="card" style="margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+          + '<div style="font-weight:600;font-size:14px;">'+titulo+'</div>'
+          + '<div style="display:flex;gap:12px;font-size:12px;">'
+            + '<span style="color:var(--muted);">'+g.total+' total</span>'
+            + '<span style="color:var(--color-primary);">'+g.abertas+' abertas</span>'
+            + (g.atrasadas > 0 ? '<span style="color:#ef4444;font-weight:600;">'+g.atrasadas+' atrasadas</span>' : '')
+          + '</div>'
+        + '</div>'
+        + '<div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:12px;">'
+          + '<div style="background:var(--color-success);width:'+pct+'%;height:100%;border-radius:4px;transition:width .3s;"></div>'
+        + '</div>'
+        + itens + mais
+        + '</div>';
+    }).join('');
+    el.innerHTML = html;
+  }
+
+  function aoAbrir() {
+    var boot = App.getBoot && App.getBoot();
+    var papel = boot && boot.usuarioPapel ? boot.usuarioPapel : 'colaborador';
+    // Mostrar aba Gestão para gestores e admins
+    var btnGestao = document.getElementById('tf-btn-gestao');
+    if (btnGestao) btnGestao.style.display = ['gestor','admin','superadmin'].indexOf(papel) !== -1 ? '' : 'none';
+    if (!_carregado) carregar();
+    _carregarSelectUsuariosHelper('tf-responsavel', (boot && boot.usuarioEmail) || '', '— Selecionar —');
+  }
+
+  return { carregar: carregar, criar: criar, concluir: concluir, aoAbrir: aoAbrir, setSubTab: setSubTab, setGrupoGestao: setGrupoGestao, carregarGestao: carregarGestao, atualizarVinculo: atualizarVinculo, toggleDetalhe: toggleDetalhe };
 })();
 
 // ═══════════════════════════════════════════════════════════
