@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix Ponto — "Pessoas no arquivo" ordenada alfabeticamente (2026-06-09)** — Deploy @712. Prévia AFD: lista de colaboradores do arquivo agora ordenada por `localeCompare('pt-BR')` antes de renderizar (era ordem de aparição no arquivo).
+**Fase atual**: **Fix Ponto — aba Vínculos sempre vazia (campo semVinculo→colaboradores) (2026-06-09)** — Deploy @713. `ctrl_ponto_listar_sem_vinculo` retornava `{ semVinculo, usuarios }` mas frontend lia `r.data.colaboradores` → array sempre undefined → "Todos os colaboradores já estão vinculados". Corrigido renomeando para `{ colaboradores, usuarios }`.
+
+**Fase anterior**: **Fix Ponto — "Pessoas no arquivo" ordenada alfabeticamente (2026-06-09)** — Deploy @712. Prévia AFD: lista de colaboradores do arquivo agora ordenada por `localeCompare('pt-BR')` antes de renderizar (era ordem de aparição no arquivo).
 
 **Fase anterior**: **AFD — auto-criação de colaboradores + aba Vínculos (2026-06-09)** — Deploy @708. `confirmarImportacao` agora cria stubs de colaboradores automaticamente a partir dos registros tipo-5 (cadastro) do AFD para PIS ainda não cadastrados no sistema; tenta vincular ao usuário de acesso pelo nome via `_buscarColabPorNome` (fuzzy 75%); retorna campo `autoCriados` no resultado. Novo `_resolverColabId(orgId, email)` no controller de ponto: resolve email → `colabId` via `emailInstitucional` para que colaboradores logados vejam seu próprio espelho. Novos controllers: `ctrl_ponto_listar_sem_vinculo` (stubs sem email + lista usuários ativos) e `ctrl_ponto_vincular_colaborador` (seta `emailInstitucional`). Frontend: aba "Vínculos" (tabela select+botão Vincular); `_renderAfdPasso3` mostra 6 stats (Importados, Jornadas, Cadastrados, Sem vínculo, Duplicados, Erros) + mensagem autoCriados. **Pós-deploy obrigatório**: (1) executar `AfdLayoutRepository.prepararIndice()` no GAS Editor; (2) reverter sessões ruins e reimportar o arquivo AFD.
 

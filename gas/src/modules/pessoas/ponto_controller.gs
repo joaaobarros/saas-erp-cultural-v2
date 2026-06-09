@@ -548,7 +548,7 @@ function ctrl_ponto_listar_sem_vinculo(params) {
     var usuarios = (lerJSON('usuarios_acesso.json') || [])
       .filter(function(u){ return u.status === 'ativo'; })
       .map(function(u){ return { email: u.email, nome: u.nome || u.email }; });
-    return { semVinculo: semVinculo, usuarios: usuarios };
+    return { colaboradores: semVinculo, usuarios: usuarios };
   }, 'ctrl_ponto_listar_sem_vinculo');
 }
 
