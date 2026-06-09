@@ -310,8 +310,10 @@ var JornadaEngine = (function() {
    * @param {Array}  normalizados — registros normalizados com { colaboradorId, data, hora, id }
    * @returns {Array} array de objetos jornada prontos para JornadaRepository.salvarLote()
    */
-  function calcularJornadasLote(orgId, normalizados) {
+  // mapaHoras opcional: { colaboradorId → horasSemanais } — por-colab override do global
+  function calcularJornadasLote(orgId, normalizados, mapaHoras) {
     if (!normalizados || !normalizados.length) return [];
+    mapaHoras = mapaHoras || {};
 
     // Agrupa por (colaboradorId, data)
     var porChave = {};
@@ -323,8 +325,8 @@ var JornadaEngine = (function() {
     });
 
     var jornadas = [];
-    var cfg       = _getParametrosRH(orgId);
-    var minDiario = Math.round(((cfg.horas_semanais_padrao || 40) / 5) * 60);
+    var cfg              = _getParametrosRH(orgId);
+    var horasPadraoGlobal = cfg.horas_semanais_padrao || 40;
 
     Object.keys(porChave).forEach(function(key) {
       var registros = porChave[key].slice().sort(function(a, b){ return a.hora.localeCompare(b.hora); });
@@ -339,6 +341,10 @@ var JornadaEngine = (function() {
       var tipos = _derivarTipos(batidas);
       // Atualiza tipo nos registros in-place — evita atualizarTipo individual
       batidas.forEach(function(b, idx) { b._ref.tipo = tipos[idx]; });
+
+      var colabId    = registros[0].colaboradorId;
+      var horasSem   = mapaHoras[colabId] || horasPadraoGlobal;
+      var minDiario  = Math.round((horasSem / 5) * 60);
 
       var minutosTrabalho  = batidas.length >= 2 ? _calcularMinutosTrabalhados(batidas) : 0;
       var minutosIntervalo = batidas.length >= 4 ? _calcularMinutosIntervalo(batidas) : 0;
@@ -392,7 +398,22 @@ var JornadaEngine = (function() {
     // Cobre AFD import e batidas manuais; não depende de jornadas.json estar populado.
     var normalizados = PontoRepository.listarPorColaborador(orgId, colaboradorId, inicio, fim)
       .filter(function(r){ return r.status !== 'revertido'; });
-    var jornadasCalc = calcularJornadasLote(orgId, normalizados);
+
+    // Resolve carga horária do colaborador (campo horasSemanais em colaboradores.json)
+    var horasSemanais = null;
+    try {
+      var colabs = lerJSON('colaboradores.json') || [];
+      for (var ci = 0; ci < colabs.length; ci++) {
+        if (colabs[ci].id === colaboradorId && colabs[ci].orgId === orgId) {
+          horasSemanais = colabs[ci].horasSemanais || null;
+          break;
+        }
+      }
+    } catch(_) {}
+    var mapaHoras = {};
+    if (horasSemanais) mapaHoras[colaboradorId] = horasSemanais;
+
+    var jornadasCalc = calcularJornadasLote(orgId, normalizados, mapaHoras);
     var jornadasMap = {};
     jornadasCalc.forEach(function(j){ jornadasMap[j.data] = j; });
 

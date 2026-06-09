@@ -592,7 +592,7 @@ function ctrl_ponto_listar_colaboradores(params) {
     var todos = lerJSON('colaboradores.json') || [];
     var colaboradores = todos
       .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; })
-      .map(function(c){ return { id: c.id, nome: c.nome || '', setor: c.setor || '', emailInstitucional: c.emailInstitucional || '' }; })
+      .map(function(c){ return { id: c.id, nome: c.nome || '', setor: c.setor || '', emailInstitucional: c.emailInstitucional || '', horasSemanais: c.horasSemanais || 40 }; })
       .sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
     var setores = [];
     try { setores = SistemaConfigService.getSetores(ctx.orgId) || []; } catch(_) {}
@@ -604,6 +604,122 @@ function ctrl_ponto_listar_colaboradores(params) {
     setores = setores.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
     return { colaboradores: colaboradores, setores: setores };
   }, 'ctrl_ponto_listar_colaboradores');
+}
+
+/**
+ * Totais consolidados de ponto para um colaborador em múltiplos períodos.
+ * @param {object} params — { colaboradorId }
+ * Retorna: { mensal, anoVigente, ultimos12Meses, desdeAdmissao } — cada um com
+ *   { totalMinutos, totalExtras, minutosFaltantes, diasTrabalhados, diasAusentes }
+ */
+function ctrl_ponto_consolidado(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    var colaboradorId = _resolverColabId(ctx.orgId, params.colaboradorId || ctx.email);
+    var meuId = _resolverColabId(ctx.orgId, ctx.email);
+    if (colaboradorId !== meuId && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+
+    var hoje  = new Date();
+    var anoH  = hoje.getFullYear();
+    var mesH  = hoje.getMonth() + 1;
+
+    // Data de admissão do colaborador
+    var admissaoISO = null;
+    try {
+      var colabs = lerJSON('colaboradores.json') || [];
+      for (var ci = 0; ci < colabs.length; ci++) {
+        if (colabs[ci].id === colaboradorId && colabs[ci].orgId === ctx.orgId) {
+          admissaoISO = colabs[ci].dataAdmissao || null;
+          break;
+        }
+      }
+    } catch(_) {}
+
+    function _pad(n) { return String(n).padStart(2,'0'); }
+    function _ultimoDia(y, m) {
+      return y + '-' + _pad(m) + '-' + new Date(y, m, 0).getDate();
+    }
+
+    // Calcula totais de normalizados em um período
+    function _totais(dataInicio, dataFim) {
+      var regs = PontoRepository.listarPorColaborador(ctx.orgId, colaboradorId, dataInicio, dataFim)
+        .filter(function(r){ return r.status !== 'revertido'; });
+      if (!regs.length) return { totalMinutos: 0, totalExtras: 0, minutosFaltantes: 0, diasTrabalhados: 0, diasAusentes: 0 };
+      var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regs);
+      var totMin = 0, totExt = 0, totFalt = 0, dias = 0;
+      jornadas.forEach(function(j) {
+        totMin  += j.minutosTrabalho   || 0;
+        totExt  += j.minutosExtras     || 0;
+        totFalt += j.minutosFaltantes  || 0;
+        if (j.statusJornada !== 'ausente') dias++;
+      });
+      // Dias ausentes úteis (seg-sex) no período
+      var ausentes = 0;
+      var d = new Date(dataInicio + 'T12:00:00Z');
+      var fimD = new Date(dataFim + 'T12:00:00Z');
+      while (d <= fimD) {
+        var dow = d.getUTCDay();
+        if (dow >= 1 && dow <= 5) ausentes++;
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      ausentes = Math.max(0, ausentes - dias);
+      return { totalMinutos: totMin, totalExtras: totExt, minutosFaltantes: totFalt, diasTrabalhados: dias, diasAusentes: ausentes };
+    }
+
+    // Mensal: mês atual
+    var mensal = _totais(anoH + '-' + _pad(mesH) + '-01', _ultimoDia(anoH, mesH));
+
+    // Ano vigente: 01/01/ano_atual até hoje
+    var anoVigente = _totais(anoH + '-01-01', hoje.toISOString().slice(0,10));
+
+    // Últimos 12 meses: mês-11 até mês atual
+    var d12 = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+    var ultimos12 = _totais(
+      d12.getFullYear() + '-' + _pad(d12.getMonth()+1) + '-01',
+      hoje.toISOString().slice(0,10)
+    );
+
+    // Desde admissão (ou máximo 5 anos se sem data de admissão)
+    var inicioAdmissao = admissaoISO
+      ? admissaoISO.slice(0,10)
+      : (anoH - 5) + '-01-01';
+    var desdeAdmissao = _totais(inicioAdmissao, hoje.toISOString().slice(0,10));
+
+    return {
+      mensal:          mensal,
+      anoVigente:      anoVigente,
+      ultimos12Meses:  ultimos12,
+      desdeAdmissao:   desdeAdmissao,
+      dataAdmissao:    admissaoISO || null
+    };
+  }, 'ctrl_ponto_consolidado');
+}
+
+/**
+ * Atualiza a carga horária semanal de um colaborador.
+ * @param {object} params — { colaboradorId, horasSemanais }
+ */
+function ctrl_ponto_atualizar_carga_horaria(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel rh/admin+ necessário.');
+    var horas = Number(params.horasSemanais);
+    if (!horas || horas < 1 || horas > 60) throw new Error('Carga horária inválida (1–60h).');
+    modifyJSON('colaboradores.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      lista.forEach(function(c) {
+        if (c.orgId === ctx.orgId && c.id === params.colaboradorId) c.horasSemanais = horas;
+      });
+      return lista;
+    });
+    AuditoriaService.registrar('PONTO_CARGA_HORARIA_ATUALIZADA', 'ponto',
+      { colaboradorId: params.colaboradorId, horasSemanais: horas }, ctx.email);
+    return { colaboradorId: params.colaboradorId, horasSemanais: horas };
+  }, 'ctrl_ponto_atualizar_carga_horaria');
 }
 
 // ─── Diagnóstico de normalizados ─────────────────────────────────────────────

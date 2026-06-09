@@ -7897,12 +7897,25 @@ select.form-control { cursor: pointer; }
                 <option value="">Todos os setores</option>
               </select>
               <select id="ponto-filtro-colab" class="select-sm" style="flex:1;min-width:200px;"
-                      onchange="PontoUI.carregarEspelho()">
+                      onchange="PontoUI._aoSelecionarColab()">
                 <option value="">— Todos os colaboradores —</option>
               </select>
+              <!-- Carga horária semanal — aparece quando colaborador selecionado -->
+              <div id="ponto-carga-horaria-wrap" class="oculto" style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                <span style="font-size:12px;color:var(--text2);">Carga:</span>
+                <div style="display:flex;gap:3px;">
+                  <button class="btn btn-ghost btn-sm" id="ponto-ch-20" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(20)">20h</button>
+                  <button class="btn btn-ghost btn-sm" id="ponto-ch-30" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(30)">30h</button>
+                  <button class="btn btn-ghost btn-sm" id="ponto-ch-40" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(40)">40h</button>
+                  <input type="number" id="ponto-ch-custom" min="1" max="60" step="1"
+                         class="select-sm" style="width:60px;font-size:12px;text-align:center;"
+                         placeholder="h/sem" onchange="PontoUI._setCargaCustom(this.value)">
+                </div>
+              </div>
             </div>
           </div>
           <div id="ponto-espelho-conteudo"><p class="muted-text">⏳ Carregando espelho…</p></div>
+          <div id="ponto-consolidado-wrap"></div>
         </div>
 
         <!-- Tab: AFD (Importação e Exportação) -->
@@ -9354,8 +9367,10 @@ var GAS = {
     listarColaboradores:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_colaboradores(d||{}); },
     reprocessarJornadas:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_reprocessar_jornadas(d||{}); },
     listarSemVinculo:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sem_vinculo(d||{}); },
-    vincularColaborador: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); },
-    diagnostico:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_diagnostico(d||{}); }
+    vincularColaborador:     function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); },
+    diagnostico:             function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_diagnostico(d||{}); },
+    atualizarCargaHoraria:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_atualizar_carga_horaria(d||{}); },
+    consolidado:             function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_consolidado(d||{}); }
   },
   encargos: {
     listar:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_listar(); },
@@ -31555,6 +31570,56 @@ var PontoUI = (function() {
     _preencherSelectColab(selSetor ? selSetor.value : '');
   }
 
+  function _aoSelecionarColab() {
+    var colEl  = document.getElementById('ponto-filtro-colab');
+    var colabId = colEl ? colEl.value.trim() : '';
+    var wrap    = document.getElementById('ponto-carga-horaria-wrap');
+    if (wrap) wrap.classList.toggle('oculto', !colabId);
+    if (colabId) {
+      var colab = _todosColabs.filter(function(c){ return c.id === colabId; })[0];
+      _renderCargaBotoes(colab ? (colab.horasSemanais || 40) : 40);
+    }
+    carregarEspelho();
+  }
+
+  function _renderCargaBotoes(horas) {
+    ['20','30','40'].forEach(function(h) {
+      var btn = document.getElementById('ponto-ch-' + h);
+      if (btn) {
+        btn.style.background = (Number(horas) === Number(h)) ? 'var(--color-primary)' : '';
+        btn.style.color      = (Number(horas) === Number(h)) ? '#fff' : '';
+        btn.style.fontWeight = (Number(horas) === Number(h)) ? '700' : '';
+      }
+    });
+    var inp = document.getElementById('ponto-ch-custom');
+    if (inp) inp.value = [20,30,40].indexOf(Number(horas)) < 0 ? horas : '';
+  }
+
+  function _setCarga(horas) {
+    var colEl = document.getElementById('ponto-filtro-colab');
+    if (!colEl || !colEl.value) return;
+    _salvarCargaHoraria(colEl.value, horas);
+  }
+
+  function _setCargaCustom(val) {
+    var horas = Number(val);
+    if (!horas || horas < 1 || horas > 60) return;
+    var colEl = document.getElementById('ponto-filtro-colab');
+    if (!colEl || !colEl.value) return;
+    _salvarCargaHoraria(colEl.value, horas);
+  }
+
+  function _salvarCargaHoraria(colaboradorId, horas) {
+    GAS.ponto.atualizarCargaHoraria({ colaboradorId: colaboradorId, horasSemanais: horas }, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao salvar carga horária.'); return; }
+      // Atualiza cache local
+      _todosColabs.forEach(function(c){ if (c.id === colaboradorId) c.horasSemanais = horas; });
+      _renderCargaBotoes(horas);
+      Toast.sucesso('Carga horária atualizada: ' + horas + 'h/sem');
+      carregarEspelho();
+    }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
+  }
+
   function setTab(tab, btn) {
     _tabAtual = tab;
     ['espelho','importexport','sessoes','vinculos'].forEach(function(t) {
@@ -31689,7 +31754,48 @@ var PontoUI = (function() {
       }
       if (el) el.innerHTML = html;
       if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('ponto-espelho-conteudo');
+      // Carrega consolidado se há colaborador selecionado
+      if (dados.colaboradorId) _carregarConsolidado(dados.colaboradorId);
+      else { var cEl = document.getElementById('ponto-consolidado-wrap'); if(cEl) cEl.innerHTML = ''; }
     }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc((e&&e.message)||e) + '</p>'; });
+  }
+
+  function _carregarConsolidado(colaboradorId) {
+    var wrap = document.getElementById('ponto-consolidado-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<p class="muted-text" style="font-size:12px;padding:8px 0;">⏳ Carregando consolidado…</p>';
+    GAS.ponto.consolidado({ colaboradorId: colaboradorId }, function(r) {
+      if (!r || !r.ok) { wrap.innerHTML = ''; return; }
+      var d = r.data;
+      function toHM(min) { if(!min) return '0h00'; return Math.floor(min/60)+'h'+String(min%60).padStart(2,'0'); }
+      function card(titulo, dados) {
+        return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;min-width:160px;">' +
+          '<div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">' + titulo + '</div>' +
+          '<div style="display:flex;flex-direction:column;gap:4px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:13px;">' +
+              '<span style="color:var(--text2);">Trabalhado</span>' +
+              '<strong>' + toHM(dados.totalMinutos) + '</strong></div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:13px;">' +
+              '<span style="color:var(--text2);">Extras</span>' +
+              '<strong style="color:var(--success)">' + toHM(dados.totalExtras) + '</strong></div>' +
+            '<div style="display:flex;justify-content:space-between;font-size:13px;">' +
+              '<span style="color:var(--text2);">Dias trab.</span>' +
+              '<strong>' + (dados.diasTrabalhados||0) + '</strong></div>' +
+          '</div></div>';
+      }
+      var html = '<div style="margin-top:20px;">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px;">' +
+          '<span class="ms ms-sm">bar_chart</span>Consolidado' +
+          (d.dataAdmissao ? '<span style="font-size:11px;font-weight:400;color:var(--muted);">· admissão: ' + fmtDataPtBR(d.dataAdmissao.slice(0,10)) + '</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+          card('Este mês',           d.mensal) +
+          card('Ano vigente',        d.anoVigente) +
+          card('Últimos 12 meses',   d.ultimos12Meses) +
+          card('Desde a admissão',   d.desdeAdmissao) +
+        '</div></div>';
+      wrap.innerHTML = html;
+    }, function(){ wrap.innerHTML = ''; });
   }
 
   function calcularCLT() {
@@ -32308,7 +32414,7 @@ var PontoUI = (function() {
     }, function(e){ if (done) done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico };
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _setCarga, _setCargaCustom, _salvarCargaHoraria, _carregarConsolidado, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
