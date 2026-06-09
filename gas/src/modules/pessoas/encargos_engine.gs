@@ -86,7 +86,7 @@ var EncargosEngine = (function () {
         { de: 4664.69, ate: null,    aliquota: 0.275, deducao: 896.00, descricao: '27,5%' }
       ],
       descontoSimplificadoIRRF: { chave: 'descontoSimplificadoIRRF', label: 'Desconto Simplificado IRRF', valor: 528.00, unidade: 'reais', descricao: 'IN RFB 2.141/2023' }
-    }
+    },
 
     // ─── 2026 ──────────────────────────────────────────────────────────────────
     // Portaria Interministerial MPS/MF nº 13/2026 (INSS)
