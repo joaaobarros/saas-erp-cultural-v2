@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix Ponto — Vínculos A-Z + loading icons + hint espelho vazio (2026-06-09)** — Deploy @715. (1) `ctrl_ponto_listar_sem_vinculo`: semVinculo ordenado por `localeCompare('pt-BR')`. (2) 10 ocorrências de `hourglass_empty` MS icon em estados de carregamento padronizadas para `<p class="muted-text">⏳ Carregando…</p>` (admin-pendentes, pessoas, afastamentos, ocorrências, solicitações, agendamentos, contratos, remanejamentos, aditivos, tarefas). (3) Espelho sem dados: quando sem `colaboradorId`, exibe banner informativo orientando a usar o campo e-mail.
+**Fase atual**: **Ponto — filtro do espelho: select setor + select colaborador (2026-06-09)** — Deploy @717. Campo de email livre substituído por: (1) select "Todos os setores" populado via `ctrl_ponto_listar_colaboradores` + `SistemaConfigService.getSetores`; (2) select de colaboradores ativos, filtrado pelo setor selecionado. `carregarEspelho()` envia `colaboradorId` = stub ID (ex: COL-xyz); `_resolverColabId` já aceita IDs sem @. `_carregarFiltroColabs()` cacheia em `_todosColabs` e roda uma única vez no `aoAbrir()`.
+
+**Fase anterior**: **Fix Ponto — Vínculos A-Z + loading icons + hint espelho vazio (2026-06-09)** — Deploy @715. (1) `ctrl_ponto_listar_sem_vinculo`: semVinculo ordenado por `localeCompare('pt-BR')`. (2) 10 ocorrências de `hourglass_empty` MS icon em estados de carregamento padronizadas para `<p class="muted-text">⏳ Carregando…</p>` (admin-pendentes, pessoas, afastamentos, ocorrências, solicitações, agendamentos, contratos, remanejamentos, aditivos, tarefas). (3) Espelho sem dados: quando sem `colaboradorId`, exibe banner informativo orientando a usar o campo e-mail.
 
 **Fase anterior**: **Fix Ponto — aba Vínculos sempre vazia (campo semVinculo→colaboradores) (2026-06-09)** — Deploy @713. `ctrl_ponto_listar_sem_vinculo` retornava `{ semVinculo, usuarios }` mas frontend lia `r.data.colaboradores` → array sempre undefined → "Todos os colaboradores já estão vinculados". Corrigido renomeando para `{ colaboradores, usuarios }`.
 

@@ -524,6 +524,34 @@ function ctrl_ponto_obter_jornada(params) {
   }, 'ctrl_ponto_obter_jornada');
 }
 
+// ─── Lista de colaboradores para filtros ─────────────────────────────────────
+
+/**
+ * Retorna colaboradores ativos + setores disponíveis para popular os selects
+ * de filtro do espelho e outras telas de ponto.
+ * Qualquer papel autenticado pode chamar; a restrição de quem vê o quê
+ * é aplicada nos controllers de espelho/jornada.
+ */
+function ctrl_ponto_listar_colaboradores(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPonto();
+    var todos = lerJSON('colaboradores.json') || [];
+    var colaboradores = todos
+      .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; })
+      .map(function(c){ return { id: c.id, nome: c.nome || '', setor: c.setor || '', emailInstitucional: c.emailInstitucional || '' }; })
+      .sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
+    var setores = [];
+    try { setores = SistemaConfigService.getSetores(ctx.orgId) || []; } catch(_) {}
+    // Fallback: extrair setores únicos dos próprios colaboradores
+    if (!setores.length) {
+      var vistos = {};
+      colaboradores.forEach(function(c){ if (c.setor && !vistos[c.setor]) { vistos[c.setor] = 1; setores.push({ id: c.setor, nome: c.setor }); } });
+    }
+    setores = setores.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
+    return { colaboradores: colaboradores, setores: setores };
+  }, 'ctrl_ponto_listar_colaboradores');
+}
+
 // ─── Vínculos colaborador ↔ usuário do sistema ───────────────────────────────
 
 /**

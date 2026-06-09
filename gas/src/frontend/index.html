@@ -7890,9 +7890,14 @@ select.form-control { cursor: pointer; }
           <div class="filter-bar">
             <input type="month" id="ponto-filtro-mes" class="select-sm"
                    onchange="PontoUI.carregarEspelho()">
-            <input type="text" id="ponto-filtro-colab" class="input-busca"
-                   placeholder="Email do colaborador (opcional)" style="flex:1;min-width:200px;"
-                   oninput="PontoUI.carregarEspelho()">
+            <select id="ponto-filtro-setor" class="select-sm"
+                    onchange="PontoUI._filtrarColabPorSetor();PontoUI.carregarEspelho();">
+              <option value="">Todos os setores</option>
+            </select>
+            <select id="ponto-filtro-colab" class="select-sm" style="flex:1;min-width:200px;"
+                    onchange="PontoUI.carregarEspelho()">
+              <option value="">— Meu espelho —</option>
+            </select>
           </div>
           <div id="ponto-espelho-conteudo"><p class="muted-text">⏳ Carregando espelho…</p></div>
         </div>
@@ -9323,6 +9328,7 @@ var GAS = {
     listarSessoes:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sessoes(d||{}); },
     espelhoMensal:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_espelho_mensal(d||{}); },
     processarJornada:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_processar_jornada(d||{}); },
+    listarColaboradores: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_colaboradores(d||{}); },
     listarSemVinculo:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sem_vinculo(d||{}); },
     vincularColaborador: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); }
   },
@@ -31465,8 +31471,10 @@ Router.registrar('dashboard', 'Dashboard Executivo', DashboardUI.aoAbrir);
 
 // ─── Fase 11.4: PontoUI ─────────────────────────────────────────────────────
 var PontoUI = (function() {
-  var _carregado = false;
-  var _tabAtual  = 'espelho';
+  var _carregado      = false;
+  var _tabAtual       = 'espelho';
+  var _todosColabs    = [];   // cache: [{id,nome,setor,emailInstitucional}]
+  var _colabsCarreg   = false;
 
   function aoAbrir() {
     var mesEl = document.getElementById('ponto-filtro-mes');
@@ -31474,7 +31482,39 @@ var PontoUI = (function() {
       var ag = new Date();
       mesEl.value = ag.getFullYear() + '-' + String(ag.getMonth()+1).padStart(2,'0');
     }
+    if (!_colabsCarreg) _carregarFiltroColabs();
     if (!_carregado) carregarEspelho();
+  }
+
+  function _carregarFiltroColabs() {
+    GAS.ponto.listarColaboradores({}, function(r) {
+      _colabsCarreg = true;
+      if (!r || !r.ok) return;
+      _todosColabs = Array.isArray(r.data && r.data.colaboradores) ? r.data.colaboradores : [];
+      var setores  = Array.isArray(r.data && r.data.setores)       ? r.data.setores       : [];
+      var selSetor = document.getElementById('ponto-filtro-setor');
+      if (selSetor) {
+        var optsS = '<option value="">Todos os setores</option>' +
+          setores.map(function(s){ return '<option value="' + _esc(s.id||s.nome||s) + '">' + _esc(s.nome||s.id||s) + '</option>'; }).join('');
+        selSetor.innerHTML = optsS;
+      }
+      _preencherSelectColab('');
+    });
+  }
+
+  function _preencherSelectColab(setorFiltro) {
+    var sel = document.getElementById('ponto-filtro-colab');
+    if (!sel) return;
+    var lista = setorFiltro
+      ? _todosColabs.filter(function(c){ return c.setor === setorFiltro; })
+      : _todosColabs;
+    sel.innerHTML = '<option value="">— Meu espelho —</option>' +
+      lista.map(function(c){ return '<option value="' + _esc(c.id) + '">' + _esc(c.nome) + '</option>'; }).join('');
+  }
+
+  function _filtrarColabPorSetor() {
+    var selSetor = document.getElementById('ponto-filtro-setor');
+    _preencherSelectColab(selSetor ? selSetor.value : '');
   }
 
   function setTab(tab, btn) {
@@ -31588,11 +31628,16 @@ var PontoUI = (function() {
 
         html += '</tbody></table></div>';
       } else {
+        var nomeColab = '';
+        if (dados.colaboradorId) {
+          var found = _todosColabs.filter(function(c){ return c.id === dados.colaboradorId; })[0];
+          nomeColab = found ? found.nome : dados.colaboradorId;
+        }
         var msgSemDados = dados.colaboradorId
-          ? '<p class="muted-text">Nenhum registro encontrado para <strong>' + _esc(dados.colaboradorId) + '</strong> em ' + _esc(m.periodo||'—') + '.</p>'
+          ? '<p class="muted-text">Nenhum registro encontrado para <strong>' + _esc(nomeColab) + '</strong> em ' + _esc(m.periodo||'—') + '.</p>'
           : '<div style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:16px 20px;font-size:13px;">' +
               '<p style="margin:0 0 6px;font-weight:600;">Sem registros no seu perfil</p>' +
-              '<p style="margin:0;color:var(--text2);">O espelho exibe os registros do usuário logado. Se você importou um arquivo AFD, informe o <strong>e-mail institucional</strong> do colaborador no campo acima para visualizar o espelho dele.</p>' +
+              '<p style="margin:0;color:var(--text2);">Selecione um colaborador nos filtros acima para visualizar o espelho de ponto.</p>' +
             '</div>';
         html += msgSemDados;
       }
@@ -32110,7 +32155,7 @@ var PontoUI = (function() {
     }, function(e){ done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo };
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
