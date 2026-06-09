@@ -32127,7 +32127,7 @@ var PontoUI = (function() {
               'onclick="PontoUI._cancelarSessao(' + sid + ')">Cancelar</button>';
           } else if (st === 'confirmada') {
             btnAcao = '<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;" ' +
-              'onclick="PontoUI._reverterSessao(' + sid + ')">Reverter</button>';
+              'onclick="PontoUI._reverterSessao(' + sid + ')">Excluir</button>';
           }
           return '<tr style="border-bottom:1px solid var(--border);" id="sessao-row-' + _esc(s.id) + '">' +
             '<td style="padding:7px 8px;white-space:nowrap;">' + _esc(dt) + '</td>' +
@@ -32226,7 +32226,15 @@ var PontoUI = (function() {
     });
   }
 
+  function _setBtnCarregando(sessaoId, label) {
+    var row = document.getElementById('sessao-row-' + sessaoId);
+    if (!row) return;
+    var cell = row.querySelector('td:last-child');
+    if (cell) cell.innerHTML = '<span style="font-size:11px;color:var(--text2);">⏳ ' + label + '…</span>';
+  }
+
   function _executarCancelamento(sessaoId) {
+    _setBtnCarregando(sessaoId, 'Cancelando');
     GAS.ponto.cancelarImportacao({ sessaoId: sessaoId }, function(r) {
       if (!r || !r.ok) { Toast.erro('Erro ao cancelar: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
       Toast.sucesso('Sessão cancelada. Você pode re-importar o arquivo.');
@@ -32238,18 +32246,19 @@ var PontoUI = (function() {
   function _reverterSessao(sessaoId) {
     var idStr = JSON.stringify(sessaoId).replace(/"/g,"'");
     _abrirModalConfirmar({
-      titulo:        'Reverter importação confirmada',
-      mensagem:      'As batidas desta sessão serão marcadas como revertidas e os brutos removidos. Você poderá re-importar o arquivo depois.',
-      labelConfirmar:'Reverter sessão',
+      titulo:        'Excluir importação confirmada',
+      mensagem:      'As batidas desta sessão serão removidas do histórico e os brutos excluídos. Você poderá re-importar o arquivo depois.',
+      labelConfirmar:'Excluir sessão',
       idBtn:         'btn-confirmar-reverter-sessao',
       onConfirm:     "PontoUI._executarReversao(" + idStr + ");this.closest('.modal-simples').remove()"
     });
   }
 
   function _executarReversao(sessaoId) {
+    _setBtnCarregando(sessaoId, 'Excluindo');
     GAS.ponto.reverterImportacao({ sessaoId: sessaoId }, function(r) {
-      if (!r || !r.ok) { Toast.erro('Erro ao reverter: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
-      Toast.sucesso('Sessão revertida (' + (r.data&&r.data.revertidos||0) + ' registros). Você pode re-importar o arquivo.');
+      if (!r || !r.ok) { Toast.erro('Erro ao excluir: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
+      Toast.sucesso('Sessão excluída (' + (r.data&&r.data.revertidos||0) + ' registros). Você pode re-importar o arquivo.');
       var row = document.getElementById('sessao-row-' + sessaoId);
       if (row) row.remove();
     }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
