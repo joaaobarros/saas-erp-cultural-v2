@@ -470,7 +470,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 48 (2026-06-09) → SESSÃO 49
 
-### Estado atual: ~265 bugs registrados · Deploy @708 (GAS)
+### Estado atual: ~265 bugs registrados · Deploy @712 (GAS)
 
 ### O que foi feito nesta sessão (s48)
 
