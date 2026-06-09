@@ -540,19 +540,41 @@ function ctrl_ponto_reprocessar_jornadas(params) {
     var ctx = _ctxPonto();
     if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
       throw new Error('Acesso negado — papel rh/admin+ necessário.');
-    var todos = lerJSON('ponto_normalizado.json') || [];
-    var pares = {};
-    todos.filter(function(r){ return r.orgId === ctx.orgId && r.status === 'ativo' && r.colaboradorId && r.data; })
-         .forEach(function(r){ pares[r.colaboradorId + '|' + r.data] = { colaboradorId: r.colaboradorId, data: r.data }; });
-    var processadas = 0, erros = 0;
-    Object.keys(pares).forEach(function(k) {
-      var p = pares[k];
-      try { JornadaEngine.processarDia(ctx.orgId, p.colaboradorId, p.data); processadas++; }
-      catch(e) { erros++; }
+
+    // BATCH: lê uma vez, calcula em memória, persiste em 2 operações
+    var ativos = (lerJSON('ponto_normalizado.json') || []).filter(function(r) {
+      return r.orgId === ctx.orgId && r.status === 'ativo' && r.colaboradorId && r.data;
     });
+
+    // calcularJornadasLote deriva tipos E/I/R/S in-place nos registros
+    var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, ativos);
+
+    // Persiste tipos atualizados — 1 modifyJSON
+    modifyJSON('ponto_normalizado.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      var mapaAtivos = {};
+      ativos.forEach(function(r){ mapaAtivos[r.id] = r; });
+      lista.forEach(function(r) {
+        if (mapaAtivos[r.id]) r.tipo = mapaAtivos[r.id].tipo;
+      });
+      return lista;
+    });
+
+    // Salva todas as jornadas em 1 modifyJSON
+    var processadas = 0, erros = 0;
+    if (jornadas.length > 0) {
+      try {
+        JornadaRepository.salvarLote(ctx.orgId, jornadas);
+        processadas = jornadas.length;
+      } catch(e) {
+        erros = jornadas.length;
+        Logger.warn('ponto_controller', 'reprocessar_jornadas', e.message);
+      }
+    }
+
     AuditoriaService.registrar('PONTO_JORNADAS_REPROCESSADAS', 'ponto',
-      { pares: Object.keys(pares).length, processadas: processadas, erros: erros }, ctx.email);
-    return { processadas: processadas, erros: erros, pares: Object.keys(pares).length };
+      { registrosAtivos: ativos.length, processadas: processadas, erros: erros }, ctx.email);
+    return { processadas: processadas, erros: erros, registrosAtivos: ativos.length };
   }, 'ctrl_ponto_reprocessar_jornadas');
 }
 

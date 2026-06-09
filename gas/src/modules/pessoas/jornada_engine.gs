@@ -299,6 +299,76 @@ var JornadaEngine = (function() {
     return { processadas: processadas, erros: erros };
   }
 
+  /**
+   * Calcula jornadas para um lote de registros normalizados passados diretamente em memória.
+   * Não acessa ponto_normalizado.json — usa os registros fornecidos.
+   * Atualiza o campo `tipo` (E/I/R/S) em cada registro in-place antes de retornar.
+   *
+   * Reduz N modifyJSON calls para 0 durante o cálculo; o chamador faz 1 único salvarLote.
+   *
+   * @param {string} orgId
+   * @param {Array}  normalizados — registros normalizados com { colaboradorId, data, hora, id }
+   * @returns {Array} array de objetos jornada prontos para JornadaRepository.salvarLote()
+   */
+  function calcularJornadasLote(orgId, normalizados) {
+    if (!normalizados || !normalizados.length) return [];
+
+    // Agrupa por (colaboradorId, data)
+    var porChave = {};
+    normalizados.forEach(function(r) {
+      if (!r.colaboradorId || !r.data) return;
+      var key = r.colaboradorId + '|' + r.data;
+      if (!porChave[key]) porChave[key] = [];
+      porChave[key].push(r);
+    });
+
+    var jornadas = [];
+    var cfg       = _getParametrosRH(orgId);
+    var minDiario = Math.round(((cfg.horas_semanais_padrao || 40) / 5) * 60);
+
+    Object.keys(porChave).forEach(function(key) {
+      var registros = porChave[key].slice().sort(function(a, b){ return a.hora.localeCompare(b.hora); });
+      var batidas   = registros.map(function(r) {
+        return { _ref: r, hora: r.hora, nsr: r.nsr, datetimeOriginal: r.datetimeOriginal || '' };
+      });
+
+      var inconsistencias = _detectarInconsistencias(batidas);
+      var fora = inconsistencias.some(function(i){ return i.tipo === 'fora_de_ordem'; });
+      var statusJornada = fora ? 'inconsistente' : (batidas.length % 2 !== 0 ? 'incompleta' : 'completa');
+
+      var tipos = _derivarTipos(batidas);
+      // Atualiza tipo nos registros in-place — evita atualizarTipo individual
+      batidas.forEach(function(b, idx) { b._ref.tipo = tipos[idx]; });
+
+      var minutosTrabalho  = batidas.length >= 2 ? _calcularMinutosTrabalhados(batidas) : 0;
+      var minutosIntervalo = batidas.length >= 4 ? _calcularMinutosIntervalo(batidas) : 0;
+      var minutosExtras = 0, minutosFaltantes = 0;
+      if (statusJornada === 'completa') {
+        minutosExtras    = Math.max(0, minutosTrabalho - minDiario);
+        minutosFaltantes = Math.max(0, minDiario - minutosTrabalho);
+      }
+
+      jornadas.push({
+        colaboradorId:    registros[0].colaboradorId,
+        data:             registros[0].data,
+        batidas:          batidas.map(function(b, idx) {
+          return { normalizadoId: b._ref.id, hora: b.hora, tipoDerivado: tipos[idx], nsr: b.nsr, datetimeOriginal: b.datetimeOriginal };
+        }),
+        numBatidas:       batidas.length,
+        minutosTrabalho:  minutosTrabalho,
+        minutosExtras:    minutosExtras,
+        minutosFaltantes: minutosFaltantes,
+        minutosIntervalo: minutosIntervalo,
+        horaEntrada:      batidas[0].hora,
+        horaSaida:        batidas[batidas.length - 1].hora,
+        statusJornada:    statusJornada,
+        inconsistencias:  inconsistencias
+      });
+    });
+
+    return jornadas;
+  }
+
   // ─── Espelho de Ponto ────────────────────────────────────────────────────────
 
   /**
@@ -402,6 +472,7 @@ var JornadaEngine = (function() {
     processarDia:          processarDia,
     processarPeriodo:      processarPeriodo,
     processarImportacao:   processarImportacao,
+    calcularJornadasLote:  calcularJornadasLote,
     calcularEspelho:       calcularEspelho
   };
 

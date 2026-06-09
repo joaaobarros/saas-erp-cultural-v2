@@ -90,6 +90,31 @@ var JornadaRepository = (function() {
     }) || null;
   }
 
+  /**
+   * Salva um lote de jornadas em uma única operação modifyJSON.
+   * Idempotente: remove jornadas existentes para os mesmos (colabId, data) antes de inserir.
+   */
+  function salvarLote(orgId, jornadas) {
+    if (!jornadas || !jornadas.length) return 0;
+    var agora = new Date().toISOString();
+    var chaves = {};
+    jornadas.forEach(function(j){ chaves[j.colaboradorId + '|' + j.data] = true; });
+    modifyJSON(ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      lista = lista.filter(function(j) {
+        return !(j.orgId === orgId && chaves[j.colaboradorId + '|' + j.data]);
+      });
+      jornadas.forEach(function(jornada) {
+        lista.push(Object.assign(
+          { id: gerarId('JORNADA'), orgId: orgId, processadoEm: agora },
+          jornada
+        ));
+      });
+      return lista;
+    });
+    return jornadas.length;
+  }
+
   // ─── Índice Sheet ─────────────────────────────────────────────────────────────
 
   function prepararIndice() {
@@ -112,6 +137,7 @@ var JornadaRepository = (function() {
 
   return {
     salvar:                    salvar,
+    salvarLote:                salvarLote,
     listarPorColaborador:      listarPorColaborador,
     listarPorPeriodo:          listarPorPeriodo,
     obterPorColaboradorData:   obterPorColaboradorData,

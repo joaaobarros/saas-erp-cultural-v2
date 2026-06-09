@@ -604,18 +604,16 @@ var AfdParserEngine = (function() {
       }
     });
 
-    // ── Etapa 2: confirmar batidas 'valido' e 'sem_cadastro' ──────────────────────
+    // ── Etapa 2: montar lote de normalizados ─────────────────────────────────────
     // 'valido' → colaboradorId já resolvido em iniciarImportacao
     // 'sem_cadastro' → tenta resolver agora com o mapa atualizado (inclui stubs)
+    // BATCH: toda escrita feita em 1 único modifyJSON (evita timeout para ~20k batidas)
     var paraConfirmar = brutos.filter(function(b){
       return b.status === 'valido' || b.status === 'sem_cadastro';
     });
 
-    var importados = 0, erros = 0, semCadastroFinal = 0;
-    // Pares (colabId|data) das batidas salvas com sucesso — usados para processar jornadas.
-    // processarImportacao() só processa brutos 'valido', o que deixaria fora os 'sem_cadastro'
-    // que acabam de ser vinculados aos stubs criados na etapa 1. Coletamos aqui diretamente.
-    var paresDias = {};
+    var semCadastroFinal = 0;
+    var normalizadosLote = [];
 
     paraConfirmar.forEach(function(b) {
       var colabId = b.colaboradorId;
@@ -628,30 +626,45 @@ var AfdParserEngine = (function() {
         semCadastroFinal++;
         return;
       }
-      try {
-        PontoRepository.salvarRegistro(orgId, {
-          colaboradorId:    colabId,
-          pis:              b.pis,
-          data:             b.data,
-          hora:             b.hora,
-          datetimeOriginal: b.datetimeOriginal,
-          tipo:             'E',           // tipo E/S/I/R derivado pelo JornadaEngine
-          tipoEvento:       'batida',
-          nsr:              b.nsr,
-          importacaoId:     sessaoId,
-          brutoId:          b.id,
-          equipamento:      layout ? layout.nome : '',
-          hash:             b.hash || '',
-          origem:           'afd_import',
-          status:           'ativo'
-        });
-        importados++;
-        if (b.data) paresDias[colabId + '|' + b.data] = { colaboradorId: colabId, data: b.data };
-      } catch(e) {
-        erros++;
-        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'NSR ' + b.nsr + ': ' + e.message);
-      }
+      normalizadosLote.push({
+        id:               gerarId('PONTO'),
+        colaboradorId:    colabId,
+        pis:              b.pis,
+        data:             b.data,
+        hora:             b.hora,
+        datetimeOriginal: b.datetimeOriginal,
+        tipo:             'E',    // tipo derivado in-place por calcularJornadasLote antes do save
+        tipoEvento:       'batida',
+        nsr:              b.nsr,
+        importacaoId:     sessaoId,
+        brutoId:          b.id,
+        equipamento:      layout ? layout.nome : '',
+        hash:             b.hash || '',
+        origem:           'afd_import',
+        status:           'ativo'
+      });
     });
+
+    // Calcula jornadas em memória: deriva tipos E/I/R/S e monta objetos jornada.
+    // Atualiza campo `tipo` nos registros in-place — eliminando atualizarTipo individual.
+    var jornadasLote = [];
+    try {
+      jornadasLote = JornadaEngine.calcularJornadasLote(orgId, normalizadosLote);
+    } catch(e) {
+      Logger.warn('afd_parser_engine', 'confirmarImportacao', 'calcularJornadasLote: ' + e.message);
+    }
+
+    // Salva todos os normalizados em 1 operação — evita N × modifyJSON individual
+    var importados = 0, erros = 0;
+    if (normalizadosLote.length > 0) {
+      try {
+        PontoRepository.salvarLote(orgId, normalizadosLote);
+        importados = normalizadosLote.length;
+      } catch(e) {
+        erros = normalizadosLote.length;
+        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'salvarLote normalizados: ' + e.message);
+      }
+    }
 
     PontoBrutoRepository.concluirSessao(orgId, sessaoId, {
       registrosBrutos: importados,
@@ -665,25 +678,16 @@ var AfdParserEngine = (function() {
       erros:       erros
     }, emailAdmin || '');
 
-    // Processa jornadas a partir dos pares (colabId, data) coletados durante a etapa 2.
-    // Não usa processarImportacao() que filtraria só brutos 'valido', perdendo os 'sem_cadastro'.
+    // Salva todas as jornadas em 1 operação
     var resultadoJornadas = { processadas: 0, erros: 0 };
-    try {
-      if (typeof JornadaEngine !== 'undefined') {
-        Object.keys(paresDias).forEach(function(k) {
-          var p = paresDias[k];
-          try {
-            JornadaEngine.processarDia(orgId, p.colaboradorId, p.data);
-            resultadoJornadas.processadas++;
-          } catch(e) {
-            resultadoJornadas.erros++;
-            Logger.warn('afd_parser_engine', 'confirmarImportacao',
-              'Jornada ' + p.colaboradorId + ' ' + p.data + ': ' + e.message);
-          }
-        });
+    if (jornadasLote.length > 0) {
+      try {
+        JornadaRepository.salvarLote(orgId, jornadasLote);
+        resultadoJornadas.processadas = jornadasLote.length;
+      } catch(e) {
+        resultadoJornadas.erros++;
+        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'salvarLote jornadas: ' + e.message);
       }
-    } catch(e) {
-      Logger.warn('afd_parser_engine', 'confirmarImportacao', 'JornadaEngine batch: ' + e.message);
     }
 
     return {

@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @723 · ~265 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @724 · ~265 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,18 +468,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49 (2026-06-09) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 50 (2026-06-09) → SESSÃO 51
 
-### Estado atual: ~265 bugs registrados · Deploy @721 (GAS)
+### Estado atual: ~265 bugs registrados · Deploy @724 (GAS)
 
-### O que foi feito nesta sessão (s49)
+### O que foi feito nesta sessão (s50)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @721 | Fix RH — colaboradores auto-carregam + modal de detalhe | Bug: `_reconstruirMenu()` chamado no bootstrap sobrescrevia o registro do Router `'rh'` com `null` (id ausente da chain if-else). Fix: adicionado `id === 'rh' ? RhUI.aoAbrir()`. Modal `verColab(id)`: abre via botão `visibility` por linha da tabela Equipe; exibe nome/status/vínculo, grid setor/cargo/admissão, histórico de eventos (últimos 5 via `GAS.rh.historico`) e férias (últimas 4 via `GAS.rh.listarFerias`), com botões "Adicionar evento" e "Solicitar férias" que pré-selecionam o colaborador. `abrirFormEvento(idColabPre)` e `abrirFormFerias(idColabPre)` recebem parâmetro opcional de pré-seleção. |
+| @724 | Fix Ponto — batch import AFD (timeout 19k batidas) | Root-cause real do espelho vazio: `confirmarImportacao` chamava `PontoRepository.salvarRegistro()` individualmente para cada batida (19.471 registros). Cada chamada faz lock+lê JSON+escreve → custo O(N²) → timeout de 6 min do GAS antes de terminar → arquivos vazios → espelho "Ausente". Fix: `PontoRepository.salvarLote()`, `JornadaRepository.salvarLote()`, `JornadaEngine.calcularJornadasLote()` (calcula tipos E/I/R/S em memória in-place). `confirmarImportacao` reescrito: monta array em memória → 1 modifyJSON para normalizados + 1 modifyJSON para jornadas. `ctrl_ponto_reprocessar_jornadas` também reescrito para batch. |
 
 ### Pendentes / próxima ação
-- Testar no browser: navegar para Pessoas/RH → colaboradores carregam sem clicar refresh → botão visibility abre modal com eventos e férias
+- **Pós-deploy obrigatório**: (1) reverter sessões existentes no painel Sessões; (2) reimportar arquivo AFD; (3) navegar para **Abril/2024** no espelho (dados do arquivo importado)
 - **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
 
 ---

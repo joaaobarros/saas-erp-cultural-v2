@@ -74,6 +74,27 @@ var PontoRepository = (function() {
     return id;
   }
 
+  /**
+   * Salva um lote de registros em uma única operação modifyJSON.
+   * Pré-requisito para confirmarImportacao com alto volume sem timeout.
+   */
+  function salvarLote(orgId, registros) {
+    if (!registros || !registros.length) return 0;
+    var agora = new Date().toISOString();
+    modifyJSON(ARQUIVO_PONTO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      registros.forEach(function(dados) {
+        lista.push(Object.assign(
+          { registradoEm: agora, status: 'ativo' },
+          dados,
+          { orgId: orgId }
+        ));
+      });
+      return lista;
+    });
+    return registros.length;
+  }
+
   function excluirRegistro(orgId, id) {
     modifyJSON(ARQUIVO_PONTO, function(lista) {
       if (!Array.isArray(lista)) return lista;
@@ -221,6 +242,7 @@ var PontoRepository = (function() {
     listarPorData:            listarPorData,
     listarPorPeriodo:         listarPorPeriodo,
     salvarRegistro:           salvarRegistro,
+    salvarLote:               salvarLote,
     excluirRegistro:          excluirRegistro,
     atualizarTipo:            atualizarTipo,
     nsrJaExiste:              nsrJaExiste,
