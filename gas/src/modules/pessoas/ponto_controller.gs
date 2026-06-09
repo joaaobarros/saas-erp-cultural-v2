@@ -31,6 +31,38 @@ function _ctxPonto() {
   };
 }
 
+/**
+ * Resolve um colaboradorId que pode ser um email (self-service) ou um ID gerado
+ * (importação AFD). Se for email, procura o colaborador cujo emailInstitucional
+ * ou id coincide com esse email — necessário para que colaboradores vejam o ponto
+ * importado via AFD antes de o vínculo ser concluído manualmente.
+ * Fallback: retorna o próprio valor (retrocompatível com registros manuais).
+ */
+function _resolverColabId(orgId, colaboradorId) {
+  if (!colaboradorId) return colaboradorId;
+  // Se já parece um ID gerado (não é e-mail), retorna direto
+  if (colaboradorId.indexOf('@') < 0) return colaboradorId;
+  // É um email — procura colaborador com emailInstitucional correspondente
+  try {
+    var colabs = lerJSON('colaboradores.json') || [];
+    var match = null;
+    for (var i = 0; i < colabs.length; i++) {
+      var c = colabs[i];
+      if (c.orgId !== orgId) continue;
+      var eInst = String(c.emailInstitucional || '').toLowerCase().trim();
+      var ePess = String(c.emailPessoal       || '').toLowerCase().trim();
+      var email = colaboradorId.toLowerCase().trim();
+      if (eInst === email || ePess === email || c.id === colaboradorId) {
+        match = c.id;
+        break;
+      }
+    }
+    return match || colaboradorId;
+  } catch(_) {
+    return colaboradorId;
+  }
+}
+
 // ─── Registro de ponto ───────────────────────────────────────────────────────
 
 /**
@@ -70,8 +102,9 @@ function ctrl_ponto_listar(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var ctx = _ctxPonto();
-    var colabId = params.colaboradorId || ctx.email;
-    if (colabId !== ctx.email && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+    var colabId = _resolverColabId(ctx.orgId, params.colaboradorId || ctx.email);
+    if (colabId !== ctx.email && _resolverColabId(ctx.orgId, ctx.email) !== colabId &&
+        ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
       throw new Error('Acesso negado.');
     return PontoRepository.listarPorColaborador(
       ctx.orgId, colabId, params.dataInicio, params.dataFim
@@ -462,13 +495,15 @@ function ctrl_ponto_espelho_mensal(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var ctx = _ctxPonto();
-    var colabId = params.colaboradorId || ctx.email;
-    if (colabId !== ctx.email && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+    var colabIdResolvido = _resolverColabId(ctx.orgId, params.colaboradorId || ctx.email);
+    var meuIdResolvido   = _resolverColabId(ctx.orgId, ctx.email);
+    if (colabIdResolvido !== meuIdResolvido && colabIdResolvido !== ctx.email &&
+        ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
       throw new Error('Acesso negado.');
     var agora = new Date();
     var ano   = Number(params.ano  || agora.getFullYear());
     var mes   = Number(params.mes  || agora.getMonth() + 1);
-    return JornadaEngine.calcularEspelho(ctx.orgId, colabId, ano, mes);
+    return JornadaEngine.calcularEspelho(ctx.orgId, colabIdResolvido, ano, mes);
   }, 'ctrl_ponto_espelho_mensal');
 }
 
@@ -480,10 +515,76 @@ function ctrl_ponto_obter_jornada(params) {
   return GasResponse.wrap(function() {
     params = params || {};
     var ctx = _ctxPonto();
-    var colabId = params.colaboradorId || ctx.email;
-    if (colabId !== ctx.email && ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+    var colabId = _resolverColabId(ctx.orgId, params.colaboradorId || ctx.email);
+    if (colabId !== ctx.email && _resolverColabId(ctx.orgId, ctx.email) !== colabId &&
+        ['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
       throw new Error('Acesso negado.');
     if (!params.data) throw new Error('data obrigatória.');
     return JornadaRepository.obterPorColaboradorData(ctx.orgId, colabId, params.data);
   }, 'ctrl_ponto_obter_jornada');
+}
+
+// ─── Vínculos colaborador ↔ usuário do sistema ───────────────────────────────
+
+/**
+ * Lista colaboradores importados via AFD que ainda não têm emailInstitucional
+ * definido (sem vínculo com usuário do sistema). Retorna também a lista de
+ * usuários ativos para popular o select de vínculo manual.
+ */
+function ctrl_ponto_listar_sem_vinculo(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel rh/admin+ necessário.');
+    var colabs = lerJSON('colaboradores.json') || [];
+    var semVinculo = colabs.filter(function(c) {
+      return c.orgId === ctx.orgId &&
+             c.origem === 'afd_import' &&
+             !c.emailInstitucional;
+    }).map(function(c) {
+      return { id: c.id, nome: c.nome, pis: c.pis || '', criadoEm: c.criadoEm || '' };
+    });
+    var usuarios = (lerJSON('usuarios_acesso.json') || [])
+      .filter(function(u){ return u.status === 'ativo'; })
+      .map(function(u){ return { email: u.email, nome: u.nome || u.email }; });
+    return { semVinculo: semVinculo, usuarios: usuarios };
+  }, 'ctrl_ponto_listar_sem_vinculo');
+}
+
+/**
+ * Vincula manualmente um colaborador a um usuário do sistema.
+ * Define emailInstitucional no registro do colaborador.
+ * @param {object} params — { colaboradorId, emailInstitucional }
+ */
+function ctrl_ponto_vincular_colaborador(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.colaboradorId) throw new Error('colaboradorId obrigatório.');
+    if (!params.emailInstitucional) throw new Error('emailInstitucional obrigatório.');
+    var atualizado = false;
+    modifyJSON('colaboradores.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      var idx = lista.findIndex(function(c){
+        return c.id === params.colaboradorId && c.orgId === ctx.orgId;
+      });
+      if (idx < 0) throw new Error('Colaborador não encontrado: ' + params.colaboradorId);
+      lista[idx] = Object.assign({}, lista[idx], {
+        emailInstitucional: params.emailInstitucional,
+        vinculoManual:      true,
+        vinculadoPor:       ctx.email,
+        vinculadoEm:        new Date().toISOString()
+      });
+      atualizado = true;
+      return lista;
+    });
+    AuditoriaService.registrar('COLABORADOR_VINCULADO', 'ponto', {
+      colaboradorId:      params.colaboradorId,
+      emailInstitucional: params.emailInstitucional
+    }, ctx.email);
+    return { ok: true, colaboradorId: params.colaboradorId };
+  }, 'ctrl_ponto_vincular_colaborador');
 }

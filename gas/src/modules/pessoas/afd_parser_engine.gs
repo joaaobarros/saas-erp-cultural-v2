@@ -519,13 +519,16 @@ var AfdParserEngine = (function() {
   // ─── Importação Etapa 2 — Confirmar (criar normalizados) ────────────────────
 
   /**
-   * Converte registros brutos com status 'valido' em registros normalizados.
-   * Só processa batidas (tipo 3); registros de cadastro (tipo 5) ficam apenas no bruto.
+   * Converte registros brutos com status 'valido' ou 'sem_cadastro' em registros
+   * normalizados. Quando a sessão contém brutos de cadastro (tipo 5) com PIS não
+   * encontrado em colaboradores.json, cria stubs de colaborador automaticamente
+   * antes de confirmar — permitindo importar arquivos AFD de sistemas sem nenhum
+   * colaborador pré-cadastrado.
    *
    * @param {string} orgId
    * @param {string} sessaoId
    * @param {string} emailAdmin
-   * @returns {{ ok, importados, duplicados, pisNaoEncontrados, cadastros, erros }}
+   * @returns {{ ok, importados, autoCriados, semCadastro, duplicados, cadastros, erros }}
    */
   function confirmarImportacao(orgId, sessaoId, emailAdmin) {
     var sessao = PontoBrutoRepository.obterSessao(orgId, sessaoId);
@@ -534,23 +537,101 @@ var AfdParserEngine = (function() {
       throw new Error('Sessão não está pendente (status atual: ' + sessao.status + ').');
     }
 
-    var layout  = AfdLayoutRepository.obter(sessao.layoutId);
-    var brutos  = PontoBrutoRepository.listarBrutoPorSessao(orgId, sessaoId);
-    // Apenas 'valido' (PIS ou nome matched) vira normalizado
-    // 'sem_cadastro' permanece como bruto aguardando vinculação futura
-    var validos = brutos.filter(function(b){ return b.status === 'valido'; });
+    var layout = AfdLayoutRepository.obter(sessao.layoutId);
+    var brutos = PontoBrutoRepository.listarBrutoPorSessao(orgId, sessaoId);
 
-    var importados = 0, erros = 0;
+    // ── Etapa 0: recarregar mapa PIS → colabId (inclui colaboradores já existentes) ──
+    var mapaPIS = _construirMapaPIS(orgId);
 
-    validos.forEach(function(b) {
+    // ── Etapa 1: auto-criar colaboradores stubs a partir dos brutos de cadastro (tipo 5) ──
+    // Agrupa por PIS único para evitar duplicatas quando o mesmo colaborador tem
+    // múltiplas linhas de cadastro no arquivo (inclusão + alterações).
+    var pisParaCriar = {};
+    brutos.filter(function(b){ return b.status === 'cadastro' && b.pis; })
+      .forEach(function(b) {
+        var pis = String(b.pis).replace(/\D/g, '');
+        // Só cria se ainda não existe no sistema (em nenhuma variante de 11/12 dígitos)
+        if (!mapaPIS[pis] && !pisParaCriar[pis]) {
+          pisParaCriar[pis] = (b.nomeEquipamento || '').trim();
+        }
+      });
+
+    // Mapa nome normalizado → email dos usuários do sistema (para auto-vínculo)
+    var mapaUsuariosNome = {};
+    try {
+      var usuarios = lerJSON('usuarios_acesso.json') || [];
+      usuarios.filter(function(u){ return u.status === 'ativo' && u.nome && u.email; })
+        .forEach(function(u) {
+          var norm = _normalizarNome(u.nome);
+          if (norm) mapaUsuariosNome[norm] = u.email;
+        });
+    } catch(_) {}
+
+    var autoCriados = 0;
+    var agora = new Date().toISOString();
+    Object.keys(pisParaCriar).forEach(function(pis) {
+      try {
+        var nomeAfd = pisParaCriar[pis] || '';
+        // Tenta auto-vincular ao usuário do sistema pelo nome
+        var emailVinculo = _buscarColabPorNome(nomeAfd, mapaUsuariosNome) || null;
+
+        var id = gerarId('COL');
+        modifyJSON('colaboradores.json', function(lista) {
+          if (!Array.isArray(lista)) lista = [];
+          lista.push({
+            id:                  id,
+            orgId:               orgId,
+            nome:                nomeAfd || 'Colaborador ' + pis,
+            pis:                 pis,
+            emailInstitucional:  emailVinculo || '',
+            status:              'ativo',
+            ativo:               true,
+            origem:              'afd_import',
+            vinculoAutomatico:   !!emailVinculo,
+            importacaoId:        sessaoId,
+            criadoEm:            agora,
+            atualizadoEm:        agora
+          });
+          return lista;
+        });
+        // Atualiza o mapa local com o stub recém-criado
+        mapaPIS[pis] = id;
+        if (pis.length === 11) mapaPIS['0' + pis] = id;
+        if (pis.length === 12 && pis.charAt(0) === '0') mapaPIS[pis.substring(1)] = id;
+        autoCriados++;
+      } catch(e) {
+        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'Erro ao criar stub PIS ' + pis + ': ' + e.message);
+      }
+    });
+
+    // ── Etapa 2: confirmar batidas 'valido' e 'sem_cadastro' ──────────────────────
+    // 'valido' → colaboradorId já resolvido em iniciarImportacao
+    // 'sem_cadastro' → tenta resolver agora com o mapa atualizado (inclui stubs)
+    var paraConfirmar = brutos.filter(function(b){
+      return b.status === 'valido' || b.status === 'sem_cadastro';
+    });
+
+    var importados = 0, erros = 0, semCadastroFinal = 0;
+
+    paraConfirmar.forEach(function(b) {
+      var colabId = b.colaboradorId;
+      if (!colabId && b.pis) {
+        colabId = mapaPIS[String(b.pis).replace(/\D/g, '')] || null;
+      }
+      if (!colabId) {
+        // Permanece sem vínculo mesmo após criação de stubs — PIS não aparecia
+        // em nenhuma linha de cadastro (tipo 5) do arquivo
+        semCadastroFinal++;
+        return;
+      }
       try {
         PontoRepository.salvarRegistro(orgId, {
-          colaboradorId:    b.colaboradorId,
+          colaboradorId:    colabId,
           pis:              b.pis,
           data:             b.data,
           hora:             b.hora,
           datetimeOriginal: b.datetimeOriginal,
-          tipo:             'E',           // tipo E/S/I/R derivado pelo JornadaEngine (Fase 4)
+          tipo:             'E',           // tipo E/S/I/R derivado pelo JornadaEngine
           tipoEvento:       'batida',
           nsr:              b.nsr,
           importacaoId:     sessaoId,
@@ -573,9 +654,10 @@ var AfdParserEngine = (function() {
     });
 
     AuditoriaService.registrar('PONTO_IMPORTACAO_CONFIRMADA', 'ponto', {
-      sessaoId:   sessaoId,
-      importados: importados,
-      erros:      erros
+      sessaoId:    sessaoId,
+      importados:  importados,
+      autoCriados: autoCriados,
+      erros:       erros
     }, emailAdmin || '');
 
     // Dispara reconstrução automática de jornadas para todos os dias importados.
@@ -592,9 +674,10 @@ var AfdParserEngine = (function() {
     return {
       ok:               true,
       importados:       importados,
+      autoCriados:      autoCriados,
       erros:            erros,
+      semCadastro:      semCadastroFinal,
       duplicados:       brutos.filter(function(b){ return b.status === 'duplicado'; }).length,
-      semCadastro:      brutos.filter(function(b){ return b.status === 'sem_cadastro'; }).length,
       cadastros:        brutos.filter(function(b){ return b.status === 'cadastro'; }).length,
       jornadasProcessadas: resultadoJornadas.processadas,
       jornadasErros:       resultadoJornadas.erros

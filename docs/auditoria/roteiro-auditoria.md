@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @707 · ~270 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @708 · ~265 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,7 +468,26 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 47 (2026-06-09) → SESSÃO 48
+## HANDOFF ATUAL — SESSÃO 48 (2026-06-09) → SESSÃO 49
+
+### Estado atual: ~265 bugs registrados · Deploy @708 (GAS)
+
+### O que foi feito nesta sessão (s48)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @707 | Fix AFD — posições layout + reverterImportacao | Layout `iDClass-BioProx-v1`: `datetimeOriginal` 25→24 chars; tipo-3 `pis` posInicio 35→34, `hash` 47→46; tipo-5 `acao` 35→34, `pis` 36→35 comp 11→12. `reverterImportacao` chama `PontoBrutoRepository.reverterSessao()` para remover brutos (re-importação não marcava mais como duplicado). |
+| @708 | AFD — auto-criação colaboradores + aba Vínculos | `confirmarImportacao`: cria stubs `COL-*` de PIS tipo-5 não cadastrados; tenta auto-link por nome fuzzy contra `usuarios_acesso.json`; processa batidas `sem_cadastro` após criar stubs; retorna `autoCriados`. `_resolverColabId`: resolve email→colabId via `emailInstitucional`. `ctrl_ponto_listar_sem_vinculo` + `ctrl_ponto_vincular_colaborador`. Frontend: aba "Vínculos" com tabela select+botão; `_renderAfdPasso3` exibe 6 stats incluindo "Cadastrados". |
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (obrigatório pós-deploy):**
+  1. `AfdLayoutRepository.prepararIndice()` — aplica upsert do layout com posições corrigidas
+  2. Reverter sessões ruins (`ctrl_ponto_reverter_importacao`) e reimportar o AFD
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 47 (2026-06-09) → SESSÃO 48
 
 ### Estado atual: ~265 bugs registrados · Deploy @706 (GAS) · Firebase live
 
@@ -482,7 +501,6 @@
 - **Executar no GAS Editor (se ainda não feito):**
   1. `AfdLayoutRepository.prepararIndice()` — aplica correção posInicio do nome AFD
   2. `criarTriggerVerificacaoPrazos()` — trigger diário 08:00 para TAR-04
-- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
 
 ---
 
