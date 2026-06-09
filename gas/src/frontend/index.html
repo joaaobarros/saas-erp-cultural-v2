@@ -7890,14 +7890,17 @@ select.form-control { cursor: pointer; }
           <div class="filter-bar">
             <input type="month" id="ponto-filtro-mes" class="select-sm"
                    onchange="PontoUI.carregarEspelho()">
-            <select id="ponto-filtro-setor" class="select-sm"
-                    onchange="PontoUI._filtrarColabPorSetor();PontoUI.carregarEspelho();">
-              <option value="">Todos os setores</option>
-            </select>
-            <select id="ponto-filtro-colab" class="select-sm" style="flex:1;min-width:200px;"
-                    onchange="PontoUI.carregarEspelho()">
-              <option value="">— Meu espelho —</option>
-            </select>
+            <!-- filtros avançados: visíveis apenas para superadmin / rh / gestor -->
+            <div id="ponto-filtros-avancados" class="oculto" style="display:flex;gap:8px;flex:1;">
+              <select id="ponto-filtro-setor" class="select-sm"
+                      onchange="PontoUI._filtrarColabPorSetor();PontoUI.carregarEspelho();">
+                <option value="">Todos os setores</option>
+              </select>
+              <select id="ponto-filtro-colab" class="select-sm" style="flex:1;min-width:200px;"
+                      onchange="PontoUI.carregarEspelho()">
+                <option value="">— Todos os colaboradores —</option>
+              </select>
+            </div>
           </div>
           <div id="ponto-espelho-conteudo"><p class="muted-text">⏳ Carregando espelho…</p></div>
         </div>
@@ -7945,11 +7948,18 @@ select.form-control { cursor: pointer; }
 
         <!-- Tab: Sessões de Importação AFD -->
         <div id="ponto-tab-sessoes" class="oculto">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
             <h4 style="margin:0;font-size:15px;">Histórico de Importações AFD</h4>
-            <button class="btn btn-ghost btn-sm" onclick="PontoUI.carregarSessoes()" data-bg-skip="1">
-              <span class="ms ms-sm">refresh</span> Atualizar
-            </button>
+            <div style="display:flex;gap:6px;">
+              <button id="btn-reprocessar-jornadas" class="btn btn-secondary btn-sm"
+                      onclick="BtnGuard.wrap('btn-reprocessar-jornadas','Reprocessando…',PontoUI.reprocessarJornadas)"
+                      title="Reconstrói jornadas.json a partir das batidas já confirmadas">
+                <span class="ms ms-sm">sync</span> Reprocessar Jornadas
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="PontoUI.carregarSessoes()" data-bg-skip="1">
+                <span class="ms ms-sm">refresh</span> Atualizar
+              </button>
+            </div>
           </div>
           <div id="ponto-sessoes-conteudo"><p class="muted-text">⏳ Carregando sessões…</p></div>
         </div>
@@ -9328,7 +9338,8 @@ var GAS = {
     listarSessoes:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sessoes(d||{}); },
     espelhoMensal:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_espelho_mensal(d||{}); },
     processarJornada:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_processar_jornada(d||{}); },
-    listarColaboradores: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_colaboradores(d||{}); },
+    listarColaboradores:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_colaboradores(d||{}); },
+    reprocessarJornadas:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_reprocessar_jornadas(d||{}); },
     listarSemVinculo:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sem_vinculo(d||{}); },
     vincularColaborador: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); }
   },
@@ -25888,6 +25899,7 @@ var App = (function() {
             : id === 'escuta'         ? function(){ EscutaUI.aoAbrir(); }
             : id === 'dashboard'      ? function(){ DashboardUI.aoAbrir(); }
             : id === 'ponto'          ? function(){ PontoUI.aoAbrir(); }
+            : id === 'rh'             ? function(){ RhUI.aoAbrir(); }
             : id === 'memoria'         ? function(){ MemoriaUI.aoAbrir(); }
             : id === 'reservas-carro' ? function(){ ReservasCarroUI.aoAbrir(); }
             : id === 'manual'         ? function(){ ManualUI.aoAbrir(); }
@@ -31476,13 +31488,24 @@ var PontoUI = (function() {
   var _todosColabs    = [];   // cache: [{id,nome,setor,emailInstitucional}]
   var _colabsCarreg   = false;
 
+  function _podeVerTodos() {
+    var b = App.getBoot && App.getBoot();
+    return ['superadmin','rh','gestor'].indexOf((b && b.usuarioPapel) || '') >= 0;
+  }
+
   function aoAbrir() {
     var mesEl = document.getElementById('ponto-filtro-mes');
     if (mesEl && !mesEl.value) {
       var ag = new Date();
       mesEl.value = ag.getFullYear() + '-' + String(ag.getMonth()+1).padStart(2,'0');
     }
-    if (!_colabsCarreg) _carregarFiltroColabs();
+    var filtrosEl = document.getElementById('ponto-filtros-avancados');
+    if (_podeVerTodos()) {
+      if (filtrosEl) filtrosEl.classList.remove('oculto');
+      if (!_colabsCarreg) _carregarFiltroColabs();
+    } else {
+      if (filtrosEl) filtrosEl.classList.add('oculto');
+    }
     if (!_carregado) carregarEspelho();
   }
 
@@ -31633,12 +31656,20 @@ var PontoUI = (function() {
           var found = _todosColabs.filter(function(c){ return c.id === dados.colaboradorId; })[0];
           nomeColab = found ? found.nome : dados.colaboradorId;
         }
-        var msgSemDados = dados.colaboradorId
-          ? '<p class="muted-text">Nenhum registro encontrado para <strong>' + _esc(nomeColab) + '</strong> em ' + _esc(m.periodo||'—') + '.</p>'
-          : '<div style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:16px 20px;font-size:13px;">' +
-              '<p style="margin:0 0 6px;font-weight:600;">Sem registros no seu perfil</p>' +
-              '<p style="margin:0;color:var(--text2);">Selecione um colaborador nos filtros acima para visualizar o espelho de ponto.</p>' +
+        var msgSemDados;
+        if (dados.colaboradorId) {
+          msgSemDados = '<p class="muted-text">Nenhum registro de ponto encontrado para <strong>' + _esc(nomeColab) + '</strong> em ' + _esc(m.periodo||'—') + '.</p>';
+        } else if (_podeVerTodos()) {
+          msgSemDados = '<div style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:16px 20px;font-size:13px;">' +
+            '<p style="margin:0 0 6px;font-weight:600;">Nenhum colaborador selecionado</p>' +
+            '<p style="margin:0;color:var(--text2);">Use os filtros acima para selecionar um setor e colaborador.</p>' +
             '</div>';
+        } else {
+          msgSemDados = '<div style="background:var(--surface2,#f5f5f5);border-radius:8px;padding:16px 20px;font-size:13px;">' +
+            '<p style="margin:0 0 6px;font-weight:600;">Nenhum registro de ponto encontrado</p>' +
+            '<p style="margin:0;color:var(--text2);">Não há registros de ponto para o seu perfil em ' + _esc(m.periodo||'—') + '. Se você acredita que isso é um erro, entre em contato com o RH.</p>' +
+            '</div>';
+        }
         html += msgSemDados;
       }
       if (el) el.innerHTML = html;
@@ -32155,7 +32186,16 @@ var PontoUI = (function() {
     }, function(e){ done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo };
+  function reprocessarJornadas(done) {
+    GAS.ponto.reprocessarJornadas({}, function(r) {
+      done();
+      if (!r || !r.ok) { Toast.erro('Erro: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
+      Toast.sucesso(r.data.processadas + ' jornadas reprocessadas' + (r.data.erros > 0 ? ' (' + r.data.erros + ' erros)' : '') + '.');
+      PontoUI.carregarEspelho();
+    }, function(e){ done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
+  }
+
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
@@ -32310,7 +32350,9 @@ var RhUI = (function() {
               '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
               '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
               '<td>'+_badge(c.status||'ativo')+'</td>'+
-              '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.editarColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button></td>'+
+              '<td style="white-space:nowrap;">'+
+              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Ver detalhes" onclick="RhUI.verColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">visibility</span></button> '+
+              '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar" onclick="RhUI.editarColab(\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button></td>'+
               '</tr>';
           }).join('')+'</tbody></table>';
         _popularSelectColaboradores('rh-hist-colab');
@@ -32406,6 +32448,91 @@ var RhUI = (function() {
   function editarColab(id) {
     var c = _colaboradores.find(function(x){ return x.id===id; });
     if (c) abrirFormColab(c);
+  }
+
+  function verColab(id) {
+    var c = _colaboradores.find(function(x){ return x.id===id; });
+    if (!c) return;
+    var eid = _esc(c.id);
+    var html =
+      '<div style="padding:20px 24px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">' +
+          '<div>' +
+            '<h2 style="margin:0 0 3px;font-size:18px;font-weight:700;">' + _esc(c.nome||'—') + '</h2>' +
+            '<p style="margin:0;font-size:12px;color:var(--text2);">' + _esc(c.emailInstitucional||c.email||'') + '</p>' +
+            '<div style="margin-top:6px;">' + _badge(c.status||'ativo') + ' ' + _badge(c.vinculo||c.tipoVinculo||'') + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<button class="btn btn-secondary btn-sm" onclick="RhUI._fecharModalRh();RhUI.editarColab(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">edit</span> Editar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="RhUI._fecharModalRh()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">' +
+          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.setor||'—') + '</p></div>' +
+          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Cargo</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.cargo||'—') + '</p></div>' +
+          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Admissão</p><p style="margin:4px 0 0;font-size:13px;">' + _fmtData(c.dataAdmissao) + '</p></div>' +
+        '</div>' +
+        '<div style="margin-bottom:20px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<h4 style="margin:0;font-size:13px;font-weight:700;">Histórico de Eventos</h4>' +
+            '<button class="btn btn-ghost btn-sm" onclick="RhUI._fecharModalRh();RhUI.setTab(\'historico\',null);" data-bg-skip="1"><span class="ms ms-sm">open_in_new</span> Ver todos</button>' +
+          '</div>' +
+          '<div id="rh-det-eventos">' + _empty('Carregando…') + '</div>' +
+          '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="RhUI._abrirFormEventoComColab(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar evento</button>' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<h4 style="margin:0;font-size:13px;font-weight:700;">Férias</h4>' +
+            '<button class="btn btn-ghost btn-sm" onclick="RhUI._fecharModalRh();RhUI.setTab(\'ferias\',null);" data-bg-skip="1"><span class="ms ms-sm">open_in_new</span> Ver todas</button>' +
+          '</div>' +
+          '<div id="rh-det-ferias">' + _empty('Carregando…') + '</div>' +
+          '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="RhUI._abrirFeriasComColab(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">beach_access</span> Solicitar férias</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalRhLargo(html);
+    GAS.rh.historico(c.id, function(r) {
+      var el = document.getElementById('rh-det-eventos');
+      if (!el) return;
+      var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
+      if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
+      el.innerHTML = lista.slice(0,5).map(function(ev) {
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-primary);">' + _esc(ev.tipoEvento||ev.tipo||'Evento') + '</span>' +
+          '<span style="font-size:11px;color:var(--text2);margin-left:8px;">' + _fmtData(ev.data||ev.criadoEm||'') + '</span>' +
+          (ev.descricao ? '<p style="margin:2px 0 0;font-size:12px;">' + _esc(ev.descricao) + '</p>' : '') +
+          '</div>';
+      }).join('');
+    }, function() {
+      var el = document.getElementById('rh-det-eventos');
+      if (el) el.innerHTML = _empty('Erro ao carregar.');
+    });
+    GAS.rh.listarFerias(c.id, function(r) {
+      var el = document.getElementById('rh-det-ferias');
+      if (!el) return;
+      var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
+      if (!lista.length) { el.innerHTML = _empty('Nenhuma férias registrada.'); return; }
+      el.innerHTML = lista.slice(0,4).map(function(f) {
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:12px;">' + _fmtData(f.dataInicio||f.inicio) + ' → ' + _fmtData(f.dataFim||f.fim) + ' (' + (f.totalDias||'?') + ' dias)</span>' +
+          _badge(f.status||'pendente') + '</div>';
+      }).join('');
+    }, function() {
+      var el = document.getElementById('rh-det-ferias');
+      if (el) el.innerHTML = _empty('Erro ao carregar.');
+    });
+  }
+
+  function _abrirFormEventoComColab(idColab) {
+    _fecharModalRh();
+    setTab('historico', null);
+    setTimeout(function() {
+      abrirFormEvento(idColab);
+    }, 150);
+  }
+
+  function _abrirFeriasComColab(idColab) {
+    _fecharModalRh();
+    abrirFormFerias(idColab);
   }
 
   function salvarColab() {
@@ -33106,11 +33233,12 @@ var RhUI = (function() {
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
   }
 
-  function abrirFormEvento() {
+  function abrirFormEvento(idColabPre) {
     _popularSelectColaboradores('rh-ev-colab');
     document.getElementById('rh-ev-tipo').value='outro';
     document.getElementById('rh-ev-descricao').value='';
     document.getElementById('rh-evento-form').style.display='';
+    if (idColabPre) { var s = document.getElementById('rh-ev-colab'); if (s) s.value = idColabPre; }
   }
   function fecharFormEvento(){ document.getElementById('rh-evento-form').style.display='none'; }
 
@@ -33308,7 +33436,7 @@ var RhUI = (function() {
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
   }
 
-  function abrirFormFerias() {
+  function abrirFormFerias(idColabPre) {
     _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
       '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Solicitar Férias</h3>'+
       '<div class="form-group"><label class="form-label">Colaborador *</label>'+
@@ -33337,6 +33465,7 @@ var RhUI = (function() {
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
       '</div></div>');
     _popularSelectColaboradores('rh-fer-colab-m');
+    if (idColabPre) { var sf = document.getElementById('rh-fer-colab-m'); if (sf) sf.value = idColabPre; }
   }
 
   function _feriasToggleTipo() {
@@ -33894,7 +34023,8 @@ var RhUI = (function() {
   return {
     aoAbrir:aoAbrir, setTab:setTab,
     carregarEquipe:carregarEquipe, abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
-    editarColab:editarColab, salvarColab:salvarColab, _preencherDeUsuario:_preencherDeUsuario,
+    editarColab:editarColab, verColab:verColab, _abrirFormEventoComColab:_abrirFormEventoComColab, _abrirFeriasComColab:_abrirFeriasComColab,
+    salvarColab:salvarColab, _preencherDeUsuario:_preencherDeUsuario,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
     excluirCargo:excluirCargo, _confirmarExcluirCargo:_confirmarExcluirCargo,

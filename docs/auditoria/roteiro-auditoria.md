@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @717 · ~265 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @718 · ~265 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,7 +468,23 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 48 (2026-06-09) → SESSÃO 49
+## HANDOFF ATUAL — SESSÃO 49 (2026-06-09) → SESSÃO 50
+
+### Estado atual: ~265 bugs registrados · Deploy @718 (GAS)
+
+### O que foi feito nesta sessão (s49)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @718 | Fix RH — colaboradores auto-carregam + modal de detalhe | Bug: `_reconstruirMenu()` chamado no bootstrap sobrescrevia o registro do Router `'rh'` com `null` (id ausente da chain if-else). Fix: adicionado `id === 'rh' ? RhUI.aoAbrir()`. Modal `verColab(id)`: abre via botão `visibility` por linha da tabela Equipe; exibe nome/status/vínculo, grid setor/cargo/admissão, histórico de eventos (últimos 5 via `GAS.rh.historico`) e férias (últimas 4 via `GAS.rh.listarFerias`), com botões "Adicionar evento" e "Solicitar férias" que pré-selecionam o colaborador. `abrirFormEvento(idColabPre)` e `abrirFormFerias(idColabPre)` recebem parâmetro opcional de pré-seleção. |
+
+### Pendentes / próxima ação
+- Testar no browser: navegar para Pessoas/RH → colaboradores carregam sem clicar refresh → botão visibility abre modal com eventos e férias
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 48 (2026-06-09) → SESSÃO 49
 
 ### Estado atual: ~265 bugs registrados · Deploy @712 (GAS)
 

@@ -524,6 +524,38 @@ function ctrl_ponto_obter_jornada(params) {
   }, 'ctrl_ponto_obter_jornada');
 }
 
+// ─── Reprocessamento de jornadas ─────────────────────────────────────────────
+
+/**
+ * Reprocessa jornadas a partir dos registros normalizados ativos em
+ * ponto_normalizado.json. Idempotente — pode ser rodado a qualquer momento
+ * para reconstruir jornadas.json sem re-importar o arquivo AFD.
+ *
+ * Necessário quando sessões foram confirmadas antes da correção que adicionou
+ * a chamada a JornadaEngine.processarDia() no confirmarImportacao.
+ */
+function ctrl_ponto_reprocessar_jornadas(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel rh/admin+ necessário.');
+    var todos = lerJSON('ponto_normalizado.json') || [];
+    var pares = {};
+    todos.filter(function(r){ return r.orgId === ctx.orgId && r.status === 'ativo' && r.colaboradorId && r.data; })
+         .forEach(function(r){ pares[r.colaboradorId + '|' + r.data] = { colaboradorId: r.colaboradorId, data: r.data }; });
+    var processadas = 0, erros = 0;
+    Object.keys(pares).forEach(function(k) {
+      var p = pares[k];
+      try { JornadaEngine.processarDia(ctx.orgId, p.colaboradorId, p.data); processadas++; }
+      catch(e) { erros++; }
+    });
+    AuditoriaService.registrar('PONTO_JORNADAS_REPROCESSADAS', 'ponto',
+      { pares: Object.keys(pares).length, processadas: processadas, erros: erros }, ctx.email);
+    return { processadas: processadas, erros: erros, pares: Object.keys(pares).length };
+  }, 'ctrl_ponto_reprocessar_jornadas');
+}
+
 // ─── Lista de colaboradores para filtros ─────────────────────────────────────
 
 /**

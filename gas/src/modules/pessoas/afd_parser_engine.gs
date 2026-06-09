@@ -612,6 +612,10 @@ var AfdParserEngine = (function() {
     });
 
     var importados = 0, erros = 0, semCadastroFinal = 0;
+    // Pares (colabId|data) das batidas salvas com sucesso — usados para processar jornadas.
+    // processarImportacao() só processa brutos 'valido', o que deixaria fora os 'sem_cadastro'
+    // que acabam de ser vinculados aos stubs criados na etapa 1. Coletamos aqui diretamente.
+    var paresDias = {};
 
     paraConfirmar.forEach(function(b) {
       var colabId = b.colaboradorId;
@@ -642,6 +646,7 @@ var AfdParserEngine = (function() {
           status:           'ativo'
         });
         importados++;
+        if (b.data) paresDias[colabId + '|' + b.data] = { colaboradorId: colabId, data: b.data };
       } catch(e) {
         erros++;
         Logger.warn('afd_parser_engine', 'confirmarImportacao', 'NSR ' + b.nsr + ': ' + e.message);
@@ -660,15 +665,25 @@ var AfdParserEngine = (function() {
       erros:       erros
     }, emailAdmin || '');
 
-    // Dispara reconstrução automática de jornadas para todos os dias importados.
-    // Erro aqui não cancela a confirmação — jornadas podem ser reprocessadas manualmente.
+    // Processa jornadas a partir dos pares (colabId, data) coletados durante a etapa 2.
+    // Não usa processarImportacao() que filtraria só brutos 'valido', perdendo os 'sem_cadastro'.
     var resultadoJornadas = { processadas: 0, erros: 0 };
     try {
       if (typeof JornadaEngine !== 'undefined') {
-        resultadoJornadas = JornadaEngine.processarImportacao(orgId, sessaoId);
+        Object.keys(paresDias).forEach(function(k) {
+          var p = paresDias[k];
+          try {
+            JornadaEngine.processarDia(orgId, p.colaboradorId, p.data);
+            resultadoJornadas.processadas++;
+          } catch(e) {
+            resultadoJornadas.erros++;
+            Logger.warn('afd_parser_engine', 'confirmarImportacao',
+              'Jornada ' + p.colaboradorId + ' ' + p.data + ': ' + e.message);
+          }
+        });
       }
     } catch(e) {
-      Logger.warn('afd_parser_engine', 'confirmarImportacao', 'JornadaEngine: ' + e.message);
+      Logger.warn('afd_parser_engine', 'confirmarImportacao', 'JornadaEngine batch: ' + e.message);
     }
 
     return {
