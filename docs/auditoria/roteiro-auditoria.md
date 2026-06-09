@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @727 · ~265 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @728 · ~265 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,7 +468,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 50 (2026-06-09) → SESSÃO 51
+## HANDOFF ATUAL — SESSÃO 51 (2026-06-09) → SESSÃO 52
+
+### Estado atual: ~265 bugs registrados · Deploy @728 (GAS)
+
+### O que foi feito nesta sessão (s51)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @727 | RH — BcbService + tabelas 2026 | Catálogo de encargos 2026, BcbService para busca de taxa SELIC/CDI via API BCB, atualização automática da SM via BCB API. |
+| @728 | Fix Ponto — espelho vazio após reimportação (2ª causa) | Causa raiz: sessão antiga (pendente por timeout do batch fix anterior) ainda detinha os 19k brutos em `ponto_bruto.json`; qualquer reimportação do mesmo arquivo detectava todos NSRs como "duplicado" → 0 normalizados → 0 jornadas → espelho vazio. Fixes: (1) `cancelarImportacao` agora chama `PontoRepository.reverterImportacao` antes de remover brutos — limpa normalizados órfãos que a versão pré-batch pôde ter gravado parcialmente antes do timeout; (2) `GAS.ponto.reverterImportacao` adicionado ao namespace frontend; (3) Aba Sessões ganha coluna "Ação" com botão "Cancelar" (pendentes) e "Reverter" (confirmadas) via `_abrirModalConfirmar`. |
+
+### Pendentes / próxima ação
+- **Ação imediata no sistema**: (1) Módulo Ponto → aba Sessões → clicar "Cancelar" na sessão pendente antiga; (2) Reimportar arquivo AFD; (3) Confirmar importação; (4) Verificar espelho em Abril/2024 para ADRIELLY
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 50 (2026-06-09) → SESSÃO 51
 
 ### Estado atual: ~265 bugs registrados · Deploy @725 (GAS)
 

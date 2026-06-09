@@ -719,6 +719,12 @@ var AfdParserEngine = (function() {
         'Para sessões confirmadas use reverterImportacao().'
       );
     }
+    // Remove normalizados órfãos que possam ter sido gravados antes de um timeout
+    // no confirmarImportacao antigo (antes do batch fix). Seguro rodar mesmo quando
+    // nenhum normalizado existe para essa sessão.
+    try {
+      PontoRepository.reverterImportacao(orgId, sessaoId);
+    } catch(_) {}
     PontoBrutoRepository.reverterSessao(orgId, sessaoId, emailAdmin);
     PontoBrutoRepository.atualizarSessao(orgId, sessaoId, { status: 'cancelada' });
     AuditoriaService.registrar('PONTO_IMPORTACAO_CANCELADA', 'ponto',

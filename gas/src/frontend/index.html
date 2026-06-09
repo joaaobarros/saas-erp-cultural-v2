@@ -9341,6 +9341,7 @@ var GAS = {
     iniciarImportacao:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_iniciar_importacao_afd(d||{}); },
     confirmarImportacao: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_confirmar_importacao(d||{}); },
     cancelarImportacao:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_cancelar_importacao(d||{}); },
+    reverterImportacao:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_reverter_importacao(d||{}); },
     listarLayouts:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_layouts(d||{}); },
     listarSessoes:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sessoes(d||{}); },
     espelhoMensal:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_espelho_mensal(d||{}); },
@@ -32112,13 +32113,23 @@ var PontoUI = (function() {
             '<th style="padding:8px;text-align:center;font-weight:600;">Erros</th>' +
             '<th style="padding:8px;text-align:center;font-weight:600;">Status</th>' +
             '<th style="padding:8px;text-align:left;font-weight:600;">Importado por</th>' +
+            '<th style="padding:8px;text-align:center;font-weight:600;">Ação</th>' +
           '</tr></thead><tbody>' +
         sessoes.map(function(s) {
           var st  = s.status || 'pendente';
           var cor = ST_COR[st]   || 'var(--text)';
           var lbl = ST_LABEL[st] || st;
           var dt  = s.criadoEm ? fmtDataPtBR(s.criadoEm.slice(0,10)) + ' ' + (s.criadoEm.slice(11,16)||'') : '—';
-          return '<tr style="border-bottom:1px solid var(--border);">' +
+          var sid = JSON.stringify(s.id).replace(/"/g,"'");
+          var btnAcao = '';
+          if (st === 'pendente') {
+            btnAcao = '<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;" ' +
+              'onclick="PontoUI._cancelarSessao(' + sid + ')">Cancelar</button>';
+          } else if (st === 'confirmada') {
+            btnAcao = '<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;" ' +
+              'onclick="PontoUI._reverterSessao(' + sid + ')">Reverter</button>';
+          }
+          return '<tr style="border-bottom:1px solid var(--border);" id="sessao-row-' + _esc(s.id) + '">' +
             '<td style="padding:7px 8px;white-space:nowrap;">' + _esc(dt) + '</td>' +
             '<td style="padding:7px 8px;">' + _esc(s.nomeArquivo||'—') + '</td>' +
             '<td style="padding:7px 8px;">' + _esc(s.layoutId||'—') + '</td>' +
@@ -32126,6 +32137,7 @@ var PontoUI = (function() {
             '<td style="padding:7px 8px;text-align:center;color:' + ((s.erros||0)>0?'var(--danger)':'var(--text)') + ';">' + (s.erros||0) + '</td>' +
             '<td style="padding:7px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:' + cor + ';">' + lbl + '</span></td>' +
             '<td style="padding:7px 8px;font-size:12px;color:var(--text2);">' + _esc(s.importadoPor||'—') + '</td>' +
+            '<td style="padding:7px 8px;text-align:center;">' + btnAcao + '</td>' +
           '</tr>';
         }).join('') +
         '</tbody></table></div>';
@@ -32203,7 +32215,47 @@ var PontoUI = (function() {
     }, function(e){ done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas };
+  function _cancelarSessao(sessaoId) {
+    var idStr = JSON.stringify(sessaoId).replace(/"/g,"'");
+    _abrirModalConfirmar({
+      titulo:        'Cancelar importação pendente',
+      mensagem:      'Os registros brutos serão removidos. Batidas salvas parcialmente antes de um timeout serão revertidas. Você poderá re-importar o arquivo depois.',
+      labelConfirmar:'Cancelar sessão',
+      idBtn:         'btn-confirmar-cancelar-sessao',
+      onConfirm:     "PontoUI._executarCancelamento(" + idStr + ");this.closest('.modal-simples').remove()"
+    });
+  }
+
+  function _executarCancelamento(sessaoId) {
+    GAS.ponto.cancelarImportacao({ sessaoId: sessaoId }, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao cancelar: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
+      Toast.sucesso('Sessão cancelada. Você pode re-importar o arquivo.');
+      var row = document.getElementById('sessao-row-' + sessaoId);
+      if (row) row.remove();
+    }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
+  }
+
+  function _reverterSessao(sessaoId) {
+    var idStr = JSON.stringify(sessaoId).replace(/"/g,"'");
+    _abrirModalConfirmar({
+      titulo:        'Reverter importação confirmada',
+      mensagem:      'As batidas desta sessão serão marcadas como revertidas e os brutos removidos. Você poderá re-importar o arquivo depois.',
+      labelConfirmar:'Reverter sessão',
+      idBtn:         'btn-confirmar-reverter-sessao',
+      onConfirm:     "PontoUI._executarReversao(" + idStr + ");this.closest('.modal-simples').remove()"
+    });
+  }
+
+  function _executarReversao(sessaoId) {
+    GAS.ponto.reverterImportacao({ sessaoId: sessaoId }, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao reverter: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
+      Toast.sucesso('Sessão revertida (' + (r.data&&r.data.revertidos||0) + ' registros). Você pode re-importar o arquivo.');
+      var row = document.getElementById('sessao-row-' + sessaoId);
+      if (row) row.remove();
+    }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
+  }
+
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
