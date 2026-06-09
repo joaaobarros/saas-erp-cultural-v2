@@ -34,8 +34,8 @@ var AfdLayoutRepository = (function() {
   //     [PIS:12][HASH:4]   → pos 35..46 / 47..50
   //
   //   Tipo 5 (cadastro de funcionário):
-  //     [ACAO:1][PIS:12][NOME:50][CNPJ_SEQ:15][HASH:4]
-  //     → pos 35 / 36..47 / 48..97 / 98..112 / 113..116
+  //     [ACAO:1][PIS:11][NOME:50][CNPJ_SEQ:15][HASH:4]
+  //     → pos 35 / 36..46 / 47..96 / 97..111 / 112..115
   //
   //   Tipo 2 (informações do empregador):
   //     [CNPJ:12][...][RAZAO_SOCIAL:150][ENDERECO:100][HASH:4]
@@ -105,22 +105,22 @@ var AfdLayoutRepository = (function() {
           visivel: true, editavel: false, ordenacao: 4
         },
         {
-          nome: 'pis', posInicio: 36, comprimento: 12, tipo: 'string_digits',
-          descricao: 'PIS/NIS do colaborador',
+          nome: 'pis', posInicio: 36, comprimento: 11, tipo: 'string_digits',
+          descricao: 'PIS/NIS do colaborador (11 posições no tipo 5)',
           visivel: true, editavel: false, ordenacao: 5
         },
         {
-          nome: 'nome', posInicio: 48, comprimento: 50, tipo: 'string_trim',
+          nome: 'nome', posInicio: 47, comprimento: 50, tipo: 'string_trim',
           descricao: 'Nome do colaborador (50 chars, padded)',
           visivel: true, editavel: false, ordenacao: 6
         },
         {
-          nome: 'cnpjSeq', posInicio: 98, comprimento: 15, tipo: 'string',
+          nome: 'cnpjSeq', posInicio: 97, comprimento: 15, tipo: 'string',
           descricao: 'Sequência CNPJ do equipamento',
           visivel: false, editavel: false, ordenacao: 7
         },
         {
-          nome: 'hash', posInicio: 113, comprimento: 4, tipo: 'string',
+          nome: 'hash', posInicio: 112, comprimento: 4, tipo: 'string',
           descricao: 'Hash de integridade da linha',
           visivel: false, editavel: false, ordenacao: 8
         }
@@ -253,16 +253,14 @@ var AfdLayoutRepository = (function() {
   // ─── Inicialização ───────────────────────────────────────────────────────────
 
   function prepararIndice() {
-    var lista = _lerTodos();
-    var existe = lista.some(function(l){ return l.id === LAYOUT_IDCLASS_V1.id; });
-    if (!existe) {
-      modifyJSON(ARQUIVO, function(l) {
-        if (!Array.isArray(l)) l = [];
-        l.unshift(LAYOUT_IDCLASS_V1);
-        return l;
-      });
-      Logger.info('afd_layout_repository', 'prepararIndice', 'Layout builtin iDClass Bio Prox v1 instalado.');
-    }
+    modifyJSON(ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = lista.findIndex(function(l){ return l.id === LAYOUT_IDCLASS_V1.id; });
+      if (idx >= 0) lista[idx] = LAYOUT_IDCLASS_V1;   // upsert — aplica correções de posição
+      else lista.unshift(LAYOUT_IDCLASS_V1);
+      return lista;
+    });
+    Logger.info('afd_layout_repository', 'prepararIndice', 'Layout iDClass Bio Prox v1 instalado/atualizado.');
     return { ok: true, layouts: listar(null).length };
   }
 

@@ -466,7 +466,29 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 45 (2026-06-08) → SESSÃO 46
+## HANDOFF ATUAL — SESSÃO 46 (2026-06-08) → SESSÃO 47
+
+### Estado atual: ~267 bugs registrados · Deploy @705
+
+### O que foi feito nesta sessão (s46)
+
+Fix: nome de colaboradores cortado na primeira letra no preview AFD.
+
+| Arquivo | Mudança |
+|---|---|
+| `afd_layout_repository.gs` | Tipo-5: `nome` posInicio 48→47, `pis` comprimento 12→11, `cnpjSeq` 98→97, `hash` 113→112 |
+| `afd_layout_repository.gs` | `prepararIndice`: insert → upsert (corrige ambientes já com layout instalado) |
+
+**Ação necessária**: executar `AfdLayoutRepository.prepararIndice()` no GAS Editor para aplicar a correção no `afd_layouts.json`.
+
+### Próxima sessão
+
+1. Executar `AfdLayoutRepository.prepararIndice()` no GAS Editor
+2. Reimportar o arquivo AFD e confirmar que os nomes aparecem completos
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 45 (2026-06-08) → SESSÃO 46
 
 ### Estado atual: ~267 bugs registrados · Deploy @704 (GAS)
 
