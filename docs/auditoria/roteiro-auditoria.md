@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @638 · ~270 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @707 · ~270 bugs registrados (ver tabela abaixo para ativos)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -90,7 +90,9 @@
 | Item | Status | Sessão |
 |---|---|---|
 | View carrega com abas | ✅ | 2026-05-31 |
-| Sub-abas Custo CLT e Rescisão deslocadas | ⚠️ PON-01 | 2026-05-31 |
+| Sub-abas Custo CLT e Rescisão deslocadas | ✅ CORRIGIDO @PON-01 | 2026-06-08 |
+| Importação AFD — 0 batidas confirmadas (layout posições erradas) | ✅ CORRIGIDO @707 | 2026-06-09 |
+| reverterImportacao não removia brutos (bloqueava re-importação) | ✅ CORRIGIDO @707 | 2026-06-09 |
 
 ### Módulo 09 — Infraestrutura / Reservas
 | Item | Status | Sessão |

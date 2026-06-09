@@ -79,7 +79,7 @@ var AfdLayoutRepository = (function() {
         visivel: false, editavel: false, ordenacao: 2
       },
       {
-        nome: 'datetimeOriginal', posInicio: 10, comprimento: 25, tipo: 'datetime_iso',
+        nome: 'datetimeOriginal', posInicio: 10, comprimento: 24, tipo: 'datetime_iso',
         descricao: 'Data e hora com timezone (ISO 8601)',
         visivel: true, editavel: false, ordenacao: 3
       }
@@ -88,25 +88,25 @@ var AfdLayoutRepository = (function() {
     camposPorTipo: {
       '3': [
         {
-          nome: 'pis', posInicio: 35, comprimento: 12, tipo: 'string_digits',
+          nome: 'pis', posInicio: 34, comprimento: 12, tipo: 'string_digits',
           descricao: 'PIS/NIS do colaborador (12 posições)',
           visivel: true, editavel: false, ordenacao: 4
         },
         {
-          nome: 'hash', posInicio: 47, comprimento: 4, tipo: 'string',
+          nome: 'hash', posInicio: 46, comprimento: 4, tipo: 'string',
           descricao: 'Hash de integridade da linha',
           visivel: false, editavel: false, ordenacao: 5
         }
       ],
       '5': [
         {
-          nome: 'acao', posInicio: 35, comprimento: 1, tipo: 'string',
+          nome: 'acao', posInicio: 34, comprimento: 1, tipo: 'string',
           descricao: 'Ação no equipamento: I=Inclusão, A=Alteração, E=Exclusão',
           visivel: true, editavel: false, ordenacao: 4
         },
         {
-          nome: 'pis', posInicio: 36, comprimento: 11, tipo: 'string_digits',
-          descricao: 'PIS/NIS do colaborador (11 posições no tipo 5)',
+          nome: 'pis', posInicio: 35, comprimento: 12, tipo: 'string_digits',
+          descricao: 'PIS/NIS do colaborador (12 posições no tipo 5)',
           visivel: true, editavel: false, ordenacao: 5
         },
         {
@@ -167,7 +167,7 @@ var AfdLayoutRepository = (function() {
       cnpj:             'cnpjEmpregador',
       razaoSocial:      'razaoSocialEmpregador'
     },
-    criadoEm: '2026-06-08',
+    criadoEm: '2026-06-09',
     orgId:    null   // null = layout global compartilhado entre todas as orgs
   };
 

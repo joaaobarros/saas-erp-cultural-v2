@@ -637,12 +637,11 @@ var AfdParserEngine = (function() {
     if (sessao.status !== 'confirmada') {
       throw new Error('Só é possível reverter sessões confirmadas.');
     }
+    // Marca normalizados como 'revertido' no ponto_normalizado.json
     var revertidos = PontoRepository.reverterImportacao(orgId, sessaoId);
-    PontoBrutoRepository.atualizarSessao(orgId, sessaoId, {
-      status:       'revertida',
-      revertidoPor: emailAdmin,
-      revertidoEm:  new Date().toISOString()
-    });
+    // Remove brutos do ponto_bruto.json — necessário para que re-importação
+    // do mesmo arquivo não classifique todos os NSRs como 'duplicado'
+    PontoBrutoRepository.reverterSessao(orgId, sessaoId, emailAdmin);
     AuditoriaService.registrar('PONTO_IMPORTACAO_REVERTIDA', 'ponto', {
       sessaoId:   sessaoId,
       revertidos: revertidos
