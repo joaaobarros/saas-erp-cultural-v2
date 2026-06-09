@@ -100,8 +100,8 @@ var PontoBrutoRepository = (function() {
   function reverterSessao(orgId, id, emailAdmin) {
     var sessao = obterSessao(orgId, id);
     if (!sessao) throw new Error('Sessão não encontrada: ' + id);
-    if (sessao.status === 'revertida') throw new Error('Sessão já revertida.');
-    if (sessao.status === 'pendente')  throw new Error('Sessão pendente ainda não pode ser revertida.');
+    if (sessao.status === 'revertida' || sessao.status === 'cancelada')
+      throw new Error('Sessão já processada (status: ' + sessao.status + ').');
 
     modifyJSON(ARQUIVO_BRUTO, function(lista) {
       if (!Array.isArray(lista)) return lista;

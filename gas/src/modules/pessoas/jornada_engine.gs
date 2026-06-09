@@ -388,9 +388,13 @@ var JornadaEngine = (function() {
     var inicio = ano + '-' + _pad(mes) + '-01';
     var fim    = _ultimoDia(ano, mes);
 
-    var jornadas = JornadaRepository.listarPorColaborador(orgId, colaboradorId, inicio, fim);
+    // Lê diretamente de ponto_normalizado.json — única fonte de verdade para batidas.
+    // Cobre AFD import e batidas manuais; não depende de jornadas.json estar populado.
+    var normalizados = PontoRepository.listarPorColaborador(orgId, colaboradorId, inicio, fim)
+      .filter(function(r){ return r.status !== 'revertido'; });
+    var jornadasCalc = calcularJornadasLote(orgId, normalizados);
     var jornadasMap = {};
-    jornadas.forEach(function(j){ jornadasMap[j.data] = j; });
+    jornadasCalc.forEach(function(j){ jornadasMap[j.data] = j; });
 
     var _cfg      = _getParametrosRH(orgId);
     var diasFolga = Array.isArray(_cfg.dias_folga) ? _cfg.dias_folga : [];
