@@ -69,10 +69,11 @@ var EncargosRepository = (function () {
     var doc = _ler(orgId);
     if (doc) return doc;                        // já existe
 
-    var padrao = _buildDocOficial(orgId, 2025, 'sistema');
+    var ano    = new Date().getFullYear();
+    var padrao = _buildDocOficial(orgId, ano, 'sistema');
     _salvar(padrao);
     AuditoriaService.registrar('ENCARGOS_INICIALIZADO', 'encargos',
-      { orgId: orgId, ano: 2025 });
+      { orgId: orgId, ano: ano });
     Logger.info('encargos_repository', 'inicializar',
       'encargos_trabalhistas.json criado para ' + orgId);
     return padrao;
@@ -364,52 +365,61 @@ var EncargosRepository = (function () {
    * Chamado apenas na inicialização.
    */
   function _buildDocOficial(orgId, ano, usuario) {
-    // Estrutura base — valores 2025
-    var al2025 = {
+    var aliquotas = {
       inssPatronal: _itemAliquota('inssPatronal', 'INSS Patronal',      0.20,   'percentual', 'Contribuição previdenciária patronal — regra geral CLT', ano),
       fgts:         _itemAliquota('fgts',         'FGTS',               0.08,   'percentual', 'Fundo de Garantia do Tempo de Serviço', ano),
       pisPasep:     _itemAliquota('pisPasep',      'PIS/PASEP Patronal', 0.01,   'percentual', 'Programa de Integração Social — folha de pagamento', ano),
       sat:          _itemAliquota('sat',           'SAT/RAT',            0.01,   'percentual', 'Seguro de Acidente de Trabalho (risco leve — CNAE cultural)', ano),
-      sistemaS:     _itemAliquota('sistemaS',      'Sistema S',          0.0566, 'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (para 3.º setor/serviços; verifique seu CNAE)', ano)
+      sistemaS:     _itemAliquota('sistemaS',      'Sistema S',          0.0566, 'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (3.º setor/serviços — verifique CNAE)', ano)
     };
+
+    // Tabelas default 2026 (Portaria MPS/MF 13/2026 + Lei 15.270/2025)
+    // O salário mínimo é sobrescrito pelo trigger automático via BcbService na primeira execução.
+    var smValor     = 1621.00;
+    var smDescricao = 'Decreto presidencial — vigência 01/01/2026 (atualizado mensalmente via BCB/SGS Série 1619)';
+    var tabelaINSS  = [
+      { de: 0,       ate: 1621.00, aliquota: 0.075, fonte: 'oficial', anoRef: ano, descricao: 'Faixa 1' },
+      { de: 1621.01, ate: 2902.84, aliquota: 0.09,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 2' },
+      { de: 2902.85, ate: 4354.27, aliquota: 0.12,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 3' },
+      { de: 4354.28, ate: 8475.55, aliquota: 0.14,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 4 (teto)' }
+    ];
+    var tabelaIRRF  = [
+      // Tabela base inalterada pela Lei 15.270/2025; isenção até R$ 5.000 via desconto diferenciado.
+      { de: 0,       ate: 2259.20, aliquota: 0,     deducao: 0,      fonte: 'oficial', anoRef: ano, descricao: 'Isento' },
+      { de: 2259.21, ate: 2826.65, aliquota: 0.075, deducao: 169.44, fonte: 'oficial', anoRef: ano, descricao: '7,5%' },
+      { de: 2826.66, ate: 3751.05, aliquota: 0.15,  deducao: 381.44, fonte: 'oficial', anoRef: ano, descricao: '15%' },
+      { de: 3751.06, ate: 4664.68, aliquota: 0.225, deducao: 662.77, fonte: 'oficial', anoRef: ano, descricao: '22,5%' },
+      { de: 4664.69, ate: null,    aliquota: 0.275, deducao: 896.00, fonte: 'oficial', anoRef: ano, descricao: '27,5%' }
+    ];
+    var dsIRRF = 607.20;
+    var dsDesc = 'Dedução mensal simplificada — Lei 15.270/2025 (R$ 607,20/mês)';
 
     return {
       orgId:        orgId,
       anoAtivo:     ano,
       atualizadoEm: _ts(),
       atualizadoPor: usuario,
-      aliquotas:    al2025,
+      aliquotas:    aliquotas,
       salarioMinimo: {
         chave:        'salarioMinimo',
         label:        'Salário Mínimo Nacional',
-        valor:        1518.00,
+        valor:        smValor,
         unidade:      'reais',
-        descricao:    'Portaria MTE — vigência 2025',
+        descricao:    smDescricao,
         fonte:        'oficial',
         anoRef:       ano,
         editadoPor:   null,
         editadoEm:    null,
         justificativa: null
       },
-      tabelaINSS: [
-        { de: 0,       ate: 1518.00, aliquota: 0.075, fonte: 'oficial', anoRef: ano, descricao: 'Faixa 1' },
-        { de: 1518.01, ate: 2793.88, aliquota: 0.09,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 2' },
-        { de: 2793.89, ate: 4190.83, aliquota: 0.12,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 3' },
-        { de: 4190.84, ate: 8157.41, aliquota: 0.14,  fonte: 'oficial', anoRef: ano, descricao: 'Faixa 4 (teto)' }
-      ],
-      tabelaIRRF: [
-        { de: 0,       ate: 2259.20, aliquota: 0,     deducao: 0,      fonte: 'oficial', anoRef: ano, descricao: 'Isento' },
-        { de: 2259.21, ate: 2826.65, aliquota: 0.075, deducao: 169.44, fonte: 'oficial', anoRef: ano, descricao: '7,5%' },
-        { de: 2826.66, ate: 3751.05, aliquota: 0.15,  deducao: 381.44, fonte: 'oficial', anoRef: ano, descricao: '15%' },
-        { de: 3751.06, ate: 4664.68, aliquota: 0.225, deducao: 662.77, fonte: 'oficial', anoRef: ano, descricao: '22,5%' },
-        { de: 4664.69, ate: null,    aliquota: 0.275, deducao: 896.00, fonte: 'oficial', anoRef: ano, descricao: '27,5%' }
-      ],
+      tabelaINSS: tabelaINSS,
+      tabelaIRRF: tabelaIRRF,
       descontoSimplificadoIRRF: {
         chave:       'descontoSimplificadoIRRF',
         label:       'Desconto Simplificado IRRF',
-        valor:       528.00,
+        valor:       dsIRRF,
         unidade:     'reais',
-        descricao:   'Dedução mensal simplificada — Instrução Normativa RFB 2.141/2023',
+        descricao:   dsDesc,
         fonte:       'oficial',
         anoRef:      ano,
         editadoPor:  null,

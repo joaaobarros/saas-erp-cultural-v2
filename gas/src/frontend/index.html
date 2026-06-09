@@ -8534,6 +8534,11 @@ select.form-control { cursor: pointer; }
                 </div>
                 <div id="enc-status-bar" style="font-size:12px;color:var(--text2);margin-top:2px;">Carregando…</div>
               </div>
+              <button class="btn btn-outline btn-sm" id="enc-btn-buscar-online"
+                onclick="BtnGuard.wrap('enc-btn-buscar-online','Consultando Banco Central…',EncargosUI.buscarOnline)"
+                title="Consulta o BCB em tempo real e atualiza o salário mínimo se houver mudança">
+                <span class="ms ms-sm">cloud_sync</span> Buscar online
+              </button>
               <select id="enc-sel-ano" class="form-control" style="width:120px;font-size:13px;">
                 <option value="2025">2025</option>
                 <option value="2024">2024</option>
@@ -8547,6 +8552,8 @@ select.form-control { cursor: pointer; }
               </button>
             </div>
           </div>
+          <!-- Banner de alertas (ano desatualizado, overrides manuais, etc.) -->
+          <div id="enc-alertas-container"></div>
 
           <!-- Card: Alíquotas simples -->
           <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
@@ -9352,7 +9359,8 @@ var GAS = {
     salvarTabelaINSS:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_tabela_inss(d); },
     salvarTabelaIRRF:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_salvar_tabela_irrf(d); },
     restaurarOficial:  function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_restaurar_oficial(d); },
-    aplicarOficial:    function(ano,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_aplicar_oficial(ano); }
+    aplicarOficial:    function(ano,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_aplicar_oficial(ano); },
+    buscarOnline:      function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_buscar_online(); }
   },
   // Reservas de Veículo Institucional — Fase 21
   reservasCarro: {
@@ -34500,12 +34508,30 @@ var EncargosUI = (function() {
       _renderTabelaIRRF(_doc.tabelaIRRF || []);
       _renderHistorico();
       _popularSelectAnos(resp.data.anosDisponiveis || [2025, 2024]);
+      _renderAlertas(resp.data.alertas || []);
       var badge = resp.data.precisaAtualizar
         ? '<span style="color:#d97706;font-weight:600;">⚠ Nova tabela disponível: ' + resp.data.anoDisponivel + '</span>'
         : '✅ Tabela ' + resp.data.anoAtivo + ' em vigor · atualizado em ' + _fmtDt((_doc||{}).atualizadoEm);
       _setStatus(badge);
       _carregado = true;
     }, function(e) { _setStatus('Erro: ' + (e.message||e)); });
+  }
+
+  function _renderAlertas(alertas) {
+    var el = document.getElementById('enc-alertas-container');
+    if (!el) return;
+    if (!alertas || !alertas.length) { el.innerHTML = ''; return; }
+    el.innerHTML = alertas.map(function(a) {
+      var cor    = a.tipo === 'aviso' ? '#92400e' : '#1e40af';
+      var bg     = a.tipo === 'aviso' ? '#fef3c7' : '#dbeafe';
+      var borda  = a.tipo === 'aviso' ? '#fbbf24' : '#93c5fd';
+      var icone  = a.tipo === 'aviso' ? 'warning'  : 'info';
+      return '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 16px;background:'+bg
+        +';border-left:3px solid '+borda+';border-radius:6px;margin-bottom:8px;font-size:13px;color:'+cor+';">'
+        + '<span class="ms ms-sm" style="margin-top:1px;">'+icone+'</span>'
+        + '<span>' + _esc(a.mensagem) + '</span>'
+        + '</div>';
+    }).join('');
   }
 
   function _setStatus(html) {
@@ -34846,6 +34872,28 @@ var EncargosUI = (function() {
     setTimeout(function(){ if (document.body.contains(box)) document.body.removeChild(box); }, 1500);
   }
 
+  // ── Busca online (BCB API — Salário Mínimo) ──────────────────────────────
+
+  function buscarOnline() {
+    GAS.encargos.buscarOnline(function(resp) {
+      if (!resp || !resp.ok) {
+        Toast.erro((resp && resp.error) || 'Erro ao consultar BCB.');
+        return;
+      }
+      var d = resp.data;
+      if (d.acao === 'atualizado') {
+        Toast.sucesso('Salário mínimo atualizado: R$ ' + _R(d.anterior) + ' → R$ ' + _R(d.novo));
+        _carregado = false; carregar();
+      } else if (d.acao === 'sem_alteracao') {
+        Toast.info('Salário mínimo já está atualizado (R$ ' + _R(d.valorOnline) + ').');
+      } else if (d.acao === 'ignorado_manual') {
+        Toast.aviso('Override manual ativo. ' + (d.motivo || ''));
+      } else {
+        Toast.aviso(d.mensagem || d.motivo || 'Sem alteração.');
+      }
+    }, function(e) { Toast.erro(e.message || 'Erro ao consultar BCB.'); });
+  }
+
   // ── Aplicar tabela oficial ───────────────────────────────────────────────
 
   function previewOficial() {
@@ -34939,6 +34987,7 @@ var EncargosUI = (function() {
   return {
     aoAbrir:                aoAbrir,
     carregar:               carregar,
+    buscarOnline:           buscarOnline,
     previewOficial:         previewOficial,
     aplicarOficial:         aplicarOficial,
     abrirModalTabelaINSS:   abrirModalTabelaINSS,

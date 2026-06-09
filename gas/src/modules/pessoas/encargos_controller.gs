@@ -43,14 +43,16 @@ function ctrl_encargos_listar() {
     var ctx = _ctxEncargos();
     var doc = EncargosRepository.obter(ctx.orgId);
 
-    // Enriquecer com anos disponíveis e status de atualização
-    var status = EncargosEngine.verificarNecessidadeAtualizacao(ctx.orgId);
+    // Enriquecer com anos disponíveis, status de atualização e alertas
+    var status  = EncargosEngine.verificarNecessidadeAtualizacao(ctx.orgId);
+    var alertas = EncargosEngine.gerarAlertas(ctx.orgId);
     return {
       doc:              doc,
       anosDisponiveis:  EncargosEngine.listarAnosDisponiveis(),
       precisaAtualizar: status.precisaAtualizar,
       anoDisponivel:    status.anoDisponivel,
-      anoAtivo:         status.anoAtivo
+      anoAtivo:         status.anoAtivo,
+      alertas:          alertas
     };
   }, 'ctrl_encargos_listar');
 }
@@ -181,6 +183,18 @@ function ctrl_encargos_restaurar_oficial(dados) {
 // ════════════════════════════════════════════════════════════════════════════
 // ATUALIZAÇÃO OFICIAL
 // ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Busca o salário mínimo atual via BCB API e aplica se houve mudança.
+ * Não sobrescreve campos com override manual.
+ */
+function ctrl_encargos_buscar_online() {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxEncargos();
+    _assertEscritaEncargos(ctx.papel);
+    return EncargosEngine.buscarEAtualizarSMOnline(ctx.orgId, ctx.email);
+  }, 'ctrl_encargos_buscar_online');
+}
 
 /**
  * Aplica a tabela oficial de um ano aos encargos da org.
