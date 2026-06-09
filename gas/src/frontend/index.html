@@ -7956,6 +7956,11 @@ select.form-control { cursor: pointer; }
                       title="Reconstrói jornadas.json a partir das batidas já confirmadas">
                 <span class="ms ms-sm">sync</span> Reprocessar Jornadas
               </button>
+              <button id="btn-diagnostico-ponto" class="btn btn-ghost btn-sm"
+                      onclick="BtnGuard.wrap('btn-diagnostico-ponto','Analisando…',PontoUI._executarDiagnostico)"
+                      title="Mostra quantas batidas existem por colaborador e mês">
+                <span class="ms ms-sm">analytics</span> Diagnóstico
+              </button>
               <button class="btn btn-ghost btn-sm" onclick="PontoUI.carregarSessoes()" data-bg-skip="1">
                 <span class="ms ms-sm">refresh</span> Atualizar
               </button>
@@ -9349,7 +9354,8 @@ var GAS = {
     listarColaboradores:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_colaboradores(d||{}); },
     reprocessarJornadas:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_reprocessar_jornadas(d||{}); },
     listarSemVinculo:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_listar_sem_vinculo(d||{}); },
-    vincularColaborador: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); }
+    vincularColaborador: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_vincular_colaborador(d||{}); },
+    diagnostico:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_diagnostico(d||{}); }
   },
   encargos: {
     listar:            function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_encargos_listar(); },
@@ -32267,7 +32273,42 @@ var PontoUI = (function() {
     }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao };
+  function _executarDiagnostico(done) {
+    GAS.ponto.diagnostico({}, function(r) {
+      if (done) done();
+      if (!r || !r.ok) { Toast.erro('Erro no diagnóstico: ' + ((r&&r.error&&r.error.message)||'desconhecido')); return; }
+      var d = r.data;
+      var linhas = d.porColaborador.map(function(c) {
+        var mesesStr = Object.keys(c.meses).sort().map(function(m){ return m + ': ' + c.meses[m]; }).join(' | ');
+        return '<tr><td style="padding:5px 8px;font-size:12px;">' + _esc(c.nome) + '</td>' +
+          '<td style="padding:5px 8px;font-size:12px;color:var(--text2);">' + _esc(c.colaboradorId) + '</td>' +
+          '<td style="padding:5px 8px;font-size:12px;">' + _esc(mesesStr || '—') + '</td></tr>';
+      });
+      var html = '<div style="padding:4px 0 12px;font-size:13px;color:var(--text2);">' +
+        'Total: <strong>' + d.totalOrgId + '</strong> registros · ' +
+        '<strong style="color:var(--success)">' + d.ativos + '</strong> ativos · ' +
+        '<strong style="color:var(--muted)">' + d.revertidos + '</strong> revertidos</div>' +
+        (linhas.length
+          ? '<div style="overflow-x:auto;max-height:360px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;">' +
+            '<thead><tr style="background:var(--surface2,#f5f5f5);">' +
+            '<th style="padding:5px 8px;font-size:12px;font-weight:600;text-align:left;">Nome</th>' +
+            '<th style="padding:5px 8px;font-size:12px;font-weight:600;text-align:left;">ID</th>' +
+            '<th style="padding:5px 8px;font-size:12px;font-weight:600;text-align:left;">Batidas por mês</th></tr></thead>' +
+            '<tbody>' + linhas.join('') + '</tbody></table></div>'
+          : '<p style="color:var(--muted);font-size:13px;">Nenhum registro ativo encontrado em ponto_normalizado.json.</p>');
+      var el = document.getElementById('ponto-sessoes-conteudo');
+      if (el) {
+        var box = document.createElement('div');
+        box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:16px;';
+        box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<strong style="font-size:14px;">Diagnóstico — ponto_normalizado.json</strong>' +
+          '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="this.closest(\'div[style]\').remove()">✕</button></div>' + html;
+        el.insertAdjacentElement('afterend', box);
+      }
+    }, function(e){ if (done) done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
+  }
+
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 

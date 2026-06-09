@@ -606,6 +606,41 @@ function ctrl_ponto_listar_colaboradores(params) {
   }, 'ctrl_ponto_listar_colaboradores');
 }
 
+// ─── Diagnóstico de normalizados ─────────────────────────────────────────────
+
+/**
+ * Retorna um resumo de normalizados por colaborador e por mês.
+ * Útil para depurar quando o espelho exibe "Ausente" inesperadamente.
+ * Acesso restrito a admin/superadmin.
+ */
+function ctrl_ponto_diagnostico(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPonto();
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel admin+ necessário.');
+    var todos = lerJSON('ponto_normalizado.json') || [];
+    var orgRecs = todos.filter(function(r){ return r.orgId === ctx.orgId; });
+    var ativos    = orgRecs.filter(function(r){ return r.status !== 'revertido'; }).length;
+    var revertidos = orgRecs.filter(function(r){ return r.status === 'revertido'; }).length;
+    // Agrupa: colaboradorId → { nome, meses: {YYYY-MM: count} }
+    var colabs = lerJSON('colaboradores.json') || [];
+    var nomeMap = {};
+    colabs.forEach(function(c){ if(c.orgId === ctx.orgId) nomeMap[c.id] = c.nome || c.id; });
+    var porColab = {};
+    orgRecs.filter(function(r){ return r.status !== 'revertido' && r.colaboradorId && r.data; })
+      .forEach(function(r) {
+        var mes = r.data.substring(0, 7);
+        if (!porColab[r.colaboradorId]) porColab[r.colaboradorId] = { nome: nomeMap[r.colaboradorId] || r.colaboradorId, meses: {} };
+        porColab[r.colaboradorId].meses[mes] = (porColab[r.colaboradorId].meses[mes] || 0) + 1;
+      });
+    var resumo = Object.keys(porColab).sort().map(function(id) {
+      var c = porColab[id];
+      return { colaboradorId: id, nome: c.nome, meses: c.meses };
+    });
+    return { totalOrgId: orgRecs.length, ativos: ativos, revertidos: revertidos, porColaborador: resumo };
+  }, 'ctrl_ponto_diagnostico');
+}
+
 // ─── Vínculos colaborador ↔ usuário do sistema ───────────────────────────────
 
 /**
