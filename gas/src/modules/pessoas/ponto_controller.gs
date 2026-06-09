@@ -544,7 +544,7 @@ function ctrl_ponto_listar_sem_vinculo(params) {
              !c.emailInstitucional;
     }).map(function(c) {
       return { id: c.id, nome: c.nome, pis: c.pis || '', criadoEm: c.criadoEm || '' };
-    });
+    }).sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
     var usuarios = (lerJSON('usuarios_acesso.json') || [])
       .filter(function(u){ return u.status === 'ativo'; })
       .map(function(u){ return { email: u.email, nome: u.nome || u.email }; });

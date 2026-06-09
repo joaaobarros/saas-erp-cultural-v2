@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix Ponto — aba Vínculos sempre vazia (campo semVinculo→colaboradores) (2026-06-09)** — Deploy @713. `ctrl_ponto_listar_sem_vinculo` retornava `{ semVinculo, usuarios }` mas frontend lia `r.data.colaboradores` → array sempre undefined → "Todos os colaboradores já estão vinculados". Corrigido renomeando para `{ colaboradores, usuarios }`.
+**Fase atual**: **Fix Ponto — Vínculos A-Z + loading icons + hint espelho vazio (2026-06-09)** — Deploy @715. (1) `ctrl_ponto_listar_sem_vinculo`: semVinculo ordenado por `localeCompare('pt-BR')`. (2) 10 ocorrências de `hourglass_empty` MS icon em estados de carregamento padronizadas para `<p class="muted-text">⏳ Carregando…</p>` (admin-pendentes, pessoas, afastamentos, ocorrências, solicitações, agendamentos, contratos, remanejamentos, aditivos, tarefas). (3) Espelho sem dados: quando sem `colaboradorId`, exibe banner informativo orientando a usar o campo e-mail.
+
+**Fase anterior**: **Fix Ponto — aba Vínculos sempre vazia (campo semVinculo→colaboradores) (2026-06-09)** — Deploy @713. `ctrl_ponto_listar_sem_vinculo` retornava `{ semVinculo, usuarios }` mas frontend lia `r.data.colaboradores` → array sempre undefined → "Todos os colaboradores já estão vinculados". Corrigido renomeando para `{ colaboradores, usuarios }`.
 
 **Fase anterior**: **Fix Ponto — "Pessoas no arquivo" ordenada alfabeticamente (2026-06-09)** — Deploy @712. Prévia AFD: lista de colaboradores do arquivo agora ordenada por `localeCompare('pt-BR')` antes de renderizar (era ordem de aparição no arquivo).
 
