@@ -462,11 +462,29 @@
 | ~~HUB-10~~ | Meu Centro | ✅ CORRIGIDO @648 — `.th-item`: padding `10px 14px` → `12px 16px`, margem `6px` → `8px`, transition → `var(--fast)`; ícone 30×30 → 32×32; CSS `.th-prod-*` morto removido (nunca usado — `_prodCard` usa `stat-card`) | — |
 | ~~HUB-11~~ | Meu Centro | ✅ CORRIGIDO @657 — `_renderItem` enriquecido: metadados por tipo (tarefa→status+prioridade+prazo; encaminhamento→reuniaoTitulo; demanda→tipoDemanda+SLA%; aprovacao→solicitante; chave→salaId+prazo). Bug colateral corrigido: extras das demandas usavam chave `tipo` que sobrescrevia o `tipo` externo em `_itemCaixa`; renomeado para `tipoDemanda`/`statusDemanda`. | — |
 | ~~HUB-12~~ | Meu Centro | ✅ CORRIGIDO @657 — campo `dataNascimento` adicionado ao `ColaboradorRepository` (_HEADERS + _serializarIndice). Form de Pessoas ganha input `pf-nascimento`. `ctrl_taskhub_aniversariantes()` retorna colaboradores com aniversário nos próximos 7 dias. Seção exibida abaixo das pendências no Meu Dia com cards coloridos (hoje=cor accent). | — |
-| HUB-13 | Meu Centro | Sem workflow de dayoff de aniversário | 🔴 |
+| ~~HUB-13~~ | Meu Centro | ✅ CORRIGIDO — `PessoasEngine.registrarDayoffAniversario()`: valida janela 7 dias + uso único no ano + cria afastamento `dayoff_aniversario` auto-aprovado (ativo). `ctrl_rh_solicitar_dayoff_aniversario()` sem restrição de papel. `carregarAniversariantes()` exibe botão "Solicitar Day-off" no card do próprio aniversário. `AfastamentosUI._TIPO_LABEL` + select ganham a opção. | — |
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 46 (2026-06-08) → SESSÃO 47
+## HANDOFF ATUAL — SESSÃO 47 (2026-06-09) → SESSÃO 48
+
+### Estado atual: ~265 bugs registrados · Deploy @706 (GAS) · Firebase live
+
+### O que foi feito nesta sessão (s47)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @706 | HUB-13 — Workflow de day-off de aniversário | `PessoasEngine.registrarDayoffAniversario()`: valida janela 7 dias + uso único/ano + cria afastamento `dayoff_aniversario` auto-aprovado. `ctrl_rh_solicitar_dayoff_aniversario()` acessível a qualquer colaborador. `carregarAniversariantes()`: botão "Solicitar Day-off" no card próprio (email vs boot). `_solicitarDayoff()` + `_executarDayoff()` no TaskHubUI. `AfastamentosUI` ganha tipo + select. `ctrl_taskhub_aniversariantes` passa `email`. |
+
+### Pendentes / próxima ação
+- **Executar no GAS Editor (se ainda não feito):**
+  1. `AfdLayoutRepository.prepararIndice()` — aplica correção posInicio do nome AFD
+  2. `criarTriggerVerificacaoPrazos()` — trigger diário 08:00 para TAR-04
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 46 (2026-06-08) → SESSÃO 47
 
 ### Estado atual: ~267 bugs registrados · Deploy @705
 
@@ -575,7 +593,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ## HANDOFF ANTERIOR — SESSÃO 41 (2026-06-08) → SESSÃO 42
 
-### Estado atual: ~270 bugs registrados · Deploy @694 (GAS) · Firebase live
+### Estado atual: ~270 bugs registrados · Deploy @695 (GAS) · Firebase live
 
 ### O que foi feito nesta sessão (s41)
 

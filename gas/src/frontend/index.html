@@ -2764,6 +2764,7 @@ select.form-control { cursor: pointer; }
                   <option value="maternidade">Maternidade</option>
                   <option value="paternidade">Paternidade</option>
                   <option value="licenca_pessoal">Licença Pessoal</option>
+                  <option value="dayoff_aniversario">Day-off de Aniversário</option>
                   <option value="outro">Outro</option>
                 </select>
               </div>
@@ -8843,11 +8844,12 @@ var GAS = {
     autocomplete:         function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_autocomplete(); },
     porFuncao:            function(fn,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_por_funcao(fn); },
     // Afastamentos
-    listarAfastamentos:    function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_afastamentos(id||null); },
-    salvarAfastamento:     function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_salvar_afastamento(d); },
-    ativarAfastamento:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_ativar_afastamento(id); },
-    encerrarAfastamento:   function(id,d,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_encerrar_afastamento(id,d||{}); },
-    cancelarAfastamento:   function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_cancelar_afastamento(id,m||''); },
+    listarAfastamentos:         function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_afastamentos(id||null); },
+    salvarAfastamento:          function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_salvar_afastamento(d); },
+    ativarAfastamento:          function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_ativar_afastamento(id); },
+    encerrarAfastamento:        function(id,d,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_encerrar_afastamento(id,d||{}); },
+    cancelarAfastamento:        function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_cancelar_afastamento(id,m||''); },
+    solicitarDayoffAniversario: function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_dayoff_aniversario(); },
     // Ocorrências
     listarOcorrencias:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_ocorrencias(id||null); },
     registrarOcorrencia:   function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_ocorrencia(d); },
@@ -22468,7 +22470,7 @@ var PessoasTabs = (function() {
 var AfastamentosUI = (function() {
   var _STATUS_LABEL = { rascunho:'Rascunho', ativo:'Ativo', encerrado:'Encerrado', cancelado:'Cancelado' };
   var _STATUS_CLASS = { rascunho:'badge-primary', ativo:'badge-warning', encerrado:'badge-success', cancelado:'badge-error' };
-  var _TIPO_LABEL   = { medico:'Licença Médica', inss:'INSS', acidente:'Acidente Trab.', maternidade:'Maternidade', paternidade:'Paternidade', licenca_pessoal:'Lic. Pessoal', outro:'Outro' };
+  var _TIPO_LABEL   = { medico:'Licença Médica', inss:'INSS', acidente:'Acidente Trab.', maternidade:'Maternidade', paternidade:'Paternidade', licenca_pessoal:'Lic. Pessoal', dayoff_aniversario:'Day-off Aniversário', outro:'Outro' };
 
   function _badge(s) { return '<span class="badge '+(_STATUS_CLASS[s]||'badge-primary')+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>'; }
 
@@ -29380,21 +29382,50 @@ var TaskHubUI = (function() {
       if (!resp || !resp.ok || !resp.data || !resp.data.total) { el.innerHTML = ''; return; }
       var lista = resp.data.aniversariantes || [];
       var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      var meuEmail = ((App.getBoot && App.getBoot()) || {}).usuarioEmail || '';
       el.innerHTML = '<div class="th-grupo-label" style="margin-top:8px;">'
         + '<span class="ms ms-sm" style="vertical-align:-2px;color:var(--color-accent);">cake</span> ANIVERSARIANTES (' + lista.length + ')</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">'
         + lista.map(function(p) {
             var diaStr = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
             var ehHoje = p.ehHoje;
-            return '<div style="display:flex;align-items:center;gap:8px;background:' + (ehHoje ? 'var(--color-accent)' : 'var(--surface2)') + ';'
+            var souEu = meuEmail && p.email && p.email.toLowerCase() === meuEmail.toLowerCase();
+            var btnDayoff = souEu && ehHoje
+              ? '<div style="margin-top:6px;"><button id="btn-dayoff-aniv" class="btn btn-sm" style="background:rgba(255,255,255,.25);color:inherit;border:1px solid rgba(255,255,255,.4);font-size:11px;" onclick="TaskHubUI._solicitarDayoff()"><span class="ms ms-sm">event_available</span> Solicitar Day-off</button></div>'
+              : '';
+            return '<div style="display:flex;flex-direction:column;background:' + (ehHoje ? 'var(--color-accent)' : 'var(--surface2)') + ';'
               + 'color:' + (ehHoje ? '#fff' : 'inherit') + ';border-radius:8px;padding:8px 12px;min-width:160px;">'
+              + '<div style="display:flex;align-items:center;gap:8px;">'
               + '<span class="ms" style="font-size:20px;">' + (ehHoje ? 'celebration' : 'cake') + '</span>'
               + '<div><div style="font-weight:600;font-size:13px;">' + escaparHtml(p.nome) + '</div>'
               + '<div style="font-size:11px;opacity:.8;">' + diaStr + ' · ' + escaparHtml(p.setor || '—') + (p.idade ? ' · ' + p.idade + ' anos' : '') + '</div></div>'
+              + '</div>'
+              + btnDayoff
               + '</div>';
           }).join('')
         + '</div>';
     }, function() { el.innerHTML = ''; });
+  }
+
+  function _solicitarDayoff() {
+    _abrirModalConfirmar({
+      titulo: 'Day-off de Aniversário',
+      icone: 'celebration',
+      corIcone: 'var(--color-accent)',
+      mensagem: 'Registrar 1 dia de folga hoje como seu day-off de aniversário? Este benefício pode ser usado uma vez por ano e é aprovado automaticamente.',
+      labelConfirmar: 'Solicitar',
+      idBtn: 'btn-conf-dayoff-aniv',
+      onConfirm: 'TaskHubUI._executarDayoff()'
+    });
+  }
+
+  function _executarDayoff() {
+    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    GAS.pessoas.solicitarDayoffAniversario(function(resp) {
+      if (!resp || !resp.ok) { Toast.erro(resp && resp.error ? resp.error.message : 'Erro ao registrar day-off.'); return; }
+      Toast.sucesso('Day-off de aniversário registrado com sucesso! Aproveite bem o seu dia.');
+      carregarAniversariantes();
+    }, function(e) { Toast.erro(e.message || e); });
   }
 
   function abrirItem(tipo, id) {
@@ -29446,7 +29477,7 @@ var TaskHubUI = (function() {
     try { var p=String(d).slice(0,10).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; } catch(_){ return d; }
   }
 
-  return { aoAbrir, carregar, setTab, abrirItem, carregarTime, carregarProdutividade, carregarAniversariantes };
+  return { aoAbrir, carregar, setTab, abrirItem, carregarTime, carregarProdutividade, carregarAniversariantes, _solicitarDayoff, _executarDayoff };
 })();
 Router.registrar('taskhub', 'Meu Centro', TaskHubUI.aoAbrir);
 

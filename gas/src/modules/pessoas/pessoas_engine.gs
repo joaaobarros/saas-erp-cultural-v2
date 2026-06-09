@@ -94,13 +94,14 @@ var STATUS_AFASTAMENTO = Object.freeze({
 });
 
 var TIPO_AFASTAMENTO = Object.freeze({
-  MEDICO:         'medico',      // licença médica / atestado
-  INSS:           'inss',        // auxílio-doença INSS
-  ACIDENTE:       'acidente',    // acidente de trabalho (CAT)
-  MATERNIDADE:    'maternidade',
-  PATERNIDADE:    'paternidade',
-  LICENCA_PESSOAL:'licenca_pessoal',
-  OUTRO:          'outro'
+  MEDICO:              'medico',
+  INSS:                'inss',
+  ACIDENTE:            'acidente',
+  MATERNIDADE:         'maternidade',
+  PATERNIDADE:         'paternidade',
+  LICENCA_PESSOAL:     'licenca_pessoal',
+  DAYOFF_ANIVERSARIO:  'dayoff_aniversario',
+  OUTRO:               'outro'
 });
 
 var _TRANSICOES_AFASTAMENTO = {
@@ -677,6 +678,54 @@ var PessoasEngine = (function () {
     return { ok: true, id: id };
   }
 
+  function registrarDayoffAniversario(idColaborador, emailSolicitante, orgId) {
+    orgId = orgId || _orgId();
+    var c = ColaboradorRepository.buscarPorId(orgId, idColaborador);
+    if (!c) throw new Error('Colaborador não encontrado.');
+    if (!c.dataNascimento) throw new Error('Data de nascimento não cadastrada para este colaborador.');
+
+    var hoje = new Date();
+    var hojeStr = hoje.toISOString().substring(0, 10);
+
+    // Verificar janela de 7 dias em torno do aniversário
+    var partes = String(c.dataNascimento).slice(0, 10).split('-');
+    var nascHojeAno = new Date(hoje.getFullYear(), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+    if (nascHojeAno - hoje < -86400000) {
+      nascHojeAno = new Date(hoje.getFullYear() + 1, parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+    }
+    if (nascHojeAno - hoje > 7 * 86400000) {
+      throw new Error('O day-off de aniversário só pode ser solicitado na semana do aniversário.');
+    }
+
+    // Verificar se já solicitou este ano
+    var anoAtual = String(hoje.getFullYear());
+    var jaUsou = (ColaboradorRepository.listarAfastamentos({ orgId: orgId, idColaborador: idColaborador }) || [])
+      .some(function(a) {
+        return a.tipo === 'dayoff_aniversario'
+          && a.status !== 'cancelado'
+          && String(a.dataInicio || '').slice(0, 4) === anoAtual;
+      });
+    if (jaUsou) throw new Error('Day-off de aniversário já utilizado em ' + anoAtual + '.');
+
+    // Benefício pré-aprovado: criado diretamente como ativo, sem alterar status do colaborador
+    var dados = {
+      idColaborador: idColaborador,
+      orgId:         orgId,
+      tipo:          'dayoff_aniversario',
+      dataInicio:    hojeStr,
+      dataFim:       hojeStr,
+      descricao:     'Day-off de aniversário — solicitado pelo colaborador.',
+      status:        STATUS_AFASTAMENTO.ATIVO,
+      registradoPor: emailSolicitante || ''
+    };
+    var r = ColaboradorRepository.salvarAfastamento(dados);
+    _audit('DAYOFF_ANIVERSARIO_REGISTRADO', {
+      id: r.id, idColaborador: idColaborador,
+      data: hojeStr, operador: emailSolicitante || ''
+    });
+    return r.id;
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // OCORRÊNCIAS
   // (Advertências, elogios, registros disciplinares — sem FSM)
@@ -789,13 +838,14 @@ var PessoasEngine = (function () {
     registrarDesligamento:     registrarDesligamento,
 
     // Afastamentos
-    STATUS_AFASTAMENTO:     STATUS_AFASTAMENTO,
-    TIPO_AFASTAMENTO:       TIPO_AFASTAMENTO,
-    listarAfastamentos:     listarAfastamentos,
-    registrarAfastamento:   registrarAfastamento,
-    ativarAfastamento:      ativarAfastamento,
-    encerrarAfastamento:    encerrarAfastamento,
-    cancelarAfastamento:    cancelarAfastamento,
+    STATUS_AFASTAMENTO:          STATUS_AFASTAMENTO,
+    TIPO_AFASTAMENTO:            TIPO_AFASTAMENTO,
+    listarAfastamentos:          listarAfastamentos,
+    registrarAfastamento:        registrarAfastamento,
+    registrarDayoffAniversario:  registrarDayoffAniversario,
+    ativarAfastamento:           ativarAfastamento,
+    encerrarAfastamento:         encerrarAfastamento,
+    cancelarAfastamento:         cancelarAfastamento,
 
     // Ocorrências
     listarOcorrencias:      listarOcorrencias,

@@ -318,6 +318,7 @@ function ctrl_taskhub_aniversariantes() {
         return {
           id:      c.id,
           nome:    c.nome || '',
+          email:   c.emailInstitucional || c.emailPessoal || '',
           setor:   c.setor || '',
           data:    String(c.dataNascimento).slice(0, 10),
           dia:     dia,

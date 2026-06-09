@@ -527,6 +527,20 @@ function ctrl_rh_cancelar_afastamento(id, motivo) {
   }, 'ctrl_rh_cancelar_afastamento');
 }
 
+/**
+ * Qualquer colaborador ativo pode solicitar o seu próprio day-off de aniversário.
+ * Verificações: cadastro encontrado, janela de 7 dias, uso único no ano.
+ */
+function ctrl_rh_solicitar_dayoff_aniversario() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPessoas();
+    var idColaborador = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+    if (!idColaborador) throw new Error('Colaborador não encontrado no cadastro de pessoas.');
+    var id = PessoasEngine.registrarDayoffAniversario(idColaborador, ctx.email, ctx.orgId);
+    return { id: id };
+  }, 'ctrl_rh_solicitar_dayoff_aniversario');
+}
+
 function ctrl_rh_salvar_afastamento(dados) {
   return GasResponse.wrap(function () {
     var ctx   = _ctxPessoas();
