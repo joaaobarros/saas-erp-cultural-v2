@@ -26007,6 +26007,12 @@ var App = (function() {
 
     // Gate de pesquisas obrigatórias — verifica após boot, bloqueia se pendente
     setTimeout(_verificarGatePesquisaObrigatoria, 1500);
+
+    // Pré-carrega perfil em background para estar pronto ao abrir "Meu Perfil"
+    // Dispara após 2s para não concorrer com o boot (1ª chamada GAS sempre trava)
+    setTimeout(function() {
+      if (typeof PerfilUI !== 'undefined') PerfilUI.carregar(null, true);
+    }, 2000);
   }
 
   // ── Gate de pesquisas obrigatórias ──────────────────────────────────────────
@@ -35959,20 +35965,23 @@ var PerfilUI = (function() {
   var _colab      = null;
   var _fotoTemp   = null;
   var _carregado  = false;
+  var _carregando = false;    // true enquanto GAS call está em vôo
   var _gen        = 0;        // contador de geração — ignora callbacks de chamadas anteriores
   var _retryTimer = null;     // timer para auto-retry único na primeira carga
   var _esc = function(s){ return escaparHtml(s); };
 
   function aoAbrir() {
-    // Sempre recarrega ao abrir — dados devem estar sempre frescos
-    carregar(null, true); // null = sem BtnGuard done; true = habilitar auto-retry
+    if (_carregado)  return;         // já carregado — mostra direto
+    if (_carregando) return;         // pré-carga em andamento — aguarda callback
+    carregar(null, true);
   }
 
   function carregar(done, _retry) {
     done = done || function(){};
-    _carregado = false;
-    _fotoTemp  = null;
-    var myGen  = ++_gen;
+    _carregando = true;
+    _carregado  = false;
+    _fotoTemp   = null;
+    var myGen   = ++_gen;
     if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
     var pro = document.getElementById('perfil-dados-pro');
     if (pro) pro.innerHTML = '<p class="muted-text">Carregando…</p>';
@@ -35985,6 +35994,7 @@ var PerfilUI = (function() {
     GAS.perfil.ler(function(resp) {
       if (myGen !== _gen) { done(); return; } // callback stale — ignora
       if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+      _carregando = false;
       done();
       var pro2 = document.getElementById('perfil-dados-pro');
       if (!resp || !resp.ok) {
@@ -35999,6 +36009,7 @@ var PerfilUI = (function() {
     }, function(err) {
       if (myGen !== _gen) { done(); return; } // callback stale — ignora
       if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+      _carregando = false;
       done();
       var pro2 = document.getElementById('perfil-dados-pro');
       var msg = (err && err.message) || 'Erro ao carregar perfil.';

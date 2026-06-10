@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @768 · Meu Perfil — carga automática + salvar + BtnGuard + Descartar icon
+> Deploy atual: @770 · Meu Perfil — pré-carga no boot, _carregando guard
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
