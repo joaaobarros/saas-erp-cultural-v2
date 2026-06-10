@@ -8831,7 +8831,7 @@ select.form-control { cursor: pointer; }
             <div id="perfil-cargo-display" style="font-size:13px;color:var(--text2);margin-top:3px;"></div>
             <div id="perfil-setor-display" style="font-size:12px;color:var(--muted);margin-top:2px;"></div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="PerfilUI.carregar()" data-bg-skip="1" style="align-self:flex-start;"><span class="ms ms-sm">refresh</span> Recarregar</button>
+          <button class="btn btn-ghost btn-sm" id="perfil-btn-recarregar" onclick="BtnGuard.wrap('perfil-btn-recarregar','Carregando…',PerfilUI.carregar)" style="align-self:flex-start;"><span class="ms ms-sm">refresh</span> Recarregar</button>
           <input type="file" id="perfil-foto-input" accept="image/*" style="display:none;" onchange="PerfilUI.onFotoSelecionada(this)">
         </div>
 
@@ -8961,7 +8961,7 @@ select.form-control { cursor: pointer; }
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;padding-bottom:24px;">
-              <button class="btn btn-ghost" onclick="PerfilUI.carregar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Descartar</button>
+              <button class="btn btn-ghost" id="perfil-btn-descartar" onclick="BtnGuard.wrap('perfil-btn-descartar','Carregando…',PerfilUI.carregar)"><span class="ms ms-sm">cancel</span> Descartar</button>
               <button class="btn btn-primario" id="perfil-btn-salvar" onclick="BtnGuard.wrap('perfil-btn-salvar','Salvando…',PerfilUI.salvar)"><span class="ms ms-sm">save</span> Salvar alterações</button>
             </div>
           </div><!-- /coluna direita -->
@@ -35956,21 +35956,36 @@ function setAvatarGlobal(url, inicialFallback) {
 
 // ── Perfil Pessoal ───────────────────────────────────────────────────────────
 var PerfilUI = (function() {
-  var _colab    = null;
-  var _fotoTemp = null;
-  var _carregado = false;
+  var _colab      = null;
+  var _fotoTemp   = null;
+  var _carregado  = false;
+  var _gen        = 0;        // contador de geração — ignora callbacks de chamadas anteriores
+  var _retryTimer = null;     // timer para auto-retry único na primeira carga
   var _esc = function(s){ return escaparHtml(s); };
 
   function aoAbrir() {
-    if (!_carregado) carregar();
+    // Sempre recarrega ao abrir — dados devem estar sempre frescos
+    carregar(null, true); // null = sem BtnGuard done; true = habilitar auto-retry
   }
 
-  function carregar() {
+  function carregar(done, _retry) {
+    done = done || function(){};
     _carregado = false;
-    _fotoTemp = null;
+    _fotoTemp  = null;
+    var myGen  = ++_gen;
+    if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
     var pro = document.getElementById('perfil-dados-pro');
     if (pro) pro.innerHTML = '<p class="muted-text">Carregando…</p>';
+    // Auto-retry único após 7s (apenas quando chamado de aoAbrir)
+    if (_retry) {
+      _retryTimer = setTimeout(function() {
+        if (myGen === _gen && !_carregado) { _retryTimer = null; carregar(); }
+      }, 7000);
+    }
     GAS.perfil.ler(function(resp) {
+      if (myGen !== _gen) { done(); return; } // callback stale — ignora
+      if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+      done();
       var pro2 = document.getElementById('perfil-dados-pro');
       if (!resp || !resp.ok) {
         var msg = (resp && resp.error && resp.error.message) || 'Erro ao carregar perfil.';
@@ -35982,6 +35997,9 @@ var PerfilUI = (function() {
       _carregado = true;
       _preencher();
     }, function(err) {
+      if (myGen !== _gen) { done(); return; } // callback stale — ignora
+      if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+      done();
       var pro2 = document.getElementById('perfil-dados-pro');
       var msg = (err && err.message) || 'Erro ao carregar perfil.';
       _mostrarMsg(msg, 'error');
@@ -36135,8 +36153,9 @@ var PerfilUI = (function() {
       }).catch(function(){});
   }
 
-  function salvar() {
-    if (!_colab) { Toast.erro('Perfil não carregado. Tente novamente.'); return; }
+  function salvar(done) {
+    done = done || function(){};
+    if (!_colab) { _mostrarMsg('Perfil não carregado. Recarregue antes de salvar.', 'error'); done(); return; }
     var g = function(id){ return document.getElementById(id); };
     var dados = {
       nomeApelido:   (g('p-apelido')      ||{value:''}).value.trim(),
@@ -36170,6 +36189,7 @@ var PerfilUI = (function() {
     };
     if (_fotoTemp) dados.fotoPerfil = _fotoTemp;
     GAS.perfil.salvar(dados, function(resp) {
+      done();
       if (!resp || !resp.ok) { _mostrarMsg('Erro ao salvar.', 'error'); return; }
       _colab    = resp.data.colaborador;
       _fotoTemp = null;
@@ -36191,6 +36211,7 @@ var PerfilUI = (function() {
       if (_sd) _sd.textContent = _colab.setor ? ('Setor: '+_colab.setor) : '';
       _mostrarMsg('Perfil atualizado com sucesso!', 'ok');
     }, function(err) {
+      done();
       _mostrarMsg((err && err.message) || 'Erro ao salvar.', 'error');
     });
   }

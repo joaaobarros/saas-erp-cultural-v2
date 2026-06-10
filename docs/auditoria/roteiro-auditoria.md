@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @765 · Unificação base usuários — colaboradores.json fonte única de verdade
+> Deploy atual: @768 · Meu Perfil — carga automática + salvar + BtnGuard + Descartar icon
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
