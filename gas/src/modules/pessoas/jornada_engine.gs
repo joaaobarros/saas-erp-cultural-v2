@@ -493,12 +493,47 @@ var JornadaEngine = (function() {
     return new Date(ano, mes, 0).toISOString().split('T')[0];
   }
 
+  /**
+   * Atualiza o banco de horas para cada (colaborador, data) no lote de jornadas.
+   * Usa creditarDiaBH — idempotente: reimportar o mesmo arquivo não duplica o saldo.
+   */
+  function atualizarBHDosLotes(orgId, jornadasLote) {
+    jornadasLote.forEach(function(j) {
+      if (!j.colaboradorId || !j.data) return;
+      var delta = (j.minutosExtras || 0) - (j.minutosFaltantes || 0);
+      try {
+        PontoRepository.creditarDiaBH(orgId, j.colaboradorId, j.data, delta);
+      } catch(e) {
+        Logger.warn('jornada_engine', 'atualizarBHDosLotes', j.colaboradorId + ' ' + j.data + ': ' + e.message);
+      }
+    });
+  }
+
+  /**
+   * Recalcula BH completo de um colaborador a partir de todas as jornadas ativas.
+   * Zera o registro existente e reconstrói do zero (útil para correção pós-migração).
+   */
+  function recalcularBHCompleto(orgId, colaboradorId) {
+    var ativos = (lerJSON('ponto_normalizado.json') || []).filter(function(r) {
+      return r.orgId === orgId && r.colaboradorId === colaboradorId && r.status !== 'revertido';
+    });
+    var jornadas = calcularJornadasLote(orgId, ativos);
+    PontoRepository.resetarBancoHoras(orgId, colaboradorId);
+    jornadas.forEach(function(j) {
+      var delta = (j.minutosExtras || 0) - (j.minutosFaltantes || 0);
+      PontoRepository.creditarDiaBH(orgId, colaboradorId, j.data, delta);
+    });
+    return { colaboradorId: colaboradorId, jornadas: jornadas.length };
+  }
+
   return {
-    processarDia:          processarDia,
-    processarPeriodo:      processarPeriodo,
-    processarImportacao:   processarImportacao,
-    calcularJornadasLote:  calcularJornadasLote,
-    calcularEspelho:       calcularEspelho
+    processarDia:            processarDia,
+    processarPeriodo:        processarPeriodo,
+    processarImportacao:     processarImportacao,
+    calcularJornadasLote:    calcularJornadasLote,
+    calcularEspelho:         calcularEspelho,
+    atualizarBHDosLotes:     atualizarBHDosLotes,
+    recalcularBHCompleto:    recalcularBHCompleto
   };
 
 })();

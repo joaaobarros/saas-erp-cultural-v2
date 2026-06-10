@@ -47,7 +47,11 @@ var AlertasEngine = (function () {
     ESTOQUE_ITEM_CRITICO:        { severidade: SEVERIDADE.URGENTE, modulo: 'estoque'     },
     ESTOQUE_ITEM_BAIXO:          { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     },
     ESTOQUE_PREVISTO_ACABAR:     { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     },
-    SOLICITACAO_SEM_SEPARACAO:   { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     }
+    SOLICITACAO_SEM_SEPARACAO:   { severidade: SEVERIDADE.ATENCAO, modulo: 'estoque'     },
+    // Ponto
+    PONTO_CARGA_SEMANAL:         { severidade: SEVERIDADE.ATENCAO, modulo: 'ponto'       },
+    PONTO_CARGA_MENSAL:          { severidade: SEVERIDADE.ATENCAO, modulo: 'ponto'       },
+    PONTO_BANCO_HORAS_EXCESSIVO: { severidade: SEVERIDADE.ATENCAO, modulo: 'ponto'       }
   };
 
   // Cabeçalho do AlertasLog (12 colunas)
@@ -222,6 +226,7 @@ var AlertasEngine = (function () {
       // --- Pessoas ---
       _verificarFeriasNaoProgramadas(orgId, contadores);
       _verificarAfastamentosSemSubstituto(orgId, contadores);
+      _verificarCargaPonto(orgId, contadores);
       // --- Reuniões / Demandas ---
       _verificarEncaminhamentosVencidos(orgId, contadores);
       _verificarDemandasSLA(orgId, contadores);
@@ -464,6 +469,106 @@ var AlertasEngine = (function () {
         cont.emitidos++;
       });
     } catch(e) { cont.erros++; }
+  }
+
+  function _verificarCargaPonto(orgId, cont) {
+    try {
+      var agora    = new Date();
+      var anoAtual = agora.getFullYear();
+      var mesAtual = agora.getMonth() + 1;
+      var semanaStr = anoAtual + '-S' + _isoWeek(agora);
+
+      // Limites do mês e da semana atual
+      var inicioMes  = anoAtual + '-' + _pad2(mesAtual) + '-01';
+      var fimMes     = _ultimoDiaStr(anoAtual, mesAtual);
+      var inicioSem  = _inicioSemana(agora);
+      var fimSem     = _fimSemana(agora);
+
+      var colabs = (readJSON('colaboradores.json') || []).filter(function(c) {
+        return c.orgId === orgId && c.ativo !== false && c.status !== 'inativo';
+      });
+      var normalizados = (readJSON('ponto_normalizado.json') || []).filter(function(r) {
+        return r.orgId === orgId && r.status !== 'revertido';
+      });
+      // Limite de BH excessivo: 40h = 2400 min acumulados
+      var LIMITE_BH_MIN = 2400;
+
+      colabs.forEach(function(c) {
+        var horasSem  = (c.horasSemanais || 40);
+        var minSem    = horasSem * 60;
+        var minMensal = Math.round(horasSem / 5 * 22 * 60); // ~22 dias úteis
+
+        // Filtra registros do colaborador
+        var regMes = normalizados.filter(function(r) {
+          return r.colaboradorId === c.id && r.data >= inicioMes && r.data <= fimMes;
+        });
+        var regSem = normalizados.filter(function(r) {
+          return r.colaboradorId === c.id && r.data >= inicioSem && r.data <= fimSem;
+        });
+
+        // Minutos únicos por dia (evita contar E+S como separados)
+        var minMesTotal  = _somarMinutosPorDias(orgId, c.id, regMes);
+        var minSemTotal  = _somarMinutosPorDias(orgId, c.id, regSem);
+        var bh = (readJSON('banco_horas.json') || []).filter(function(b){
+          return b.orgId === orgId && b.colaboradorId === c.id;
+        })[0];
+        var saldoBH = bh ? (bh.saldoMinutos || 0) : 0;
+
+        // Alerta semanal — carga incompleta (só emite na sexta ou aos fins de semana)
+        var dow = agora.getDay(); // 5=Sex, 6=Sáb, 0=Dom
+        if ([0,5,6].indexOf(dow) >= 0 && minSemTotal < minSem * 0.9) {
+          emitir('PONTO_CARGA_SEMANAL',
+            c.nome + ' (' + c.setor + '): ' + _toHM(minSemTotal) + ' de ' + _toHM(minSem) + ' — faltam ' + _toHM(minSem - minSemTotal) + ' na semana.',
+            { orgId: orgId, entidade: 'colaborador', entidadeId: c.id + '_ponto_sem_' + semanaStr });
+          cont.emitidos++;
+        }
+        // Alerta mensal — carga incompleta (só emite nos últimos 3 dias do mês)
+        var ultimoDia = new Date(anoAtual, mesAtual, 0).getDate();
+        if (agora.getDate() >= ultimoDia - 2 && minMesTotal < minMensal * 0.9) {
+          emitir('PONTO_CARGA_MENSAL',
+            c.nome + ' (' + c.setor + '): ' + _toHM(minMesTotal) + ' de ' + _toHM(minMensal) + ' no mês — faltam ' + _toHM(minMensal - minMesTotal) + '.',
+            { orgId: orgId, entidade: 'colaborador', entidadeId: c.id + '_ponto_mes_' + anoAtual + '_' + mesAtual });
+          cont.emitidos++;
+        }
+        // Alerta BH excessivo (> 40h acumuladas)
+        if (saldoBH > LIMITE_BH_MIN) {
+          emitir('PONTO_BANCO_HORAS_EXCESSIVO',
+            c.nome + ' (' + c.setor + '): banco de horas em ' + _toHM(saldoBH) + ' — avaliar compensação ou pagamento.',
+            { orgId: orgId, entidade: 'colaborador', entidadeId: c.id + '_bh_excessivo' });
+          cont.emitidos++;
+        }
+      });
+    } catch(e) { cont.erros++; Logger.warn('alertas_engine', '_verificarCargaPonto', e.message); }
+  }
+
+  // helpers internos para _verificarCargaPonto
+  function _pad2(n) { return String(n).padStart(2,'0'); }
+  function _toHM(min) { if (!min) return '0h00'; return Math.floor(Math.abs(min)/60) + 'h' + String(Math.abs(min)%60).padStart(2,'0'); }
+  function _ultimoDiaStr(ano, mes) { return new Date(ano, mes, 0).toISOString().split('T')[0]; }
+  function _isoWeek(d) {
+    var date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+    var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return String(Math.ceil((((date - yearStart) / 86400000) + 1) / 7)).padStart(2,'0');
+  }
+  function _inicioSemana(d) {
+    var monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return monday.toISOString().split('T')[0];
+  }
+  function _fimSemana(d) {
+    var sunday = new Date(d);
+    sunday.setDate(d.getDate() + (7 - ((d.getDay() + 6) % 7)) % 7);
+    return sunday.toISOString().split('T')[0];
+  }
+  function _somarMinutosPorDias(orgId, colaboradorId, registros) {
+    // Soma minutos de jornada calculados por dia (usa calcularJornadasLote simplificado)
+    var total = 0;
+    try {
+      var jornadas = JornadaEngine.calcularJornadasLote(orgId, registros);
+      jornadas.forEach(function(j){ total += (j.minutosTrabalho || 0); });
+    } catch(e) {}
+    return total;
   }
 
   function _verificarEncaminhamentosVencidos(orgId, cont) {

@@ -570,12 +570,40 @@ function ctrl_ponto_reprocessar_jornadas(params) {
         erros = jornadas.length;
         Logger.warn('ponto_controller', 'reprocessar_jornadas', e.message);
       }
+      // Recalcula banco de horas com base nas jornadas reprocessadas (idempotente)
+      try { JornadaEngine.atualizarBHDosLotes(ctx.orgId, jornadas); } catch(e) {}
     }
 
     AuditoriaService.registrar('PONTO_JORNADAS_REPROCESSADAS', 'ponto',
       { registrosAtivos: ativos.length, processadas: processadas, erros: erros }, ctx.email);
     return { processadas: processadas, erros: erros, registrosAtivos: ativos.length };
   }, 'ctrl_ponto_reprocessar_jornadas');
+}
+
+/**
+ * Recalcula o banco de horas de todos os colaboradores a partir do zero.
+ * Executar manualmente no GAS Editor após migração ou correção massiva.
+ */
+function ctrl_ponto_recalcular_bh_todos(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxPonto();
+    if (['admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel admin+ necessário.');
+    var colabs = (lerJSON('colaboradores.json') || [])
+      .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false; });
+    var resultados = [];
+    colabs.forEach(function(c) {
+      try {
+        var r = JornadaEngine.recalcularBHCompleto(ctx.orgId, c.id);
+        resultados.push({ colaboradorId: c.id, nome: c.nome, jornadas: r.jornadas, ok: true });
+      } catch(e) {
+        resultados.push({ colaboradorId: c.id, nome: c.nome, ok: false, erro: e.message });
+      }
+    });
+    AuditoriaService.registrar('PONTO_BH_RECALCULADO_TODOS', 'ponto',
+      { total: colabs.length }, ctx.email);
+    return { total: colabs.length, resultados: resultados };
+  }, 'ctrl_ponto_recalcular_bh_todos');
 }
 
 // ─── Lista de colaboradores para filtros ─────────────────────────────────────
@@ -720,6 +748,134 @@ function ctrl_ponto_atualizar_carga_horaria(params) {
       { colaboradorId: params.colaboradorId, horasSemanais: horas }, ctx.email);
     return { colaboradorId: params.colaboradorId, horasSemanais: horas };
   }, 'ctrl_ponto_atualizar_carga_horaria');
+}
+
+// ─── Métricas de RH ──────────────────────────────────────────────────────────
+
+/**
+ * Métricas trabalhistas e de conformidade CLT para o painel de RH.
+ * @param {object} params — { ano?, mes? } — padrão: mês corrente
+ * Retorna: { periodo, resumo, porSetor, individual }
+ */
+function ctrl_ponto_metricas_rh(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel rh+ necessário.');
+
+    var hoje  = new Date();
+    var ano   = Number(params.ano  || hoje.getFullYear());
+    var mes   = Number(params.mes  || (hoje.getMonth() + 1));
+
+    function _pad(n) { return String(n).padStart(2,'0'); }
+    var inicioMes = ano + '-' + _pad(mes) + '-01';
+    var fimMes    = ano + '-' + _pad(mes) + '-' + new Date(ano, mes, 0).getDate();
+
+    var colabs = (lerJSON('colaboradores.json') || [])
+      .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; });
+
+    var normTodos = (lerJSON('ponto_normalizado.json') || [])
+      .filter(function(r){ return r.orgId === ctx.orgId && r.status !== 'revertido' && r.data >= inicioMes && r.data <= fimMes; });
+
+    var bhTodos = lerJSON('banco_horas.json') || [];
+
+    // CLT thresholds
+    var MAX_JORNADA_DIA_MIN  = 600; // 10h
+    var MAX_BH_MIN           = 2400; // 40h
+    var MAX_EXTRA_MES_MIN    = 12000; // ~200h (CLT Art 59)
+    var INTRAJORNADA_MIN_MIN = 60; // < 6h = sem intervalo; 6-8h = 15min; >8h = 60min
+
+    // helpers
+    function _bh(id) { var b = bhTodos.filter(function(x){ return x.orgId === ctx.orgId && x.colaboradorId === id; })[0]; return b ? (b.saldoMinutos || 0) : 0; }
+    function _toHM(m) { if (!m && m !== 0) return '0h00'; var s = m < 0 ? '-' : ''; m = Math.abs(m); return s + Math.floor(m/60) + 'h' + _pad(m%60); }
+
+    var resumo = { totalAtivos: colabs.length, cumpriramCarga: 0, naoCumpriramCarga: 0, pctCumprimento: 0, totalMinutos: 0, totalExtras: 0, totalFaltantes: 0, saldoBHTotal: 0 };
+    var setorMap = {};
+    var individual = [];
+
+    colabs.forEach(function(c) {
+      var horasSem   = c.horasSemanais || 40;
+      var minMensal  = Math.round(horasSem / 5 * 22 * 60);
+      var regs       = normTodos.filter(function(r){ return r.colaboradorId === c.id; });
+      var jornadas   = regs.length ? JornadaEngine.calcularJornadasLote(ctx.orgId, regs) : [];
+
+      var totMin = 0, totExt = 0, totFalt = 0, diasTrab = 0;
+      var jornadasLongas = 0, diasSemIntervalo = 0;
+      jornadas.forEach(function(j) {
+        totMin  += j.minutosTrabalho  || 0;
+        totExt  += j.minutosExtras    || 0;
+        totFalt += j.minutosFaltantes || 0;
+        if (j.statusJornada !== 'ausente') diasTrab++;
+        if ((j.minutosTrabalho || 0) > MAX_JORNADA_DIA_MIN) jornadasLongas++;
+        // Intervalo intrajornada: se > 8h sem pausa > 60min → risco CLT
+        if ((j.minutosTrabalho || 0) > 480 && (j.minutosIntervalo || 0) < INTRAJORNADA_MIN_MIN) diasSemIntervalo++;
+      });
+
+      var bhSaldo    = _bh(c.id);
+      var cumpriu    = totMin >= minMensal * 0.9;
+      var excessoBH  = bhSaldo > MAX_BH_MIN;
+      var extraExces = totExt > MAX_EXTRA_MES_MIN;
+      var riscoCLT   = jornadasLongas > 0 || diasSemIntervalo > 0 || excessoBH || extraExces;
+
+      if (cumpriu) resumo.cumpriramCarga++; else resumo.naoCumpriramCarga++;
+      resumo.totalMinutos   += totMin;
+      resumo.totalExtras    += totExt;
+      resumo.totalFaltantes += totFalt;
+      resumo.saldoBHTotal   += bhSaldo;
+
+      // Por setor
+      var setor = c.setor || 'Sem setor';
+      if (!setorMap[setor]) setorMap[setor] = { setor: setor, total: 0, cumpriram: 0, naoCumpriram: 0, totalMinutos: 0, totalExtras: 0, saldoBH: 0, riscoCLT: 0 };
+      var sm = setorMap[setor];
+      sm.total++;
+      if (cumpriu) sm.cumpriram++; else sm.naoCumpriram++;
+      sm.totalMinutos += totMin;
+      sm.totalExtras  += totExt;
+      sm.saldoBH      += bhSaldo;
+      if (riscoCLT) sm.riscoCLT++;
+
+      individual.push({
+        id:               c.id,
+        nome:             c.nome || '',
+        setor:            setor,
+        horasSemanais:    horasSem,
+        metaMensal:       _toHM(minMensal),
+        realizado:        _toHM(totMin),
+        extras:           _toHM(totExt),
+        faltantes:        _toHM(totFalt),
+        diasTrabalhados:  diasTrab,
+        saldoBH:          _toHM(bhSaldo),
+        cumpriu:          cumpriu,
+        jornadasLongas:   jornadasLongas,
+        diasSemIntervalo: diasSemIntervalo,
+        excessoBH:        excessoBH,
+        extraExcessivo:   extraExces,
+        riscoCLT:         riscoCLT
+      });
+    });
+
+    if (resumo.totalAtivos > 0)
+      resumo.pctCumprimento = Math.round(resumo.cumpriramCarga / resumo.totalAtivos * 100);
+
+    var porSetor = Object.keys(setorMap).sort().map(function(s) {
+      var sm = setorMap[s];
+      sm.pctCumprimento = sm.total > 0 ? Math.round(sm.cumpriram / sm.total * 100) : 0;
+      sm.totalMinutosHM = _toHM(sm.totalMinutos);
+      sm.totalExtrasHM  = _toHM(sm.totalExtras);
+      sm.saldoBHHM      = _toHM(sm.saldoBH);
+      return sm;
+    });
+
+    individual.sort(function(a,b){ return a.nome.localeCompare(b.nome,'pt-BR'); });
+
+    return {
+      periodo:    { ano: ano, mes: mes, inicioMes: inicioMes, fimMes: fimMes },
+      resumo:     resumo,
+      porSetor:   porSetor,
+      individual: individual
+    };
+  }, 'ctrl_ponto_metricas_rh');
 }
 
 // ─── Diagnóstico de normalizados ─────────────────────────────────────────────

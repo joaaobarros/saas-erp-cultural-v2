@@ -237,6 +237,43 @@ var PontoRepository = (function() {
     } catch(e) { Logger.warn('ponto', 'sincronizarSheet', e.message); }
   }
 
+  /**
+   * Credita/debita o BH de um dia específico de forma idempotente.
+   * Usa `diasProcessados[data]` para rastrear o delta por dia e evitar
+   * dupla contagem em reimportações. Cada data só conta uma vez.
+   */
+  function creditarDiaBH(orgId, colaboradorId, data, deltaMinutos) {
+    modifyJSON(ARQUIVO_BH, function(lista) {
+      if (!Array.isArray(lista)) lista = [];
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].orgId === orgId && lista[i].colaboradorId === colaboradorId) { idx = i; break; }
+      }
+      var agora = new Date().toISOString();
+      if (idx < 0) {
+        lista.push({ colaboradorId: colaboradorId, orgId: orgId, saldoMinutos: 0, diasProcessados: {}, ultimaAtualizacao: agora });
+        idx = lista.length - 1;
+      }
+      var reg = lista[idx];
+      if (!reg.diasProcessados) reg.diasProcessados = {};
+      var deltaAnterior = reg.diasProcessados[data] !== undefined ? reg.diasProcessados[data] : null;
+      var diferenca = deltaMinutos - (deltaAnterior !== null ? deltaAnterior : 0);
+      if (deltaAnterior === null || diferenca !== 0) {
+        reg.diasProcessados[data] = deltaMinutos;
+        reg.saldoMinutos = (reg.saldoMinutos || 0) + diferenca;
+        reg.ultimaAtualizacao = agora;
+      }
+      return lista;
+    });
+  }
+
+  function resetarBancoHoras(orgId, colaboradorId) {
+    modifyJSON(ARQUIVO_BH, function(lista) {
+      if (!Array.isArray(lista)) return [];
+      return lista.filter(function(b){ return !(b.orgId === orgId && b.colaboradorId === colaboradorId); });
+    });
+  }
+
   return {
     listarPorColaborador:     listarPorColaborador,
     listarPorData:            listarPorData,
@@ -250,6 +287,8 @@ var PontoRepository = (function() {
     proximoNSR:               proximoNSR,
     obterBancoHoras:          obterBancoHoras,
     atualizarBancoHoras:      atualizarBancoHoras,
+    creditarDiaBH:            creditarDiaBH,
+    resetarBancoHoras:        resetarBancoHoras,
     prepararIndice:           prepararIndice,
     sincronizarRegistroSheet: sincronizarRegistroSheet
   };

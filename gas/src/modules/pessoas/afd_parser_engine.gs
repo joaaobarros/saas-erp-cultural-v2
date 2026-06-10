@@ -688,6 +688,12 @@ var AfdParserEngine = (function() {
         resultadoJornadas.erros++;
         Logger.warn('afd_parser_engine', 'confirmarImportacao', 'salvarLote jornadas: ' + e.message);
       }
+      // Acumula extras/faltantes no banco de horas (idempotente por data)
+      try {
+        JornadaEngine.atualizarBHDosLotes(orgId, jornadasLote);
+      } catch(e) {
+        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'atualizarBH: ' + e.message);
+      }
     }
 
     return {

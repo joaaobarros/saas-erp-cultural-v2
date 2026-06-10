@@ -559,9 +559,30 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 47b (2026-06-09) → SESSÃO 48
+## HANDOFF ATUAL — SESSÃO 48 (2026-06-09) → SESSÃO 49
 
-### Estado atual: Deploy @750 (GAS)
+### Estado atual: Deploy @753 (GAS)
+
+### O que foi feito nesta sessão (s48)
+
+Perfil Pessoal: nova view `view-perfil` + módulo `PerfilUI` + avatar global propagado pelo sistema.
+
+| Arquivo | Mudança |
+|---|---|
+| `pessoas_controller.gs` | `ctrl_pessoas_meu_perfil_ler()` e `ctrl_pessoas_meu_perfil_salvar(dados)` com whitelist de campos editáveis |
+| `index.html` | `GAS.perfil.{ler,salvar}` no namespace. Menu: "Meu Perfil" após "Meu Centro". `view-perfil`: card somente leitura (dados RH) + coluna editável (apelido, pronomes, contato, emergência, endereço, diversidade, saúde+restrições). Foto: Canvas resize max 200×200 JPEG base64. `setAvatarGlobal(url)`: atualiza sidebar-avatar e topbar-avatar. Boot carrega foto silenciosamente (setTimeout 2s). Sidebar avatar clicável → Meu Perfil. `_renderEquipe` com mini-avatares via `_avatarMini(c)`. |
+
+### Próxima sessão
+
+1. Testar Meu Perfil: navegar → form carrega → editar → salvar → reabrir → dados persistem
+2. Testar upload de foto: clicar no avatar → selecionar imagem → foto aparece → salvar → recarregar página → foto persiste no sidebar/topbar
+3. Testar lista RH: Pessoas/RH → aba Equipe → avatares aparecem por colaborador
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 47b (2026-06-09) → SESSÃO 48
+
+### Estado anterior: Deploy @750 (GAS)
 
 ### O que foi feito nesta sessão (s47b)
 
@@ -587,6 +608,31 @@ RH: novos campos de diversidade, saúde e contatos no form de colaborador. Corre
 1. Testar form completo no browser: abrir colaborador, editar, salvar — verificar novos campos persistem
 2. Testar busca CEP: preencher CEP → logradouro/bairro/cidade/UF auto-preenchidos
 3. Testar exclusão: admin não consegue excluir; RH consegue
+
+---
+
+## HANDOFF ATUAL — SESSÃO 47 (2026-06-09) → SESSÃO 48
+
+### Estado atual: Deploy @754 (GAS)
+
+### O que foi feito nesta sessão (s47)
+
+Ponto: banco de horas automático na importação + alertas CLT + aba de Métricas RH.
+
+| Arquivo | Mudança |
+|---|---|
+| `ponto_repository.gs` | `creditarDiaBH(orgId, colaboradorId, data, deltaMin)` — idempotente via `diasProcessados`; `resetarBancoHoras(orgId, colaboradorId)` |
+| `jornada_engine.gs` | `atualizarBHDosLotes(orgId, jornadasLote)` — credita BH para cada jornada do lote; `recalcularBHCompleto(orgId, colaboradorId)` — zera e reconstrói desde histórico completo |
+| `afd_parser_engine.gs` | `confirmarImportacao` chama `JornadaEngine.atualizarBHDosLotes` após `JornadaRepository.salvarLote` |
+| `ponto_controller.gs` | `ctrl_ponto_reprocessar_jornadas` chama `atualizarBHDosLotes`; `ctrl_ponto_recalcular_bh_todos` (admin) chama `recalcularBHCompleto` por colaborador; `ctrl_ponto_metricas_rh(params)` retorna `{periodo, resumo, porSetor, individual}` com flags CLT (jornadas > 10h, intervalo intrajornada, BH excessivo > 40h, extras > 200h/mês) |
+| `alertas_engine.gs` | 3 novos TIPOS: `PONTO_CARGA_SEMANAL`, `PONTO_CARGA_MENSAL`, `PONTO_BANCO_HORAS_EXCESSIVO`; função `_verificarCargaPonto` com emissão deduplicada por `entidadeId`; helpers `_pad2`, `_toHM`, `_isoWeek`, `_inicioSemana`, `_fimSemana`, `_somarMinutosPorDias`, `_ultimoDiaStr` |
+| `index.html` | GAS bindings: `metricasRh`, `recalcularBhTodos`; tab "Métricas RH" no tab-bar do Ponto & RH; div `ponto-tab-metricas`; PontoUI: `carregarMetricasRh`, `_toHM`, `_metCard` expostos no return |
+
+### Próxima sessão
+
+1. Testar aba Métricas RH no browser — verificar cards resumo, tabela por setor, tabela individual
+2. Reimportar AFD e verificar se Banco de Horas = valor correto (não mais 0h00)
+3. Verificar alertas automáticos: rodar `AlertasEngine.verificarTodosAutomaticos()` no GAS Editor e confirmar logs dos 3 novos tipos
 
 ---
 
