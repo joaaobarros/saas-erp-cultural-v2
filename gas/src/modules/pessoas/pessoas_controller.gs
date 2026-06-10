@@ -197,6 +197,23 @@ function ctrl_pessoas_mudar_status(id, novoStatus) {
 }
 
 /**
+ * Exclui colaborador definitivamente (hard delete). Apenas RH/admin/superadmin.
+ * Uso restrito à remoção de duplicatas e registros inválidos.
+ */
+function ctrl_pessoas_excluir(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (nivel !== 'superadmin' && nivel !== 'rh')
+      throw new Error('Apenas RH e Superadmin podem excluir colaboradores.');
+    if (!id) throw new Error('ID é obrigatório.');
+    ColaboradorRepository.excluir(ctx.orgId, id);
+    AuditoriaService.registrar('COLABORADOR_EXCLUIDO', 'pessoas', { id: id, operador: ctx.email });
+    return { ok: true };
+  }, 'ctrl_pessoas_excluir');
+}
+
+/**
  * Registra desligamento oficial.
  */
 function ctrl_pessoas_registrar_desligamento(dados) {

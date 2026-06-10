@@ -559,9 +559,30 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 46b (2026-06-09) → SESSÃO 47
+## HANDOFF ATUAL — SESSÃO 47 (2026-06-09) → SESSÃO 48
 
-### Estado atual: Deploy @745 (GAS)
+### Estado atual: Deploy @747 (GAS)
+
+### O que foi feito nesta sessão (s47)
+
+RH: novos campos de diversidade, saúde e contatos no form de colaborador. Correções no módulo Pessoas/RH (bugs 1–8 da lista): scroll automático ao editar, barra de filtro, correção duplicatas ao editar, botão excluir (só RH/Superadmin), N° registro auto-gerado, PIS/NIS, busca de CEP via ViaCEP, ordenação setor+nome.
+
+| Arquivo | Mudança |
+|---|---|
+| `pessoas_controller.gs` | `ctrl_pessoas_excluir(id)`: hard delete, restrito a `rh` e `superadmin` |
+| `index.html` | Form RH: Gênero (select), Orientação Sexual (select), Raça/Cor IBGE (select), Telefone, Contato de Emergência (grid 3 cols), Tipo Sanguíneo, Alergias, Restrições Alimentares (checkboxes c/ detalhe condicional), Observações Pessoais. `abrirFormColab` popula tudo; `salvarColab` persiste tudo. Busca CEP onblur via ViaCEP. Barra de filtro equipe. Scroll automático ao abrir form de edição. |
+
+### Próxima sessão
+
+1. Testar form completo no browser: abrir colaborador, editar, salvar — verificar novos campos persistem
+2. Testar busca CEP: preencher CEP → logradouro/bairro/cidade/UF auto-preenchidos
+3. Testar exclusão: admin não consegue excluir; RH consegue
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 46b (2026-06-09) → SESSÃO 47
+
+### Estado atual: Deploy @748 (GAS)
 
 ### O que foi feito nesta sessão (s46)
 

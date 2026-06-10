@@ -31602,6 +31602,7 @@ var PontoUI = (function() {
   var _periodoAtivo   = 'mensal';
   var _resumoMensal   = {};
   var _saldoBHAtual   = 0;
+  var _ultimaBatida   = null;
   var _consolidadoCache = null;
 
   function _podeVerTodos() {
@@ -31728,9 +31729,16 @@ var PontoUI = (function() {
       var STATUS_LABEL = { completa:'Completa', incompleta:'Incompleta', inconsistente:'Inconsistente', ausente:'Ausente', folga:'Folga' };
       var DIAS_SEMANA  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
+      // Calcula último dia com batida no mês
+      var diasObj = m.dias || {};
+      var ultimaBatida = Object.keys(diasObj).sort().reverse().find(function(iso) {
+        return (diasObj[iso].numBatidas || 0) > 0;
+      }) || null;
+
       // Salva resumo mensal e renderiza stats no strip dedicado
       _resumoMensal = { diasTrabalhados: res.diasTrabalhados||0, totalMinutos: res.totalMinutos||0, totalExtras: res.totalExtras||0, totalFaltantes: res.totalFaltantes||0 };
       _saldoBHAtual = m.saldoBH || 0;
+      _ultimaBatida = ultimaBatida;
       _periodoAtivo = 'mensal';
       _consolidadoCache = null;
       _renderStatsStrip('mensal');
@@ -31854,6 +31862,13 @@ var PontoUI = (function() {
         '<div class="stat-card"><div class="stat-valor" style="color:' + ((d.totalExtras||0)>0?'var(--success)':'var(--text)') + '">' + toHM(d.totalExtras||0) + '</div><div class="stat-label">Horas extras</div></div>';
     }
     html += '</div>';
+    // Informe de última atualização (último dia com batida no mês visualizado)
+    if (_ultimaBatida) {
+      html += '<p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;display:flex;align-items:center;gap:4px;">' +
+        '<span class="ms" style="font-size:14px;">update</span>' +
+        'Atualizado até <strong>' + fmtDataPtBR(_ultimaBatida) + '</strong>' +
+      '</p>';
+    }
     sEl.innerHTML = html;
   }
 
