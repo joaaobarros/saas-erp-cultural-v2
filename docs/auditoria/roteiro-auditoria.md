@@ -468,7 +468,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 53 (2026-06-09) → SESSÃO 54
+## HANDOFF ATUAL — SESSÃO 54 (2026-06-10) → SESSÃO 55
+
+### Estado atual: ~265 bugs registrados · Deploy @771 (GAS)
+
+### O que foi feito nesta sessão (s54)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @771 | Ponto — fix Métricas RH | `PontoUI.setTab()` não incluía `'metricas'` no array de abas — `#ponto-tab-metricas` iniciava `oculto` e nunca era revelado. Adicionado `'metricas'` à lista. Bug: aba clicável mas conteúdo sempre em branco. |
+
+### Pendentes / próxima ação
+- **Testar Métricas RH**: clicar na aba → deve exibir resumo + tabela por setor + tabela individual
+- **Testar Meu Perfil**: abrir, editar apelido/foto → salvar → sidebar deve exibir novo nome imediatamente
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 53 (2026-06-09) → SESSÃO 54
 
 ### Estado atual: ~265 bugs registrados · Deploy @759 (GAS)
 
