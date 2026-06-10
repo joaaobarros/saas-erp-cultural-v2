@@ -470,7 +470,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 54 (2026-06-10) → SESSÃO 55
 
-### Estado atual: ~265 bugs registrados · Deploy @771 (GAS)
+### Estado atual: ~265 bugs registrados · Deploy @773 (GAS)
 
 ### O que foi feito nesta sessão (s54)
 

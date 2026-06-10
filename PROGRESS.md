@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Ponto — fix Métricas RH — aba não abria (2026-06-10)** — Deploy @771. `PontoUI.setTab()` iterava apenas `['espelho','importexport','sessoes','vinculos']` — `'metricas'` ausente do array; `#ponto-tab-metricas` iniciava com classe `oculto` e nunca era revelado ao clicar na aba. Corrigido adicionando `'metricas'` à lista de abas no `forEach` de `setTab`.
+**Fase atual**: **Ponto — fix Métricas RH — aba não abria (2026-06-10)** — Deploy @773. `PontoUI.setTab()` iterava apenas `['espelho','importexport','sessoes','vinculos']` — `'metricas'` ausente do array; `#ponto-tab-metricas` iniciava com classe `oculto` e nunca era revelado ao clicar na aba. Corrigido adicionando `'metricas'` à lista de abas no `forEach` de `setTab`.
 
 **Fase anterior**: **Meu Perfil — pré-carga no boot + _carregando guard (2026-06-10)** — Deploy @770. (1) `_aplicarBoot()`: dispara `PerfilUI.carregar(null, true)` 2s após o boot concluir, antes do usuário abrir a aba. A 1ª chamada GAS pode travar; o auto-retry (7s) garante a 2ª chamada que sempre funciona. (2) `aoAbrir()`: respeita `_carregando` — se pré-carga já está em andamento, aguarda o callback em vez de disparar nova chamada (que invalidaria a pré-carga via gen counter). (3) `_carregando` flag: novo var; setado `true` ao entrar em `carregar()`, limpo `false` nos dois callbacks; impede `aoAbrir()` de duplicar chamadas.
 
