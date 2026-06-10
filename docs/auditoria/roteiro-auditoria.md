@@ -561,7 +561,7 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ## HANDOFF ATUAL — SESSÃO 48 (2026-06-09) → SESSÃO 49
 
-### Estado atual: Deploy @753 (GAS)
+### Estado atual: Deploy @754 (GAS) — controller pessoas_controller.gs adicionado
 
 ### O que foi feito nesta sessão (s48)
 

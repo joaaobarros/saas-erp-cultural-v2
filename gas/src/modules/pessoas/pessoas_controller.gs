@@ -697,6 +697,45 @@ function ctrl_pccs_salvarTabela(pccsId, tabelaSalarial, parametros) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// PERFIL PESSOAL — auto-atualização pelo próprio colaborador
+// ═══════════════════════════════════════════════════════════════════
+
+var _PERFIL_CAMPOS_EDITAVEIS = [
+  'nomeApelido','pronomes','emailPessoal','telefone','endereco',
+  'genero','sexualidade','racaCor',
+  'tipoSanguineo','alergias','restricoesAlimentares','restricoesOutro','observacoesPessoais',
+  'contatoEmergencia','fotoPerfil'
+];
+
+function ctrl_pessoas_meu_perfil_ler() {
+  return GasResponse.wrap(function () {
+    var ctx    = _ctxPessoas();
+    var colabs = ColaboradorRepository.listar(ctx.orgId);
+    var eu     = colabs.filter(function(c){
+      return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
+    })[0] || null;
+    return { encontrado: !!eu, colaborador: eu };
+  }, 'ctrl_pessoas_meu_perfil_ler');
+}
+
+function ctrl_pessoas_meu_perfil_salvar(dados) {
+  return GasResponse.wrap(function () {
+    var ctx    = _ctxPessoas();
+    var colabs = ColaboradorRepository.listar(ctx.orgId);
+    var eu     = colabs.filter(function(c){
+      return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
+    })[0] || null;
+    if (!eu) throw new Error('Seu usuário não está vinculado a um colaborador no sistema.');
+    _PERFIL_CAMPOS_EDITAVEIS.forEach(function(campo){
+      if (Object.prototype.hasOwnProperty.call(dados, campo)) eu[campo] = dados[campo];
+    });
+    ColaboradorRepository.atualizar(ctx.orgId, eu.id, eu);
+    AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
+    return { ok: true, colaborador: eu };
+  }, 'ctrl_pessoas_meu_perfil_salvar');
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════
 
