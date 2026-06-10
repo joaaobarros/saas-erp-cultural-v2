@@ -573,6 +573,130 @@ var PessoasEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // PERÍODOS AQUISITIVOS / ACORDO DE FÉRIAS
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Calcula os períodos aquisitivos e concessivos a partir da data de admissão.
+   * Cada período: 12 meses de aquisição + 12 meses de concessão.
+   * status: em_aquisicao | em_concessao | vencido
+   */
+  function calcularPeriodosAquisitivos(dataAdmissao) {
+    if (!dataAdmissao) return [];
+    var adm = new Date(dataAdmissao);
+    if (isNaN(adm.getTime())) return [];
+    var hoje = new Date().toISOString().slice(0, 10);
+    var periodos = [];
+    for (var n = 0; n <= 30; n++) {
+      var aqIni = new Date(adm.getFullYear() + n, adm.getMonth(), adm.getDate()).toISOString().slice(0, 10);
+      // Se o período aquisitivo ainda não começou, parar
+      if (aqIni > hoje) break;
+      var aqFimD = new Date(adm.getFullYear() + n + 1, adm.getMonth(), adm.getDate());
+      aqFimD.setDate(aqFimD.getDate() - 1);
+      var aqFim = aqFimD.toISOString().slice(0, 10);
+      var concIni = new Date(adm.getFullYear() + n + 1, adm.getMonth(), adm.getDate()).toISOString().slice(0, 10);
+      var concFimD = new Date(adm.getFullYear() + n + 2, adm.getMonth(), adm.getDate());
+      concFimD.setDate(concFimD.getDate() - 1);
+      var concFim = concFimD.toISOString().slice(0, 10);
+      var status;
+      if (hoje <= aqFim)       status = 'em_aquisicao';
+      else if (hoje <= concFim) status = 'em_concessao';
+      else                      status = 'vencido';
+      periodos.push({
+        numero: n + 1,
+        aquisitivoInicio: aqIni,
+        aquisitivoFim: aqFim,
+        concessivoInicio: concIni,
+        concessivoFim: concFim,
+        diasDireito: 30,
+        status: status,
+        diasGozados: 0,
+        saldo: 30,
+        ferias: []
+      });
+    }
+    return periodos;
+  }
+
+  /**
+   * Retorna resumo estruturado de férias por período aquisitivo do colaborador.
+   * Vincula os registros de férias existentes a cada período.
+   */
+  function resumoFeriasPorPeriodo(idColaborador, orgId) {
+    orgId = orgId || _orgId();
+    var c = ColaboradorRepository.buscarPorId(orgId, idColaborador);
+    if (!c) throw new Error('Colaborador não encontrado: ' + idColaborador);
+    if (!c.dataAdmissao) return { idColaborador: idColaborador, nome: '', dataAdmissao: null, periodos: [], aviso: 'Data de admissão não registrada.' };
+    var periodos = calcularPeriodosAquisitivos(c.dataAdmissao);
+    var todas = ColaboradorRepository.listarFerias({ orgId: orgId, idColaborador: idColaborador });
+    periodos.forEach(function (p) {
+      var do_periodo = todas.filter(function (f) {
+        if (f.periodoAquisitivoNum === p.numero) return true;
+        var ref = f.dataInicio || f.inicio || '';
+        return ref && ref >= p.aquisitivoInicio && ref <= p.concessivoFim;
+      });
+      var gozados = 0;
+      do_periodo.forEach(function (f) {
+        if (f.status !== 'concluido') return;
+        if (f.acordo && f.acordo.diasEfetivosGozados) {
+          gozados += Number(f.acordo.diasEfetivosGozados) || 0;
+        } else {
+          var ini = f.dataInicio || f.inicio;
+          var fim = f.dataFim || f.fim;
+          if (ini && fim) gozados += Math.round((new Date(fim) - new Date(ini)) / 86400000) + 1;
+        }
+      });
+      p.diasGozados = gozados;
+      p.saldo = Math.max(0, p.diasDireito - gozados);
+      p.ferias = do_periodo.map(function (f) {
+        return { id: f.id, inicio: f.dataInicio || f.inicio, fim: f.dataFim || f.fim, status: f.status, acordo: f.acordo || null };
+      });
+      if (p.status !== 'em_aquisicao' && gozados >= p.diasDireito) p.status = 'gozado';
+    });
+    return { idColaborador: idColaborador, nome: c.nome || c.apelido || '', dataAdmissao: c.dataAdmissao, periodos: periodos };
+  }
+
+  /**
+   * Registra o acordo de férias: período realmente gozado + saldo remanescente.
+   * Só pode ser chamado sobre férias com status 'aprovado'.
+   * Transita para 'concluido' ao salvar o acordo.
+   */
+  function registrarAcordoFerias(id, dados, emailOperador) {
+    if (!id) throw new Error('ID é obrigatório.');
+    dados = dados || {};
+    var ferias = ColaboradorRepository.buscarFeriasPorId(id);
+    if (!ferias) throw new Error('Férias não encontradas: ' + id);
+    if (ferias.status !== STATUS_FERIAS.APROVADO)
+      throw new Error('Acordo só pode ser registrado em férias aprovadas.');
+    if (!dados.periodoGozadoInicio || !dados.periodoGozadoFim)
+      throw new Error('Período realmente gozado (início e fim) é obrigatório.');
+    var gozados = parseInt(dados.diasEfetivosGozados) || 0;
+    if (gozados < 1) throw new Error('Informe os dias efetivamente gozados (mínimo: 1).');
+    var ini = ferias.dataInicio || ferias.inicio;
+    var fim = ferias.dataFim || ferias.fim;
+    var totalSolicitado = ferias.totalDias || (ini && fim ? Math.round((new Date(fim) - new Date(ini)) / 86400000) + 1 : gozados);
+    var saldo = Math.max(0, totalSolicitado - gozados);
+    ferias.acordo = {
+      periodoGozadoInicio:  dados.periodoGozadoInicio,
+      periodoGozadoFim:     dados.periodoGozadoFim,
+      diasEfetivosGozados:  gozados,
+      saldoAnterior:        totalSolicitado,
+      saldoPosterior:       saldo,
+      observacao:           dados.observacao || '',
+      registradoEm:         new Date().toISOString(),
+      registradoPor:        emailOperador || ''
+    };
+    _transitarFerias(ferias, STATUS_FERIAS.CONCLUIDO, emailOperador, {});
+    try {
+      var colab = ColaboradorRepository.buscarPorId(ferias.orgId, ferias.idColaborador);
+      if (colab && colab.status === 'ferias')
+        mudarStatus(ferias.idColaborador, STATUS_COLABORADOR.ATIVO, emailOperador, ferias.orgId);
+    } catch (_) {}
+    _audit('FERIAS_ACORDO_REGISTRADO', { id: ferias.id, idColaborador: ferias.idColaborador, diasGozados: gozados, saldo: saldo, operador: emailOperador });
+    return { ok: true, id: id, saldo: saldo };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // AFASTAMENTOS
   // ──────────────────────────────────────────────────────────────────
 
@@ -810,15 +934,18 @@ var PessoasEngine = (function () {
     listarPorFuncao:    listarPorFuncao,
 
     // Férias
-    listarFerias:          listarFerias,
-    saldoFerias:           saldoFerias,
-    solicitarFerias:       solicitarFerias,
-    aprovarFerias:         aprovarFerias,
-    recusarFerias:         recusarFerias,
-    solicitarAjusteFerias: solicitarAjusteFerias,
-    reenviarFerias:        reenviarFerias,
-    concluirFerias:        concluirFerias,
-    cancelarFerias:        cancelarFerias,
+    listarFerias:                  listarFerias,
+    saldoFerias:                   saldoFerias,
+    solicitarFerias:               solicitarFerias,
+    aprovarFerias:                 aprovarFerias,
+    recusarFerias:                 recusarFerias,
+    solicitarAjusteFerias:         solicitarAjusteFerias,
+    reenviarFerias:                reenviarFerias,
+    concluirFerias:                concluirFerias,
+    cancelarFerias:                cancelarFerias,
+    calcularPeriodosAquisitivos:   calcularPeriodosAquisitivos,
+    resumoFeriasPorPeriodo:        resumoFeriasPorPeriodo,
+    registrarAcordoFerias:         registrarAcordoFerias,
 
     // Escalas
     listarEscalas:      listarEscalas,

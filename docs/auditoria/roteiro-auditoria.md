@@ -468,7 +468,23 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 51 (2026-06-09) → SESSÃO 52
+## HANDOFF ATUAL — SESSÃO 52 (2026-06-09) → SESSÃO 53
+
+### Estado atual: ~265 bugs registrados · Deploy @757 (GAS)
+
+### O que foi feito nesta sessão (s52)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @757 | RH — Desligamento + Períodos Aquisitivos + Acordo de Férias | (1) Botão "Desligar" no modal verColab (com/sem rescisão). (2) Painel de Períodos Aquisitivos/Concessivos na aba Férias. (3) Botão "Acordo" para férias aprovadas — registra período efetivo + saldo remanescente. |
+
+### Pendentes / próxima ação
+- **Testar no sistema**: (1) RH → Equipe → ver colaborador → botão Desligar; (2) RH → Férias → card Períodos Aquisitivos → selecionar colaborador; (3) Aprovação de férias → botão Acordo
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 51 (2026-06-09) → SESSÃO 52
 
 ### Estado atual: ~265 bugs registrados · Deploy @729 (GAS)
 

@@ -8334,6 +8334,22 @@ select.form-control { cursor: pointer; }
             </div>
             <div id="rh-fer-lista"></div>
           </div>
+
+          <!-- Card: Períodos Aquisitivos / Concessivos -->
+          <div class="card" style="margin-top:16px;">
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">calendar_clock</span> Períodos Aquisitivos e Concessivos</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select id="rh-per-colab" class="form-input" style="width:auto;min-width:200px;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarPeriodosFerias()">
+                  <option value="">Selecione colaborador…</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarPeriodosFerias()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+              </div>
+            </div>
+            <div id="rh-per-lista" style="padding:12px 20px;">
+              <p class="muted-text">Selecione um colaborador para visualizar os períodos.</p>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: FOLHA -->
@@ -9084,7 +9100,9 @@ var GAS = {
     concluirFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_concluir_ferias(id,d||{}); },
     reenviarFerias:     function(id,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_reenviar_ferias(id,d||{}); },
     // ── GAP-07 corrigido ──
-    solicitarAjuste:    function(id,obs,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_ajuste_ferias(id,obs||''); },
+    solicitarAjuste:          function(id,obs,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_ajuste_ferias(id,obs||''); },
+    resumoFeriasColaborador:  function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_resumo_ferias_colaborador(id); },
+    registrarAcordoFerias:    function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_acordo_ferias(id,d||{}); },
     // ── F16.3 — Dashboard RH ──
     dashboardFolha:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_folha(p||{}); },
     dashboardPonto:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_ponto(p||{}); },
@@ -32868,7 +32886,7 @@ var RhUI = (function() {
     if (tab==='historico')   carregarHistorico();
     if (tab==='avaliacoes')  carregarAvaliacoes();
     if (tab==='escalas')     carregarEscalas();
-    if (tab==='ferias')      carregarFerias();
+    if (tab==='ferias')      { carregarFerias(); _popularSelectColaboradores('rh-per-colab'); }
     if (tab==='indicadores') { carregarIndicadores(); carregarTurnover12m(); _inicializarCalendarioPonto(); }
     if (tab==='folha')       { carregarDashboardFolha(); }
     if (tab==='encargos')    EncargosUI.aoAbrir();
@@ -33130,6 +33148,51 @@ var RhUI = (function() {
     }, function(e) { Toast.erro(e.message||String(e)); });
   }
 
+  function abrirModalDesligamento(id) {
+    var c = _colaboradores.find(function(x){ return x.id===id; });
+    var nome = c ? (c.nome||c.id) : id;
+    var eid  = _esc(id);
+    _abrirModalRh(
+      '<div style="padding:20px;min-width:400px;">' +
+      '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">Registrar Desligamento</h3>' +
+      '<p style="margin:0 0 16px;font-size:13px;color:var(--text2);">' + _esc(nome) + '</p>' +
+      '<div class="form-group"><label class="form-label">Tipo *</label>' +
+        '<select id="rh-desl-tipo" class="form-input select-sm">' +
+          '<option value="com_rescisao">Com rescisão — demissão (gera ônus)</option>' +
+          '<option value="sem_rescisao">Sem rescisão — transferência (sem ônus)</option>' +
+        '</select></div>' +
+      '<div class="form-group"><label class="form-label">Data do desligamento *</label>' +
+        '<input id="rh-desl-data" class="form-input" type="date"></div>' +
+      '<div class="form-group"><label class="form-label">Motivo / Observação</label>' +
+        '<textarea id="rh-desl-obs" class="form-input" rows="3" placeholder="Informe o motivo…"></textarea></div>' +
+      '<div style="background:#fff3e0;border-left:3px solid var(--warning,#e65100);border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--warning,#e65100);">' +
+        'Esta ação muda o status do colaborador para <strong>Desligado</strong>.' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button id="rh-btn-conf-desl" class="btn btn-perigo" onclick="RhUI._confirmarDesligamento(\'' + eid + '\')">' +
+          '<span class="ms ms-sm">logout</span> Confirmar Desligamento</button>' +
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>'
+    );
+    var di = document.getElementById('rh-desl-data');
+    if (di) di.value = new Date().toISOString().slice(0,10);
+  }
+
+  function _confirmarDesligamento(id) {
+    var tipo  = (document.getElementById('rh-desl-tipo')||{}).value||'com_rescisao';
+    var data  = (document.getElementById('rh-desl-data')||{}).value||'';
+    var obs   = (document.getElementById('rh-desl-obs')||{}).value||'';
+    if (!data) { Toast.aviso('Informe a data do desligamento.'); return; }
+    var dados = { idColaborador: id, tipoRescisao: tipo, comRescisao: tipo==='com_rescisao', dataDesligamento: data, observacao: obs };
+    BtnGuard.wrap('rh-btn-conf-desl','Registrando…', function(done) {
+      GAS.rh.registrarDesligamento(dados, function(resp) {
+        done();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        _fecharModalRh(); Toast.sucesso('Desligamento registrado.'); carregarEquipe(); _carregarMetricas();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
+  }
+
   function _buscarCep(cep) {
     var c = String(cep||'').replace(/\D/g,'');
     if (c.length !== 8) return;
@@ -33167,6 +33230,7 @@ var RhUI = (function() {
           '</div>' +
           '<div style="display:flex;gap:6px;align-items:center;">' +
             '<button class="btn btn-secondary btn-sm" onclick="RhUI._fecharModalRh();RhUI.editarColab(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">edit</span> Editar</button>' +
+            (c.status !== 'desligado' ? '<button class="btn btn-perigo btn-sm" onclick="RhUI._fecharModalRh();RhUI.abrirModalDesligamento(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">logout</span> Desligar</button>' : '') +
             '<button class="btn btn-ghost btn-sm" onclick="RhUI._fecharModalRh()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>' +
           '</div>' +
         '</div>' +
@@ -34151,7 +34215,10 @@ var RhUI = (function() {
             acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-apr-fer-'+_esc(f.id)+'" onclick="RhUI.aprovarFerias(\''+_esc(f.id)+'\')">Aprovar</button>';
             acoes+='<button class="btn btn-error btn-sm" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
           }
-          if (f.status==='aprovado') acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
+          if (f.status==='aprovado') {
+            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\')"><span class="ms ms-sm">handshake</span> Acordo</button>';
+            acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
+          }
           var isAcordo = f.tipo==='nao_oficial';
           var tipoBadge = isAcordo
             ? '<span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;">Acordo</span>'
@@ -34164,6 +34231,41 @@ var RhUI = (function() {
             '<td>'+acoes+'</td></tr>';
         }).join('')+'</tbody></table>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function carregarPeriodosFerias() {
+    var id = (document.getElementById('rh-per-colab')||{}).value||'';
+    var el = document.getElementById('rh-per-lista');
+    if (!id) { if (el) el.innerHTML='<p class="muted-text">Selecione um colaborador para visualizar os períodos.</p>'; return; }
+    if (el) el.innerHTML=_empty('Carregando…');
+    GAS.rh.resumoFeriasColaborador(id, function(resp) {
+      if (!el) return;
+      if (!resp||!resp.ok) { el.innerHTML=_empty('Erro ao carregar.'); return; }
+      var d = resp.data;
+      if (!d||!d.periodos||!d.periodos.length) { el.innerHTML='<p class="muted-text" style="padding:10px;">Nenhum período calculado — verifique a data de admissão.</p>'; return; }
+      var SL = { em_aquisicao:'Em aquisição', em_concessao:'Em concessão', gozado:'Gozado', vencido:'Vencido' };
+      var SC = { em_aquisicao:'badge-info', em_concessao:'badge-warning', gozado:'badge-success', vencido:'badge-error' };
+      el.innerHTML = '<table class="tabela"><thead><tr>' +
+        '<th>#</th><th>Período Aquisitivo</th><th>Janela Concessiva</th>' +
+        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th>' +
+        '</tr></thead><tbody>' +
+        d.periodos.map(function(p) {
+          var cls = SC[p.status]||'badge-muted';
+          var lbl = SL[p.status]||p.status;
+          var saldoStr = p.saldo > 0
+            ? '<strong style="color:var(--warning,#e65100)">'+p.saldo+'d</strong>'
+            : '<strong style="color:var(--success,#2e7d32)">0d</strong>';
+          return '<tr>' +
+            '<td>'+p.numero+'</td>' +
+            '<td>'+_fmtData(p.aquisitivoInicio)+' – '+_fmtData(p.aquisitivoFim)+'</td>' +
+            '<td>'+_fmtData(p.concessivoInicio)+' – '+_fmtData(p.concessivoFim)+'</td>' +
+            '<td>'+p.diasDireito+'d</td>' +
+            '<td>'+(p.diasGozados||0)+'d</td>' +
+            '<td>'+saldoStr+'</td>' +
+            '<td><span class="badge '+cls+'">'+lbl+'</span></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table>';
+    }, function(e) { if (el) el.innerHTML=_empty('Erro: '+(e.message||e)); });
   }
 
   function abrirFormFerias(idColabPre) {
@@ -34294,6 +34396,73 @@ var RhUI = (function() {
         if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
         Toast.sucesso('Férias canceladas.'); carregarFerias();
       },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── ACORDO DE FÉRIAS ───────────────────────────────────────
+
+  function abrirFormAcordoFerias(id) {
+    _abrirModalRh(
+      '<div style="padding:20px;min-width:420px;">' +
+      '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">Registrar Acordo de Férias</h3>' +
+      '<p style="margin:0 0 14px;font-size:12px;color:var(--text2);">Registre o período efetivamente gozado. O saldo remanescente ficará disponível para nova solicitação.</p>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label">Início real *</label>' +
+          '<input id="rh-acr-ini" class="form-input" type="date" oninput="RhUI._acordoCalcDias()"></div>' +
+        '<div class="form-group"><label class="form-label">Fim real *</label>' +
+          '<input id="rh-acr-fim" class="form-input" type="date" oninput="RhUI._acordoCalcDias()"></div>' +
+      '</div>' +
+      '<div class="form-group"><label class="form-label">Dias efetivamente gozados *</label>' +
+        '<input id="rh-acr-dias" class="form-input" type="number" min="1" placeholder="Ex: 15" oninput="RhUI._acordoCalcSaldo()"></div>' +
+      '<div id="rh-acr-saldo-info" style="font-size:12px;background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:12px;color:var(--text2);">Preencha o período e os dias gozados</div>' +
+      '<div class="form-group"><label class="form-label">Observações</label>' +
+        '<textarea id="rh-acr-obs" class="form-input" rows="2"></textarea></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button id="rh-btn-conf-acr" class="btn btn-primario" onclick="RhUI._confirmarAcordoFerias(\'' + _esc(id) + '\')">' +
+          '<span class="ms ms-sm">check_circle</span> Registrar</button>' +
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>'
+    );
+  }
+
+  function _acordoCalcDias() {
+    var ini = (document.getElementById('rh-acr-ini')||{}).value||'';
+    var fim = (document.getElementById('rh-acr-fim')||{}).value||'';
+    var el  = document.getElementById('rh-acr-dias');
+    if (!ini||!fim||!el) return;
+    var total = Math.round((new Date(fim)-new Date(ini))/86400000)+1;
+    if (total > 0) el.value = total;
+    _acordoCalcSaldo();
+  }
+
+  function _acordoCalcSaldo() {
+    var ini  = (document.getElementById('rh-acr-ini')||{}).value||'';
+    var fim  = (document.getElementById('rh-acr-fim')||{}).value||'';
+    var dias = parseInt((document.getElementById('rh-acr-dias')||{}).value||'0')||0;
+    var el   = document.getElementById('rh-acr-saldo-info');
+    if (!el) return;
+    if (!ini||!fim||!dias) { el.textContent='Preencha o período e os dias gozados'; el.style.color=''; return; }
+    var total = Math.round((new Date(fim)-new Date(ini))/86400000)+1;
+    var saldo = Math.max(0, total-dias);
+    el.innerHTML = 'Período: <strong>'+total+'</strong> dias · Gozados: <strong>'+dias+'</strong> · Saldo remanescente: <strong style="color:'+(saldo>0?'var(--warning,#e65100)':'var(--success,#2e7d32)')+'">'+saldo+' dias</strong>';
+  }
+
+  function _confirmarAcordoFerias(id) {
+    var ini  = (document.getElementById('rh-acr-ini')||{}).value||'';
+    var fim  = (document.getElementById('rh-acr-fim')||{}).value||'';
+    var dias = parseInt((document.getElementById('rh-acr-dias')||{}).value||'0')||0;
+    var obs  = (document.getElementById('rh-acr-obs')||{}).value||'';
+    if (!ini||!fim) { Toast.aviso('Informe o período realmente gozado.'); return; }
+    if (!dias)      { Toast.aviso('Informe os dias efetivamente gozados.'); return; }
+    var dados = { periodoGozadoInicio: ini, periodoGozadoFim: fim, diasEfetivosGozados: dias, observacao: obs };
+    BtnGuard.wrap('rh-btn-conf-acr','Registrando…', function(done) {
+      GAS.rh.registrarAcordoFerias(id, dados, function(resp) {
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro.'); return; }
+        var saldo = resp.data && resp.data.saldo;
+        Toast.sucesso('Acordo registrado!' + (saldo > 0 ? ' Saldo de '+saldo+' dias a usufruir.' : ' Férias integralmente utilizadas.'));
+        carregarFerias();
+      }, function(e) { done(); Toast.erro(e.message||e); });
     });
   }
 
@@ -34777,6 +34946,10 @@ var RhUI = (function() {
     aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
     recusarFerias:recusarFerias, _confirmarRecusarFerias:_confirmarRecusarFerias,
     cancelarFerias:cancelarFerias, _confirmarCancelarFerias:_confirmarCancelarFerias,
+    abrirFormAcordoFerias:abrirFormAcordoFerias, _acordoCalcDias:_acordoCalcDias,
+    _acordoCalcSaldo:_acordoCalcSaldo, _confirmarAcordoFerias:_confirmarAcordoFerias,
+    carregarPeriodosFerias:carregarPeriodosFerias,
+    abrirModalDesligamento:abrirModalDesligamento, _confirmarDesligamento:_confirmarDesligamento,
     calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
     carregarIndicadores:carregarIndicadores, _fecharModalRh:_fecharModalRh,
     // F16.3 — Dashboard RH

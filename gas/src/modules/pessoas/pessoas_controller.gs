@@ -339,6 +339,31 @@ function ctrl_rh_cancelar_ferias(id, motivo) {
   }, 'ctrl_rh_cancelar_ferias');
 }
 
+function ctrl_rh_resumo_ferias_colaborador(idColaborador) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (!idColaborador) throw new Error('idColaborador é obrigatório.');
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) === -1) {
+      var idProprio = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+      if (!idProprio || idColaborador !== idProprio)
+        throw new Error('Acesso negado: você só pode consultar seus próprios períodos de férias.');
+    }
+    return PessoasEngine.resumoFeriasPorPeriodo(idColaborador, ctx.orgId);
+  }, 'ctrl_rh_resumo_ferias_colaborador');
+}
+
+function ctrl_rh_registrar_acordo_ferias(id, dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (nivel !== 'superadmin' && nivel !== 'admin' && nivel !== 'rh')
+      throw new Error('Apenas RH pode registrar acordo de férias.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.registrarAcordoFerias(id, dados || {}, ctx.email);
+  }, 'ctrl_rh_registrar_acordo_ferias');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // ESCALAS
 // ═══════════════════════════════════════════════════════════════════
