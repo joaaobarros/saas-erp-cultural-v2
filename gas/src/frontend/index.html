@@ -7900,18 +7900,6 @@ select.form-control { cursor: pointer; }
                       onchange="PontoUI._aoSelecionarColab()">
                 <option value="">— Todos os colaboradores —</option>
               </select>
-              <!-- Carga horária semanal — aparece quando colaborador selecionado -->
-              <div id="ponto-carga-horaria-wrap" class="oculto" style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-                <span style="font-size:12px;color:var(--text2);">Carga:</span>
-                <div style="display:flex;gap:3px;">
-                  <button class="btn btn-ghost btn-sm" id="ponto-ch-20" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(20)">20h</button>
-                  <button class="btn btn-ghost btn-sm" id="ponto-ch-30" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(30)">30h</button>
-                  <button class="btn btn-ghost btn-sm" id="ponto-ch-40" style="font-size:11px;padding:2px 8px;" onclick="PontoUI._setCarga(40)">40h</button>
-                  <input type="number" id="ponto-ch-custom" min="1" max="60" step="1"
-                         class="select-sm" style="width:60px;font-size:12px;text-align:center;"
-                         placeholder="h/sem" onchange="PontoUI._setCargaCustom(this.value)">
-                </div>
-              </div>
             </div>
           </div>
           <!-- Filtro de período — aparece apenas quando colaborador selecionado -->
@@ -8100,6 +8088,70 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">Pronomes</label><input id="rh-pf-pronomes" class="form-input" type="text" placeholder="ex: ela/dela, ele/dele"></div>
                 <div class="form-group"><label class="form-label">E-mail pessoal</label><input id="rh-pf-email-pessoal" class="form-input" type="email" placeholder="email@pessoal.com"></div>
                 <div class="form-group"><label class="form-label">Data de nascimento</label><input id="rh-pf-nascimento" class="form-input" type="date"></div>
+                <div class="form-group"><label class="form-label">Gênero</label>
+                  <select id="rh-pf-genero" class="form-input">
+                    <option value="">Prefiro não informar</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="nao_binario">Não-binário</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Orientação Sexual</label>
+                  <select id="rh-pf-sexualidade" class="form-input">
+                    <option value="">Prefiro não informar</option>
+                    <option value="heterossexual">Heterossexual</option>
+                    <option value="homossexual">Homossexual (gay/lésbica)</option>
+                    <option value="bissexual">Bissexual</option>
+                    <option value="pansexual">Pansexual</option>
+                    <option value="assexual">Assexual</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Raça/Cor (IBGE)</label>
+                  <select id="rh-pf-raca" class="form-input">
+                    <option value="">Prefiro não informar</option>
+                    <option value="branca">Branca</option>
+                    <option value="preta">Preta</option>
+                    <option value="parda">Parda</option>
+                    <option value="amarela">Amarela</option>
+                    <option value="indigena">Indígena</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Telefone / Celular</label><input id="rh-pf-telefone" class="form-input" type="tel" placeholder="(00) 00000-0000"></div>
+              </div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Contato de Emergência</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+                <div class="form-group"><label class="form-label">Nome</label><input id="rh-pf-emg-nome" class="form-input" type="text" placeholder="Nome do contato"></div>
+                <div class="form-group"><label class="form-label">Telefone</label><input id="rh-pf-emg-tel" class="form-input" type="tel" placeholder="(00) 00000-0000"></div>
+                <div class="form-group"><label class="form-label">Parentesco / Relação</label><input id="rh-pf-emg-parentesco" class="form-input" type="text" placeholder="Ex: Cônjuge, Mãe…"></div>
+              </div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Saúde e Outros</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                <div class="form-group"><label class="form-label">Tipo Sanguíneo</label>
+                  <select id="rh-pf-tipo-sanguineo" class="form-input">
+                    <option value="">Não informado</option>
+                    <option value="A+">A+</option><option value="A-">A-</option>
+                    <option value="B+">B+</option><option value="B-">B-</option>
+                    <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                    <option value="O+">O+</option><option value="O-">O-</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Alergias</label><input id="rh-pf-alergias" class="form-input" type="text" placeholder="Ex: amendoim, látex, penicilina…"></div>
+                <div class="form-group" style="grid-column:span 2">
+                  <label class="form-label">Restrições Alimentares</label>
+                  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;">
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-vegano" value="vegano"> Vegano</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-vegetariano" value="vegetariano"> Vegetariano</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-sem-gluten" value="sem_gluten"> Sem glúten</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-sem-lactose" value="sem_lactose"> Sem lactose</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-halal" value="halal"> Halal</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-kosher" value="kosher"> Kosher</label>
+                    <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-rest-outro" value="outro" onchange="var d=document.getElementById('rh-pf-rest-outro-detalhe');if(d)d.style.display=this.checked?'':'none';"> Outro</label>
+                  </div>
+                  <input id="rh-pf-rest-outro-detalhe" class="form-input" type="text" placeholder="Especifique a restrição…" style="margin-top:6px;display:none;">
+                </div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Observações Pessoais</label><textarea id="rh-pf-obs-pessoais" class="form-input" rows="3" style="resize:vertical;" placeholder="Informações adicionais relevantes sobre o colaborador…"></textarea></div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
               <div style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
@@ -31608,53 +31660,7 @@ var PontoUI = (function() {
   }
 
   function _aoSelecionarColab() {
-    var colEl  = document.getElementById('ponto-filtro-colab');
-    var colabId = colEl ? colEl.value.trim() : '';
-    var wrap    = document.getElementById('ponto-carga-horaria-wrap');
-    if (wrap) wrap.classList.toggle('oculto', !colabId);
-    if (colabId) {
-      var colab = _todosColabs.filter(function(c){ return c.id === colabId; })[0];
-      _renderCargaBotoes(colab ? (colab.horasSemanais || 40) : 40);
-    }
     carregarEspelho();
-  }
-
-  function _renderCargaBotoes(horas) {
-    ['20','30','40'].forEach(function(h) {
-      var btn = document.getElementById('ponto-ch-' + h);
-      if (btn) {
-        btn.style.background = (Number(horas) === Number(h)) ? 'var(--color-primary)' : '';
-        btn.style.color      = (Number(horas) === Number(h)) ? '#fff' : '';
-        btn.style.fontWeight = (Number(horas) === Number(h)) ? '700' : '';
-      }
-    });
-    var inp = document.getElementById('ponto-ch-custom');
-    if (inp) inp.value = [20,30,40].indexOf(Number(horas)) < 0 ? horas : '';
-  }
-
-  function _setCarga(horas) {
-    var colEl = document.getElementById('ponto-filtro-colab');
-    if (!colEl || !colEl.value) return;
-    _salvarCargaHoraria(colEl.value, horas);
-  }
-
-  function _setCargaCustom(val) {
-    var horas = Number(val);
-    if (!horas || horas < 1 || horas > 60) return;
-    var colEl = document.getElementById('ponto-filtro-colab');
-    if (!colEl || !colEl.value) return;
-    _salvarCargaHoraria(colEl.value, horas);
-  }
-
-  function _salvarCargaHoraria(colaboradorId, horas) {
-    GAS.ponto.atualizarCargaHoraria({ colaboradorId: colaboradorId, horasSemanais: horas }, function(r) {
-      if (!r || !r.ok) { Toast.erro('Erro ao salvar carga horária.'); return; }
-      // Atualiza cache local
-      _todosColabs.forEach(function(c){ if (c.id === colaboradorId) c.horasSemanais = horas; });
-      _renderCargaBotoes(horas);
-      Toast.sucesso('Carga horária atualizada: ' + horas + 'h/sem');
-      carregarEspelho();
-    }, function(e){ Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
   function setTab(tab, btn) {
@@ -32467,7 +32473,7 @@ var PontoUI = (function() {
     }, function(e){ if (done) done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _setCarga, _setCargaCustom, _salvarCargaHoraria, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico };
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
@@ -32724,6 +32730,27 @@ var RhUI = (function() {
     document.getElementById('rh-pf-bairro').value       = addr.bairro||'';
     document.getElementById('rh-pf-cidade').value       = addr.cidade||'';
     document.getElementById('rh-pf-uf').value           = addr.uf||'';
+    // Diversidade, contato e saúde
+    document.getElementById('rh-pf-genero').value         = colab?(colab.genero||''):'';
+    document.getElementById('rh-pf-sexualidade').value    = colab?(colab.sexualidade||''):'';
+    document.getElementById('rh-pf-raca').value           = colab?(colab.racaCor||colab.raca||''):'';
+    document.getElementById('rh-pf-telefone').value       = colab?(colab.telefone||colab.celular||''):'';
+    var _emgCtx = (colab && colab.contatoEmergencia) || {};
+    document.getElementById('rh-pf-emg-nome').value       = _emgCtx.nome||'';
+    document.getElementById('rh-pf-emg-tel').value        = _emgCtx.telefone||'';
+    document.getElementById('rh-pf-emg-parentesco').value = _emgCtx.parentesco||'';
+    document.getElementById('rh-pf-tipo-sanguineo').value = colab?(colab.tipoSanguineo||''):'';
+    document.getElementById('rh-pf-alergias').value       = colab?(colab.alergias||''):'';
+    document.getElementById('rh-pf-obs-pessoais').value   = colab?(colab.observacoesPessoais||colab.obsPessoais||''):'';
+    var _restsCtx = (colab && Array.isArray(colab.restricoesAlimentares)) ? colab.restricoesAlimentares : [];
+    document.querySelectorAll('[id^="rh-pf-rest-"]').forEach(function(cb){
+      if (cb.type === 'checkbox') cb.checked = _restsCtx.indexOf(cb.value) !== -1;
+    });
+    var _outroDetEl = document.getElementById('rh-pf-rest-outro-detalhe');
+    if (_outroDetEl) {
+      _outroDetEl.value        = colab?(colab.restricoesOutro||''):'';
+      _outroDetEl.style.display = (_restsCtx.indexOf('outro') !== -1) ? '' : 'none';
+    }
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
     if (pisEl) pisEl.value = colab?(colab.pis||colab.nis||''):'';
@@ -32930,6 +32957,20 @@ var RhUI = (function() {
       dataNascimento: document.getElementById('rh-pf-nascimento').value,
       numRegistro: document.getElementById('rh-pf-registro').value.trim(),
       pis:         (document.getElementById('rh-pf-pis')||{value:''}).value.trim(),
+      genero:       (document.getElementById('rh-pf-genero')||{value:''}).value,
+      sexualidade:  (document.getElementById('rh-pf-sexualidade')||{value:''}).value,
+      racaCor:      (document.getElementById('rh-pf-raca')||{value:''}).value,
+      telefone:     (document.getElementById('rh-pf-telefone')||{value:''}).value.trim(),
+      contatoEmergencia: {
+        nome:       (document.getElementById('rh-pf-emg-nome')||{value:''}).value.trim(),
+        telefone:   (document.getElementById('rh-pf-emg-tel')||{value:''}).value.trim(),
+        parentesco: (document.getElementById('rh-pf-emg-parentesco')||{value:''}).value.trim()
+      },
+      tipoSanguineo:         (document.getElementById('rh-pf-tipo-sanguineo')||{value:''}).value,
+      alergias:              (document.getElementById('rh-pf-alergias')||{value:''}).value.trim(),
+      observacoesPessoais:   (document.getElementById('rh-pf-obs-pessoais')||{value:''}).value.trim(),
+      restricoesAlimentares: Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-rest-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
+      restricoesOutro:       (document.getElementById('rh-pf-rest-outro-detalhe')||{value:''}).value.trim(),
       endereco: {
         cep:         document.getElementById('rh-pf-cep').value.trim(),
         logradouro:  document.getElementById('rh-pf-logradouro').value.trim(),

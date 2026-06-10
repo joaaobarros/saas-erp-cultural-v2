@@ -559,7 +559,7 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 46 (2026-06-09) → SESSÃO 47
+## HANDOFF ATUAL — SESSÃO 46b (2026-06-09) → SESSÃO 47
 
 ### Estado atual: Deploy @745 (GAS)
 
@@ -570,7 +570,7 @@ Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes 
 | Arquivo | Mudança |
 |---|---|
 | `ponto_controller.gs` | `ctrl_ponto_listar_colaboradores` retorna `nomeApelido` |
-| `index.html` | Bloco consolidado pós-tabela removido; `ponto-periodo-filter` com 4 pills (Este mês / Ano vigente / Últ. 12 meses / Desde admissão) altera `ponto-stats-strip`; `_setPeriodo`, `_renderStatsStrip`, `_carregarConsolidado` refatorados. Campo "Carga horária semanal" no form de colaborador (rh-pf-carga + botões 20h/30h/40h + custom); `salvarColab` inclui `horasSemanais` e registra evento `alteracao_carga` quando muda. Select de colaboradores exibe "Apelido (Nome)" quando apelido preenchido. |
+| `index.html` | Bloco consolidado pós-tabela removido; `ponto-periodo-filter` com 4 pills (Este mês / Ano vigente / Últ. 12 meses / Desde admissão) altera `ponto-stats-strip`; `_setPeriodo`, `_renderStatsStrip`, `_carregarConsolidado` refatorados. Campo "Carga horária semanal" no form de colaborador (rh-pf-carga + botões 20h/30h/40h + custom); `salvarColab` inclui `horasSemanais` e registra evento `alteracao_carga` quando muda. Select de colaboradores exibe "Apelido (Nome)" quando apelido preenchido. Seletor de carga removido do espelho (deploy @748): botões 20h/30h/40h, `_setCarga`, `_setCargaCustom`, `_salvarCargaHoraria`, `_renderCargaBotoes` excluídos. |
 
 ### Próxima sessão
 
