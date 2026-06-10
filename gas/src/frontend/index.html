@@ -35979,12 +35979,21 @@ var PerfilUI = (function() {
     var pro = document.getElementById('perfil-dados-pro');
     if (pro) pro.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.perfil.ler(function(resp) {
-      if (!resp || !resp.ok) { _mostrarMsg('Erro ao carregar perfil.', 'error'); return; }
+      var pro2 = document.getElementById('perfil-dados-pro');
+      if (!resp || !resp.ok) {
+        var msg = (resp && resp.error && resp.error.message) || 'Erro ao carregar perfil.';
+        _mostrarMsg(msg, 'error');
+        if (pro2) pro2.innerHTML = '<p style="color:var(--color-error);font-size:13px;">' + escaparHtml(msg) + '</p>';
+        return;
+      }
       _colab     = resp.data.colaborador;
       _carregado = true;
       _preencher();
     }, function(err) {
-      _mostrarMsg((err && err.message) || 'Erro ao carregar perfil.', 'error');
+      var pro2 = document.getElementById('perfil-dados-pro');
+      var msg = (err && err.message) || 'Erro ao carregar perfil.';
+      _mostrarMsg(msg, 'error');
+      if (pro2) pro2.innerHTML = '<p style="color:var(--color-error);font-size:13px;">' + escaparHtml(msg) + '</p>';
     });
   }
 

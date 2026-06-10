@@ -711,7 +711,18 @@ RH — Visibilidade de status: desligados ocultos + avatar overlay + bloqueio de
 1. Verificar no browser: colaboradores desligados não aparecem em nenhuma lista
 2. Testar avatar overlay — ferias deve mostrar 🏖️, afastado deve mostrar 🌿
 3. Testar bloqueio de tarefas — tentar atribuir a colaborador em férias → deve dar erro
-4. Verificar Meu Perfil salva corretamente (fix @760 — `ColaboradorRepository.salvar`)
+4. Verificar Meu Perfil carrega e salva (fix @764)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 46b (2026-06-10) — fix carregar eternamente
+
+Deploy @764. Detectado: fix anterior adicionava 3ª chamada Drive API (`lerJSON('usuarios_acesso.json')`) dentro de `ctrl_pessoas_meu_perfil_ler`. Corrigido com `ctx.registroAcesso` (zero Drive extra). Callback de erro do `PerfilUI.carregar()` agora exibe mensagem visível.
+
+| Arquivo | Mudança |
+|---|---|
+| `pessoas_controller.gs` | `_ctxPessoas()` expõe `registroAcesso`; `ctrl_pessoas_meu_perfil_ler` usa `ctx.registroAcesso` em vez de nova `lerJSON` |
+| `index.html` | `PerfilUI.carregar()` — callbacks de falha atualizam `#perfil-dados-pro` com msg de erro |
 
 ---
 

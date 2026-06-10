@@ -24,9 +24,10 @@ function _ctxPessoas() {
   var acesso = AcessoService.verificar(email);
   if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
   return {
-    email: email,
-    papel: acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador',
-    orgId: getOrgConfig().orgId
+    email:          email,
+    papel:          acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador',
+    orgId:          getOrgConfig().orgId,
+    registroAcesso: acesso.registro || null  // já lido por AcessoService — sem Drive extra
   };
 }
 
@@ -740,18 +741,12 @@ function ctrl_pessoas_meu_perfil_ler() {
       return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
     })[0] || null;
     // Enriquece com campos que podem viver apenas em usuarios_acesso.json
-    // (pronomes, apelido, telefone, emailPessoal, foto) se ausentes no registro do colaborador
-    if (eu) {
-      try {
-        var usrs = lerJSON('usuarios_acesso.json') || [];
-        var usr  = usrs.filter(function(u){
-          return (u.email||'').toLowerCase() === ctx.email.toLowerCase();
-        })[0];
-        if (usr) {
-          var _syncCampos = ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'];
-          _syncCampos.forEach(function(k){ if (!eu[k] && usr[k]) eu[k] = usr[k]; });
-        }
-      } catch(_e) {}
+    // Reutiliza o registro já lido em _ctxPessoas() — sem Drive extra
+    if (eu && ctx.registroAcesso) {
+      var _usr = ctx.registroAcesso;
+      ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'].forEach(function(k){
+        if (!eu[k] && _usr[k]) eu[k] = _usr[k];
+      });
     }
     return { encontrado: !!eu, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_ler');
