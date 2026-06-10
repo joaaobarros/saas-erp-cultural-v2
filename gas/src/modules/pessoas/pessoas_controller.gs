@@ -739,6 +739,20 @@ function ctrl_pessoas_meu_perfil_ler() {
     var eu     = colabs.filter(function(c){
       return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
     })[0] || null;
+    // Enriquece com campos que podem viver apenas em usuarios_acesso.json
+    // (pronomes, apelido, telefone, emailPessoal, foto) se ausentes no registro do colaborador
+    if (eu) {
+      try {
+        var usrs = lerJSON('usuarios_acesso.json') || [];
+        var usr  = usrs.filter(function(u){
+          return (u.email||'').toLowerCase() === ctx.email.toLowerCase();
+        })[0];
+        if (usr) {
+          var _syncCampos = ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'];
+          _syncCampos.forEach(function(k){ if (!eu[k] && usr[k]) eu[k] = usr[k]; });
+        }
+      } catch(_e) {}
+    }
     return { encontrado: !!eu, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_ler');
 }
@@ -754,7 +768,7 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
     _PERFIL_CAMPOS_EDITAVEIS.forEach(function(campo){
       if (Object.prototype.hasOwnProperty.call(dados, campo)) eu[campo] = dados[campo];
     });
-    ColaboradorRepository.atualizar(ctx.orgId, eu.id, eu);
+    ColaboradorRepository.salvar(ctx.orgId, eu);
     AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
 
     // Propagar campos de identificação para usuarios_acesso.json (fonte canônica de exibição)

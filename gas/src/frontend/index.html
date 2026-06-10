@@ -8105,7 +8105,16 @@ select.form-control { cursor: pointer; }
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Pessoais</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Como deseja ser chamado(a)</label><input id="rh-pf-apelido" class="form-input" type="text" placeholder="Apelido ou nome social"></div>
-                <div class="form-group"><label class="form-label">Pronomes</label><input id="rh-pf-pronomes" class="form-input" type="text" placeholder="ex: ela/dela, ele/dele"></div>
+                <div class="form-group"><label class="form-label">Pronomes</label>
+                  <select id="rh-pf-pronomes" class="form-input" onchange="RhUI._toggleRhPronoumesOutro()">
+                    <option value="">Prefiro não informar</option>
+                    <option value="ele/dele">Ele/dele</option>
+                    <option value="ela/dela">Ela/dela</option>
+                    <option value="elu/delu">Elu/delu</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                  <input id="rh-pf-pronomes-outro" class="form-input" type="text" placeholder="Informe os pronomes" style="display:none;margin-top:6px;">
+                </div>
                 <div class="form-group"><label class="form-label">E-mail pessoal</label><input id="rh-pf-email-pessoal" class="form-input" type="email" placeholder="email@pessoal.com"></div>
                 <div class="form-group"><label class="form-label">Data de nascimento</label><input id="rh-pf-nascimento" class="form-input" type="date"></div>
                 <div class="form-group"><label class="form-label">Gênero</label>
@@ -8847,7 +8856,16 @@ select.form-control { cursor: pointer; }
               <div class="card-header"><span class="card-title"><span class="ms ms-sm">badge</span> Apresentação</span></div>
               <div style="padding:12px 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label class="form-label">Como deseja ser chamado(a)</label><input id="p-apelido" class="form-input" type="text" placeholder="Apelido ou nome social"></div>
-                <div class="form-group"><label class="form-label">Pronomes</label><input id="p-pronomes" class="form-input" type="text" placeholder="ex: ela/dela, ele/dele"></div>
+                <div class="form-group"><label class="form-label">Pronomes</label>
+                  <select id="p-pronomes" class="form-input" onchange="PerfilUI._togglePronoumesOutro()">
+                    <option value="">Prefiro não informar</option>
+                    <option value="ele/dele">Ele/dele</option>
+                    <option value="ela/dela">Ela/dela</option>
+                    <option value="elu/delu">Elu/delu</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                  <input id="p-pronomes-outro" class="form-input" type="text" placeholder="Informe seus pronomes" style="display:none;margin-top:6px;">
+                </div>
               </div>
             </div>
 
@@ -32916,10 +32934,15 @@ var RhUI = (function() {
       var n = (c.nomeApelido||c.nome||'').trim().split(/\s+/);
       return n.length >= 2 ? (n[0][0]+(n[n.length-1][0])).toUpperCase() : (n[0]||'?').slice(0,2).toUpperCase();
     })();
-    if (c.fotoPerfil) {
-      return '<div class="user-avatar" style="width:34px;height:34px;flex-shrink:0;"><img src="'+c.fotoPerfil+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.textContent=\''+ini+'\';"></div>';
-    }
-    return '<div class="user-avatar" style="width:34px;height:34px;flex-shrink:0;font-size:11px;">'+ini+'</div>';
+    var overlay = c.status === 'ferias'
+      ? '<span title="Em férias" style="position:absolute;bottom:-3px;right:-4px;font-size:14px;line-height:1;pointer-events:none;">🏖️</span>'
+      : c.status === 'afastado'
+      ? '<span title="Afastado" style="position:absolute;bottom:-3px;right:-4px;font-size:14px;line-height:1;pointer-events:none;">🌿</span>'
+      : '';
+    var inner = c.fotoPerfil
+      ? '<img src="'+c.fotoPerfil+'" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentElement.textContent=\''+ini+'\';">'
+      : ini;
+    return '<div style="position:relative;display:inline-flex;width:34px;height:34px;flex-shrink:0;align-items:center;justify-content:center;" class="user-avatar">'+inner+overlay+'</div>';
   }
 
   function _renderEquipe(lista) {
@@ -33011,7 +33034,15 @@ var RhUI = (function() {
     if (!u) return;
     if (u.nome) { var el = document.getElementById('rh-pf-nome'); if (el && !el.value) el.value = u.nome; }
     if (u.nomeApelido) { var el2 = document.getElementById('rh-pf-apelido'); if (el2) el2.value = u.nomeApelido; }
-    if (u.pronomes)    { var el3 = document.getElementById('rh-pf-pronomes'); if (el3) el3.value = u.pronomes; }
+    if (u.pronomes) {
+      var _ps3 = document.getElementById('rh-pf-pronomes');
+      var _po3 = document.getElementById('rh-pf-pronomes-outro');
+      if (_ps3) {
+        var _fix3 = ['ele/dele','ela/dela','elu/delu'];
+        if (_fix3.indexOf(u.pronomes) !== -1) { _ps3.value = u.pronomes; if (_po3) { _po3.value=''; _po3.style.display='none'; } }
+        else { _ps3.value = 'outro'; if (_po3) { _po3.value = u.pronomes; _po3.style.display = ''; } }
+      }
+    }
     if (u.setor)       _popularSetorColab(u.setor);
   }
 
@@ -33039,7 +33070,16 @@ var RhUI = (function() {
     document.getElementById('rh-pf-admissao').value     = colab?((colab.dataAdmissao||'').slice(0,10)):'';
     document.getElementById('rh-pf-id').value           = colab?(colab.id||''):'';
     document.getElementById('rh-pf-apelido').value      = colab?(colab.nomeApelido||colab.apelido||''):'';
-    document.getElementById('rh-pf-pronomes').value     = colab?(colab.pronomes||''):'';
+    (function(){
+      var _pv  = colab?(colab.pronomes||''):'';
+      var _ps  = document.getElementById('rh-pf-pronomes');
+      var _po  = document.getElementById('rh-pf-pronomes-outro');
+      if (!_ps) return;
+      var _fix = ['ele/dele','ela/dela','elu/delu'];
+      if (!_pv) { _ps.value = ''; if (_po) { _po.value=''; _po.style.display='none'; } }
+      else if (_fix.indexOf(_pv) !== -1) { _ps.value = _pv; if (_po) { _po.value=''; _po.style.display='none'; } }
+      else { _ps.value = 'outro'; if (_po) { _po.value = _pv; _po.style.display = ''; } }
+    })();
     document.getElementById('rh-pf-email-pessoal').value= colab?(colab.emailPessoal||''):'';
     document.getElementById('rh-pf-nascimento').value   = colab?((colab.dataNascimento||'').slice(0,10)):'';
     document.getElementById('rh-pf-cep').value          = addr.cep||'';
@@ -33317,7 +33357,7 @@ var RhUI = (function() {
       vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao,
       horasSemanais: cargaHor,
       nomeApelido: document.getElementById('rh-pf-apelido').value.trim(),
-      pronomes:    document.getElementById('rh-pf-pronomes').value.trim(),
+      pronomes:    (function(){ var s=document.getElementById('rh-pf-pronomes'); if(!s) return ''; if(s.value==='outro'){var o=document.getElementById('rh-pf-pronomes-outro');return o?o.value.trim():'';} return s.value; })(),
       emailPessoal:document.getElementById('rh-pf-email-pessoal').value.trim(),
       dataNascimento: document.getElementById('rh-pf-nascimento').value,
       numRegistro: document.getElementById('rh-pf-registro').value.trim(),
@@ -34919,12 +34959,18 @@ var RhUI = (function() {
     '</div>');
   }
 
+  function _toggleRhPronoumesOutro() {
+    var sel = document.getElementById('rh-pf-pronomes');
+    var out = document.getElementById('rh-pf-pronomes-outro');
+    if (out) out.style.display = (sel && sel.value === 'outro') ? '' : 'none';
+  }
+
   return {
     aoAbrir:aoAbrir, setTab:setTab,
     carregarEquipe:carregarEquipe, _renderEquipe:_renderEquipe, _filtrarEquipe:_filtrarEquipe,
     abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
     editarColab:editarColab, verColab:verColab, _abrirFormEventoComColab:_abrirFormEventoComColab, _abrirFeriasComColab:_abrirFeriasComColab,
-    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario,
+    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro,
     excluirColab:excluirColab, _confirmarExcluirColab:_confirmarExcluirColab, _buscarCep:_buscarCep,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
@@ -36004,7 +36050,17 @@ var PerfilUI = (function() {
     var g = function(id) { return document.getElementById(id); };
     function _set(id, v) { var el=g(id); if(el) el.value=v||''; }
     _set('p-apelido', c.nomeApelido);
-    _set('p-pronomes', c.pronomes);
+    // Select de pronomes: predefinido ou "outro" com texto livre
+    (function(){
+      var _pv  = c.pronomes || '';
+      var _sel = g('p-pronomes');
+      var _out = g('p-pronomes-outro');
+      if (!_sel) return;
+      var _fix = ['ele/dele','ela/dela','elu/delu'];
+      if (!_pv) { _sel.value = ''; }
+      else if (_fix.indexOf(_pv) !== -1) { _sel.value = _pv; }
+      else { _sel.value = 'outro'; if (_out) { _out.value = _pv; _out.style.display = ''; } }
+    })();
     _set('p-email-pessoal', c.emailPessoal);
     _set('p-telefone', c.telefone||c.celular);
     var emg = c.contatoEmergencia || {};
@@ -36083,7 +36139,7 @@ var PerfilUI = (function() {
     var g = function(id){ return document.getElementById(id); };
     var dados = {
       nomeApelido:   (g('p-apelido')      ||{value:''}).value.trim(),
-      pronomes:      (g('p-pronomes')     ||{value:''}).value.trim(),
+      pronomes:      (function(){ var s=g('p-pronomes'); if(!s) return ''; if(s.value==='outro'){var o=g('p-pronomes-outro');return o?o.value.trim():'';} return s.value; })(),
       emailPessoal:  (g('p-email-pessoal')||{value:''}).value.trim(),
       telefone:      (g('p-telefone')     ||{value:''}).value.trim(),
       contatoEmergencia: {
@@ -36138,7 +36194,13 @@ var PerfilUI = (function() {
     });
   }
 
-  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar };
+  function _togglePronoumesOutro() {
+    var sel = document.getElementById('p-pronomes');
+    var out = document.getElementById('p-pronomes-outro');
+    if (out) out.style.display = (sel && sel.value === 'outro') ? '' : 'none';
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar, _togglePronoumesOutro:_togglePronoumesOutro };
 })();
 
 Router.registrar('perfil', 'Meu Perfil', PerfilUI.aoAbrir);

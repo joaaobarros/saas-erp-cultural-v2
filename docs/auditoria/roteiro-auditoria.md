@@ -690,6 +690,28 @@ Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes 
 
 ---
 
+## HANDOFF ATUAL — SESSÃO 46 (2026-06-10)
+
+### O que foi feito nesta sessão
+
+Meu Perfil — fix sync 3-vias + select pronomes.
+
+| Arquivo | Mudança |
+|---|---|
+| `pessoas_controller.gs` | `ctrl_pessoas_meu_perfil_salvar`: `ColaboradorRepository.atualizar` → `.salvar` (método inexistente → save sempre falhava) |
+| `pessoas_controller.gs` | `ctrl_pessoas_meu_perfil_ler`: merge de `nomeApelido`, `pronomes`, `telefone`, `emailPessoal`, `fotoPerfil` de `usuarios_acesso.json` quando ausentes no colaborador |
+| `index.html` | `p-pronomes` e `rh-pf-pronomes`: texto livre → select (ele/dele · ela/dela · elu/delu · outro) + campo condicional para pronomes personalizados |
+| `index.html` | `PerfilUI._preencher`: detecta valor predefinido vs "outro"; `PerfilUI.salvar`: coleta valor correto do select; `_togglePronoumesOutro` exportado |
+| `index.html` | `RhUI.abrirFormColab`, `salvarColab`, `_preencherDeUsuario`: mesma lógica para o select RH; `_toggleRhPronoumesOutro` exportado |
+
+### Próxima sessão
+
+1. Verificar no browser: Meu Perfil carrega campos (pronomes, emailPessoal, telefone) preenchidos
+2. Testar salvar no Meu Perfil — confirmar sem "Erro ao salvar"
+3. Verificar que ficha RH mostra pronomes corretos ao abrir o form
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 45 (2026-06-08) → SESSÃO 46
 
 ### Estado atual: ~267 bugs registrados · Deploy @704 (GAS)
