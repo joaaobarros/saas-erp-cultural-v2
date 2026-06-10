@@ -559,6 +559,27 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ---
 
+## HANDOFF ATUAL — SESSÃO 46 (2026-06-09) → SESSÃO 47
+
+### Estado atual: Deploy @745 (GAS)
+
+### O que foi feito nesta sessão (s46)
+
+Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes com apelido no filtro.
+
+| Arquivo | Mudança |
+|---|---|
+| `ponto_controller.gs` | `ctrl_ponto_listar_colaboradores` retorna `nomeApelido` |
+| `index.html` | Bloco consolidado pós-tabela removido; `ponto-periodo-filter` com 4 pills (Este mês / Ano vigente / Últ. 12 meses / Desde admissão) altera `ponto-stats-strip`; `_setPeriodo`, `_renderStatsStrip`, `_carregarConsolidado` refatorados. Campo "Carga horária semanal" no form de colaborador (rh-pf-carga + botões 20h/30h/40h + custom); `salvarColab` inclui `horasSemanais` e registra evento `alteracao_carga` quando muda. Select de colaboradores exibe "Apelido (Nome)" quando apelido preenchido. |
+
+### Próxima sessão
+
+1. Testar filtro de período no browser — verificar pills ativo, cards atualizam
+2. Testar carga no form colaborador — salvar + verificar evento no histórico
+3. Verificar nome com apelido no dropdown do espelho
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 45 (2026-06-08) → SESSÃO 46
 
 ### Estado atual: ~267 bugs registrados · Deploy @704 (GAS)

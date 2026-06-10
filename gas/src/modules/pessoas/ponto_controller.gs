@@ -592,7 +592,7 @@ function ctrl_ponto_listar_colaboradores(params) {
     var todos = lerJSON('colaboradores.json') || [];
     var colaboradores = todos
       .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; })
-      .map(function(c){ return { id: c.id, nome: c.nome || '', setor: c.setor || '', emailInstitucional: c.emailInstitucional || '', horasSemanais: c.horasSemanais || 40 }; })
+      .map(function(c){ return { id: c.id, nome: c.nome || '', nomeApelido: c.nomeApelido || c.apelido || '', setor: c.setor || '', emailInstitucional: c.emailInstitucional || '', horasSemanais: c.horasSemanais || 40 }; })
       .sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt-BR'); });
     var setores = [];
     try { setores = SistemaConfigService.getSetores(ctx.orgId) || []; } catch(_) {}
