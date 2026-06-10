@@ -559,11 +559,21 @@ Fix: nome de colaboradores cortado na primeira letra no preview AFD.
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 47 (2026-06-09) → SESSÃO 48
+## HANDOFF ATUAL — SESSÃO 47b (2026-06-09) → SESSÃO 48
 
-### Estado atual: Deploy @747 (GAS)
+### Estado atual: Deploy @750 (GAS)
 
-### O que foi feito nesta sessão (s47)
+### O que foi feito nesta sessão (s47b)
+
+Ponto: informe de atualização do espelho (último dia com batida) + remoção do seletor de carga do espelho + filtro de período nos cards.
+
+| Arquivo | Mudança |
+|---|---|
+| `index.html` | `_ultimaBatida` calculada ao carregar espelho; `_renderStatsStrip` exibe "Atualizado até DD/MM/AAAA" abaixo dos cards; seletor de carga removido do filtro do espelho. |
+
+### HANDOFF ANTERIOR — SESSÃO 47 (2026-06-09) → SESSÃO 47b
+
+### Estado anterior: Deploy @747
 
 RH: novos campos de diversidade, saúde e contatos no form de colaborador. Correções no módulo Pessoas/RH (bugs 1–8 da lista): scroll automático ao editar, barra de filtro, correção duplicatas ao editar, botão excluir (só RH/Superadmin), N° registro auto-gerado, PIS/NIS, busca de CEP via ViaCEP, ordenação setor+nome.
 

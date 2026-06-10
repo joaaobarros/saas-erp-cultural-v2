@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **RH — Form colaborador: campos de diversidade, saúde e contatos (2026-06-09)** — Deploy @747. Adicionados ao form de cadastro RH de colaboradores: Gênero, Orientação Sexual, Raça/Cor (IBGE), Telefone/Celular, Contato de Emergência (nome + telefone + parentesco, grid 3 colunas), Tipo Sanguíneo, Alergias, Restrições Alimentares (checkboxes: vegano, vegetariano, sem glúten, sem lactose, halal, kosher, outro + campo detalhe condicional) e Observações Pessoais. `abrirFormColab` popula todos os novos campos; `salvarColab` persiste tudo; restrições salvas como array de valores.
+**Fase atual**: **Ponto — Informe de atualização do espelho (2026-06-09)** — Deploy @750. Exibe "Atualizado até DD/MM/AAAA" (ícone update) abaixo dos cards de contabilização, calculado como o último dia com `numBatidas > 0` no mês visualizado. Não aparece se não há registros no mês. Implementado em `_renderStatsStrip` via var `_ultimaBatida` salva ao carregar o espelho.
+
+**Fase anterior**: **RH — Form colaborador: campos de diversidade, saúde e contatos (2026-06-09)** — Deploy @747. Adicionados ao form de cadastro RH de colaboradores: Gênero, Orientação Sexual, Raça/Cor (IBGE), Telefone/Celular, Contato de Emergência (nome + telefone + parentesco, grid 3 colunas), Tipo Sanguíneo, Alergias, Restrições Alimentares (checkboxes: vegano, vegetariano, sem glúten, sem lactose, halal, kosher, outro + campo detalhe condicional) e Observações Pessoais. `abrirFormColab` popula todos os novos campos; `salvarColab` persiste tudo; restrições salvas como array de valores.
 
 **Fase anterior**: **Ponto — Remover seletor de carga do espelho (2026-06-09)** — Deploy @748. Botões 20h/30h/40h + input de carga removidos do filtro do espelho de ponto. A carga agora é lida exclusivamente do cadastro do colaborador (`horasSemanais`), com fallback de 40h. Funções `_setCarga`, `_setCargaCustom`, `_salvarCargaHoraria`, `_renderCargaBotoes` removidas do PontoUI.
 
