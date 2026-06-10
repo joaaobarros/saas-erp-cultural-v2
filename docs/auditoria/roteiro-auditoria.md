@@ -468,7 +468,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 54 (2026-06-10) → SESSÃO 55
+## HANDOFF ATUAL — SESSÃO 55 (2026-06-10) → SESSÃO 56
+
+### Estado atual: ~265 bugs registrados · Deploy @774 (GAS)
+
+### O que foi feito nesta sessão (s55)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @774 | Telefone — máscara + WPP + Toast | Máscara `(00) 00000-0000` global via event delegation; indicador WPP (checkbox verde) em 9 campos de telefone; `Toast.sucesso`/`Toast.erro` substituem `_mostrarMsg` no save do Meu Perfil; `telefoneWpp` em `_PERFIL_CAMPOS_EDITAVEIS`. |
+
+### Pendentes / próxima ação
+- **Testar telefones**: digitar número em qualquer campo tel → máscara aplica; marcar WPP → salvar → reabrir → checkbox deve estar marcado
+- **Testar Toast Meu Perfil**: salvar → Toast verde "Perfil atualizado com sucesso!" deve aparecer (canto inferior), não mensagem no topo do form
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 54 (2026-06-10) → SESSÃO 55
 
 ### Estado atual: ~265 bugs registrados · Deploy @773 (GAS)
 

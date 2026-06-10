@@ -724,7 +724,7 @@ function ctrl_pccs_salvarTabela(pccsId, tabelaSalarial, parametros) {
 // ═══════════════════════════════════════════════════════════════════
 
 var _PERFIL_CAMPOS_EDITAVEIS = [
-  'nomeApelido','pronomes','emailPessoal','telefone','endereco',
+  'nomeApelido','pronomes','emailPessoal','telefone','telefoneWpp','endereco',
   'genero','sexualidade','racaCor',
   'tipoSanguineo','alergias','restricoesAlimentares','restricoesOutro','observacoesPessoais',
   'contatoEmergencia','fotoPerfil'
