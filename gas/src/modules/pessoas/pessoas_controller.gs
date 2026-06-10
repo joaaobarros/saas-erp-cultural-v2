@@ -756,6 +756,26 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
     });
     ColaboradorRepository.atualizar(ctx.orgId, eu.id, eu);
     AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
+
+    // Propagar campos de identificação para usuarios_acesso.json (fonte canônica de exibição)
+    var emailInst = (eu.emailInstitucional || eu.email || '').toLowerCase().trim();
+    if (emailInst) {
+      var _camposSyncAcesso = ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'];
+      try {
+        modifyJSON('usuarios_acesso.json', function(lista) {
+          if (!Array.isArray(lista)) return lista;
+          var usr = lista.filter(function(u){ return (u.email||'').toLowerCase() === emailInst; })[0];
+          if (!usr) return lista;
+          _camposSyncAcesso.forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(dados, k)) usr[k] = dados[k];
+          });
+          usr.atualizadoEm = new Date().toISOString();
+          return lista;
+        });
+        try { BootService.limparCache(emailInst); } catch(_) {}
+      } catch(_) {}
+    }
+
     return { ok: true, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_salvar');
 }

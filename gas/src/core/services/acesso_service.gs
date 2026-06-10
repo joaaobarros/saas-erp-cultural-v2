@@ -534,6 +534,22 @@ function ctrl_acesso_editarPapel(params) {
     // Invalida o cache de boot do usuário editado para refletir novas permissões
     try { BootService.limparCache(params.email); } catch(_e) {}
 
+    // Propagar setor para colaboradores.json (fonte canônica de RH)
+    if (params.setor !== undefined && typeof ColaboradorRepository !== 'undefined') {
+      try {
+        var _orgCfg = getOrgConfig();
+        var _colabs = ColaboradorRepository.listar(_orgCfg.orgId);
+        var _emailAlvoLower = (params.email || '').toLowerCase();
+        var _colab = _colabs.filter(function(c){
+          return (c.emailInstitucional||c.email||'').toLowerCase() === _emailAlvoLower;
+        })[0];
+        if (_colab && _colab.setor !== (params.setor || '')) {
+          _colab.setor = params.setor || '';
+          ColaboradorRepository.atualizar(_orgCfg.orgId, _colab.id, _colab);
+        }
+      } catch(_e) {}
+    }
+
     AuditoriaService.registrar('USUARIO_PAPEL_EDITADO', 'acesso',
       { email: params.email, papel: params.papel, setor: params.setor, admin: emailAdmin });
     return { ok: true, email: params.email, papel: params.papel };

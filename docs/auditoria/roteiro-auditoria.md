@@ -468,7 +468,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 52 (2026-06-09) → SESSÃO 53
+## HANDOFF ATUAL — SESSÃO 53 (2026-06-09) → SESSÃO 54
+
+### Estado atual: ~265 bugs registrados · Deploy @759 (GAS)
+
+### O que foi feito nesta sessão (s53)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @759 | Perfil Pessoal — sync 3-vias | `ctrl_pessoas_meu_perfil_salvar` propaga nomeApelido/pronomes/telefone/emailPessoal/fotoPerfil para `usuarios_acesso.json`; `ctrl_acesso_editarPapel` propaga setor para `colaboradores.json`; `PerfilUI.salvar()` atualiza sidebar-user-name, topbar-email e header da view em sessão. |
+
+### Pendentes / próxima ação
+- **Testar Meu Perfil**: abrir, editar apelido/foto → salvar → sidebar deve exibir novo nome imediatamente
+- **Testar sync RH → Perfil**: RH abre ficha de colaborador, preenche campos (genero, telefone) → usuário abre Meu Perfil → deve ver os dados preenchidos
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 52 (2026-06-09) → SESSÃO 53
 
 ### Estado atual: ~265 bugs registrados · Deploy @757 (GAS)
 

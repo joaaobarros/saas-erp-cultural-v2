@@ -36117,12 +36117,21 @@ var PerfilUI = (function() {
       _colab    = resp.data.colaborador;
       _fotoTemp = null;
       _atualizarFotoDisplay(_colab.fotoPerfil || null);
-      // Atualiza nome no sidebar se apelido foi definido
-      if (_colab.nomeApelido) {
-        var sn = document.getElementById('sidebar-user-name');
-        if (sn) sn.textContent = _colab.nomeApelido;
-        document.getElementById('perfil-nome-display').textContent = _colab.nomeApelido+' ('+(_colab.nome||'')+')';
+      // Atualiza nome em toda a UI (sidebar, topbar, header da view)
+      var _exibirNome = _colab.nomeApelido || _colab.nome || '';
+      if (_exibirNome) {
+        var _sn = document.getElementById('sidebar-user-name');
+        if (_sn) _sn.textContent = _exibirNome;
+        var _te = document.getElementById('topbar-email');
+        if (_te) _te.textContent = _exibirNome;
       }
+      var _nomeHeader = _colab.nomeApelido ? (_colab.nomeApelido+' ('+(_colab.nome||'')+')') : (_colab.nome||'—');
+      var _nd = document.getElementById('perfil-nome-display');
+      if (_nd) _nd.textContent = _nomeHeader;
+      var _cd = document.getElementById('perfil-cargo-display');
+      if (_cd) _cd.textContent = _colab.cargo||'';
+      var _sd = document.getElementById('perfil-setor-display');
+      if (_sd) _sd.textContent = _colab.setor ? ('Setor: '+_colab.setor) : '';
       _mostrarMsg('Perfil atualizado com sucesso!', 'ok');
     }, function(err) {
       _mostrarMsg((err && err.message) || 'Erro ao salvar.', 'error');
