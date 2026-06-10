@@ -8004,15 +8004,23 @@ select.form-control { cursor: pointer; }
               <h4 style="margin:0;font-size:15px;">Métricas de Conformidade Trabalhista</h4>
               <p style="margin:2px 0 0;font-size:12px;color:var(--text2);">Acompanhamento por RH — carga horária, banco de horas e indicadores CLT.</p>
             </div>
-            <div style="display:flex;gap:6px;align-items:center;">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
               <input type="month" id="ponto-metricas-mes" class="select-sm" style="width:auto;">
+              <select id="ponto-metricas-setor" class="select-sm" style="width:auto;" onchange="PontoUI.filtrarMetricasSetor()" data-bg-skip="1">
+                <option value="">Todos os setores</option>
+              </select>
               <button id="btn-carregar-metricas" class="btn btn-ghost btn-sm"
                       onclick="BtnGuard.wrap('btn-carregar-metricas','Calculando…',PontoUI.carregarMetricasRh)">
                 <span class="ms ms-sm">refresh</span> Atualizar
               </button>
+              <button id="btn-tendencias-metricas" class="btn btn-ghost btn-sm"
+                      onclick="BtnGuard.wrap('btn-tendencias-metricas','Carregando…',PontoUI.carregarTendencias)">
+                <span class="ms ms-sm">trending_up</span> Evolução
+              </button>
             </div>
           </div>
           <div id="ponto-metricas-conteudo"><p class="muted-text">Selecione o mês e clique em Atualizar.</p></div>
+          <div id="ponto-metricas-tendencias"></div>
         </div>
       </div><!-- /view-ponto -->
 
@@ -9658,6 +9666,7 @@ var GAS = {
     atualizarCargaHoraria:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_atualizar_carga_horaria(d||{}); },
     consolidado:             function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_consolidado(d||{}); },
     metricasRh:              function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_metricas_rh(d||{}); },
+    tendenciasRh:            function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_tendencias_rh(d||{}); },
     recalcularBhTodos:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_recalcular_bh_todos(d||{}); }
   },
   encargos: {
@@ -31828,6 +31837,8 @@ var PontoUI = (function() {
   var _saldoBHAtual   = 0;
   var _ultimaBatida   = null;
   var _consolidadoCache = null;
+  var _metrDados        = null; // cache: dados do mês selecionado
+  var _tendDados        = null; // cache: tendências por colaborador
 
   function _podeVerTodos() {
     var b = App.getBoot && App.getBoot();
@@ -34402,7 +34413,7 @@ var RhUI = (function() {
     BtnGuard.wrap('rh-btn-conf-apr-fer','Aprovando…',function(done){
       GAS.rh.aprovarFerias(id,{},function(resp){
         done(); _fecharModalRh();
-        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)||'Erro ao aprovar férias.'); return; }
         Toast.sucesso('Férias aprovadas!'); carregarFerias();
       },function(e){ done(); Toast.erro(e.message||e); });
     });
@@ -34423,7 +34434,7 @@ var RhUI = (function() {
     BtnGuard.wrap('rh-btn-conf-rec-fer','Recusando…',function(done){
       GAS.rh.recusarFerias(id,motivo,function(resp){
         done(); _fecharModalRh();
-        if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)||'Erro ao recusar férias.'); return; }
         Toast.sucesso('Férias recusadas.'); carregarFerias();
       },function(e){ done(); Toast.erro(e.message||e); });
     });

@@ -140,7 +140,7 @@ var PessoasEngine = (function () {
   function _transitarColaborador(colaborador, novoStatus, emailOperador) {
     var atual = colaborador.status || 'ativo';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('colaborador_status', atual, novoStatus);
+      FsmGuardian.assertValida('colaborador_status', atual, novoStatus);
     }
     colaborador.status = novoStatus;
     colaborador.ativo  = (novoStatus !== 'desligado' && novoStatus !== 'inativo');
@@ -153,7 +153,7 @@ var PessoasEngine = (function () {
   function _transitarFerias(ferias, novoStatus, emailOperador, dados) {
     var atual = ferias.status || 'pendente';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('ferias_status', atual, novoStatus);
+      FsmGuardian.assertValida('ferias_status', atual, novoStatus);
     }
     dados = dados || {};
     ferias.status      = novoStatus;
@@ -313,7 +313,20 @@ var PessoasEngine = (function () {
   function listarFerias(filtros, orgId) {
     orgId   = orgId || _orgId();
     filtros = Object.assign({ orgId: orgId }, filtros || {});
-    return ColaboradorRepository.listarFerias(filtros);
+    var lista = ColaboradorRepository.listarFerias(filtros);
+    // Enrich with collaborator name (avoid showing raw ID in UI)
+    var _cache = {};
+    lista.forEach(function(f) {
+      if (f.nomeColaborador || !f.idColaborador) return;
+      try {
+        if (!_cache[f.idColaborador]) {
+          var c = ColaboradorRepository.buscarPorId(orgId, f.idColaborador);
+          _cache[f.idColaborador] = c ? (c.nomeApelido || c.nome || f.idColaborador) : f.idColaborador;
+        }
+        f.nomeColaborador = _cache[f.idColaborador];
+      } catch (_) {}
+    });
+    return lista;
   }
 
   function saldoFerias(idColaborador, orgId) {
@@ -587,23 +600,34 @@ var PessoasEngine = (function () {
    */
   function calcularPeriodosAquisitivos(dataAdmissao) {
     if (!dataAdmissao) return [];
-    var adm = new Date(dataAdmissao);
+    // Parse timezone-safely: ISO string → local Date (avoid UTC midnight shift)
+    var parts = String(dataAdmissao).slice(0, 10).split('-');
+    if (parts.length < 3) return [];
+    var adm = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     if (isNaN(adm.getTime())) return [];
-    var hoje = new Date().toISOString().slice(0, 10);
+    // Today in local timezone
+    var _now = new Date();
+    var _pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var hoje = _now.getFullYear() + '-' + _pad(_now.getMonth() + 1) + '-' + _pad(_now.getDate());
+    var _fmtLocal = function(d) {
+      return d.getFullYear() + '-' + _pad(d.getMonth() + 1) + '-' + _pad(d.getDate());
+    };
     var periodos = [];
     for (var n = 0; n <= 30; n++) {
-      var aqIni = new Date(adm.getFullYear() + n, adm.getMonth(), adm.getDate()).toISOString().slice(0, 10);
+      var aqIniD = new Date(adm.getFullYear() + n, adm.getMonth(), adm.getDate());
+      var aqIni  = _fmtLocal(aqIniD);
       // Se o período aquisitivo ainda não começou, parar
       if (aqIni > hoje) break;
       var aqFimD = new Date(adm.getFullYear() + n + 1, adm.getMonth(), adm.getDate());
       aqFimD.setDate(aqFimD.getDate() - 1);
-      var aqFim = aqFimD.toISOString().slice(0, 10);
-      var concIni = new Date(adm.getFullYear() + n + 1, adm.getMonth(), adm.getDate()).toISOString().slice(0, 10);
+      var aqFim    = _fmtLocal(aqFimD);
+      var concIniD = new Date(adm.getFullYear() + n + 1, adm.getMonth(), adm.getDate());
+      var concIni  = _fmtLocal(concIniD);
       var concFimD = new Date(adm.getFullYear() + n + 2, adm.getMonth(), adm.getDate());
       concFimD.setDate(concFimD.getDate() - 1);
-      var concFim = concFimD.toISOString().slice(0, 10);
+      var concFim  = _fmtLocal(concFimD);
       var status;
-      if (hoje <= aqFim)       status = 'em_aquisicao';
+      if (hoje <= aqFim)        status = 'em_aquisicao';
       else if (hoje <= concFim) status = 'em_concessao';
       else                      status = 'vencido';
       periodos.push({
@@ -707,7 +731,7 @@ var PessoasEngine = (function () {
   function _transitarAfastamento(afastamento, novoStatus, emailOperador, dados) {
     var atual = afastamento.status || 'rascunho';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('afastamento_status', atual, novoStatus);
+      FsmGuardian.assertValida('afastamento_status', atual, novoStatus);
     }
     dados = dados || {};
     afastamento.status = novoStatus;

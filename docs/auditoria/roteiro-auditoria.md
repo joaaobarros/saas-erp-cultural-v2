@@ -468,7 +468,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 55 (2026-06-10) → SESSÃO 56
+## HANDOFF ATUAL — SESSÃO 56 (2026-06-10) → SESSÃO 57
+
+### Estado atual: ~265 bugs registrados · Deploy @777 (GAS)
+
+### O que foi feito nesta sessão (s56)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @777 | Férias — fix crítico FsmGuardian + nome + timezone | `FsmGuardian.validarTransicao` → `assertValida` (método inexistente causava TypeError em toda transição); `listarFerias` enriquece com `nomeColaborador`; `calcularPeriodosAquisitivos` timezone-safe; Toast mostra erro real. |
+
+### Pendentes / próxima ação
+- **Testar aprovar férias**: não deve mais mostrar "Erro. Erro." — deve aprovar corretamente
+- **Verificar coluna Colaborador**: deve exibir nome, não ID `col_1780...`
+- **Verificar períodos aquisitivos**: se `dataAdmissao` de João Paulo estiver incorreta (ex: 2026-05-31), corrigir na Ficha RH para a data real de admissão
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 55 (2026-06-10) → SESSÃO 56
 
 ### Estado atual: ~265 bugs registrados · Deploy @774 (GAS)
 
@@ -481,7 +499,6 @@
 ### Pendentes / próxima ação
 - **Testar telefones**: digitar número em qualquer campo tel → máscara aplica; marcar WPP → salvar → reabrir → checkbox deve estar marcado
 - **Testar Toast Meu Perfil**: salvar → Toast verde "Perfil atualizado com sucesso!" deve aparecer (canto inferior), não mensagem no topo do form
-- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
 
 ---
 
