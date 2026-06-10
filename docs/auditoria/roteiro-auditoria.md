@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @738 · ~265 bugs registrados (ver tabela abaixo para ativos)
+> Deploy atual: @765 · Unificação base usuários — colaboradores.json fonte única de verdade
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

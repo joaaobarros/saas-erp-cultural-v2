@@ -24,10 +24,9 @@ function _ctxPessoas() {
   var acesso = AcessoService.verificar(email);
   if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
   return {
-    email:          email,
-    papel:          acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador',
-    orgId:          getOrgConfig().orgId,
-    registroAcesso: acesso.registro || null  // já lido por AcessoService — sem Drive extra
+    email: email,
+    papel: acesso.registro && acesso.registro.papel ? acesso.registro.papel : 'colaborador',
+    orgId: getOrgConfig().orgId
   };
 }
 
@@ -161,7 +160,7 @@ function ctrl_pessoas_salvar(dados) {
     if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
       throw new Error('Apenas RH e administradores podem cadastrar colaboradores.');
     var id = PessoasEngine.salvar(dados || {}, ctx.email, ctx.orgId);
-    // Sync setor/nomeApelido/pronomes para o registro de usuário vinculado
+    // Sync mínimo para usuarios_acesso.json: apenas setor e nome como fallback de exibição
     var emailInst = String((dados||{}).emailInstitucional || '').toLowerCase().trim();
     if (emailInst) {
       try {
@@ -169,10 +168,8 @@ function ctrl_pessoas_salvar(dados) {
           if (!Array.isArray(lista)) return lista;
           var usr = lista.find(function(u){ return (u.email||'').toLowerCase() === emailInst; });
           if (!usr) return lista;
-          if (dados.setor       !== undefined) usr.setor       = dados.setor || usr.setor;
-          if (dados.nomeApelido !== undefined) usr.nomeApelido = dados.nomeApelido;
-          if (dados.pronomes    !== undefined) usr.pronomes    = dados.pronomes;
-          if (dados.nome        && !usr.nome)  usr.nome        = dados.nome;
+          if (dados.setor !== undefined) usr.setor = dados.setor || usr.setor;
+          if (dados.nome  && !usr.nome)  usr.nome  = dados.nome;
           usr.atualizadoEm = new Date().toISOString();
           return lista;
         });
@@ -735,56 +732,23 @@ var _PERFIL_CAMPOS_EDITAVEIS = [
 
 function ctrl_pessoas_meu_perfil_ler() {
   return GasResponse.wrap(function () {
-    var ctx    = _ctxPessoas();
-    var colabs = ColaboradorRepository.listar(ctx.orgId);
-    var eu     = colabs.filter(function(c){
-      return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
-    })[0] || null;
-    // Enriquece com campos que podem viver apenas em usuarios_acesso.json
-    // Reutiliza o registro já lido em _ctxPessoas() — sem Drive extra
-    if (eu && ctx.registroAcesso) {
-      var _usr = ctx.registroAcesso;
-      ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'].forEach(function(k){
-        if (!eu[k] && _usr[k]) eu[k] = _usr[k];
-      });
-    }
+    var ctx = _ctxPessoas();
+    var eu  = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
     return { encontrado: !!eu, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_ler');
 }
 
 function ctrl_pessoas_meu_perfil_salvar(dados) {
   return GasResponse.wrap(function () {
-    var ctx    = _ctxPessoas();
-    var colabs = ColaboradorRepository.listar(ctx.orgId);
-    var eu     = colabs.filter(function(c){
-      return (c.emailInstitucional||c.email||'').toLowerCase() === ctx.email.toLowerCase();
-    })[0] || null;
+    var ctx = _ctxPessoas();
+    var eu  = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
     if (!eu) throw new Error('Seu usuário não está vinculado a um colaborador no sistema.');
     _PERFIL_CAMPOS_EDITAVEIS.forEach(function(campo){
       if (Object.prototype.hasOwnProperty.call(dados, campo)) eu[campo] = dados[campo];
     });
     ColaboradorRepository.salvar(ctx.orgId, eu);
     AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
-
-    // Propagar campos de identificação para usuarios_acesso.json (fonte canônica de exibição)
-    var emailInst = (eu.emailInstitucional || eu.email || '').toLowerCase().trim();
-    if (emailInst) {
-      var _camposSyncAcesso = ['nomeApelido','pronomes','telefone','emailPessoal','fotoPerfil'];
-      try {
-        modifyJSON('usuarios_acesso.json', function(lista) {
-          if (!Array.isArray(lista)) return lista;
-          var usr = lista.filter(function(u){ return (u.email||'').toLowerCase() === emailInst; })[0];
-          if (!usr) return lista;
-          _camposSyncAcesso.forEach(function(k){
-            if (Object.prototype.hasOwnProperty.call(dados, k)) usr[k] = dados[k];
-          });
-          usr.atualizadoEm = new Date().toISOString();
-          return lista;
-        });
-        try { BootService.limparCache(emailInst); } catch(_) {}
-      } catch(_) {}
-    }
-
+    try { BootService.limparCache(ctx.email); } catch(_) {}
     return { ok: true, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_salvar');
 }
@@ -811,4 +775,55 @@ function fase1_colaboradores_migrarFuncionarios() {
   return GasResponse.wrap(function () {
     return PessoasEngine.migrarFuncionariosParaColaboradores(getOrgConfig().orgId);
   }, 'fase1_colaboradores_migrarFuncionarios');
+}
+
+/**
+ * Migração única: copia campos pessoais de usuarios_acesso.json → colaboradores.json
+ * e remove esses campos do arquivo de acesso.
+ * Idempotente: só sobrescreve campos vazios no colaborador.
+ * Executar UMA vez no GAS Editor após o deploy desta versão.
+ */
+function ctrl_pessoas_meu_perfil_migrar_acesso_para_colaboradores() {
+  return GasResponse.wrap(function () {
+    var orgId       = getOrgConfig().orgId;
+    var _campos     = ['pronomes', 'nomeApelido', 'emailPessoal', 'telefone', 'fotoPerfil'];
+    var registros   = lerJSON('usuarios_acesso.json') || [];
+    var importados  = 0;
+    var ignorados   = 0;
+
+    registros.forEach(function(usr) {
+      if (!usr.email) { ignorados++; return; }
+      var temDados = _campos.some(function(k) { return !!usr[k]; });
+      if (!temDados) { ignorados++; return; }
+
+      var colab = ColaboradorRepository.buscarPorEmail(orgId, usr.email);
+      if (!colab) { ignorados++; return; }
+
+      var alterado = false;
+      _campos.forEach(function(k) {
+        if (usr[k] && !colab[k]) { colab[k] = usr[k]; alterado = true; }
+      });
+
+      if (alterado) {
+        ColaboradorRepository.salvar(orgId, colab);
+        importados++;
+      } else {
+        ignorados++;
+      }
+    });
+
+    // Limpar campos pessoais de usuarios_acesso.json
+    modifyJSON('usuarios_acesso.json', function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      return lista.map(function(u) {
+        _campos.forEach(function(k) { delete u[k]; });
+        u.atualizadoEm = new Date().toISOString();
+        return u;
+      });
+    });
+
+    AuditoriaService.registrar('MIGRACAO_ACESSO_PARA_COLABORADORES', 'admin',
+      { importados: importados, ignorados: ignorados });
+    return { importados: importados, ignorados: ignorados };
+  }, 'ctrl_pessoas_meu_perfil_migrar_acesso_para_colaboradores');
 }

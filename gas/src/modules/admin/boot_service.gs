@@ -77,6 +77,10 @@ var BootService = (function () {
       }
     } catch(_e) {}
 
+    // Enriquecer dados de exibição a partir do colaborador (fonte única de verdade)
+    var colab = null;
+    try { colab = ColaboradorRepository.buscarPorEmail(orgId, email); } catch(_e) {}
+
     // Matriz de permissões por módulo (papel × módulo → {visualizar, editar, excluir})
     // Aplica overrides individuais do registro do usuário, se existirem.
     var permissoesModulos = {};
@@ -132,9 +136,11 @@ var BootService = (function () {
       orgId:              orgId,
       orgConfig:          orgConfig,
       usuarioEmail:       email,
-      usuarioNome:        (acesso && acesso.registro && acesso.registro.nome) || '',
+      usuarioNome:        (colab && (colab.nomeApelido || colab.nome)) || (acesso && acesso.registro && acesso.registro.nome) || '',
       usuarioPapel:       usuarioPapel,
-      usuarioSetor:       (acesso && acesso.registro && acesso.registro.setor) || '',
+      usuarioSetor:       (colab && colab.setor) || (acesso && acesso.registro && acesso.registro.setor) || '',
+      usuarioCargo:       (colab && colab.cargo) || '',
+      usuarioFoto:        (colab && colab.fotoPerfil) || '',
       permissoesModulos:  permissoesModulos,
       papeisAtribuiveis:  papeisAtribuiveis,
       featuresAtivas:     featuresAtivas,

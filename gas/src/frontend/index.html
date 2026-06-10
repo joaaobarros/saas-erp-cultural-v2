@@ -25976,16 +25976,8 @@ var App = (function() {
     document.getElementById('topbar-avatar').textContent    = iniciais;
     document.getElementById('sidebar-avatar').textContent   = iniciais;
     document.title = 'TRAMAR — ' + nome;
-    // Foto de perfil — carrega silenciosamente 2s após o boot para não atrasar a UI
-    setTimeout(function() {
-      if (typeof GAS !== 'undefined' && GAS.perfil) {
-        GAS.perfil.ler(function(r) {
-          if (r && r.ok && r.data && r.data.colaborador && r.data.colaborador.fotoPerfil) {
-            setAvatarGlobal(r.data.colaborador.fotoPerfil, iniciais);
-          }
-        }, function(){});
-      }
-    }, 2000);
+    // Foto de perfil — já vem no boot, sem chamada extra
+    if (_boot.usuarioFoto) setAvatarGlobal(_boot.usuarioFoto, iniciais);
 
     _construirMenu();
     _renderizarHome();
