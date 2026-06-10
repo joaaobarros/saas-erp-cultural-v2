@@ -468,7 +468,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 56 (2026-06-10) → SESSÃO 57
+## HANDOFF ATUAL — SESSÃO 57 (2026-06-10) → SESSÃO 58
+
+### Estado atual: ~265 bugs registrados · Deploy @778 (GAS)
+
+### O que foi feito nesta sessão (s57)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @778 | Ponto — Métricas RH (fix + evolução + drill-down) | Fix `r.dados`→`r.data` (bug `undefined` em totalAtivos); filtro de setor client-side; `ctrl_ponto_tendencias_rh` (6 meses por colaborador); 3 gráficos de barras CSS no botão Evolução; drill-down inline por colaborador. |
+
+### Pendentes / próxima ação
+- **Testar Métricas RH**: clicar Atualizar → cards com números reais; filtro setor; botão Evolução → 3 gráficos; clicar colaborador → mini-gráficos
+- **Testar aprovar férias**: não deve mais mostrar "Erro. Erro." — deve aprovar corretamente
+- **Verificar coluna Colaborador nas Férias**: deve exibir nome, não ID
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 56 (2026-06-10) → SESSÃO 57
 
 ### Estado atual: ~265 bugs registrados · Deploy @777 (GAS)
 

@@ -9105,9 +9105,10 @@ var GAS = {
     aplicarReajuste: function(pid,pct,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_aplicarReajuste(pid,pct); },
     salvarTabela:    function(pid,ts,p,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pccs_salvarTabela(pid,ts,p); },
     // Histórico RH
-    historico:          function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
-    registrarEvento:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
-    excluirEvento:      function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_evento(id); },
+    historico:             function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
+    registrarEvento:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
+    excluirEvento:         function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_evento(id); },
+    registrarDesligamento: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_registrar_desligamento(d); },
     // Avaliações
     listarAvaliacoes:   function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_listar_avaliacoes(id||null); },
     salvarAvaliacao:    function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_salvar_avaliacao(d); },
@@ -32741,81 +32742,218 @@ var PontoUI = (function() {
     GAS.ponto.metricasRh({ ano: ano, mes: mes }, function(r) {
       if (done) done();
       if (!r || !r.ok) { if (el) el.innerHTML = '<p style="color:var(--erro)">Erro ao carregar métricas.</p>'; return; }
-      var d = r.dados || r;
-      var resumo = d.resumo || {};
-      var porSetor = d.porSetor || [];
-      var individual = d.individual || [];
-      function _cor(ok) { return ok ? 'var(--sucesso,#2d6a4f)' : 'var(--erro,#c62828)'; }
-      function _badge(ok) { return '<span style="background:' + (ok?'#e8f5e9':'#ffebee') + ';color:' + _cor(ok) + ';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">' + (ok?'Cumpriu':'Incompleto') + '</span>'; }
-      function _risco(rc) { return rc ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Risco CLT</span>' : ''; }
-      var mesNome = new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">' + mesNome + '</h4>' +
-        '<div class="stats-grid" style="margin-bottom:16px;">' +
-        _metCard('Ativos', resumo.totalAtivos, 'group') +
-        _metCard('Cumpriram carga', (resumo.cumpriramCarga||0) + ' (' + (resumo.pctCumprimento||0) + '%)', 'check_circle', (resumo.pctCumprimento||0) >= 80 ? 'sucesso' : 'alerta') +
-        _metCard('Incompleto', resumo.naoCumpriramCarga||0, 'warning', (resumo.naoCumpriramCarga||0) > 0 ? 'alerta' : '') +
-        _metCard('Total trabalhado', _toHM(resumo.totalMinutos||0), 'schedule') +
-        _metCard('Extras acumuladas', _toHM(resumo.totalExtras||0), 'more_time') +
-        _metCard('Saldo BH global', _toHM(resumo.saldoBHTotal||0), 'account_balance') +
-        '</div>';
-      if (porSetor.length) {
-        html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Por Setor</h4>' +
-          '<div style="overflow-x:auto;margin-bottom:16px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-          '<thead><tr style="background:var(--surface2,#f5f5f5);"><th style="text-align:left;padding:6px 8px;">Setor</th>' +
-          '<th style="text-align:center;padding:6px 8px;">Ativos</th><th style="text-align:center;padding:6px 8px;">% Cump.</th>' +
-          '<th style="text-align:right;padding:6px 8px;">Total trab.</th><th style="text-align:right;padding:6px 8px;">Extras</th>' +
-          '<th style="text-align:right;padding:6px 8px;">BH acum.</th><th style="text-align:center;padding:6px 8px;">Risco CLT</th></tr></thead><tbody>';
-        porSetor.forEach(function(s, i) {
-          var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
-          html += '<tr style="'+bg+'"><td style="padding:5px 8px;font-weight:500;">'+_esc(s.setor)+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;">'+s.total+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;color:'+_cor(s.pctCumprimento>=80)+';font-weight:600;">'+s.pctCumprimento+'%</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalMinutosHM)+'</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalExtrasHM)+'</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(s.saldoBHHM)+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;">'+(s.riscoCLT>0?'<span style="color:var(--erro,#c62828);font-weight:600;">'+s.riscoCLT+' col.</span>':'<span style="color:var(--sucesso,#2d6a4f);">OK</span>')+'</td></tr>';
-        });
-        html += '</tbody></table></div>';
+      _metrDados = r.data || r.dados || {};
+      var setorSel = document.getElementById('ponto-metricas-setor');
+      if (setorSel && _metrDados.porSetor) {
+        setorSel.innerHTML = '<option value="">Todos os setores</option>' +
+          (_metrDados.porSetor||[]).map(function(s){ return '<option value="'+_esc(s.setor)+'">'+_esc(s.setor)+'</option>'; }).join('');
       }
-      if (individual.length) {
-        html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Individual</h4>' +
-          '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-          '<thead><tr style="background:var(--surface2,#f5f5f5);"><th style="text-align:left;padding:6px 8px;">Colaborador</th>' +
-          '<th style="text-align:left;padding:6px 8px;">Setor</th><th style="text-align:center;padding:6px 8px;">Carga</th>' +
-          '<th style="text-align:right;padding:6px 8px;">Meta</th><th style="text-align:right;padding:6px 8px;">Realizado</th>' +
-          '<th style="text-align:right;padding:6px 8px;">Extras</th><th style="text-align:right;padding:6px 8px;">BH</th>' +
-          '<th style="text-align:center;padding:6px 8px;">Status</th><th style="text-align:center;padding:6px 8px;">CLT</th></tr></thead><tbody>';
-        individual.forEach(function(p, i) {
-          var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
-          html += '<tr style="'+bg+'"><td style="padding:5px 8px;font-weight:500;">'+_esc(p.nome)+'</td>' +
-            '<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(p.setor)+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;">'+p.horasSemanais+'h/sem</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(p.realizado)+'</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(p.extras)+'</td>' +
-            '<td style="text-align:right;padding:5px 8px;">'+_esc(p.saldoBH)+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;">'+_badge(p.cumpriu)+'</td>' +
-            '<td style="text-align:center;padding:5px 8px;">'+_risco(p.riscoCLT)+'</td></tr>';
-          if (p.riscoCLT) {
-            var av = [];
-            if (p.jornadasLongas>0) av.push(p.jornadasLongas+' jornada(s) > 10h');
-            if (p.diasSemIntervalo>0) av.push(p.diasSemIntervalo+' dia(s) sem intervalo intrajornada');
-            if (p.excessoBH) av.push('BH acima de 40h (CLT Art. 59)');
-            if (p.extraExcessivo) av.push('Extras acima de 200h/mês');
-            html += '<tr style="'+bg+'"><td colspan="9" style="padding:2px 8px 8px 24px;font-size:11px;color:#e65100;">'+av.join(' · ')+'</td></tr>';
-          }
-        });
-        html += '</tbody></table></div>';
-      }
-      html += '</div>';
-      if (el) el.innerHTML = html;
+      _renderMetricas('');
     }, function(e) {
       if (done) done();
       if (el) el.innerHTML = '<p style="color:var(--erro)">Erro: ' + _esc((e&&e.message)||String(e)) + '</p>';
     });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh };
+  function filtrarMetricasSetor() {
+    var sel = document.getElementById('ponto-metricas-setor');
+    _renderMetricas(sel ? sel.value : '');
+  }
+
+  function _renderMetricas(setorFiltro) {
+    var el = document.getElementById('ponto-metricas-conteudo');
+    if (!el || !_metrDados) return;
+    var d = _metrDados;
+    var resumo    = d.resumo    || {};
+    var porSetor  = d.porSetor  || [];
+    var individual = d.individual || [];
+    var periodo   = d.periodo   || {};
+
+    var setorData = setorFiltro ? porSetor.filter(function(s){ return s.setor === setorFiltro; }) : porSetor;
+    var indivFilt = setorFiltro ? individual.filter(function(p){ return p.setor === setorFiltro; }) : individual;
+
+    var rsm = resumo;
+    if (setorFiltro && setorData.length) {
+      var sd = setorData[0];
+      rsm = { totalAtivos: sd.total, cumpriramCarga: sd.cumpriram, naoCumpriramCarga: sd.naoCumpriram, pctCumprimento: sd.pctCumprimento, totalMinutos: sd.totalMinutos, totalExtras: sd.totalExtras, saldoBHTotal: sd.saldoBH };
+    }
+
+    function _cor(ok) { return ok ? 'var(--sucesso,#2d6a4f)' : 'var(--erro,#c62828)'; }
+    function _badge(ok) { return '<span style="background:'+(ok?'#e8f5e9':'#ffebee')+';color:'+_cor(ok)+';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">'+(ok?'Cumpriu':'Incompleto')+'</span>'; }
+    function _risco(rc) { return rc ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Risco CLT</span>' : ''; }
+
+    var mesNome = new Date(periodo.ano||new Date().getFullYear(), (periodo.mes||new Date().getMonth()+1)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var colsN = setorFiltro ? 8 : 9;
+
+    var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">'+mesNome+(setorFiltro?' · '+_esc(setorFiltro):'')+'</h4>'+
+      '<div class="stats-grid" style="margin-bottom:16px;">'+
+      _metCard('Ativos', rsm.totalAtivos != null ? rsm.totalAtivos : '—', 'group')+
+      _metCard('Cumpriram carga', (rsm.cumpriramCarga||0)+' ('+(rsm.pctCumprimento||0)+'%)', 'check_circle', (rsm.pctCumprimento||0)>=80?'sucesso':'alerta')+
+      _metCard('Incompleto', rsm.naoCumpriramCarga||0, 'warning', (rsm.naoCumpriramCarga||0)>0?'alerta':'')+
+      _metCard('Total trabalhado', _toHM(rsm.totalMinutos||0), 'schedule')+
+      _metCard('Extras acumuladas', _toHM(rsm.totalExtras||0), 'more_time')+
+      _metCard('Saldo BH global', _toHM(rsm.saldoBHTotal||0), 'account_balance')+
+      '</div>';
+
+    if (!setorFiltro && porSetor.length) {
+      html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Por Setor <span style="font-weight:400;font-size:11px;color:var(--text2);">(clique para filtrar)</span></h4>'+
+        '<div style="overflow-x:auto;margin-bottom:16px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+        '<thead><tr style="background:var(--surface2,#f5f5f5);"><th style="text-align:left;padding:6px 8px;">Setor</th>'+
+        '<th style="text-align:center;padding:6px 8px;">Ativos</th><th style="text-align:center;padding:6px 8px;">% Cump.</th>'+
+        '<th style="text-align:right;padding:6px 8px;">Total trab.</th><th style="text-align:right;padding:6px 8px;">Extras</th>'+
+        '<th style="text-align:right;padding:6px 8px;">BH acum.</th><th style="text-align:center;padding:6px 8px;">Risco CLT</th></tr></thead><tbody>';
+      porSetor.forEach(function(s, i) {
+        var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
+        html += '<tr style="'+bg+';cursor:pointer;" onclick="document.getElementById(\'ponto-metricas-setor\').value='+JSON.stringify(s.setor).replace(/"/g,"'")+';PontoUI.filtrarMetricasSetor();">'+
+          '<td style="padding:5px 8px;font-weight:500;">'+_esc(s.setor)+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;">'+s.total+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;color:'+_cor(s.pctCumprimento>=80)+';font-weight:600;">'+s.pctCumprimento+'%</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalMinutosHM)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalExtrasHM)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(s.saldoBHHM)+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;">'+(s.riscoCLT>0?'<span style="color:var(--erro,#c62828);font-weight:600;">'+s.riscoCLT+' col.</span>':'<span style="color:var(--sucesso,#2d6a4f);">OK</span>')+'</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (indivFilt.length) {
+      html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Individual'+(setorFiltro?' · '+_esc(setorFiltro):'')+
+        ' <span style="font-weight:400;font-size:11px;color:var(--text2);">(clique p/ histórico — requer Evolução carregada)</span></h4>'+
+        '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+        '<thead><tr style="background:var(--surface2,#f5f5f5);"><th style="text-align:left;padding:6px 8px;">Colaborador</th>'+
+        (!setorFiltro?'<th style="text-align:left;padding:6px 8px;">Setor</th>':'')+
+        '<th style="text-align:center;padding:6px 8px;">Carga</th>'+
+        '<th style="text-align:right;padding:6px 8px;">Meta</th><th style="text-align:right;padding:6px 8px;">Realizado</th>'+
+        '<th style="text-align:right;padding:6px 8px;">Extras</th><th style="text-align:right;padding:6px 8px;">BH</th>'+
+        '<th style="text-align:center;padding:6px 8px;">Status</th><th style="text-align:center;padding:6px 8px;">CLT</th></tr></thead><tbody>';
+      indivFilt.forEach(function(p, i) {
+        var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
+        var pid = 'ponto-dd-'+_esc(p.id);
+        html += '<tr style="'+bg+';cursor:pointer;" onclick="PontoUI._toggleDrilldown(\''+pid+'\',\''+_esc(p.id)+'\','+colsN+')">'+
+          '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(p.nome)+'</td>'+
+          (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(p.setor)+'</td>':'')+
+          '<td style="text-align:center;padding:5px 8px;">'+p.horasSemanais+'h/sem</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(p.realizado)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(p.extras)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;">'+_esc(p.saldoBH)+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;">'+_badge(p.cumpriu)+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;">'+_risco(p.riscoCLT)+'</td></tr>'+
+          '<tr id="'+pid+'" style="display:none;'+bg+'"><td colspan="'+colsN+'" style="padding:6px 12px 10px 24px;" id="'+pid+'-body">'+
+          '<span class="muted-text" style="font-size:11px;">Carregue a Evolução primeiro (botão acima).</span></td></tr>';
+        if (p.riscoCLT) {
+          var av = [];
+          if (p.jornadasLongas>0) av.push(p.jornadasLongas+' jornada(s) > 10h');
+          if (p.diasSemIntervalo>0) av.push(p.diasSemIntervalo+' dia(s) sem intervalo intrajornada');
+          if (p.excessoBH) av.push('BH acima de 40h (CLT Art. 59)');
+          if (p.extraExcessivo) av.push('Extras acima de 200h/mês');
+          html += '<tr style="'+bg+'"><td colspan="'+colsN+'" style="padding:2px 8px 8px 24px;font-size:11px;color:#e65100;">'+av.join(' · ')+'</td></tr>';
+        }
+      });
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function _toggleDrilldown(rowId, colabId, nCols) {
+    var row  = document.getElementById(rowId);
+    var body = document.getElementById(rowId + '-body');
+    if (!row) return;
+    if (row.style.display === 'none') {
+      row.style.display = '';
+      if (_tendDados && (_tendDados.porColaborador||{})[colabId]) {
+        _renderDrilldown(body, colabId);
+      }
+    } else {
+      row.style.display = 'none';
+    }
+  }
+
+  function _renderDrilldown(bodyEl, colabId) {
+    if (!bodyEl || !_tendDados) return;
+    var hist = (_tendDados.porColaborador||{})[colabId] || [];
+    if (!hist.length) { bodyEl.innerHTML = '<span class="muted-text" style="font-size:11px;">Sem dados históricos para este colaborador.</span>'; return; }
+    var maxMin = Math.max.apply(null, hist.map(function(h){ return h.totalMinutos||0; })) || 1;
+    var maxExt = Math.max.apply(null, hist.map(function(h){ return h.totalExtras||0; })) || 1;
+    var lbls = hist.map(function(h){ return '<div style="flex:1;font-size:7px;text-align:center;color:var(--text2);">'+_esc(h.label)+'</div>'; }).join('');
+    function _sBar(v, mx, clr, lbl) {
+      var h = Math.max(3, Math.round(v/mx*52));
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">'+
+        '<span style="font-size:7px;font-weight:600;color:var(--text1);">'+_esc(lbl)+'</span>'+
+        '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:4px;"></div></div>';
+    }
+    var b1='', b2='', b3='';
+    hist.forEach(function(h) {
+      var pct = h.pctCarga||0;
+      b1 += _sBar(pct, 100, pct>=90?'#22c55e':pct>=70?'#f59e0b':'#ef4444', pct+'%');
+      b2 += _sBar(h.totalMinutos||0, maxMin, 'var(--color-primary)', h.totalMinutosHM||'—');
+      b3 += _sBar(h.totalExtras||0, maxExt, '#f59e0b', h.totalExtrasHM||'—');
+    });
+    function _mini(title, bars) {
+      return '<div style="flex:1;min-width:90px;background:var(--surface2,#f9f9f9);border-radius:6px;padding:8px;">'+
+        '<p style="margin:0 0 3px;font-size:10px;font-weight:600;color:var(--text2);">'+title+'</p>'+
+        '<div style="display:flex;align-items:flex-end;gap:2px;height:56px;">'+bars+'</div>'+
+        '<div style="display:flex;gap:2px;margin-top:2px;">'+lbls+'</div></div>';
+    }
+    bodyEl.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0;">'+
+      _mini('% Carga', b1)+_mini('Horas', b2)+_mini('Extras', b3)+'</div>';
+  }
+
+  function carregarTendencias(done) {
+    var el = document.getElementById('ponto-metricas-tendencias');
+    if (el) el.innerHTML = '<p class="muted-text" style="font-size:12px;">Calculando evolução histórica…</p>';
+    GAS.ponto.tendenciasRh({ meses: 6 }, function(r) {
+      if (done) done();
+      if (!r || !r.ok || !r.data) { if (el) el.innerHTML = '<p style="color:var(--erro);font-size:12px;">Erro ao carregar tendências.</p>'; return; }
+      _tendDados = r.data;
+      var td = _tendDados.tendencias || [];
+      if (!td.length) { if (el) el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de evolução.</p>'; return; }
+      var maxMin = Math.max.apply(null, td.map(function(t){ return t.totalMinutos||0; })) || 1;
+      var maxExt = Math.max.apply(null, td.map(function(t){ return t.totalExtras||0; })) || 1;
+      var lbls = td.map(function(t){ return '<div style="flex:1;font-size:8px;text-align:center;color:var(--text2);">'+_esc(t.label)+'</div>'; }).join('');
+      function _tBar(v, mx, clr, lbl) {
+        var h = Math.max(3, Math.round(v/mx*64));
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">'+
+          '<span style="font-size:8px;font-weight:600;color:var(--text1);">'+_esc(lbl)+'</span>'+
+          '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:6px;"></div></div>';
+      }
+      var b1='', b2='', b3='';
+      td.forEach(function(t) {
+        var pct = t.pctCumprimento||0;
+        b1 += _tBar(pct, 100, pct>=80?'#22c55e':pct>=60?'#f59e0b':'#ef4444', pct+'%');
+        b2 += _tBar(t.totalMinutos||0, maxMin, 'var(--color-primary)', t.totalHorasHM||'—');
+        b3 += _tBar(t.totalExtras||0, maxExt, '#f59e0b', t.totalExtrasHM||'—');
+      });
+      function _trenChart(title, bars) {
+        return '<div style="flex:1;min-width:160px;background:var(--surface2,#f9f9f9);border-radius:8px;padding:12px;">'+
+          '<p style="margin:0 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">'+title+'</p>'+
+          '<div style="display:flex;align-items:flex-end;gap:3px;height:72px;">'+bars+'</div>'+
+          '<div style="display:flex;gap:3px;margin-top:3px;">'+lbls+'</div></div>';
+      }
+      if (el) el.innerHTML = '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:16px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+        '<h4 style="margin:0;font-size:13px;font-weight:600;">Evolução — últimos 6 meses</h4>'+
+        '<span style="font-size:11px;color:var(--text2);">clique no nome de um colaborador para ver seu histórico individual</span></div>'+
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;">'+
+        _trenChart('% Cumprimento de Carga', b1)+
+        _trenChart('Total Horas Trabalhadas', b2)+
+        _trenChart('Extras Acumuladas', b3)+
+        '</div></div>';
+      // Atualiza drilldowns já abertos
+      var pc = _tendDados.porColaborador || {};
+      Object.keys(pc).forEach(function(id) {
+        var bodyEl = document.getElementById('ponto-dd-'+id+'-body');
+        var row    = document.getElementById('ponto-dd-'+id);
+        if (bodyEl && row && row.style.display !== 'none') _renderDrilldown(bodyEl, id);
+      });
+    }, function(e) {
+      if (done) done();
+      if (el) el.innerHTML = '<p style="color:var(--erro);font-size:12px;">Erro: '+_esc((e&&e.message)||String(e))+'</p>';
+    });
+  }
+
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh, filtrarMetricasSetor, _toggleDrilldown, carregarTendencias };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 

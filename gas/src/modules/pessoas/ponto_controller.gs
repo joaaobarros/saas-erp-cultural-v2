@@ -878,6 +878,65 @@ function ctrl_ponto_metricas_rh(params) {
   }, 'ctrl_ponto_metricas_rh');
 }
 
+// ─── Tendências RH — evolução mensal ─────────────────────────────────────────
+
+function ctrl_ponto_tendencias_rh(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','gestor','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado — papel rh+ necessário.');
+
+    var nMeses = Math.min(Math.max(Number(params.meses || 6), 2), 12);
+
+    function _pad(n) { return String(n).padStart(2,'0'); }
+    function _toHM(m) { if (!m && m !== 0) return '0h00'; var s = m < 0 ? '-' : ''; m = Math.abs(m); return s + Math.floor(m/60) + 'h' + _pad(m%60); }
+
+    var colabs = (lerJSON('colaboradores.json') || [])
+      .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; });
+
+    var normTodos = (lerJSON('ponto_normalizado.json') || [])
+      .filter(function(r){ return r.orgId === ctx.orgId && r.status !== 'revertido'; });
+
+    var hoje = new Date();
+    var tendencias = [];
+    var porColaborador = {}; // id → [{label,mes,ano,totalMinutos,totalMinutosHM,cumpriu,pctCarga}]
+
+    for (var i = nMeses - 1; i >= 0; i--) {
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      var ano = d.getFullYear();
+      var mes = d.getMonth() + 1;
+      var ini = ano + '-' + _pad(mes) + '-01';
+      var fim = ano + '-' + _pad(mes) + '-' + new Date(ano, mes, 0).getDate();
+      var lbl = _pad(mes) + '/' + String(ano).slice(2);
+
+      var regsDoMes = normTodos.filter(function(r){ return r.data >= ini && r.data <= fim; });
+
+      var totMin = 0, totExt = 0, cumpr = 0, ativosNo = 0;
+
+      colabs.forEach(function(c) {
+        var regsColab = regsDoMes.filter(function(r){ return r.colaboradorId === c.id; });
+        if (!regsColab.length) return;
+        ativosNo++;
+        var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regsColab);
+        var cMin = 0, cExt = 0;
+        jornadas.forEach(function(j){ cMin += j.minutosTrabalho||0; cExt += j.minutosExtras||0; });
+        var meta = Math.round((c.horasSemanais||40) / 5 * 22 * 60);
+        var cumpriu = cMin >= meta * 0.9;
+        if (cumpriu) cumpr++;
+        totMin += cMin;
+        totExt += cExt;
+        if (!porColaborador[c.id]) porColaborador[c.id] = [];
+        porColaborador[c.id].push({ label: lbl, mes: mes, ano: ano, totalMinutos: cMin, totalMinutosHM: _toHM(cMin), totalExtras: cExt, totalExtrasHM: _toHM(cExt), cumpriu: cumpriu, pctCarga: meta > 0 ? Math.round(cMin/meta*100) : 0 });
+      });
+
+      tendencias.push({ label: lbl, ano: ano, mes: mes, ativos: ativosNo, pctCumprimento: ativosNo > 0 ? Math.round(cumpr/ativosNo*100) : 0, totalMinutos: totMin, totalHorasHM: _toHM(totMin), totalExtras: totExt, totalExtrasHM: _toHM(totExt), cumpriram: cumpr });
+    }
+
+    return { tendencias: tendencias, porColaborador: porColaborador };
+  }, 'ctrl_ponto_tendencias_rh');
+}
+
 // ─── Diagnóstico de normalizados ─────────────────────────────────────────────
 
 /**
