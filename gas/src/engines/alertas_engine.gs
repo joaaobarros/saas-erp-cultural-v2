@@ -226,6 +226,9 @@ var AlertasEngine = (function () {
       // --- Pessoas ---
       _verificarFeriasNaoProgramadas(orgId, contadores);
       _verificarAfastamentosSemSubstituto(orgId, contadores);
+      // Auto-retorno após fim do período real de férias ou afastamento
+      try { contadores.emitidos += PessoasEngine.verificarAutoRetornoFerias(orgId)      || 0; } catch (_) { contadores.erros++; }
+      try { contadores.emitidos += PessoasEngine.verificarAutoRetornoAfastamento(orgId)  || 0; } catch (_) { contadores.erros++; }
       _verificarCargaPonto(orgId, contadores);
       // --- Reuniões / Demandas ---
       _verificarEncaminhamentosVencidos(orgId, contadores);

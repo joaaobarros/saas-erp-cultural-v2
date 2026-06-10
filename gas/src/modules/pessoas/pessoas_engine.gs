@@ -177,7 +177,11 @@ var PessoasEngine = (function () {
    * Lista colaboradores com filtros opcionais.
    */
   function listar(filtros, orgId) {
-    return ColaboradorRepository.listar(orgId || _orgId(), filtros || {});
+    filtros = filtros || {};
+    // Excluir desligados por padrão; para vê-los, passar status:'desligado' explicitamente
+    var filtrosRepo = Object.assign({}, filtros);
+    if (!filtrosRepo.status) filtrosRepo.excluirDesligado = true;
+    return ColaboradorRepository.listar(orgId || _orgId(), filtrosRepo);
   }
 
   /**
@@ -914,6 +918,74 @@ var PessoasEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // AUTO-RETORNO — chamado pelo AlertasEngine a cada ciclo
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Reverte para 'ativo' colaboradores cujo período de férias terminou.
+   * Usa o período realmente gozado (acordo.periodoGozadoFim) quando disponível;
+   * caso contrário, usa a data de fim da solicitação aprovada.
+   */
+  function verificarAutoRetornoFerias(orgId) {
+    orgId = orgId || _orgId();
+    var hoje = new Date().toISOString().slice(0, 10);
+    var revertidos = 0;
+    var emFerias = ColaboradorRepository.listar(orgId, { status: 'ferias' });
+    emFerias.forEach(function (c) {
+      try {
+        var feriasAprovadas = ColaboradorRepository.listarFerias({ orgId: orgId, idColaborador: c.id, status: 'aprovado' });
+        var deveRetornar = !feriasAprovadas.length || feriasAprovadas.every(function (f) {
+          // Se há acordo, usa a data real gozada; senão usa data fim da solicitação
+          var fim = (f.acordo && f.acordo.periodoGozadoFim) || f.dataFim || f.fim || '';
+          return fim && fim < hoje;
+        });
+        if (deveRetornar) {
+          mudarStatus(c.id, STATUS_COLABORADOR.ATIVO, 'sistema', orgId);
+          revertidos++;
+        }
+      } catch (e) {
+        Logger.warn('pessoas_engine', 'verificarAutoRetornoFerias', c.id + ': ' + e.message);
+      }
+    });
+    return revertidos;
+  }
+
+  /**
+   * Encerra afastamentos com dataFim vencida e reverte colaborador para 'ativo'.
+   * Também corrige status órfão (afastado sem afastamento ativo).
+   */
+  function verificarAutoRetornoAfastamento(orgId) {
+    orgId = orgId || _orgId();
+    var hoje = new Date().toISOString().slice(0, 10);
+    var revertidos = 0;
+    var afastados = ColaboradorRepository.listar(orgId, { status: 'afastado' });
+    afastados.forEach(function (c) {
+      try {
+        var ativos = ColaboradorRepository.listarAfastamentos({ orgId: orgId, idColaborador: c.id, status: 'ativo' });
+        // Encerrar automaticamente os que passaram da dataFim
+        ativos.forEach(function (a) {
+          if (a.dataFim && a.dataFim < hoje) {
+            try { encerrarAfastamento(a.id, { observacao: 'Encerrado automaticamente pelo sistema.' }, 'sistema', orgId); } catch (_) {}
+          }
+        });
+        // Se não há afastamento ativo (ou todos foram encerrados acima), corrigir status órfão
+        var aindaAtivos = ativos.filter(function (a) { return !a.dataFim || a.dataFim >= hoje; });
+        if (!aindaAtivos.length) {
+          // encerrarAfastamento já reverte; só precisa mudar se o status ficou órfão
+          var colab = ColaboradorRepository.buscarPorId(orgId, c.id);
+          if (colab && colab.status === 'afastado') {
+            mudarStatus(c.id, STATUS_COLABORADOR.ATIVO, 'sistema', orgId);
+          }
+          revertidos++;
+        }
+      } catch (e) {
+        Logger.warn('pessoas_engine', 'verificarAutoRetornoAfastamento', c.id + ': ' + e.message);
+      }
+    });
+    return revertidos;
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // API PÚBLICA
   // ──────────────────────────────────────────────────────────────────
 
@@ -980,7 +1052,11 @@ var PessoasEngine = (function () {
     excluirOcorrencia:      excluirOcorrencia,
 
     // Migração
-    migrarFuncionariosParaColaboradores: migrarFuncionariosParaColaboradores
+    migrarFuncionariosParaColaboradores: migrarFuncionariosParaColaboradores,
+
+    // Auto-retorno
+    verificarAutoRetornoFerias:      verificarAutoRetornoFerias,
+    verificarAutoRetornoAfastamento: verificarAutoRetornoAfastamento
   };
 
 })();

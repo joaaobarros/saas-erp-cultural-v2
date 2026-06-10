@@ -690,11 +690,36 @@ Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes 
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 46 (2026-06-10)
+## HANDOFF ATUAL — SESSÃO 47 (2026-06-10)
 
 ### O que foi feito nesta sessão
 
-Meu Perfil — fix sync 3-vias + select pronomes.
+RH — Visibilidade de status: desligados ocultos + avatar overlay + bloqueio de tarefas + auto-retorno. Deploy @761.
+
+| Arquivo | Mudança |
+|---|---|
+| `colaborador_repository.gs` | `listar()`: suporte a flag `excluirDesligado` — filtra fora colaboradores com `status:'desligado'` |
+| `pessoas_engine.gs` | `listar()`: aplica `excluirDesligado:true` por padrão quando nenhum filtro de status é passado |
+| `pessoas_engine.gs` | `verificarAutoRetornoFerias()`: reverte status para `ativo` usando `acordo.periodoGozadoFim` ou `fim` da solicitação |
+| `pessoas_engine.gs` | `verificarAutoRetornoAfastamento()`: encerra afastamentos com `dataFim` vencida via `encerrarAfastamento` |
+| `alertas_engine.gs` | `verificarTodosAutomaticos()`: chama ambas as funções de auto-retorno a cada ciclo de 30 min |
+| `tarefa_engine.gs` | `_validarTarefa()`: bloqueia atribuição de tarefas a colaboradores em `ferias`, `afastado` ou `desligado` |
+| `index.html` | `_avatarMini(c)`: overlay 🏖️/🌿 com `position:absolute` para ferias/afastado |
+
+### Próxima sessão
+
+1. Verificar no browser: colaboradores desligados não aparecem em nenhuma lista
+2. Testar avatar overlay — ferias deve mostrar 🏖️, afastado deve mostrar 🌿
+3. Testar bloqueio de tarefas — tentar atribuir a colaborador em férias → deve dar erro
+4. Verificar Meu Perfil salva corretamente (fix @760 — `ColaboradorRepository.salvar`)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 46 (2026-06-10)
+
+### O que foi feito nesta sessão
+
+Meu Perfil — fix sync 3-vias + select pronomes. Deploy @760.
 
 | Arquivo | Mudança |
 |---|---|
@@ -703,12 +728,6 @@ Meu Perfil — fix sync 3-vias + select pronomes.
 | `index.html` | `p-pronomes` e `rh-pf-pronomes`: texto livre → select (ele/dele · ela/dela · elu/delu · outro) + campo condicional para pronomes personalizados |
 | `index.html` | `PerfilUI._preencher`: detecta valor predefinido vs "outro"; `PerfilUI.salvar`: coleta valor correto do select; `_togglePronoumesOutro` exportado |
 | `index.html` | `RhUI.abrirFormColab`, `salvarColab`, `_preencherDeUsuario`: mesma lógica para o select RH; `_toggleRhPronoumesOutro` exportado |
-
-### Próxima sessão
-
-1. Verificar no browser: Meu Perfil carrega campos (pronomes, emailPessoal, telefone) preenchidos
-2. Testar salvar no Meu Perfil — confirmar sem "Erro ao salvar"
-3. Verificar que ficha RH mostra pronomes corretos ao abrir o form
 
 ---
 

@@ -128,6 +128,7 @@ var ColaboradorRepository = (function () {
     var todos = lerJSON(_ARQUIVO_COLABORADORES) || [];
     var lista = todos.filter(function (c) {
       if (c.orgId && c.orgId !== orgId) return false;
+      if (filtros.excluirDesligado && c.status === 'desligado') return false;
       if (filtros.status  && c.status  && c.status !== filtros.status)  return false;
       if (filtros.setor   && c.setor   !== filtros.setor)   return false;
       if (filtros.cargo   && c.cargo   !== filtros.cargo)   return false;

@@ -110,6 +110,15 @@ var TarefaEngine = (function () {
     if (tarefa.prazo && isNaN(new Date(tarefa.prazo).getTime())) {
       throw new Error('Prazo invalido.');
     }
+    // Bloquear atribuição a colaborador indisponível (férias, afastado, desligado)
+    if (tarefa.responsavel && typeof PessoasEngine !== 'undefined') {
+      var _c = null;
+      try { _c = PessoasEngine.buscarPorEmail(tarefa.responsavel); } catch (_) {}
+      if (_c && ['ferias', 'afastado', 'desligado'].indexOf(_c.status || 'ativo') !== -1) {
+        var _label = { ferias: 'em férias', afastado: 'afastado', desligado: 'desligado' }[_c.status] || _c.status;
+        throw new Error('Não é possível atribuir a tarefa a ' + (_c.nome || tarefa.responsavel) + ' — colaborador ' + _label + '.');
+      }
+    }
   }
 
   function _emitir(tipo, tarefa, ator, extra) {
