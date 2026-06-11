@@ -34,10 +34,13 @@ var SolicitacaoReservaEngine = (function() {
 
   function _notificar(destinatarios, assunto, corpo) {
     if (!Array.isArray(destinatarios) || !destinatarios.length) return;
-    var nome = getOrgConfig().nome || 'Sistema';
+    var nome  = getOrgConfig().nome || 'Sistema';
+    var orgId = getOrgConfig().orgId;
     destinatarios.forEach(function(email) {
       if (!email || email.indexOf('@') < 0) return;
       try {
+        var _c = ColaboradorRepository.buscarPorEmail(orgId, email);
+        if (_c && _c.status === 'desligado') return;
         GmailApp.sendEmail(email, assunto, corpo, { name: nome });
       } catch(e) {
         Logger.warn('solicitacao_engine', '_notificar', e.message);

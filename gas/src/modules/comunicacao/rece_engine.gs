@@ -217,8 +217,13 @@ var ReceEngine = (function () {
                     (registro.descricaoPublica ? registro.descricaoPublica + '\n\n' : '') +
                     '— ' + org;
 
+      var _orgId = getOrgConfig().orgId;
       convidados.forEach(function(email) {
-        try { GmailApp.sendEmail(email, assunto, corpo); } catch(_) {}
+        try {
+          var _c = ColaboradorRepository.buscarPorEmail(_orgId, email);
+          if (_c && _c.status === 'desligado') return;
+          GmailApp.sendEmail(email, assunto, corpo);
+        } catch(_) {}
       });
     } catch(e) {
       Logger.warn('rece_engine', '_enviarEmailPublicacao', e.message);

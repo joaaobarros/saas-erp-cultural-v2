@@ -478,6 +478,7 @@
 |---|---|---|
 | @775 | Telefone — máscara + WPP + Toast | Máscara global event delegation; WPP checkbox em 9 campos; `Toast.sucesso`/`Toast.erro` no Meu Perfil save. |
 | @780 | RH — fix foto apagada + filtro Todos | `ColaboradorRepository.salvar`: merge `Object.keys(prev)` antes de `lista[idx]=dados` — preserva `fotoPerfil` e campos não enviados; `PessoasEngine.listar`: `incluirDesligado:true` do frontend impede `excluirDesligado` automático no filtro "Todos". |
+| @781 | Notificações — bloquear email desligados | Guard `_isDesligado(email)` em 4 engines (`notification_engine`, `solicitacao_reserva`, `reserva_carro`, `rece`). Email externo (null do buscarPorEmail) não é bloqueado. |
 
 ### Pendentes / próxima ação
 - **Testar filtro Todos RH**: selecionar "Todos" → Geovana (desligada) deve aparecer

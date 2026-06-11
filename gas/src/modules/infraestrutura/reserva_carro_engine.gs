@@ -90,11 +90,15 @@ var ReservaCarroEngine = (function() {
   }
 
   function _notificar(destinatarios, assunto, corpo) {
-    var nome = getOrgConfig().nome || 'Sistema';
+    var nome  = getOrgConfig().nome || 'Sistema';
+    var orgId = getOrgConfig().orgId;
     (destinatarios || []).forEach(function(email) {
       if (!email || email.indexOf('@') < 0) return;
-      try { GmailApp.sendEmail(email, assunto, corpo, { name: nome }); }
-      catch(e) { Logger.warn('reserva_carro_engine', '_notificar', e.message); }
+      try {
+        var _c = ColaboradorRepository.buscarPorEmail(orgId, email);
+        if (_c && _c.status === 'desligado') return;
+        GmailApp.sendEmail(email, assunto, corpo, { name: nome });
+      } catch(e) { Logger.warn('reserva_carro_engine', '_notificar', e.message); }
     });
   }
 

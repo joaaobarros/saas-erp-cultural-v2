@@ -121,9 +121,20 @@ var NotificationEngine = (function() {
     try { return ScriptApp.getService().getUrl() || ''; } catch(_) { return ''; }
   }
 
+  function _isDesligado(email) {
+    try {
+      var c = ColaboradorRepository.buscarPorEmail(getOrgConfig().orgId, email);
+      return !!(c && c.status === 'desligado');
+    } catch(_e) { return false; }
+  }
+
   function _enviarEmail(destinatario, assunto, corpo) {
     try {
       if (!destinatario || !destinatario.includes('@')) return false;
+      if (_isDesligado(destinatario)) {
+        Logger.info('[NotificationEngine] email ignorado — colaborador desligado: ' + destinatario);
+        return false;
+      }
       GmailApp.sendEmail(destinatario, assunto, corpo);
 
       SystemEvents.emit(SystemEventTypes.NOTIFICACAO_EMAIL_ENVIADA, {
