@@ -523,30 +523,109 @@ var PessoasEngine = (function () {
   function listarHistoricoFiltrado(idColaborador, papel, orgId) {
     orgId = orgId || _orgId();
     var lista = ColaboradorRepository.listarHistorico({ orgId: orgId, idColaborador: idColaborador });
-    var eventosSensiveis = ['desligamento', 'alteracaoSalarial', 'advertencia', 'suspensao'];
+    var eventosSensiveis = ['desligamento', 'alteracaoSalarial', 'reajuste', 'advertencia', 'suspensao'];
+    // Valores salariais nunca saem para papéis não-RH (ex.: promoção carrega salário)
+    var _semSalario = function (h) {
+      var c = Object.assign({}, h);
+      delete c.salarioAnterior;
+      delete c.novoSalario;
+      return c;
+    };
     if (papel === 'colaborador') {
       return lista.filter(function (h) {
         return eventosSensiveis.indexOf(h.tipo) === -1;
-      });
+      }).map(_semSalario);
     }
     if (papel === 'gestor') {
-      return lista.filter(function (h) { return h.tipo !== 'alteracaoSalarial'; });
+      return lista.filter(function (h) {
+        return h.tipo !== 'alteracaoSalarial' && h.tipo !== 'reajuste';
+      }).map(_semSalario);
     }
     return lista;
+  }
+
+  /**
+   * Aplica na ficha do colaborador os efeitos estruturados do evento
+   * (promoção, reajuste, mudança de cargo, alteração de carga, admissão),
+   * gravando em `dados` os valores anteriores para o histórico.
+   */
+  function _aplicarEfeitosEvento(dados, emailOperador, orgId) {
+    var tipo = dados.tipo;
+    var alteraSalario  = (tipo === 'promocao' || tipo === 'reajuste') &&
+                         dados.novoSalario !== undefined && dados.novoSalario !== null && dados.novoSalario !== '';
+    var alteraCargo    = (tipo === 'promocao' || tipo === 'mudanca_cargo') && dados.novoCargo;
+    var alteraCarga    = tipo === 'alteracao_carga' && dados.novaCargaHoraria;
+    var alteraAdmissao = tipo === 'admissao' && dados.dataAdmissao;
+
+    if (tipo === 'promocao' && !alteraSalario && !alteraCargo)
+      throw new Error('Promoção exige novo cargo e/ou novo salário.');
+    if (tipo === 'reajuste' && !alteraSalario)
+      throw new Error('Reajuste salarial exige o novo salário.');
+    if (tipo === 'mudanca_cargo' && !alteraCargo)
+      throw new Error('Mudança de cargo exige o novo cargo.');
+    if (tipo === 'alteracao_carga' && !alteraCarga)
+      throw new Error('Alteração de carga horária exige a nova carga.');
+
+    if (!alteraSalario && !alteraCargo && !alteraCarga && !alteraAdmissao) return false;
+
+    var c = ColaboradorRepository.buscarPorId(orgId, dados.idColaborador);
+    if (!c) throw new Error('Colaborador não encontrado: ' + dados.idColaborador);
+
+    if (alteraSalario) {
+      dados.novoSalario     = Number(dados.novoSalario);
+      if (!(dados.novoSalario > 0)) throw new Error('Novo salário inválido.');
+      dados.salarioAnterior = Number(c.salarioBruto || c.salario || 0);
+      c.salarioBruto        = dados.novoSalario;
+    }
+    if (alteraCargo) {
+      dados.cargoAnterior = c.cargo || '';
+      c.cargo             = dados.novoCargo;
+    }
+    if (alteraCarga) {
+      dados.novaCargaHoraria = Number(dados.novaCargaHoraria);
+      if (!(dados.novaCargaHoraria > 0)) throw new Error('Nova carga horária inválida.');
+      dados.cargaAnterior    = Number(c.horasSemanais || 40);
+      c.horasSemanais        = dados.novaCargaHoraria;
+    }
+    if (alteraAdmissao) {
+      dados.dataAdmissaoAnterior = c.dataAdmissao || '';
+      c.dataAdmissao             = dados.dataAdmissao;
+    }
+
+    ColaboradorRepository.salvar(orgId, c);
+    _audit('FICHA_ATUALIZADA_POR_EVENTO_RH', {
+      idColaborador: c.id, tipo: tipo, operador: emailOperador || '',
+      cargoAnterior: dados.cargoAnterior, novoCargo: dados.novoCargo,
+      cargaAnterior: dados.cargaAnterior, novaCargaHoraria: dados.novaCargaHoraria
+    });
+    return true;
   }
 
   function registrarEvento(dados, emailOperador, orgId) {
     orgId = orgId || _orgId();
     dados = dados || {};
+    // Frontend envia tipoEvento; o canônico no histórico é tipo
+    if (!dados.tipo && dados.tipoEvento) dados.tipo = dados.tipoEvento;
     if (!dados.tipo || !dados.idColaborador)
       throw new Error('tipo e idColaborador são obrigatórios.');
     if (dados.tipo === 'desligamento')
       throw new Error('Use registrarDesligamento() para registrar desligamentos oficiais.');
+
+    // semEfeitos: a ficha já foi atualizada pelo chamador (ex.: salvarColab),
+    // o evento apenas registra os valores anterior/novo recebidos.
+    var fichaAtualizada = false;
+    if (dados.semEfeitos) {
+      delete dados.semEfeitos;
+    } else {
+      fichaAtualizada = _aplicarEfeitosEvento(dados, emailOperador, orgId);
+    }
+
     dados.orgId        = orgId;
     dados.registradoPor = emailOperador || '';
     var r = ColaboradorRepository.salvarHistorico(dados);
     _audit('HISTORICO_EVENTO_REGISTRADO', {
-      id: r.id, tipo: dados.tipo, idColaborador: dados.idColaborador, operador: emailOperador || ''
+      id: r.id, tipo: dados.tipo, idColaborador: dados.idColaborador,
+      fichaAtualizada: !!fichaAtualizada, operador: emailOperador || ''
     });
     return r.id;
   }

@@ -470,7 +470,7 @@
 
 ## HANDOFF ATUAL — SESSÃO 60 (2026-06-11) → SESSÃO 61
 
-### Estado atual: ~265 bugs registrados · Deploy @790 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @793 (GAS)
 
 ### O que foi feito nesta sessão (s60)
 
@@ -480,19 +480,22 @@
 
 | @790 | Ponto — Apuração semanal + meta do mês | Novo `regimeApuracao` (diario/semanal) no colaborador (select na Ficha RH). **JornadaEngine**: regime semanal zera extras/faltantes diários e fecha BH por semana ISO (chave idempotente `sem:<segunda>`); `agruparSemanas` exportado; `calcularJornadasLote(…, mapaRegime)`; `processarDia` usa carga real do colaborador; `atualizarBHDosLotes`/`recalcularBHCompleto` semanais; guard em `ponto_engine._calcularEAtualizarBH`. **Espelho**: card "Meta do mês · N% atingido" (`metaMensalMin`), subtotais por semana na tabela (saldo ± / em andamento), badge "Apuração semanal". **Métricas/Tendências/Consolidado**: meta semanal = carga×dias/7; extras de semanais = deltas positivos das semanas fechadas; corrigido extras com 40h global p/ cargas parciais. **Filtro de profissional**: "como deseja ser chamado (Nome Completo)", ordenado pelo exibido; idem tabela individual e cards de risco. ⚠️ Pós-deploy: marcar professores como Semanal + rodar `ctrl_ponto_recalcular_bh_todos` no GAS Editor. |
 
+| @793 | RH — Histórico de Eventos estruturado | **Bug RH-HIST-01 CORRIGIDO**: frontend enviava `tipoEvento`, engine exigia `dados.tipo` — registro de evento sempre falhava ("tipo e idColaborador são obrigatórios"), inclusive o auto-evento de carga do `salvarColab` (erro engolido). Engine normaliza os dois nomes. **Campos por tipo** (`_EV_CAMPOS`): Promoção → novo cargo+salário; Reajuste → salário; Mudança de Cargo → cargo; Alt. Carga → h/semana; Admissão → data; demais só descrição. Hints "Atual: …" da ficha; campo Data do Evento. **Ficha atualizada automaticamente** (`_aplicarEfeitosEvento`): grava `salarioBruto`/`cargo`/`horasSemanais`/`dataAdmissao` + valores anteriores no evento (audit `FICHA_ATUALIZADA_POR_EVENTO_RH`); flag `semEfeitos` p/ chamadores que já salvaram a ficha. **Timeline**: chips "anterior → novo" (Histórico + modal detalhe), labels pt-BR (`_EV_TIPO_LABEL`). **Privacidade**: `reajuste` vira tipo sensível; campos salariais removidos p/ gestor/colaborador em `listarHistoricoFiltrado`. |
+
 ### Checklist de auditoria — s60
 ```
 [x] prompt()/confirm() — não usados
-[x] GAS.* namespace — nenhum endpoint novo; metricasRh/tendenciasRh já mapeados
-[x] CSS — zero classes novas (btn-primario, btn-ghost, stat-card, muted-text existentes)
-[x] IDs de DOM — ponto-dd-* inalterado; nenhum id novo derivado de dados
-[x] FsmGuardian — sem transições de status
+[x] GAS.* namespace — nenhum endpoint novo; metricasRh/tendenciasRh já mapeados; registrarEvento/listarCargos já mapeados (@793)
+[x] CSS — zero classes novas (btn-primario, btn-ghost, stat-card, muted-text existentes; @793 usa form-group/form-input/form-label existentes)
+[x] IDs de DOM — ponto-dd-* inalterado; @793: rh-ev-wrap-*/rh-ev-hint-* estáticos, ids fixos
+[x] FsmGuardian — sem transições de status (eventos RH não alteram status; desligamento continua via registrarDesligamento)
 [x] Modais — nenhum modal novo
-[x] Datas — datas de risco formatadas via fmtDataPtBR (_ddmm); backend retorna ISO interno
-[x] BtnGuard — chips e selects com data-bg-skip; Atualizar com BtnGuard.wrap(force)
+[x] Datas — datas de risco formatadas via fmtDataPtBR (_ddmm); @793 usa _fmtData (DD/MM/AAAA) nos hints e chips; backend ISO interno
+[x] BtnGuard — chips e selects com data-bg-skip; Atualizar com BtnGuard.wrap(force); @793: rh-btn-salvar-evento já tinha BtnGuard.wrap
 ```
 
 ### Pendentes / próxima ação
+- **Testar no browser (@793 — Histórico RH)**: Novo Evento → trocar Tipo mostra campos específicos com "Atual: …"; Reajuste sem salário bloqueia; registrar Promoção atualiza cargo/salário na ficha (conferir no modal de detalhe) e timeline mostra chips "anterior → novo"; auto-evento de carga ao mudar h/semana na Ficha RH agora aparece no histórico
 - **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar colaboradores 20h de escala variável como "Apuração semanal"; depois rodar `ctrl_ponto_recalcular_bh_todos` no GAS Editor (limpa deltas diários antigos do BH)
 - **Testar no browser (Espelho semanal)**: selecionar professor marcado como semanal → card "Meta do mês"; subtotais de semana na tabela com saldo; badge "Apuração semanal"; dias longos sem extras diários
 - **Testar no browser (Ficha RH)**: select "Apuração de jornada" salva e recarrega corretamente
