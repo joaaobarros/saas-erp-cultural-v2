@@ -675,6 +675,9 @@ var PontoEngine = (function() {
   }
 
   function _calcularEAtualizarBH(orgId, colaboradorId, data) {
+    // Regime semanal: o BH fecha por semana via JornadaEngine — não debita/credita por dia
+    var colab = _buscarColaborador(orgId, colaboradorId);
+    if (colab && colab.regimeApuracao === 'semanal') return;
     var dia = calcularHorasDia(orgId, colaboradorId, data);
     var delta = dia.extras - dia.faltantes;
     if (delta !== 0) {

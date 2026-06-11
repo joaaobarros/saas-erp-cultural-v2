@@ -653,17 +653,21 @@ function ctrl_ponto_consolidado(params) {
     var anoH  = hoje.getFullYear();
     var mesH  = hoje.getMonth() + 1;
 
-    // Data de admissão do colaborador
-    var admissaoISO = null;
+    // Data de admissão, carga e regime do colaborador
+    var admissaoISO = null, horasSemC = 40, regimeC = 'diario';
     try {
       var colabs = lerJSON('colaboradores.json') || [];
       for (var ci = 0; ci < colabs.length; ci++) {
         if (colabs[ci].id === colaboradorId && colabs[ci].orgId === ctx.orgId) {
           admissaoISO = colabs[ci].dataAdmissao || null;
+          horasSemC   = colabs[ci].horasSemanais || 40;
+          regimeC     = (colabs[ci].regimeApuracao === 'semanal') ? 'semanal' : 'diario';
           break;
         }
       }
     } catch(_) {}
+    var mapaHorasC = {};  mapaHorasC[colaboradorId]  = horasSemC;
+    var mapaRegimeC = {}; mapaRegimeC[colaboradorId] = regimeC;
 
     function _pad(n) { return String(n).padStart(2,'0'); }
     function _ultimoDia(y, m) {
@@ -675,7 +679,7 @@ function ctrl_ponto_consolidado(params) {
       var regs = PontoRepository.listarPorColaborador(ctx.orgId, colaboradorId, dataInicio, dataFim)
         .filter(function(r){ return r.status !== 'revertido'; });
       if (!regs.length) return { totalMinutos: 0, totalExtras: 0, minutosFaltantes: 0, diasTrabalhados: 0, diasAusentes: 0 };
-      var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regs);
+      var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regs, mapaHorasC, mapaRegimeC);
       var totMin = 0, totExt = 0, totFalt = 0, dias = 0;
       jornadas.forEach(function(j) {
         totMin  += j.minutosTrabalho   || 0;
@@ -683,6 +687,15 @@ function ctrl_ponto_consolidado(params) {
         totFalt += j.minutosFaltantes  || 0;
         if (j.statusJornada !== 'ausente') dias++;
       });
+      if (regimeC === 'semanal') {
+        // Extras/faltantes fecham por semana; semanas em andamento ficam de fora
+        var hojeISO_ = new Date().toISOString().slice(0,10);
+        totExt = 0; totFalt = 0;
+        JornadaEngine.agruparSemanas(jornadas, Math.round(horasSemC * 60)).forEach(function(s) {
+          if (s.fimSemana >= hojeISO_) return;
+          if (s.delta > 0) totExt += s.delta; else totFalt += -s.delta;
+        });
+      }
       // Dias ausentes úteis (seg-sex) no período
       var ausentes = 0;
       var d = new Date(dataInicio + 'T12:00:00Z');
@@ -737,16 +750,21 @@ function ctrl_ponto_atualizar_carga_horaria(params) {
       throw new Error('Acesso negado — papel rh/admin+ necessário.');
     var horas = Number(params.horasSemanais);
     if (!horas || horas < 1 || horas > 60) throw new Error('Carga horária inválida (1–60h).');
+    var regime = params.regimeApuracao;
+    if (regime && ['diario','semanal'].indexOf(regime) < 0) throw new Error('Regime de apuração inválido.');
     modifyJSON('colaboradores.json', function(lista) {
       if (!Array.isArray(lista)) return lista;
       lista.forEach(function(c) {
-        if (c.orgId === ctx.orgId && c.id === params.colaboradorId) c.horasSemanais = horas;
+        if (c.orgId === ctx.orgId && c.id === params.colaboradorId) {
+          c.horasSemanais = horas;
+          if (regime) c.regimeApuracao = regime;
+        }
       });
       return lista;
     });
     AuditoriaService.registrar('PONTO_CARGA_HORARIA_ATUALIZADA', 'ponto',
-      { colaboradorId: params.colaboradorId, horasSemanais: horas }, ctx.email);
-    return { colaboradorId: params.colaboradorId, horasSemanais: horas };
+      { colaboradorId: params.colaboradorId, horasSemanais: horas, regimeApuracao: regime || '' }, ctx.email);
+    return { colaboradorId: params.colaboradorId, horasSemanais: horas, regimeApuracao: regime || null };
   }, 'ctrl_ponto_atualizar_carga_horaria');
 }
 
@@ -772,13 +790,36 @@ function ctrl_ponto_metricas_rh(params) {
     var inicioMes = ano + '-' + _pad(mes) + '-01';
     var fimMes    = ano + '-' + _pad(mes) + '-' + new Date(ano, mes, 0).getDate();
 
+    // Bordas de semana ISO (seg→dom) — para fechar semanas completas no regime semanal
+    function _segunda(iso) {
+      var p = iso.split('-');
+      var d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+      d.setUTCDate(d.getUTCDate() + (d.getUTCDay() === 0 ? -6 : 1 - d.getUTCDay()));
+      return d.toISOString().slice(0,10);
+    }
+    function _maisDias(iso, n) {
+      var p = iso.split('-');
+      var d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2] + n));
+      return d.toISOString().slice(0,10);
+    }
+    var iniExt = _segunda(inicioMes);
+    var fimExt = _maisDias(_segunda(fimMes), 6);
+
     var colabs = (lerJSON('colaboradores.json') || [])
       .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; });
 
     var normTodos = (lerJSON('ponto_normalizado.json') || [])
-      .filter(function(r){ return r.orgId === ctx.orgId && r.status !== 'revertido' && r.data >= inicioMes && r.data <= fimMes; });
+      .filter(function(r){ return r.orgId === ctx.orgId && r.status !== 'revertido' && r.data >= iniExt && r.data <= fimExt; });
 
     var bhTodos = lerJSON('banco_horas.json') || [];
+
+    // Mapas por colaborador: carga real e regime de apuração (1 passada, passados ao engine)
+    var mapaHoras = {}, mapaRegime = {};
+    colabs.forEach(function(c) {
+      if (c.horasSemanais) mapaHoras[c.id] = c.horasSemanais;
+      mapaRegime[c.id] = (c.regimeApuracao === 'semanal') ? 'semanal' : 'diario';
+    });
+    var diasNoMes = new Date(ano, mes, 0).getDate();
 
     // CLT thresholds
     var MAX_JORNADA_DIA_MIN  = 600; // 10h
@@ -796,9 +837,13 @@ function ctrl_ponto_metricas_rh(params) {
 
     colabs.forEach(function(c) {
       var horasSem   = c.horasSemanais || 40;
-      var minMensal  = Math.round(horasSem / 5 * 22 * 60);
-      var regs       = normTodos.filter(function(r){ return r.colaboradorId === c.id; });
-      var jornadas   = regs.length ? JornadaEngine.calcularJornadasLote(ctx.orgId, regs) : [];
+      var regime     = mapaRegime[c.id] || 'diario';
+      var minMensal  = regime === 'semanal'
+        ? Math.round(horasSem * 60 * diasNoMes / 7)
+        : Math.round(horasSem / 5 * 22 * 60);
+      var regsExt    = normTodos.filter(function(r){ return r.colaboradorId === c.id; });
+      var regs       = regsExt.filter(function(r){ return r.data >= inicioMes && r.data <= fimMes; });
+      var jornadas   = regs.length ? JornadaEngine.calcularJornadasLote(ctx.orgId, regs, mapaHoras, mapaRegime) : [];
 
       var totMin = 0, totExt = 0, totFalt = 0, diasTrab = 0;
       var jornadasLongas = 0, diasSemIntervalo = 0;
@@ -818,6 +863,19 @@ function ctrl_ponto_metricas_rh(params) {
           if (semIntervaloDatas.length < 8) semIntervaloDatas.push({ data: j.data, minutos: j.minutosTrabalho || 0, intervalo: j.minutosIntervalo || 0 });
         }
       });
+
+      // Regime semanal: extras/faltantes fecham por semana completa (dias têm 0).
+      // Semanas em andamento não contam — evita falta artificial no meio da semana.
+      if (regime === 'semanal' && regsExt.length) {
+        var jornadasExt = JornadaEngine.calcularJornadasLote(ctx.orgId, regsExt, mapaHoras, mapaRegime);
+        var hojeISO = new Date().toISOString().slice(0,10);
+        totExt = 0; totFalt = 0;
+        JornadaEngine.agruparSemanas(jornadasExt, Math.round(horasSem * 60)).forEach(function(s) {
+          if (s.fimSemana < inicioMes || s.inicioSemana > fimMes) return;   // fora do mês
+          if (s.fimSemana >= hojeISO) return;                              // em andamento
+          if (s.delta > 0) totExt += s.delta; else totFalt += -s.delta;
+        });
+      }
 
       var bhSaldo    = _bh(c.id);
       var cumpriu    = totMin >= minMensal * 0.9;
@@ -845,7 +903,9 @@ function ctrl_ponto_metricas_rh(params) {
       individual.push({
         id:               c.id,
         nome:             c.nome || '',
+        nomeApelido:      c.nomeApelido || '',
         setor:            setor,
+        regime:           regime,
         horasSemanais:    horasSem,
         metaMensal:       _toHM(minMensal),
         realizado:        _toHM(totMin),
@@ -904,6 +964,12 @@ function ctrl_ponto_tendencias_rh(params) {
     var colabs = (lerJSON('colaboradores.json') || [])
       .filter(function(c){ return c.orgId === ctx.orgId && c.ativo !== false && c.status !== 'inativo'; });
 
+    var mapaHoras = {}, mapaRegime = {};
+    colabs.forEach(function(c) {
+      if (c.horasSemanais) mapaHoras[c.id] = c.horasSemanais;
+      mapaRegime[c.id] = (c.regimeApuracao === 'semanal') ? 'semanal' : 'diario';
+    });
+
     var normTodos = (lerJSON('ponto_normalizado.json') || [])
       .filter(function(r){ return r.orgId === ctx.orgId && r.status !== 'revertido'; });
 
@@ -927,10 +993,21 @@ function ctrl_ponto_tendencias_rh(params) {
         var regsColab = regsDoMes.filter(function(r){ return r.colaboradorId === c.id; });
         if (!regsColab.length) return;
         ativosNo++;
-        var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regsColab);
+        var jornadas = JornadaEngine.calcularJornadasLote(ctx.orgId, regsColab, mapaHoras, mapaRegime);
         var cMin = 0, cExt = 0;
         jornadas.forEach(function(j){ cMin += j.minutosTrabalho||0; cExt += j.minutosExtras||0; });
-        var meta = Math.round((c.horasSemanais||40) / 5 * 22 * 60);
+        var regimeC = mapaRegime[c.id] || 'diario';
+        if (regimeC === 'semanal') {
+          // Extras do mês = soma dos deltas positivos das semanas do mês
+          cExt = 0;
+          JornadaEngine.agruparSemanas(jornadas, Math.round((c.horasSemanais||40) * 60)).forEach(function(s) {
+            if (s.delta > 0) cExt += s.delta;
+          });
+        }
+        var diasMes = new Date(ano, mes, 0).getDate();
+        var meta = regimeC === 'semanal'
+          ? Math.round((c.horasSemanais||40) * 60 * diasMes / 7)
+          : Math.round((c.horasSemanais||40) / 5 * 22 * 60);
         var cumpriu = cMin >= meta * 0.9;
         if (cumpriu) cumpr++;
         totMin += cMin;

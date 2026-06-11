@@ -8106,6 +8106,14 @@ select.form-control { cursor: pointer; }
                     <input type="hidden" id="rh-pf-carga" value="40">
                   </div>
                 </div>
+                <div class="form-group" style="grid-column:span 2">
+                  <label class="form-label">Apuração de jornada</label>
+                  <select id="rh-pf-regime" class="form-input">
+                    <option value="diario">Diária — horário fixo (extras/faltas fecham por dia)</option>
+                    <option value="semanal">Semanal — escala variável (extras/faltas fecham por semana)</option>
+                  </select>
+                  <p style="font-size:11px;color:var(--text2);margin:4px 0 0;">Use "Semanal" para escalas pactuadas que mudam de dias/turnos (ex.: professores 20h em 2-3 dias).</p>
+                </div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Pessoais</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
@@ -8234,9 +8242,9 @@ select.form-control { cursor: pointer; }
             </div>
             <div id="rh-evento-form" style="display:none;border-top:1px solid var(--border);padding:16px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-ev-colab" class="form-input"><option value="">Selecione…</option></select></div>
+                <div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-ev-colab" class="form-input" onchange="RhUI._atualizarCamposEvento()"><option value="">Selecione…</option></select></div>
                 <div class="form-group"><label class="form-label">Tipo *</label>
-                  <select id="rh-ev-tipo" class="form-input">
+                  <select id="rh-ev-tipo" class="form-input" onchange="RhUI._atualizarCamposEvento()">
                     <option value="admissao">Admissão</option>
                     <option value="promocao">Promoção</option>
                     <option value="reajuste">Reajuste Salarial</option>
@@ -8247,8 +8255,14 @@ select.form-control { cursor: pointer; }
                     <option value="outro" selected>Outro</option>
                   </select>
                 </div>
-                <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição *</label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
+                <div class="form-group"><label class="form-label">Data do Evento *</label><input id="rh-ev-data" class="form-input" type="date"></div>
+                <div class="form-group" id="rh-ev-wrap-admissao" style="display:none;"><label class="form-label">Data de Admissão *</label><input id="rh-ev-admissao" class="form-input" type="date"><span id="rh-ev-hint-admissao" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" id="rh-ev-wrap-cargo" style="display:none;"><label class="form-label">Novo Cargo *</label><select id="rh-ev-cargo" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-cargo" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" id="rh-ev-wrap-salario" style="display:none;"><label class="form-label">Novo Salário Bruto (R$) *</label><input id="rh-ev-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"><span id="rh-ev-hint-salario" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" id="rh-ev-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Horária (h/semana) *</label><input id="rh-ev-carga" class="form-input" type="number" min="1" max="60" step="1" placeholder="40"><span id="rh-ev-hint-carga" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição <span id="rh-ev-desc-req">*</span></label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
               </div>
+              <div id="rh-ev-aviso-ficha" style="display:none;margin-top:8px;font-size:12px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:8px 10px;"><span class="ms ms-sm" style="vertical-align:middle;">info</span> Ao registrar, a ficha do colaborador é atualizada automaticamente e os valores anteriores ficam guardados no histórico.</div>
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <button class="btn btn-primario" id="rh-btn-salvar-evento" onclick="RhUI.salvarEvento()"><span class="ms ms-sm">save</span> Registrar</button>
                 <button class="btn btn-ghost" onclick="RhUI.fecharFormEvento()" data-bg-skip="1">Cancelar</button>
@@ -31834,6 +31848,8 @@ var PontoUI = (function() {
   var _resumoMensal   = {};
   var _saldoBHAtual   = 0;
   var _ultimaBatida   = null;
+  var _metaMensal     = 0;      // minutos ideais do mês (backend metaMensalMin)
+  var _regimeEspelho  = 'diario';
   var _consolidadoCache = null;
   var _metrDados        = null; // cache: dados do mês selecionado
   var _tendDados        = null; // cache: tendências por colaborador
@@ -31881,10 +31897,15 @@ var PontoUI = (function() {
     var lista = setorFiltro
       ? _todosColabs.filter(function(c){ return c.setor === setorFiltro; })
       : _todosColabs;
+    // "Como deseja ser chamado" primeiro, nome completo entre parênteses;
+    // ordena pelo nome de exibição para a busca visual acompanhar o apelido
+    var comLabel = lista.map(function(c) {
+      var ap = (c.nomeApelido || '').trim();
+      return { id: c.id, label: ap ? ap + ' (' + c.nome + ')' : c.nome };
+    }).sort(function(a, b){ return a.label.localeCompare(b.label, 'pt-BR'); });
     sel.innerHTML = '<option value="">— Meu espelho —</option>' +
-      lista.map(function(c){
-        var label = c.nomeApelido ? c.nomeApelido + ' (' + c.nome + ')' : c.nome;
-        return '<option value="' + _esc(c.id) + '">' + _esc(label) + '</option>';
+      comLabel.map(function(c){
+        return '<option value="' + _esc(c.id) + '">' + _esc(c.label) + '</option>';
       }).join('');
   }
 
@@ -31972,6 +31993,8 @@ var PontoUI = (function() {
       _resumoMensal = { diasTrabalhados: res.diasTrabalhados||0, totalMinutos: res.totalMinutos||0, totalExtras: res.totalExtras||0, totalFaltantes: res.totalFaltantes||0 };
       _saldoBHAtual = m.saldoBH || 0;
       _ultimaBatida = ultimaBatida;
+      _metaMensal    = m.metaMensalMin || 0;
+      _regimeEspelho = m.regimeApuracao || 'diario';
       _periodoAtivo = 'mensal';
       _consolidadoCache = null;
       _pintarBotoesPeriodo('mensal');
@@ -31984,6 +32007,31 @@ var PontoUI = (function() {
       // Tabela de dias
       var dias    = m.dias || {};
       var datasOrd = Object.keys(dias).sort();
+      // Apuração semanal: mapa segunda-feira → subtotal da semana (backend m.semanas)
+      var semanasMap = {};
+      if (m.regimeApuracao === 'semanal' && Array.isArray(m.semanas)) {
+        m.semanas.forEach(function(s){ semanasMap[s.inicioSemana] = s; });
+      }
+      var _segundaDe = function(iso) {
+        var p = iso.split('-');
+        var dt = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+        var w  = dt.getUTCDay();
+        dt.setUTCDate(dt.getUTCDate() + (w === 0 ? -6 : 1 - w));
+        return dt.toISOString().slice(0,10);
+      };
+      var _rowSemana = function(s) {
+        var saldoCor = s.emAndamento ? 'var(--text2)' : (s.delta >= 0 ? 'var(--success)' : 'var(--danger)');
+        var saldoTxt = s.emAndamento
+          ? 'em andamento'
+          : 'saldo ' + (s.delta >= 0 ? '+' : '−') + toHM(Math.abs(s.delta));
+        return '<tr style="background:var(--surface2,#f3f1fa);border-bottom:2px solid var(--border);">' +
+          '<td colspan="5" style="padding:5px 8px;font-size:11px;color:var(--text2);">' +
+            'Semana ' + fmtDataPtBR(s.inicioSemana).slice(0,5) + ' – ' + fmtDataPtBR(s.fimSemana).slice(0,5) + '</td>' +
+          '<td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:700;">' +
+            toHM(s.minutosTrabalho) + ' <span style="font-weight:400;color:var(--text2);">de ' + toHM(s.cargaSemanalMin) + '</span></td>' +
+          '<td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:600;color:' + saldoCor + ';">' + saldoTxt + '</td>' +
+        '</tr>';
+      };
       if (datasOrd.length > 0) {
         html += '<div style="overflow-x:auto;">' +
           '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
@@ -31997,7 +32045,7 @@ var PontoUI = (function() {
             '<th style="padding:6px 8px;text-align:center;font-weight:600;">Status</th>' +
           '</tr></thead><tbody>';
 
-        datasOrd.forEach(function(iso) {
+        datasOrd.forEach(function(iso, idx) {
           var d    = dias[iso];
           var st   = d.statusJornada || 'ausente';
           var dow  = new Date(iso + 'T00:00:00').getDay();
@@ -32014,6 +32062,11 @@ var PontoUI = (function() {
             '<td style="padding:5px 8px;text-align:right;font-weight:600;">' + (d.minutosTrabalho ? toHM(d.minutosTrabalho) : '—') + '</td>' +
             '<td style="padding:5px 8px;text-align:center;"><span style="font-size:11px;font-weight:600;color:' + cor + ';">' + lbl + '</span></td>' +
           '</tr>';
+          // Apuração semanal: subtotal ao fim de cada semana (domingo ou último dia do mês)
+          var prox = datasOrd[idx + 1];
+          if ((!prox || _segundaDe(prox) !== _segundaDe(iso)) && semanasMap[_segundaDe(iso)]) {
+            html += _rowSemana(semanasMap[_segundaDe(iso)]);
+          }
         });
 
         html += '</tbody></table></div>';
@@ -32104,9 +32157,13 @@ var PontoUI = (function() {
     if (periodo === 'mensal') {
       var r = _resumoMensal;
       var bh = _saldoBHAtual;
+      var pctMeta = _metaMensal > 0 ? Math.round((r.totalMinutos||0) / _metaMensal * 100) : null;
       html +=
         '<div class="stat-card"><div class="stat-valor">' + (r.diasTrabalhados||0) + '</div><div class="stat-label">Dias trabalhados</div></div>' +
         '<div class="stat-card"><div class="stat-valor">' + toHM(r.totalMinutos||0) + '</div><div class="stat-label">Horas totais</div></div>' +
+        (_metaMensal > 0
+          ? '<div class="stat-card"><div class="stat-valor" style="color:' + (pctMeta>=90?'var(--success)':pctMeta>=60?'#d97706':'var(--danger)') + '">' + toHM(_metaMensal) + '</div><div class="stat-label">Meta do mês · ' + pctMeta + '% atingido</div></div>'
+          : '') +
         '<div class="stat-card"><div class="stat-valor" style="color:' + ((r.totalExtras||0)>0?'var(--success)':'var(--text)') + '">' + toHM(r.totalExtras||0) + '</div><div class="stat-label">Horas extras</div></div>' +
         '<div class="stat-card"><div class="stat-valor" style="color:' + ((r.totalFaltantes||0)>0?'var(--danger)':'var(--text)') + '">' + toHM(r.totalFaltantes||0) + '</div><div class="stat-label">Horas em falta</div></div>' +
         '<div class="stat-card"><div class="stat-valor" style="color:' + ((bh||0)>0?'var(--success)':(bh||0)<0?'var(--danger)':'var(--text)') + '">' + toHM(Math.abs(bh||0)) + '</div><div class="stat-label">Banco de horas</div></div>';
@@ -32127,10 +32184,14 @@ var PontoUI = (function() {
       '</p>';
     }
     // Informe de última atualização (último dia com batida no mês visualizado)
-    if (_ultimaBatida) {
-      html += '<p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;display:flex;align-items:center;gap:4px;">' +
-        '<span class="ms" style="font-size:14px;">update</span>' +
-        'Atualizado até <strong>' + fmtDataPtBR(_ultimaBatida) + '</strong>' +
+    if (_ultimaBatida || _regimeEspelho === 'semanal') {
+      html += '<p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        (_ultimaBatida
+          ? '<span style="display:inline-flex;align-items:center;gap:4px;"><span class="ms" style="font-size:14px;">update</span>Atualizado até <strong>' + fmtDataPtBR(_ultimaBatida) + '</strong></span>'
+          : '') +
+        (_regimeEspelho === 'semanal'
+          ? '<span style="background:#ede9fe;color:#7c3aed;padding:1px 8px;border-radius:20px;font-weight:600;" title="Escala variável pactuada — extras e faltas fecham por semana, não por dia">Apuração semanal</span>'
+          : '') +
       '</p>';
     }
     sEl.innerHTML = html;
@@ -32850,6 +32911,12 @@ var PontoUI = (function() {
     function _badgeSemReg() { return '<span style="background:var(--surface2,#f5f5f5);color:var(--text2);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Sem registro</span>'; }
     function _risco(rc) { return rc ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Risco CLT</span>' : ''; }
     function _ddmm(iso) { return fmtDataPtBR(String(iso||'')).slice(0,5); }
+    function _nomeExib(p) { var ap = (p.nomeApelido||'').trim(); return ap ? ap + ' (' + p.nome + ')' : p.nome; }
+    function _badgeRegime(p) {
+      return p.regime === 'semanal'
+        ? ' <span style="background:#ede9fe;color:#7c3aed;padding:0 6px;border-radius:20px;font-size:10px;font-weight:600;" title="Apuração semanal — extras/faltas fecham por semana (escala variável)">sem.</span>'
+        : '';
+    }
 
     var mesNome = new Date(periodo.ano||new Date().getFullYear(), (periodo.mes||new Date().getMonth()+1)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     var colsN = setorFiltro ? 8 : 9;
@@ -32914,7 +32981,7 @@ var PontoUI = (function() {
         if (p.extraExcessivo) linhas.push(_linhaRisco('more_time', 'var(--erro,#c62828)', 'Extras acima do teto mensal', 'Acumulado no mês: '+_esc(p.extras)));
         html += '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--erro,#c62828);border-radius:8px;padding:12px 14px;">'+
           '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">'+
-            '<strong style="font-size:13px;">'+_esc(p.nome)+'</strong>'+
+            '<strong style="font-size:13px;">'+_esc(_nomeExib(p))+'</strong>'+
             '<span style="font-size:11px;color:var(--text2);white-space:nowrap;">'+_esc(p.setor)+'</span></div>'+
           '<div style="display:flex;flex-direction:column;gap:6px;">'+linhas.join('')+'</div></div>';
       });
@@ -32967,9 +33034,9 @@ var PontoUI = (function() {
         var pid = 'ponto-dd-'+_esc(p.id);
         var semReg = (p.diasTrabalhados||0) === 0;
         html += '<tr style="'+bg+';cursor:pointer;" onclick="PontoUI._toggleDrilldown(\''+pid+'\',\''+_esc(p.id)+'\','+colsN+')">'+
-          '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(p.nome)+'</td>'+
+          '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(_nomeExib(p))+'</td>'+
           (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(p.setor)+'</td>':'')+
-          '<td style="text-align:center;padding:5px 8px;">'+p.horasSemanais+'h/sem</td>'+
+          '<td style="text-align:center;padding:5px 8px;white-space:nowrap;">'+p.horasSemanais+'h/sem'+_badgeRegime(p)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;'+(semReg?'color:var(--text2);':'font-weight:600;')+'">'+_esc(p.realizado)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.extras)+'</td>'+
@@ -33411,8 +33478,10 @@ var RhUI = (function() {
     }
     // Vínculo: usa tipoVinculo (canônico) com fallback em vinculo (legado)
     document.getElementById('rh-pf-vinculo').value = colab?(colab.tipoVinculo||colab.vinculo||'clt'):'clt';
-    // Carga horária semanal
+    // Carga horária semanal + regime de apuração
     _setCargaForm(colab ? (colab.horasSemanais || 40) : 40);
+    var regEl2 = document.getElementById('rh-pf-regime');
+    if (regEl2) regEl2.value = colab ? (colab.regimeApuracao === 'semanal' ? 'semanal' : 'diario') : 'diario';
     _popularSetorColab(colab ? (colab.setor||'') : '');
     _carregarEmailColab(colab?(colab.emailInstitucional||colab.email||''):'');
     GAS.rh.listarCargos(function(resp){
@@ -33594,9 +33663,10 @@ var RhUI = (function() {
       if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
       el.innerHTML = lista.slice(0,5).map(function(ev) {
         return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">' +
-          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-primary);">' + _esc(ev.tipoEvento||ev.tipo||'Evento') + '</span>' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-primary);">' + _esc(_evLabel(ev.tipo||ev.tipoEvento)) + '</span>' +
           '<span style="font-size:11px;color:var(--text2);margin-left:8px;">' + _fmtData(ev.data||ev.criadoEm||'') + '</span>' +
           (ev.descricao ? '<p style="margin:2px 0 0;font-size:12px;">' + _esc(ev.descricao) + '</p>' : '') +
+          _evMudancasHtml(ev) +
           '</div>';
       }).join('');
     }, function() {
@@ -33646,6 +33716,7 @@ var RhUI = (function() {
       nome:nome, emailInstitucional:email, setor:setor, cargo:cargo,
       vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao,
       horasSemanais: cargaHor,
+      regimeApuracao: (document.getElementById('rh-pf-regime')||{value:'diario'}).value,
       nomeApelido: document.getElementById('rh-pf-apelido').value.trim(),
       pronomes:    (function(){ var s=document.getElementById('rh-pf-pronomes'); if(!s) return ''; if(s.value==='outro'){var o=document.getElementById('rh-pf-pronomes-outro');return o?o.value.trim():'';} return s.value; })(),
       emailPessoal:document.getElementById('rh-pf-email-pessoal').value.trim(),
@@ -33690,10 +33761,14 @@ var RhUI = (function() {
         done();
         if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
         // Registra evento de histórico se a carga horária mudou
+        // (semEfeitos: a ficha já foi salva acima com o novo valor)
         if (id && cargaAnterior !== null && cargaAnterior !== cargaHor) {
           GAS.rh.registrarEvento({
             idColaborador: id,
             tipoEvento: 'alteracao_carga',
+            cargaAnterior: cargaAnterior,
+            novaCargaHoraria: cargaHor,
+            semEfeitos: true,
             descricao: 'Carga horária semanal alterada de ' + cargaAnterior + 'h para ' + cargaHor + 'h.'
           }, function(){}, function(){});
         }
@@ -34339,6 +34414,43 @@ var RhUI = (function() {
   }
 
   // ─── HISTÓRICO ──────────────────────────────────────────────
+  var _EV_TIPO_LABEL = {
+    admissao:'Admissão', promocao:'Promoção', reajuste:'Reajuste Salarial',
+    mudanca_cargo:'Mudança de Cargo', alteracao_carga:'Alteração de Carga Horária',
+    advertencia:'Advertência', elogio:'Elogio', desligamento:'Desligamento',
+    alteracaoSalarial:'Alteração Salarial', suspensao:'Suspensão', outro:'Outro'
+  };
+  // Campos estruturados exigidos por tipo de evento (atualizam a ficha)
+  var _EV_CAMPOS = {
+    promocao:['cargo','salario'], reajuste:['salario'],
+    mudanca_cargo:['cargo'], alteracao_carga:['carga'], admissao:['admissao']
+  };
+
+  function _evLabel(t){ return _EV_TIPO_LABEL[t] || t || 'Evento'; }
+
+  // Resumo das mudanças estruturadas do evento (anterior → novo), já escapado
+  function _evMudancas(ev) {
+    var parts = [];
+    if (ev.novoCargo)
+      parts.push('Cargo: ' + _esc(ev.cargoAnterior || '—') + ' → <strong>' + _esc(ev.novoCargo) + '</strong>');
+    if (ev.novoSalario !== undefined && ev.novoSalario !== null && ev.novoSalario !== '')
+      parts.push('Salário: R$ ' + _fmtMoeda(ev.salarioAnterior || 0) + ' → <strong>R$ ' + _fmtMoeda(ev.novoSalario) + '</strong>');
+    if (ev.novaCargaHoraria)
+      parts.push('Carga: ' + _esc(ev.cargaAnterior != null ? ev.cargaAnterior + 'h' : '—') + ' → <strong>' + _esc(ev.novaCargaHoraria) + 'h</strong>');
+    if ((ev.tipo === 'admissao' || ev.tipoEvento === 'admissao') && ev.dataAdmissao)
+      parts.push('Admissão: <strong>' + _esc(_fmtData(ev.dataAdmissao)) + '</strong>');
+    if (ev.tipo === 'desligamento' && ev.dataDesligamento)
+      parts.push('Desligamento: <strong>' + _esc(_fmtData(ev.dataDesligamento)) + '</strong>' + (ev.tipoRescisao ? ' (' + _esc(ev.tipoRescisao) + ')' : ''));
+    return parts;
+  }
+  function _evMudancasHtml(ev) {
+    var muds = _evMudancas(ev);
+    if (!muds.length) return '';
+    return '<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;">' +
+      muds.map(function(m){ return '<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;">' + m + '</span>'; }).join('') +
+      '</div>';
+  }
+
   function carregarHistorico() {
     var el = document.getElementById('rh-hist-lista');
     if (!el) return;
@@ -34348,23 +34460,65 @@ var RhUI = (function() {
       var lista=(resp&&resp.ok)?resp.data:[];
       if (!lista||!lista.length){ el.innerHTML=_empty('Nenhum evento registrado.'); return; }
       el.innerHTML='<ul class="rh-timeline">'+lista.map(function(ev){
+        var nome = ev.colaboradorNome || (function(){ var c=_colaboradores.find(function(x){return x.id===ev.idColaborador;}); return c?c.nome:''; })();
         return '<li><div class="tl-dot"></div><div class="tl-body">'+
-          '<strong style="font-size:13px;">'+_esc(ev.tipoEvento||ev.tipo||'Evento')+'</strong>'+
+          '<strong style="font-size:13px;">'+_esc(_evLabel(ev.tipo||ev.tipoEvento))+'</strong>'+
           '<span style="font-size:11px;color:var(--text2);margin-left:8px;">'+_esc(_fmtData(ev.data||ev.criadoEm))+'</span>'+
-          (ev.colaboradorNome?'<br><span style="font-size:12px;color:var(--text2)">'+_esc(ev.colaboradorNome)+'</span>':'')+
+          (nome?'<br><span style="font-size:12px;color:var(--text2)">'+_esc(nome)+'</span>':'')+
           (ev.descricao?'<p style="margin:4px 0 0;font-size:13px;">'+_esc(ev.descricao)+'</p>':'')+
+          _evMudancasHtml(ev)+
           '<button class="btn btn-error btn-sm" style="margin-top:6px;" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
           '</div></li>';
       }).join('')+'</ul>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
   }
 
+  // Mostra/oculta campos estruturados conforme o tipo + preenche valores atuais da ficha
+  function _atualizarCamposEvento() {
+    var tipo   = (document.getElementById('rh-ev-tipo')||{}).value || 'outro';
+    var campos = _EV_CAMPOS[tipo] || [];
+    ['cargo','salario','carga','admissao'].forEach(function(c){
+      var w = document.getElementById('rh-ev-wrap-'+c);
+      if (w) w.style.display = campos.indexOf(c) >= 0 ? '' : 'none';
+    });
+    var aviso = document.getElementById('rh-ev-aviso-ficha');
+    if (aviso) aviso.style.display = campos.length ? '' : 'none';
+    var req = document.getElementById('rh-ev-desc-req');
+    if (req) req.style.display = campos.length ? 'none' : '';
+    var idColab = (document.getElementById('rh-ev-colab')||{}).value;
+    var c = _colaboradores.find(function(x){ return x.id === idColab; });
+    var hints = {
+      cargo:    c ? 'Atual: ' + (c.cargo || '—') : '',
+      salario:  c ? 'Atual: R$ ' + _fmtMoeda(c.salarioBruto || c.salario || 0) : '',
+      carga:    c ? 'Atual: ' + (c.horasSemanais || 40) + 'h/semana' : '',
+      admissao: (c && c.dataAdmissao) ? 'Atual: ' + _fmtData(c.dataAdmissao) : ''
+    };
+    Object.keys(hints).forEach(function(k){
+      var h = document.getElementById('rh-ev-hint-'+k);
+      if (h) h.textContent = hints[k];
+    });
+  }
+
   function abrirFormEvento(idColabPre) {
     _popularSelectColaboradores('rh-ev-colab');
     document.getElementById('rh-ev-tipo').value='outro';
     document.getElementById('rh-ev-descricao').value='';
+    var dt = document.getElementById('rh-ev-data');
+    if (dt) dt.value = new Date().toISOString().slice(0,10);
+    ['rh-ev-salario','rh-ev-carga','rh-ev-admissao'].forEach(function(id){
+      var el=document.getElementById(id); if (el) el.value='';
+    });
+    GAS.rh.listarCargos(function(resp){
+      var sel = document.getElementById('rh-ev-cargo');
+      if (!sel) return;
+      var cargos = (resp&&resp.ok)?resp.data:[];
+      cargos.sort(function(a,b){ var na=a.titulo||a.nome||''; var nb=b.titulo||b.nome||''; return na.localeCompare(nb,'pt-BR'); });
+      sel.innerHTML = '<option value="">Selecione…</option>'+
+        cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
+    }, function(){});
     document.getElementById('rh-evento-form').style.display='';
     if (idColabPre) { var s = document.getElementById('rh-ev-colab'); if (s) s.value = idColabPre; }
+    _atualizarCamposEvento();
   }
   function fecharFormEvento(){ document.getElementById('rh-evento-form').style.display='none'; }
 
@@ -34372,13 +34526,41 @@ var RhUI = (function() {
     var idColab=document.getElementById('rh-ev-colab').value;
     var tipo=document.getElementById('rh-ev-tipo').value;
     var desc=document.getElementById('rh-ev-descricao').value.trim();
+    var dataEv=(document.getElementById('rh-ev-data')||{}).value||'';
     if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
-    if (!desc){ Toast.aviso('Informe a descrição.'); return; }
+    var campos=_EV_CAMPOS[tipo]||[];
+    if (!desc && !campos.length){ Toast.aviso('Informe a descrição.'); return; }
+    var dados={idColaborador:idColab,tipo:tipo,tipoEvento:tipo,descricao:desc,data:dataEv};
+    if (campos.indexOf('cargo')>=0){
+      var nc=(document.getElementById('rh-ev-cargo')||{}).value;
+      if (!nc && tipo==='mudanca_cargo'){ Toast.aviso('Selecione o novo cargo.'); return; }
+      if (nc) dados.novoCargo=nc;
+    }
+    if (campos.indexOf('salario')>=0){
+      var ns=_parseMoeda((document.getElementById('rh-ev-salario')||{}).value);
+      if ((!ns||ns<=0) && tipo==='reajuste'){ Toast.aviso('Informe o novo salário.'); return; }
+      if (ns>0) dados.novoSalario=ns;
+    }
+    if (tipo==='promocao' && !dados.novoCargo && !(dados.novoSalario>0)){
+      Toast.aviso('Promoção exige novo cargo e/ou novo salário.'); return;
+    }
+    if (campos.indexOf('carga')>=0){
+      var nh=Number((document.getElementById('rh-ev-carga')||{}).value);
+      if (!nh||nh<1||nh>60){ Toast.aviso('Informe a nova carga horária (1–60h/semana).'); return; }
+      dados.novaCargaHoraria=nh;
+    }
+    if (campos.indexOf('admissao')>=0){
+      var da=(document.getElementById('rh-ev-admissao')||{}).value;
+      if (!da){ Toast.aviso('Informe a data de admissão.'); return; }
+      dados.dataAdmissao=da;
+    }
     BtnGuard.wrap('rh-btn-salvar-evento','Registrando…',function(done){
-      GAS.rh.registrarEvento({idColaborador:idColab,tipoEvento:tipo,descricao:desc},function(resp){
+      GAS.rh.registrarEvento(dados,function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Evento registrado!'); fecharFormEvento(); carregarHistorico();
+        Toast.sucesso(campos.length?'Evento registrado — ficha do colaborador atualizada!':'Evento registrado!');
+        fecharFormEvento(); carregarHistorico();
+        if (campos.length){ carregarEquipe(); _carregarMetricas(); }
       },function(e){ done(); Toast.erro(e.message||e); });
     });
   }
@@ -35274,6 +35456,7 @@ var RhUI = (function() {
     _aplicarReajustePccsInline:_aplicarReajustePccsInline,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
+    _atualizarCamposEvento:_atualizarCamposEvento,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,
     fecharFormAvaliacao:fecharFormAvaliacao, salvarAvaliacao:salvarAvaliacao,
     excluirAvaliacao:excluirAvaliacao, _confirmarExcluirAvaliacao:_confirmarExcluirAvaliacao,

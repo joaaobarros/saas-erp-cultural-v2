@@ -138,6 +138,84 @@ var JornadaEngine = (function() {
     try { return SistemaConfigService.getParametrosRH() || {}; } catch(e) { return {}; }
   }
 
+  // ─── Apuração semanal (regimeApuracao = 'semanal') ──────────────────────────
+  //
+  // Colaboradores com escala variável (ex.: professores 20h em 2-3 dias) não têm
+  // carga diária fixa — extras e faltantes só fazem sentido fechados por semana.
+  // Para eles: jornadas diárias têm extras/faltantes = 0; o BH recebe um único
+  // delta por semana ISO (chave 'sem:<segunda-feira>' em diasProcessados).
+
+  /** Segunda-feira (ISO) da semana que contém a data. */
+  function _segundaISO(iso) {
+    var p = String(iso).split('-');
+    var d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])));
+    var dow = d.getUTCDay();                       // 0=Dom … 6=Sáb
+    d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+    return d.toISOString().slice(0, 10);
+  }
+
+  /** Domingo (ISO) da semana cuja segunda-feira é `segundaIso`. */
+  function _domingoISO(segundaIso) {
+    var p = segundaIso.split('-');
+    var d = new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]) + 6));
+    return d.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Carrega mapas { horas: {colabId→horasSemanais}, regime: {colabId→'diario'|'semanal'} }
+   * de colaboradores.json. Uma leitura por chamada — em loops, construir uma vez e passar.
+   */
+  function _mapasColaboradores(orgId) {
+    var horas = {}, regime = {};
+    try {
+      (lerJSON('colaboradores.json') || []).forEach(function(c) {
+        if (c.orgId !== orgId) return;
+        if (c.horasSemanais) horas[c.id] = c.horasSemanais;
+        regime[c.id] = (c.regimeApuracao === 'semanal') ? 'semanal' : 'diario';
+      });
+    } catch(_) {}
+    return { horas: horas, regime: regime };
+  }
+
+  /**
+   * Agrupa jornadas de UM colaborador por semana ISO (seg→dom).
+   * Só semanas com pelo menos uma jornada entram (semana sem batida é neutra —
+   * mesmo comportamento do regime diário, em que dia sem batida não debita BH).
+   * @returns [{ inicioSemana, fimSemana, minutosTrabalho, dias, cargaSemanalMin, delta }]
+   */
+  function agruparSemanas(jornadas, cargaSemanalMin) {
+    var porSem = {};
+    (jornadas || []).forEach(function(j) {
+      if (!j.data) return;
+      var seg = _segundaISO(j.data);
+      if (!porSem[seg]) porSem[seg] = { inicioSemana: seg, fimSemana: _domingoISO(seg), minutosTrabalho: 0, dias: 0 };
+      porSem[seg].minutosTrabalho += j.minutosTrabalho || 0;
+      if (j.statusJornada && j.statusJornada !== 'ausente') porSem[seg].dias++;
+    });
+    return Object.keys(porSem).sort().map(function(k) {
+      var s = porSem[k];
+      s.cargaSemanalMin = cargaSemanalMin;
+      s.delta = s.minutosTrabalho - cargaSemanalMin;
+      return s;
+    });
+  }
+
+  /**
+   * Recalcula e credita no BH o delta de UMA semana de um colaborador semanal.
+   * Idempotente: chave 'sem:<segunda>' em diasProcessados substitui o delta anterior.
+   */
+  function _creditarSemanaBH(orgId, colaboradorId, dataNaSemana, horasSemanais, mapaHoras, mapaRegime) {
+    var seg = _segundaISO(dataNaSemana);
+    var dom = _domingoISO(seg);
+    var regs = PontoRepository.listarPorColaborador(orgId, colaboradorId, seg, dom)
+      .filter(function(r){ return r.status !== 'revertido'; });
+    var jornadas = calcularJornadasLote(orgId, regs, mapaHoras, mapaRegime);
+    var total = 0;
+    jornadas.forEach(function(j){ total += j.minutosTrabalho || 0; });
+    var delta = total - Math.round(horasSemanais * 60);
+    PontoRepository.creditarDiaBH(orgId, colaboradorId, 'sem:' + seg, regs.length ? delta : 0);
+  }
+
   // ─── Processamento de um dia ─────────────────────────────────────────────────
 
   /**
@@ -198,10 +276,14 @@ var JornadaEngine = (function() {
     var minutosTrabalho  = batidas.length >= 2 ? _calcularMinutosTrabalhados(batidas) : 0;
     var minutosIntervalo = batidas.length >= 4 ? _calcularMinutosIntervalo(batidas) : 0;
 
+    var mp       = _mapasColaboradores(orgId);
+    var regime   = mp.regime[colaboradorId] || 'diario';
+    var cfg      = _getParametrosRH(orgId);
+    var horasSem = mp.horas[colaboradorId] || cfg.horas_semanais_padrao || 40;
+
     var minutosExtras    = 0, minutosFaltantes = 0;
-    if (statusJornada === 'completa') {
-      var cfg = _getParametrosRH(orgId);
-      var minDiario = Math.round(((cfg.horas_semanais_padrao || 40) / 5) * 60);
+    if (statusJornada === 'completa' && regime !== 'semanal') {
+      var minDiario = Math.round((horasSem / 5) * 60);
       minutosExtras    = Math.max(0, minutosTrabalho - minDiario);
       minutosFaltantes = Math.max(0, minDiario - minutosTrabalho);
     }
@@ -221,8 +303,11 @@ var JornadaEngine = (function() {
       inconsistencias:  inconsistencias
     });
 
-    // Atualiza banco de horas apenas para jornadas completas
-    if (statusJornada === 'completa') {
+    // Atualiza banco de horas
+    if (regime === 'semanal') {
+      // Refecha a semana inteira de forma idempotente (chave sem:<segunda>)
+      try { _creditarSemanaBH(orgId, colaboradorId, data, horasSem, mp.horas, mp.regime); } catch(_) {}
+    } else if (statusJornada === 'completa') {
       var delta = minutosExtras - minutosFaltantes;
       if (delta !== 0) {
         try {
@@ -310,9 +395,15 @@ var JornadaEngine = (function() {
    * @param {Array}  normalizados — registros normalizados com { colaboradorId, data, hora, id }
    * @returns {Array} array de objetos jornada prontos para JornadaRepository.salvarLote()
    */
-  // mapaHoras opcional: { colaboradorId → horasSemanais } — por-colab override do global
-  function calcularJornadasLote(orgId, normalizados, mapaHoras) {
+  // mapaHoras opcional:  { colaboradorId → horasSemanais } — por-colab override do global
+  // mapaRegime opcional: { colaboradorId → 'diario'|'semanal' } — se ausente, carrega de colaboradores.json
+  function calcularJornadasLote(orgId, normalizados, mapaHoras, mapaRegime) {
     if (!normalizados || !normalizados.length) return [];
+    if (!mapaRegime) {
+      var _mp = _mapasColaboradores(orgId);
+      mapaRegime = _mp.regime;
+      if (!mapaHoras || !Object.keys(mapaHoras).length) mapaHoras = _mp.horas;
+    }
     mapaHoras = mapaHoras || {};
 
     // Agrupa por (colaboradorId, data)
@@ -349,7 +440,8 @@ var JornadaEngine = (function() {
       var minutosTrabalho  = batidas.length >= 2 ? _calcularMinutosTrabalhados(batidas) : 0;
       var minutosIntervalo = batidas.length >= 4 ? _calcularMinutosIntervalo(batidas) : 0;
       var minutosExtras = 0, minutosFaltantes = 0;
-      if (statusJornada === 'completa') {
+      // Regime semanal: extras/faltantes não existem no dia — fecham por semana
+      if (statusJornada === 'completa' && (mapaRegime[colabId] || 'diario') !== 'semanal') {
         minutosExtras    = Math.max(0, minutosTrabalho - minDiario);
         minutosFaltantes = Math.max(0, minDiario - minutosTrabalho);
       }
@@ -394,26 +486,32 @@ var JornadaEngine = (function() {
     var inicio = ano + '-' + _pad(mes) + '-01';
     var fim    = _ultimoDia(ano, mes);
 
-    // Lê diretamente de ponto_normalizado.json — única fonte de verdade para batidas.
-    // Cobre AFD import e batidas manuais; não depende de jornadas.json estar populado.
-    var normalizados = PontoRepository.listarPorColaborador(orgId, colaboradorId, inicio, fim)
-      .filter(function(r){ return r.status !== 'revertido'; });
-
-    // Resolve carga horária do colaborador (campo horasSemanais em colaboradores.json)
-    var horasSemanais = null;
+    // Resolve carga horária e regime de apuração do colaborador
+    var horasSemanais = null, regimeApuracao = 'diario';
     try {
       var colabs = lerJSON('colaboradores.json') || [];
       for (var ci = 0; ci < colabs.length; ci++) {
         if (colabs[ci].id === colaboradorId && colabs[ci].orgId === orgId) {
-          horasSemanais = colabs[ci].horasSemanais || null;
+          horasSemanais  = colabs[ci].horasSemanais || null;
+          regimeApuracao = (colabs[ci].regimeApuracao === 'semanal') ? 'semanal' : 'diario';
           break;
         }
       }
     } catch(_) {}
     var mapaHoras = {};
     if (horasSemanais) mapaHoras[colaboradorId] = horasSemanais;
+    var mapaRegime = {};
+    mapaRegime[colaboradorId] = regimeApuracao;
 
-    var jornadasCalc = calcularJornadasLote(orgId, normalizados, mapaHoras);
+    // Lê diretamente de ponto_normalizado.json — única fonte de verdade para batidas.
+    // Regime semanal: estende a leitura até as bordas das semanas ISO, para que
+    // os subtotais das semanas que cruzam o mês considerem a semana inteira.
+    var iniLeitura = regimeApuracao === 'semanal' ? _segundaISO(inicio) : inicio;
+    var fimLeitura = regimeApuracao === 'semanal' ? _domingoISO(_segundaISO(fim)) : fim;
+    var normalizados = PontoRepository.listarPorColaborador(orgId, colaboradorId, iniLeitura, fimLeitura)
+      .filter(function(r){ return r.status !== 'revertido'; });
+
+    var jornadasCalc = calcularJornadasLote(orgId, normalizados, mapaHoras, mapaRegime);
     var jornadasMap = {};
     jornadasCalc.forEach(function(j){ jornadasMap[j.data] = j; });
 
@@ -468,9 +566,45 @@ var JornadaEngine = (function() {
 
     var bh = PontoRepository.obterBancoHoras(orgId, colaboradorId);
 
+    // Regime semanal: subtotais por semana ISO + extras/faltantes fechados por semana
+    var semanas = null;
+    if (regimeApuracao === 'semanal') {
+      var cargaSemMin = Math.round((horasSemanais || 0) * 60);
+      var hojeISO = new Date().toISOString().slice(0, 10);
+      semanas = agruparSemanas(jornadasCalc, cargaSemMin)
+        .filter(function(s){ return s.fimSemana >= inicio && s.inicioSemana <= fim; })
+        .map(function(s){ s.emAndamento = s.fimSemana >= hojeISO; return s; });
+      // Resumo: extras/faltantes do mês = soma dos deltas das semanas FECHADAS
+      totalExtras = 0; totalFaltantes = 0;
+      semanas.forEach(function(s) {
+        if (s.emAndamento) return;
+        if (s.delta > 0) totalExtras    += s.delta;
+        else             totalFaltantes += -s.delta;
+      });
+    }
+
+    // Meta de horas do mês (ideal a trabalhar) — para comparação no espelho
+    var diasNoMes = new Date(ano, mes, 0).getDate();
+    var metaMensalMin;
+    if (regimeApuracao === 'semanal') {
+      metaMensalMin = Math.round((horasSemanais || 0) * 60 * diasNoMes / 7);
+    } else {
+      var folgaMeta = diasFolga.length ? diasFolga : [0, 6];   // padrão: sáb/dom
+      var diasUteis = 0;
+      for (var dm = 1; dm <= diasNoMes; dm++) {
+        if (folgaMeta.indexOf(new Date(ano, mes - 1, dm).getDay()) < 0) diasUteis++;
+      }
+      var horasSemBase = horasSemanais || _cfg.horas_semanais_padrao || 40;
+      metaMensalMin = Math.round((horasSemBase / 5) * 60) * diasUteis;
+    }
+
     return {
       colaboradorId:      colaboradorId,
       periodo:            ano + '-' + _pad(mes),
+      regimeApuracao:     regimeApuracao,
+      metaMensalMin:      metaMensalMin,
+      cargaSemanalMin:    regimeApuracao === 'semanal' ? Math.round((horasSemanais || 0) * 60) : undefined,
+      semanas:            semanas || undefined,
       dias:               dias,
       resumo: {
         diasTrabalhados:     diasTrabalhados,
@@ -498,13 +632,33 @@ var JornadaEngine = (function() {
    * Usa creditarDiaBH — idempotente: reimportar o mesmo arquivo não duplica o saldo.
    */
   function atualizarBHDosLotes(orgId, jornadasLote) {
+    var mp = _mapasColaboradores(orgId);
+    var cfg = _getParametrosRH(orgId);
+    var horasPadrao = cfg.horas_semanais_padrao || 40;
+    var semanasTocadas = {};   // 'colabId|segunda' → colabId
+
     jornadasLote.forEach(function(j) {
       if (!j.colaboradorId || !j.data) return;
+      if ((mp.regime[j.colaboradorId] || 'diario') === 'semanal') {
+        semanasTocadas[j.colaboradorId + '|' + _segundaISO(j.data)] = j.colaboradorId;
+        return;
+      }
       var delta = (j.minutosExtras || 0) - (j.minutosFaltantes || 0);
       try {
         PontoRepository.creditarDiaBH(orgId, j.colaboradorId, j.data, delta);
       } catch(e) {
         Logger.warn('jornada_engine', 'atualizarBHDosLotes', j.colaboradorId + ' ' + j.data + ': ' + e.message);
+      }
+    });
+
+    // Regime semanal: refecha cada semana tocada com a semana COMPLETA (idempotente)
+    Object.keys(semanasTocadas).forEach(function(chave) {
+      var colabId = semanasTocadas[chave];
+      var seg     = chave.split('|')[1];
+      try {
+        _creditarSemanaBH(orgId, colabId, seg, mp.horas[colabId] || horasPadrao, mp.horas, mp.regime);
+      } catch(e) {
+        Logger.warn('jornada_engine', 'atualizarBHDosLotes', 'semana ' + chave + ': ' + e.message);
       }
     });
   }
@@ -517,12 +671,21 @@ var JornadaEngine = (function() {
     var ativos = (lerJSON('ponto_normalizado.json') || []).filter(function(r) {
       return r.orgId === orgId && r.colaboradorId === colaboradorId && r.status !== 'revertido';
     });
-    var jornadas = calcularJornadasLote(orgId, ativos);
+    var mp  = _mapasColaboradores(orgId);
+    var cfg = _getParametrosRH(orgId);
+    var jornadas = calcularJornadasLote(orgId, ativos, mp.horas, mp.regime);
     PontoRepository.resetarBancoHoras(orgId, colaboradorId);
-    jornadas.forEach(function(j) {
-      var delta = (j.minutosExtras || 0) - (j.minutosFaltantes || 0);
-      PontoRepository.creditarDiaBH(orgId, colaboradorId, j.data, delta);
-    });
+    if ((mp.regime[colaboradorId] || 'diario') === 'semanal') {
+      var cargaSemMin = Math.round((mp.horas[colaboradorId] || cfg.horas_semanais_padrao || 40) * 60);
+      agruparSemanas(jornadas, cargaSemMin).forEach(function(s) {
+        PontoRepository.creditarDiaBH(orgId, colaboradorId, 'sem:' + s.inicioSemana, s.delta);
+      });
+    } else {
+      jornadas.forEach(function(j) {
+        var delta = (j.minutosExtras || 0) - (j.minutosFaltantes || 0);
+        PontoRepository.creditarDiaBH(orgId, colaboradorId, j.data, delta);
+      });
+    }
     return { colaboradorId: colaboradorId, jornadas: jornadas.length };
   }
 
@@ -532,6 +695,7 @@ var JornadaEngine = (function() {
     processarImportacao:     processarImportacao,
     calcularJornadasLote:    calcularJornadasLote,
     calcularEspelho:         calcularEspelho,
+    agruparSemanas:          agruparSemanas,
     atualizarBHDosLotes:     atualizarBHDosLotes,
     recalcularBHCompleto:    recalcularBHCompleto
   };

@@ -470,13 +470,15 @@
 
 ## HANDOFF ATUAL — SESSÃO 60 (2026-06-11) → SESSÃO 61
 
-### Estado atual: ~265 bugs registrados · Deploy @789 (GAS)
+### Estado atual: ~265 bugs registrados · Deploy @790 (GAS)
 
 ### O que foi feito nesta sessão (s60)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
 | @789 | Ponto — UX/UI Espelho + Métricas RH | **Espelho**: troca de mês reseta período p/ "Mês selecionado" (`_pintarBotoesPeriodo` extraído — antes o botão de período ficava aceso indevidamente); período agregado desabilita o seletor de mês (tooltip) e cards ganham sufixo do período + nota sobre a tabela diária; fallback de erro no consolidado. **Métricas RH**: mês com `onchange` + cache por mês (`_metrCacheMes`, troca instantânea); Atualizar = força recálculo; Evolução auto-carrega em background (botão removido); setor preservado na troca de mês. **Painel Riscos CLT**: cards por colaborador com datas das ocorrências (backend retorna `jornadasLongasDatas`/`semIntervaloDatas` em `ctrl_ponto_metricas_rh`). **Tabela individual**: chips Com registro/Risco CLT/Todos (default Com registro), badge "Sem registro", ordenação riscos primeiro. **Gráficos**: fontes/alturas maiores + tooltips. ⚠️ `index.html` desta fase foi commitado em f560d3e (@787) por sessão paralela; @789 entrega o backend. |
+
+| @790 | Ponto — Apuração semanal + meta do mês | Novo `regimeApuracao` (diario/semanal) no colaborador (select na Ficha RH). **JornadaEngine**: regime semanal zera extras/faltantes diários e fecha BH por semana ISO (chave idempotente `sem:<segunda>`); `agruparSemanas` exportado; `calcularJornadasLote(…, mapaRegime)`; `processarDia` usa carga real do colaborador; `atualizarBHDosLotes`/`recalcularBHCompleto` semanais; guard em `ponto_engine._calcularEAtualizarBH`. **Espelho**: card "Meta do mês · N% atingido" (`metaMensalMin`), subtotais por semana na tabela (saldo ± / em andamento), badge "Apuração semanal". **Métricas/Tendências/Consolidado**: meta semanal = carga×dias/7; extras de semanais = deltas positivos das semanas fechadas; corrigido extras com 40h global p/ cargas parciais. **Filtro de profissional**: "como deseja ser chamado (Nome Completo)", ordenado pelo exibido; idem tabela individual e cards de risco. ⚠️ Pós-deploy: marcar professores como Semanal + rodar `ctrl_ponto_recalcular_bh_todos` no GAS Editor. |
 
 ### Checklist de auditoria — s60
 ```
@@ -491,6 +493,9 @@
 ```
 
 ### Pendentes / próxima ação
+- **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar colaboradores 20h de escala variável como "Apuração semanal"; depois rodar `ctrl_ponto_recalcular_bh_todos` no GAS Editor (limpa deltas diários antigos do BH)
+- **Testar no browser (Espelho semanal)**: selecionar professor marcado como semanal → card "Meta do mês"; subtotais de semana na tabela com saldo; badge "Apuração semanal"; dias longos sem extras diários
+- **Testar no browser (Ficha RH)**: select "Apuração de jornada" salva e recarrega corretamente
 - **Testar no browser (Métricas RH)**: trocar mês → recarrega sozinho; voltar a mês anterior → instantâneo (cache); painel "Riscos CLT identificados" com datas; chips filtram a tabela; drill-down preenche após evolução carregar
 - **Testar no browser (Espelho)**: ativar "Ano vigente" → seletor de mês desabilita; voltar "Mês selecionado" → reabilita; trocar mês → botões de período resetam
 - **Próximo bug de auditoria:** AFT-02 (anexar documentos em afastamentos) ou PON-03 (exportação AFD)
