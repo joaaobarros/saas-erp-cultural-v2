@@ -131,6 +131,13 @@ var NotificationEngine = (function() {
   function _enviarEmail(destinatario, assunto, corpo) {
     try {
       if (!destinatario || !destinatario.includes('@')) return false;
+      // Bloquear emails para colaborador em processo de desligamento (flag setada por PessoasEngine)
+      if (typeof EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO !== 'undefined' &&
+          Array.isArray(EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO) &&
+          EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO.indexOf(String(destinatario).toLowerCase().trim()) !== -1) {
+        Logger.info('[NotificationEngine] email bloqueado — desligamento em curso: ' + destinatario);
+        return false;
+      }
       if (_isDesligado(destinatario)) {
         Logger.info('[NotificationEngine] email ignorado — colaborador desligado: ' + destinatario);
         return false;

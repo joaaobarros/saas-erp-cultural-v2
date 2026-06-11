@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @770 · Meu Perfil — pré-carga no boot, _carregando guard
+> Deploy atual: @783 · Pessoas — bloquear email de demissão para o colaborador desligado
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

@@ -39,6 +39,9 @@
  *          core/logger.gs (Logger)
  */
 
+// ── Guard global: bloqueia emails para o colaborador sendo desligado nesta execução ──
+var EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO = [];
+
 // ── Constantes de domínio ─────────────────────────────────────────────
 
 var STATUS_COLABORADOR = Object.freeze({
@@ -564,6 +567,12 @@ var PessoasEngine = (function () {
 
     var c = ColaboradorRepository.buscarPorId(orgId, dados.idColaborador);
     if (!c) throw new Error('Colaborador não encontrado: ' + dados.idColaborador);
+
+    // Bloquear proativamente qualquer email para a pessoa sendo desligada
+    // durante esta execução — impede notificações prematuras antes da transição de status.
+    if (!Array.isArray(EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO)) EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO = [];
+    if (c.emailInstitucional) EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO.push(String(c.emailInstitucional).toLowerCase().trim());
+    if (c.emailPessoal)       EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO.push(String(c.emailPessoal).toLowerCase().trim());
 
     // 1. Registrar evento no histórico
     var eventoId = ColaboradorRepository.salvarHistorico({

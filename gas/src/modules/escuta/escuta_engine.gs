@@ -954,6 +954,7 @@ var EscutaEngine = (function() {
         var colab = ColaboradorRepository.listar(orgId)
           .find(function(c){ return c.id === colaboradorId; });
         if (!colab || !colab.email) return;
+        if (colab.status === 'desligado') return;
 
         var urlResposta = link + '#escuta';
 

@@ -104,6 +104,10 @@ var EventHandlerRegistry = (function () {
           var ctx = evt.contexto || {};
           var responsavel = String(ctx.responsavel || '');
           if (!responsavel || responsavel.indexOf('@') === -1) return;
+          try {
+            var _c = ColaboradorRepository.buscarPorEmail(getOrgConfig().orgId, responsavel);
+            if (_c && _c.status === 'desligado') return;
+          } catch(_e) {}
           var org = _getNomeOrg();
           var appUrl = _getAppUrl();
           var titulo = String(ctx.titulo || evt.entidadeId);
@@ -129,6 +133,10 @@ var EventHandlerRegistry = (function () {
           var responsavel = String(ctx.responsavel || '');
           if (!responsavel || responsavel.indexOf('@') === -1) return;
           if (responsavel === evt.usuario) return; // criador = responsável — não notificar
+          try {
+            var _c = ColaboradorRepository.buscarPorEmail(getOrgConfig().orgId, responsavel);
+            if (_c && _c.status === 'desligado') return;
+          } catch(_e) {}
           var org = _getNomeOrg();
           var appUrl = _getAppUrl();
           var titulo = String(ctx.titulo || evt.entidadeId);

@@ -355,6 +355,9 @@ var AcessoService = (function () {
   function _notificarAprovado(registro) {
     try {
       if (!registro.email || !registro.email.includes('@')) return;
+      if (typeof EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO !== 'undefined' &&
+          Array.isArray(EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO) &&
+          EMAILS_BLOQUEADOS_DESLIGAMENTO_ATIVO.indexOf(String(registro.email).toLowerCase().trim()) !== -1) return;
       var org = getOrgConfig();
       var assunto = '[' + org.nome + '] Seu acesso foi liberado!';
       var corpo = 'Olá, ' + registro.nome + '!\n\n' +
