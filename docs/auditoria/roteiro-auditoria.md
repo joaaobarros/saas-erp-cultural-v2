@@ -778,7 +778,29 @@ Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes 
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 47 (2026-06-10)
+## HANDOFF ATUAL — SESSÃO 48 (2026-06-11)
+
+### Estado atual: Deploy @787
+
+### O que foi feito nesta sessão
+
+RH — fix desligamento (GAS.rh binding ausente) + PIS backfill automático via confirmação AFD.
+
+| Arquivo | Mudança |
+|---|---|
+| `index.html` | `GAS.rh.registrarDesligamento` adicionado ao namespace `GAS.rh` — apontava para `undefined`, causando falha silenciosa em todo clique no botão "Confirmar Desligamento" |
+| `afd_parser_engine.gs` | `confirmarImportacao`: nova Etapa 1b — backfill PIS nos colaboradores matchados sem PIS; 1 único `modifyJSON`; não sobrescreve quem já tem; retorna `pisBackfilled` |
+| `index.html` | Resultado AFD exibe linha verde "PIS pré-preenchido em N ficha(s)" quando `pisBackfilled > 0` |
+
+### Próxima sessão
+
+1. Testar desligamento: Equipe → clicar no colaborador → botão Desligar → confirmar → status muda para "desligado"
+2. Reimportar AFD → verificar mensagem de PIS pré-preenchido na tela de resultado
+3. Verificar campo PIS nas fichas dos colaboradores matchados por nome
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 47 (2026-06-10)
 
 ### O que foi feito nesta sessão
 

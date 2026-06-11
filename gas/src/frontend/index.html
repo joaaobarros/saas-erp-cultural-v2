@@ -7908,7 +7908,7 @@ select.form-control { cursor: pointer; }
           <div id="ponto-periodo-filter" class="oculto" style="display:flex;align-items:center;gap:8px;padding:6px 0 10px;flex-wrap:wrap;">
             <span style="font-size:12px;color:var(--text2);white-space:nowrap;">Período:</span>
             <div style="display:flex;gap:4px;">
-              <button id="periodo-btn-mensal"         class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="PontoUI._setPeriodo('mensal')"         data-bg-skip="1">Este mês</button>
+              <button id="periodo-btn-mensal"         class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="PontoUI._setPeriodo('mensal')"         data-bg-skip="1">Mês selecionado</button>
               <button id="periodo-btn-anoVigente"     class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="PontoUI._setPeriodo('anoVigente')"     data-bg-skip="1">Ano vigente</button>
               <button id="periodo-btn-ultimos12Meses" class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="PontoUI._setPeriodo('ultimos12Meses')" data-bg-skip="1">Últ. 12 meses</button>
               <button id="periodo-btn-desdeAdmissao"  class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="PontoUI._setPeriodo('desdeAdmissao')"  data-bg-skip="1">Desde admissão</button>
@@ -8005,21 +8005,18 @@ select.form-control { cursor: pointer; }
               <p style="margin:2px 0 0;font-size:12px;color:var(--text2);">Acompanhamento por RH — carga horária, banco de horas e indicadores CLT.</p>
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-              <input type="month" id="ponto-metricas-mes" class="select-sm" style="width:auto;">
+              <input type="month" id="ponto-metricas-mes" class="select-sm" style="width:auto;"
+                     onchange="PontoUI.carregarMetricasRh()">
               <select id="ponto-metricas-setor" class="select-sm" style="width:auto;" onchange="PontoUI.filtrarMetricasSetor()" data-bg-skip="1">
                 <option value="">Todos os setores</option>
               </select>
-              <button id="btn-carregar-metricas" class="btn btn-ghost btn-sm"
-                      onclick="BtnGuard.wrap('btn-carregar-metricas','Calculando…',PontoUI.carregarMetricasRh)">
+              <button id="btn-carregar-metricas" class="btn btn-ghost btn-sm" title="Recalcular o mês selecionado"
+                      onclick="BtnGuard.wrap('btn-carregar-metricas','Calculando…',function(d){PontoUI.carregarMetricasRh(d,true)})">
                 <span class="ms ms-sm">refresh</span> Atualizar
-              </button>
-              <button id="btn-tendencias-metricas" class="btn btn-ghost btn-sm"
-                      onclick="BtnGuard.wrap('btn-tendencias-metricas','Carregando…',PontoUI.carregarTendencias)">
-                <span class="ms ms-sm">trending_up</span> Evolução
               </button>
             </div>
           </div>
-          <div id="ponto-metricas-conteudo"><p class="muted-text">Selecione o mês e clique em Atualizar.</p></div>
+          <div id="ponto-metricas-conteudo"><p class="muted-text">Calculando métricas…</p></div>
           <div id="ponto-metricas-tendencias"></div>
         </div>
       </div><!-- /view-ponto -->
@@ -31977,6 +31974,7 @@ var PontoUI = (function() {
       _ultimaBatida = ultimaBatida;
       _periodoAtivo = 'mensal';
       _consolidadoCache = null;
+      _pintarBotoesPeriodo('mensal');
       _renderStatsStrip('mensal');
       // Mostra/oculta filtro de período
       var pfEl = document.getElementById('ponto-periodo-filter');
@@ -32049,16 +32047,25 @@ var PontoUI = (function() {
 
   function _carregarConsolidado(colaboradorId) {
     GAS.ponto.consolidado({ colaboradorId: colaboradorId }, function(r) {
-      if (!r || !r.ok) return;
+      if (!r || !r.ok) {
+        if (_periodoAtivo !== 'mensal') {
+          var sEl = document.getElementById('ponto-stats-strip');
+          if (sEl) sEl.innerHTML = '<p class="muted-text" style="font-size:12px;padding:4px 0;">Não foi possível carregar o consolidado do período. Volte para "Mês selecionado".</p>';
+        }
+        return;
+      }
       _consolidadoCache = r.data;
       // Atualiza stats se período ativo não é mensal
       if (_periodoAtivo !== 'mensal') _renderStatsStrip(_periodoAtivo);
-    }, function(){});
+    }, function(){
+      if (_periodoAtivo !== 'mensal') {
+        var sEl = document.getElementById('ponto-stats-strip');
+        if (sEl) sEl.innerHTML = '<p class="muted-text" style="font-size:12px;padding:4px 0;">Não foi possível carregar o consolidado do período. Volte para "Mês selecionado".</p>';
+      }
+    });
   }
 
-  function _setPeriodo(periodo) {
-    _periodoAtivo = periodo;
-    // Atualiza botões ativos
+  function _pintarBotoesPeriodo(periodo) {
     ['mensal','anoVigente','ultimos12Meses','desdeAdmissao'].forEach(function(p) {
       var btn = document.getElementById('periodo-btn-' + p);
       if (!btn) return;
@@ -32067,6 +32074,19 @@ var PontoUI = (function() {
       btn.style.color      = ativo ? '#fff' : '';
       btn.style.fontWeight = ativo ? '700' : '';
     });
+    // Sincroniza o filtro de mês: períodos agregados ignoram o mês selecionado
+    var mesEl = document.getElementById('ponto-filtro-mes');
+    if (mesEl) {
+      var agregado = periodo !== 'mensal';
+      mesEl.disabled = agregado;
+      mesEl.style.opacity = agregado ? '.45' : '';
+      mesEl.title = agregado ? 'Filtro de mês não se aplica ao período agregado — clique em "Mês selecionado" para reativar' : '';
+    }
+  }
+
+  function _setPeriodo(periodo) {
+    _periodoAtivo = periodo;
+    _pintarBotoesPeriodo(periodo);
     if (periodo === 'mensal' || _consolidadoCache) {
       _renderStatsStrip(periodo);
     } else {
@@ -32092,12 +32112,20 @@ var PontoUI = (function() {
         '<div class="stat-card"><div class="stat-valor" style="color:' + ((bh||0)>0?'var(--success)':(bh||0)<0?'var(--danger)':'var(--text)') + '">' + toHM(Math.abs(bh||0)) + '</div><div class="stat-label">Banco de horas</div></div>';
     } else if (_consolidadoCache) {
       var d = _consolidadoCache[periodo] || {};
+      var PERIODO_LABEL = { anoVigente: 'Ano vigente', ultimos12Meses: 'Últimos 12 meses', desdeAdmissao: 'Desde a admissão' };
+      var plbl = PERIODO_LABEL[periodo] || periodo;
       html +=
-        '<div class="stat-card"><div class="stat-valor">' + (d.diasTrabalhados||0) + '</div><div class="stat-label">Dias trabalhados</div></div>' +
-        '<div class="stat-card"><div class="stat-valor">' + toHM(d.totalMinutos||0) + '</div><div class="stat-label">Horas totais</div></div>' +
-        '<div class="stat-card"><div class="stat-valor" style="color:' + ((d.totalExtras||0)>0?'var(--success)':'var(--text)') + '">' + toHM(d.totalExtras||0) + '</div><div class="stat-label">Horas extras</div></div>';
+        '<div class="stat-card"><div class="stat-valor">' + (d.diasTrabalhados||0) + '</div><div class="stat-label">Dias trabalhados · ' + plbl + '</div></div>' +
+        '<div class="stat-card"><div class="stat-valor">' + toHM(d.totalMinutos||0) + '</div><div class="stat-label">Horas totais · ' + plbl + '</div></div>' +
+        '<div class="stat-card"><div class="stat-valor" style="color:' + ((d.totalExtras||0)>0?'var(--success)':'var(--text)') + '">' + toHM(d.totalExtras||0) + '</div><div class="stat-label">Horas extras · ' + plbl + '</div></div>';
     }
     html += '</div>';
+    if (periodo !== 'mensal') {
+      html += '<p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;display:flex;align-items:center;gap:4px;">' +
+        '<span class="ms" style="font-size:14px;">info</span>' +
+        'Cards somam o período selecionado; a tabela abaixo continua exibindo o detalhamento diário do mês escolhido.' +
+      '</p>';
+    }
     // Informe de última atualização (último dia com batida no mês visualizado)
     if (_ultimaBatida) {
       html += '<p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;display:flex;align-items:center;gap:4px;">' +
@@ -32497,6 +32525,7 @@ var PontoUI = (function() {
           _afdStat(resultado.erros||0,              'Erros',       'var(--danger)') +
         '</div>' +
         (resultado.autoCriados > 0 ? '<p style="font-size:12px;color:var(--primario);max-width:420px;margin:0 auto 8px;"><strong>' + resultado.autoCriados + '</strong> colaborador(es) criado(s) automaticamente. Veja a aba <strong>Vínculos</strong> para associar usuários.</p>' : '') +
+        (resultado.pisBackfilled > 0 ? '<p style="font-size:12px;color:var(--success);max-width:420px;margin:0 auto 8px;">PIS pré-preenchido em <strong>' + resultado.pisBackfilled + '</strong> ficha(s) de colaborador a partir do arquivo AFD.</p>' : '') +
         (resultado.semCadastro > 0 ? '<p style="font-size:12px;color:#f59e0b;max-width:420px;margin:0 auto 12px;">⚠ ' + resultado.semCadastro + ' batida(s) sem vínculo — verifique a aba <strong>Vínculos</strong>.</p>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;justify-content:center;">' +
@@ -32731,33 +32760,71 @@ var PontoUI = (function() {
       '<div><div class="stat-value" style="' + color + '">' + val + '</div><div class="stat-label">' + label + '</div></div></div>';
   }
 
-  function carregarMetricasRh(done) {
+  var _metrCacheMes      = {};   // 'YYYY-MM' → dados do backend (troca de mês instantânea)
+  var _metrFiltroLista   = 'comRegistro'; // 'todos' | 'comRegistro' | 'risco'
+  var _tendCarregando    = false;
+
+  function carregarMetricasRh(done, force) {
     var elInput = document.getElementById('ponto-metricas-mes');
+    var hj = new Date();
+    if (elInput && !elInput.value) elInput.value = hj.getFullYear() + '-' + String(hj.getMonth()+1).padStart(2,'0');
     var val = elInput ? elInput.value : '';
     var ano, mes;
     if (val) { ano = Number(val.split('-')[0]); mes = Number(val.split('-')[1]); }
-    else { var hj = new Date(); ano = hj.getFullYear(); mes = hj.getMonth() + 1; }
+    else { ano = hj.getFullYear(); mes = hj.getMonth() + 1; }
+    var chave = ano + '-' + String(mes).padStart(2,'0');
     var el = document.getElementById('ponto-metricas-conteudo');
+
+    if (!force && _metrCacheMes[chave]) {
+      _metrDados = _metrCacheMes[chave];
+      _popularSelectSetores();
+      filtrarMetricasSetor();
+      if (done) done();
+      _autoCarregarTendencias();
+      return;
+    }
+
     if (el) el.innerHTML = '<p class="muted-text">Calculando métricas…</p>';
     GAS.ponto.metricasRh({ ano: ano, mes: mes }, function(r) {
       if (done) done();
       if (!r || !r.ok) { if (el) el.innerHTML = '<p style="color:var(--erro)">Erro ao carregar métricas.</p>'; return; }
       _metrDados = r.data || r.dados || {};
-      var setorSel = document.getElementById('ponto-metricas-setor');
-      if (setorSel && _metrDados.porSetor) {
-        setorSel.innerHTML = '<option value="">Todos os setores</option>' +
-          (_metrDados.porSetor||[]).map(function(s){ return '<option value="'+_esc(s.setor)+'">'+_esc(s.setor)+'</option>'; }).join('');
-      }
-      _renderMetricas('');
+      _metrCacheMes[chave] = _metrDados;
+      _popularSelectSetores();
+      filtrarMetricasSetor();
+      _autoCarregarTendencias();
     }, function(e) {
       if (done) done();
       if (el) el.innerHTML = '<p style="color:var(--erro)">Erro: ' + _esc((e&&e.message)||String(e)) + '</p>';
     });
   }
 
+  function _popularSelectSetores() {
+    var setorSel = document.getElementById('ponto-metricas-setor');
+    if (!setorSel || !_metrDados || !_metrDados.porSetor) return;
+    var valAnterior = setorSel.value;
+    setorSel.innerHTML = '<option value="">Todos os setores</option>' +
+      (_metrDados.porSetor||[]).map(function(s){ return '<option value="'+_esc(s.setor)+'">'+_esc(s.setor)+'</option>'; }).join('');
+    // Preserva o setor selecionado se ainda existir no novo mês
+    if (valAnterior && Array.prototype.some.call(setorSel.options, function(o){ return o.value === valAnterior; })) {
+      setorSel.value = valAnterior;
+    }
+  }
+
+  function _autoCarregarTendencias() {
+    if (_tendDados || _tendCarregando) return;
+    _tendCarregando = true;
+    carregarTendencias();
+  }
+
   function filtrarMetricasSetor() {
     var sel = document.getElementById('ponto-metricas-setor');
     _renderMetricas(sel ? sel.value : '');
+  }
+
+  function _setMetrFiltroLista(filtro) {
+    _metrFiltroLista = filtro;
+    filtrarMetricasSetor();
   }
 
   function _renderMetricas(setorFiltro) {
@@ -32780,7 +32847,9 @@ var PontoUI = (function() {
 
     function _cor(ok) { return ok ? 'var(--sucesso,#2d6a4f)' : 'var(--erro,#c62828)'; }
     function _badge(ok) { return '<span style="background:'+(ok?'#e8f5e9':'#ffebee')+';color:'+_cor(ok)+';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">'+(ok?'Cumpriu':'Incompleto')+'</span>'; }
+    function _badgeSemReg() { return '<span style="background:var(--surface2,#f5f5f5);color:var(--text2);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Sem registro</span>'; }
     function _risco(rc) { return rc ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;">Risco CLT</span>' : ''; }
+    function _ddmm(iso) { return fmtDataPtBR(String(iso||'')).slice(0,5); }
 
     var mesNome = new Date(periodo.ano||new Date().getFullYear(), (periodo.mes||new Date().getMonth()+1)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     var colsN = setorFiltro ? 8 : 9;
@@ -32816,41 +32885,103 @@ var PontoUI = (function() {
       html += '</tbody></table></div>';
     }
 
-    if (indivFilt.length) {
-      html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;">Individual'+(setorFiltro?' · '+_esc(setorFiltro):'')+
-        ' <span style="font-weight:400;font-size:11px;color:var(--text2);">(clique p/ histórico — requer Evolução carregada)</span></h4>'+
-        '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
+    // ── Painel de Riscos CLT — cards visuais com as datas das ocorrências ──
+    var comRisco = indivFilt.filter(function(p){ return p.riscoCLT; });
+    if (comRisco.length) {
+      html += '<h4 style="margin:0 0 8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;">'+
+        '<span class="ms" style="font-size:16px;color:var(--erro,#c62828);">warning</span>'+
+        'Riscos CLT identificados <span style="background:#ffebee;color:var(--erro,#c62828);padding:1px 8px;border-radius:20px;font-size:11px;">'+comRisco.length+'</span></h4>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-bottom:18px;">';
+      comRisco.forEach(function(p) {
+        function _linhaRisco(icone, corIcone, texto, detalhe) {
+          return '<div style="display:flex;align-items:flex-start;gap:6px;font-size:12px;line-height:1.45;">'+
+            '<span class="ms" style="font-size:15px;color:'+corIcone+';flex-shrink:0;margin-top:1px;">'+icone+'</span>'+
+            '<div><div style="font-weight:600;">'+texto+'</div>'+
+            (detalhe?'<div style="font-size:11px;color:var(--text2);">'+detalhe+'</div>':'')+'</div></div>';
+        }
+        var linhas = [];
+        if (p.jornadasLongas > 0) {
+          var dts = (p.jornadasLongasDatas||[]).map(function(o){ return _ddmm(o.data)+' ('+_toHM(o.minutos)+')'; }).join(' · ');
+          linhas.push(_linhaRisco('schedule', 'var(--erro,#c62828)',
+            p.jornadasLongas+' jornada(s) acima de 10h', dts));
+        }
+        if (p.diasSemIntervalo > 0) {
+          var dts2 = (p.semIntervaloDatas||[]).map(function(o){ return _ddmm(o.data)+' ('+_toHM(o.minutos)+' / pausa '+(o.intervalo||0)+'min)'; }).join(' · ');
+          linhas.push(_linhaRisco('coffee', '#e65100',
+            p.diasSemIntervalo+' dia(s) sem intervalo intrajornada', dts2));
+        }
+        if (p.excessoBH)      linhas.push(_linhaRisco('account_balance', '#7c3aed', 'Banco de horas acima de 40h', 'Saldo atual: '+_esc(p.saldoBH)+' (CLT Art. 59)'));
+        if (p.extraExcessivo) linhas.push(_linhaRisco('more_time', 'var(--erro,#c62828)', 'Extras acima do teto mensal', 'Acumulado no mês: '+_esc(p.extras)));
+        html += '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--erro,#c62828);border-radius:8px;padding:12px 14px;">'+
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">'+
+            '<strong style="font-size:13px;">'+_esc(p.nome)+'</strong>'+
+            '<span style="font-size:11px;color:var(--text2);white-space:nowrap;">'+_esc(p.setor)+'</span></div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px;">'+linhas.join('')+'</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // ── Tabela individual com filtro rápido ──
+    var comRegistro = indivFilt.filter(function(p){ return (p.diasTrabalhados||0) > 0; });
+    var listaExibida = _metrFiltroLista === 'risco'       ? comRisco
+                     : _metrFiltroLista === 'comRegistro' ? comRegistro
+                     : indivFilt;
+    // Ordenação para análise: riscos primeiro, depois quem tem registro, depois alfabético
+    listaExibida = listaExibida.slice().sort(function(a, b) {
+      if (a.riscoCLT !== b.riscoCLT) return a.riscoCLT ? -1 : 1;
+      var ra = (a.diasTrabalhados||0) > 0, rb = (b.diasTrabalhados||0) > 0;
+      if (ra !== rb) return ra ? -1 : 1;
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+
+    function _chip(label, valor, qtd) {
+      var ativo = _metrFiltroLista === valor;
+      return '<button class="btn btn-sm '+(ativo?'btn-primario':'btn-ghost')+'" style="font-size:11px;padding:3px 10px;" data-bg-skip="1" '+
+        'onclick="PontoUI._setMetrFiltroLista(\''+valor+'\')">'+label+' ('+qtd+')</button>';
+    }
+
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;">'+
+      '<h4 style="margin:0;font-size:13px;font-weight:600;">Individual'+(setorFiltro?' · '+_esc(setorFiltro):'')+
+      ' <span style="font-weight:400;font-size:11px;color:var(--text2);">(clique na linha p/ histórico mensal)</span></h4>'+
+      '<div style="display:flex;gap:4px;margin-left:auto;">'+
+        _chip('Com registro', 'comRegistro', comRegistro.length)+
+        _chip('Risco CLT', 'risco', comRisco.length)+
+        _chip('Todos', 'todos', indivFilt.length)+
+      '</div></div>';
+
+    if (_metrFiltroLista === 'comRegistro' && indivFilt.length > comRegistro.length) {
+      html += '<p style="font-size:11px;color:var(--text2);margin:0 0 8px;">'+
+        (indivFilt.length - comRegistro.length)+' colaborador(es) sem registro de ponto no mês estão ocultos — use o filtro "Todos" para exibi-los.</p>';
+    }
+
+    if (listaExibida.length) {
+      html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'+
         '<thead><tr style="background:var(--surface2,#f5f5f5);"><th style="text-align:left;padding:6px 8px;">Colaborador</th>'+
         (!setorFiltro?'<th style="text-align:left;padding:6px 8px;">Setor</th>':'')+
         '<th style="text-align:center;padding:6px 8px;">Carga</th>'+
         '<th style="text-align:right;padding:6px 8px;">Meta</th><th style="text-align:right;padding:6px 8px;">Realizado</th>'+
         '<th style="text-align:right;padding:6px 8px;">Extras</th><th style="text-align:right;padding:6px 8px;">BH</th>'+
         '<th style="text-align:center;padding:6px 8px;">Status</th><th style="text-align:center;padding:6px 8px;">CLT</th></tr></thead><tbody>';
-      indivFilt.forEach(function(p, i) {
+      listaExibida.forEach(function(p, i) {
         var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
         var pid = 'ponto-dd-'+_esc(p.id);
+        var semReg = (p.diasTrabalhados||0) === 0;
         html += '<tr style="'+bg+';cursor:pointer;" onclick="PontoUI._toggleDrilldown(\''+pid+'\',\''+_esc(p.id)+'\','+colsN+')">'+
           '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(p.nome)+'</td>'+
           (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(p.setor)+'</td>':'')+
           '<td style="text-align:center;padding:5px 8px;">'+p.horasSemanais+'h/sem</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>'+
-          '<td style="text-align:right;padding:5px 8px;">'+_esc(p.realizado)+'</td>'+
+          '<td style="text-align:right;padding:5px 8px;'+(semReg?'color:var(--text2);':'font-weight:600;')+'">'+_esc(p.realizado)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.extras)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.saldoBH)+'</td>'+
-          '<td style="text-align:center;padding:5px 8px;">'+_badge(p.cumpriu)+'</td>'+
+          '<td style="text-align:center;padding:5px 8px;">'+(semReg?_badgeSemReg():_badge(p.cumpriu))+'</td>'+
           '<td style="text-align:center;padding:5px 8px;">'+_risco(p.riscoCLT)+'</td></tr>'+
           '<tr id="'+pid+'" style="display:none;'+bg+'"><td colspan="'+colsN+'" style="padding:6px 12px 10px 24px;" id="'+pid+'-body">'+
-          '<span class="muted-text" style="font-size:11px;">Carregue a Evolução primeiro (botão acima).</span></td></tr>';
-        if (p.riscoCLT) {
-          var av = [];
-          if (p.jornadasLongas>0) av.push(p.jornadasLongas+' jornada(s) > 10h');
-          if (p.diasSemIntervalo>0) av.push(p.diasSemIntervalo+' dia(s) sem intervalo intrajornada');
-          if (p.excessoBH) av.push('BH acima de 40h (CLT Art. 59)');
-          if (p.extraExcessivo) av.push('Extras acima de 200h/mês');
-          html += '<tr style="'+bg+'"><td colspan="'+colsN+'" style="padding:2px 8px 8px 24px;font-size:11px;color:#e65100;">'+av.join(' · ')+'</td></tr>';
-        }
+          '<span class="muted-text" style="font-size:11px;">⏳ Carregando histórico…</span></td></tr>';
       });
       html += '</tbody></table></div>';
+    } else {
+      html += '<p class="muted-text" style="font-size:12px;">Nenhum colaborador neste filtro.</p>';
     }
     html += '</div>';
     el.innerHTML = html;
@@ -32862,9 +32993,8 @@ var PontoUI = (function() {
     if (!row) return;
     if (row.style.display === 'none') {
       row.style.display = '';
-      if (_tendDados && (_tendDados.porColaborador||{})[colabId]) {
-        _renderDrilldown(body, colabId);
-      }
+      if (_tendDados) _renderDrilldown(body, colabId);
+      // sem _tendDados: mantém "Carregando histórico…" — preenchido quando as tendências chegarem
     } else {
       row.style.display = 'none';
     }
@@ -32876,34 +33006,35 @@ var PontoUI = (function() {
     if (!hist.length) { bodyEl.innerHTML = '<span class="muted-text" style="font-size:11px;">Sem dados históricos para este colaborador.</span>'; return; }
     var maxMin = Math.max.apply(null, hist.map(function(h){ return h.totalMinutos||0; })) || 1;
     var maxExt = Math.max.apply(null, hist.map(function(h){ return h.totalExtras||0; })) || 1;
-    var lbls = hist.map(function(h){ return '<div style="flex:1;font-size:7px;text-align:center;color:var(--text2);">'+_esc(h.label)+'</div>'; }).join('');
-    function _sBar(v, mx, clr, lbl) {
-      var h = Math.max(3, Math.round(v/mx*52));
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">'+
-        '<span style="font-size:7px;font-weight:600;color:var(--text1);">'+_esc(lbl)+'</span>'+
-        '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:4px;"></div></div>';
+    var lbls = hist.map(function(h){ return '<div style="flex:1;font-size:9px;text-align:center;color:var(--text2);">'+_esc(h.label)+'</div>'; }).join('');
+    function _sBar(v, mx, clr, lbl, tip) {
+      var h = Math.max(3, Math.round(v/mx*60));
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;" title="'+_esc(tip||lbl)+'">'+
+        '<span style="font-size:9px;font-weight:600;color:var(--text1);white-space:nowrap;">'+_esc(lbl)+'</span>'+
+        '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:6px;"></div></div>';
     }
     var b1='', b2='', b3='';
     hist.forEach(function(h) {
       var pct = h.pctCarga||0;
-      b1 += _sBar(pct, 100, pct>=90?'#22c55e':pct>=70?'#f59e0b':'#ef4444', pct+'%');
-      b2 += _sBar(h.totalMinutos||0, maxMin, 'var(--color-primary)', h.totalMinutosHM||'—');
-      b3 += _sBar(h.totalExtras||0, maxExt, '#f59e0b', h.totalExtrasHM||'—');
+      b1 += _sBar(pct, 100, pct>=90?'#22c55e':pct>=70?'#f59e0b':'#ef4444', pct+'%', h.label+' — '+pct+'% da carga');
+      b2 += _sBar(h.totalMinutos||0, maxMin, 'var(--color-primary)', h.totalMinutosHM||'—', h.label+' — '+(h.totalMinutosHM||'0h00')+' trabalhadas');
+      b3 += _sBar(h.totalExtras||0, maxExt, '#f59e0b', h.totalExtrasHM||'—', h.label+' — '+(h.totalExtrasHM||'0h00')+' extras');
     });
     function _mini(title, bars) {
-      return '<div style="flex:1;min-width:90px;background:var(--surface2,#f9f9f9);border-radius:6px;padding:8px;">'+
-        '<p style="margin:0 0 3px;font-size:10px;font-weight:600;color:var(--text2);">'+title+'</p>'+
-        '<div style="display:flex;align-items:flex-end;gap:2px;height:56px;">'+bars+'</div>'+
-        '<div style="display:flex;gap:2px;margin-top:2px;">'+lbls+'</div></div>';
+      return '<div style="flex:1;min-width:150px;background:var(--surface2,#f9f9f9);border-radius:6px;padding:10px;">'+
+        '<p style="margin:0 0 4px;font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;">'+title+'</p>'+
+        '<div style="display:flex;align-items:flex-end;gap:3px;height:66px;">'+bars+'</div>'+
+        '<div style="display:flex;gap:3px;margin-top:3px;">'+lbls+'</div></div>';
     }
-    bodyEl.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0;">'+
+    bodyEl.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;padding:2px 0;">'+
       _mini('% Carga', b1)+_mini('Horas', b2)+_mini('Extras', b3)+'</div>';
   }
 
   function carregarTendencias(done) {
     var el = document.getElementById('ponto-metricas-tendencias');
-    if (el) el.innerHTML = '<p class="muted-text" style="font-size:12px;">Calculando evolução histórica…</p>';
+    if (el) el.innerHTML = '<p class="muted-text" style="font-size:12px;">⏳ Calculando evolução histórica…</p>';
     GAS.ponto.tendenciasRh({ meses: 6 }, function(r) {
+      _tendCarregando = false;
       if (done) done();
       if (!r || !r.ok || !r.data) { if (el) el.innerHTML = '<p style="color:var(--erro);font-size:12px;">Erro ao carregar tendências.</p>'; return; }
       _tendDados = r.data;
@@ -32911,30 +33042,30 @@ var PontoUI = (function() {
       if (!td.length) { if (el) el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados de evolução.</p>'; return; }
       var maxMin = Math.max.apply(null, td.map(function(t){ return t.totalMinutos||0; })) || 1;
       var maxExt = Math.max.apply(null, td.map(function(t){ return t.totalExtras||0; })) || 1;
-      var lbls = td.map(function(t){ return '<div style="flex:1;font-size:8px;text-align:center;color:var(--text2);">'+_esc(t.label)+'</div>'; }).join('');
-      function _tBar(v, mx, clr, lbl) {
-        var h = Math.max(3, Math.round(v/mx*64));
-        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">'+
-          '<span style="font-size:8px;font-weight:600;color:var(--text1);">'+_esc(lbl)+'</span>'+
-          '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:6px;"></div></div>';
+      var lbls = td.map(function(t){ return '<div style="flex:1;font-size:10px;text-align:center;color:var(--text2);">'+_esc(t.label)+'</div>'; }).join('');
+      function _tBar(v, mx, clr, lbl, tip) {
+        var h = Math.max(3, Math.round(v/mx*84));
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="'+_esc(tip||lbl)+'">'+
+          '<span style="font-size:10px;font-weight:600;color:var(--text1);white-space:nowrap;">'+_esc(lbl)+'</span>'+
+          '<div style="width:100%;background:'+clr+';border-radius:3px 3px 0 0;height:'+h+'px;min-width:8px;"></div></div>';
       }
       var b1='', b2='', b3='';
       td.forEach(function(t) {
         var pct = t.pctCumprimento||0;
-        b1 += _tBar(pct, 100, pct>=80?'#22c55e':pct>=60?'#f59e0b':'#ef4444', pct+'%');
-        b2 += _tBar(t.totalMinutos||0, maxMin, 'var(--color-primary)', t.totalHorasHM||'—');
-        b3 += _tBar(t.totalExtras||0, maxExt, '#f59e0b', t.totalExtrasHM||'—');
+        b1 += _tBar(pct, 100, pct>=80?'#22c55e':pct>=60?'#f59e0b':'#ef4444', pct+'%', t.label+' — '+pct+'% dos ativos cumpriram a carga ('+(t.cumpriram||0)+' de '+(t.ativos||0)+')');
+        b2 += _tBar(t.totalMinutos||0, maxMin, 'var(--color-primary)', t.totalHorasHM||'—', t.label+' — '+(t.totalHorasHM||'0h00')+' trabalhadas no total');
+        b3 += _tBar(t.totalExtras||0, maxExt, '#f59e0b', t.totalExtrasHM||'—', t.label+' — '+(t.totalExtrasHM||'0h00')+' de extras acumuladas');
       });
       function _trenChart(title, bars) {
-        return '<div style="flex:1;min-width:160px;background:var(--surface2,#f9f9f9);border-radius:8px;padding:12px;">'+
-          '<p style="margin:0 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">'+title+'</p>'+
-          '<div style="display:flex;align-items:flex-end;gap:3px;height:72px;">'+bars+'</div>'+
-          '<div style="display:flex;gap:3px;margin-top:3px;">'+lbls+'</div></div>';
+        return '<div style="flex:1;min-width:220px;background:var(--surface2,#f9f9f9);border-radius:8px;padding:14px;">'+
+          '<p style="margin:0 0 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">'+title+'</p>'+
+          '<div style="display:flex;align-items:flex-end;gap:4px;height:96px;">'+bars+'</div>'+
+          '<div style="display:flex;gap:4px;margin-top:4px;">'+lbls+'</div></div>';
       }
       if (el) el.innerHTML = '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:16px;">'+
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">'+
         '<h4 style="margin:0;font-size:13px;font-weight:600;">Evolução — últimos 6 meses</h4>'+
-        '<span style="font-size:11px;color:var(--text2);">clique no nome de um colaborador para ver seu histórico individual</span></div>'+
+        '<span style="font-size:11px;color:var(--text2);">passe o mouse nas barras para detalhes · clique na linha de um colaborador para o histórico individual</span></div>'+
         '<div style="display:flex;gap:12px;flex-wrap:wrap;">'+
         _trenChart('% Cumprimento de Carga', b1)+
         _trenChart('Total Horas Trabalhadas', b2)+
@@ -32948,12 +33079,13 @@ var PontoUI = (function() {
         if (bodyEl && row && row.style.display !== 'none') _renderDrilldown(bodyEl, id);
       });
     }, function(e) {
+      _tendCarregando = false;
       if (done) done();
       if (el) el.innerHTML = '<p style="color:var(--erro);font-size:12px;">Erro: '+_esc((e&&e.message)||String(e))+'</p>';
     });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh, filtrarMetricasSetor, _toggleDrilldown, carregarTendencias };
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh, filtrarMetricasSetor, _setMetrFiltroLista, _toggleDrilldown, carregarTendencias };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 

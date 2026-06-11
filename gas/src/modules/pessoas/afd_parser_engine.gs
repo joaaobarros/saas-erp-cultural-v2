@@ -604,6 +604,35 @@ var AfdParserEngine = (function() {
       }
     });
 
+    // ── Etapa 1b: Backfill PIS nos colaboradores sem PIS ─────────────────────────
+    // Para colaboradores matchados (por nome ou PIS) que ainda não têm o campo pis
+    // preenchido na ficha, grava o PIS lido do AFD — permitindo edição posterior pelo RH.
+    var pisBackfill = {};
+    brutos.forEach(function(b) {
+      if (b.colaboradorId && b.pis && !pisBackfill[b.colaboradorId]) {
+        pisBackfill[b.colaboradorId] = String(b.pis).replace(/\D/g, '');
+      }
+    });
+    var pisBackfilledCount = 0;
+    if (Object.keys(pisBackfill).length > 0) {
+      try {
+        var agora = new Date().toISOString();
+        modifyJSON('colaboradores.json', function(lista) {
+          if (!Array.isArray(lista)) return lista;
+          lista.forEach(function(c) {
+            if (c.orgId === orgId && pisBackfill[c.id] && !c.pis) {
+              c.pis = pisBackfill[c.id];
+              c.atualizadoEm = agora;
+              pisBackfilledCount++;
+            }
+          });
+          return lista;
+        });
+      } catch(e) {
+        Logger.warn('afd_parser_engine', 'confirmarImportacao', 'Backfill PIS: ' + e.message);
+      }
+    }
+
     // ── Etapa 2: montar lote de normalizados ─────────────────────────────────────
     // 'valido' → colaboradorId já resolvido em iniciarImportacao
     // 'sem_cadastro' → tenta resolver agora com o mapa atualizado (inclui stubs)
@@ -700,6 +729,7 @@ var AfdParserEngine = (function() {
       ok:               true,
       importados:       importados,
       autoCriados:      autoCriados,
+      pisBackfilled:    pisBackfilledCount,
       erros:            erros,
       semCadastro:      semCadastroFinal,
       duplicados:       brutos.filter(function(b){ return b.status === 'duplicado'; }).length,
