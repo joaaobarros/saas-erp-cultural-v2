@@ -802,14 +802,21 @@ function ctrl_ponto_metricas_rh(params) {
 
       var totMin = 0, totExt = 0, totFalt = 0, diasTrab = 0;
       var jornadasLongas = 0, diasSemIntervalo = 0;
+      var jornadasLongasDatas = [], semIntervaloDatas = [];
       jornadas.forEach(function(j) {
         totMin  += j.minutosTrabalho  || 0;
         totExt  += j.minutosExtras    || 0;
         totFalt += j.minutosFaltantes || 0;
         if (j.statusJornada !== 'ausente') diasTrab++;
-        if ((j.minutosTrabalho || 0) > MAX_JORNADA_DIA_MIN) jornadasLongas++;
+        if ((j.minutosTrabalho || 0) > MAX_JORNADA_DIA_MIN) {
+          jornadasLongas++;
+          if (jornadasLongasDatas.length < 8) jornadasLongasDatas.push({ data: j.data, minutos: j.minutosTrabalho || 0 });
+        }
         // Intervalo intrajornada: se > 8h sem pausa > 60min → risco CLT
-        if ((j.minutosTrabalho || 0) > 480 && (j.minutosIntervalo || 0) < INTRAJORNADA_MIN_MIN) diasSemIntervalo++;
+        if ((j.minutosTrabalho || 0) > 480 && (j.minutosIntervalo || 0) < INTRAJORNADA_MIN_MIN) {
+          diasSemIntervalo++;
+          if (semIntervaloDatas.length < 8) semIntervaloDatas.push({ data: j.data, minutos: j.minutosTrabalho || 0, intervalo: j.minutosIntervalo || 0 });
+        }
       });
 
       var bhSaldo    = _bh(c.id);
@@ -851,7 +858,9 @@ function ctrl_ponto_metricas_rh(params) {
         diasSemIntervalo: diasSemIntervalo,
         excessoBH:        excessoBH,
         extraExcessivo:   extraExces,
-        riscoCLT:         riscoCLT
+        riscoCLT:         riscoCLT,
+        jornadasLongasDatas: jornadasLongasDatas,
+        semIntervaloDatas:   semIntervaloDatas
       });
     });
 

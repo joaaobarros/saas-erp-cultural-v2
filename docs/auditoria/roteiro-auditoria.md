@@ -468,7 +468,36 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 58 (2026-06-10) → SESSÃO 59
+## HANDOFF ATUAL — SESSÃO 60 (2026-06-11) → SESSÃO 61
+
+### Estado atual: ~265 bugs registrados · Deploy @789 (GAS)
+
+### O que foi feito nesta sessão (s60)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @789 | Ponto — UX/UI Espelho + Métricas RH | **Espelho**: troca de mês reseta período p/ "Mês selecionado" (`_pintarBotoesPeriodo` extraído — antes o botão de período ficava aceso indevidamente); período agregado desabilita o seletor de mês (tooltip) e cards ganham sufixo do período + nota sobre a tabela diária; fallback de erro no consolidado. **Métricas RH**: mês com `onchange` + cache por mês (`_metrCacheMes`, troca instantânea); Atualizar = força recálculo; Evolução auto-carrega em background (botão removido); setor preservado na troca de mês. **Painel Riscos CLT**: cards por colaborador com datas das ocorrências (backend retorna `jornadasLongasDatas`/`semIntervaloDatas` em `ctrl_ponto_metricas_rh`). **Tabela individual**: chips Com registro/Risco CLT/Todos (default Com registro), badge "Sem registro", ordenação riscos primeiro. **Gráficos**: fontes/alturas maiores + tooltips. ⚠️ `index.html` desta fase foi commitado em f560d3e (@787) por sessão paralela; @789 entrega o backend. |
+
+### Checklist de auditoria — s60
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* namespace — nenhum endpoint novo; metricasRh/tendenciasRh já mapeados
+[x] CSS — zero classes novas (btn-primario, btn-ghost, stat-card, muted-text existentes)
+[x] IDs de DOM — ponto-dd-* inalterado; nenhum id novo derivado de dados
+[x] FsmGuardian — sem transições de status
+[x] Modais — nenhum modal novo
+[x] Datas — datas de risco formatadas via fmtDataPtBR (_ddmm); backend retorna ISO interno
+[x] BtnGuard — chips e selects com data-bg-skip; Atualizar com BtnGuard.wrap(force)
+```
+
+### Pendentes / próxima ação
+- **Testar no browser (Métricas RH)**: trocar mês → recarrega sozinho; voltar a mês anterior → instantâneo (cache); painel "Riscos CLT identificados" com datas; chips filtram a tabela; drill-down preenche após evolução carregar
+- **Testar no browser (Espelho)**: ativar "Ano vigente" → seletor de mês desabilita; voltar "Mês selecionado" → reabilita; trocar mês → botões de período resetam
+- **Próximo bug de auditoria:** AFT-02 (anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 58 (2026-06-10) → SESSÃO 59
 
 ### Estado atual: ~265 bugs registrados · Deploy @780 (GAS)
 
