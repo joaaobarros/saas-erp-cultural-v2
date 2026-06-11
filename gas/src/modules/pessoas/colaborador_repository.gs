@@ -190,9 +190,11 @@ var ColaboradorRepository = (function () {
       }
       if (idx >= 0) {
         var prev = lista[idx];
-        if (dados.status   === undefined || dados.status   === null) dados.status   = prev.status   || 'ativo';
-        if (dados.ativo    === undefined)                             dados.ativo    = prev.ativo !== false;
-        if (!dados.criadoEm)                                          dados.criadoEm = prev.criadoEm;
+        // Preservar campos de prev não presentes em dados (ex: fotoPerfil do Meu Perfil)
+        Object.keys(prev).forEach(function(k) { if (dados[k] === undefined) dados[k] = prev[k]; });
+        if (dados.status === undefined || dados.status === null) dados.status = prev.status || 'ativo';
+        if (dados.ativo  === undefined) dados.ativo = prev.ativo !== false;
+        if (!dados.criadoEm) dados.criadoEm = prev.criadoEm;
         lista[idx] = dados;
       } else {
         lista.push(dados);

@@ -468,7 +468,25 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 57 (2026-06-10) → SESSÃO 58
+## HANDOFF ATUAL — SESSÃO 58 (2026-06-10) → SESSÃO 59
+
+### Estado atual: ~265 bugs registrados · Deploy @780 (GAS)
+
+### O que foi feito nesta sessão (s58)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @775 | Telefone — máscara + WPP + Toast | Máscara global event delegation; WPP checkbox em 9 campos; `Toast.sucesso`/`Toast.erro` no Meu Perfil save. |
+| @780 | RH — fix foto apagada + filtro Todos | `ColaboradorRepository.salvar`: merge `Object.keys(prev)` antes de `lista[idx]=dados` — preserva `fotoPerfil` e campos não enviados; `PessoasEngine.listar`: `incluirDesligado:true` do frontend impede `excluirDesligado` automático no filtro "Todos". |
+
+### Pendentes / próxima ação
+- **Testar filtro Todos RH**: selecionar "Todos" → Geovana (desligada) deve aparecer
+- **Testar foto persistência**: editar ficha RH → salvar → abrir Meu Perfil → foto ainda presente
+- **Próximo bug de auditoria:** AFT-02 (campo para anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 57 (2026-06-10) → SESSÃO 58
 
 ### Estado atual: ~265 bugs registrados · Deploy @778 (GAS)
 

@@ -178,9 +178,10 @@ var PessoasEngine = (function () {
    */
   function listar(filtros, orgId) {
     filtros = filtros || {};
-    // Excluir desligados por padrão; para vê-los, passar status:'desligado' explicitamente
+    // Excluir desligados por padrão; exceto quando status explícito OU incluirDesligado:true
     var filtrosRepo = Object.assign({}, filtros);
-    if (!filtrosRepo.status) filtrosRepo.excluirDesligado = true;
+    if (!filtrosRepo.status && !filtrosRepo.incluirDesligado) filtrosRepo.excluirDesligado = true;
+    delete filtrosRepo.incluirDesligado;
     return ColaboradorRepository.listar(orgId || _orgId(), filtrosRepo);
   }
 
