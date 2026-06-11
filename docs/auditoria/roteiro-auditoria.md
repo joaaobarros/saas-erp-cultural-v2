@@ -484,6 +484,8 @@
 
 | @795 | RH — Advertências: sequência + gravidade | Evento Advertência ganhou **Nível** (verbal → 1ª/2ª/3ª escrita; após a 3ª: demissão) e **Gravidade** (leve/moderada/grave/gravíssima) — validados no backend (`registrarEvento`); justificativa obrigatória. **Painel de alerta no form** (`_pintarAlertaAdv`): resumo das advertências anteriores (contagem por nível + última data), próximo passo da sequência (pré-seleciona o nível), aviso vermelho quando 3ª escrita já aplicada (medida prevista: demissão); GRAVE → antecipação de etapas; GRAVÍSSIMA → desligamento direto (justa causa) + botão atalho p/ modal de desligamento. **Toasts** pós-registro (3ª escrita / gravíssima). **Timeline**: chips Nível (⚠ na 3ª) + Gravidade colorida. **Modal detalhe**: banner disciplinar (total + próximo passo). Advertências antigas sem nível contam como verbal. *(Commit inclui selects demográficos de sessão paralela.)* |
 
+| @796 | RH — demografia do painel + CPF | Vínculo "Terceirizado"; gênero Cis/Trans (Mulher/Homem Cis, Mulher/Homem Trans, Travesti, Não-binárie) com proteção a valores legados; rótulos "Gay / Lésbica" e "Preta/Parda (Negro)"; campo CPF na Ficha RH (11 dígitos, máscara, não apaga quando vazio; restrito a rh/admin via `_NIVEL_ESCRITA`; fora de `_PERFIL_CAMPOS_EDITAVEIS`); Meu Perfil exibe CPF mascarado read-only. Inclui também (sessão paralela): advertências com nível/gravidade. |
+
 ### Checklist de auditoria — s60
 ```
 [x] prompt()/confirm() — não usados

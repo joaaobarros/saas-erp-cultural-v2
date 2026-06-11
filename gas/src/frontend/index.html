@@ -8095,6 +8095,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">Data Admissão</label><input id="rh-pf-admissao" class="form-input" type="date"></div>
                 <div class="form-group"><label class="form-label">Nº de Registro</label><input id="rh-pf-registro" class="form-input" type="text" placeholder="RH-AAAA-NNNN"></div>
                 <div class="form-group"><label class="form-label">Nº PIS/NIS</label><input id="rh-pf-pis" class="form-input" type="text" placeholder="000.00000.00-0" maxlength="14"></div>
+                <div class="form-group"><label class="form-label">CPF <span style="font-weight:400;font-size:10px;color:var(--text2);">(editável apenas pelo RH)</span></label><input id="rh-pf-cpf" class="form-input" type="text" placeholder="000.000.000-00" maxlength="14" inputmode="numeric"></div>
                 <div class="form-group" style="grid-column:span 2">
                   <label class="form-label">Carga horária semanal</label>
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -33508,6 +33509,14 @@ var RhUI = (function() {
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
     if (pisEl) pisEl.value = colab?(colab.pis||colab.nis||''):'';
+    // CPF — exibido formatado; edição restrita ao RH (todo o form exige papel rh/admin)
+    var cpfEl = document.getElementById('rh-pf-cpf');
+    if (cpfEl) {
+      var _cpfDig = String((colab&&colab.cpf)||'').replace(/\D/g,'');
+      cpfEl.value = _cpfDig.length === 11
+        ? _cpfDig.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')
+        : ((colab&&colab.cpf)||'');
+    }
     // Nº de registro: auto-gera para novo OU quando o existente está vazio
     var regEl = document.getElementById('rh-pf-registro');
     if (regEl) {
@@ -33765,6 +33774,8 @@ var RhUI = (function() {
     var id      = document.getElementById('rh-pf-id').value;
     var cargaHor= Number((document.getElementById('rh-pf-carga')||{value:40}).value) || 40;
     if (!nome) { Toast.aviso('Nome é obrigatório.'); return; }
+    var _cpfRaw = ((document.getElementById('rh-pf-cpf')||{value:''}).value||'').replace(/\D/g,'');
+    if (_cpfRaw && _cpfRaw.length !== 11) { Toast.aviso('CPF inválido — deve conter 11 dígitos.'); return; }
     var dados = {
       nome:nome, emailInstitucional:email, setor:setor, cargo:cargo,
       vinculo:vinculo, tipoVinculo:vinculo, dataAdmissao:admissao,
@@ -33802,6 +33813,7 @@ var RhUI = (function() {
         uf:          document.getElementById('rh-pf-uf').value.trim()
       }
     };
+    if (_cpfRaw) dados.cpf = _cpfRaw;   // só sobrescreve quando preenchido — não apaga CPF existente
     var cargaAnterior = null;
     if (id) {
       dados.id = id;
@@ -36742,6 +36754,7 @@ var PerfilUI = (function() {
       _ro('Nº de Registro', c.numRegistro) +
       _ro('Admissão', fmtDataPtBR((c.dataAdmissao||'').slice(0,10))) +
       _ro('Nascimento', fmtDataPtBR((c.dataNascimento||'').slice(0,10))) +
+      _ro('CPF', (function(){ var d=String(c.cpf||'').replace(/\D/g,''); return d.length===11 ? d.slice(0,3)+'.***.***-'+d.slice(9) : (c.cpf ? '***' : '—'); })()) +
       (c.pis ? _ro('PIS / NIS', c.pis) : '');
 
     // Campos editáveis
