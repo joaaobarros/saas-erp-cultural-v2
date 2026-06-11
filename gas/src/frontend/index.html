@@ -8094,8 +8094,8 @@ select.form-control { cursor: pointer; }
                 </div>
                 <div class="form-group"><label class="form-label">Data Admissão</label><input id="rh-pf-admissao" class="form-input" type="date"></div>
                 <div class="form-group"><label class="form-label">Nº de Registro</label><input id="rh-pf-registro" class="form-input" type="text" placeholder="RH-AAAA-NNNN"></div>
-                <div class="form-group"><label class="form-label">Nº PIS/NIS</label><input id="rh-pf-pis" class="form-input" type="text" placeholder="000.00000.00-0" maxlength="14"></div>
-                <div class="form-group"><label class="form-label">CPF <span style="font-weight:400;font-size:10px;color:var(--text2);">(editável apenas pelo RH)</span></label><input id="rh-pf-cpf" class="form-input" type="text" placeholder="000.000.000-00" maxlength="14" inputmode="numeric"></div>
+                <div class="form-group"><label class="form-label">Nº PIS/NIS</label><input id="rh-pf-pis" class="form-input" type="text" placeholder="000.00000.00-0" maxlength="14" inputmode="numeric" oninput="RhUI._maskPis(this)"></div>
+                <div class="form-group"><label class="form-label">CPF <span style="font-weight:400;font-size:10px;color:var(--text2);">(editável apenas pelo RH)</span></label><input id="rh-pf-cpf" class="form-input" type="text" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="RhUI._maskCpf(this)"></div>
                 <div class="form-group" style="grid-column:span 2">
                   <label class="form-label">Carga horária semanal</label>
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -8835,6 +8835,166 @@ select.form-control { cursor: pointer; }
         </div><!-- /rh-tab-encargos -->
 
       </div><!-- /view-rh -->
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- BI DEMOGRÁFICO (Equipe + Beneficiários)                 -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="view-bi-demografico" class="view">
+        <div class="view-header">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="material-icons-round" style="font-size:28px;color:var(--primary);">person_search</span>
+            <div>
+              <div class="page-title" id="bi-dem-titulo">BI Demográfico — Equipe</div>
+              <div class="page-subtitle" id="bi-dem-subtitulo">Perfil da equipe com recortes por setor, cargo e território</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-ghost btn-sm" id="bi-dem-btn-atualizar"
+              onclick="BtnGuard.wrap('bi-dem-btn-atualizar','Carregando…',BiDemograficoUI.atualizar)">
+              <span class="material-icons-round" style="font-size:16px;vertical-align:-3px;">refresh</span> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs Equipe / Beneficiários -->
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <button class="tab-btn tab-ativa" id="bi-dem-tab-equipe"
+            onclick="BiDemograficoUI.setContexto('equipe',this)" data-bg-skip="1">
+            <span class="material-icons-round" style="font-size:15px;vertical-align:-3px;">badge</span> Equipe
+          </button>
+          <button class="tab-btn" id="bi-dem-tab-beneficiarios"
+            onclick="BiDemograficoUI.setContexto('beneficiarios',this)" data-bg-skip="1">
+            <span class="material-icons-round" style="font-size:15px;vertical-align:-3px;">groups</span> Beneficiários
+          </button>
+        </div>
+
+        <!-- Barra de filtros -->
+        <div class="filter-bar" id="bi-dem-filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
+          <select class="select-sm" id="bi-dem-sel-periodo" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="">Todos os períodos</option>
+          </select>
+          <select class="select-sm" id="bi-dem-sel-setor" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="">Todos os setores</option>
+          </select>
+          <select class="select-sm" id="bi-dem-sel-vinculo" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="">Todos os vínculos</option>
+            <option value="clt">CLT</option>
+            <option value="pj">PJ / Pessoa Jurídica</option>
+            <option value="estagiario">Estagiário</option>
+            <option value="terceirizado">Terceirizado</option>
+            <option value="voluntario">Voluntário</option>
+          </select>
+          <select class="select-sm" id="bi-dem-sel-status" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="ativo">Apenas ativos</option>
+            <option value="">Ativos + desligados</option>
+            <option value="desligado">Apenas desligados</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" id="bi-dem-btn-limpar" style="display:none;"
+            onclick="BiDemograficoUI.limparFiltros()" data-bg-skip="1">
+            <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">filter_list_off</span> Limpar
+          </button>
+        </div>
+
+        <!-- KPI strip com MetricsToggle -->
+        <div class="stats-strip" id="bi-dem-kpis" style="margin-bottom:20px;"></div>
+
+        <!-- Grid demográfico 2×2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">wc</span> Gênero
+            </div>
+            <div id="bi-dem-genero" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">favorite</span> Sexualidade
+            </div>
+            <div id="bi-dem-sexualidade" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">diversity_3</span> Raça / Cor
+            </div>
+            <div id="bi-dem-raca" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">cake</span> Faixa Etária
+            </div>
+            <div id="bi-dem-faixaetaria" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+        </div>
+
+        <!-- Grid setor + território -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;" id="bi-dem-label-setor-dist">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Setor
+            </div>
+            <div id="bi-dem-setor-dist" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;">
+            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+              <span style="display:flex;align-items:center;gap:6px;">
+                <span class="material-icons-round" style="font-size:16px;color:var(--primary);">location_on</span> Território
+              </span>
+              <div style="display:flex;gap:3px;">
+                <button class="btn btn-ghost btn-sm tab-btn tab-ativa" id="bi-dem-geo-bairros"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.setGeoView('bairro',this)" data-bg-skip="1">Bairros</button>
+                <button class="btn btn-ghost btn-sm tab-btn" id="bi-dem-geo-cidades"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.setGeoView('cidade',this)" data-bg-skip="1">Cidades</button>
+              </div>
+            </div>
+            <div id="bi-dem-bairro" style="padding:12px 16px;min-height:100px;"></div>
+          </div>
+        </div>
+
+        <!-- Mapa de calor Leaflet -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+          <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">map</span>
+              Mapa de Distribuição Territorial
+            </span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span id="bi-dem-geo-pendentes" style="display:none;font-size:11px;color:var(--warning);">
+                <span class="material-icons-round" style="font-size:12px;vertical-align:-2px;">hourglass_empty</span>
+                <span id="bi-dem-geo-pendentes-txt"></span>
+              </span>
+              <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
+                onclick="BtnGuard.wrap('bi-dem-btn-mapa','Carregando mapa…',BiDemograficoUI.iniciarMapa)">
+                <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">layers</span> Carregar Mapa
+              </button>
+            </div>
+          </div>
+          <div id="bi-dem-mapa" style="width:100%;height:420px;background:var(--surface2);display:flex;align-items:center;justify-content:center;border-radius:0 0 var(--r-lg) var(--r-lg);">
+            <div style="text-align:center;color:var(--text2);">
+              <span class="material-icons-round" style="font-size:48px;display:block;margin-bottom:8px;opacity:.4;">map</span>
+              <span style="font-size:13px;">Clique em <strong>Carregar Mapa</strong> para ver a distribuição geográfica</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Análise de Personas -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+          <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:6px;">
+              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">psychology</span>
+              Análise de Personas
+            </span>
+            <button class="btn btn-ghost btn-sm" id="bi-dem-btn-personas"
+              onclick="BtnGuard.wrap('bi-dem-btn-personas','Gerando personas…',BiDemograficoUI.gerarPersonas)">
+              <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">auto_awesome</span> Gerar Personas
+            </button>
+          </div>
+          <div id="bi-dem-personas-content" style="padding:16px;">
+            <p class="muted-text" style="font-size:13px;">Clique em <strong>Gerar Personas</strong> para criar perfis compostos a partir dos dados demográficos.</p>
+          </div>
+        </div>
+      </div><!-- /view-bi-demografico -->
 
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- MANUAL DO SISTEMA                                       -->
@@ -9733,6 +9893,10 @@ var GAS = {
     ativar:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_ativar(d); },
     encerrar: function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_encerrar(); },
     status:   function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_status(); }
+  },
+  biDemografico: {
+    equipe:        function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_bi_demografico_equipe(); },
+    beneficiarios: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_bi_demografico_beneficiarios(); }
   },
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
@@ -25967,8 +26131,9 @@ var App = (function() {
     { id:'reservas-carro', label:'Reserva de Veículo', icone:'directions_car', badge:'badgeReservasCarro', modulo:'ESPACOS' },
     { secao:'GESTÃO' },
     { id:'rh',            label:'Pessoas / RH',    icone:'badge',                   modulo:'PESSOAS' },
-    { id:'escuta',        label:'Escuta',          icone:'hearing',  badge:'badgeEscutaAtiva', modulo:'PESSOAS' },
-    { id:'contratacoes',  label:'Contratações',    icone:'handshake',               modulo:'PESSOAS' },
+    { id:'escuta',          label:'Escuta',          icone:'hearing',       badge:'badgeEscutaAtiva', modulo:'PESSOAS' },
+    { id:'bi-demografico', label:'BI Demográfico', icone:'person_search',            modulo:'RELATORIOS' },
+    { id:'contratacoes',   label:'Contratações',   icone:'handshake',               modulo:'PESSOAS' },
     { id:'financeiro',    label:'Financeiro',      icone:'account_balance_wallet',  modulo:'FINANCEIRO' },
     { id:'reunioes',    label:'Reuniões',         icone:'groups',                  modulo:'REUNIOES' },
     { secao:'OPERACIONAL' },
@@ -33508,7 +33673,12 @@ var RhUI = (function() {
     }
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
-    if (pisEl) pisEl.value = colab?(colab.pis||colab.nis||''):'';
+    if (pisEl) {
+      var _pisDig = String((colab&&(colab.pis||colab.nis))||'').replace(/\D/g,'');
+      pisEl.value = _pisDig.length === 11
+        ? _pisDig.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/,'$1.$2.$3-$4')
+        : ((colab&&(colab.pis||colab.nis))||'');
+    }
     // CPF — exibido formatado; edição restrita ao RH (todo o form exige papel rh/admin)
     var cpfEl = document.getElementById('rh-pf-cpf');
     if (cpfEl) {
@@ -35176,6 +35346,20 @@ var RhUI = (function() {
   }
 
   // ─── FOLHA ──────────────────────────────────────────────────
+  function _maskCpf(el) {
+    var d = el.value.replace(/\D/g, '').slice(0, 11);
+    if      (d.length <= 3)  el.value = d;
+    else if (d.length <= 6)  el.value = d.slice(0,3)+'.'+d.slice(3);
+    else if (d.length <= 9)  el.value = d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6);
+    else                     el.value = d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9);
+  }
+  function _maskPis(el) {
+    var d = el.value.replace(/\D/g, '').slice(0, 11);
+    if      (d.length <= 3)  el.value = d;
+    else if (d.length <= 8)  el.value = d.slice(0,3)+'.'+d.slice(3);
+    else if (d.length <= 10) el.value = d.slice(0,3)+'.'+d.slice(3,8)+'.'+d.slice(8);
+    else                     el.value = d.slice(0,3)+'.'+d.slice(3,8)+'.'+d.slice(8,10)+'-'+d.slice(10);
+  }
   function _maskMoeda(el) {
     var raw = el.value.replace(/\D/g, '');
     if (!raw) { el.value = ''; return; }
@@ -35666,7 +35850,7 @@ var RhUI = (function() {
     _acordoCalcSaldo:_acordoCalcSaldo, _confirmarAcordoFerias:_confirmarAcordoFerias,
     carregarPeriodosFerias:carregarPeriodosFerias,
     abrirModalDesligamento:abrirModalDesligamento, _confirmarDesligamento:_confirmarDesligamento,
-    calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
+    calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, _maskCpf:_maskCpf, _maskPis:_maskPis, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
     carregarIndicadores:carregarIndicadores, _fecharModalRh:_fecharModalRh,
     // F16.3 — Dashboard RH
     setSubAbaFolha:setSubAbaFolha,
@@ -35677,6 +35861,603 @@ var RhUI = (function() {
   };
 })();
 Router.registrar('rh', 'RH / Depto. Pessoal', RhUI.aoAbrir);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BiDemograficoUI — BI Demográfico (Equipe + Beneficiários)
+// ═══════════════════════════════════════════════════════════════════════════
+var BiDemograficoUI = (function () {
+  var _carregado   = false;
+  var _contexto    = 'equipe';     // 'equipe' | 'beneficiarios'
+  var _dados       = {};           // { equipe: {...}, beneficiarios: {...} }
+  var _geoView     = 'bairro';     // 'bairro' | 'cidade'
+  var _mapa        = null;
+  var _heatLayer   = null;
+  var _mapaAtivo   = false;
+
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Ciclo de vida ───────────────────────────────────────────────────────
+
+  function aoAbrir() {
+    if (!_carregado) _carregar();
+  }
+
+  function atualizar() {
+    _carregado = false;
+    _dados = {};
+    _resetarMapa();
+    _carregar();
+  }
+
+  function _carregar() {
+    _mostrarLoading();
+    var fn = _contexto === 'equipe' ? GAS.biDemografico.equipe : GAS.biDemografico.beneficiarios;
+    fn(function (r) {
+      if (!r || !r.ok) { _mostrarErro((r && r.error && r.error.message) || 'Erro ao carregar dados.'); return; }
+      _dados[_contexto] = r.data;
+      _carregado = true;
+      _popularFiltros();
+      _renderizar();
+    }, function (e) { _mostrarErro(e.message || String(e)); });
+  }
+
+  // ── Contexto / Tabs ─────────────────────────────────────────────────────
+
+  function setContexto(ctx) {
+    if (ctx === _contexto && _carregado) return;
+    _contexto = ctx;
+    ['equipe','beneficiarios'].forEach(function (t) {
+      var b = document.getElementById('bi-dem-tab-' + t);
+      if (b) b.classList.toggle('tab-ativa', t === ctx);
+    });
+    var titulo    = document.getElementById('bi-dem-titulo');
+    var subtitulo = document.getElementById('bi-dem-subtitulo');
+    var lblSetor  = document.getElementById('bi-dem-label-setor-dist');
+    var selVinculo = document.getElementById('bi-dem-sel-vinculo');
+    var selStatus  = document.getElementById('bi-dem-sel-status');
+    var selSetor   = document.getElementById('bi-dem-sel-setor');
+    if (ctx === 'equipe') {
+      if (titulo)    titulo.textContent    = 'BI Demográfico — Equipe';
+      if (subtitulo) subtitulo.textContent = 'Perfil da equipe com recortes por setor, cargo e território';
+      if (lblSetor)  lblSetor.innerHTML    = '<span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Setor';
+      if (selVinculo) selVinculo.style.display = '';
+      if (selStatus)  selStatus.style.display  = '';
+    } else {
+      if (titulo)    titulo.textContent    = 'BI Demográfico — Beneficiários';
+      if (subtitulo) subtitulo.textContent = 'Perfil do público atendido com recortes por ação e território';
+      if (lblSetor)  lblSetor.innerHTML    = '<span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Ação';
+      if (selVinculo) selVinculo.style.display = 'none';
+      if (selStatus)  selStatus.style.display  = 'none';
+    }
+    if (selSetor) selSetor.value = '';
+    _resetarMapa();
+    if (_dados[_contexto]) { _popularFiltros(); _renderizar(); }
+    else _carregar();
+  }
+
+  // ── Filtros ──────────────────────────────────────────────────────────────
+
+  function _popularFiltros() {
+    var d = _dados[_contexto];
+    if (!d || !d.registros) return;
+
+    // Período (anos presentes nos dados)
+    var selPer = document.getElementById('bi-dem-sel-periodo');
+    if (selPer) {
+      var anos = {};
+      var campoPer = _contexto === 'equipe' ? 'dataAdmissao' : 'criadoEm';
+      d.registros.forEach(function (r) {
+        var a = String(r[campoPer]||'').slice(0,4);
+        if (/^\d{4}$/.test(a)) anos[a] = true;
+      });
+      var anosArr = Object.keys(anos).sort().reverse();
+      var optsP = '<option value="">Todos os períodos</option>';
+      anosArr.forEach(function (a) { optsP += '<option value="' + a + '">' + a + '</option>'; });
+      selPer.innerHTML = optsP;
+    }
+
+    // Setor / Ação
+    var selSet = document.getElementById('bi-dem-sel-setor');
+    if (selSet) {
+      var items = {};
+      var campoSet = _contexto === 'equipe' ? 'setor' : 'acaoNome';
+      d.registros.forEach(function (r) {
+        var v = String(r[campoSet]||'').trim();
+        if (v) items[v] = true;
+      });
+      var label = _contexto === 'equipe' ? 'setor' : 'ação';
+      var optsS = '<option value="">Todos os ' + label + 's</option>';
+      Object.keys(items).sort().forEach(function (v) {
+        optsS += '<option value="' + _esc(v) + '">' + _esc(v) + '</option>';
+      });
+      selSet.innerHTML = optsS;
+    }
+  }
+
+  function _getFiltros() {
+    return {
+      periodo: (document.getElementById('bi-dem-sel-periodo')||{}).value || '',
+      setor:   (document.getElementById('bi-dem-sel-setor')  ||{}).value || '',
+      vinculo: (document.getElementById('bi-dem-sel-vinculo')||{}).value || '',
+      status:  ((document.getElementById('bi-dem-sel-status') ||{}).value !== undefined
+                ? (document.getElementById('bi-dem-sel-status')||{}).value
+                : 'ativo')
+    };
+  }
+
+  function _getDadosFiltrados() {
+    var d = _dados[_contexto];
+    if (!d || !d.registros) return [];
+    var f = _getFiltros();
+    return d.registros.filter(function (r) {
+      if (_contexto === 'equipe') {
+        if (f.status === 'ativo'     && r.status !== 'ativo')    return false;
+        if (f.status === 'desligado' && r.status === 'ativo')    return false;
+        if (f.periodo && String(r.dataAdmissao||'').slice(0,4)  !== f.periodo) return false;
+        if (f.setor   && r.setor !== f.setor) return false;
+        if (f.vinculo) {
+          var tv = String(r.tipoVinculo||'').toLowerCase().replace(/\s+/g,'');
+          var fv = f.vinculo.toLowerCase().replace(/\s+/g,'');
+          if (fv === 'pj' && !/(pj|pessoajuridica)/.test(tv)) return false;
+          if (fv !== 'pj' && tv.indexOf(fv) === -1) return false;
+        }
+      } else {
+        if (f.periodo && String(r.criadoEm||'').slice(0,4) !== f.periodo) return false;
+        if (f.setor   && r.acaoNome !== f.setor) return false;
+      }
+      return true;
+    });
+  }
+
+  function aplicarFiltros() {
+    _renderizar();
+    var f = _getFiltros();
+    var temFiltro = f.periodo || f.setor || f.vinculo || (f.status && f.status !== 'ativo');
+    var btn = document.getElementById('bi-dem-btn-limpar');
+    if (btn) btn.style.display = temFiltro ? '' : 'none';
+  }
+
+  function limparFiltros() {
+    ['bi-dem-sel-periodo','bi-dem-sel-setor','bi-dem-sel-vinculo'].forEach(function (id) {
+      var e = document.getElementById(id);
+      if (e) e.value = '';
+    });
+    var s = document.getElementById('bi-dem-sel-status');
+    if (s) s.value = 'ativo';
+    var btn = document.getElementById('bi-dem-btn-limpar');
+    if (btn) btn.style.display = 'none';
+    _renderizar();
+  }
+
+  // ── Render principal ─────────────────────────────────────────────────────
+
+  function _renderizar() {
+    var regs = _getDadosFiltrados();
+    _renderKpis(regs);
+    _renderBarras('genero',      regs, 'genero');
+    _renderBarras('sexualidade', regs, 'sexualidade');
+    _renderBarras('raca',        regs, _contexto === 'equipe' ? 'racaCor' : 'racaCor');
+    _renderFaixaEtaria(regs);
+    _renderSetorDist(regs);
+    _renderGeo(regs);
+    if (_mapaAtivo) _atualizarMapa(regs);
+  }
+
+  function _mostrarLoading() {
+    var el = document.getElementById('bi-dem-kpis');
+    if (el) el.innerHTML = '<div class="stat-card" style="min-width:200px;"><span class="muted-text">Carregando dados demográficos…</span></div>';
+    ['genero','sexualidade','raca','faixaetaria','setor-dist','bairro'].forEach(function (id) {
+      var e = document.getElementById('bi-dem-' + id);
+      if (e) e.innerHTML = '<p class="muted-text" style="font-size:12px;padding:8px 0;">Carregando…</p>';
+    });
+  }
+
+  function _mostrarErro(msg) {
+    var el = document.getElementById('bi-dem-kpis');
+    if (el) el.innerHTML = '<p style="color:var(--danger);font-size:13px;">Erro: ' + _esc(msg) + '</p>';
+  }
+
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+
+  function _renderKpis(regs) {
+    var el = document.getElementById('bi-dem-kpis');
+    if (!el) return;
+    var total = regs.length;
+    var cards = [];
+
+    if (_contexto === 'equipe') {
+      var clt = regs.filter(function(r){ return /clt/i.test(r.tipoVinculo||''); }).length;
+      var pj  = regs.filter(function(r){ return /pj|pessoa.?jur/i.test(r.tipoVinculo||''); }).length;
+      var est = regs.filter(function(r){ return /estagi/i.test(r.tipoVinculo||''); }).length;
+      var ter = regs.filter(function(r){ return /tercei/i.test(r.tipoVinculo||''); }).length;
+      var iv  = regs.filter(function(r){ return r.idade != null; });
+      var mid = iv.length ? (Math.round(iv.reduce(function(s,r){return s+r.idade;},0)/iv.length*10)/10).toFixed(1) : '—';
+      cards.push(_kpi('Equipe Total', total, '', ''));
+      cards.push(_kpi('CLT', clt, total ? Math.round(clt/total*100)+'%' : '', ''));
+      cards.push(_kpi('Estagiários', est, total ? Math.round(est/total*100)+'%' : '', ''));
+      cards.push(_kpi('Prof. PJ', pj, total ? Math.round(pj/total*100)+'%' : '', ''));
+      cards.push(_kpi('Terceirizados', ter, total ? Math.round(ter/total*100)+'%' : '', ''));
+      cards.push(_kpi('Média de Idade', mid, '', 'anos'));
+    } else {
+      var iv2 = regs.filter(function(r){ return r.idade != null; });
+      var mid2 = iv2.length ? (Math.round(iv2.reduce(function(s,r){return s+r.idade;},0)/iv2.length*10)/10).toFixed(1) : '—';
+      var uniq = {};
+      regs.forEach(function(r){ if (r.pessoa) uniq[r.pessoa] = true; });
+      cards.push(_kpi('Inscrições',    total, '', ''));
+      cards.push(_kpi('Pessoas Únicas', Object.keys(uniq).length, '', ''));
+      cards.push(_kpi('Média de Idade', mid2, '', 'anos'));
+    }
+
+    el.innerHTML = cards.join('');
+    if (typeof MetricsToggle !== 'undefined') MetricsToggle.init('bi-dem-kpis');
+  }
+
+  function _kpi(label, valor, pct, sufixo) {
+    var pctHtml = pct ? '<div style="font-size:12px;color:var(--text2);margin-top:2px;">' + _esc(pct) + '</div>' : '';
+    var sufHtml = sufixo ? '<span style="font-size:12px;color:var(--text2);margin-left:3px;">' + _esc(sufixo) + '</span>' : '';
+    return '<div class="stat-card">' +
+      '<div style="font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">' + _esc(label) + '</div>' +
+      '<div style="font-size:26px;font-weight:700;color:var(--text);">' + _esc(String(valor)) + sufHtml + '</div>' +
+      pctHtml + '</div>';
+  }
+
+  // ── Barras horizontais ───────────────────────────────────────────────────
+
+  var _CORES = {
+    'mulher cis':'#ec4899','homem cis':'#3b82f6','mulher trans':'#d946ef',
+    'homem trans':'#6366f1','não-binárie':'#8b5cf6','não binário':'#8b5cf6',
+    'outra':'#f59e0b','negro pardo':'#92400e','negro preto':'#292524',
+    'branco':'#94a3b8','amarelo':'#ca8a04','indígena':'#16a34a',
+    'heterossexual':'#22c55e','gay / lésbica':'#a855f7','lésbica':'#a855f7',
+    'gay':'#6366f1','bissexual':'#ec4899','pansexual':'#f97316','assexual':'#94a3b8'
+  };
+  function _cor(label) {
+    return _CORES[String(label||'').toLowerCase().trim()] || 'var(--primary)';
+  }
+
+  function _renderBarras(elId, regs, campo) {
+    var el = document.getElementById('bi-dem-' + elId);
+    if (!el) return;
+    var cont = {};
+    regs.forEach(function(r) {
+      var v = String(r[campo]||'').trim() || 'Não informado';
+      cont[v] = (cont[v]||0) + 1;
+    });
+    var total = regs.length;
+    var ents = Object.keys(cont).map(function(k){
+      return { k:k, n:cont[k], pct: total ? Math.round(cont[k]/total*100) : 0 };
+    }).sort(function(a,b){ return b.n - a.n; });
+    if (!ents.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
+    var html = '<table style="width:100%;border-collapse:collapse;">';
+    ents.forEach(function(e, i) {
+      if (i >= 9) return;
+      var cor = _cor(e.k);
+      html += '<tr>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="' + _esc(e.k) + '">' + _esc(e.k) + '</td>' +
+        '<td style="width:100%;padding:4px 6px;">' +
+          '<div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;">' +
+            '<div style="background:' + cor + ';height:14px;width:' + Math.max(2,e.pct) + '%;border-radius:4px;transition:width .4s;"></div>' +
+          '</div></td>' +
+        '<td style="font-size:12px;padding:4px 0 4px 8px;color:var(--text2);white-space:nowrap;text-align:right;">' +
+          e.n + ' <span style="color:var(--text3);">(' + e.pct + '%)</span></td>' +
+        '</tr>';
+    });
+    if (ents.length > 9) {
+      html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:4px 0;">… mais ' + (ents.length-9) + ' categorias</td></tr>';
+    }
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function _renderFaixaEtaria(regs) {
+    var el = document.getElementById('bi-dem-faixaetaria');
+    if (!el) return;
+    var faixas = [
+      {label:'< 20 anos',min:0,max:19},{label:'20 – 29',min:20,max:29},
+      {label:'30 – 39',min:30,max:39},{label:'40 – 49',min:40,max:49},
+      {label:'50 – 59',min:50,max:59},{label:'60+',min:60,max:120}
+    ];
+    var comIdade = regs.filter(function(r){ return r.idade != null; });
+    var semIdade = regs.length - comIdade.length;
+    var html = '<table style="width:100%;border-collapse:collapse;">';
+    faixas.forEach(function(f, i) {
+      var n = comIdade.filter(function(r){ return r.idade >= f.min && r.idade <= f.max; }).length;
+      var pct = comIdade.length ? Math.round(n/comIdade.length*100) : 0;
+      html += '<tr>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;">' + _esc(f.label) + '</td>' +
+        '<td style="width:100%;padding:4px 6px;">' +
+          '<div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;">' +
+            '<div style="background:var(--primary);opacity:.75;height:14px;width:' + Math.max(2,pct) + '%;border-radius:4px;transition:width .4s;"></div>' +
+          '</div></td>' +
+        '<td style="font-size:12px;padding:4px 0 4px 8px;color:var(--text2);white-space:nowrap;text-align:right;">' +
+          n + ' <span style="color:var(--text3);">(' + pct + '%)</span></td>' +
+        '</tr>';
+    });
+    if (semIdade > 0) {
+      html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:6px 0 2px;">' + semIdade + ' sem nascimento cadastrado</td></tr>';
+    }
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  function _renderSetorDist(regs) {
+    _renderBarras('setor-dist', regs, _contexto === 'equipe' ? 'setor' : 'acaoNome');
+  }
+
+  // ── Território (lista) ───────────────────────────────────────────────────
+
+  function setGeoView(view) {
+    _geoView = view;
+    ['bairros','cidades'].forEach(function(v) {
+      var b = document.getElementById('bi-dem-geo-' + v);
+      if (b) b.classList.toggle('tab-ativa',
+        (v==='bairros' && view==='bairro') || (v==='cidades' && view==='cidade'));
+    });
+    _renderGeo(_getDadosFiltrados());
+  }
+
+  function _renderGeo(regs) {
+    var el = document.getElementById('bi-dem-bairro');
+    if (!el) return;
+    var cont = {};
+    regs.forEach(function(r) {
+      var v = _geoView === 'bairro' ? String(r.bairro||'').trim() : String(r.cidade||'').trim();
+      if (v) cont[v] = (cont[v]||0) + 1;
+    });
+    var ents = Object.keys(cont).map(function(k){
+      return { k:k, n:cont[k] };
+    }).sort(function(a,b){ return b.n-a.n; });
+    var max = ents.length ? ents[0].n : 1;
+    if (!ents.length) {
+      el.innerHTML = '<p class="muted-text" style="font-size:12px;">Endereços não cadastrados ou aguardando geocodificação.</p>';
+      return;
+    }
+    var html = '<table style="width:100%;border-collapse:collapse;">';
+    ents.forEach(function(e, i) {
+      if (i >= 12) return;
+      var pct = Math.round(e.n/max*100);
+      html += '<tr>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="' + _esc(e.k) + '">' + _esc(e.k) + '</td>' +
+        '<td style="width:100%;padding:4px 6px;">' +
+          '<div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;">' +
+            '<div style="background:var(--primary);opacity:.65;height:14px;width:' + Math.max(2,pct) + '%;border-radius:4px;transition:width .4s;"></div>' +
+          '</div></td>' +
+        '<td style="font-size:12px;padding:4px 0 4px 8px;color:var(--text2);white-space:nowrap;text-align:right;">' + e.n + '</td>' +
+        '</tr>';
+    });
+    if (ents.length > 12) {
+      html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:4px 0;">… mais ' + (ents.length-12) + ' locais</td></tr>';
+    }
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  // ── Mapa Leaflet + leaflet-heat ──────────────────────────────────────────
+
+  function iniciarMapa() {
+    var regs = _getDadosFiltrados();
+    var d    = _dados[_contexto];
+    if (!d || !d.geo || !Object.keys(d.geo).length) {
+      Toast.aviso('Dados geográficos ainda não disponíveis. Atualize para iniciar a geocodificação.');
+      return;
+    }
+    _atualizarIndicadorPendentes(d.geoPendentes || 0);
+    if (!_mapa) _inicializarLeaflet(regs, d.geo);
+    else        _atualizarMapa(regs);
+    _mapaAtivo = true;
+  }
+
+  function _atualizarMapa(regs) {
+    var d = _dados[_contexto];
+    if (!_mapa || !d || !d.geo) return;
+    _renderPontosNoMapa(regs, d.geo);
+  }
+
+  function _atualizarIndicadorPendentes(n) {
+    var el  = document.getElementById('bi-dem-geo-pendentes');
+    var txt = document.getElementById('bi-dem-geo-pendentes-txt');
+    if (!el) return;
+    el.style.display = n > 0 ? '' : 'none';
+    if (txt) txt.textContent = n + ' endereço(s) aguardando geocodificação';
+  }
+
+  function _resetarMapa() {
+    if (_mapa) { try { _mapa.remove(); } catch(e) {} _mapa = null; _heatLayer = null; }
+    _mapaAtivo = false;
+    var cont = document.getElementById('bi-dem-mapa');
+    if (cont) cont.innerHTML =
+      '<div style="text-align:center;color:var(--text2);display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">' +
+        '<span class="material-icons-round" style="font-size:48px;display:block;margin-bottom:8px;opacity:.4;">map</span>' +
+        '<span style="font-size:13px;">Clique em <strong>Carregar Mapa</strong> para ver a distribuição geográfica</span>' +
+      '</div>';
+  }
+
+  function _inicializarLeaflet(regs, geo) {
+    var mapaEl = document.getElementById('bi-dem-mapa');
+    if (!mapaEl) return;
+    mapaEl.innerHTML = '';
+
+    function _criarMapa() {
+      _mapa = L.map('bi-dem-mapa').setView([-3.7910, -38.5912], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors', maxZoom: 18
+      }).addTo(_mapa);
+      _renderPontosNoMapa(regs, geo);
+    }
+
+    function _carregarHeat(onload) {
+      if (typeof L.heatLayer !== 'undefined') { onload(); return; }
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js';
+      s.onload = onload;
+      s.onerror = onload; // cria mapa mesmo sem heat (fallback círculos)
+      document.head.appendChild(s);
+    }
+
+    if (typeof L === 'undefined') {
+      if (!document.getElementById('leaflet-css')) {
+        var lnk = document.createElement('link');
+        lnk.id = 'leaflet-css'; lnk.rel = 'stylesheet';
+        lnk.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(lnk);
+      }
+      var scr = document.createElement('script');
+      scr.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      scr.onload = function () { _carregarHeat(_criarMapa); };
+      document.head.appendChild(scr);
+    } else {
+      _carregarHeat(_criarMapa);
+    }
+  }
+
+  function _renderPontosNoMapa(regs, geo) {
+    if (!_mapa) return;
+    if (_heatLayer) { _mapa.removeLayer(_heatLayer); _heatLayer = null; }
+    _mapa.eachLayer(function(l){ if (l._biDemMarker) _mapa.removeLayer(l); });
+
+    var cont = {};
+    regs.forEach(function(r) {
+      var k = r.geoKey;
+      if (k && geo[k]) cont[k] = (cont[k]||0) + 1;
+    });
+    var pontos = [];
+    var maxN   = 1;
+    Object.keys(cont).forEach(function(k) {
+      if (geo[k]) { pontos.push([geo[k].lat, geo[k].lng, cont[k]]); if (cont[k]>maxN) maxN=cont[k]; }
+    });
+
+    if (!pontos.length) { Toast.aviso('Nenhum ponto geocodificado para os filtros atuais.'); return; }
+
+    if (typeof L.heatLayer !== 'undefined') {
+      _heatLayer = L.heatLayer(pontos, {
+        radius:25, blur:20, maxZoom:16, max:maxN,
+        gradient:{0.2:'#4ade80',0.5:'#facc15',0.8:'#f97316',1.0:'#ef4444'}
+      }).addTo(_mapa);
+    } else {
+      pontos.forEach(function(p) {
+        var m = L.circleMarker([p[0],p[1]], {
+          radius: Math.max(6, Math.min(22, p[2]*2)),
+          color:'#1a73e8', fillColor:'#1a73e8', fillOpacity:.5, weight:1
+        }).addTo(_mapa);
+        m._biDemMarker = true;
+      });
+    }
+    try {
+      _mapa.fitBounds(pontos.map(function(p){return[p[0],p[1]];}), {padding:[40,40]});
+    } catch(e) {}
+  }
+
+  // ── Personas ─────────────────────────────────────────────────────────────
+
+  function gerarPersonas() {
+    var regs = _getDadosFiltrados();
+    var el   = document.getElementById('bi-dem-personas-content');
+    if (!el) return;
+    if (!regs.length) { el.innerHTML = '<p class="muted-text">Sem dados para os filtros atuais.</p>'; return; }
+
+    var personas = _calcPersonas(regs);
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">';
+    personas.forEach(function(p) {
+      html +=
+        '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">' +
+          '<div style="font-size:36px;text-align:center;">' + p.emoji + '</div>' +
+          '<div style="font-weight:700;font-size:14px;text-align:center;">' + _esc(p.nome) + '</div>' +
+          '<div style="font-size:12px;color:var(--text2);text-align:center;">' + _esc(p.desc) + '</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+          p.attrs.map(function(a){
+            return '<tr style="border-bottom:1px solid var(--border);">' +
+              '<td style="padding:3px 4px;color:var(--text2);">' + _esc(a[0]) + '</td>' +
+              '<td style="padding:3px 4px;font-weight:600;text-align:right;">' + _esc(a[1]) + '</td>' +
+              '</tr>';
+          }).join('') +
+          '</table>' +
+          '<div style="background:var(--primary);color:#fff;border-radius:6px;padding:4px 8px;text-align:center;font-size:11px;font-weight:600;">' +
+            Math.round(p.rep) + '% da amostra' +
+          '</div>' +
+        '</div>';
+    });
+    html += '</div>' +
+      '<p style="font-size:11px;color:var(--text2);margin-top:10px;">Personas geradas a partir da moda de cada atributo nos ' + regs.length + ' registros filtrados.</p>';
+    el.innerHTML = html;
+  }
+
+  function _moda(arr, campo) {
+    var c = {};
+    arr.forEach(function(r) {
+      var v = String(r[campo]||'').trim();
+      if (v && v.toLowerCase() !== 'não informado') c[v] = (c[v]||0) + 1;
+    });
+    var max = 0, res = null;
+    Object.keys(c).forEach(function(k){ if (c[k]>max){max=c[k];res=k;} });
+    return res;
+  }
+
+  function _fxEtLabel(idade) {
+    if (idade == null) return null;
+    if (idade < 20) return '< 20';
+    if (idade < 30) return '20-29';
+    if (idade < 40) return '30-39';
+    if (idade < 50) return '40-49';
+    if (idade < 60) return '50-59';
+    return '60+';
+  }
+
+  var _EMOJIS_GENERO = {'mulher cis':'👩','homem cis':'👨','mulher trans':'👩‍🦱','homem trans':'👨‍🦱','não-binárie':'🧑'};
+
+  function _calcPersonas(regs) {
+    var total   = regs.length;
+    var personas = [];
+    var campoSetor = _contexto === 'equipe' ? 'setor' : 'acaoNome';
+
+    function _add(nome, desc, subRegs, emoji) {
+      if (!subRegs.length) return;
+      var mg  = _moda(subRegs,'genero');
+      var mr  = _moda(subRegs,'racaCor');
+      var ms  = _moda(subRegs, campoSetor);
+      var iv  = subRegs.filter(function(r){return r.idade!=null;});
+      var mId = iv.length ? Math.round(iv.reduce(function(s,r){return s+r.idade;},0)/iv.length) : null;
+      var em  = emoji || _EMOJIS_GENERO[(mg||'').toLowerCase()] || '🧑';
+      var rep = subRegs.length / total * 100;
+      personas.push({
+        emoji: em,
+        nome:  nome,
+        desc:  desc + ' (' + subRegs.length + ' pessoas)',
+        attrs: [
+          ['Gênero',     mg  || '—'],
+          ['Raça/Cor',   mr  || '—'],
+          [_contexto==='equipe'?'Setor':'Ação', ms||'—'],
+          ['Faixa etária', _fxEtLabel(mId)||'—']
+        ],
+        rep: rep
+      });
+    }
+
+    // Perfil geral
+    _add('Perfil Predominante', 'Combinação mais comum', regs);
+
+    // Jovens < 30
+    var jovens = regs.filter(function(r){return r.idade!=null&&r.idade<30;});
+    if (jovens.length/total >= 0.1) _add('Jovem Talento', 'Até 29 anos', jovens, '🧑‍🎤');
+
+    // Sêniores 40+
+    var seniors = regs.filter(function(r){return r.idade!=null&&r.idade>=40;});
+    if (seniors.length/total >= 0.1) _add('Profissional Sênior', '40 anos ou mais', seniors, '🧑‍💼');
+
+    return personas;
+  }
+
+  return {
+    aoAbrir:       aoAbrir,
+    atualizar:     atualizar,
+    setContexto:   setContexto,
+    aplicarFiltros:aplicarFiltros,
+    limparFiltros: limparFiltros,
+    setGeoView:    setGeoView,
+    iniciarMapa:   iniciarMapa,
+    gerarPersonas: gerarPersonas
+  };
+})();
+Router.registrar('bi-demografico', 'BI Demográfico', BiDemograficoUI.aoAbrir);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HoleriteUI — Fase 17 — Processamento de Folha e Holerites

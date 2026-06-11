@@ -105,6 +105,19 @@ function _biGeocodificar(bairro, cidade, uf) {
   return { erro: true };
 }
 
+/** Hash curto e não reversível do email — permite contar pessoas únicas sem expor identidade. */
+function _biHashPessoa(email) {
+  var norm = String(email || '').toLowerCase().trim();
+  if (!norm) return '';
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, norm, Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i = 0; i < 5; i++) {
+    var b = (bytes[i] + 256) % 256;
+    hex += (b < 16 ? '0' : '') + b.toString(16);
+  }
+  return hex;
+}
+
 function _biIdade(dataNascimento) {
   var iso = String(dataNascimento || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -263,6 +276,7 @@ function ctrl_bi_demografico_beneficiarios() {
       var idade = (i.idade !== null && i.idade !== '' && !isNaN(Number(i.idade)))
         ? Math.max(0, Math.min(119, Math.round(Number(i.idade)))) : null;
       return {
+        pessoa:    _biHashPessoa(i.email),
         acaoId:    i.acaoId   || '',
         acaoNome:  i.acaoNome || '',
         status:    i.status   || '',

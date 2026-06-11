@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @783 · Pessoas — bloquear email de demissão para o colaborador desligado
+> Deploy atual: @797 · BI Demográfico — Painel interativo de análise de perfil (Equipe + Beneficiários)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,7 +468,37 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 60 (2026-06-11) → SESSÃO 61
+## HANDOFF ATUAL — SESSÃO 61 (2026-06-11) → SESSÃO 62
+
+### Estado atual: ~266 bugs registrados · Deploy @797 (GAS)
+
+### O que foi feito nesta sessão (s61)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @797 | BI Demográfico — Painel de análise de perfil | **Backend**: `bi_demografico_controller.gs` (já existia) — `ctrl_bi_demografico_equipe` (microdados anonimizados, geocodificação Maps API + cache `bi_geo_cache.json`) e `ctrl_bi_demografico_beneficiarios` (inscrições Público, CEP→bairro ViaCEP + geocodificação). **Frontend**: view `#view-bi-demografico`; tabs Equipe/Beneficiários; filtros (período/ano, setor/ação, vínculo CLT/PJ/Estagiário/Terceirizado, status); KPI strip MetricsToggle; 4 cards demográficos com barras coloridas por categoria (Gênero, Sexualidade, Raça/Cor, Faixa Etária); grid Setor+Território (toggle Bairros/Cidades); mapa de calor Leaflet+leaflet-heat (OpenStreetMap; fallback círculos); análise de Personas (perfil predominante, jovens <30, sênior 40+). `GAS.biDemografico.equipe/beneficiarios`. Menu RELATORIOS. |
+
+### Checklist de auditoria — s61
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* namespace — GAS.biDemografico.equipe + beneficiarios mapeados
+[x] CSS — classes usadas: filter-bar, select-sm, tab-btn, tab-ativa, card, stat-card, stats-strip, muted-text — todas existentes
+[x] IDs de DOM — bi-dem-* fixos, sem sanitização regex
+[x] FsmGuardian — sem transições de status (BI é somente leitura)
+[x] Modais — nenhum modal novo
+[x] Datas — período exibido como ano (string "2025"); sem ISO cru em UI
+[x] BtnGuard — atualizar/mapa/personas com BtnGuard.wrap; botões sync com data-bg-skip="1"
+```
+
+### Pendentes / próxima ação
+- **Testar no browser (@797 — BI Demográfico)**: navegar em BI Demográfico → KPIs carregam; barras de gênero/sexualidade/raça/faixa etária aparecem; filtro por setor filtra os gráficos; Carregar Mapa → mapa Leaflet aparece com heat layer; tab Beneficiários → dados de inscrições; Gerar Personas → 3 personas aparecem
+- **Testar no browser (@796 — Ficha RH)**: CPF na ficha; gênero Cis/Trans; vínculo Terceirizado
+- **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar como "Apuração semanal" + rodar `ctrl_ponto_recalcular_bh_todos`
+- **Próximo bug de auditoria:** AFT-02 (anexar documentos em afastamentos) ou PON-03 (exportação AFD)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 60 (2026-06-11) → SESSÃO 61
 
 ### Estado atual: ~266 bugs registrados · Deploy @795 (GAS)
 
