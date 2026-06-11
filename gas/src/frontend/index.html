@@ -8087,7 +8087,8 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">Vínculo</label>
                   <select id="rh-pf-vinculo" class="form-input">
                     <option value="clt">CLT</option><option value="pj">PJ</option>
-                    <option value="estagio">Estágio</option><option value="voluntario">Voluntário</option>
+                    <option value="estagio">Estágio</option><option value="terceirizado">Terceirizado</option>
+                    <option value="voluntario">Voluntário</option>
                     <option value="bolsista">Bolsista</option>
                   </select>
                 </div>
@@ -8130,12 +8131,15 @@ select.form-control { cursor: pointer; }
                 </div>
                 <div class="form-group"><label class="form-label">E-mail pessoal</label><input id="rh-pf-email-pessoal" class="form-input" type="email" placeholder="email@pessoal.com"></div>
                 <div class="form-group"><label class="form-label">Data de nascimento</label><input id="rh-pf-nascimento" class="form-input" type="date"></div>
-                <div class="form-group"><label class="form-label">Gênero</label>
+                <div class="form-group"><label class="form-label">Identidade de Gênero</label>
                   <select id="rh-pf-genero" class="form-input">
                     <option value="">Prefiro não informar</option>
-                    <option value="feminino">Feminino</option>
-                    <option value="masculino">Masculino</option>
-                    <option value="nao_binario">Não-binário</option>
+                    <option value="mulher_cis">Mulher Cis</option>
+                    <option value="homem_cis">Homem Cis</option>
+                    <option value="mulher_trans">Mulher Trans</option>
+                    <option value="homem_trans">Homem Trans</option>
+                    <option value="travesti">Travesti</option>
+                    <option value="nao_binario">Não-binárie</option>
                     <option value="outro">Outro</option>
                   </select>
                 </div>
@@ -8143,7 +8147,7 @@ select.form-control { cursor: pointer; }
                   <select id="rh-pf-sexualidade" class="form-input">
                     <option value="">Prefiro não informar</option>
                     <option value="heterossexual">Heterossexual</option>
-                    <option value="homossexual">Homossexual (gay/lésbica)</option>
+                    <option value="homossexual">Gay / Lésbica</option>
                     <option value="bissexual">Bissexual</option>
                     <option value="pansexual">Pansexual</option>
                     <option value="assexual">Assexual</option>
@@ -8154,8 +8158,8 @@ select.form-control { cursor: pointer; }
                   <select id="rh-pf-raca" class="form-input">
                     <option value="">Prefiro não informar</option>
                     <option value="branca">Branca</option>
-                    <option value="preta">Preta</option>
-                    <option value="parda">Parda</option>
+                    <option value="preta">Preta (Negro Preto)</option>
+                    <option value="parda">Parda (Negro Pardo)</option>
                     <option value="amarela">Amarela</option>
                     <option value="indigena">Indígena</option>
                   </select>
@@ -8260,7 +8264,24 @@ select.form-control { cursor: pointer; }
                 <div class="form-group" id="rh-ev-wrap-cargo" style="display:none;"><label class="form-label">Novo Cargo *</label><select id="rh-ev-cargo" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-cargo" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-salario" style="display:none;"><label class="form-label">Novo Salário Bruto (R$) *</label><input id="rh-ev-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"><span id="rh-ev-hint-salario" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Horária (h/semana) *</label><input id="rh-ev-carga" class="form-input" type="number" min="1" max="60" step="1" placeholder="40"><span id="rh-ev-hint-carga" style="font-size:11px;color:var(--text2);"></span></div>
-                <div class="form-group" style="grid-column:span 2"><label class="form-label">Descrição <span id="rh-ev-desc-req">*</span></label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
+                <div class="form-group" id="rh-ev-wrap-nivel-adv" style="display:none;"><label class="form-label">Nível da Advertência *</label>
+                  <select id="rh-ev-nivel-adv" class="form-input" onchange="RhUI._pintarAlertaAdv()">
+                    <option value="verbal">Advertência Verbal</option>
+                    <option value="escrita_1">1ª Advertência Escrita</option>
+                    <option value="escrita_2">2ª Advertência Escrita</option>
+                    <option value="escrita_3">3ª Advertência Escrita (última antes da demissão)</option>
+                  </select>
+                </div>
+                <div class="form-group" id="rh-ev-wrap-gravidade" style="display:none;"><label class="form-label">Gravidade *</label>
+                  <select id="rh-ev-gravidade" class="form-input" onchange="RhUI._pintarAlertaAdv()">
+                    <option value="leve">Leve</option>
+                    <option value="moderada">Moderada</option>
+                    <option value="grave">Grave</option>
+                    <option value="gravissima">Gravíssima</option>
+                  </select>
+                </div>
+                <div id="rh-ev-alerta-adv" style="display:none;grid-column:span 2;"></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label"><span id="rh-ev-desc-label">Descrição</span> <span id="rh-ev-desc-req">*</span></label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
               </div>
               <div id="rh-ev-aviso-ficha" style="display:none;margin-top:8px;font-size:12px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:8px 10px;"><span class="ms ms-sm" style="vertical-align:middle;">info</span> Ao registrar, a ficha do colaborador é atualizada automaticamente e os valores anteriores ficam guardados no histórico.</div>
               <div style="display:flex;gap:8px;margin-top:8px;">
@@ -8924,24 +8945,26 @@ select.form-control { cursor: pointer; }
                 <span style="font-size:11px;color:var(--muted);font-style:italic;">opcional e sigiloso</span>
               </div>
               <div style="padding:12px 16px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-                <div class="form-group"><label class="form-label">Gênero</label>
+                <div class="form-group"><label class="form-label">Identidade de Gênero</label>
                   <select id="p-genero" class="form-input">
                     <option value="">Prefiro não informar</option>
-                    <option value="feminino">Feminino</option><option value="masculino">Masculino</option>
-                    <option value="nao_binario">Não-binário</option><option value="outro">Outro</option>
+                    <option value="mulher_cis">Mulher Cis</option><option value="homem_cis">Homem Cis</option>
+                    <option value="mulher_trans">Mulher Trans</option><option value="homem_trans">Homem Trans</option>
+                    <option value="travesti">Travesti</option>
+                    <option value="nao_binario">Não-binárie</option><option value="outro">Outro</option>
                   </select></div>
                 <div class="form-group"><label class="form-label">Orientação Sexual</label>
                   <select id="p-sexualidade" class="form-input">
                     <option value="">Prefiro não informar</option>
-                    <option value="heterossexual">Heterossexual</option><option value="homossexual">Homossexual</option>
+                    <option value="heterossexual">Heterossexual</option><option value="homossexual">Gay / Lésbica</option>
                     <option value="bissexual">Bissexual</option><option value="pansexual">Pansexual</option>
                     <option value="assexual">Assexual</option><option value="outro">Outro</option>
                   </select></div>
                 <div class="form-group"><label class="form-label">Raça/Cor (IBGE)</label>
                   <select id="p-raca" class="form-input">
                     <option value="">Prefiro não informar</option>
-                    <option value="branca">Branca</option><option value="preta">Preta</option>
-                    <option value="parda">Parda</option><option value="amarela">Amarela</option>
+                    <option value="branca">Branca</option><option value="preta">Preta (Negro Preto)</option>
+                    <option value="parda">Parda (Negro Pardo)</option><option value="amarela">Amarela</option>
                     <option value="indigena">Indígena</option>
                   </select></div>
               </div>
@@ -33445,9 +33468,24 @@ var RhUI = (function() {
     document.getElementById('rh-pf-cidade').value       = addr.cidade||'';
     document.getElementById('rh-pf-uf').value           = addr.uf||'';
     // Diversidade, contato e saúde
-    document.getElementById('rh-pf-genero').value         = colab?(colab.genero||''):'';
-    document.getElementById('rh-pf-sexualidade').value    = colab?(colab.sexualidade||''):'';
-    document.getElementById('rh-pf-raca').value           = colab?(colab.racaCor||colab.raca||''):'';
+    // Valor legado (ex.: genero 'feminino'/'masculino' pré-taxonomia Cis/Trans):
+    // injeta option temporária para não apagar o dado silenciosamente ao salvar
+    var _setSelLegado = function(id, v) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      v = v || '';
+      el.value = v;
+      if (v && el.value !== v) {
+        var o = document.createElement('option');
+        o.value = v;
+        o.textContent = v + ' (legado — atualizar)';
+        el.appendChild(o);
+        el.value = v;
+      }
+    };
+    _setSelLegado('rh-pf-genero',      colab?(colab.genero||''):'');
+    _setSelLegado('rh-pf-sexualidade', colab?(colab.sexualidade||''):'');
+    _setSelLegado('rh-pf-raca',        colab?(colab.racaCor||colab.raca||''):'');
     document.getElementById('rh-pf-telefone').value       = mascaraTelValor(colab?(colab.telefone||colab.celular||''):'');
     (function(){ var _w=document.getElementById('rh-pf-telefone-wpp'); if(_w) _w.checked=!!(colab&&colab.telefoneWpp); })();
     var _emgCtx = (colab && colab.contatoEmergencia) || {};
@@ -33661,7 +33699,22 @@ var RhUI = (function() {
       if (!el) return;
       var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
       if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
-      el.innerHTML = lista.slice(0,5).map(function(ev) {
+      // Banner disciplinar: posição do colaborador na sequência de advertências
+      var advs = lista.filter(function(ev){ return (ev.tipo||ev.tipoEvento)==='advertencia'; });
+      var bannerAdv = '';
+      if (advs.length) {
+        var prox = _advProximoPasso(advs);
+        var limite = prox === 'demissao';
+        var corB = limite ? 'var(--color-error,#c62828)' : '#e65100';
+        bannerAdv = '<div style="background:var(--surface2);border-left:3px solid '+corB+';border-radius:0 8px 8px 0;padding:8px 10px;margin-bottom:8px;font-size:12px;">' +
+          '<span class="ms ms-sm" style="vertical-align:middle;color:'+corB+';">warning</span> ' +
+          '<strong>'+advs.length+' advertência(s) registrada(s)</strong> — ' +
+          (limite
+            ? '<strong style="color:var(--color-error,#c62828);">limite da sequência atingido; medida prevista: demissão</strong>'
+            : 'próximo passo na sequência: <strong>'+_esc(_ADV_NIVEL_LABEL[prox])+'</strong>') +
+          '</div>';
+      }
+      el.innerHTML = bannerAdv + lista.slice(0,5).map(function(ev) {
         return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">' +
           '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-primary);">' + _esc(_evLabel(ev.tipo||ev.tipoEvento)) + '</span>' +
           '<span style="font-size:11px;color:var(--text2);margin-left:8px;">' + _fmtData(ev.data||ev.criadoEm||'') + '</span>' +
@@ -34426,6 +34479,100 @@ var RhUI = (function() {
     mudanca_cargo:['cargo'], alteracao_carga:['carga'], admissao:['admissao']
   };
 
+  // ── Advertências — sequência disciplinar + gravidade ─────────
+  var _ADV_NIVEIS      = ['verbal','escrita_1','escrita_2','escrita_3'];
+  var _ADV_NIVEL_LABEL = { verbal:'Advertência Verbal', escrita_1:'1ª Advertência Escrita', escrita_2:'2ª Advertência Escrita', escrita_3:'3ª Advertência Escrita' };
+  var _ADV_GRAV_LABEL  = { leve:'Leve', moderada:'Moderada', grave:'Grave', gravissima:'Gravíssima' };
+  var _ADV_GRAV_COR    = { leve:'var(--color-success,#2e7d32)', moderada:'#b26a00', grave:'#e65100', gravissima:'var(--color-error,#c62828)' };
+  var _advsColab = null;   // cache das advertências do colaborador selecionado no form
+
+  // Posição mais avançada já aplicada na sequência (-1 = nenhuma; sem nível registrado conta como verbal)
+  function _advMaxOrdem(advs) {
+    var m = -1;
+    (advs||[]).forEach(function(a){
+      var o = _ADV_NIVEIS.indexOf(a.nivelAdvertencia);
+      if (o === -1) o = 0;
+      if (o > m) m = o;
+    });
+    return m;
+  }
+  // Próximo passo da sequência: nível seguinte ou 'demissao' após a 3ª escrita
+  function _advProximoPasso(advs) {
+    var prox = _advMaxOrdem(advs) + 1;
+    return prox >= _ADV_NIVEIS.length ? 'demissao' : _ADV_NIVEIS[prox];
+  }
+
+  function _carregarAdvsColab(idColab) {
+    var box = document.getElementById('rh-ev-alerta-adv');
+    if (!box) return;
+    box.style.display = '';
+    box.innerHTML = '<span style="font-size:12px;color:var(--text2);">Verificando advertências anteriores…</span>';
+    _advsColab = null;
+    GAS.rh.historico(idColab, function(resp){
+      var lista = (resp&&resp.ok&&Array.isArray(resp.data)) ? resp.data : [];
+      _advsColab = lista.filter(function(ev){ return (ev.tipo||ev.tipoEvento)==='advertencia'; });
+      // Pré-seleciona o próximo nível da sequência
+      var prox = _advProximoPasso(_advsColab);
+      var sel = document.getElementById('rh-ev-nivel-adv');
+      if (sel && prox !== 'demissao') sel.value = prox;
+      _pintarAlertaAdv();
+    }, function(){
+      _advsColab = [];
+      _pintarAlertaAdv();
+    });
+  }
+
+  // Painel de alerta do form: histórico, posição na sequência e efeito da gravidade
+  function _pintarAlertaAdv() {
+    var box = document.getElementById('rh-ev-alerta-adv');
+    if (!box || box.style.display === 'none') return;
+    var idColab = (document.getElementById('rh-ev-colab')||{}).value || '';
+    if (!idColab) { box.innerHTML = '<span style="font-size:12px;color:var(--text2);">Selecione o colaborador para ver o histórico disciplinar.</span>'; return; }
+    if (_advsColab === null) return; // ainda carregando
+    var advs = _advsColab;
+    var grav = (document.getElementById('rh-ev-gravidade')||{}).value || 'leve';
+    var prox = _advProximoPasso(advs);
+    var linhas = [];
+
+    // 1. Histórico disciplinar
+    if (!advs.length) {
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;">history</span> Nenhuma advertência anterior registrada.');
+    } else {
+      var contagem = {};
+      advs.forEach(function(a){ var n = _ADV_NIVEIS.indexOf(a.nivelAdvertencia)===-1 ? 'verbal' : a.nivelAdvertencia; contagem[n]=(contagem[n]||0)+1; });
+      var resumo = _ADV_NIVEIS.filter(function(n){ return contagem[n]; })
+        .map(function(n){ return _ADV_NIVEL_LABEL[n] + (contagem[n]>1?' ×'+contagem[n]:''); }).join(' · ');
+      var ultima = advs[0]; // listarHistorico já vem ordenado desc por criadoEm
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;">history</span> <strong>'+advs.length+' advertência(s) anteriores:</strong> '+_esc(resumo)+
+        (ultima ? ' <span style="color:var(--text2);">(última: '+_esc(_fmtData(ultima.data||ultima.criadoEm))+')</span>' : ''));
+    }
+
+    // 2. Posição na sequência disciplinar
+    var corBorda = 'var(--color-primary,#6a1b9a)';
+    if (prox === 'demissao') {
+      corBorda = 'var(--color-error,#c62828)';
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;color:var(--color-error,#c62828);">warning</span> <strong style="color:var(--color-error,#c62828);">Limite da sequência disciplinar atingido</strong> — a 3ª advertência escrita já foi aplicada. Medida prevista: <strong>demissão</strong>.');
+    } else {
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;">stairs</span> Próximo passo na sequência: <strong>'+_esc(_ADV_NIVEL_LABEL[prox])+'</strong> <span style="color:var(--text2);">(verbal → 1ª escrita → 2ª escrita → 3ª escrita → demissão)</span>');
+    }
+
+    // 3. Efeito da gravidade
+    if (grav === 'grave') {
+      corBorda = '#e65100';
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;color:#e65100;">priority_high</span> <strong style="color:#e65100;">Gravidade GRAVE</strong> — pode-se antecipar etapas da sequência (aplicar advertência escrita mais avançada).');
+    } else if (grav === 'gravissima') {
+      corBorda = 'var(--color-error,#c62828)';
+      linhas.push('<span class="ms ms-sm" style="vertical-align:middle;color:var(--color-error,#c62828);">report</span> <strong style="color:var(--color-error,#c62828);">Gravidade GRAVÍSSIMA</strong> — pode justificar desligamento direto (justa causa), independente da sequência.');
+    }
+
+    var btnDesligar = (prox === 'demissao' || grav === 'gravissima')
+      ? '<div style="margin-top:8px;"><button type="button" class="btn btn-perigo btn-sm" data-bg-skip="1" onclick="RhUI.abrirModalDesligamento('+JSON.stringify(idColab).replace(/"/g,"'")+')"><span class="ms ms-sm">logout</span> Registrar desligamento</button></div>'
+      : '';
+
+    box.innerHTML = '<div style="background:var(--surface2);border-left:3px solid '+corBorda+';border-radius:0 8px 8px 0;padding:10px 12px;font-size:12px;display:flex;flex-direction:column;gap:6px;">'+
+      linhas.map(function(l){ return '<div>'+l+'</div>'; }).join('') + btnDesligar + '</div>';
+  }
+
   function _evLabel(t){ return _EV_TIPO_LABEL[t] || t || 'Evento'; }
 
   // Resumo das mudanças estruturadas do evento (anterior → novo), já escapado
@@ -34439,6 +34586,12 @@ var RhUI = (function() {
       parts.push('Carga: ' + _esc(ev.cargaAnterior != null ? ev.cargaAnterior + 'h' : '—') + ' → <strong>' + _esc(ev.novaCargaHoraria) + 'h</strong>');
     if ((ev.tipo === 'admissao' || ev.tipoEvento === 'admissao') && ev.dataAdmissao)
       parts.push('Admissão: <strong>' + _esc(_fmtData(ev.dataAdmissao)) + '</strong>');
+    if ((ev.tipo === 'advertencia' || ev.tipoEvento === 'advertencia')) {
+      if (ev.nivelAdvertencia)
+        parts.push('Nível: <strong>' + _esc(_ADV_NIVEL_LABEL[ev.nivelAdvertencia] || ev.nivelAdvertencia) + '</strong>' + (ev.nivelAdvertencia === 'escrita_3' ? ' <span style="color:var(--color-error,#c62828);">⚠ última antes da demissão</span>' : ''));
+      if (ev.gravidade)
+        parts.push('Gravidade: <strong style="color:' + (_ADV_GRAV_COR[ev.gravidade] || 'inherit') + ';">' + _esc(_ADV_GRAV_LABEL[ev.gravidade] || ev.gravidade) + '</strong>');
+    }
     if (ev.tipo === 'desligamento' && ev.dataDesligamento)
       parts.push('Desligamento: <strong>' + _esc(_fmtData(ev.dataDesligamento)) + '</strong>' + (ev.tipoRescisao ? ' (' + _esc(ev.tipoRescisao) + ')' : ''));
     return parts;
@@ -34477,15 +34630,30 @@ var RhUI = (function() {
   function _atualizarCamposEvento() {
     var tipo   = (document.getElementById('rh-ev-tipo')||{}).value || 'outro';
     var campos = _EV_CAMPOS[tipo] || [];
+    var ehAdv  = tipo === 'advertencia';
     ['cargo','salario','carga','admissao'].forEach(function(c){
       var w = document.getElementById('rh-ev-wrap-'+c);
       if (w) w.style.display = campos.indexOf(c) >= 0 ? '' : 'none';
     });
+    ['nivel-adv','gravidade'].forEach(function(c){
+      var w = document.getElementById('rh-ev-wrap-'+c);
+      if (w) w.style.display = ehAdv ? '' : 'none';
+    });
+    var lblDesc = document.getElementById('rh-ev-desc-label');
+    if (lblDesc) lblDesc.textContent = ehAdv ? 'Justificativa' : 'Descrição';
     var aviso = document.getElementById('rh-ev-aviso-ficha');
     if (aviso) aviso.style.display = campos.length ? '' : 'none';
     var req = document.getElementById('rh-ev-desc-req');
     if (req) req.style.display = campos.length ? 'none' : '';
     var idColab = (document.getElementById('rh-ev-colab')||{}).value;
+    var alertaAdv = document.getElementById('rh-ev-alerta-adv');
+    if (ehAdv) {
+      if (alertaAdv) alertaAdv.style.display = '';
+      if (idColab) _carregarAdvsColab(idColab);
+      else { _advsColab = []; _pintarAlertaAdv(); }
+    } else if (alertaAdv) {
+      alertaAdv.style.display = 'none';
+    }
     var c = _colaboradores.find(function(x){ return x.id === idColab; });
     var hints = {
       cargo:    c ? 'Atual: ' + (c.cargo || '—') : '',
@@ -34508,6 +34676,9 @@ var RhUI = (function() {
     ['rh-ev-salario','rh-ev-carga','rh-ev-admissao'].forEach(function(id){
       var el=document.getElementById(id); if (el) el.value='';
     });
+    _advsColab = null;
+    var nvSel = document.getElementById('rh-ev-nivel-adv'); if (nvSel) nvSel.value = 'verbal';
+    var gvSel = document.getElementById('rh-ev-gravidade'); if (gvSel) gvSel.value = 'leve';
     GAS.rh.listarCargos(function(resp){
       var sel = document.getElementById('rh-ev-cargo');
       if (!sel) return;
@@ -34529,8 +34700,16 @@ var RhUI = (function() {
     var dataEv=(document.getElementById('rh-ev-data')||{}).value||'';
     if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
     var campos=_EV_CAMPOS[tipo]||[];
-    if (!desc && !campos.length){ Toast.aviso('Informe a descrição.'); return; }
+    if (!desc && !campos.length && tipo!=='advertencia'){ Toast.aviso('Informe a descrição.'); return; }
     var dados={idColaborador:idColab,tipo:tipo,tipoEvento:tipo,descricao:desc,data:dataEv};
+    if (tipo==='advertencia'){
+      var nv=(document.getElementById('rh-ev-nivel-adv')||{}).value;
+      var gv=(document.getElementById('rh-ev-gravidade')||{}).value;
+      if (!nv){ Toast.aviso('Selecione o nível da advertência.'); return; }
+      if (!gv){ Toast.aviso('Selecione a gravidade.'); return; }
+      if (!desc){ Toast.aviso('Informe a justificativa da advertência.'); return; }
+      dados.nivelAdvertencia=nv; dados.gravidade=gv;
+    }
     if (campos.indexOf('cargo')>=0){
       var nc=(document.getElementById('rh-ev-cargo')||{}).value;
       if (!nc && tipo==='mudanca_cargo'){ Toast.aviso('Selecione o novo cargo.'); return; }
@@ -34559,6 +34738,10 @@ var RhUI = (function() {
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
         Toast.sucesso(campos.length?'Evento registrado — ficha do colaborador atualizada!':'Evento registrado!');
+        if (dados.nivelAdvertencia==='escrita_3')
+          Toast.aviso('3ª advertência escrita registrada — a próxima medida prevista é a demissão.');
+        else if (dados.gravidade==='gravissima')
+          Toast.aviso('Advertência GRAVÍSSIMA registrada — avalie o desligamento direto (justa causa).');
         fecharFormEvento(); carregarHistorico();
         if (campos.length){ carregarEquipe(); _carregarMetricas(); }
       },function(e){ done(); Toast.erro(e.message||e); });
@@ -35456,7 +35639,7 @@ var RhUI = (function() {
     _aplicarReajustePccsInline:_aplicarReajustePccsInline,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
     salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
-    _atualizarCamposEvento:_atualizarCamposEvento,
+    _atualizarCamposEvento:_atualizarCamposEvento, _pintarAlertaAdv:_pintarAlertaAdv,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,
     fecharFormAvaliacao:fecharFormAvaliacao, salvarAvaliacao:salvarAvaliacao,
     excluirAvaliacao:excluirAvaliacao, _confirmarExcluirAvaliacao:_confirmarExcluirAvaliacao,
@@ -36585,7 +36768,17 @@ var PerfilUI = (function() {
     var addr = c.endereco || {};
     _set('p-cep', addr.cep); _set('p-logradouro', addr.logradouro); _set('p-num-end', addr.numero);
     _set('p-complemento', addr.complemento); _set('p-bairro', addr.bairro); _set('p-cidade', addr.cidade); _set('p-uf', addr.uf);
-    _set('p-genero', c.genero); _set('p-sexualidade', c.sexualidade); _set('p-raca', c.racaCor||c.raca);
+    // Selects demográficos: valor legado ganha option temporária (não apagar ao salvar)
+    var _setSelLeg = function(id, v) {
+      var el = g(id); if (!el) return;
+      v = v || ''; el.value = v;
+      if (v && el.value !== v) {
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v + ' (legado — atualizar)';
+        el.appendChild(o); el.value = v;
+      }
+    };
+    _setSelLeg('p-genero', c.genero); _setSelLeg('p-sexualidade', c.sexualidade); _setSelLeg('p-raca', c.racaCor||c.raca);
     _set('p-tipo-sanguineo', c.tipoSanguineo); _set('p-alergias', c.alergias); _set('p-obs-pessoais', c.observacoesPessoais||c.obsPessoais);
     var rests = Array.isArray(c.restricoesAlimentares) ? c.restricoesAlimentares : [];
     document.querySelectorAll('[id^="p-rest-"]').forEach(function(cb) {

@@ -611,6 +611,18 @@ var PessoasEngine = (function () {
     if (dados.tipo === 'desligamento')
       throw new Error('Use registrarDesligamento() para registrar desligamentos oficiais.');
 
+    // Advertência: sequência disciplinar (verbal → 1ª/2ª/3ª escrita) + gravidade
+    if (dados.tipo === 'advertencia') {
+      var _NIVEIS_ADV = ['verbal', 'escrita_1', 'escrita_2', 'escrita_3'];
+      var _GRAVIDADES = ['leve', 'moderada', 'grave', 'gravissima'];
+      if (_NIVEIS_ADV.indexOf(dados.nivelAdvertencia) === -1)
+        throw new Error('Nível da advertência inválido. Use: ' + _NIVEIS_ADV.join(', '));
+      if (_GRAVIDADES.indexOf(dados.gravidade) === -1)
+        throw new Error('Gravidade inválida. Use: ' + _GRAVIDADES.join(', '));
+      if (!dados.descricao)
+        throw new Error('Justificativa é obrigatória para advertências.');
+    }
+
     // semEfeitos: a ficha já foi atualizada pelo chamador (ex.: salvarColab),
     // o evento apenas registra os valores anterior/novo recebidos.
     var fichaAtualizada = false;
@@ -625,6 +637,7 @@ var PessoasEngine = (function () {
     var r = ColaboradorRepository.salvarHistorico(dados);
     _audit('HISTORICO_EVENTO_REGISTRADO', {
       id: r.id, tipo: dados.tipo, idColaborador: dados.idColaborador,
+      nivelAdvertencia: dados.nivelAdvertencia, gravidade: dados.gravidade,
       fichaAtualizada: !!fichaAtualizada, operador: emailOperador || ''
     });
     return r.id;
