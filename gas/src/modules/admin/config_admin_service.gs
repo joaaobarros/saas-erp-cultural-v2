@@ -378,7 +378,8 @@ var ConfigAdminService = (function () {
 
     modifyJSON('setores_config.json', function(lista) {
       var idx = lista.findIndex(function(s) { return s.id === id && s.orgId === orgId; });
-      var registro = Object.assign({}, setor, { id: id, orgId: orgId, atualizadoEm: agora() });
+      var label = setor.label || setor.nome;
+      var registro = Object.assign({}, setor, { id: id, label: label, orgId: orgId, atualizadoEm: agora() });
       if (idx >= 0) lista[idx] = registro; else lista.push(registro);
       return lista;
     });

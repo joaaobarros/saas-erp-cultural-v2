@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @802 · BI Demográfico — UI redesenhada (ícones ms, headers coloridos, sem termos vazados)
+> Deploy atual: @820 · RH — Férias: saldo correto, acordo melhorado, edição inline na modal do colaborador
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,33 +468,47 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 64 (2026-06-12) → SESSÃO 65
+## HANDOFF ATUAL — SESSÃO 65 (2026-06-12) → SESSÃO 66
 
-### Estado atual: ~266 bugs registrados · Deploy @819 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @820 (GAS)
 
-### O que foi feito nesta sessão (s64)
+### O que foi feito nesta sessão (s65)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @819 | RH — Campo pai/mãe em Meu Perfil e Ficha Colaborador | **Backend**: 3 campos em `_CAMPOS_PROTEGIDOS` + `_PERFIL_CAMPOS_EDITAVEIS`: `ePaiMae`, `papelParental`, `numFilhos`. **Frontend**: bloco condicional na seção Saúde de ambos os forms — select "É pai/mãe?" (Prefiro não informar/Não/Sim); ao Sim, expande painel com checkboxes Mãe/Pai/Responsável e campo numérico de filhos/dependentes. Toggle `_togglePaiMae` exposto em `PerfilUI` e `RhUI`. Usado para datas comemorativas (Dia das Mães/Pais) e homenagens. |
-| @818 | RH — Campo PcD em Meu Perfil e Ficha Colaborador | **Backend**: 4 campos em `_CAMPOS_PROTEGIDOS` + `_PERFIL_CAMPOS_EDITAVEIS`: `pcd`, `pcdTipos`, `pcdSuporte`, `pcdSuporteDescricao`. Bloco condicional com tipos LBI/Lei de Cotas. |
-| @816 | BI Demográfico — geocodificação precisa + toggle mapa de bairros | Fase anterior. |
+| @820 | RH — Férias: saldo correto, acordo melhorado, edição inline na modal do colaborador | **Backend** (`pessoas_engine.gs`): `solicitarFerias` agora calcula e persiste `totalDias` na criação; normaliza aliases `dataInicio`/`dataFim`. `resumoFeriasPorPeriodo` robustecido: conta férias `aprovado` cujo `dataFim <= hoje` além das `concluido`; status normalizado (minúsculas + strip acentos). **Frontend** (`index.html`): (1) Períodos Aquisitivos ordenados por data decrescente (mais recente no topo). (2) Accord modal reescrito — recebe datas originais aprovadas e `totalDias`; pré-preenche datas; mostra card de referência com período aprovado; saldo = `totalDias aprovado − diasGozados`. (3) Sistema de **modal secundário** empilhado: `_abrirModalRhSecundario` (z-index 10000) / `_fecharModalSecundario` / `_recarregarDetFerias` / `_recarregarDetEventos`. (4) **Inline Férias**: "Solicitar férias" na modal do colaborador abre form em modal secundário; ao salvar → fecha secundário + atualiza só o painel de férias da modal. (5) **Inline Eventos**: "Adicionar evento" abre mini-form completo (todos os tipos: reajuste, promoção, mudança cargo, carga, advertência, outro) em modal secundário; ao salvar → atualiza só o painel de histórico. (6) Fix "? dias": calcula a partir das datas quando `totalDias` ausente. |
+| @819 | RH — Campo pai/mãe em Meu Perfil e Ficha Colaborador | Sessão anterior. |
+| @818 | RH — Campo PcD em Meu Perfil e Ficha Colaborador | Sessão anterior. |
 
-### Checklist de auditoria — s64
+### Checklist de auditoria — s65
 ```
 [x] prompt()/confirm() — não usados
-[x] GAS.* namespace — sem novas chamadas GAS (campos salvos pelos controladores existentes)
-[x] CSS — sem classes novas
-[x] IDs de DOM — p-pm-* / rh-pf-pm-* / p-pai-mae / rh-pf-pai-mae (sem colisão com PcD)
-[x] FsmGuardian — sem transições de status
-[x] Modais — sem modais novos
-[x] Datas — sem datas em UI
-[x] BtnGuard — botões de salvar já protegidos
+[x] GAS.* namespace — GAS.rh.listarFerias e GAS.rh.historico usados em _recarregarDet*
+[x] CSS — rh-modal-secundario usa rh-modal-overlay existente; sem classes novas órfãs
+[x] IDs de DOM — rh-fer-sec-* e rh-ev-sec-* usam prefixo próprio; sem colisão
+[x] FsmGuardian — sem transições de status (solicitarFerias = status 'pendente', sem FSM)
+[x] Modais — modal secundário usa background:var(--surface) opaco; overlay rgba(0,0,0,.5)
+[x] Datas — campos de data usam type=date (ISO interno); exibição via fmtDataPtBR
+[x] BtnGuard — _enviarFeriasSec e _salvarEventoSec protegidos com BtnGuard.wrap
 ```
 
 ### Pendentes / próxima ação
-- **Testar no browser (@819)**: Meu Perfil → Saúde → "É pai/mãe? = Sim" → painel expande → marcar papel → salvar → recarregar → persiste; Ficha RH → mesmo fluxo
+- **Deduplificação obrigatória**: rodar `recuperar_diagnosticar_duplicatas()` no GAS Editor → anotar o ID da cópia espúria de João Paulo → rodar `recuperar_deduplicar_joao_paulo(idDuplicado)`. Isso corrigirá o GOZADO = 0d nos Períodos Aquisitivos.
+- **Testar no browser (@820)**: RH → Férias → card Períodos → período mais recente no topo; Acordo → datas pré-preenchidas do período aprovado, saldo correto; RH → Equipe → ver colaborador → "Solicitar férias" → abre modal secundário (modal do colaborador não fecha) → salvar → painel atualiza; "Adicionar evento" → idem.
+- **Testar no browser (@819)**: Meu Perfil → Saúde → "É pai/mãe? = Sim" → painel expande → salvar → persiste; Ficha RH → mesmo fluxo
 - **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar como "Apuração semanal" + rodar `ctrl_ponto_recalcular_bh_todos`
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 64 (2026-06-12) → SESSÃO 65
+
+### Estado anterior: ~266 bugs registrados · Deploy @819 (GAS)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @819 | RH — Campo pai/mãe em Meu Perfil e Ficha Colaborador | **Backend**: 3 campos em `_CAMPOS_PROTEGIDOS` + `_PERFIL_CAMPOS_EDITAVEIS`: `ePaiMae`, `papelParental`, `numFilhos`. **Frontend**: bloco condicional na seção Saúde de ambos os forms. Toggle `_togglePaiMae` exposto em `PerfilUI` e `RhUI`. |
+| @818 | RH — Campo PcD em Meu Perfil e Ficha Colaborador | **Backend**: 4 campos `pcd`, `pcdTipos`, `pcdSuporte`, `pcdSuporteDescricao`. Bloco condicional com tipos LBI/Lei de Cotas. |
+| @816 | BI Demográfico — geocodificação precisa + toggle mapa de bairros | Fase anterior. |
 
 ---
 

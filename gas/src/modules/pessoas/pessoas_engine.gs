@@ -374,6 +374,14 @@ var PessoasEngine = (function () {
     var c = ColaboradorRepository.buscarPorId(orgId, dados.idColaborador);
     if (!c) throw new Error('Colaborador não encontrado: ' + dados.idColaborador);
 
+    // Garantir que totalDias esteja sempre preenchido para cálculo de saldo no acordo
+    if (!dados.totalDias) {
+      dados.totalDias = Math.round((new Date(dados.fim) - new Date(dados.inicio)) / 86400000) + 1;
+    }
+    // Normalizar aliases de campo
+    dados.dataInicio = dados.dataInicio || dados.inicio;
+    dados.dataFim    = dados.dataFim    || dados.fim;
+
     dados.orgId      = orgId;
     dados.solicitante = emailSolicitante || '';
     dados.status     = STATUS_FERIAS.PENDENTE;
@@ -767,7 +775,14 @@ var PessoasEngine = (function () {
       });
       var gozados = 0;
       do_periodo.forEach(function (f) {
-        if (f.status !== 'concluido') return;
+        var statusF = String(f.status || '').toLowerCase().replace(/[^a-z]/g, '');
+        var isConcluido = statusF === 'concluido';
+        // Férias aprovadas com período encerrado (dataFim <= hoje) também contam como gozadas
+        if (!isConcluido && statusF === 'aprovado') {
+          var fimCheck = f.dataFim || f.fim || '';
+          if (fimCheck && fimCheck <= hoje) isConcluido = true;
+        }
+        if (!isConcluido) return;
         if (f.acordo && f.acordo.diasEfetivosGozados) {
           gozados += Number(f.acordo.diasEfetivosGozados) || 0;
         } else {

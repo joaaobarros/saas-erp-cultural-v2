@@ -57,7 +57,8 @@ var SistemaConfigService = (function () {
       var orgId = getOrgConfig().orgId;
       var lista = readJSON('setores_config.json');
       if (Array.isArray(lista) && lista.length > 0) {
-        return lista.filter(function(s) { return s.ativo !== false && s.orgId === orgId; });
+        return lista.filter(function(s) { return s.ativo !== false && s.orgId === orgId; })
+                    .map(function(s) { return s.label ? s : Object.assign({}, s, { label: s.nome }); });
       }
     } catch(e) {
       Logger.warn('config_service', 'getSetores', 'setores_config.json indisponível: ' + e.message);
