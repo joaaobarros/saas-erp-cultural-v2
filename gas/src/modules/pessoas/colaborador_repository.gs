@@ -190,8 +190,30 @@ var ColaboradorRepository = (function () {
       }
       if (idx >= 0) {
         var prev = lista[idx];
-        // Preservar campos de prev não presentes em dados (ex: fotoPerfil do Meu Perfil)
-        Object.keys(prev).forEach(function(k) { if (dados[k] === undefined) dados[k] = prev[k]; });
+        // Campos opcionais que jamais devem ser apagados por um form enviando string vazia.
+        // O valor '' ou [] enviado pelo formulário é tratado como "não informado" quando
+        // prev tem conteúdo — previne perda acidental de dados pessoais/profissionais.
+        // Para apagar intencionalmente um campo, use null (sentinel explícito).
+        var _CAMPOS_PROTEGIDOS = [
+          'nomeApelido','pronomes','emailPessoal','dataNascimento','numRegistro','pis',
+          'genero','sexualidade','racaCor','telefone','contatoEmergencia',
+          'tipoSanguineo','alergias','observacoesPessoais','restricoesAlimentares',
+          'restricoesOutro','endereco','funcoes','substituicoes','cpf',
+          'salarioBruto','salario','fotoPerfil','beneficios'
+        ];
+        Object.keys(prev).forEach(function(k) {
+          if (dados[k] === undefined) {
+            dados[k] = prev[k];
+          } else if (_CAMPOS_PROTEGIDOS.indexOf(k) !== -1 && dados[k] !== null) {
+            var eVazio = dados[k] === '' ||
+              (Array.isArray(dados[k]) && dados[k].length === 0) ||
+              (dados[k] && typeof dados[k] === 'object' && !Array.isArray(dados[k]) &&
+               Object.keys(dados[k]).every(function(sk){ return !dados[k][sk]; }));
+            var prevTemDado = prev[k] !== '' && prev[k] !== null && prev[k] !== undefined &&
+              !(Array.isArray(prev[k]) && prev[k].length === 0);
+            if (eVazio && prevTemDado) dados[k] = prev[k];
+          }
+        });
         if (dados.status === undefined || dados.status === null) dados.status = prev.status || 'ativo';
         if (dados.ativo  === undefined) dados.ativo = prev.ativo !== false;
         if (!dados.criadoEm) dados.criadoEm = prev.criadoEm;

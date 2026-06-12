@@ -778,6 +778,124 @@ function fase1_colaboradores_migrarFuncionarios() {
 }
 
 /**
+ * RECUPERAÇÃO DE EMERGÊNCIA — executar no GAS Editor quando houver perda de dados.
+ *
+ * Lista as últimas revisões de colaboradores.json no Drive e encontra a versão
+ * de João Paulo Rodrigues Barros ANTES da perda ocorrida em 2026-06-11 tarde.
+ *
+ * Uso:
+ *   1. Executar recuperar_colaborador_historico() no GAS Editor
+ *   2. Anotar o conteúdo de "dadosRecuperados" no resultado
+ *   3. Executar recuperar_colaborador_aplicar(dadosRecuperados) para restaurar
+ */
+function recuperar_colaborador_historico() {
+  var NOME_ARQUIVO = 'colaboradores.json';
+  var BUSCA_NOME   = 'João Paulo Rodrigues Barros';
+  // Perda ocorreu em 2026-06-11 tarde (BRT = UTC-3, então aprox. 15:00 UTC)
+  var ANTES_DE     = '2026-06-11T15:00:00.000Z';
+
+  var files = DriveApp.getFilesByName(NOME_ARQUIVO);
+  if (!files.hasNext()) return { ok: false, erro: 'Arquivo ' + NOME_ARQUIVO + ' não encontrado no Drive.' };
+
+  var file   = files.next();
+  var fileId = file.getId();
+  var token  = ScriptApp.getOAuthToken();
+
+  // Listar revisões
+  var rUrl  = 'https://www.googleapis.com/drive/v3/files/' + fileId +
+              '/revisions?pageSize=50&fields=revisions(id,modifiedTime)';
+  var rResp = UrlFetchApp.fetch(rUrl, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+  var revData = JSON.parse(rResp.getContentText());
+  var revisoes = (revData.revisions || []).filter(function(r) {
+    return r.modifiedTime < ANTES_DE;
+  }).sort(function(a, b) {
+    return b.modifiedTime.localeCompare(a.modifiedTime); // mais recente primeiro
+  });
+
+  if (revisoes.length === 0) {
+    return { ok: false, erro: 'Nenhuma revisão encontrada antes de ' + ANTES_DE, totalRevisoes: (revData.revisions||[]).length };
+  }
+
+  // Percorrer revisões até encontrar o colaborador com dados ricos
+  var melhorDados = null;
+  var melhorRevisao = null;
+  for (var i = 0; i < revisoes.length; i++) {
+    var rev = revisoes[i];
+    var cUrl = 'https://www.googleapis.com/drive/v3/files/' + fileId +
+               '/revisions/' + rev.id + '?alt=media';
+    try {
+      var cResp = UrlFetchApp.fetch(cUrl, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+      if (cResp.getResponseCode() !== 200) continue;
+      var lista = JSON.parse(cResp.getContentText());
+      for (var j = 0; j < lista.length; j++) {
+        var c = lista[j];
+        if ((c.nome || '').toLowerCase().indexOf('joão paulo rodrigues barros') !== -1 ||
+            (c.emailInstitucional || '').indexOf('jpbarros') !== -1) {
+          // Critério de "dados ricos": pelo menos 3 campos pessoais não-vazios
+          var camposRicos = ['nomeApelido','pronomes','emailPessoal','dataNascimento',
+                             'genero','sexualidade','racaCor','telefone','cpf',
+                             'tipoSanguineo','alergias','observacoesPessoais'];
+          var ricos = camposRicos.filter(function(k) { return !!c[k]; }).length;
+          if (ricos > (melhorDados ? camposRicos.filter(function(k){ return !!(melhorDados[k]); }).length : 0)) {
+            melhorDados    = c;
+            melhorRevisao  = rev;
+          }
+        }
+      }
+      if (melhorDados) break; // encontrou — para na revisão mais recente com dados
+    } catch(e) { Logger.log('Erro revisão ' + rev.id + ': ' + e.message); }
+  }
+
+  if (!melhorDados) {
+    return {
+      ok: false,
+      erro: 'Colaborador não encontrado em nenhuma revisão anterior a ' + ANTES_DE,
+      revisoesTentadas: revisoes.length
+    };
+  }
+
+  return {
+    ok: true,
+    revisaoId: melhorRevisao.id,
+    revisaoData: melhorRevisao.modifiedTime,
+    dadosRecuperados: melhorDados,
+    instrucao: 'Verifique os dados acima e execute recuperar_colaborador_aplicar() para restaurar.'
+  };
+}
+
+/**
+ * SEGUNDO PASSO DA RECUPERAÇÃO — aplica os dados recuperados sobre o registro atual.
+ * Preserva status atual e atualizadoEm; restaura todos os outros campos do snapshot.
+ *
+ * Uso: recuperar_colaborador_aplicar()  (usa dados de colaboradores.json histórico)
+ * Ou:  recuperar_colaborador_aplicar_manual() para restaurar campos específicos
+ */
+function recuperar_colaborador_aplicar() {
+  var resultado = recuperar_colaborador_historico();
+  if (!resultado.ok) return resultado;
+
+  var snap   = resultado.dadosRecuperados;
+  var orgId  = snap.orgId || getOrgConfig().orgId;
+  var atual  = ColaboradorRepository.buscarPorId(orgId, snap.id);
+
+  if (!atual) return { ok: false, erro: 'Colaborador ID ' + snap.id + ' não encontrado no estado atual.' };
+
+  // Preservar status e datas atuais; restaurar dados pessoais/profissionais do snapshot
+  var _PRESERVAR_ATUAL = ['status', 'ativo', 'atualizadoEm'];
+  Object.keys(snap).forEach(function(k) {
+    if (_PRESERVAR_ATUAL.indexOf(k) === -1) atual[k] = snap[k];
+  });
+
+  ColaboradorRepository.salvar(orgId, atual);
+  AuditoriaService.registrar('COLABORADOR_RESTAURADO_HISTORICO', 'pessoas', {
+    id: snap.id, nome: snap.nome, revisaoId: resultado.revisaoId,
+    revisaoData: resultado.revisaoData, operador: 'recuperacao_emergencia'
+  });
+
+  return { ok: true, mensagem: 'Dados de ' + snap.nome + ' restaurados a partir da revisão ' + resultado.revisaoData };
+}
+
+/**
  * Migração única: copia campos pessoais de usuarios_acesso.json → colaboradores.json
  * e remove esses campos do arquivo de acesso.
  * Idempotente: só sobrescreve campos vazios no colaborador.

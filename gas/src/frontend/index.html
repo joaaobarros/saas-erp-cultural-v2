@@ -8840,36 +8840,33 @@ select.form-control { cursor: pointer; }
       <!-- BI DEMOGRÁFICO (Equipe + Beneficiários)                 -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div id="view-bi-demografico" class="view">
+
+        <!-- Cabeçalho -->
         <div class="view-header">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span class="material-icons-round" style="font-size:28px;color:var(--primary);">person_search</span>
-            <div>
-              <div class="page-title" id="bi-dem-titulo">BI Demográfico — Equipe</div>
-              <div class="page-subtitle" id="bi-dem-subtitulo">Perfil da equipe com recortes por setor, cargo e território</div>
-            </div>
+          <div>
+            <div class="view-titulo" id="bi-dem-titulo">BI Demográfico — Equipe</div>
+            <p class="view-subtitulo" id="bi-dem-subtitulo">Perfil da equipe com recortes por setor, cargo e território</p>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn btn-ghost btn-sm" id="bi-dem-btn-atualizar"
-              onclick="BtnGuard.wrap('bi-dem-btn-atualizar','Carregando…',BiDemograficoUI.atualizar)">
-              <span class="material-icons-round" style="font-size:16px;vertical-align:-3px;">refresh</span> Atualizar
-            </button>
-          </div>
+          <button class="btn btn-ghost btn-sm" id="bi-dem-btn-atualizar"
+            onclick="BtnGuard.wrap('bi-dem-btn-atualizar','Carregando…',BiDemograficoUI.atualizar)">
+            <span class="ms ms-sm">refresh</span> Atualizar
+          </button>
         </div>
 
-        <!-- Tabs Equipe / Beneficiários -->
+        <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:16px;">
           <button class="tab-btn tab-ativa" id="bi-dem-tab-equipe"
-            onclick="BiDemograficoUI.setContexto('equipe',this)" data-bg-skip="1">
-            <span class="material-icons-round" style="font-size:15px;vertical-align:-3px;">badge</span> Equipe
+            onclick="BiDemograficoUI.setContexto('equipe')" data-bg-skip="1">
+            <span class="ms ms-sm">badge</span> Equipe
           </button>
           <button class="tab-btn" id="bi-dem-tab-beneficiarios"
-            onclick="BiDemograficoUI.setContexto('beneficiarios',this)" data-bg-skip="1">
-            <span class="material-icons-round" style="font-size:15px;vertical-align:-3px;">groups</span> Beneficiários
+            onclick="BiDemograficoUI.setContexto('beneficiarios')" data-bg-skip="1">
+            <span class="ms ms-sm">groups</span> Beneficiários
           </button>
         </div>
 
         <!-- Barra de filtros -->
-        <div class="filter-bar" id="bi-dem-filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;">
+        <div class="filter-bar" id="bi-dem-filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center;">
           <select class="select-sm" id="bi-dem-sel-periodo" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
             <option value="">Todos os períodos</option>
           </select>
@@ -8891,53 +8888,55 @@ select.form-control { cursor: pointer; }
           </select>
           <button class="btn btn-ghost btn-sm" id="bi-dem-btn-limpar" style="display:none;"
             onclick="BiDemograficoUI.limparFiltros()" data-bg-skip="1">
-            <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">filter_list_off</span> Limpar
+            <span class="ms ms-sm">filter_list_off</span> Limpar filtros
           </button>
         </div>
 
         <!-- KPI strip com MetricsToggle -->
-        <div class="stats-strip" id="bi-dem-kpis" style="margin-bottom:20px;"></div>
+        <div class="stats-strip" id="bi-dem-kpis" style="margin-bottom:24px;">
+          <div class="stat-card"><span class="muted-text" style="font-size:12px;">Carregando métricas…</span></div>
+        </div>
 
         <!-- Grid demográfico 2×2 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">wc</span> Gênero
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#7c3aed11,#7c3aed05);border-bottom:3px solid #7c3aed;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#7c3aed;">people</span> Identidade de Gênero
             </div>
-            <div id="bi-dem-genero" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-genero" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">favorite</span> Sexualidade
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#db277711,#db277705);border-bottom:3px solid #db2777;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#db2777;">volunteer_activism</span> Orientação Sexual
             </div>
-            <div id="bi-dem-sexualidade" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-sexualidade" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">diversity_3</span> Raça / Cor
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#92400e11,#92400e05);border-bottom:3px solid #92400e;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#92400e;">groups</span> Raça / Cor
             </div>
-            <div id="bi-dem-raca" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-raca" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">cake</span> Faixa Etária
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#0369a111,#0369a105);border-bottom:3px solid #0369a1;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#0369a1;">person</span> Faixa Etária
             </div>
-            <div id="bi-dem-faixaetaria" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-faixaetaria" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
         </div>
 
         <!-- Grid setor + território -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;" id="bi-dem-label-setor-dist">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Setor
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#05966911,#05966905);border-bottom:3px solid #059669;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;" id="bi-dem-label-setor-dist">
+              <span class="ms ms-sm" style="color:#059669;">account_tree</span> Por Setor
             </div>
-            <div id="bi-dem-setor-dist" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-setor-dist" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
-          <div class="card" style="padding:0;margin-bottom:0;">
-            <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-              <span style="display:flex;align-items:center;gap:6px;">
-                <span class="material-icons-round" style="font-size:16px;color:var(--primary);">location_on</span> Território
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#d9770611,#d9770605);border-bottom:3px solid #d97706;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+              <span style="display:flex;align-items:center;gap:8px;">
+                <span class="ms ms-sm" style="color:#d97706;">location_city</span> Distribuição Territorial
               </span>
               <div style="display:flex;gap:3px;">
                 <button class="btn btn-ghost btn-sm tab-btn tab-ativa" id="bi-dem-geo-bairros"
@@ -8948,52 +8947,52 @@ select.form-control { cursor: pointer; }
                   onclick="BiDemograficoUI.setGeoView('cidade',this)" data-bg-skip="1">Cidades</button>
               </div>
             </div>
-            <div id="bi-dem-bairro" style="padding:12px 16px;min-height:100px;"></div>
+            <div id="bi-dem-bairro" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
         </div>
 
-        <!-- Mapa de calor Leaflet -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-          <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">map</span>
-              Mapa de Distribuição Territorial
+        <!-- Mapa de calor -->
+        <div class="card" style="padding:0;margin-bottom:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#1d4ed811,#1d4ed805);border-bottom:3px solid #1d4ed8;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#1d4ed8;">travel_explore</span> Mapa de Distribuição Territorial
             </span>
             <div style="display:flex;gap:8px;align-items:center;">
               <span id="bi-dem-geo-pendentes" style="display:none;font-size:11px;color:var(--warning);">
-                <span class="material-icons-round" style="font-size:12px;vertical-align:-2px;">hourglass_empty</span>
+                <span class="ms ms-sm">hourglass_empty</span>
                 <span id="bi-dem-geo-pendentes-txt"></span>
               </span>
               <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
                 onclick="BtnGuard.wrap('bi-dem-btn-mapa','Carregando mapa…',BiDemograficoUI.iniciarMapa)">
-                <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">layers</span> Carregar Mapa
+                <span class="ms ms-sm">travel_explore</span> Carregar Mapa
               </button>
             </div>
           </div>
-          <div id="bi-dem-mapa" style="width:100%;height:420px;background:var(--surface2);display:flex;align-items:center;justify-content:center;border-radius:0 0 var(--r-lg) var(--r-lg);">
+          <div id="bi-dem-mapa" style="width:100%;height:440px;background:var(--surface2);display:flex;align-items:center;justify-content:center;border-radius:0;">
             <div style="text-align:center;color:var(--text2);">
-              <span class="material-icons-round" style="font-size:48px;display:block;margin-bottom:8px;opacity:.4;">map</span>
-              <span style="font-size:13px;">Clique em <strong>Carregar Mapa</strong> para ver a distribuição geográfica</span>
+              <span class="ms" style="font-size:52px;display:block;margin-bottom:12px;opacity:.3;">travel_explore</span>
+              <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Visualização geográfica</div>
+              <div style="font-size:12px;">Clique em <strong>Carregar Mapa</strong> para ver onde estão as pessoas cadastradas</div>
             </div>
           </div>
         </div>
 
         <!-- Análise de Personas -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-          <div style="font-weight:600;font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span style="display:flex;align-items:center;gap:6px;">
-              <span class="material-icons-round" style="font-size:16px;color:var(--primary);">psychology</span>
-              Análise de Personas
+        <div class="card" style="padding:0;margin-bottom:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#71717a11,#71717a05);border-bottom:3px solid #71717a;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#71717a;">psychology</span> Análise de Personas
             </span>
             <button class="btn btn-ghost btn-sm" id="bi-dem-btn-personas"
               onclick="BtnGuard.wrap('bi-dem-btn-personas','Gerando personas…',BiDemograficoUI.gerarPersonas)">
-              <span class="material-icons-round" style="font-size:14px;vertical-align:-2px;">auto_awesome</span> Gerar Personas
+              <span class="ms ms-sm">auto_awesome</span> Gerar Personas
             </button>
           </div>
           <div id="bi-dem-personas-content" style="padding:16px;">
-            <p class="muted-text" style="font-size:13px;">Clique em <strong>Gerar Personas</strong> para criar perfis compostos a partir dos dados demográficos.</p>
+            <p class="muted-text" style="font-size:13px;">Clique em <strong>Gerar Personas</strong> para criar perfis compostos a partir dos dados demográficos (perfil predominante, jovens, seniores).</p>
           </div>
         </div>
+
       </div><!-- /view-bi-demografico -->
 
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -33990,6 +33989,18 @@ var RhUI = (function() {
       var _colabAtual = _colaboradores.find(function(x){ return x.id === id; });
       if (_colabAtual && _colabAtual.status) dados.status = _colabAtual.status;
       if (_colabAtual) cargaAnterior = _colabAtual.horasSemanais || 40;
+      // Restaurar campos não controlados por este formulário — evita apagar dados
+      // gravados por outros fluxos (histórico RH, Meu Perfil, importações, etc.)
+      if (_colabAtual) {
+        var _camposNaoControladosPeloForm = [
+          'funcoes','substituicoes','salarioBruto','salario','fotoPerfil','beneficios','pccs'
+        ];
+        _camposNaoControladosPeloForm.forEach(function(k) {
+          if (_colabAtual[k] !== undefined) dados[k] = _colabAtual[k];
+        });
+        // CPF: preservar do objeto atual caso o campo do form esteja vazio
+        if (!dados.cpf && _colabAtual.cpf) dados.cpf = _colabAtual.cpf;
+      }
     }
     BtnGuard.wrap('rh-btn-salvar-colab','Salvando…',function(done){
       GAS.pessoas.salvar(dados,function(resp){
@@ -35919,13 +35930,13 @@ var BiDemograficoUI = (function () {
     if (ctx === 'equipe') {
       if (titulo)    titulo.textContent    = 'BI Demográfico — Equipe';
       if (subtitulo) subtitulo.textContent = 'Perfil da equipe com recortes por setor, cargo e território';
-      if (lblSetor)  lblSetor.innerHTML    = '<span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Setor';
+      if (lblSetor)  lblSetor.innerHTML    = '<span class="ms" style="font-size:16px;color:var(--primary);">account_tree</span> Por Setor';
       if (selVinculo) selVinculo.style.display = '';
       if (selStatus)  selStatus.style.display  = '';
     } else {
       if (titulo)    titulo.textContent    = 'BI Demográfico — Beneficiários';
       if (subtitulo) subtitulo.textContent = 'Perfil do público atendido com recortes por ação e território';
-      if (lblSetor)  lblSetor.innerHTML    = '<span class="material-icons-round" style="font-size:16px;color:var(--primary);">account_tree</span> Por Ação';
+      if (lblSetor)  lblSetor.innerHTML    = '<span class="ms" style="font-size:16px;color:var(--primary);">account_tree</span> Por Ação';
       if (selVinculo) selVinculo.style.display = 'none';
       if (selStatus)  selStatus.style.display  = 'none';
     }
@@ -36267,7 +36278,7 @@ var BiDemograficoUI = (function () {
     var cont = document.getElementById('bi-dem-mapa');
     if (cont) cont.innerHTML =
       '<div style="text-align:center;color:var(--text2);display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">' +
-        '<span class="material-icons-round" style="font-size:48px;display:block;margin-bottom:8px;opacity:.4;">map</span>' +
+        '<span class="ms" style="font-size:48px;display:block;margin-bottom:8px;opacity:.4;">map</span>' +
         '<span style="font-size:13px;">Clique em <strong>Carregar Mapa</strong> para ver a distribuição geográfica</span>' +
       '</div>';
   }

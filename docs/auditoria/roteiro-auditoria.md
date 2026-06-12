@@ -1098,7 +1098,37 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 37 (2026-06-08) → SESSÃO 38 [ATUALIZADO]
+## HANDOFF ATUAL — SESSÃO 46 (2026-06-11) → SESSÃO 47
+
+### Estado: Deploy @800 · Fix crítico perda de dados RH + função de recuperação
+
+### O que foi feito nesta sessão (s46)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @800 | Fix crítico RH | `ColaboradorRepository.salvar`: merge protege `_CAMPOS_PROTEGIDOS` contra sobrescrita por string vazia. `salvarColab` frontend: restaura `funcoes/substituicoes/salarioBruto/salario/fotoPerfil/beneficios/pccs/cpf` de `_colabAtual`. `pessoas_controller.gs`: `recuperar_colaborador_historico()` + `recuperar_colaborador_aplicar()` via Drive API v3 para recuperar João Paulo Rodrigues Barros. |
+
+### Checklist de auditoria — Fix @800
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* namespace — sem novos bindings frontend (funções de recuperação são executadas no GAS Editor)
+[x] CSS — sem alterações CSS
+[x] IDs de DOM — sem novos IDs
+[x] FsmGuardian — não aplicável (fix é no merge do repositório)
+[x] Modais — não aplicável
+[x] BtnGuard — não aplicável
+[x] Datas — não aplicável
+```
+
+### Pendentes / próxima ação
+- **Recuperação de dados João Paulo Rodrigues Barros:**
+  1. Executar `recuperar_colaborador_historico()` no GAS Editor — lista revisões e localiza dados pré-perda
+  2. Verificar o campo `dadosRecuperados` no resultado
+  3. Se correto, executar `recuperar_colaborador_aplicar()` para restaurar
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 37 (2026-06-08) → SESSÃO 38 [ATUALIZADO]
 
 ### Estado: Deploy @700 · Motor AFD Flexível Fase 5 concluída
 
