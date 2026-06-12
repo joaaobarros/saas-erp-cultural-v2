@@ -4,7 +4,8 @@
  * @description Engine de Reservas de Veículo Institucional.
  *   Regras de negócio:
  *   - TODA reserva exige aprovação de infraestrutura/gestor/admin/superadmin.
- *   - Aprovação é bloqueada se houver reserva APROVADA com horário sobreposto na mesma data.
+ *   - Criação é bloqueada se já existir reserva APROVADA com horário sobreposto (slot ocupado).
+ *   - Aprovação é bloqueada atomicamente se outra reserva for aprovada no mesmo slot (race-safe).
  *   - Colaboradores comuns só veem e cancelam as próprias reservas.
  *   - Equipe infra/gestor/admin vê todas e pode aprovar, recusar ou concluir.
  * @depends modules/infraestrutura/reserva_carro_repository.gs,
@@ -31,7 +32,7 @@ var ReservaCarroEngine = (function() {
     'CONCLUIDA': []
   };
 
-  var PAPEIS_APROVACAO = ['infraestrutura', 'habilitador', 'gestor', 'admin', 'superadmin'];
+  var PAPEIS_APROVACAO = ['habilitador', 'gestor', 'admin', 'superadmin'];
 
   FsmGuardian.registrar('reservas_carro', _TRANSICOES);
 
@@ -48,16 +49,9 @@ var ReservaCarroEngine = (function() {
     return _getRegistro(email).papel || 'colaborador';
   }
 
-  // superadmin e infraestrutura aprovam sempre; gestor/admin apenas se vinculados ao setor Infraestrutura
   function _podAprovar(email) {
-    var reg   = _getRegistro(email);
-    var papel = (reg.papel || '').toLowerCase();
-    if (papel === 'superadmin' || papel === 'infraestrutura') return true;
-    if (papel === 'gestor' || papel === 'admin') {
-      var setor = (reg.setor || '').toLowerCase();
-      return setor === 'infraestrutura';
-    }
-    return false;
+    var papel = (_getRegistro(email).papel || '').toLowerCase();
+    return PAPEIS_APROVACAO.indexOf(papel) >= 0;
   }
 
   function _horaParaMin(hora) {
@@ -108,9 +102,7 @@ var ReservaCarroEngine = (function() {
       if (!Array.isArray(lista)) return [];
       return lista
         .filter(function(u) {
-          return u.status === 'ativo' &&
-            (u.papel === 'infraestrutura' || u.papel === 'gestor' ||
-             u.papel === 'admin'          || u.papel === 'superadmin');
+          return u.status === 'ativo' && PAPEIS_APROVACAO.indexOf(u.papel) >= 0;
         })
         .map(function(u) { return u.email; })
         .filter(function(e) { return !!e; });
@@ -130,6 +122,14 @@ var ReservaCarroEngine = (function() {
     if (!dados.horaChegada) throw new Error('Hora de chegada é obrigatória.');
     if (_horaParaMin(dados.horaSaida) >= _horaParaMin(dados.horaChegada))
       throw new Error('Hora de chegada deve ser posterior à hora de saída.');
+
+    var conflitoAprovado = _verificarConflito(dados.data, dados.horaSaida, dados.horaChegada, orgId, null);
+    if (conflitoAprovado) {
+      throw new Error(
+        'Horário indisponível: o veículo já está reservado em ' + dados.data +
+        ' das ' + conflitoAprovado.horaSaida + ' às ' + conflitoAprovado.horaChegada + '.'
+      );
+    }
 
     var payload = {
       data:             dados.data,
@@ -198,19 +198,20 @@ var ReservaCarroEngine = (function() {
     FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.APROVADA,
       id, emailAprovador);
 
-    var conflito = _verificarConflito(rc.data, rc.horaSaida, rc.horaChegada, orgId, id);
-    if (conflito) {
-      throw new Error(
-        'Conflito de horário: já existe reserva aprovada em ' + rc.data +
-        ' das ' + conflito.horaSaida + ' às ' + conflito.horaChegada + '.'
-      );
-    }
-
-    var atualizado = ReservaCarroRepository.atualizar(id, {
+    var resultadoAprovacao = ReservaCarroRepository.aprovarAtomico(id, {
       status:        STATUS.APROVADA,
       aprovador:     emailAprovador,
       dataAprovacao: agora()
     }, orgId);
+    if (resultadoAprovacao.conflito) {
+      var c = resultadoAprovacao.conflito;
+      throw new Error(
+        'Conflito de horário: já existe reserva aprovada em ' + rc.data +
+        ' das ' + c.horaSaida + ' às ' + c.horaChegada + '.'
+      );
+    }
+    if (!resultadoAprovacao.atualizado) throw new Error('Erro ao aprovar reserva: ' + id);
+    var atualizado = resultadoAprovacao.atualizado;
 
     AuditoriaService.registrar('RESERVA_CARRO_APROVADA', 'reservas_carro', {
       entidadeId: id, orgId: orgId, usuario: emailAprovador, solicitante: rc.solicitante

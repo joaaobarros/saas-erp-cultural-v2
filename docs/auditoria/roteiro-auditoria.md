@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @820 · RH — Férias: saldo correto, acordo melhorado, edição inline na modal do colaborador
+> Deploy atual: @826 · Infraestrutura — fix dupla reserva de veículo no mesmo horário (criação + aprovação atômica)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

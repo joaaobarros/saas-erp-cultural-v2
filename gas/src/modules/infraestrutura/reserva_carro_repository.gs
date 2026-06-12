@@ -51,6 +51,14 @@ var ReservaCarroRepository = (function() {
     }
   }
 
+  function _horaParaMinRepo(hora) {
+    if (!hora) return -1;
+    var p = String(hora).split(':');
+    var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return -1;
+    return h * 60 + m;
+  }
+
   // ── API pública ──────────────────────────────────────────────────────────────
 
   function listar(filtros, orgId) {
@@ -143,6 +151,46 @@ var ReservaCarroRepository = (function() {
     });
   }
 
+  /**
+   * Verifica sobreposição com reservas APROVADAS e, se não houver conflito, aprova atomicamente.
+   * A verificação e a escrita ocorrem dentro do mesmo lock (modifyJSON), eliminando race condition.
+   * @returns {{ atualizado: object|null, conflito: object|null }}
+   */
+  function aprovarAtomico(id, patch, orgId) {
+    var atualizado = null;
+    var conflito   = null;
+
+    modifyJSON(_ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) return lista;
+
+      var rc = null;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === id && lista[i].orgId === orgId) { rc = lista[i]; break; }
+      }
+      if (!rc) return lista;
+
+      var iniNovo = _horaParaMinRepo(rc.horaSaida);
+      var fimNovo = _horaParaMinRepo(rc.horaChegada);
+
+      for (var j = 0; j < lista.length; j++) {
+        var r = lista[j];
+        if (r.orgId !== orgId || r.data !== rc.data || r.id === id) continue;
+        if (r.status !== 'APROVADA') continue;
+        var ini = _horaParaMinRepo(r.horaSaida);
+        var fim = _horaParaMinRepo(r.horaChegada);
+        if (iniNovo < fim && fimNovo > ini) { conflito = r; return lista; }
+      }
+
+      return lista.map(function(r) {
+        if (r.id !== id || r.orgId !== orgId) return r;
+        atualizado = Object.assign({}, r, patch, { atualizadoEm: agora() });
+        return atualizado;
+      });
+    });
+
+    return { atualizado: atualizado, conflito: conflito };
+  }
+
   function prepararIndice() {
     try {
       var aba    = _getSheet(_PLANILHA, _ABA);
@@ -163,6 +211,7 @@ var ReservaCarroRepository = (function() {
     inserir:              inserir,
     atualizar:            atualizar,
     listarAprovadasNaData: listarAprovadasNaData,
+    aprovarAtomico:       aprovarAtomico,
     prepararIndice:       prepararIndice
   };
 
