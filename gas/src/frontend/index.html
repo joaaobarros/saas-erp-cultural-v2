@@ -8235,6 +8235,30 @@ select.form-control { cursor: pointer; }
                     </div>
                   </div>
                 </div>
+                <div class="form-group" style="grid-column:span 2;">
+                  <label class="form-label">É pai ou mãe? <span style="font-size:11px;color:var(--muted);font-weight:400;">— usado em datas comemorativas e homenagens</span></label>
+                  <select id="rh-pf-pai-mae" class="form-input" style="max-width:220px;" onchange="RhUI._togglePaiMae()">
+                    <option value="">Não informado</option>
+                    <option value="nao">Não</option>
+                    <option value="sim">Sim</option>
+                  </select>
+                </div>
+                <div id="rh-pf-pai-mae-detalhes" style="grid-column:span 2;display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group">
+                      <label class="form-label">Papel parental</label>
+                      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;">
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pm-mae" value="mae"> Mãe</label>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pm-pai" value="pai"> Pai</label>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pm-responsavel" value="responsavel"> Responsável / Tutor(a)</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Quantidade de filhos / dependentes</label>
+                      <input id="rh-pf-num-filhos" class="form-input" type="number" min="1" max="20" step="1" placeholder="Ex: 2" style="max-width:100px;">
+                    </div>
+                  </div>
+                </div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
               <div style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
@@ -9245,6 +9269,30 @@ select.form-control { cursor: pointer; }
                     <div class="form-group" id="p-pcd-suporte-det-wrap" style="display:none;">
                       <label class="form-label">Descreva o suporte necessário</label>
                       <input id="p-pcd-suporte-descricao" class="form-input" type="text" placeholder="Ex: intérprete de Libras, rampa de acesso…">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group" style="grid-column:span 2;">
+                  <label class="form-label">É pai ou mãe? <span style="font-size:11px;color:var(--muted);font-weight:400;">— usado em datas comemorativas e homenagens</span></label>
+                  <select id="p-pai-mae" class="form-input" style="max-width:220px;" onchange="PerfilUI._togglePaiMae()">
+                    <option value="">Prefiro não informar</option>
+                    <option value="nao">Não</option>
+                    <option value="sim">Sim</option>
+                  </select>
+                </div>
+                <div id="p-pai-mae-detalhes" style="grid-column:span 2;display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group">
+                      <label class="form-label">Papel parental</label>
+                      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;">
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pm-mae" value="mae"> Mãe</label>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pm-pai" value="pai"> Pai</label>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pm-responsavel" value="responsavel"> Responsável / Tutor(a)</label>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Quantidade de filhos / dependentes</label>
+                      <input id="p-num-filhos" class="form-input" type="number" min="1" max="20" step="1" placeholder="Ex: 2" style="max-width:100px;">
                     </div>
                   </div>
                 </div>
@@ -33773,6 +33821,18 @@ var RhUI = (function() {
       if (supDet) supDet.value = colab?(colab.pcdSuporteDescricao||''):'';
       _togglePcd(); _togglePcdSuporte();
     })();
+    // Pai/mãe
+    (function(){
+      var pmSel = document.getElementById('rh-pf-pai-mae');
+      if (pmSel) pmSel.value = colab?(colab.ePaiMae||''):'';
+      var _ppTipos = (colab && Array.isArray(colab.papelParental)) ? colab.papelParental : [];
+      ['rh-pf-pm-mae','rh-pf-pm-pai','rh-pf-pm-responsavel'].forEach(function(id){
+        var el = document.getElementById(id); if (el) el.checked = _ppTipos.indexOf(el.value) !== -1;
+      });
+      var nfEl = document.getElementById('rh-pf-num-filhos');
+      if (nfEl) nfEl.value = (colab && colab.numFilhos != null) ? String(colab.numFilhos) : '';
+      _togglePaiMae();
+    })();
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
     if (pisEl) {
@@ -34013,8 +34073,9 @@ var RhUI = (function() {
       var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
       if (!lista.length) { el.innerHTML = _empty('Nenhuma férias registrada.'); return; }
       el.innerHTML = lista.slice(0,4).map(function(f) {
+        var _nd = f.totalDias || (f.dataInicio&&f.dataFim ? Math.round((new Date(f.dataFim)-new Date(f.dataInicio))/86400000)+1 : (f.inicio&&f.fim ? Math.round((new Date(f.fim)-new Date(f.inicio))/86400000)+1 : '?'));
         return '<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-size:12px;">' + _fmtData(f.dataInicio||f.inicio) + ' → ' + _fmtData(f.dataFim||f.fim) + ' (' + (f.totalDias||'?') + ' dias)</span>' +
+          '<span style="font-size:12px;">' + _fmtData(f.dataInicio||f.inicio) + ' → ' + _fmtData(f.dataFim||f.fim) + ' (' + _nd + ' dias)</span>' +
           _badge(f.status||'pendente') + '</div>';
       }).join('');
     }, function() {
@@ -34024,11 +34085,128 @@ var RhUI = (function() {
   }
 
   function _abrirFormEventoComColab(idColab) {
-    _fecharModalRh();
-    setTab('historico', null);
-    setTimeout(function() {
-      abrirFormEvento(idColab);
-    }, 150);
+    _abrirModalRhSecundario(
+      '<div style="padding:20px;min-width:440px;">' +
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Adicionar Evento</h3>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label">Tipo *</label>' +
+          '<select id="rh-ev-sec-tipo" class="form-input" onchange="RhUI._evSecAtualizarCampos()">' +
+            '<option value="outro" selected>Outro</option>' +
+            '<option value="reajuste">Reajuste Salarial</option>' +
+            '<option value="mudanca_cargo">Mudan\u00e7a de Cargo</option>' +
+            '<option value="promocao">Promo\u00e7\u00e3o</option>' +
+            '<option value="alteracao_carga">Altera\u00e7\u00e3o de Carga Hor\u00e1ria</option>' +
+            '<option value="advertencia">Advert\u00eancia</option>' +
+            '<option value="elogio">Elogio</option>' +
+          '</select></div>' +
+        '<div class="form-group"><label class="form-label">Data do Evento *</label>' +
+          '<input id="rh-ev-sec-data" class="form-input" type="date"></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-cargo" style="display:none;grid-column:span 2;"><label class="form-label">Novo Cargo *</label>' +
+          '<select id="rh-ev-sec-cargo" class="form-input"><option value="">Selecione\u2026</option></select></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-salario" style="display:none;"><label class="form-label">Novo Sal\u00e1rio Bruto (R$) *</label>' +
+          '<input id="rh-ev-sec-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Hor\u00e1ria (h/sem) *</label>' +
+          '<input id="rh-ev-sec-carga" class="form-input" type="number" min="1" max="60" placeholder="40"></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-nivel" style="display:none;"><label class="form-label">N\u00edvel da Advert\u00eancia *</label>' +
+          '<select id="rh-ev-sec-nivel" class="form-input">' +
+            '<option value="verbal">Advertência Verbal</option>' +
+            '<option value="escrita_1">1\u00aa Advertência Escrita</option>' +
+            '<option value="escrita_2">2\u00aa Advertência Escrita</option>' +
+            '<option value="escrita_3">3\u00aa Advertência Escrita</option>' +
+          '</select></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-gravidade" style="display:none;"><label class="form-label">Gravidade *</label>' +
+          '<select id="rh-ev-sec-gravidade" class="form-input">' +
+            '<option value="leve">Leve</option>' +
+            '<option value="moderada">Moderada</option>' +
+            '<option value="grave">Grave</option>' +
+            '<option value="gravissima">Grav\u00edssima</option>' +
+          '</select></div>' +
+        '<div class="form-group" style="grid-column:span 2;"><label class="form-label">Descri\u00e7\u00e3o <span id="rh-ev-sec-desc-req">*</span></label>' +
+          '<textarea id="rh-ev-sec-desc" class="form-input" rows="3" placeholder="Descreva o evento\u2026"></textarea></div>' +
+      '</div>' +
+      '<input type="hidden" id="rh-ev-sec-colab" value="">' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button id="rh-btn-ev-sec-salvar" class="btn btn-primario" onclick="RhUI._salvarEventoSec()"><span class="ms ms-sm">save</span> Registrar</button>' +
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalSecundario()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>'
+    );
+    // Pré-selecionar data de hoje e colaborador
+    var elData = document.getElementById('rh-ev-sec-data');
+    if (elData) elData.value = new Date().toISOString().slice(0,10);
+    var elColab = document.getElementById('rh-ev-sec-colab');
+    if (elColab && idColab) elColab.value = idColab;
+    // Popular select de cargos
+    GAS.rh.listarCargos(function(resp) {
+      var sel = document.getElementById('rh-ev-sec-cargo');
+      if (!sel) return;
+      var cargos = (resp&&resp.ok) ? resp.data : [];
+      cargos.sort(function(a,b){ return (a.titulo||a.nome||'').localeCompare(b.titulo||b.nome||'','pt-BR'); });
+      sel.innerHTML = '<option value="">Selecione…</option>' +
+        cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
+    }, function(){});
+    _evSecAtualizarCampos();
+  }
+
+  function _evSecAtualizarCampos() {
+    var tipo = (document.getElementById('rh-ev-sec-tipo')||{}).value||'outro';
+    var mostrar = function(id, show) { var el=document.getElementById(id); if(el) el.style.display=show?'':'none'; };
+    var temCargo   = ['promocao','mudanca_cargo'].indexOf(tipo)>=0;
+    var temSalario = ['promocao','reajuste'].indexOf(tipo)>=0;
+    var temCarga   = tipo==='alteracao_carga';
+    var temAdv     = tipo==='advertencia';
+    var temDesc    = tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='alteracao_carga';
+    mostrar('rh-ev-sec-wrap-cargo',    temCargo);
+    mostrar('rh-ev-sec-wrap-salario',  temSalario);
+    mostrar('rh-ev-sec-wrap-carga',    temCarga);
+    mostrar('rh-ev-sec-wrap-nivel',    temAdv);
+    mostrar('rh-ev-sec-wrap-gravidade',temAdv);
+    var reqEl = document.getElementById('rh-ev-sec-desc-req');
+    if (reqEl) reqEl.style.display = temDesc ? '' : 'none';
+  }
+
+  function _salvarEventoSec() {
+    var idColab = (document.getElementById('rh-ev-sec-colab')||{}).value||'';
+    var tipo    = (document.getElementById('rh-ev-sec-tipo')||{}).value||'outro';
+    var desc    = ((document.getElementById('rh-ev-sec-desc')||{}).value||'').trim();
+    var dataEv  = (document.getElementById('rh-ev-sec-data')||{}).value||'';
+    if (!idColab) { Toast.aviso('Colaborador não identificado.'); return; }
+    var campos = { promocao:['cargo','salario'], reajuste:['salario'], mudanca_cargo:['cargo'], alteracao_carga:['carga'], advertencia:['nivel','gravidade'] };
+    var camposTipo = campos[tipo] || [];
+    if (!desc && tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='alteracao_carga' && tipo!=='advertencia') {
+      Toast.aviso('Informe a descrição.'); return;
+    }
+    var dados = { idColaborador:idColab, tipo:tipo, tipoEvento:tipo, descricao:desc, data:dataEv };
+    if (tipo==='advertencia') {
+      var nv=(document.getElementById('rh-ev-sec-nivel')||{}).value||'verbal';
+      var gv=(document.getElementById('rh-ev-sec-gravidade')||{}).value||'leve';
+      if (!desc) { Toast.aviso('Informe a justificativa da advertência.'); return; }
+      dados.nivelAdvertencia=nv; dados.gravidade=gv;
+    }
+    if (camposTipo.indexOf('cargo')>=0) {
+      var nc=(document.getElementById('rh-ev-sec-cargo')||{}).value||'';
+      if (!nc) { Toast.aviso('Selecione o novo cargo.'); return; }
+      dados.novoCargo=nc;
+    }
+    if (camposTipo.indexOf('salario')>=0) {
+      var ns=_parseMoeda((document.getElementById('rh-ev-sec-salario')||{}).value||'');
+      if (!ns||ns<=0) { Toast.aviso('Informe o novo salário.'); return; }
+      dados.novoSalario=ns;
+    }
+    if (camposTipo.indexOf('carga')>=0) {
+      var nh=Number((document.getElementById('rh-ev-sec-carga')||{}).value||'0');
+      if (!nh||nh<1) { Toast.aviso('Informe a nova carga horária.'); return; }
+      dados.novaCargaHoraria=nh;
+    }
+    BtnGuard.wrap('rh-btn-ev-sec-salvar', 'Registrando…', function(done) {
+      GAS.rh.registrarEvento(dados, function(resp) {
+        done(); _fecharModalSecundario();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Evento registrado!');
+        _recarregarDetEventos(idColab);
+        if (camposTipo.length) { carregarEquipe(); _carregarMetricas(); }
+        carregarHistorico();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
   }
 
   function _abrirFeriasComColab(idColab) {
@@ -34153,6 +34331,9 @@ var RhUI = (function() {
       pcdTipos:              Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-pcd-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
       pcdSuporte:            (document.getElementById('rh-pf-pcd-suporte')||{value:''}).value,
       pcdSuporteDescricao:   (document.getElementById('rh-pf-pcd-suporte-descricao')||{value:''}).value.trim(),
+      ePaiMae:       (document.getElementById('rh-pf-pai-mae')||{value:''}).value,
+      papelParental: ['rh-pf-pm-mae','rh-pf-pm-pai','rh-pf-pm-responsavel'].filter(function(id){ var el=document.getElementById(id); return el&&el.checked; }).map(function(id){ return document.getElementById(id).value; }),
+      numFilhos:     (function(){ var v=parseInt((document.getElementById('rh-pf-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })(),
       endereco: {
         cep:         document.getElementById('rh-pf-cep').value.trim(),
         logradouro:  document.getElementById('rh-pf-logradouro').value.trim(),
@@ -36108,12 +36289,18 @@ var RhUI = (function() {
     if (det) det.style.display = v === 'sim' ? '' : 'none';
   }
 
+  function _togglePaiMae() {
+    var v = (document.getElementById('rh-pf-pai-mae')||{}).value;
+    var det = document.getElementById('rh-pf-pai-mae-detalhes');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
   return {
     aoAbrir:aoAbrir, setTab:setTab,
     carregarEquipe:carregarEquipe, _renderEquipe:_renderEquipe, _filtrarEquipe:_filtrarEquipe,
     abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
     editarColab:editarColab, verColab:verColab, _abrirFormEventoComColab:_abrirFormEventoComColab, _abrirFeriasComColab:_abrirFeriasComColab,
-    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte,
+    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte, _togglePaiMae:_togglePaiMae,
     excluirColab:excluirColab, _confirmarExcluirColab:_confirmarExcluirColab, _buscarCep:_buscarCep,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
@@ -37997,6 +38184,14 @@ var PerfilUI = (function() {
     _set('p-pcd-suporte', c.pcdSuporte);
     _set('p-pcd-suporte-descricao', c.pcdSuporteDescricao);
     _togglePcd(); _togglePcdSuporte();
+    // Pai/mãe
+    _set('p-pai-mae', c.ePaiMae);
+    var ppTipos = Array.isArray(c.papelParental) ? c.papelParental : [];
+    ['p-pm-mae','p-pm-pai','p-pm-responsavel'].forEach(function(id) {
+      var el = g(id); if (el) el.checked = ppTipos.indexOf(el.value) !== -1;
+    });
+    _set('p-num-filhos', c.numFilhos != null ? String(c.numFilhos) : '');
+    _togglePaiMae();
   }
 
   function _atualizarFotoDisplay(url) {
@@ -38093,7 +38288,10 @@ var PerfilUI = (function() {
       pcd:                 (g('p-pcd')||{value:''}).value,
       pcdTipos:            Array.prototype.slice.call(document.querySelectorAll('[id^="p-pcd-"]')).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
       pcdSuporte:          (g('p-pcd-suporte')||{value:''}).value,
-      pcdSuporteDescricao: (g('p-pcd-suporte-descricao')||{value:''}).value.trim()
+      pcdSuporteDescricao: (g('p-pcd-suporte-descricao')||{value:''}).value.trim(),
+      ePaiMae:     (g('p-pai-mae')||{value:''}).value,
+      papelParental: ['p-pm-mae','p-pm-pai','p-pm-responsavel'].filter(function(id){ var el=g(id); return el&&el.checked; }).map(function(id){ return g(id).value; }),
+      numFilhos:   (function(){ var v=parseInt((g('p-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })()
     };
     if (_fotoTemp) dados.fotoPerfil = _fotoTemp;
     GAS.perfil.salvar(dados, function(resp) {
@@ -38142,7 +38340,13 @@ var PerfilUI = (function() {
     if (det) det.style.display = v === 'sim' ? '' : 'none';
   }
 
-  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar, _togglePronoumesOutro:_togglePronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte };
+  function _togglePaiMae() {
+    var v = (document.getElementById('p-pai-mae')||{}).value;
+    var det = document.getElementById('p-pai-mae-detalhes');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar, _togglePronoumesOutro:_togglePronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte, _togglePaiMae:_togglePaiMae };
 })();
 
 Router.registrar('perfil', 'Meu Perfil', PerfilUI.aoAbrir);

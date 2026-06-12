@@ -470,13 +470,14 @@
 
 ## HANDOFF ATUAL — SESSÃO 64 (2026-06-12) → SESSÃO 65
 
-### Estado atual: ~266 bugs registrados · Deploy @817 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @819 (GAS)
 
 ### O que foi feito nesta sessão (s64)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @817 | RH — Campo PcD em Meu Perfil e Ficha Colaborador | **Backend**: 4 campos novos em `_CAMPOS_PROTEGIDOS` (`ColaboradorRepository`) e em `_PERFIL_CAMPOS_EDITAVEIS` (`pessoas_controller`): `pcd`, `pcdTipos`, `pcdSuporte`, `pcdSuporteDescricao`. **Frontend — Meu Perfil + Ficha RH**: bloco PcD na seção Saúde — select "É PcD?" com toggle que expande painel de tipo(s) (Física/Auditiva/Visual/Intelectual/Mental-Psicossocial/Múltipla/Reabilitado Profissional — art. 2º Lei 13.146/2015 · art. 93 Lei 8.213/1991) + select "Precisa de suporte?" + campo descrição condicional. Funções `_togglePcd`/`_togglePcdSuporte` implementadas e expostas nos retornos de `PerfilUI` e `RhUI`; populate e save completos em ambos os formulários. |
+| @819 | RH — Campo pai/mãe em Meu Perfil e Ficha Colaborador | **Backend**: 3 campos em `_CAMPOS_PROTEGIDOS` + `_PERFIL_CAMPOS_EDITAVEIS`: `ePaiMae`, `papelParental`, `numFilhos`. **Frontend**: bloco condicional na seção Saúde de ambos os forms — select "É pai/mãe?" (Prefiro não informar/Não/Sim); ao Sim, expande painel com checkboxes Mãe/Pai/Responsável e campo numérico de filhos/dependentes. Toggle `_togglePaiMae` exposto em `PerfilUI` e `RhUI`. Usado para datas comemorativas (Dia das Mães/Pais) e homenagens. |
+| @818 | RH — Campo PcD em Meu Perfil e Ficha Colaborador | **Backend**: 4 campos em `_CAMPOS_PROTEGIDOS` + `_PERFIL_CAMPOS_EDITAVEIS`: `pcd`, `pcdTipos`, `pcdSuporte`, `pcdSuporteDescricao`. Bloco condicional com tipos LBI/Lei de Cotas. |
 | @816 | BI Demográfico — geocodificação precisa + toggle mapa de bairros | Fase anterior. |
 
 ### Checklist de auditoria — s64
@@ -484,15 +485,15 @@
 [x] prompt()/confirm() — não usados
 [x] GAS.* namespace — sem novas chamadas GAS (campos salvos pelos controladores existentes)
 [x] CSS — sem classes novas
-[x] IDs de DOM — p-pcd-* / rh-pf-pcd-* (prefixos distintos, sem colisão); querySelectorAll filtra por cb.type==='checkbox'
+[x] IDs de DOM — p-pm-* / rh-pf-pm-* / p-pai-mae / rh-pf-pai-mae (sem colisão com PcD)
 [x] FsmGuardian — sem transições de status
 [x] Modais — sem modais novos
 [x] Datas — sem datas em UI
-[x] BtnGuard — botões de salvar já protegidos (Meu Perfil: perfil-btn-salvar; Ficha RH: rh-btn-salvar-colab)
+[x] BtnGuard — botões de salvar já protegidos
 ```
 
 ### Pendentes / próxima ação
-- **Testar no browser (@817)**: Meu Perfil → seção Saúde → select PcD = "Sim" → painel expande; marcar tipo → salvar → recarregar → persiste; Ficha RH → mesmo fluxo
+- **Testar no browser (@819)**: Meu Perfil → Saúde → "É pai/mãe? = Sim" → painel expande → marcar papel → salvar → recarregar → persiste; Ficha RH → mesmo fluxo
 - **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar como "Apuração semanal" + rodar `ctrl_ponto_recalcular_bh_todos`
 
 ---
