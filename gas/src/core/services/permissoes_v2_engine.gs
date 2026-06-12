@@ -122,12 +122,13 @@ var PermissoesV2Engine = (function () {
     },
 
     habilitador: {
-      // Equipe de infraestrutura: habilita espaços, confirma reservas sem dono,
-      // aprova veículos. Sem financeiro, pessoas (privacidade), admin, master.
-      ACOES:       _p(1,0,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(0,0,0),
-      FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(0,0,0), TAREFAS:    _p(1,1,0),
+      // Equipe de infraestrutura: habilita espaços, confirma e aprova reservas,
+      // aprova veículos. Vê pessoas (para contato), comunicação e público (eventos nos espaços).
+      // Sem financeiro, admin, master.
+      ACOES:       _p(1,0,0), ESPACOS:     _p(1,1,0), PESSOAS:    _p(1,0,0),
+      FINANCEIRO:  _p(0,0,0), COMUNICACAO: _p(1,0,0), TAREFAS:    _p(1,1,0),
       REUNIOES:    _p(1,0,0), RELATORIOS:  _p(0,0,0), ADMIN:      _p(0,0,0),
-      MASTER:      _p(0,0,0), PUBLICO:     _p(0,0,0), AGENTES:    _p(1,0,0),
+      MASTER:      _p(0,0,0), PUBLICO:     _p(1,0,0), AGENTES:    _p(1,0,0),
       VOLUNTARIOS: _p(0,0,0)
     },
 

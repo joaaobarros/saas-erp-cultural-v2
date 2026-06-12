@@ -48,14 +48,13 @@ function _nivelReservas(email) {
   return 'colaborador';
 }
 
-var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'infraestrutura', 'habilitador'];
+var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'habilitador'];
 var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
 // Papéis soberanos: confirmam a qualquer momento, independente de responsável
-var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor'];
-// Papéis com escalonamento: confirmam imediatamente se forem responsáveis do slot;
-// caso contrário, aguardam _DIAS_ESCALACAO dias sem resposta
-var _NIVEL_ESCALACAO = ['infraestrutura', 'habilitador'];
+var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor', 'habilitador'];
+// Papéis com escalonamento: aguardam _DIAS_ESCALACAO dias sem resposta antes de confirmar
+var _NIVEL_ESCALACAO = [];
 // Dias de espera para escalonamento (sem resposta do responsável do slot)
 var _DIAS_ESCALACAO = 2;
 
@@ -343,10 +342,9 @@ function ctrl_reservas_cancelar(id, motivo) {
  * Confirma uma reserva (pendente → confirmado).
  *
  * Quem pode confirmar:
- *   • admin / superadmin / gestor — soberanos, a qualquer momento
+ *   • admin / superadmin / gestor / habilitador — soberanos, a qualquer momento
  *   • responsável cadastrado no espaço/slot — a qualquer momento
- *   • infraestrutura / habilitador — imediato se for responsável do slot;
- *     caso contrário, apenas após _DIAS_ESCALACAO dias sem resposta
+ *   • mesmo setor do responsável — a qualquer momento
  *
  * @param {string} id
  */
