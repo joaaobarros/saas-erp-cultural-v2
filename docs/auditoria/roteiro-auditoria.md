@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @797 · BI Demográfico — Painel interativo de análise de perfil (Equipe + Beneficiários)
+> Deploy atual: @799 · BI Demográfico — fix modulo RELATORIOS→PESSOAS
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
