@@ -8199,6 +8199,42 @@ select.form-control { cursor: pointer; }
                   <input id="rh-pf-rest-outro-detalhe" class="form-input" type="text" placeholder="Especifique a restrição…" style="margin-top:6px;display:none;">
                 </div>
                 <div class="form-group" style="grid-column:span 2"><label class="form-label">Observações Pessoais</label><textarea id="rh-pf-obs-pessoais" class="form-input" rows="3" style="resize:vertical;" placeholder="Informações adicionais relevantes sobre o colaborador…"></textarea></div>
+                <div class="form-group" style="grid-column:span 2;">
+                  <label class="form-label">Pessoa com Deficiência (PcD)? <span style="font-size:11px;color:var(--muted);font-weight:400;">— Lei 13.146/2015</span></label>
+                  <select id="rh-pf-pcd" class="form-input" style="max-width:220px;" onchange="RhUI._togglePcd()">
+                    <option value="">Não informado</option>
+                    <option value="nao">Não</option>
+                    <option value="sim">Sim</option>
+                  </select>
+                </div>
+                <div id="rh-pf-pcd-detalhes" style="grid-column:span 2;display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Tipo(s) de Deficiência <span style="font-size:11px;color:var(--muted);font-weight:400;">— art. 2º, Lei 13.146/2015 · art. 93, Lei 8.213/1991</span></label>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-fisica" value="fisica"> Física</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-auditiva" value="auditiva"> Auditiva</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-visual" value="visual"> Visual</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-intelectual" value="intelectual"> Intelectual</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-psicossocial" value="psicossocial"> Mental / Psicossocial</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-multipla" value="multipla"> Múltipla</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="rh-pf-pcd-reabilitado" value="reabilitado"> Reabilitado Profissional <em style="font-size:11px;color:var(--muted);">(Lei 8.213)</em></label>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group">
+                      <label class="form-label">Precisa de suporte específico no trabalho?</label>
+                      <select id="rh-pf-pcd-suporte" class="form-input" onchange="RhUI._togglePcdSuporte()">
+                        <option value="">Não informado</option>
+                        <option value="nao">Não</option>
+                        <option value="sim">Sim</option>
+                      </select>
+                    </div>
+                    <div class="form-group" id="rh-pf-pcd-suporte-det-wrap" style="display:none;">
+                      <label class="form-label">Descreva o suporte necessário</label>
+                      <input id="rh-pf-pcd-suporte-descricao" class="form-input" type="text" placeholder="Ex: intérprete de Libras, rampa de acesso…">
+                    </div>
+                  </div>
+                </div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
               <div style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
@@ -9176,6 +9212,42 @@ select.form-control { cursor: pointer; }
                   <input id="p-rest-outro-det" class="form-input" type="text" placeholder="Especifique…" style="margin-top:6px;display:none;">
                 </div>
                 <div class="form-group" style="grid-column:span 2;"><label class="form-label">Observações Pessoais</label><textarea id="p-obs-pessoais" class="form-input" rows="3" style="resize:vertical;" placeholder="Informações adicionais relevantes…"></textarea></div>
+                <div class="form-group" style="grid-column:span 2;">
+                  <label class="form-label">Pessoa com Deficiência (PcD)? <span style="font-size:11px;color:var(--muted);font-weight:400;">— Lei 13.146/2015</span></label>
+                  <select id="p-pcd" class="form-input" style="max-width:220px;" onchange="PerfilUI._togglePcd()">
+                    <option value="">Prefiro não informar</option>
+                    <option value="nao">Não</option>
+                    <option value="sim">Sim</option>
+                  </select>
+                </div>
+                <div id="p-pcd-detalhes" style="grid-column:span 2;display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                  <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label">Tipo(s) de Deficiência <span style="font-size:11px;color:var(--muted);font-weight:400;">— art. 2º, Lei 13.146/2015 · art. 93, Lei 8.213/1991</span></label>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-fisica" value="fisica"> Física</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-auditiva" value="auditiva"> Auditiva</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-visual" value="visual"> Visual</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-intelectual" value="intelectual"> Intelectual</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-psicossocial" value="psicossocial"> Mental / Psicossocial</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-multipla" value="multipla"> Múltipla</label>
+                      <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="p-pcd-reabilitado" value="reabilitado"> Reabilitado Profissional <em style="font-size:11px;color:var(--muted);">(Lei 8.213)</em></label>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group">
+                      <label class="form-label">Precisa de suporte específico no trabalho?</label>
+                      <select id="p-pcd-suporte" class="form-input" onchange="PerfilUI._togglePcdSuporte()">
+                        <option value="">Não informado</option>
+                        <option value="nao">Não</option>
+                        <option value="sim">Sim</option>
+                      </select>
+                    </div>
+                    <div class="form-group" id="p-pcd-suporte-det-wrap" style="display:none;">
+                      <label class="form-label">Descreva o suporte necessário</label>
+                      <input id="p-pcd-suporte-descricao" class="form-input" type="text" placeholder="Ex: intérprete de Libras, rampa de acesso…">
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -33687,6 +33759,20 @@ var RhUI = (function() {
       _outroDetEl.value        = colab?(colab.restricoesOutro||''):'';
       _outroDetEl.style.display = (_restsCtx.indexOf('outro') !== -1) ? '' : 'none';
     }
+    // PcD
+    (function(){
+      var pcdSel = document.getElementById('rh-pf-pcd');
+      if (pcdSel) pcdSel.value = colab?(colab.pcd||''):'';
+      var _pcdTipos = (colab && Array.isArray(colab.pcdTipos)) ? colab.pcdTipos : [];
+      document.querySelectorAll('[id^="rh-pf-pcd-"]').forEach(function(el){
+        if (el.type === 'checkbox') el.checked = _pcdTipos.indexOf(el.value) !== -1;
+      });
+      var supSel = document.getElementById('rh-pf-pcd-suporte');
+      if (supSel) supSel.value = colab?(colab.pcdSuporte||''):'';
+      var supDet = document.getElementById('rh-pf-pcd-suporte-descricao');
+      if (supDet) supDet.value = colab?(colab.pcdSuporteDescricao||''):'';
+      _togglePcd(); _togglePcdSuporte();
+    })();
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
     if (pisEl) {
@@ -33946,8 +34032,82 @@ var RhUI = (function() {
   }
 
   function _abrirFeriasComColab(idColab) {
-    _fecharModalRh();
-    abrirFormFerias(idColab);
+    _abrirModalRhSecundario(
+      '<div style="padding:20px;min-width:400px;">' +
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Solicitar F\u00e9rias</h3>' +
+      '<div class="form-group"><label class="form-label">Colaborador *</label>' +
+        '<select id="rh-fer-sec-colab" class="form-input"><option value="">Selecione\u2026</option></select></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label">In\u00edcio *</label>' +
+          '<input id="rh-fer-sec-ini" class="form-input" type="date" oninput="RhUI._ferSecCalcSaldo()"></div>' +
+        '<div class="form-group"><label class="form-label">Fim *</label>' +
+          '<input id="rh-fer-sec-fim" class="form-input" type="date" oninput="RhUI._ferSecCalcSaldo()"></div>' +
+      '</div>' +
+      '<div class="form-group"><label class="form-label">Tipo</label>' +
+        '<select id="rh-fer-sec-tipo" class="form-input select-sm" onchange="RhUI._ferSecToggleTipo()">' +
+          '<option value="oficial">Oficial</option>' +
+          '<option value="nao_oficial">N\u00e3o Oficial (Acordo Interno)</option>' +
+        '</select></div>' +
+      '<div id="rh-fer-sec-nao-oficial" style="display:none;background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--warning,#e65100);margin-bottom:8px;">Acordo interno</div>' +
+        '<div class="form-group"><label class="form-label">Dias realmente gozados no per\u00edodo</label>' +
+          '<input id="rh-fer-sec-gozados" class="form-input" type="number" min="1" placeholder="Ex: 10" oninput="RhUI._ferSecCalcSaldo()"></div>' +
+        '<div id="rh-fer-sec-saldo" style="font-size:12px;color:var(--text2);margin-top:4px;">Saldo para uso posterior: \u2014</div>' +
+      '</div>' +
+      '<div class="form-group"><label class="form-label">Observa\u00e7\u00f5es</label>' +
+        '<textarea id="rh-fer-sec-obs" class="form-input" rows="2"></textarea></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button id="rh-btn-fer-sec-env" class="btn btn-primario" onclick="RhUI._enviarFeriasSec()"><span class="ms ms-sm">send</span> Solicitar</button>' +
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalSecundario()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>'
+    );
+    _popularSelectColaboradores('rh-fer-sec-colab');
+    var sf = document.getElementById('rh-fer-sec-colab');
+    if (sf && idColab) sf.value = idColab;
+  }
+
+  function _ferSecToggleTipo() {
+    var tipo = (document.getElementById('rh-fer-sec-tipo')||{}).value||'oficial';
+    var bloco = document.getElementById('rh-fer-sec-nao-oficial');
+    if (bloco) bloco.style.display = tipo === 'nao_oficial' ? '' : 'none';
+  }
+
+  function _ferSecCalcSaldo() {
+    var ini = (document.getElementById('rh-fer-sec-ini')||{}).value||'';
+    var fim = (document.getElementById('rh-fer-sec-fim')||{}).value||'';
+    var goz = parseInt((document.getElementById('rh-fer-sec-gozados')||{}).value||'0')||0;
+    var el  = document.getElementById('rh-fer-sec-saldo');
+    if (!el) return;
+    if (!ini||!fim) { el.textContent='Saldo para uso posterior: —'; return; }
+    var total = Math.round((new Date(fim)-new Date(ini))/(1000*60*60*24))+1;
+    var saldo = total - goz;
+    el.textContent = 'Total: '+total+' dias · Gozados: '+goz+' · Saldo: '+Math.max(0,saldo)+' dias';
+    el.style.color = saldo < 0 ? 'var(--danger,#c62828)' : 'var(--text2)';
+  }
+
+  function _enviarFeriasSec() {
+    var idColab = (document.getElementById('rh-fer-sec-colab')||{}).value||'';
+    var inicio  = (document.getElementById('rh-fer-sec-ini')||{}).value||'';
+    var fim     = (document.getElementById('rh-fer-sec-fim')||{}).value||'';
+    var tipo    = (document.getElementById('rh-fer-sec-tipo')||{}).value||'oficial';
+    var obs     = (document.getElementById('rh-fer-sec-obs')||{}).value||'';
+    if (!idColab) { Toast.aviso('Selecione o colaborador.'); return; }
+    if (!inicio||!fim) { Toast.aviso('Informe o período.'); return; }
+    var dados = { idColaborador:idColab, dataInicio:inicio, dataFim:fim, observacoes:obs, tipo:tipo };
+    if (tipo === 'nao_oficial') {
+      var goz = parseInt((document.getElementById('rh-fer-sec-gozados')||{}).value||'0')||0;
+      if (!goz) { Toast.aviso('Informe os dias realmente gozados.'); return; }
+      dados.diasGozados = goz;
+    }
+    BtnGuard.wrap('rh-btn-fer-sec-env', 'Solicitando…', function(done) {
+      GAS.rh.solicitarFerias(dados, function(resp) {
+        done(); _fecharModalSecundario();
+        if (!resp||!resp.ok) { Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
+        Toast.sucesso('Férias solicitadas!');
+        _recarregarDetFerias(idColab);
+        carregarFerias();
+      }, function(e) { done(); Toast.erro(e.message||e); });
+    });
   }
 
   function salvarColab() {
@@ -33989,6 +34149,10 @@ var RhUI = (function() {
       observacoesPessoais:   (document.getElementById('rh-pf-obs-pessoais')||{value:''}).value.trim(),
       restricoesAlimentares: Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-rest-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
       restricoesOutro:       (document.getElementById('rh-pf-rest-outro-detalhe')||{value:''}).value.trim(),
+      pcd:                   (document.getElementById('rh-pf-pcd')||{value:''}).value,
+      pcdTipos:              Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-pcd-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
+      pcdSuporte:            (document.getElementById('rh-pf-pcd-suporte')||{value:''}).value,
+      pcdSuporteDescricao:   (document.getElementById('rh-pf-pcd-suporte-descricao')||{value:''}).value.trim(),
       endereco: {
         cep:         document.getElementById('rh-pf-cep').value.trim(),
         logradouro:  document.getElementById('rh-pf-logradouro').value.trim(),
@@ -35123,7 +35287,10 @@ var RhUI = (function() {
             acoes+='<button class="btn btn-error btn-sm" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
           }
           if (f.status==='aprovado') {
-            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\')"><span class="ms ms-sm">handshake</span> Acordo</button>';
+            var _fIni = _esc(f.dataInicio||f.inicio||'');
+            var _fFim = _esc(f.dataFim||f.fim||'');
+            var _fTot = f.totalDias || (_fIni&&_fFim ? Math.round((new Date(f.dataFim||f.fim)-new Date(f.dataInicio||f.inicio))/86400000)+1 : 0);
+            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\',\''+_fIni+'\',\''+_fFim+'\','+_fTot+')"><span class="ms ms-sm">handshake</span> Acordo</button>';
             acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
           }
           var isAcordo = f.tipo==='nao_oficial';
@@ -35156,7 +35323,7 @@ var RhUI = (function() {
         '<th>#</th><th>Período Aquisitivo</th><th>Janela Concessiva</th>' +
         '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th>' +
         '</tr></thead><tbody>' +
-        d.periodos.map(function(p) {
+        d.periodos.slice().reverse().map(function(p) {
           var cls = SC[p.status]||'badge-muted';
           var lbl = SL[p.status]||p.status;
           var saldoStr = p.saldo > 0
@@ -35308,11 +35475,21 @@ var RhUI = (function() {
 
   // ─── ACORDO DE FÉRIAS ───────────────────────────────────────
 
-  function abrirFormAcordoFerias(id) {
+  function abrirFormAcordoFerias(id, originalInicio, originalFim, totalOriginal) {
+    totalOriginal = parseInt(totalOriginal) || 0;
+    var refInfo = '';
+    if (originalInicio && originalFim) {
+      refInfo = '<div style="font-size:11px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:6px 10px;margin-bottom:12px;">' +
+        '<span class="ms ms-sm" style="vertical-align:middle;">info</span>' +
+        ' Período aprovado: <strong>' + _fmtData(originalInicio) + ' → ' + _fmtData(originalFim) + '</strong>' +
+        (totalOriginal ? ' (<strong>' + totalOriginal + ' dias</strong> autorizados)' : '') + '</div>';
+    }
     _abrirModalRh(
       '<div style="padding:20px;min-width:420px;">' +
       '<h3 style="margin:0 0 4px;font-size:15px;font-weight:700;">Registrar Acordo de Férias</h3>' +
-      '<p style="margin:0 0 14px;font-size:12px;color:var(--text2);">Registre o período efetivamente gozado. O saldo remanescente ficará disponível para nova solicitação.</p>' +
+      '<p style="margin:0 0 10px;font-size:12px;color:var(--text2);">Informe o período realmente gozado. O saldo remanescente ficará disponível para nova solicitação.</p>' +
+      refInfo +
+      '<input type="hidden" id="rh-acr-total-original" value="' + totalOriginal + '">' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
         '<div class="form-group"><label class="form-label">Início real *</label>' +
           '<input id="rh-acr-ini" class="form-input" type="date" oninput="RhUI._acordoCalcDias()"></div>' +
@@ -35330,6 +35507,10 @@ var RhUI = (function() {
         '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>' +
       '</div></div>'
     );
+    // Pré-preencher datas do período aprovado e calcular dias automaticamente
+    if (originalInicio) { var elI = document.getElementById('rh-acr-ini'); if (elI) elI.value = originalInicio; }
+    if (originalFim)    { var elF = document.getElementById('rh-acr-fim'); if (elF) elF.value = originalFim; }
+    if (originalInicio && originalFim) _acordoCalcDias();
   }
 
   function _acordoCalcDias() {
@@ -35343,15 +35524,21 @@ var RhUI = (function() {
   }
 
   function _acordoCalcSaldo() {
-    var ini  = (document.getElementById('rh-acr-ini')||{}).value||'';
-    var fim  = (document.getElementById('rh-acr-fim')||{}).value||'';
     var dias = parseInt((document.getElementById('rh-acr-dias')||{}).value||'0')||0;
     var el   = document.getElementById('rh-acr-saldo-info');
     if (!el) return;
-    if (!ini||!fim||!dias) { el.textContent='Preencha o período e os dias gozados'; el.style.color=''; return; }
-    var total = Math.round((new Date(fim)-new Date(ini))/86400000)+1;
-    var saldo = Math.max(0, total-dias);
-    el.innerHTML = 'Período: <strong>'+total+'</strong> dias · Gozados: <strong>'+dias+'</strong> · Saldo remanescente: <strong style="color:'+(saldo>0?'var(--warning,#e65100)':'var(--success,#2e7d32)')+'">'+saldo+' dias</strong>';
+    if (!dias) { el.textContent='Preencha os dias efetivamente gozados'; el.style.color=''; return; }
+    // Usar totalDias do período original aprovado; fallback: calcular do intervalo informado
+    var totalOriginal = parseInt((document.getElementById('rh-acr-total-original')||{}).value||'0')||0;
+    var total = totalOriginal;
+    if (!total) {
+      var ini = (document.getElementById('rh-acr-ini')||{}).value||'';
+      var fim = (document.getElementById('rh-acr-fim')||{}).value||'';
+      if (ini && fim) total = Math.round((new Date(fim)-new Date(ini))/86400000)+1;
+    }
+    if (!total) { el.textContent='Informe o período para calcular o saldo'; el.style.color=''; return; }
+    var saldo = Math.max(0, total - dias);
+    el.innerHTML = 'Total aprovado: <strong>' + total + '</strong> dias · Gozados: <strong>' + dias + '</strong> · Saldo remanescente: <strong style="color:' + (saldo>0?'var(--warning,#e65100)':'var(--success,#2e7d32)') + '">' + saldo + ' dias</strong>';
   }
 
   function _confirmarAcordoFerias(id) {
@@ -35821,6 +36008,69 @@ var RhUI = (function() {
     document.body.appendChild(overlay);
   }
 
+  // ─── Modal Secundário (stacked — sobrepõe a modal do colaborador) ─────────────
+  // Usa z-index 10000 (acima de 9999) e classe própria para que _fecharModalRh não o remova
+  function _abrirModalRhSecundario(html) {
+    var overlay = document.createElement('div');
+    overlay.className = 'rh-modal-secundario';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border-radius:20px;border-top:3px solid var(--color-primary);max-width:520px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.30),0 8px 20px rgba(0,0,0,.15);';
+    box.innerHTML = html;
+    overlay.appendChild(box);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+  function _fecharModalSecundario() { document.querySelectorAll('.rh-modal-secundario').forEach(function(m){ m.remove(); }); }
+
+  // Recarrega a seção de férias dentro da modal do colaborador (sem fechar a modal)
+  function _recarregarDetFerias(idColab) {
+    var el = document.getElementById('rh-det-ferias');
+    if (!el) return;
+    el.innerHTML = '<span style="font-size:12px;color:var(--text2);">Atualizando…</span>';
+    GAS.rh.listarFerias(idColab, function(r) {
+      if (!document.getElementById('rh-det-ferias')) return;
+      var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
+      if (!lista.length) { el.innerHTML = _empty('Nenhuma férias registrada.'); return; }
+      el.innerHTML = lista.slice(0,4).map(function(f) {
+        var nd = f.totalDias || (f.dataInicio&&f.dataFim ? Math.round((new Date(f.dataFim)-new Date(f.dataInicio))/86400000)+1 : (f.inicio&&f.fim ? Math.round((new Date(f.fim)-new Date(f.inicio))/86400000)+1 : '?'));
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="font-size:12px;">' + _fmtData(f.dataInicio||f.inicio) + ' → ' + _fmtData(f.dataFim||f.fim) + ' (' + nd + ' dias)</span>' +
+          _badge(f.status||'pendente') + '</div>';
+      }).join('');
+    }, function() { el.innerHTML = _empty('Erro ao recarregar.'); });
+  }
+
+  // Recarrega a seção de histórico dentro da modal do colaborador
+  function _recarregarDetEventos(idColab) {
+    var el = document.getElementById('rh-det-eventos');
+    if (!el) return;
+    el.innerHTML = '<span style="font-size:12px;color:var(--text2);">Atualizando…</span>';
+    GAS.rh.historico(idColab, function(r) {
+      if (!document.getElementById('rh-det-eventos')) return;
+      var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
+      if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
+      var advs = lista.filter(function(ev){ return (ev.tipo||ev.tipoEvento)==='advertencia'; });
+      var bannerAdv = '';
+      if (advs.length) {
+        var prox = _advProximoPasso(advs);
+        var limite = prox === 'demissao';
+        var corB = limite ? 'var(--color-error,#c62828)' : '#e65100';
+        bannerAdv = '<div style="background:var(--surface2);border-left:3px solid '+corB+';border-radius:0 8px 8px 0;padding:8px 10px;margin-bottom:8px;font-size:12px;">' +
+          '<span class="ms ms-sm" style="vertical-align:middle;color:'+corB+';">warning</span> ' +
+          '<strong>'+advs.length+' advertência(s)</strong> — ' +
+          (limite ? '<strong style="color:var(--color-error,#c62828);">demissão prevista</strong>' : 'próximo: <strong>'+_esc(_ADV_NIVEL_LABEL[prox])+'</strong>') + '</div>';
+      }
+      el.innerHTML = bannerAdv + lista.slice(0,5).map(function(ev) {
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--border);">' +
+          '<span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-primary);">' + _esc(_evLabel(ev.tipo||ev.tipoEvento)) + '</span>' +
+          '<span style="font-size:11px;color:var(--text2);margin-left:8px;">' + _fmtData(ev.data||ev.criadoEm||'') + '</span>' +
+          (ev.descricao ? '<p style="margin:2px 0 0;font-size:12px;">' + _esc(ev.descricao) + '</p>' : '') +
+          _evMudancasHtml(ev) + '</div>';
+      }).join('');
+    }, function() { el.innerHTML = _empty('Erro ao recarregar.'); });
+  }
+
   function _abrirModalConfirmarRh(opts) {
     _abrirModalRh('<div>'+
       '<div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">'+
@@ -35846,12 +36096,24 @@ var RhUI = (function() {
     if (out) out.style.display = (sel && sel.value === 'outro') ? '' : 'none';
   }
 
+  function _togglePcd() {
+    var v = (document.getElementById('rh-pf-pcd')||{}).value;
+    var det = document.getElementById('rh-pf-pcd-detalhes');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
+  function _togglePcdSuporte() {
+    var v = (document.getElementById('rh-pf-pcd-suporte')||{}).value;
+    var det = document.getElementById('rh-pf-pcd-suporte-det-wrap');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
   return {
     aoAbrir:aoAbrir, setTab:setTab,
     carregarEquipe:carregarEquipe, _renderEquipe:_renderEquipe, _filtrarEquipe:_filtrarEquipe,
     abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
     editarColab:editarColab, verColab:verColab, _abrirFormEventoComColab:_abrirFormEventoComColab, _abrirFeriasComColab:_abrirFeriasComColab,
-    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro,
+    salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte,
     excluirColab:excluirColab, _confirmarExcluirColab:_confirmarExcluirColab, _buscarCep:_buscarCep,
     carregarPccs:carregarPccs, abrirFormPccs:abrirFormPccs, _salvarPccs:_salvarPccs,
     abrirFormCargo:abrirFormCargo, _salvarCargo:_salvarCargo, _pccsPreviewSalario:_pccsPreviewSalario,
@@ -37726,6 +37988,15 @@ var PerfilUI = (function() {
     });
     var outroDetEl = g('p-rest-outro-det');
     if (outroDetEl) { outroDetEl.value=c.restricoesOutro||''; outroDetEl.style.display=rests.indexOf('outro')!==-1?'':'none'; }
+    // PcD
+    _set('p-pcd', c.pcd);
+    var pcdTipos = Array.isArray(c.pcdTipos) ? c.pcdTipos : [];
+    document.querySelectorAll('[id^="p-pcd-"]').forEach(function(el) {
+      if (el.type === 'checkbox') el.checked = pcdTipos.indexOf(el.value) !== -1;
+    });
+    _set('p-pcd-suporte', c.pcdSuporte);
+    _set('p-pcd-suporte-descricao', c.pcdSuporteDescricao);
+    _togglePcd(); _togglePcdSuporte();
   }
 
   function _atualizarFotoDisplay(url) {
@@ -37818,7 +38089,11 @@ var PerfilUI = (function() {
       restricoesAlimentares: Array.prototype.slice.call(
         document.querySelectorAll('[id^="p-rest-"]')
       ).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
-      restricoesOutro: (g('p-rest-outro-det')||{value:''}).value.trim()
+      restricoesOutro: (g('p-rest-outro-det')||{value:''}).value.trim(),
+      pcd:                 (g('p-pcd')||{value:''}).value,
+      pcdTipos:            Array.prototype.slice.call(document.querySelectorAll('[id^="p-pcd-"]')).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
+      pcdSuporte:          (g('p-pcd-suporte')||{value:''}).value,
+      pcdSuporteDescricao: (g('p-pcd-suporte-descricao')||{value:''}).value.trim()
     };
     if (_fotoTemp) dados.fotoPerfil = _fotoTemp;
     GAS.perfil.salvar(dados, function(resp) {
@@ -37855,7 +38130,19 @@ var PerfilUI = (function() {
     if (out) out.style.display = (sel && sel.value === 'outro') ? '' : 'none';
   }
 
-  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar, _togglePronoumesOutro:_togglePronoumesOutro };
+  function _togglePcd() {
+    var v = (document.getElementById('p-pcd')||{}).value;
+    var det = document.getElementById('p-pcd-detalhes');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
+  function _togglePcdSuporte() {
+    var v = (document.getElementById('p-pcd-suporte')||{}).value;
+    var det = document.getElementById('p-pcd-suporte-det-wrap');
+    if (det) det.style.display = v === 'sim' ? '' : 'none';
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, clicarFoto:clicarFoto, onFotoSelecionada:onFotoSelecionada, buscarCep:buscarCep, salvar:salvar, _togglePronoumesOutro:_togglePronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte };
 })();
 
 Router.registrar('perfil', 'Meu Perfil', PerfilUI.aoAbrir);

@@ -199,7 +199,8 @@ var ColaboradorRepository = (function () {
           'genero','sexualidade','racaCor','telefone','contatoEmergencia',
           'tipoSanguineo','alergias','observacoesPessoais','restricoesAlimentares',
           'restricoesOutro','endereco','funcoes','substituicoes','cpf',
-          'salarioBruto','salario','fotoPerfil','beneficios'
+          'salarioBruto','salario','fotoPerfil','beneficios',
+          'pcd','pcdTipos','pcdSuporte','pcdSuporteDescricao'
         ];
         Object.keys(prev).forEach(function(k) {
           if (dados[k] === undefined) {

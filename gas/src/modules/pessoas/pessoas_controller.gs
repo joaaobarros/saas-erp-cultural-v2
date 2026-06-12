@@ -740,7 +740,8 @@ var _PERFIL_CAMPOS_EDITAVEIS = [
   'nomeApelido','pronomes','emailPessoal','telefone','telefoneWpp','endereco',
   'genero','sexualidade','racaCor',
   'tipoSanguineo','alergias','restricoesAlimentares','restricoesOutro','observacoesPessoais',
-  'contatoEmergencia','fotoPerfil'
+  'contatoEmergencia','fotoPerfil',
+  'pcd','pcdTipos','pcdSuporte','pcdSuporteDescricao'
 ];
 
 function ctrl_pessoas_meu_perfil_ler() {
