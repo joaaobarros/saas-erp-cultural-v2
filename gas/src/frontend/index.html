@@ -8165,6 +8165,11 @@ select.form-control { cursor: pointer; }
                     <option value="indigena">Indígena</option>
                   </select>
                 </div>
+                <div class="form-group" style="grid-column:span 2;margin-top:2px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde — identidade <em>(opcional)</em>:</label>
+                  <input type="date" id="rh-pf-identidade-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Quando essas informações de identidade passaram a ser verdadeiras? Deixe em branco para registrar como hoje.">
+                  <span style="font-size:11px;color:var(--muted);">— para consultas históricas no BI</span>
+                </div>
                 <div class="form-group"><label class="form-label">Telefone / Celular</label><div style="display:flex;align-items:center;gap:6px;"><input id="rh-pf-telefone" class="form-input" type="tel" placeholder="(00) 00000-0000" style="flex:1;min-width:0;"><label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;color:#25D366;font-weight:700;"><input type="checkbox" id="rh-pf-telefone-wpp" style="accent-color:#25D366;width:13px;height:13px;cursor:pointer;">WPP</label></div></div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Contato de Emergência</div>
@@ -8234,6 +8239,11 @@ select.form-control { cursor: pointer; }
                       <input id="rh-pf-pcd-suporte-descricao" class="form-input" type="text" placeholder="Ex: intérprete de Libras, rampa de acesso…">
                     </div>
                   </div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde <em>(opcional)</em>:</label>
+                    <input type="date" id="rh-pf-pcd-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Quando esta condição foi identificada? Deixe em branco para registrar como hoje.">
+                    <span style="font-size:11px;color:var(--muted);">— para histórico e BI</span>
+                  </div>
                 </div>
                 <div class="form-group" style="grid-column:span 2;">
                   <label class="form-label">É pai ou mãe? <span style="font-size:11px;color:var(--muted);font-weight:400;">— usado em datas comemorativas e homenagens</span></label>
@@ -8257,6 +8267,11 @@ select.form-control { cursor: pointer; }
                       <label class="form-label">Quantidade de filhos / dependentes</label>
                       <input id="rh-pf-num-filhos" class="form-input" type="number" min="1" max="20" step="1" placeholder="Ex: 2" style="max-width:100px;">
                     </div>
+                  </div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde <em>(opcional)</em>:</label>
+                    <input type="date" id="rh-pf-pm-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Desde quando é pai/mãe/responsável? Deixe em branco para registrar como hoje.">
+                    <span style="font-size:11px;color:var(--muted);">— para histórico e BI</span>
                   </div>
                 </div>
               </div>
@@ -8928,11 +8943,17 @@ select.form-control { cursor: pointer; }
         <!-- Barra de filtros -->
         <div class="filter-bar" id="bi-dem-filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center;">
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">De:</span>
-          <select class="select-sm" id="bi-dem-sel-de" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+          <select class="select-sm" id="bi-dem-sel-de-mes" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1" style="min-width:64px;">
+            <option value="">—</option>
+          </select>
+          <select class="select-sm" id="bi-dem-sel-de-ano" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1" style="min-width:72px;">
             <option value="">—</option>
           </select>
           <span style="font-size:12px;color:var(--text2);white-space:nowrap;">Até:</span>
-          <select class="select-sm" id="bi-dem-sel-ate" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+          <select class="select-sm" id="bi-dem-sel-ate-mes" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1" style="min-width:64px;">
+            <option value="">—</option>
+          </select>
+          <select class="select-sm" id="bi-dem-sel-ate-ano" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1" style="min-width:72px;">
             <option value="">—</option>
           </select>
           <select class="select-sm" id="bi-dem-sel-setor" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
@@ -9014,6 +9035,47 @@ select.form-control { cursor: pointer; }
             </div>
             <div id="bi-dem-bairro" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
           </div>
+        </div>
+
+        <!-- Grid Cargo + Tempo de atuação (equipe only) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" id="bi-dem-grid-cargo-tempo">
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#0f766e11,#0f766e05);border-bottom:3px solid #0f766e;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#0f766e;">work</span> Cargo / Função
+            </div>
+            <div id="bi-dem-cargo" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#52525b11,#52525b05);border-bottom:3px solid #52525b;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#52525b;">schedule</span> Tempo de Atuação
+            </div>
+            <div id="bi-dem-tempo" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
+          </div>
+        </div>
+
+        <!-- Grid PcD + Pais/Filhos (equipe only) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" id="bi-dem-grid-pcd-familia">
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#6d28d911,#6d28d905);border-bottom:3px solid #6d28d9;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#6d28d9;">accessible</span> Pessoas com Deficiência (PcD)
+            </div>
+            <div id="bi-dem-pcd" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
+          </div>
+          <div class="card" style="padding:0;margin-bottom:0;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#05966911,#05966905);border-bottom:3px solid #059669;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+              <span class="ms ms-sm" style="color:#059669;">family_restroom</span> Pais / Mães e Filhos
+            </div>
+            <div id="bi-dem-familias" style="padding:14px 16px;min-height:120px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
+          </div>
+        </div>
+
+        <!-- Restrições Alimentares (equipe only) -->
+        <div class="card" style="padding:0;margin-bottom:16px;overflow:hidden;" id="bi-dem-card-restricoes">
+          <div style="background:linear-gradient(135deg,#b4530011,#b4530005);border-bottom:3px solid #b45300;padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+            <span class="ms ms-sm" style="color:#b45300;">restaurant_menu</span> Restrições Alimentares
+            <span style="margin-left:auto;font-size:11px;font-weight:400;color:var(--text2);">para planejamento de eventos</span>
+          </div>
+          <div id="bi-dem-restricoes" style="padding:14px 16px;"><p class="muted-text" style="font-size:12px;">Carregando…</p></div>
         </div>
 
         <!-- Mapa de calor -->
@@ -9204,6 +9266,11 @@ select.form-control { cursor: pointer; }
                     <option value="parda">Parda (Negro Pardo)</option><option value="amarela">Amarela</option>
                     <option value="indigena">Indígena</option>
                   </select></div>
+                <div class="form-group" style="grid-column:span 3;margin-top:2px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde <em>(opcional)</em>:</label>
+                  <input type="date" id="p-identidade-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Quando essas informações de identidade passaram a ser verdadeiras? Deixe em branco para registrar como hoje.">
+                  <span style="font-size:11px;color:var(--muted);">— para consultas históricas no BI</span>
+                </div>
               </div>
             </div>
 
@@ -9271,6 +9338,11 @@ select.form-control { cursor: pointer; }
                       <input id="p-pcd-suporte-descricao" class="form-input" type="text" placeholder="Ex: intérprete de Libras, rampa de acesso…">
                     </div>
                   </div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde <em>(opcional)</em>:</label>
+                    <input type="date" id="p-pcd-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Quando esta condição foi identificada? Deixe em branco para registrar como hoje.">
+                    <span style="font-size:11px;color:var(--muted);">— para histórico e BI</span>
+                  </div>
                 </div>
                 <div class="form-group" style="grid-column:span 2;">
                   <label class="form-label">É pai ou mãe? <span style="font-size:11px;color:var(--muted);font-weight:400;">— usado em datas comemorativas e homenagens</span></label>
@@ -9294,6 +9366,11 @@ select.form-control { cursor: pointer; }
                       <label class="form-label">Quantidade de filhos / dependentes</label>
                       <input id="p-num-filhos" class="form-input" type="number" min="1" max="20" step="1" placeholder="Ex: 2" style="max-width:100px;">
                     </div>
+                  </div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Vigente desde <em>(opcional)</em>:</label>
+                    <input type="date" id="p-pm-data-inicio" class="form-input" style="max-width:150px;font-size:12px;" title="Desde quando é pai/mãe/responsável? Deixe em branco para registrar como hoje.">
+                    <span style="font-size:11px;color:var(--muted);">— para histórico e BI</span>
                   </div>
                 </div>
               </div>
@@ -33807,31 +33884,45 @@ var RhUI = (function() {
       _outroDetEl.value        = colab?(colab.restricoesOutro||''):'';
       _outroDetEl.style.display = (_restsCtx.indexOf('outro') !== -1) ? '' : 'none';
     }
-    // PcD
+    // PcD — ler histórico vigente; fallback para campos planos (registros legados)
     (function(){
+      var _pcdAtual = colab && Array.isArray(colab.pcdHistorico) ? colab.pcdHistorico.find(function(e){ return !e.dataFim; }) : null;
+      var _pcdSrc   = _pcdAtual || (colab || {});
       var pcdSel = document.getElementById('rh-pf-pcd');
-      if (pcdSel) pcdSel.value = colab?(colab.pcd||''):'';
-      var _pcdTipos = (colab && Array.isArray(colab.pcdTipos)) ? colab.pcdTipos : [];
+      if (pcdSel) pcdSel.value = _pcdSrc.pcd||'';
+      var _pcdTipos = Array.isArray(_pcdSrc.pcdTipos) ? _pcdSrc.pcdTipos : [];
       document.querySelectorAll('[id^="rh-pf-pcd-"]').forEach(function(el){
         if (el.type === 'checkbox') el.checked = _pcdTipos.indexOf(el.value) !== -1;
       });
       var supSel = document.getElementById('rh-pf-pcd-suporte');
-      if (supSel) supSel.value = colab?(colab.pcdSuporte||''):'';
+      if (supSel) supSel.value = _pcdSrc.pcdSuporte||'';
       var supDet = document.getElementById('rh-pf-pcd-suporte-descricao');
-      if (supDet) supDet.value = colab?(colab.pcdSuporteDescricao||''):'';
+      if (supDet) supDet.value = _pcdSrc.pcdSuporteDescricao||'';
+      var diEl = document.getElementById('rh-pf-pcd-data-inicio');
+      if (diEl) diEl.value = (_pcdAtual && _pcdAtual.dataInicio) ? _pcdAtual.dataInicio : '';
       _togglePcd(); _togglePcdSuporte();
     })();
-    // Pai/mãe
+    // Pai/mãe — ler histórico vigente; fallback para campos planos (registros legados)
     (function(){
+      var _pmAtual = colab && Array.isArray(colab.paiMaeHistorico) ? colab.paiMaeHistorico.find(function(e){ return !e.dataFim; }) : null;
+      var _pmSrc   = _pmAtual || (colab || {});
       var pmSel = document.getElementById('rh-pf-pai-mae');
-      if (pmSel) pmSel.value = colab?(colab.ePaiMae||''):'';
-      var _ppTipos = (colab && Array.isArray(colab.papelParental)) ? colab.papelParental : [];
+      if (pmSel) pmSel.value = _pmSrc.ePaiMae||'';
+      var _ppTipos = Array.isArray(_pmSrc.papelParental) ? _pmSrc.papelParental : [];
       ['rh-pf-pm-mae','rh-pf-pm-pai','rh-pf-pm-responsavel'].forEach(function(id){
         var el = document.getElementById(id); if (el) el.checked = _ppTipos.indexOf(el.value) !== -1;
       });
       var nfEl = document.getElementById('rh-pf-num-filhos');
-      if (nfEl) nfEl.value = (colab && colab.numFilhos != null) ? String(colab.numFilhos) : '';
+      if (nfEl) nfEl.value = _pmSrc.numFilhos != null ? String(_pmSrc.numFilhos) : '';
+      var diEl = document.getElementById('rh-pf-pm-data-inicio');
+      if (diEl) diEl.value = (_pmAtual && _pmAtual.dataInicio) ? _pmAtual.dataInicio : '';
       _togglePaiMae();
+    })();
+    // Identidade — preencher data vigente (genero/racaCor/sexualidade)
+    (function(){
+      var _gAtual = colab && Array.isArray(colab.generoHistorico) ? colab.generoHistorico.find(function(e){ return !e.dataFim; }) : null;
+      var _idDI   = document.getElementById('rh-pf-identidade-data-inicio');
+      if (_idDI) _idDI.value = (_gAtual && _gAtual.dataInicio) ? _gAtual.dataInicio : '';
     })();
     // PIS/NIS
     var pisEl = document.getElementById('rh-pf-pis');
@@ -34327,13 +34418,22 @@ var RhUI = (function() {
       observacoesPessoais:   (document.getElementById('rh-pf-obs-pessoais')||{value:''}).value.trim(),
       restricoesAlimentares: Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-rest-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
       restricoesOutro:       (document.getElementById('rh-pf-rest-outro-detalhe')||{value:''}).value.trim(),
-      pcd:                   (document.getElementById('rh-pf-pcd')||{value:''}).value,
-      pcdTipos:              Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-pcd-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
-      pcdSuporte:            (document.getElementById('rh-pf-pcd-suporte')||{value:''}).value,
-      pcdSuporteDescricao:   (document.getElementById('rh-pf-pcd-suporte-descricao')||{value:''}).value.trim(),
-      ePaiMae:       (document.getElementById('rh-pf-pai-mae')||{value:''}).value,
-      papelParental: ['rh-pf-pm-mae','rh-pf-pm-pai','rh-pf-pm-responsavel'].filter(function(id){ var el=document.getElementById(id); return el&&el.checked; }).map(function(id){ return document.getElementById(id).value; }),
-      numFilhos:     (function(){ var v=parseInt((document.getElementById('rh-pf-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })(),
+      pcdDemografia: {
+        pcd:                 (document.getElementById('rh-pf-pcd')||{value:''}).value,
+        pcdTipos:            Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-pcd-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
+        pcdSuporte:          (document.getElementById('rh-pf-pcd-suporte')||{value:''}).value,
+        pcdSuporteDescricao: (document.getElementById('rh-pf-pcd-suporte-descricao')||{value:''}).value.trim(),
+        dataInicio:          (document.getElementById('rh-pf-pcd-data-inicio')||{value:''}).value
+      },
+      paiMaeDemografia: {
+        ePaiMae:       (document.getElementById('rh-pf-pai-mae')||{value:''}).value,
+        papelParental: ['rh-pf-pm-mae','rh-pf-pm-pai','rh-pf-pm-responsavel'].filter(function(id){ var el=document.getElementById(id); return el&&el.checked; }).map(function(id){ return document.getElementById(id).value; }),
+        numFilhos:     (function(){ var v=parseInt((document.getElementById('rh-pf-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })(),
+        dataInicio:    (document.getElementById('rh-pf-pm-data-inicio')||{value:''}).value
+      },
+      generoDemografia:      { genero:      (document.getElementById('rh-pf-genero')||{value:''}).value,      dataInicio: (document.getElementById('rh-pf-identidade-data-inicio')||{value:''}).value },
+      racaCorDemografia:     { racaCor:     (document.getElementById('rh-pf-raca')||{value:''}).value,        dataInicio: (document.getElementById('rh-pf-identidade-data-inicio')||{value:''}).value },
+      sexualidadeDemografia: { sexualidade: (document.getElementById('rh-pf-sexualidade')||{value:''}).value, dataInicio: (document.getElementById('rh-pf-identidade-data-inicio')||{value:''}).value },
       endereco: {
         cep:         document.getElementById('rh-pf-cep').value.trim(),
         logradouro:  document.getElementById('rh-pf-logradouro').value.trim(),
@@ -38178,23 +38278,32 @@ var PerfilUI = (function() {
     });
     var outroDetEl = g('p-rest-outro-det');
     if (outroDetEl) { outroDetEl.value=c.restricoesOutro||''; outroDetEl.style.display=rests.indexOf('outro')!==-1?'':'none'; }
-    // PcD
-    _set('p-pcd', c.pcd);
-    var pcdTipos = Array.isArray(c.pcdTipos) ? c.pcdTipos : [];
+    // PcD — ler histórico vigente; fallback para campos planos (registros legados)
+    var _pcdAtual = Array.isArray(c.pcdHistorico) ? c.pcdHistorico.find(function(e){ return !e.dataFim; }) : null;
+    var _pcdSrc   = _pcdAtual || c;
+    _set('p-pcd', _pcdSrc.pcd);
+    var pcdTipos = Array.isArray(_pcdSrc.pcdTipos) ? _pcdSrc.pcdTipos : [];
     document.querySelectorAll('[id^="p-pcd-"]').forEach(function(el) {
       if (el.type === 'checkbox') el.checked = pcdTipos.indexOf(el.value) !== -1;
     });
-    _set('p-pcd-suporte', c.pcdSuporte);
-    _set('p-pcd-suporte-descricao', c.pcdSuporteDescricao);
+    _set('p-pcd-suporte', _pcdSrc.pcdSuporte);
+    _set('p-pcd-suporte-descricao', _pcdSrc.pcdSuporteDescricao);
+    var _pcdDIEl = g('p-pcd-data-inicio'); if (_pcdDIEl) _pcdDIEl.value = (_pcdAtual && _pcdAtual.dataInicio) ? _pcdAtual.dataInicio : '';
     _togglePcd(); _togglePcdSuporte();
-    // Pai/mãe
-    _set('p-pai-mae', c.ePaiMae);
-    var ppTipos = Array.isArray(c.papelParental) ? c.papelParental : [];
+    // Pai/mãe — ler histórico vigente; fallback para campos planos (registros legados)
+    var _pmAtual = Array.isArray(c.paiMaeHistorico) ? c.paiMaeHistorico.find(function(e){ return !e.dataFim; }) : null;
+    var _pmSrc   = _pmAtual || c;
+    _set('p-pai-mae', _pmSrc.ePaiMae);
+    var ppTipos = Array.isArray(_pmSrc.papelParental) ? _pmSrc.papelParental : [];
     ['p-pm-mae','p-pm-pai','p-pm-responsavel'].forEach(function(id) {
       var el = g(id); if (el) el.checked = ppTipos.indexOf(el.value) !== -1;
     });
-    _set('p-num-filhos', c.numFilhos != null ? String(c.numFilhos) : '');
+    _set('p-num-filhos', _pmSrc.numFilhos != null ? String(_pmSrc.numFilhos) : '');
+    var _pmDIEl = g('p-pm-data-inicio'); if (_pmDIEl) _pmDIEl.value = (_pmAtual && _pmAtual.dataInicio) ? _pmAtual.dataInicio : '';
     _togglePaiMae();
+    // Identidade — preencher data vigente (genero/racaCor/sexualidade)
+    var _gAtual  = Array.isArray(c.generoHistorico) ? c.generoHistorico.find(function(e){ return !e.dataFim; }) : null;
+    var _idDIEl  = g('p-identidade-data-inicio'); if (_idDIEl) _idDIEl.value = (_gAtual && _gAtual.dataInicio) ? _gAtual.dataInicio : '';
   }
 
   function _atualizarFotoDisplay(url) {
@@ -38288,13 +38397,22 @@ var PerfilUI = (function() {
         document.querySelectorAll('[id^="p-rest-"]')
       ).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
       restricoesOutro: (g('p-rest-outro-det')||{value:''}).value.trim(),
-      pcd:                 (g('p-pcd')||{value:''}).value,
-      pcdTipos:            Array.prototype.slice.call(document.querySelectorAll('[id^="p-pcd-"]')).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
-      pcdSuporte:          (g('p-pcd-suporte')||{value:''}).value,
-      pcdSuporteDescricao: (g('p-pcd-suporte-descricao')||{value:''}).value.trim(),
-      ePaiMae:     (g('p-pai-mae')||{value:''}).value,
-      papelParental: ['p-pm-mae','p-pm-pai','p-pm-responsavel'].filter(function(id){ var el=g(id); return el&&el.checked; }).map(function(id){ return g(id).value; }),
-      numFilhos:   (function(){ var v=parseInt((g('p-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })()
+      pcdDemografia: {
+        pcd:                 (g('p-pcd')||{value:''}).value,
+        pcdTipos:            Array.prototype.slice.call(document.querySelectorAll('[id^="p-pcd-"]')).filter(function(cb){ return cb.type==='checkbox'&&cb.checked; }).map(function(cb){ return cb.value; }),
+        pcdSuporte:          (g('p-pcd-suporte')||{value:''}).value,
+        pcdSuporteDescricao: (g('p-pcd-suporte-descricao')||{value:''}).value.trim(),
+        dataInicio:          (g('p-pcd-data-inicio')||{value:''}).value
+      },
+      paiMaeDemografia: {
+        ePaiMae:       (g('p-pai-mae')||{value:''}).value,
+        papelParental: ['p-pm-mae','p-pm-pai','p-pm-responsavel'].filter(function(id){ var el=g(id); return el&&el.checked; }).map(function(id){ return g(id).value; }),
+        numFilhos:     (function(){ var v=parseInt((g('p-num-filhos')||{value:''}).value,10); return isNaN(v)?null:v; })(),
+        dataInicio:    (g('p-pm-data-inicio')||{value:''}).value
+      },
+      generoDemografia:      { genero:      (g('p-genero')     ||{value:''}).value, dataInicio: (g('p-identidade-data-inicio')||{value:''}).value },
+      racaCorDemografia:     { racaCor:     (g('p-raca')       ||{value:''}).value, dataInicio: (g('p-identidade-data-inicio')||{value:''}).value },
+      sexualidadeDemografia: { sexualidade: (g('p-sexualidade')||{value:''}).value, dataInicio: (g('p-identidade-data-inicio')||{value:''}).value }
     };
     if (_fotoTemp) dados.fotoPerfil = _fotoTemp;
     GAS.perfil.salvar(dados, function(resp) {

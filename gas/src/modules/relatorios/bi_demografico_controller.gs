@@ -222,25 +222,39 @@ function ctrl_bi_demografico_equipe() {
       } else {
         geoKey = bairroKey;
       }
+      // nomeDisplay: primeiro nome + inicial do sobrenome — identificação leve para planejamento de eventos
+      var nomePartes = String(c.nome || '').trim().split(/\s+/);
+      var nomeDisplay = nomePartes.length > 1
+        ? nomePartes[0] + ' ' + nomePartes[nomePartes.length - 1].charAt(0) + '.'
+        : nomePartes[0] || '';
+
       return {
-        setor:            c.setor       || '',
-        cargo:            c.cargo       || '',
-        tipoVinculo:      c.tipoVinculo || '',
-        status:           c.status      || 'ativo',
-        genero:           c.genero      || '',
-        sexualidade:      c.sexualidade || '',
-        racaCor:          c.racaCor || c.raca || '',
-        pronomes:         c.pronomes    || '',
-        idade:            _biIdade(c.dataNascimento),
-        bairro:           bairro,
-        cidade:           cidade,
-        uf:               uf,
-        geoKey:           geoKey,
-        bairroKey:        bairroKey,
-        cidadeKey:        cidKey,
-        horasSemanais:    c.horasSemanais || null,
-        dataAdmissao:     String(c.dataAdmissao || '').slice(0, 10),
-        dataDesligamento: desligamentos[c.id] || ''
+        setor:                 c.setor       || '',
+        cargo:                 c.cargo       || '',
+        tipoVinculo:           c.tipoVinculo || '',
+        status:                c.status      || 'ativo',
+        genero:                c.genero      || '',
+        sexualidade:           c.sexualidade || '',
+        racaCor:               c.racaCor || c.raca || '',
+        pronomes:              c.pronomes    || '',
+        idade:                 _biIdade(c.dataNascimento),
+        bairro:                bairro,
+        cidade:                cidade,
+        uf:                    uf,
+        geoKey:                geoKey,
+        bairroKey:             bairroKey,
+        cidadeKey:             cidKey,
+        horasSemanais:         c.horasSemanais || null,
+        dataAdmissao:          String(c.dataAdmissao || '').slice(0, 10),
+        dataDesligamento:      desligamentos[c.id] || '',
+        // campos operacionais (eventos / inclusão)
+        nomeDisplay:           nomeDisplay,
+        restricoesAlimentares: Array.isArray(c.restricoesAlimentares) ? c.restricoesAlimentares : [],
+        restricoesOutro:       c.restricoesOutro || '',
+        pcd:                   c.pcd || '',
+        pcdTipos:              Array.isArray(c.pcdTipos) ? c.pcdTipos : [],
+        ePaiMae:               c.ePaiMae || '',
+        numFilhos:             c.numFilhos != null ? c.numFilhos : null
       };
     });
 

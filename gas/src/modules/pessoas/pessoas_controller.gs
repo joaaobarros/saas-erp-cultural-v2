@@ -147,6 +147,81 @@ function ctrl_pessoas_por_funcao(funcao) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS — DADOS DEMOGRÁFICOS TEMPORAIS
+// ═══════════════════════════════════════════════════════════════════
+
+/** Retorna a entrada com dataFim===null (vigente) do histórico demográfico. */
+function _demAtual(historico) {
+  if (!Array.isArray(historico) || !historico.length) return null;
+  return historico.find(function(e) { return !e.dataFim; }) || historico[historico.length - 1];
+}
+
+/**
+ * Registra uma nova entrada temporal no histórico demográfico do colaborador.
+ * - Se os dados forem idênticos à entrada vigente: no-op (retorna false).
+ * - Se o indicador for vazio: fecha a entrada vigente sem abrir nova (dado retirado).
+ * - Se houver mudança real: fecha vigente + abre nova a partir de dataInicio.
+ * Modifica colab[grupo+'Historico'] in-place.
+ */
+function _registrarDemografia(colab, grupo, novaDados, dataInicio) {
+  var chave = grupo + 'Historico';
+  if (!Array.isArray(colab[chave])) colab[chave] = [];
+
+  var dInicio = (String(dataInicio || '')).slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+  // Remove campos temporais para comparação semântica
+  var semMeta = function(obj) {
+    if (!obj) return {};
+    var c = {};
+    Object.keys(obj).forEach(function(k) {
+      if (k !== 'dataInicio' && k !== 'dataFim') c[k] = obj[k];
+    });
+    return c;
+  };
+
+  // Serialização determinística: chaves ordenadas, arrays ordenados
+  var normalizar = function(obj, refKeys) {
+    return refKeys.map(function(k) {
+      var v = obj[k];
+      return k + '=' + (Array.isArray(v) ? v.slice().sort().join(',') : String(v == null ? '' : v));
+    }).join(';');
+  };
+
+  var novaSem = semMeta(novaDados);
+  delete novaSem.dataInicio; delete novaSem.dataFim;
+
+  // Indicador principal — campo que determina se há dado ou não
+  var indicador;
+  if      (grupo === 'pcd')    indicador = novaSem.pcd;
+  else if (grupo === 'paiMae') indicador = novaSem.ePaiMae;
+  else    indicador = Object.keys(novaSem).some(function(k){ return novaSem[k] != null && novaSem[k] !== ''; });
+
+  var atual = colab[chave].find(function(e) { return !e.dataFim; });
+
+  // Indicador vazio = dado retirado: fechar entrada vigente sem abrir nova
+  if (!indicador) {
+    if (atual) atual.dataFim = dInicio;
+    return false;
+  }
+
+  // Comparar usando as chaves canônicas da nova entrada (garante consistência após evolução do schema)
+  var refKeys = Object.keys(novaSem).sort();
+  if (atual && normalizar(semMeta(atual), refKeys) === normalizar(novaSem, refKeys)) {
+    return false; // Dados idênticos — no-op
+  }
+
+  if (atual) {
+    var dFimObj = new Date(dInicio + 'T12:00:00Z');
+    dFimObj.setUTCDate(dFimObj.getUTCDate() - 1);
+    atual.dataFim = dFimObj.toISOString().slice(0, 10);
+  }
+
+  colab[chave].push(Object.assign({}, novaSem, { dataInicio: dInicio, dataFim: null }));
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // COLABORADORES — MUTAÇÕES
 // ═══════════════════════════════════════════════════════════════════
 
@@ -159,6 +234,54 @@ function ctrl_pessoas_salvar(dados) {
     var nivel = _ctxPessoasNivel(ctx.email);
     if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
       throw new Error('Apenas RH e administradores podem cadastrar colaboradores.');
+
+    // Extrair dados demográficos temporais antes de passar para o engine
+    var _dHoje    = new Date().toISOString().slice(0, 10);
+    var pcdDem         = dados.pcdDemografia;         delete dados.pcdDemografia;
+    var paiMaeDem      = dados.paiMaeDemografia;      delete dados.paiMaeDemografia;
+    // Para genero/racaCor/sexualidade: usar obj explícito ou auto-construir a partir do campo plano
+    var generoDem      = dados.generoDemografia      || (dados.genero      ? {genero:      dados.genero,      dataInicio: _dHoje} : null);
+    var racaCorDem     = dados.racaCorDemografia     || (dados.racaCor     ? {racaCor:     dados.racaCor,     dataInicio: _dHoje} : null);
+    var sexualidadeDem = dados.sexualidadeDemografia || (dados.sexualidade ? {sexualidade: dados.sexualidade, dataInicio: _dHoje} : null);
+    delete dados.generoDemografia; delete dados.racaCorDemografia; delete dados.sexualidadeDemografia;
+
+    if (pcdDem || paiMaeDem || generoDem || racaCorDem || sexualidadeDem) {
+      if (dados.id) {
+        // Edição: mesclar histórico a partir do registro atual
+        var _colabExistente = ColaboradorRepository.buscarPorId(ctx.orgId, dados.id);
+        if (_colabExistente) {
+          if (pcdDem)         _registrarDemografia(_colabExistente, 'pcd',         pcdDem,         pcdDem.dataInicio);
+          if (paiMaeDem)      _registrarDemografia(_colabExistente, 'paiMae',      paiMaeDem,      paiMaeDem.dataInicio);
+          if (generoDem)      _registrarDemografia(_colabExistente, 'genero',      generoDem,      generoDem.dataInicio);
+          if (racaCorDem)     _registrarDemografia(_colabExistente, 'racaCor',     racaCorDem,     racaCorDem.dataInicio);
+          if (sexualidadeDem) _registrarDemografia(_colabExistente, 'sexualidade', sexualidadeDem, sexualidadeDem.dataInicio);
+          dados.pcdHistorico         = _colabExistente.pcdHistorico;
+          dados.paiMaeHistorico      = _colabExistente.paiMaeHistorico;
+          dados.generoHistorico      = _colabExistente.generoHistorico;
+          dados.racaCorHistorico     = _colabExistente.racaCorHistorico;
+          dados.sexualidadeHistorico = _colabExistente.sexualidadeHistorico;
+        }
+      } else {
+        // Novo colaborador: semear primeira entrada no histórico
+        if (pcdDem && pcdDem.pcd)
+          dados.pcdHistorico = [Object.assign({}, pcdDem, { dataInicio: pcdDem.dataInicio || _dHoje, dataFim: null })];
+        if (paiMaeDem && paiMaeDem.ePaiMae)
+          dados.paiMaeHistorico = [Object.assign({}, paiMaeDem, { dataInicio: paiMaeDem.dataInicio || _dHoje, dataFim: null })];
+        if (generoDem && generoDem.genero) {
+          var _tmp = Object.assign({}, generoDem, { dataInicio: generoDem.dataInicio || _dHoje, dataFim: null });
+          dados.generoHistorico = [_tmp];
+        }
+        if (racaCorDem && racaCorDem.racaCor) {
+          var _tmp2 = Object.assign({}, racaCorDem, { dataInicio: racaCorDem.dataInicio || _dHoje, dataFim: null });
+          dados.racaCorHistorico = [_tmp2];
+        }
+        if (sexualidadeDem && sexualidadeDem.sexualidade) {
+          var _tmp3 = Object.assign({}, sexualidadeDem, { dataInicio: sexualidadeDem.dataInicio || _dHoje, dataFim: null });
+          dados.sexualidadeHistorico = [_tmp3];
+        }
+      }
+    }
+
     var id = PessoasEngine.salvar(dados || {}, ctx.email, ctx.orgId);
     // Sync mínimo para usuarios_acesso.json: apenas setor e nome como fallback de exibição
     var emailInst = String((dados||{}).emailInstitucional || '').toLowerCase().trim();
@@ -740,9 +863,9 @@ var _PERFIL_CAMPOS_EDITAVEIS = [
   'nomeApelido','pronomes','emailPessoal','telefone','telefoneWpp','endereco',
   'genero','sexualidade','racaCor',
   'tipoSanguineo','alergias','restricoesAlimentares','restricoesOutro','observacoesPessoais',
-  'contatoEmergencia','fotoPerfil',
-  'pcd','pcdTipos','pcdSuporte','pcdSuporteDescricao',
-  'ePaiMae','papelParental','numFilhos'
+  'contatoEmergencia','fotoPerfil'
+  // pcd, paiMae → tratados via pcdDemografia / paiMaeDemografia (histórico temporal)
+  // genero, sexualidade, racaCor → campo plano + histórico auto-gerado via _registrarDemografia
 ];
 
 function ctrl_pessoas_meu_perfil_ler() {
@@ -758,9 +881,27 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
     var ctx = _ctxPessoas();
     var eu  = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
     if (!eu) throw new Error('Seu usuário não está vinculado a um colaborador no sistema.');
+
+    // Extrair objetos demográficos antes de aplicar campos planos
+    var _dHoje         = new Date().toISOString().slice(0, 10);
+    var pcdDem         = dados.pcdDemografia;         delete dados.pcdDemografia;
+    var paiMaeDem      = dados.paiMaeDemografia;      delete dados.paiMaeDemografia;
+    var generoDem      = dados.generoDemografia      || (dados.genero      ? {genero:      dados.genero,      dataInicio: _dHoje} : null);
+    var racaCorDem     = dados.racaCorDemografia     || (dados.racaCor     ? {racaCor:     dados.racaCor,     dataInicio: _dHoje} : null);
+    var sexualidadeDem = dados.sexualidadeDemografia || (dados.sexualidade ? {sexualidade: dados.sexualidade, dataInicio: _dHoje} : null);
+    delete dados.generoDemografia; delete dados.racaCorDemografia; delete dados.sexualidadeDemografia;
+
     _PERFIL_CAMPOS_EDITAVEIS.forEach(function(campo){
       if (Object.prototype.hasOwnProperty.call(dados, campo)) eu[campo] = dados[campo];
     });
+
+    // Registrar histórico demográfico temporal
+    if (pcdDem)         _registrarDemografia(eu, 'pcd',         pcdDem,         pcdDem.dataInicio);
+    if (paiMaeDem)      _registrarDemografia(eu, 'paiMae',      paiMaeDem,      paiMaeDem.dataInicio);
+    if (generoDem)      _registrarDemografia(eu, 'genero',      generoDem,      generoDem.dataInicio);
+    if (racaCorDem)     _registrarDemografia(eu, 'racaCor',     racaCorDem,     racaCorDem.dataInicio);
+    if (sexualidadeDem) _registrarDemografia(eu, 'sexualidade', sexualidadeDem, sexualidadeDem.dataInicio);
+
     ColaboradorRepository.salvar(ctx.orgId, eu);
     AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
     try { BootService.limparCache(ctx.email); } catch(_) {}
@@ -851,6 +992,50 @@ function recuperar_deduplicar_joao_paulo(idParaExcluir) {
     mensagem: 'Registro duplicado ' + idParaExcluir + ' (numRegistro: ' + alvo.numRegistro + ') removido com sucesso.',
     registroOriginalPreservado: 'Execute recuperar_diagnosticar_duplicatas() para confirmar que o registro completo persiste.'
   };
+}
+
+/**
+ * MIGRAÇÃO — semeia históricos temporais a partir de campos planos legados.
+ * Idempotente: não sobrescreve históricos já existentes.
+ * Executar uma vez no GAS Editor após o deploy da Fase dos históricos demográficos.
+ */
+function fase1_colaboradores_migrarHistoricosDemograficos() {
+  return GasResponse.wrap(function () {
+    var orgId   = getOrgConfig().orgId;
+    var lista   = ColaboradorRepository.listarTodos(orgId) || [];
+    var seeded  = 0;
+    var ignored = 0;
+    var _dPadrao = '2020-01-01'; // data de início padrão para registros legados
+
+    lista.forEach(function(c) {
+      var alterado = false;
+
+      var _semeiarSe = function(grupo, indicadorKey, objCampos) {
+        var chave = grupo + 'Historico';
+        if (Array.isArray(c[chave]) && c[chave].length > 0) return; // já tem histórico
+        var indicador = c[indicadorKey];
+        if (indicador == null || indicador === '') return;
+        var entrada = Object.assign({}, objCampos, { dataInicio: _dPadrao, dataFim: null });
+        c[chave] = [entrada];
+        alterado = true;
+      };
+
+      _semeiarSe('pcd',    'pcd',    { pcd: c.pcd, pcdTipos: c.pcdTipos || [], pcdSuporte: c.pcdSuporte || '', pcdSuporteDescricao: c.pcdSuporteDescricao || '' });
+      _semeiarSe('paiMae', 'ePaiMae',{ ePaiMae: c.ePaiMae, papelParental: c.papelParental || [], numFilhos: c.numFilhos || null });
+      _semeiarSe('genero',      'genero',      { genero: c.genero });
+      _semeiarSe('racaCor',     'racaCor',     { racaCor: c.racaCor });
+      _semeiarSe('sexualidade', 'sexualidade', { sexualidade: c.sexualidade });
+
+      if (alterado) {
+        ColaboradorRepository.salvar(orgId, c);
+        seeded++;
+      } else {
+        ignored++;
+      }
+    });
+
+    return { ok: true, total: lista.length, seeded: seeded, ignored: ignored };
+  }, 'fase1_colaboradores_migrarHistoricosDemograficos');
 }
 
 /**

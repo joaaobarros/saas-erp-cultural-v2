@@ -468,9 +468,38 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 65 (2026-06-12) → SESSÃO 66
+## HANDOFF ATUAL — SESSÃO 66 (2026-06-12) → SESSÃO 67
 
-### Estado atual: ~266 bugs registrados · Deploy @820 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @821 (GAS)
+
+### O que foi feito nesta sessão (s66)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @821 | RH — Histórico temporal demográfico (PcD, pai/mãe, gênero, raça/cor, sexualidade) | **Arquitetura SCD (Slowly Changing Dimension)** aplicada a todos os campos demográficos quantificáveis. **Backend** (`pessoas_controller.gs`): `_registrarDemografia` generalizado — indicador automático para grupos sem booleano (genero/racaCor/sexualidade); `ctrl_pessoas_salvar` e `ctrl_pessoas_meu_perfil_salvar` agora registram `pcdHistorico`, `paiMaeHistorico`, `generoHistorico`, `racaCorHistorico`, `sexualidadeHistorico` (arrays `{...dados, dataInicio, dataFim}`); campos genero/racaCor/sexualidade auto-constroem objeto demografia quando frontend envia só o campo plano. **Backend** (`colaborador_repository.gs`): `_CAMPOS_PROTEGIDOS` agora protege os 5 arrays de histórico (não mais os campos planos pcd/paiMae). **Migração**: `fase1_colaboradores_migrarHistoricosDemograficos()` semeia histórico a partir de campos planos legados (datas padrão 2020-01-01), idempotente. **Frontend** (`index.html`): campos "Vigente desde" (opcional) adicionados em ambos os formulários (Meu Perfil e Ficha RH) para pcd-detalhes, pai-mae-detalhes e identidade (gênero/raça/sexualidade); populate lê da entrada vigente (`dataFim===null`) do histórico com fallback para campos planos legados; save envia `pcdDemografia`, `paiMaeDemografia`, `generoDemografia`, `racaCorDemografia`, `sexualidadeDemografia` com `dataInicio` explícito. |
+
+### Checklist de auditoria — s66
+```
+[x] prompt()/confirm() — não usados nesta fase
+[x] GAS.* namespace — GAS.perfil.salvar e GAS.pessoas.salvar já existem; sem novos bindings
+[x] CSS — sem classes novas; date inputs usam form-input existente
+[x] IDs de DOM — novos IDs: p-pcd-data-inicio, p-pm-data-inicio, p-identidade-data-inicio, rh-pf-pcd-data-inicio, rh-pf-pm-data-inicio, rh-pf-identidade-data-inicio
+[x] FsmGuardian — sem transições de status nesta fase
+[x] Modais — sem novos modais
+[x] Datas — campos type=date (ISO interno); vigente-desde é opcional (vazio = hoje no backend)
+[x] BtnGuard — sem novos botões assíncronos; botões existentes já protegidos
+```
+
+### Pendentes / próxima ação
+- **Migração obrigatória**: rodar `fase1_colaboradores_migrarHistoricosDemograficos()` no GAS Editor → deve retornar `{ok:true, seeded:N, ignored:M}`
+- **Testar no browser (@821)**: Meu Perfil → Saúde → "PcD = Sim" → preencher detalhes + "Vigente desde" → salvar → abrir de novo → data vigente pré-preenchida; Ficha RH → mesmo fluxo; confirmar que genero/racaCor/sexualidade também criam histórico
+- **Pendente anterior**: Deduplificação João Paulo — `recuperar_diagnosticar_duplicatas()` → `recuperar_deduplicar_joao_paulo(id)`
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 65 (2026-06-12) → SESSÃO 66
+
+### Estado anterior: ~266 bugs registrados · Deploy @820 (GAS)
 
 ### O que foi feito nesta sessão (s65)
 

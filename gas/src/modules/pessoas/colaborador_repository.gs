@@ -200,8 +200,9 @@ var ColaboradorRepository = (function () {
           'tipoSanguineo','alergias','observacoesPessoais','restricoesAlimentares',
           'restricoesOutro','endereco','funcoes','substituicoes','cpf',
           'salarioBruto','salario','fotoPerfil','beneficios',
-          'pcd','pcdTipos','pcdSuporte','pcdSuporteDescricao',
-          'ePaiMae','papelParental','numFilhos'
+          // históricos temporais — arrays de entradas {dados, dataInicio, dataFim}
+          'pcdHistorico','paiMaeHistorico',
+          'generoHistorico','racaCorHistorico','sexualidadeHistorico'
         ];
         Object.keys(prev).forEach(function(k) {
           if (dados[k] === undefined) {
