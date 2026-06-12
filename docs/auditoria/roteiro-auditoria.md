@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @826 · Infraestrutura — fix dupla reserva de veículo no mesmo horário (criação + aprovação atômica)
+> Deploy atual: @829 · UX — Erradicação de prompt()/confirm()/alert() — helpers _modalInput + _abrirModalConfirmar
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -20,7 +20,7 @@
 
 ### Checklist de auditoria antes do deploy
 ```
-[ ] prompt()/confirm() — _raw separado, null-check antes do fallback
+[ ] Zero prompt()/confirm()/alert() — usar _modalInput()/_abrirModalConfirmar()/Toast.erro()
 [ ] GAS.* namespace — todos os ctrl_* têm binding; editar despacha para atualizar
 [ ] CSS — zero classes sem definição correspondente
 [ ] IDs de DOM — regex de sanitização idêntica em todos os pontos

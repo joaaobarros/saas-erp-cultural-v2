@@ -2315,15 +2315,17 @@ var MapaAcaoEditorUI = (function() {
   function _editarLayer(layerId) {
     var l = (_mapa.layers || []).filter(function(l) { return l.id === layerId; })[0];
     if (!l) return;
-    var _raw = prompt('Nome da camada:', l.nome);
-    if (_raw === null) return;
-    var _raw2 = prompt('Descrição:', l.descricao || '');
-    if (_raw2 === null) return;
-    if (_raw.trim()) l.nome = _raw.trim();
-    l.descricao = _raw2.trim();
-    _renderLayerSidebar();
-    _renderElementos();
-    _setStatus('Camada atualizada.');
+    _modalInput({titulo:'Editar Camada',label:'Nome da camada',valorPadrao:l.nome,obrigatorio:true}, function(_raw) {
+      if (_raw === null) return;
+      _modalInput({titulo:'Editar Camada',label:'Descrição',valorPadrao:l.descricao||''}, function(_raw2) {
+        if (_raw2 === null) return;
+        if (_raw.trim()) l.nome = _raw.trim();
+        l.descricao = _raw2.trim();
+        _renderLayerSidebar();
+        _renderElementos();
+        _setStatus('Camada atualizada.');
+      });
+    });
   }
 
   function _excluirLayer(layerId) {

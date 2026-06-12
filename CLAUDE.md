@@ -124,15 +124,61 @@ Se for planilha nova, também:
 
 Antes de executar `clasp push` / `clasp deploy` em **qualquer entrega ou fase**, o Claude DEVE realizar sistematicamente:
 
-### A. Revisão de chamadas `prompt()` / `confirm()`
+### A. Diálogos nativos do browser — USO ABSOLUTAMENTE PROIBIDO
 
-Toda chamada a `prompt()` ou `confirm()` deve:
-1. Capturar o valor em variável separada: `var _raw = prompt('...');`
-2. Checar `null` **antes** de qualquer fallback: `if (_raw === null) return;`
-3. Só então aplicar fallback: `var val = _raw || '';`
+**`prompt()`, `confirm()` e `alert()` são PROIBIDOS em todo o sistema.** Esses diálogos nativos do browser quebram a identidade visual, bloqueiam a thread, não funcionam em iframes (como o GAS), e são substituídos por modais do próprio sistema.
 
-> **Anti-padrão proibido**: `var x = prompt('...') || ''; if (x === null) return;`  
-> O `|| ''` consome o `null` antes da checagem — o `if` nunca executa.
+#### Substitutos obrigatórios
+
+| Nativo proibido | Substituto correto |
+|---|---|
+| `confirm('mensagem')` | `_abrirModalConfirmar({ titulo, mensagem, labelConfirmar, cb })` |
+| `prompt('label')` | `_modalInput({ titulo, label, obrigatorio?, placeholder? }, cb)` |
+| `alert('mensagem de erro')` | `Toast.erro('mensagem')` ou elemento inline de erro |
+| `alert('mensagem de aviso')` | `Toast.aviso('mensagem')` |
+
+#### Padrão correto para `_modalInput` (substituto de `prompt`)
+
+```javascript
+function recusar(id, btn) {
+  _modalInput({titulo:'Recusar', label:'Motivo da recusa', obrigatorio:true}, function(_raw) {
+    if (_raw === null) return;        // usuário cancelou o modal
+    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+      GAS.modulo.recusar(id, _raw, function(r) { liberar(); ... });
+    });
+  });
+}
+```
+
+#### Padrão correto para `_abrirModalConfirmar` com callback (substituto de `confirm`)
+
+```javascript
+function excluir(id) {
+  _abrirModalConfirmar({
+    titulo: 'Excluir Item', icone: 'delete_forever', corIcone: '#ef4444',
+    mensagem: 'Excluir este item? Esta ação não pode ser desfeita.',
+    labelConfirmar: 'Excluir',
+    cb: function() {
+      GAS.modulo.excluir(id, function(r) { ... });
+    }
+  });
+}
+```
+
+> **Quando há BtnGuard com `done` callback que precisa ser liberado no cancelamento:**
+> ```javascript
+> function suprimirEmails(done) {
+>   _abrirModalConfirmar({ ..., cb: function() { GAS.x.y(function(r){ done(); ... }); }, cbCancelar: function() { done(); } });
+> }
+> ```
+
+> **Anti-padrão TERMINANTEMENTE PROIBIDO:**
+> ```javascript
+> // ❌ PROIBIDO — jamais usar em nenhum arquivo do sistema
+> var x = prompt('Motivo:');
+> var ok = confirm('Confirmar?');
+> alert('Erro!');
+> ```
 
 ### B. Revisão de namespace `GAS.*` no frontend
 
@@ -187,7 +233,7 @@ Toda data exibida ao usuário **deve** usar o formato pt-BR (`DD/MM/AAAA`). **Nu
 ### Checklist de auditoria (executar antes de cada deploy)
 
 ```
-[ ] prompt()/confirm() — _raw separado, null-check antes do fallback
+[ ] Zero prompt()/confirm()/alert() — usar _modalInput()/_abrirModalConfirmar()/Toast.erro()
 [ ] GAS.* namespace — todos os ctrl_* têm binding; editar despacha para atualizar
 [ ] CSS — zero classes usadas sem definição correspondente no <style>
 [ ] IDs de DOM — regex de sanitização idêntica em todos os pontos de uso
@@ -289,6 +335,10 @@ BtnGuard.auditar()  // deve retornar "✅ todos protegidos"
 - Toda rota → `Router.registrar(id, label, fn)` + `App._MODULOS_MENU`
 - `aoAbrir()` → carregar dados apenas na primeira vez (`if (!_carregado) carregar()`)
 - **Datas em output de UI** → sempre `fmtDataPtBR(valor)` (definida em `index.html:8722`); `toLocaleDateString` sempre com `'pt-BR'`; nunca ISO cru em texto visível
+- **Diálogos** → **PROIBIDO** usar `prompt()`, `confirm()`, `alert()`. Sempre usar:
+  - Coleta de texto → `_modalInput({titulo, label, obrigatorio?, tipo?, valorPadrao?}, cb)` (global em `index.html`)
+  - Confirmação → `_abrirModalConfirmar({titulo, mensagem, labelConfirmar, icone, corIcone, cb, cbCancelar?})` (global em `index.html`)
+  - Erros/avisos → `Toast.erro()` / `Toast.aviso()` / elemento inline de erro
 
 #### Documentação
 - Toda nova entidade → documentar schema em `docs/architecture/domain_model.md`

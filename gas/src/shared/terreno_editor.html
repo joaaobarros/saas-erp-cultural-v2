@@ -97,14 +97,17 @@ var TerrenoEditorUI = (function () {
   }
 
   function _redefinir() {
-    var _raw = confirm('Redefinir o terreno para o formato padrão do CCBJ?');
-    if (_raw === null || !_raw) return;
-    _pontos = _PADRAO.map(function(p) {
-      return { x: p.x, y: p.y, curve: false, qcx: p.x, qcy: p.y };
+    _abrirModalConfirmar({titulo:'Redefinir Terreno',icone:'restart_alt',corIcone:'#f59e0b',
+      mensagem:'Redefinir o terreno para o formato padrão do CCBJ? Todos os pontos serão restaurados.',
+      labelConfirmar:'Redefinir', cb:function(){
+        _pontos = _PADRAO.map(function(p) {
+          return { x: p.x, y: p.y, curve: false, qcx: p.x, qcy: p.y };
+        });
+        _sel = null;
+        _render();
+        _atualizarSelInfo();
+      }
     });
-    _sel = null;
-    _render();
-    _atualizarSelInfo();
   }
 
   // ── Modo de ferramentas ───────────────────────────────────

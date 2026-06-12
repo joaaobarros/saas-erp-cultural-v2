@@ -10726,14 +10726,17 @@ var IdentidadeAdmin = (function() {
   }
 
   function restaurarPadrao() {
-    var _conf = confirm('Restaurar a paleta de cores padrão do sistema?');
-    if (!_conf) return;
-    BtnGuard.wrap('btn-restaurar-padrao','Restaurando…',function(done){
-      GAS.admin.restaurarPadrao(function(resp){
-        done();
-        if(resp&&resp.ok){Toast.sucesso('Paleta restaurada.');carregar();}
-        else Toast.erro('Erro ao restaurar paleta.');
-      },function(err){done();Toast.erro('Erro: '+(err.message||err));});
+    _abrirModalConfirmar({titulo:'Restaurar Paleta Padrão',icone:'restore',corIcone:'#f59e0b',
+      mensagem:'Restaurar a paleta de cores padrão do sistema? As cores personalizadas serão perdidas.',
+      labelConfirmar:'Restaurar', cb:function(){
+        BtnGuard.wrap('btn-restaurar-padrao','Restaurando…',function(done){
+          GAS.admin.restaurarPadrao(function(resp){
+            done();
+            if(resp&&resp.ok){Toast.sucesso('Paleta restaurada.');carregar();}
+            else Toast.erro('Erro ao restaurar paleta.');
+          },function(err){done();Toast.erro(err.message||err);});
+        });
+      }
     });
   }
 
@@ -13226,40 +13229,46 @@ var ComprasUI = (function() {
   }
 
   function _aprovar(id) {
-    var _conf = confirm('Aprovar esta solicitação de compra?');
-    if (!_conf) return;
-    GAS.compras.aprovar(id, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      Toast.sucesso('Aprovada.'); _carregado = false; carregar();
-    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    _abrirModalConfirmar({titulo:'Aprovar Compra',icone:'check_circle',corIcone:'#22c55e',
+      mensagem:'Aprovar esta solicitação de compra?',
+      labelConfirmar:'Aprovar', cb:function(){
+        GAS.compras.aprovar(id, function(r) {
+          if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+          Toast.sucesso('Aprovada.'); _carregado = false; carregar();
+        }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+      }
+    });
   }
 
   function _rejeitar(id) {
-    var _raw = prompt('Motivo da rejeição:');
-    if (_raw === null) return;
-    GAS.compras.rejeitar(id, _raw, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      Toast.sucesso('Rejeitada.'); _carregado = false; carregar();
-    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    _modalInput({titulo:'Rejeitar Compra',label:'Motivo da rejeição',placeholder:'Descreva o motivo'}, function(_raw) {
+      if (_raw === null) return;
+      GAS.compras.rejeitar(id, _raw, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        Toast.sucesso('Rejeitada.'); _carregado = false; carregar();
+      }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    });
   }
 
   function _executada(id) {
-    var _raw = prompt('Nº da Nota Fiscal / Empenho (opcional):');
-    if (_raw === null) return;
-    GAS.compras.executada(id, _raw, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      Toast.sucesso('Marcada como executada.'); _carregado = false; carregar();
-    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    _modalInput({titulo:'Marcar como Executada',label:'Nº da Nota Fiscal / Empenho (opcional)',placeholder:'NF ou empenho'}, function(_raw) {
+      if (_raw === null) return;
+      GAS.compras.executada(id, _raw, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        Toast.sucesso('Marcada como executada.'); _carregado = false; carregar();
+      }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    });
   }
 
   function _receber(id) {
-    var _raw = prompt('Nº da Nota Fiscal / Empenho (opcional):');
-    if (_raw === null) return;
-    GAS.compras.receber(id, _raw, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      Toast.sucesso('Recebida! Item adicionado ao estoque.');
-      _carregado = false; carregar();
-    }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    _modalInput({titulo:'Registrar Recebimento',label:'Nº da Nota Fiscal / Empenho (opcional)',placeholder:'NF ou empenho'}, function(_raw) {
+      if (_raw === null) return;
+      GAS.compras.receber(id, _raw, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        Toast.sucesso('Recebida! Item adicionado ao estoque.');
+        _carregado = false; carregar();
+      }, function(e) { Toast.erro('Erro: '+(e.message||e)); });
+    });
   }
 
   return {
@@ -13769,38 +13778,41 @@ var RemanejamentosUI = (function() {
   }
 
   function aprovarFin(btn, id) {
-    var _raw = prompt('Parecer de aprovação (financeiro):');
-    if (_raw === null) return;
-    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
-      GAS.remanejamentos.aprovarFinanceiro(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Aprovado pelo financeiro.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Aprovar (Financeiro)',label:'Parecer de aprovação financeiro',placeholder:'Descreva o parecer (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+        GAS.remanejamentos.aprovarFinanceiro(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Aprovado pelo financeiro.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
 
   function aprovarDir(btn, id) {
-    var _raw = prompt('Parecer de aprovação (direção):');
-    if (_raw === null) return;
-    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
-      GAS.remanejamentos.aprovarDirecao(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Aprovado pela direção.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Aprovar (Direção)',label:'Parecer de aprovação da direção',placeholder:'Descreva o parecer (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+        GAS.remanejamentos.aprovarDirecao(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Aprovado pela direção.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
 
   function rejeitar(btn, id) {
-    var _raw = prompt('Motivo da rejeição (obrigatório):');
-    if (_raw === null) return;
-    if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
-    BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
-      GAS.remanejamentos.rejeitar(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Remanejamento rejeitado.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Rejeitar Remanejamento',label:'Motivo da rejeição',obrigatorio:true,placeholder:'Motivo obrigatório'}, function(_raw) {
+      if (_raw === null) return;
+      if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
+      BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
+        GAS.remanejamentos.rejeitar(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Remanejamento rejeitado.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
@@ -13975,13 +13987,14 @@ var AditivosUI = (function() {
   }
 
   function aprovarInterno(btn, id) {
-    var _raw = prompt('Parecer de aprovação interna:');
-    if (_raw === null) return;
-    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
-      GAS.aditivos.aprovarInterno(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Aprovado internamente.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Aprovação Interna',label:'Parecer de aprovação interna',placeholder:'Descreva o parecer (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+        GAS.aditivos.aprovarInterno(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Aprovado internamente.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
@@ -14008,26 +14021,28 @@ var AditivosUI = (function() {
   }
 
   function aprovarFundador(btn, id) {
-    var _raw = prompt('Parecer de aprovação do fundador:');
-    if (_raw === null) return;
-    BtnGuard.wrap(btn, 'Registrando…', function(liberar) {
-      GAS.aditivos.aprovarFundador(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Aprovação do fundador registrada.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Aprovação do Fundador',label:'Parecer de aprovação do fundador',placeholder:'Descreva o parecer (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      BtnGuard.wrap(btn, 'Registrando…', function(liberar) {
+        GAS.aditivos.aprovarFundador(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Aprovação do fundador registrada.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
 
   function rejeitar(btn, id) {
-    var _raw = prompt('Motivo da rejeição (obrigatório):');
-    if (_raw === null) return;
-    if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
-    BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
-      GAS.aditivos.rejeitar(id, _raw, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Aditivo rejeitado.'); carregar(); }
-        else Toast.erro((r && r.mensagem) || 'Erro.');
+    _modalInput({titulo:'Rejeitar Aditivo',label:'Motivo da rejeição',obrigatorio:true,placeholder:'Motivo obrigatório'}, function(_raw) {
+      if (_raw === null) return;
+      if (!_raw.trim()) { Toast.erro('Motivo é obrigatório.'); return; }
+      BtnGuard.wrap(btn, 'Rejeitando…', function(liberar) {
+        GAS.aditivos.rejeitar(id, _raw, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Aditivo rejeitado.'); carregar(); }
+          else Toast.erro((r && r.mensagem) || 'Erro.');
+        });
       });
     });
   }
@@ -15562,30 +15577,35 @@ var AprovacaoReservaUI = (function() {
   }
 
   function recusar(id, btn) {
-    var _raw = prompt('Motivo da recusa (obrigatório):');
-    if (_raw === null) return;
-    var motivo = _raw.trim();
-    if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
-    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
-      GAS.solicitacoes.recusar(id, motivo, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Solicitação recusada.'); carregar(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+    _modalInput({titulo:'Recusar Solicitação',label:'Motivo da recusa',obrigatorio:true,placeholder:'Motivo obrigatório'}, function(_raw) {
+      if (_raw === null) return;
+      var motivo = _raw.trim();
+      if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
+      BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+        GAS.solicitacoes.recusar(id, motivo, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Solicitação recusada.'); carregar(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        });
       });
     });
   }
+  }
 
   function aprovarAcesso(email, btn) {
-    var _raw = prompt('Papel a atribuir (colaborador, habilitador, rh, financeiro, comunicacao, coordenador, gestor, admin):');
-    if (_raw === null) return;
-    var papel = (_raw.trim() || 'colaborador').toLowerCase();
-    BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
-      GAS.acesso.aprovar({ emailAlvo: email, papel: papel }, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Acesso aprovado!'); carregarAcessos(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+    _modalInput({titulo:'Aprovar Acesso',label:'Papel a atribuir',valorPadrao:'colaborador',
+      dica:'Papéis: colaborador, habilitador, rh, financeiro, comunicacao, coordenador, gestor, admin'}, function(_raw) {
+      if (_raw === null) return;
+      var papel = (_raw.trim() || 'colaborador').toLowerCase();
+      BtnGuard.wrap(btn, 'Aprovando…', function(liberar) {
+        GAS.acesso.aprovar({ emailAlvo: email, papel: papel }, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Acesso aprovado!'); carregarAcessos(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        });
       });
     });
+  }
   }
 
   function recusarAcesso(email, btn) {
@@ -15645,16 +15665,17 @@ var AprovacaoReservaUI = (function() {
   }
 
   function recusarCarro(id, btn) {
-    var _raw = prompt('Motivo da recusa (obrigatório):');
-    if (_raw === null) return;
-    var motivo = _raw.trim();
-    if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
-    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
-      GAS.reservasCarro.recusar(id, motivo, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Reserva de veículo recusada.'); carregarCarros(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro ao recusar.');
-      }, function(e) { liberar(); Toast.erro((e&&e.message)||'Erro de comunicação.'); });
+    _modalInput({titulo:'Recusar Reserva de Veículo',label:'Motivo da recusa',obrigatorio:true,placeholder:'Motivo obrigatório'}, function(_raw) {
+      if (_raw === null) return;
+      var motivo = _raw.trim();
+      if (!motivo) { Toast.aviso('Informe o motivo da recusa.'); return; }
+      BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+        GAS.reservasCarro.recusar(id, motivo, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Reserva de veículo recusada.'); carregarCarros(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro ao recusar.');
+        }, function(e) { liberar(); Toast.erro((e&&e.message)||'Erro de comunicação.'); });
+      });
     });
   }
 
@@ -16772,17 +16793,18 @@ var ReservasCarroUI = (function() {
   }
 
   function cancelar(id, btn) {
-    var _raw = prompt('Motivo do cancelamento (opcional):');
-    if (_raw === null) return;
-    var motivo = _raw.trim();
-    BtnGuard.wrap(btn, 'Cancelando…', function(liberar) {
-      GAS.reservasCarro.cancelar(id, motivo, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Reserva cancelada.'); carregar(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro ao cancelar.');
-      }, function(err) {
-        liberar();
-        Toast.erro((err && err.message) || 'Erro de comunicação.');
+    _modalInput({titulo:'Cancelar Reserva',label:'Motivo do cancelamento (opcional)',placeholder:'Descreva o motivo'}, function(_raw) {
+      if (_raw === null) return;
+      var motivo = _raw.trim();
+      BtnGuard.wrap(btn, 'Cancelando…', function(liberar) {
+        GAS.reservasCarro.cancelar(id, motivo, function(r) {
+          liberar();
+          if (r && r.ok) { Toast.sucesso('Reserva cancelada.'); carregar(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro ao cancelar.');
+        }, function(err) {
+          liberar();
+          Toast.erro((err && err.message) || 'Erro de comunicação.');
+        });
       });
     });
   }
@@ -17135,13 +17157,16 @@ var ReservasCarroUI = (function() {
   }
 
   function _removerEscala(id) {
-    var _raw = confirm('Desativar esta escala?');
-    if (!_raw) return;
-    GAS.reservasCarro.removerEscala(id, function(r) {
-      if (r && r.ok) { Toast.sucesso('Escala removida.'); _carregarEscala(); }
-      else Toast.erro((r && r.error && r.error.message) || 'Erro.');
-    }, function(err) {
-      Toast.erro((err && err.message) || 'Erro de comunicação.');
+    _abrirModalConfirmar({titulo:'Remover Escala',icone:'delete',corIcone:'#ef4444',
+      mensagem:'Desativar esta escala de veículo? A remoção é imediata.',
+      labelConfirmar:'Remover', cb:function(){
+        GAS.reservasCarro.removerEscala(id, function(r) {
+          if (r && r.ok) { Toast.sucesso('Escala removida.'); _carregarEscala(); }
+          else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+        }, function(err) {
+          Toast.erro((err && err.message) || 'Erro de comunicação.');
+        });
+      }
     });
   }
 
@@ -22971,14 +22996,17 @@ var EstoqueUI = (function() {
   }
 
   function _devolverSolicitacao(id) {
-    var _conf = confirm('Confirmar devolução? Itens permanentes terão o saldo restaurado no depósito padrão.');
-    if (!_conf) return;
-    GAS.estoque.devolverSolicitacao(id, function(r) {
-      if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao registrar devolução.'); return; }
-      Toast.sucesso('Devolução registrada.');
-      _forcarRecarregarSolicitacoes();
-      _carregados['estoque'] = false;
-    }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
+    _abrirModalConfirmar({titulo:'Registrar Devolução',icone:'undo',corIcone:'#f59e0b',
+      mensagem:'Confirmar devolução? Itens permanentes terão o saldo restaurado no depósito padrão.',
+      labelConfirmar:'Confirmar', cb:function(){
+        GAS.estoque.devolverSolicitacao(id, function(r) {
+          if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao registrar devolução.'); return; }
+          Toast.sucesso('Devolução registrada.');
+          _forcarRecarregarSolicitacoes();
+          _carregados['estoque'] = false;
+        }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
+      }
+    });
   }
 
   function _abrirEntregarSolicitacao(id) {
@@ -23216,14 +23244,17 @@ var EstoqueUI = (function() {
   }
 
   function excluirItem(id) {
-    var _conf = confirm('Excluir este item do catálogo? Esta ação não pode ser desfeita.');
-    if (!_conf) return;
-    GAS.estoque.excluirItem(id, function(r) {
-      if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao excluir.'); return; }
-      Toast.sucesso('Item excluído.');
-      recarregarItens();
-      _carregados['estoque'] = false;
-    }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
+    _abrirModalConfirmar({titulo:'Excluir Item',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir este item do catálogo? Esta ação não pode ser desfeita.',
+      labelConfirmar:'Excluir', cb:function(){
+        GAS.estoque.excluirItem(id, function(r) {
+          if (!r || !r.ok) { Toast.erro((r && r.error && r.error.message) || 'Erro ao excluir.'); return; }
+          Toast.sucesso('Item excluído.');
+          recarregarItens();
+          _carregados['estoque'] = false;
+        }, function(e) { Toast.erro('Erro: ' + (e.message || e)); });
+      }
+    });
   }
 
   // ── Modal: Registrar Entrada ─────────────────────────────
@@ -24988,16 +25019,18 @@ var SolicitacoesUI = (function() {
   // ── Marcar Pago ───────────────────────────────────────────
 
   function marcarPago(id, numeroParcela) {
-    var _raw = prompt('Data do pagamento (AAAA-MM-DD):');
-    if (_raw === null) return;
-    var dataPaga = _raw || new Date().toISOString().slice(0,10);
-    BtnGuard.wrap('btn-mp-'+id+'-'+numeroParcela, 'Registrando…', function(done){
-      GAS.contratacoes.marcarPago(id, numeroParcela, {dataPaga: dataPaga}, function(resp){
-        done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Parcela '+numeroParcela+' marcada como paga!');
-        abrirDetalhe(id); carregar();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+    _modalInput({titulo:'Marcar Parcela como Paga',label:'Data do pagamento',tipo:'date',obrigatorio:true,
+      valorPadrao:new Date().toISOString().slice(0,10)}, function(_raw) {
+      if (_raw === null) return;
+      var dataPaga = _raw || new Date().toISOString().slice(0,10);
+      BtnGuard.wrap('btn-mp-'+id+'-'+numeroParcela, 'Registrando…', function(done){
+        GAS.contratacoes.marcarPago(id, numeroParcela, {dataPaga: dataPaga}, function(resp){
+          done();
+          if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+          Toast.sucesso('Parcela '+numeroParcela+' marcada como paga!');
+          abrirDetalhe(id); carregar();
+        }, function(e){ done(); Toast.erro(e.message||e); });
+      });
     });
   }
 

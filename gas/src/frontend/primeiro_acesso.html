@@ -172,6 +172,7 @@
     <button class="btn" id="btnSolicitar" onclick="solicitar()">
       Solicitar acesso
     </button>
+    <p id="erroEnvio" class="error-msg"></p>
   </div>
 
   <div class="success-box" id="successBox">
@@ -211,12 +212,16 @@
             document.getElementById('formArea').style.display   = 'none';
             document.getElementById('successBox').style.display = 'block';
           } else {
-            alert((res && res.mensagem) || 'Erro ao enviar. Tente novamente.');
+            var _erroEl = document.getElementById('erroEnvio');
+            _erroEl.textContent = (res && res.mensagem) || 'Erro ao enviar. Tente novamente.';
+            _erroEl.style.display = 'block';
           }
         })
         .withFailureHandler(function(err) {
           done();
-          alert('Erro ao comunicar com o servidor: ' + err.message);
+          var _erroEl = document.getElementById('erroEnvio');
+          _erroEl.textContent = 'Erro ao comunicar com o servidor: ' + (err.message || err);
+          _erroEl.style.display = 'block';
         })
         .ctrl_acesso_solicitar({ nome: nome, setorDesejado: setor });
     });
