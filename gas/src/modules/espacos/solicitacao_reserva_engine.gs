@@ -167,9 +167,8 @@ var SolicitacaoReservaEngine = (function() {
       throw new Error('Sem permissao: voce nao e responsavel por este espaco/periodo.');
     }
 
-    // Sem responsavel configurado: habilitador e gestor aprovam diretamente
-    var papel = _getPapel(emailAprovador);
-    if (['gestor','habilitador'].indexOf(papel) >= 0) return;
+
+    // Sem responsavel: solicitacao nao deveria existir (reserva seria automatica)
     throw new Error('Sem permissao para aprovar esta solicitacao.');
   }
 
