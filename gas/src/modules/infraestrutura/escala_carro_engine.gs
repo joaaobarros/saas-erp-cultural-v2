@@ -69,6 +69,14 @@ var EscalaCarroEngine = (function() {
 
   // ── Cálculo de tempo entre dois locais ──────────────────────────────────────
 
+  // Nomes informais sem vírgula (ex: "ccbj", "pinacoteca") falham no Maps API —
+  // adiciona cidade para que o geocoder resolva corretamente.
+  function _normalizarEndereco(local) {
+    if (!local) return local;
+    if (String(local).indexOf(',') === -1) return local + ', Fortaleza, CE, Brasil';
+    return local;
+  }
+
   /**
    * Estima tempo de viagem em minutos entre dois endereços usando GAS Maps.
    * Retorna BUFFER_MIN como fallback em caso de erro (distância desconhecida = buffer mínimo).
@@ -77,8 +85,8 @@ var EscalaCarroEngine = (function() {
     if (!origem || !destino || origem === destino) return 0;
     try {
       var finder = Maps.newDirectionFinder()
-        .setOrigin(String(origem))
-        .setDestination(String(destino))
+        .setOrigin(_normalizarEndereco(String(origem)))
+        .setDestination(_normalizarEndereco(String(destino)))
         .setMode(Maps.DirectionFinder.Mode.DRIVING);
       var res = finder.getDirections();
       if (!res || !res.routes || !res.routes.length) return BUFFER_MIN;
@@ -246,14 +254,14 @@ var EscalaCarroEngine = (function() {
     if (!params.origem || !params.destino) throw new Error('Origem e destino são obrigatórios.');
     try {
       var finder = Maps.newDirectionFinder()
-        .setOrigin(String(params.origem))
-        .setDestination(String(params.destino))
+        .setOrigin(_normalizarEndereco(String(params.origem)))
+        .setDestination(_normalizarEndereco(String(params.destino)))
         .setMode(Maps.DirectionFinder.Mode.DRIVING);
 
       var paradas = Array.isArray(params.paradas) ? params.paradas : [];
       paradas.forEach(function(p) {
         var local = (typeof p === 'string') ? p : (p.local || '');
-        if (local) finder.addWaypoint(local);
+        if (local) finder.addWaypoint(_normalizarEndereco(local));
       });
 
       var res = finder.getDirections();

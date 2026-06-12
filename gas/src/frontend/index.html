@@ -10251,25 +10251,71 @@ function _abrirModalSimples(html, selectId, selectVal) {
   }
 }
 
+var _confirmarModalCb = null;
+var _confirmarModalCbCancelar = null;
+var _modalInputCb = null;
+var _modalInputObrig = false;
+
 function _abrirModalConfirmar(opts) {
+  if (opts.cb) { _confirmarModalCb = opts.cb; }
+  if (opts.cbCancelar) { _confirmarModalCbCancelar = opts.cbCancelar; }
+  var _fOk   = 'var _m=document.querySelector(\'.modal-simples\');if(_m)_m.remove();var _f=_confirmarModalCb;_confirmarModalCb=null;if(_f)_f();';
+  var _fCanc = 'var _m=document.querySelector(\'.modal-simples\');if(_m)_m.remove();var _f=_confirmarModalCbCancelar;_confirmarModalCbCancelar=null;if(_f)_f();';
+  var onOk   = opts.onConfirm || (opts.cb ? _fOk : '');
+  var onCanc = opts.cbCancelar ? _fCanc : 'this.closest(\'.modal-simples\').remove()';
   var html =
     '<div style="border-radius:17px;overflow:hidden;">' +
       '<div style="background:linear-gradient(135deg,rgba(var(--color-primary-rgb,76,29,149),.05) 0%,var(--surface) 60%);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
         '<span class="ms" style="color:'+(opts.corIcone||'#ef4444')+';font-size:22px;">'+(opts.icone||'warning')+'</span>' +
         '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.015em;">'+escaparHtml(opts.titulo||'Confirmar')+'</h3>' +
-        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;width:30px;height:30px;border-radius:50%;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:background .12s;"><span class="ms" style="font-size:18px;">close</span></button>' +
+        '<button onclick="'+onCanc+'" data-bg-skip="1" style="margin-left:auto;width:30px;height:30px;border-radius:50%;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:background .12s;"><span class="ms" style="font-size:18px;">close</span></button>' +
       '</div>' +
       '<div style="padding:16px 20px;">' +
         '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">'+(opts.mensagem||'')+'</p>' +
         '<div style="display:flex;gap:8px;">' +
-          '<button class="btn btn-perigo" id="'+escaparHtml(opts.idBtn||'btn-confirmar-acao')+'" onclick="'+(opts.onConfirm||'')+'">' +
+          '<button class="btn btn-perigo" id="'+escaparHtml(opts.idBtn||'btn-confirmar-acao')+'" onclick="'+onOk+'">' +
             escaparHtml(opts.labelConfirmar||'Confirmar') +
           '</button>' +
-          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '<button class="btn btn-ghost" onclick="'+onCanc+'" data-bg-skip="1">Cancelar</button>' +
         '</div>' +
       '</div>' +
     '</div>';
   _abrirModalSimples(html);
+}
+
+function _modalInput(opts, cb) {
+  _modalInputCb = cb;
+  _modalInputObrig = !!opts.obrigatorio;
+  var fid = 'minp-' + Date.now();
+  var _canc = 'var _m=document.querySelector(\'.modal-simples\');if(_m)_m.remove();var _f=_modalInputCb;_modalInputCb=null;_modalInputObrig=false;if(_f)_f(null);';
+  var html =
+    '<div style="border-radius:17px;overflow:hidden;">' +
+      '<div style="background:linear-gradient(135deg,rgba(var(--color-primary-rgb,76,29,149),.05) 0%,var(--surface) 60%);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
+        '<span class="ms" style="color:'+(opts.corIcone||'var(--color-primary)')+';font-size:22px;">'+(opts.icone||'edit')+'</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.015em;">'+escaparHtml(opts.titulo||opts.label||'Informar')+'</h3>' +
+        '<button onclick="'+_canc+'" data-bg-skip="1" style="margin-left:auto;width:30px;height:30px;border-radius:50%;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:18px;">close</span></button>' +
+      '</div>' +
+      '<div style="padding:16px 20px;">' +
+        (opts.label ? '<label for="'+fid+'" style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">'+escaparHtml(opts.label)+(opts.obrigatorio ? ' <span style="color:#ef4444;">*</span>' : '')+'</label>' : '') +
+        (opts.dica  ? '<p style="font-size:12px;color:var(--muted);margin:0 0 8px;">'+escaparHtml(opts.dica)+'</p>' : '') +
+        '<input id="'+fid+'" type="'+(opts.tipo||'text')+'" value="'+escaparHtml(opts.valorPadrao||'')+'" placeholder="'+escaparHtml(opts.placeholder||'')+'" class="form-input" style="width:100%;box-sizing:border-box;" onkeydown="if(event.key===\'Enter\')_confirmarModalInput(\''+fid+'\')">' +
+        '<div style="margin-top:12px;display:flex;gap:8px;">' +
+          '<button class="btn btn-primario" id="btn-modal-input-ok" onclick="_confirmarModalInput(\''+fid+'\')">'+escaparHtml(opts.labelConfirmar||'Confirmar')+'</button>' +
+          '<button class="btn btn-ghost" onclick="'+_canc+'" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  _abrirModalSimples(html);
+  setTimeout(function() { var el = document.getElementById(fid); if (el) { el.focus(); el.select(); } }, 80);
+}
+
+function _confirmarModalInput(fid) {
+  var el = document.getElementById(fid);
+  var val = el ? el.value.trim() : '';
+  if (_modalInputObrig && !val) { Toast.aviso('Este campo é obrigatório.'); return; }
+  var m = document.querySelector('.modal-simples'); if (m) m.remove();
+  var cb = _modalInputCb; _modalInputCb = null; _modalInputObrig = false;
+  if (cb) cb(val);
 }
 
 // ── Utilitário de data (YYYY-MM-DD → DD/MM/YYYY) ────────────
@@ -15841,6 +15887,7 @@ var ReservasCarroUI = (function() {
     } else if (pPreview) {
       pPreview.style.display = 'none';
     }
+    _debounceCalcRota();
   }
 
   function _removerParada(idx) {
@@ -15868,6 +15915,7 @@ var ReservasCarroUI = (function() {
         }
       }
     });
+    debouncePreviewMapa();
   }
 
   function _getParadas() {
@@ -16224,11 +16272,15 @@ var ReservasCarroUI = (function() {
       if (pSaida)   pSaida.style.display   = 'none';
       if (pChegada) pChegada.style.display = 'none';
       if (pRota && iRota) {
+        var paradasAtivas = _paradasData.filter(function(p) { return p.local; });
+        var daddrParts = paradasAtivas.map(function(p) { return encodeURIComponent(p.local); });
+        daddrParts.push(encodeURIComponent(chegada));
         iRota.src = 'https://maps.google.com/maps?saddr=' + encodeURIComponent(saida) +
-                    '&daddr=' + encodeURIComponent(chegada) + '&hl=pt-BR&output=embed';
+                    '&daddr=' + daddrParts.join('+to:') + '&hl=pt-BR&output=embed';
         pRota.style.display = '';
       }
-      var rotaUrl = 'https://www.google.com/maps/dir/' + encodeURIComponent(saida) + '/' + encodeURIComponent(chegada);
+      var rotaUrlParts = [saida].concat(_paradasData.filter(function(p){ return p.local; }).map(function(p){ return p.local; })).concat([chegada]);
+      var rotaUrl = 'https://www.google.com/maps/dir/' + rotaUrlParts.map(encodeURIComponent).join('/');
       if (linkRota) linkRota.href = rotaUrl;
       if (hidMapa)  hidMapa.value = rotaUrl;
     } else {
@@ -16499,6 +16551,7 @@ var ReservasCarroUI = (function() {
         }
       }
       _mapaCampoParadaIdx = null;
+      debouncePreviewMapa();
     } else {
       var elId = _mapaCampoAtual === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
       var el = document.getElementById(elId);
@@ -25451,15 +25504,16 @@ var ContratadosUI = (function() {
   }
 
   function suspender(id) {
-    var _raw = prompt('Motivo da suspensão:');
-    if (_raw === null) return;
-    var motivo = _raw || '';
-    BtnGuard.wrap('btn-ag-sus-'+id, 'Suspendendo…', function(done){
-      GAS.contratados.mudarStatus(id, 'suspenso', motivo, function(resp){
-        done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Agente suspenso.'); carregar();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+    _modalInput({titulo:'Suspender Agente',label:'Motivo da suspensão',placeholder:'Descreva o motivo'}, function(_raw) {
+      if (_raw === null) return;
+      var motivo = _raw || '';
+      BtnGuard.wrap('btn-ag-sus-'+id, 'Suspendendo…', function(done){
+        GAS.contratados.mudarStatus(id, 'suspenso', motivo, function(resp){
+          done();
+          if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+          Toast.sucesso('Agente suspenso.'); carregar();
+        }, function(e){ done(); Toast.erro(e.message||e); });
+      });
     });
   }
 
@@ -25523,43 +25577,46 @@ var HabilitacoesUI = (function() {
   }
 
   function aprovar(id) {
-    var _raw = prompt('Parecer de aprovação:');
-    if (_raw === null) return;
-    var parecer = _raw || '';
-    BtnGuard.wrap('btn-hab-apr-'+id, 'Aprovando…', function(done){
-      GAS.habilitacoes.aprovar(id, parecer, function(resp){
-        done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Habilitação aprovada. Agente habilitado.'); carregar();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+    _modalInput({titulo:'Aprovar Habilitação',label:'Parecer de aprovação',placeholder:'Descreva o parecer (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      var parecer = _raw || '';
+      BtnGuard.wrap('btn-hab-apr-'+id, 'Aprovando…', function(done){
+        GAS.habilitacoes.aprovar(id, parecer, function(resp){
+          done();
+          if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+          Toast.sucesso('Habilitação aprovada. Agente habilitado.'); carregar();
+        }, function(e){ done(); Toast.erro(e.message||e); });
+      });
     });
   }
 
   function reprovar(id) {
-    var _raw = prompt('Motivo da reprovação (obrigatório):');
-    if (_raw === null) return;
-    var parecer = _raw || '';
-    if (!parecer){ Toast.erro('Motivo é obrigatório.'); return; }
-    BtnGuard.wrap('btn-hab-rep-'+id, 'Reprovando…', function(done){
-      GAS.habilitacoes.reprovar(id, parecer, function(resp){
-        done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Habilitação reprovada.'); carregar();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+    _modalInput({titulo:'Reprovar Habilitação',label:'Motivo da reprovação',obrigatorio:true,placeholder:'Descreva o motivo'}, function(_raw) {
+      if (_raw === null) return;
+      var parecer = _raw || '';
+      if (!parecer){ Toast.erro('Motivo é obrigatório.'); return; }
+      BtnGuard.wrap('btn-hab-rep-'+id, 'Reprovando…', function(done){
+        GAS.habilitacoes.reprovar(id, parecer, function(resp){
+          done();
+          if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+          Toast.sucesso('Habilitação reprovada.'); carregar();
+        }, function(e){ done(); Toast.erro(e.message||e); });
+      });
     });
   }
 
   function devolver(id) {
-    var _raw = prompt('Observação para devolução:');
-    if (_raw === null) return;
-    var obs = _raw || '';
-    if (!obs){ Toast.erro('Observação é obrigatória.'); return; }
-    BtnGuard.wrap('btn-hab-dev-'+id, 'Devolvendo…', function(done){
-      GAS.habilitacoes.devolver(id, obs, function(resp){
-        done();
-        if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
-        Toast.sucesso('Habilitação devolvida para complementação.'); carregar();
-      }, function(e){ done(); Toast.erro(e.message||e); });
+    _modalInput({titulo:'Devolver para Complementação',label:'Observação para devolução',obrigatorio:true,placeholder:'Descreva o que precisa ser complementado'}, function(_raw) {
+      if (_raw === null) return;
+      var obs = _raw || '';
+      if (!obs){ Toast.erro('Observação é obrigatória.'); return; }
+      BtnGuard.wrap('btn-hab-dev-'+id, 'Devolvendo…', function(done){
+        GAS.habilitacoes.devolver(id, obs, function(resp){
+          done();
+          if (!resp||!resp.ok){ Toast.erro(resp&&resp.error?resp.error.message:'Erro.'); return; }
+          Toast.sucesso('Habilitação devolvida para complementação.'); carregar();
+        }, function(e){ done(); Toast.erro(e.message||e); });
+      });
     });
   }
 
@@ -26665,13 +26722,15 @@ var MapaAcaoUI = (function() {
   function _excluirMapa(mapaId) {
     var mapa=_mapas.filter(function(m){return m.id===mapaId;})[0];
     if(!mapa)return;
-    var _raw=confirm('Excluir o local "'+mapa.nome+'" e todos os seus elementos?');
-    if(_raw===null)return;
-    if(!_raw)return;
-    GAS.acoes.mapaAcao.excluir(mapaId,function(r){
-      if(r&&r.ok){Toast.sucesso('Local excluído.');_mapas=_mapas.filter(function(m){return m.id!==mapaId;});_renderizarLista();}
-      else Toast.erro('Erro ao excluir: '+(r&&r.error?r.error.message:'Tente novamente.'));
-    },function(){Toast.erro('Erro de comunicação.');});
+    _abrirModalConfirmar({titulo:'Excluir Local',icone:'delete_forever',corIcone:'#ef4444',
+      mensagem:'Excluir o local \"'+escaparHtml(mapa.nome)+'\" e todos os seus elementos? Esta ação é irreversível.',
+      labelConfirmar:'Excluir', cb:function(){
+        GAS.acoes.mapaAcao.excluir(mapaId,function(r){
+          if(r&&r.ok){Toast.sucesso('Local excluído.');_mapas=_mapas.filter(function(m){return m.id!==mapaId;});_renderizarLista();}
+          else Toast.erro('Erro ao excluir: '+(r&&r.error?r.error.message:'Tente novamente.'));
+        },function(){Toast.erro('Erro de comunicação.');});
+      }
+    });
   }
 
   // ── Picker de espaços (Fase D) ──────────────────────────────
@@ -28615,11 +28674,12 @@ var PublicoUI = (function() {
   }
 
   function cancelar(id) {
-    var _raw = prompt('Motivo do cancelamento:');
-    if (_raw === null) return;
-    GAS.publico.cancelarInscricao({ id: id, motivo: _raw }, function(resp) {
-      if (resp && resp.ok) { Toast.sucesso('Inscrição cancelada.'); _carregado = false; carregar(); }
-      else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao cancelar.');
+    _modalInput({titulo:'Cancelar Inscrição',label:'Motivo do cancelamento',placeholder:'Descreva o motivo (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      GAS.publico.cancelarInscricao({ id: id, motivo: _raw }, function(resp) {
+        if (resp && resp.ok) { Toast.sucesso('Inscrição cancelada.'); _carregado = false; carregar(); }
+        else Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao cancelar.');
+      });
     });
   }
 
@@ -29226,12 +29286,13 @@ var AgentesUI = (function() {
   }
 
   function suspender(id) {
-    var _raw = prompt('Motivo da suspensão:');
-    if (_raw === null) return;
-    var motivo = _raw || 'Não informado';
-    GAS.agentes.mudarStatus({ id:id, status:'suspenso', motivo:motivo }, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      _carregado = false; carregar(); Toast.sucesso('Agente suspenso.');
+    _modalInput({titulo:'Suspender Agente',label:'Motivo da suspensão',placeholder:'Descreva o motivo'}, function(_raw) {
+      if (_raw === null) return;
+      var motivo = _raw || 'Não informado';
+      GAS.agentes.mudarStatus({ id:id, status:'suspenso', motivo:motivo }, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        _carregado = false; carregar(); Toast.sucesso('Agente suspenso.');
+      });
     });
   }
 
@@ -29496,12 +29557,13 @@ var VoluntariosUI = (function() {
   }
 
   function registrarPresenca(alocacaoId) {
-    var _raw = prompt('Horas realizadas:');
-    if (_raw === null) return;
-    var horas = parseFloat(_raw) || 0;
-    GAS.voluntarios.registrarPresenca({ alocacaoId: alocacaoId, horas: horas }, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      carregarAlocacoes(); Toast.sucesso('Presença registrada!');
+    _modalInput({titulo:'Registrar Presença',label:'Horas realizadas',tipo:'number',placeholder:'Ex: 4'}, function(_raw) {
+      if (_raw === null) return;
+      var horas = parseFloat(_raw) || 0;
+      GAS.voluntarios.registrarPresenca({ alocacaoId: alocacaoId, horas: horas }, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        carregarAlocacoes(); Toast.sucesso('Presença registrada!');
+      });
     });
   }
 
@@ -29621,11 +29683,12 @@ var ParceriasUI = (function() {
   }
 
   function _mudar(id, status, msg) {
-    var _raw = prompt(msg || 'Confirmar ' + status + '?');
-    if (_raw === null) return;
-    GAS.parcerias.mudarStatus({ id:id, status:status, motivo:_raw||'' }, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
+    _modalInput({titulo:'Atualizar Status',label:msg||'Motivo / observação',placeholder:'Descreva o motivo (opcional)'}, function(_raw) {
+      if (_raw === null) return;
+      GAS.parcerias.mudarStatus({ id:id, status:status, motivo:_raw||' }, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
+      });
     });
   }
   function avancar(id)  { _mudar(id, 'negociacao', 'Motivo / observação (opcional):'); }
@@ -29906,16 +29969,20 @@ var EstrategiaUI = (function() {
   }
 
   function mudarStatus(id, novoStatus) {
-    var motivo = '';
-    if (novoStatus === 'cancelado') {
-      var _raw = prompt('Motivo do cancelamento:');
-      if (_raw === null) { BtnGuard.liberar('btn-ativar-' + id); BtnGuard.liberar('btn-concluir-' + id); return; }
-      motivo = _raw || '';
+    function _doMudar(motivo) {
+      GAS.estrategia.mudarStatus({ id:id, novoStatus:novoStatus, motivo:motivo||' }, function(r) {
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
+        _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
+      });
     }
-    GAS.estrategia.mudarStatus({ id:id, novoStatus:novoStatus, motivo:motivo }, function(r) {
-      if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro.'); return; }
-      _carregado = false; carregar(); Toast.sucesso('Status atualizado!');
-    });
+    if (novoStatus === 'cancelado') {
+      _modalInput({titulo:'Cancelar Objetivo',label:'Motivo do cancelamento',placeholder:'Descreva o motivo (opcional)'}, function(_raw) {
+        if (_raw === null) { BtnGuard.liberar('btn-ativar-' + id); BtnGuard.liberar('btn-concluir-' + id); return; }
+        _doMudar(_raw);
+      });
+    } else {
+      _doMudar('');
+    }
   }
 
   // ─── Vincular Ação ────────────────────────────────────────────────────────
@@ -30683,46 +30750,49 @@ var ReunioesUI = (function() {
   function _usarTemplateAta() {
     var el = document.getElementById('run-ata-texto');
     if (!el) return;
-    if (el.value.trim()) {
-      var _conf = confirm('Substituir o texto atual pelo template?');
-      if (!_conf) return;
+    function _doTemplate() {
+      var titulo   = (document.getElementById('run-titulo')     || {}).value || '___';
+      var local    = (document.getElementById('run-local')      || {}).value || '___';
+      var convocou = (document.getElementById('run-convocador') || {}).value || '___';
+      var dtHora   = (document.getElementById('run-data-hora')  || {}).value || '';
+      var dtFmt = dtHora ? dtHora.replace('T',' às ').replace(/(\\d{4})-(\\d{2})-(\\d{2})/,'$3/$2/$1') : '___';
+      var pautaItems = [];
+      document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
+        var t = li.querySelector('span') ? li.querySelector('span').textContent : li.textContent;
+        if (t.trim()) pautaItems.push(t.trim());
+      });
+      var deliberacoes = pautaItems.length
+        ? pautaItems.map(function(p, i) {
+            return 'Item ' + (i+1) + ' — ' + p + ':\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
+          }).join('\n\n')
+        : 'Item 1 — [Título do item]:\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
+      el.value =
+        '1. ABERTURA\n' +
+        'Reunião: ' + titulo + '\n' +
+        'Data e Hora: ' + dtFmt + '\n' +
+        'Local: ' + local + '\n' +
+        'Convocado por: ' + convocou + '\n\n' +
+        '2. PARTICIPANTES\n' +
+        'Presentes: \n' +
+        'Ausentes justificados: \n\n' +
+        '3. PAUTA\n' +
+        (pautaItems.length ? pautaItems.map(function(p,i){ return (i+1)+'. '+p; }).join('\n') : '1. \n2. ') + '\n\n' +
+        '4. DELIBERAÇÕES\n' +
+        deliberacoes + '\n\n' +
+        '5. ENCAMINHAMENTOS GERAIS\n' +
+        '1.  | Responsável:  | Prazo: \n\n' +
+        '6. ENCERRAMENTO\n' +
+        'Hora de encerramento: \n' +
+        'Próxima reunião: (se definida)\n';
+      el.focus();
     }
-    // Coleta dados disponíveis para pré-preencher
-    var titulo   = (document.getElementById('run-titulo')     || {}).value || '___';
-    var local    = (document.getElementById('run-local')      || {}).value || '___';
-    var convocou = (document.getElementById('run-convocador') || {}).value || '___';
-    var dtHora   = (document.getElementById('run-data-hora')  || {}).value || '';
-    var dtFmt = dtHora ? dtHora.replace('T',' às ').replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1') : '___';
-    // Itens de pauta para pré-preencher as deliberações
-    var pautaItems = [];
-    document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
-      var t = li.querySelector('span') ? li.querySelector('span').textContent : li.textContent;
-      if (t.trim()) pautaItems.push(t.trim());
-    });
-    var deliberacoes = pautaItems.length
-      ? pautaItems.map(function(p, i) {
-          return 'Item ' + (i+1) + ' — ' + p + ':\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
-        }).join('\n\n')
-      : 'Item 1 — [Título do item]:\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
-    el.value =
-      '1. ABERTURA\n' +
-      'Reunião: ' + titulo + '\n' +
-      'Data e Hora: ' + dtFmt + '\n' +
-      'Local: ' + local + '\n' +
-      'Convocado por: ' + convocou + '\n\n' +
-      '2. PARTICIPANTES\n' +
-      'Presentes: \n' +
-      'Ausentes justificados: \n\n' +
-      '3. PAUTA\n' +
-      (pautaItems.length ? pautaItems.map(function(p,i){ return (i+1)+'. '+p; }).join('\n') : '1. \n2. ') + '\n\n' +
-      '4. DELIBERAÇÕES\n' +
-      deliberacoes + '\n\n' +
-      '5. ENCAMINHAMENTOS GERAIS\n' +
-      '1.  | Responsável:  | Prazo: \n\n' +
-      '6. ENCERRAMENTO\n' +
-      'Hora de encerramento: \n' +
-      'Próxima reunião: (se definida)\n';
-    el.focus();
+    if (el.value.trim()) {
+      _abrirModalConfirmar({titulo:'Usar Template de Ata',icone:'article',corIcone:'#6366f1',
+        mensagem:'Substituir o texto atual pelo template? O conteúdo atual será perdido.',
+        labelConfirmar:'Substituir', cb: _doTemplate});
+    } else {
+      _doTemplate();
+    }
   }
 
   return { aoAbrir, carregar, setTab, _filtrar, abrirForm, fecharForm,
@@ -31673,14 +31743,15 @@ var EscutaUI = (function() {
   }
 
   function resolverAlerta(alertaId) {
-    var _raw = prompt('Descreva a ação tomada para resolver este alerta:');
-    if (_raw === null) return;
-    var acao = _raw.trim() || 'Resolvido.';
-    GAS.escuta.alertasResolver({ alertaId: alertaId, acao: acao }, function(r) {
-      if (!r || !r.ok) { Toast.erro('Erro ao resolver alerta.'); return; }
-      Toast.sucesso('Alerta resolvido!');
-      carregarAlertas();
-    }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
+    _modalInput({titulo:'Resolver Alerta',label:'Ação tomada para resolver o alerta',placeholder:'Descreva a ação tomada'}, function(_raw) {
+      if (_raw === null) return;
+      var acao = _raw.trim() || 'Resolvido.';
+      GAS.escuta.alertasResolver({ alertaId: alertaId, acao: acao }, function(r) {
+        if (!r || !r.ok) { Toast.erro('Erro ao resolver alerta.'); return; }
+        Toast.sucesso('Alerta resolvido!');
+        carregarAlertas();
+      }, function(e){ Toast.erro((e&&e.message)||'Erro.'); });
+    });
   }
 
   // ── Aba: Distribuição ────────────────────────────────────────────────────
@@ -32270,13 +32341,18 @@ var EscutaUI = (function() {
   }
 
   function suprimirEmails(done) {
-    var _raw = confirm('Suprimir e-mails de respostas com mais de 90 dias? Esta ação é IRREVERSÍVEL (LGPD).');
-    if (!_raw) { if(done) done(); return; }
-    GAS.escuta.suprimirEmails(function(r) {
-      if (done) done();
-      if (!r || !r.ok) { Toast.erro('Erro.'); return; }
-      Toast.sucesso('E-mails suprimidos: ' + ((r.data&&r.data.suprimidos)||0));
-    }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+    _abrirModalConfirmar({titulo:'Suprimir E-mails (LGPD)',icone:'warning',corIcone:'#ef4444',
+      mensagem:'Suprimir e-mails de respostas com mais de 90 dias? Esta ação é IRREVERSÍVEL (LGPD).',
+      labelConfirmar:'Suprimir',
+      cb: function() {
+        GAS.escuta.suprimirEmails(function(r) {
+          if (done) done();
+          if (!r || !r.ok) { Toast.erro('Erro.'); return; }
+          Toast.sucesso('E-mails suprimidos: ' + ((r.data&&r.data.suprimidos)||0));
+        }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
+      },
+      cbCancelar: function() { if (done) done(); }
+    });
   }
 
   // ── Pulse Widget ──────────────────────────────────────────────────────────
