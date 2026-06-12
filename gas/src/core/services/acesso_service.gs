@@ -19,7 +19,9 @@
  *   4. Admin aprova via painel → aprovarAcesso()
  *
  * ARMAZENAMENTO: usuarios_acesso.json (Drive, pasta de dados da org)
- * Schema por item: { email, nome, status, papel, setor, solicitadoEm, aprovadoEm, aprovadoPor }
+ * Schema por item: { email, nome, status, papel, setor, setoresGerenciados, solicitadoEm, aprovadoEm, aprovadoPor }
+ *   setoresGerenciados: array de setores que um 'gestor' gerencia (ex: ['infraestrutura']).
+ *   Determina permissões especializadas dentro do módulo correspondente.
  *
  * REGRA DE NÃO-HARDCODE:
  *   - Domínio lido de getOrgConfig().dominio (PropertiesService:ORG_DOMINIO)
@@ -235,9 +237,12 @@ var AcessoService = (function () {
         return { ok: false, mensagem: 'Usuário não encontrado na fila de solicitações.' };
       }
 
-      registros[idx].status      = 'ativo';
-      registros[idx].papel       = String(params.papel || 'colaborador').trim();
-      registros[idx].setor       = String(params.setor || '').trim();
+      registros[idx].status             = 'ativo';
+      registros[idx].papel              = String(params.papel || 'colaborador').trim();
+      registros[idx].setor              = String(params.setor || '').trim();
+      registros[idx].setoresGerenciados = Array.isArray(params.setoresGerenciados)
+        ? params.setoresGerenciados
+        : (registros[idx].setoresGerenciados || []);
       registros[idx].aprovadoEm  = new Date().toISOString();
       registros[idx].aprovadoPor = emailAdmin;
 
@@ -516,6 +521,11 @@ function ctrl_acesso_editarPapel(params) {
       if (!usr) throw new Error('Usuário não encontrado: ' + params.email);
       if (params.papel)  usr.papel  = params.papel;
       if (params.setor !== undefined) usr.setor = params.setor || '';
+      if (params.setoresGerenciados !== undefined) {
+        usr.setoresGerenciados = Array.isArray(params.setoresGerenciados)
+          ? params.setoresGerenciados
+          : [];
+      }
       if (params.status) usr.status = params.status;
       // permissoesOverride: null ou {} remove overrides, objeto define overrides por módulo
       if (params.permissoesOverride !== undefined) {

@@ -468,9 +468,40 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 66 (2026-06-12) → SESSÃO 67
+## HANDOFF ATUAL — SESSÃO 67 (2026-06-12) → SESSÃO 68
 
-### Estado atual: ~266 bugs registrados · Deploy @821 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @828 (GAS)
+
+### O que foi feito nesta sessão (s67)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @828 | Infraestrutura — Fase 22 completa: reserva de carro complexificada | **Backend (22a)**: 5 novos arquivos GAS. `veiculos_repository.gs`: frota multi-veículo, `id:'default'` auto-criado. `escala_carro_repository.gs`: disponibilidade por tipo (semanal com diasSemana[]+vigência ou específica por data). `escala_carro_engine.gs`: `podAprovarCarro(email)` centralizado (habilitador/admin/superadmin ou gestor com 'infraestrutura' em setoresGerenciados); `calcularDisponibilidade()` com algoritmo de subtração de intervalos + buffer de deslocamento via Maps API; `calcularTempoRota()` com waypoints; CRUD escalas + veículos. `escala_carro_controller.gs`: 9 novos endpoints. `acesso_service.gs`: campo `setoresGerenciados[]` em aprovarAcesso + editarPapel. `reserva_carro_repository.gs`: schema enriquecido (veiculoId, horaChegadaEstimada, rota.paradas como objetos, coords, tempoEstimadoMin, distanciaKm), aprovarAtomico filtrado por veiculoId. `reserva_carro_engine.gs`: editarRota() para aprovadores. `setup.gs`: abas Veiculos+EscalaCarro. **Frontend (22b)**: formulário Nova Reserva — seletor veículo (oculto se 1 veículo), paradas com map picker + iframe preview + `_paradasData[]` (objects com lat/lng/mapaUrl), hora chegada estimada (display+botão Calcular via tempoRota), painel disponibilidade (janelas/bloqueios/próximoHorário), debounce 2s. Toggle "Escala" (oculto para não-aprovadores). Aba Escala: lista + formulário semanal (dias-semana checkboxes + vigência) e específica. Seção veículos. Modal detalhes: seção "Editar Rota" colapsável (PENDENTE/APROVADA). Admin editarPapel: `setoresGerenciados` multi-select visível só para papel=gestor. |
+
+### Checklist de auditoria — s67
+```
+[x] prompt()/confirm() — _removerEscala usa confirm() que retorna boolean (sem null)
+[x] GAS.* namespace — 10 novos bindings: disponibilidade, tempoRota, editarRota, listarVeiculos, salvarVeiculo, listarEscalas, salvarEscala, atualizarEscala, removerEscala + geocode atualizado
+[x] CSS — sem classes novas que precisem de CSS; carro-parada-bloco, esc-dia-btn usados só em JS
+[x] IDs de DOM — consistentes em toda a base; carro-parada-preview-N e carro-parada-iframe-N com mesmo N
+[x] FsmGuardian — editarRota() no backend verifica FSM (PENDENTE|APROVADA); sem transição de status nesta fase
+[x] Modais — carro-escala-modal-overlay e carro-veiculo-modal-overlay com background:rgba(0,0,0,.5), caixas com background:var(--surface)
+[x] BtnGuard — calcularRota, _salvarEscala, _salvarVeiculo, _confirmarEditarRota todos usam BtnGuard.wrap
+[x] Datas — _renderEscala usa fmtDataPtBR(); sem ISO cru exposto ao usuário
+[x] Paradas — _verDetalhesAgenda e renderLista/agenda tratam p como objeto ou string (backward compat)
+```
+
+### Pendentes / próxima ação
+- **Setup obrigatório**: rodar `fase22_carro_prepararIndice()` no GAS Editor após deploy → `{veiculos:{ok:true}, escala:{ok:true}}`
+- **Testar no browser (@828)**: Nova Reserva → selecionar data → painel disponibilidade aparece → preencher saída+chegada → Calcular → hora estimada atualiza → Adicionar parada → botão mapa funciona → Enviar → persiste veiculoId, horaChegadaEstimada, rota.paradas como objetos
+- **Testar Escala**: Como habilitador → aba "Escala" visível → Nova escala semanal → salva → lista atualiza
+- **Testar Admin**: Editar usuário papel=gestor → bloco "Setores Gerenciados" aparece → marcar infraestrutura → salvar → usuário passa a ter podAprovarCarro
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 66 (2026-06-12) → SESSÃO 67
+
+### Estado anterior: ~266 bugs registrados · Deploy @821 (GAS)
 
 ### O que foi feito nesta sessão (s66)
 

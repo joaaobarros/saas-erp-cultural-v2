@@ -4,7 +4,10 @@
  * @description Controller de Reservas de Veículo Institucional.
  *   Funções públicas: ctrl_carro_*
  *   Todas autenticam via getEmailSessao() + AcessoService.verificar().
+ *   Permissão de gestão (aprovar/recusar/escala/veículos): habilitador, admin, superadmin,
+ *   e gestor com 'infraestrutura' em setoresGerenciados.
  * @depends modules/infraestrutura/reserva_carro_engine.gs,
+ *          modules/infraestrutura/escala_carro_engine.gs,
  *          core/services/acesso_service.gs,
  *          shared/response.gs,
  *          core/auth_session.gs,
@@ -72,12 +75,11 @@ function ctrl_carro_metricas() {
 }
 
 /**
- * Retorna lista + métricas em uma única chamada GAS,
- * eliminando o segundo round-trip de ctrl_carro_metricas.
+ * Retorna lista + métricas + veículos + flag podGerenciar em uma única chamada.
  */
 function ctrl_carro_dados(filtros) {
   return GasResponse.wrap(function() {
-    var ctx  = _ctxCarro();
+    var ctx   = _ctxCarro();
     var todas = ReservaCarroEngine.listar({}, ctx.email);
     var metricas = {
       total:     todas.length,
@@ -87,7 +89,6 @@ function ctrl_carro_dados(filtros) {
       canceladas: todas.filter(function(r){ return r.status === 'CANCELADA'; }).length,
       concluidas: todas.filter(function(r){ return r.status === 'CONCLUIDA'; }).length
     };
-    // Mapa bulk de email → nome para exibição nos cards
     var nomeMap = {};
     try {
       AcessoService.listarUsuarios().forEach(function(u) {
@@ -106,7 +107,16 @@ function ctrl_carro_dados(filtros) {
         aprovadorNome:   r.aprovador ? _nome(r.aprovador) : null
       });
     });
-    return { lista: lista, metricas: metricas };
+
+    var veiculos = [];
+    try { veiculos = EscalaCarroEngine.listarVeiculos(ctx.email); } catch(e) { /* silencioso */ }
+
+    return {
+      lista:        lista,
+      metricas:     metricas,
+      veiculos:     veiculos,
+      podGerenciar: EscalaCarroEngine.podAprovarCarro(ctx.email)
+    };
   }, 'ctrl_carro_dados');
 }
 

@@ -2340,7 +2340,7 @@ select.form-control { cursor: pointer; }
 
         <div class="stats-strip" id="carro-metricas"></div>
 
-        <!-- Toggle de modo: Lista / Agenda -->
+        <!-- Toggle de modo: Lista / Agenda / Escala -->
         <div style="display:flex;gap:6px;margin-bottom:12px;" id="carro-modo-toggle">
           <button class="btn btn-ghost btn-sm res-modo-btn active" data-modo="lista"
                   onclick="ReservasCarroUI.setModo('lista')" data-bg-skip="1">
@@ -2349,6 +2349,10 @@ select.form-control { cursor: pointer; }
           <button class="btn btn-ghost btn-sm res-modo-btn" data-modo="agenda"
                   onclick="ReservasCarroUI.setModo('agenda')" data-bg-skip="1">
             <span class="ms ms-sm">calendar_month</span> Agenda
+          </button>
+          <button class="btn btn-ghost btn-sm res-modo-btn" data-modo="escala" id="btn-carro-modo-escala"
+                  onclick="ReservasCarroUI.setModo('escala')" data-bg-skip="1" style="display:none;">
+            <span class="ms ms-sm">event_available</span> Escala
           </button>
         </div>
 
@@ -2390,6 +2394,13 @@ select.form-control { cursor: pointer; }
           </div>
         </div>
 
+        <!-- Vista Escala (aprovadores) -->
+        <div id="carro-view-escala" style="display:none;">
+          <div id="carro-escala-content">
+            <div class="card" style="padding:20px;"><p class="muted-text">Carregando…</p></div>
+          </div>
+        </div>
+
         <!-- Modal Formulário -->
         <div id="carro-modal-overlay" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
           <div id="carro-modal-box" style="background:var(--surface);border-radius:12px;width:min(680px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);">
@@ -2401,6 +2412,10 @@ select.form-control { cursor: pointer; }
             </div>
             <div style="flex:1;overflow-y:auto;padding:20px 24px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group" id="carro-veiculo-bloco" style="display:none;grid-column:1/-1;">
+                <label class="form-label">Veículo</label>
+                <select id="carro-f-veiculo" class="form-control"></select>
+              </div>
               <div class="form-group">
                 <label class="form-label">Data da Viagem *</label>
                 <input id="carro-f-data" type="date" class="form-control" required onchange="ReservasCarroUI._onDataChange()">
@@ -2413,11 +2428,22 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Hora de Saída *</label>
-                <input id="carro-f-saida" type="time" class="form-control" required>
+                <input id="carro-f-saida" type="time" class="form-control" required onchange="ReservasCarroUI._debounceCalcRota()">
               </div>
               <div class="form-group">
-                <label class="form-label">Hora de Chegada *</label>
-                <input id="carro-f-chegada" type="time" class="form-control" required>
+                <label class="form-label">Hora de Chegada (estimada)</label>
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                  <span class="ms ms-sm" style="color:var(--primario);">schedule</span>
+                  <span id="carro-hora-chegada-est" style="font-size:14px;font-weight:600;flex:1;">—</span>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.calcularRota()" data-bg-skip="1" id="btn-carro-calc-rota" style="font-size:12px;white-space:nowrap;"><span class="ms ms-sm">refresh</span> Calcular</button>
+                </div>
+                <span id="carro-tempo-est-detalhe" style="font-size:11px;color:var(--muted);"></span>
+              </div>
+              <div id="carro-disp-panel" style="display:none;grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
+                <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                  <span class="ms ms-sm" style="font-size:14px;">access_time</span> Disponibilidade do veículo
+                </div>
+                <div id="carro-disp-content">—</div>
               </div>
             </div>
 
@@ -2592,6 +2618,8 @@ select.form-control { cursor: pointer; }
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Aprovado por</div>
                 <div id="carro-det-aprov" style="font-size:12px;color:var(--muted);"></div>
               </div>
+              <!-- Editar Rota (aprovadores) -->
+              <div id="carro-det-editar-rota" style="display:none;border-top:1px solid var(--border);padding-top:12px;"></div>
             </div>
             <!-- Rodapé com ações -->
             <div id="carro-det-acoes" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0;"></div>
@@ -2643,6 +2671,78 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
         </div>
+
+        <!-- Modal Escala de Disponibilidade -->
+        <div id="carro-escala-modal-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(520px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="margin:0;font-size:15px;">Nova Escala de Disponibilidade</h3>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.fecharModalEscala()" data-bg-skip="1" style="padding:4px 8px;"><span class="ms">close</span></button>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tipo</label>
+              <div style="display:flex;gap:8px;margin-bottom:4px;">
+                <button type="button" class="btn btn-primario btn-sm" id="btn-esc-tipo-semanal" onclick="ReservasCarroUI._setTipoEscala('semanal')" data-bg-skip="1">Semanal</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-esc-tipo-especifica" onclick="ReservasCarroUI._setTipoEscala('especifica')" data-bg-skip="1">Data específica</button>
+              </div>
+            </div>
+            <div id="esc-form-semanal">
+              <div class="form-group">
+                <label class="form-label">Dias da semana</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-ghost btn-sm esc-dia-btn" data-dia="0" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Dom</button>
+                  <button type="button" class="btn btn-primario btn-sm esc-dia-btn" data-dia="1" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Seg</button>
+                  <button type="button" class="btn btn-primario btn-sm esc-dia-btn" data-dia="2" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Ter</button>
+                  <button type="button" class="btn btn-primario btn-sm esc-dia-btn" data-dia="3" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Qua</button>
+                  <button type="button" class="btn btn-primario btn-sm esc-dia-btn" data-dia="4" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Qui</button>
+                  <button type="button" class="btn btn-primario btn-sm esc-dia-btn" data-dia="5" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Sex</button>
+                  <button type="button" class="btn btn-ghost btn-sm esc-dia-btn" data-dia="6" onclick="ReservasCarroUI._toggleDiaEscala(this)" data-bg-skip="1">Sáb</button>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group"><label class="form-label">Vigência início</label><input id="esc-data-inicio" type="date" class="form-control"></div>
+                <div class="form-group"><label class="form-label">Vigência fim</label><input id="esc-data-fim" type="date" class="form-control"></div>
+              </div>
+            </div>
+            <div id="esc-form-especifica" style="display:none;" class="form-group">
+              <label class="form-label">Data</label>
+              <input id="esc-data-especifica" type="date" class="form-control">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group"><label class="form-label">Hora início</label><input id="esc-hora-inicio" type="time" class="form-control" value="08:00"></div>
+              <div class="form-group"><label class="form-label">Hora fim</label><input id="esc-hora-fim" type="time" class="form-control" value="18:00"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nome / Descrição (opcional)</label>
+              <input id="esc-nome" type="text" class="form-control" placeholder="Ex: Semana útil, Plantão sábado…">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-salvar-escala" onclick="ReservasCarroUI._salvarEscala(this)"><span class="ms ms-sm">save</span> Salvar</button>
+              <button class="btn btn-ghost" onclick="ReservasCarroUI.fecharModalEscala()" data-bg-skip="1">Cancelar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Novo Veículo -->
+        <div id="carro-veiculo-modal-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.5);align-items:center;justify-content:center;">
+          <div style="background:var(--surface);border-radius:12px;width:min(460px,96vw);box-shadow:0 20px 60px rgba(0,0,0,.25);padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="margin:0;font-size:15px;">Novo Veículo</h3>
+              <button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.fecharModalVeiculo()" data-bg-skip="1" style="padding:4px 8px;"><span class="ms">close</span></button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group"><label class="form-label">Nome *</label><input id="vei-nome" type="text" class="form-control" placeholder="Carro Institucional"></div>
+              <div class="form-group"><label class="form-label">Placa</label><input id="vei-placa" type="text" class="form-control" placeholder="ABC-1234"></div>
+              <div class="form-group"><label class="form-label">Modelo</label><input id="vei-modelo" type="text" class="form-control"></div>
+              <div class="form-group"><label class="form-label">Capacidade</label><input id="vei-capacidade" type="number" class="form-control" min="1" max="20" value="5"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button class="btn btn-primario" id="btn-salvar-veiculo" onclick="ReservasCarroUI._salvarVeiculo(this)"><span class="ms ms-sm">save</span> Salvar</button>
+              <button class="btn btn-ghost" onclick="ReservasCarroUI.fecharModalVeiculo()" data-bg-skip="1">Cancelar</button>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /view-reservas-carro -->
 
       <!-- VIEW: Tarefas -->
@@ -10070,7 +10170,16 @@ var GAS = {
     cancelar: function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_cancelar(id,m||''); },
     concluir: function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_concluir(id); },
     metricas: function(cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_metricas(); },
-    geocode:  function(e,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_geocode(e); }
+    geocode:         function(e,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_geocode(e); },
+    disponibilidade: function(p,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_disponibilidade(p); },
+    tempoRota:       function(p,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_tempo_rota(p); },
+    editarRota:      function(id,r,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_editar_rota(id,r); },
+    listarVeiculos:  function(cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_listar_veiculos(); },
+    salvarVeiculo:   function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_salvar_veiculo(d); },
+    listarEscalas:   function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_listar_escalas(f||{}); },
+    salvarEscala:    function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_salvar_escala(d); },
+    atualizarEscala: function(id,p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_atualizar_escala(id,p); },
+    removerEscala:   function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_remover_escala(id); }
   },
   simulacao: {
     ativar:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_ativar(d); },
@@ -14393,6 +14502,9 @@ var AdminCadastrosUI = (function() {
     if (wrapM) wrapM.innerHTML = _renderMatrizPermissoes(novoPapel, {});
     if (wrapF) wrapF.innerHTML = _renderFeaturesModal(novoPapel, {}, {});
     _sincronizarFeaturesComModulos();
+    // Mostrar/ocultar setores gerenciados conforme papel
+    var blocoSG = document.getElementById('edit-setores-gerenciados-bloco');
+    if (blocoSG) blocoSG.style.display = novoPapel === 'gestor' ? '' : 'none';
   }
 
   function _renderFeaturesModal(papel, featuresOverride, permOverrides) {
@@ -14495,6 +14607,21 @@ var AdminCadastrosUI = (function() {
           '<option value="">— Sem setor —</option>' + setorOptions +
         '</select>' +
 
+        '<div id="edit-setores-gerenciados-bloco" style="display:' + (papelAtual === 'gestor' ? 'block' : 'none') + ';margin-bottom:16px;">' +
+          '<label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;">Setores Gerenciados</label>' +
+          '<p style="font-size:11px;color:var(--muted);margin:4px 0 8px;">Setores que este gestor gerencia (ex: infraestrutura = pode aprovar veículos).</p>' +
+          '<div id="edit-setores-gerenciados-lista" style="display:flex;flex-wrap:wrap;gap:6px;">' +
+            setoresList.map(function(s) {
+              var sid2 = s.id || s.nome || '';
+              var slb  = s.label || s.nome || s.id || '';
+              var checked = Array.isArray(u.setoresGerenciados) && u.setoresGerenciados.indexOf(sid2) !== -1;
+              return '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:6px;">' +
+                '<input type="checkbox" class="edit-setor-ger-chk" value="' + escaparHtml(sid2) + '"' + (checked ? ' checked' : '') + '> ' +
+                escaparHtml(slb) + '</label>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+
         '<details' + (temPermOvr ? ' open' : '') + ' style="margin-bottom:12px;">' +
           '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 0;">' +
             '<span class="ms ms-sm" style="font-size:14px;">tune</span> Permissões por módulo' +
@@ -14567,8 +14694,16 @@ var AdminCadastrosUI = (function() {
       if (Object.keys(modOvr).length > 0) featuresOverride[modulo] = modOvr;
     });
 
+    // Coleta setoresGerenciados (apenas para papel gestor)
+    var setoresGerenciados = [];
+    if (papel === 'gestor') {
+      document.querySelectorAll('.edit-setor-ger-chk').forEach(function(chk) {
+        if (chk.checked && chk.value) setoresGerenciados.push(chk.value);
+      });
+    }
+
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
-      GAS.acesso.editarPapel({ email: email, papel: papel, setor: setor, permissoesOverride: permissoesOverride, featuresOverride: featuresOverride }, function(r) {
+      GAS.acesso.editarPapel({ email: email, papel: papel, setor: setor, setoresGerenciados: setoresGerenciados, permissoesOverride: permissoesOverride, featuresOverride: featuresOverride }, function(r) {
         liberar();
         var m = document.querySelector('.modal-simples'); if (m) m.remove();
         if (r && r.ok) { Toast.sucesso('Usuário atualizado.'); carregarUsuarios(); }
@@ -15435,7 +15570,7 @@ var AprovacaoReservaUI = (function() {
         return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
           '<div style="min-width:80px;flex-shrink:0;">' +
             '<div style="font-size:13px;font-weight:600;">' + escaparHtml(fmtDataPtBR(rc.data)||'—') + '</div>' +
-            '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + ' – ' + escaparHtml(rc.horaChegada||'—') + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + ' – ' + escaparHtml(rc.horaChegadaEstimada||rc.horaChegada||'—') + '</div>' +
           '</div>' +
           '<div style="flex:1;min-width:120px;">' +
             '<div style="font-size:13px;">' + escaparHtml(rc.solicitante||'—') + '</div>' +
@@ -15590,12 +15725,21 @@ var ReservasCarroUI = (function() {
   var _modo         = 'lista';
   var _cache        = [];
   var _mesAgenda    = new Date();
-  var _debounceTimer = null;
-  var _mapaCampoAtual = null;
-  var _mapaPickerMap  = null;
+  var _debounceTimer    = null;
+  var _debounceRotaTimer = null;
+  var _mapaCampoAtual   = null;
+  var _mapaCampoParadaIdx = null;
+  var _mapaPickerMap    = null;
   var _mapaPickerMarker = null;
-  var _mapaPickerEnd  = '';
+  var _mapaPickerEnd    = '';
   var _passInternosData = []; // [{email, nome}] selecionados no form
+  var _paradasData      = []; // [{local, lat, lng, mapaUrl}]
+  var _veiculosData     = [];
+  var _podGerenciar     = false;
+  var _escalaCache      = [];
+  var _horaChegadaEstimada = '';
+  var _tempoEstimadoMin    = 0;
+  var _distanciaKm         = 0;
 
   var _MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                 'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -15650,28 +15794,84 @@ var ReservasCarroUI = (function() {
 
   // ── Paradas intermediárias ─────────────────────────────────────────────────
 
+  function _criarBlocoParada(container, idx) {
+    var div = document.createElement('div');
+    div.className = 'carro-parada-bloco';
+    div.setAttribute('data-parada-idx', String(idx));
+    div.style.cssText = 'margin-bottom:8px;';
+    div.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;font-size:14px;">radio_button_unchecked</span>' +
+        '<input type="text" class="form-control carro-parada-input" placeholder="Local da parada ' + (idx + 1) + '…" style="flex:1;"' +
+          ' oninput="ReservasCarroUI._onParadaInput(' + idx + ',this)">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirMapaPickerParada(' + idx + ')" data-bg-skip="1" title="Selecionar no mapa" style="padding:0 10px;">' +
+          '<span class="ms ms-sm">place</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._removerParada(' + idx + ')" data-bg-skip="1" style="padding:0 6px;color:var(--muted);" title="Remover">' +
+          '<span class="ms ms-sm">close</span>' +
+        '</button>' +
+      '</div>' +
+      '<div id="carro-parada-preview-' + idx + '" style="display:none;margin-top:6px;margin-left:24px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">' +
+        '<iframe id="carro-parada-iframe-' + idx + '" style="width:100%;height:120px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' +
+      '</div>';
+    container.appendChild(div);
+    return div;
+  }
+
   function _adicionarParada() {
     var container = document.getElementById('carro-paradas-lista');
     if (!container) return;
-    var idx = container.children.length;
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:8px;align-items:center;';
-    row.innerHTML =
-      '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;font-size:14px;">radio_button_unchecked</span>'
-      + '<input type="text" class="form-control carro-parada-input" placeholder="Local da parada ' + (idx + 1) + '…" style="flex:1;">'
-      + '<button type="button" class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()" data-bg-skip="1" style="padding:0 6px;color:var(--muted);" title="Remover"><span class="ms ms-sm">close</span></button>';
-    container.appendChild(row);
-    row.querySelector('input').focus();
+    var idx = _paradasData.length;
+    _paradasData.push({ local: '', lat: null, lng: null, mapaUrl: '' });
+    var div = _criarBlocoParada(container, idx);
+    div.querySelector('input').focus();
+  }
+
+  function _onParadaInput(idx, inp) {
+    if (_paradasData[idx] === undefined) return;
+    _paradasData[idx].local = inp.value.trim();
+    _paradasData[idx].lat   = null;
+    _paradasData[idx].lng   = null;
+    var val = inp.value.trim();
+    var pPreview = document.getElementById('carro-parada-preview-' + idx);
+    var iframe   = document.getElementById('carro-parada-iframe-' + idx);
+    if (val && pPreview && iframe) {
+      iframe.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(val) + '&hl=pt-BR&output=embed&z=14';
+      pPreview.style.display = '';
+    } else if (pPreview) {
+      pPreview.style.display = 'none';
+    }
+  }
+
+  function _removerParada(idx) {
+    _paradasData.splice(idx, 1);
+    var container = document.getElementById('carro-paradas-lista');
+    if (!container) return;
+    var snapshot = _paradasData.slice();
+    container.innerHTML = '';
+    _paradasData = [];
+    snapshot.forEach(function(p) {
+      var newIdx = _paradasData.length;
+      _paradasData.push(p);
+      _criarBlocoParada(container, newIdx);
+      var blocos = container.querySelectorAll('.carro-parada-bloco');
+      var bloco  = blocos[newIdx];
+      if (!bloco) return;
+      var inp = bloco.querySelector('.carro-parada-input');
+      if (inp) inp.value = p.local || '';
+      if (p.local) {
+        var pPreview = document.getElementById('carro-parada-preview-' + newIdx);
+        var iframe   = document.getElementById('carro-parada-iframe-' + newIdx);
+        if (pPreview && iframe) {
+          iframe.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(p.local) + '&hl=pt-BR&output=embed&z=14';
+          pPreview.style.display = '';
+        }
+      }
+    });
   }
 
   function _getParadas() {
-    var inputs = document.querySelectorAll('#carro-paradas-lista .carro-parada-input');
-    var paradas = [];
-    inputs.forEach(function(inp) {
-      var v = inp.value.trim();
-      if (v) paradas.push(v);
-    });
-    return paradas;
+    return _paradasData.filter(function(p) { return p.local; });
   }
 
   function _atualizarBadge(pendentes) {
@@ -15742,7 +15942,7 @@ var ReservasCarroUI = (function() {
       return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
         '<div style="min-width:72px;flex-shrink:0;">' +
           '<div style="font-size:13px;font-weight:600;">' + escaparHtml(fmtDataPtBR(rc.data)||'—') + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + '–' + escaparHtml(rc.horaChegada||'—') + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + '–' + escaparHtml(rc.horaChegadaEstimada||rc.horaChegada||'—') + '</div>' +
         '</div>' +
         '<div style="flex:1;min-width:140px;">' +
           '<div style="font-size:13px;font-weight:500;" title="' + escaparHtml(rc.solicitante||'') + '">' + escaparHtml(rc.solicitanteNome || rc.solicitante || '—') + '</div>' +
@@ -15794,7 +15994,7 @@ var ReservasCarroUI = (function() {
       var chips = reservasDia.map(function(r) {
         var cls = _badgeCls(r.status);
         var label = (r.horaSaida || '?') + ' ' + escaparHtml((r.solicitante||'').split('@')[0].slice(0,10));
-        var tip = escaparHtml(r.solicitante||'') + ' ' + escaparHtml(r.horaSaida||'') + '–' + escaparHtml(r.horaChegada||'') + ' ' + escaparHtml((r.rota||{}).localChegada||'');
+        var tip = escaparHtml(r.solicitante||'') + ' ' + escaparHtml(r.horaSaida||'') + '–' + escaparHtml(r.horaChegadaEstimada||r.horaChegada||'') + ' ' + escaparHtml((r.rota||{}).localChegada||'');
         var sid = JSON.stringify(r.id).replace(/"/g, "'");
         return '<div class="badge ' + cls + '" title="' + tip + '" onclick="event.stopPropagation();ReservasCarroUI._verDetalhesAgenda(' + sid + ')" style="display:block;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;cursor:pointer;">' + label + '</div>';
       }).join('');
@@ -15825,10 +16025,12 @@ var ReservasCarroUI = (function() {
     _modo = modo;
     var elLista   = document.getElementById('carro-view-lista');
     var elAgenda  = document.getElementById('carro-view-agenda');
+    var elEscala  = document.getElementById('carro-view-escala');
     var elFiltros = document.getElementById('carro-filtros-lista');
 
     if (elLista)   elLista.style.display   = modo === 'lista'  ? '' : 'none';
     if (elAgenda)  elAgenda.style.display  = modo === 'agenda' ? '' : 'none';
+    if (elEscala)  elEscala.style.display  = modo === 'escala' ? '' : 'none';
     if (elFiltros) elFiltros.style.display = modo === 'lista'  ? '' : 'none';
 
     var btns = document.querySelectorAll('#carro-modo-toggle .res-modo-btn');
@@ -15840,6 +16042,7 @@ var ReservasCarroUI = (function() {
       if (_cache.length) _renderAgenda(_cache);
       else carregar();
     }
+    if (modo === 'escala') _carregarEscala();
   }
 
   function agendaMes(delta) {
@@ -15882,10 +16085,16 @@ var ReservasCarroUI = (function() {
         return;
       }
       if (r.data.metricas) _renderMetricas(r.data.metricas);
+      if (r.data.podGerenciar !== undefined) {
+        _podGerenciar = !!r.data.podGerenciar;
+        var btnEscala = document.getElementById('btn-carro-modo-escala');
+        if (btnEscala) btnEscala.style.display = _podGerenciar ? '' : 'none';
+      }
+      if (Array.isArray(r.data.veiculos)) _veiculosData = r.data.veiculos;
       var itens = Array.isArray(r.data.lista) ? r.data.lista : [];
       _cache = itens;
       if (_modo === 'lista') _renderLista(itens);
-      else _renderAgenda(itens);
+      else if (_modo === 'agenda') _renderAgenda(itens);
     }, function(err) {
       if (_modo === 'lista') {
         var elErr = document.getElementById('carro-lista');
@@ -15908,7 +16117,7 @@ var ReservasCarroUI = (function() {
   function abrirFormulario() {
     var overlay = document.getElementById('carro-modal-overlay');
     if (!overlay) return;
-    ['carro-f-data','carro-f-saida','carro-f-chegada',
+    ['carro-f-data','carro-f-saida',
      'carro-f-pass-externo','carro-f-mapa','carro-f-obs','carro-f-acao-nome'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.value = '';
@@ -15918,9 +16127,28 @@ var ReservasCarroUI = (function() {
     _renderPassInternosTags();
     // Popular select de colaboradores
     _carregarSelectUsuariosHelper('carro-f-pass-sel', '', '— Selecionar colaborador —');
-    // Resetar paradas
+    // Resetar paradas e hora estimada
+    _paradasData = [];
+    _horaChegadaEstimada = '';
+    _tempoEstimadoMin    = 0;
+    _distanciaKm         = 0;
     var elParadas = document.getElementById('carro-paradas-lista');
     if (elParadas) elParadas.innerHTML = '';
+    var elEst = document.getElementById('carro-hora-chegada-est');
+    if (elEst) elEst.textContent = '—';
+    var elDet = document.getElementById('carro-tempo-est-detalhe');
+    if (elDet) elDet.textContent = '';
+    var elDisp = document.getElementById('carro-disp-panel');
+    if (elDisp) elDisp.style.display = 'none';
+    // Veículo
+    var selVei = document.getElementById('carro-f-veiculo');
+    var bcoVei = document.getElementById('carro-veiculo-bloco');
+    if (selVei) {
+      selVei.innerHTML = _veiculosData.map(function(v) {
+        return '<option value="' + escaparHtml(v.id) + '">' + escaparHtml(v.nome + (v.placa ? ' — ' + v.placa : '')) + '</option>';
+      }).join('') || '<option value="default">Carro Institucional</option>';
+    }
+    if (bcoVei) bcoVei.style.display = (_veiculosData.length > 1) ? '' : 'none';
     // Resetar select de ação e carregar lista
     var selAcao = document.getElementById('carro-f-acao');
     if (selAcao) {
@@ -15972,7 +16200,10 @@ var ReservasCarroUI = (function() {
 
   function debouncePreviewMapa() {
     if (_debounceTimer) clearTimeout(_debounceTimer);
-    _debounceTimer = setTimeout(_atualizarPreviewMapa, 600);
+    _debounceTimer = setTimeout(function() {
+      _atualizarPreviewMapa();
+      _debounceCalcRota();
+    }, 600);
   }
 
   function _atualizarPreviewMapa() {
@@ -16056,7 +16287,7 @@ var ReservasCarroUI = (function() {
     var elData = document.getElementById('carro-det-data');
     if (elData) elData.textContent = fmtDataPtBR(r.data) || '—';
     var elHor = document.getElementById('carro-det-horario');
-    if (elHor) elHor.textContent = (r.horaSaida||'?') + ' – ' + (r.horaChegada||'?');
+    if (elHor) elHor.textContent = (r.horaSaida||'?') + ' – ' + (r.horaChegadaEstimada||r.horaChegada||'?');
 
     // Solicitante
     var elSol = document.getElementById('carro-det-solicitante');
@@ -16090,7 +16321,10 @@ var ReservasCarroUI = (function() {
     if (elRotaParadas) {
       var paradas = Array.isArray(rota.paradas) ? rota.paradas.filter(Boolean) : [];
       var pontos = [{ local: rota.localSaida || '—', icone: 'trip_origin', cor: 'var(--primario)' }];
-      paradas.forEach(function(p) { pontos.push({ local: p, icone: 'radio_button_unchecked', cor: 'var(--muted)' }); });
+      paradas.forEach(function(p) {
+        var localP = (typeof p === 'object' && p !== null) ? (p.local || '—') : String(p || '');
+        pontos.push({ local: localP, icone: 'radio_button_unchecked', cor: 'var(--muted)' });
+      });
       pontos.push({ local: rota.localChegada || '—', icone: 'place', cor: '#ef4444' });
       elRotaParadas.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;">'
         + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:2px;">'
@@ -16152,7 +16386,7 @@ var ReservasCarroUI = (function() {
     var elAcoes = document.getElementById('carro-det-acoes');
     if (elAcoes) {
       var _ftCarroDet = ((App.getBoot&&App.getBoot()&&App.getBoot().featuresAtivas)||{}).ESPACOS||{};
-      var ehAprovador = !!_ftCarroDet.aprovar_reserva_carro;
+      var ehAprovador = !!_ftCarroDet.aprovar_reserva_carro || _podGerenciar;
       var sid = JSON.stringify(id).replace(/"/g, "'");
       var btns = '';
       if (ehAprovador && r.status === 'PENDENTE') {
@@ -16169,6 +16403,17 @@ var ReservasCarroUI = (function() {
       elAcoes.innerHTML = btns;
     }
 
+    // Editar Rota (apenas aprovadores em PENDENTE ou APROVADA)
+    var elEditRota = document.getElementById('carro-det-editar-rota');
+    if (elEditRota) {
+      if (_podGerenciar && (r.status === 'PENDENTE' || r.status === 'APROVADA')) {
+        _abrirEditarRota(r);
+      } else {
+        elEditRota.style.display = 'none';
+        elEditRota.innerHTML = '';
+      }
+    }
+
     var overlay = document.getElementById('carro-det-overlay');
     if (overlay) overlay.style.display = 'flex';
   }
@@ -16181,8 +16426,9 @@ var ReservasCarroUI = (function() {
   // ── Seletor de local no mapa (Leaflet + OpenStreetMap) ─────────────────────
 
   function abrirMapaPicker(campo) {
-    _mapaCampoAtual = campo;
-    _mapaPickerEnd  = '';
+    _mapaCampoAtual     = campo;
+    _mapaCampoParadaIdx = null;
+    _mapaPickerEnd      = '';
     var overlay = document.getElementById('carro-mapa-picker-overlay');
     if (!overlay) return;
     var titulo = document.getElementById('carro-mapa-picker-titulo');
@@ -16201,6 +16447,27 @@ var ReservasCarroUI = (function() {
     });
   }
 
+  function abrirMapaPickerParada(idx) {
+    _mapaCampoAtual     = 'parada';
+    _mapaCampoParadaIdx = idx;
+    _mapaPickerEnd      = '';
+    var overlay = document.getElementById('carro-mapa-picker-overlay');
+    if (!overlay) return;
+    var titulo = document.getElementById('carro-mapa-picker-titulo');
+    if (titulo) titulo.textContent = 'Selecionar parada ' + (idx + 1);
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = '— clique no mapa para selecionar —';
+    var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+    if (btnConf) { btnConf.disabled = true; btnConf.style.opacity = '.5'; btnConf.style.cursor = 'not-allowed'; }
+    var valorAtual = (_paradasData[idx] && _paradasData[idx].local) || '';
+    var elBusca = document.getElementById('carro-mapa-picker-busca');
+    if (elBusca) elBusca.value = valorAtual;
+    overlay.style.display = 'flex';
+    _iniciarLeaflet(function() {
+      if (valorAtual) _buscarEnderecoMapa(valorAtual);
+    });
+  }
+
   function fecharMapaPicker() {
     var overlay = document.getElementById('carro-mapa-picker-overlay');
     if (overlay) overlay.style.display = 'none';
@@ -16208,9 +16475,35 @@ var ReservasCarroUI = (function() {
 
   function confirmarMapaPicker() {
     if (!_mapaPickerEnd) return;
-    var elId = _mapaCampoAtual === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
-    var el = document.getElementById(elId);
-    if (el) { el.value = _mapaPickerEnd; _atualizarPreviewMapa(); }
+    if (_mapaCampoAtual === 'parada' && _mapaCampoParadaIdx !== null) {
+      var idx = _mapaCampoParadaIdx;
+      if (_paradasData[idx]) {
+        _paradasData[idx].local  = _mapaPickerEnd;
+        _paradasData[idx].lat    = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lat : null;
+        _paradasData[idx].lng    = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lng : null;
+        _paradasData[idx].mapaUrl = 'https://www.google.com/maps/place/' + encodeURIComponent(_mapaPickerEnd);
+      }
+      var container = document.getElementById('carro-paradas-lista');
+      if (container) {
+        var blocos = container.querySelectorAll('.carro-parada-bloco');
+        var bloco  = blocos[idx];
+        if (bloco) {
+          var inp = bloco.querySelector('.carro-parada-input');
+          if (inp) inp.value = _mapaPickerEnd;
+          var pPreview = document.getElementById('carro-parada-preview-' + idx);
+          var iframe   = document.getElementById('carro-parada-iframe-' + idx);
+          if (pPreview && iframe) {
+            iframe.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(_mapaPickerEnd) + '&hl=pt-BR&output=embed&z=14';
+            pPreview.style.display = '';
+          }
+        }
+      }
+      _mapaCampoParadaIdx = null;
+    } else {
+      var elId = _mapaCampoAtual === 'saida' ? 'carro-f-local-saida' : 'carro-f-local-chegada';
+      var el = document.getElementById(elId);
+      if (el) { el.value = _mapaPickerEnd; _atualizarPreviewMapa(); }
+    }
     fecharMapaPicker();
   }
 
@@ -16307,13 +16600,13 @@ var ReservasCarroUI = (function() {
   function salvar() {
     var data       = (document.getElementById('carro-f-data')         || {}).value || '';
     var horaSaida  = (document.getElementById('carro-f-saida')        || {}).value || '';
-    var horaCheg   = (document.getElementById('carro-f-chegada')      || {}).value || '';
     var setor      = (document.getElementById('carro-f-setor')        || {}).value || '';
     var passExtRaw = (document.getElementById('carro-f-pass-externo') || {}).value || '';
     var localSaida = (document.getElementById('carro-f-local-saida')  || {}).value || '';
     var localCheg  = (document.getElementById('carro-f-local-chegada')|| {}).value || '';
     var mapaUrl    = (document.getElementById('carro-f-mapa')         || {}).value || '';
     var obs        = (document.getElementById('carro-f-obs')          || {}).value || '';
+    var veiculoId  = (document.getElementById('carro-f-veiculo')      || {}).value || 'default';
     var selAcao    = document.getElementById('carro-f-acao');
     var acaoId     = selAcao ? (selAcao.value || '') : '';
     var acaoNome   = '';
@@ -16324,7 +16617,6 @@ var ReservasCarroUI = (function() {
 
     if (!data)       { Toast.aviso('Informe a data da viagem.');   return; }
     if (!horaSaida)  { Toast.aviso('Informe a hora de saída.');    return; }
-    if (!horaCheg)   { Toast.aviso('Informe a hora de chegada.');  return; }
     if (!localSaida) { Toast.aviso('Informe o local de saída.');   return; }
     if (!localCheg)  { Toast.aviso('Informe o local de chegada.'); return; }
 
@@ -16341,19 +16633,24 @@ var ReservasCarroUI = (function() {
 
     var dados = {
       data:                 data,
+      veiculoId:            veiculoId,
       horaSaida:            horaSaida,
-      horaChegada:          horaCheg,
+      horaChegadaEstimada:  _horaChegadaEstimada || '',
       solicitanteSetor:     setor,
       passageiros:          passageiros,
       passageirosInternos:  passInterno,
       passageirosExternos:  passExterno,
-      localSaida:           localSaida,
-      localChegada:         localCheg,
-      paradas:              paradas,
-      mapaUrl:              mapaUrl,
-      acaoId:               acaoId,
-      acaoNome:             acaoNome,
-      observacao:           obs
+      rota: {
+        localSaida:       localSaida,
+        localChegada:     localCheg,
+        mapaUrl:          mapaUrl,
+        paradas:          paradas,
+        tempoEstimadoMin: _tempoEstimadoMin,
+        distanciaKm:      _distanciaKm
+      },
+      acaoId:    acaoId,
+      acaoNome:  acaoNome,
+      observacao: obs
     };
 
     var btn = document.getElementById('btn-carro-salvar');
@@ -16455,15 +16752,388 @@ var ReservasCarroUI = (function() {
     var hoje = new Date();
     var minData = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0') + '-' + String(hoje.getDate()).padStart(2,'0');
     var elSaida = document.getElementById('carro-f-saida');
-    var elCheg  = document.getElementById('carro-f-chegada');
     if (data === minData) {
       var horaMin = String(hoje.getHours()).padStart(2,'0') + ':' + String(hoje.getMinutes()).padStart(2,'0');
       if (elSaida) elSaida.min = horaMin;
-      if (elCheg)  elCheg.min  = horaMin;
     } else {
       if (elSaida) elSaida.removeAttribute('min');
-      if (elCheg)  elCheg.removeAttribute('min');
     }
+    _atualizarDisponibilidade();
+  }
+
+  // ── Calcular rota + tempo estimado ─────────────────────────────────────────
+
+  function calcularRota() {
+    var saida   = (document.getElementById('carro-f-local-saida')   || {}).value || '';
+    var chegada = (document.getElementById('carro-f-local-chegada') || {}).value || '';
+    var hora    = (document.getElementById('carro-f-saida')         || {}).value || '';
+    var data    = (document.getElementById('carro-f-data')          || {}).value || '';
+    if (!saida || !chegada) {
+      Toast.aviso('Preencha os locais de saída e chegada para calcular.');
+      return;
+    }
+    var elEst     = document.getElementById('carro-hora-chegada-est');
+    var elDetalhe = document.getElementById('carro-tempo-est-detalhe');
+    var btn       = document.getElementById('btn-carro-calc-rota');
+    if (elEst) elEst.textContent = 'Calculando…';
+    var paradasLocais = _paradasData.filter(function(p){ return p.local; }).map(function(p){ return { local: p.local }; });
+    BtnGuard.wrap(btn, 'Calculando…', function(liberar) {
+      GAS.reservasCarro.tempoRota({ origem: saida, destino: chegada, paradas: paradasLocais, data: data, hora: hora }, function(r) {
+        liberar();
+        if (r && r.ok && r.data) {
+          _horaChegadaEstimada = r.data.horaChegadaSugerida || '';
+          _tempoEstimadoMin    = r.data.minutos             || 0;
+          _distanciaKm         = r.data.km                  || 0;
+          if (elEst) elEst.textContent = _horaChegadaEstimada || '—';
+          if (elDetalhe) {
+            var txt = '';
+            if (_tempoEstimadoMin) txt += _tempoEstimadoMin + ' min';
+            if (_distanciaKm)      txt += (txt ? ' · ' : '') + _distanciaKm.toFixed(1) + ' km';
+            if (txt) txt += ' (+ 5 min de buffer)';
+            elDetalhe.textContent = txt;
+          }
+        } else {
+          if (elEst) elEst.textContent = '—';
+          Toast.aviso((r && r.error && r.error.message) || 'Não foi possível calcular o tempo de rota.');
+        }
+      }, function(err) {
+        liberar();
+        if (elEst) elEst.textContent = '—';
+        Toast.aviso((err && err.message) || 'Erro ao calcular rota.');
+      });
+    });
+  }
+
+  function _debounceCalcRota() {
+    if (_debounceRotaTimer) clearTimeout(_debounceRotaTimer);
+    _debounceRotaTimer = setTimeout(function() {
+      var saida   = (document.getElementById('carro-f-local-saida')   || {}).value || '';
+      var chegada = (document.getElementById('carro-f-local-chegada') || {}).value || '';
+      if (saida && chegada) calcularRota();
+    }, 2000);
+  }
+
+  // ── Disponibilidade do veículo ──────────────────────────────────────────────
+
+  function _atualizarDisponibilidade() {
+    var data    = (document.getElementById('carro-f-data')        || {}).value || '';
+    var saida   = (document.getElementById('carro-f-local-saida') || {}).value || '';
+    var veicSel = document.getElementById('carro-f-veiculo');
+    var veiculo = veicSel ? (veicSel.value || 'default') : 'default';
+    var panel   = document.getElementById('carro-disp-panel');
+    var content = document.getElementById('carro-disp-content');
+    if (!panel || !content) return;
+    if (!data) { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+    content.innerHTML = '<p style="font-size:12px;color:var(--muted);">Carregando…</p>';
+    GAS.reservasCarro.disponibilidade({ data: data, localSaida: saida, veiculoId: veiculo }, function(r) {
+      if (!r || !r.ok || !r.data) {
+        content.innerHTML = '<p style="font-size:12px;color:var(--muted);">Indisponível.</p>';
+        return;
+      }
+      var d         = r.data;
+      var janelas   = Array.isArray(d.janelas)   ? d.janelas   : [];
+      var bloqueios = Array.isArray(d.bloqueios) ? d.bloqueios : [];
+      var html      = '<div style="display:flex;flex-direction:column;gap:6px;">';
+      if (!janelas.length && !bloqueios.length) {
+        html += '<span style="font-size:12px;color:var(--primario);">Veículo disponível o dia todo.</span>';
+      } else {
+        if (bloqueios.length) {
+          html += '<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Ocupado:</div><div style="display:flex;flex-wrap:wrap;gap:4px;">';
+          bloqueios.forEach(function(b) {
+            var isBuffer = b.isBuffer;
+            html += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:12px;font-size:11px;background:' +
+              (isBuffer ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.12)') + ';color:' +
+              (isBuffer ? '#b45309' : '#b91c1c') + ';" title="' + escaparHtml(b.descricao || '') + '">' +
+              '<span class="ms ms-sm" style="font-size:11px;">' + (isBuffer ? 'sync' : 'block') + '</span>' +
+              escaparHtml((b.inicio || '') + '–' + (b.fim || '')) + (b.descricao ? ' — ' + escaparHtml(b.descricao) : '') +
+              '</span>';
+          });
+          html += '</div>';
+        }
+        if (janelas.length) {
+          html += '<div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:2px;">Disponível:</div><div style="display:flex;flex-wrap:wrap;gap:4px;">';
+          janelas.forEach(function(j) {
+            html += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:12px;font-size:11px;background:rgba(34,197,94,.12);color:#15803d;">' +
+              '<span class="ms ms-sm" style="font-size:11px;">check_circle</span>' +
+              escaparHtml((j.inicio || '') + '–' + (j.fim || '')) + '</span>';
+          });
+          html += '</div>';
+        }
+        if (d.proximoHorario) {
+          var pHSafe = JSON.stringify(d.proximoHorario).replace(/"/g, "'");
+          html += '<div style="font-size:11px;margin-top:4px;color:var(--primario);">Próximo disponível: <strong>' + escaparHtml(d.proximoHorario) + '</strong>' +
+            ' <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._usarProximoHorario(' + pHSafe + ')" data-bg-skip="1" style="font-size:11px;padding:1px 8px;">Usar</button></div>';
+        }
+      }
+      html += '</div>';
+      content.innerHTML = html;
+    }, function() {
+      content.innerHTML = '<p style="font-size:12px;color:var(--muted);">Não foi possível carregar.</p>';
+    });
+  }
+
+  function _usarProximoHorario(hora) {
+    var el = document.getElementById('carro-f-saida');
+    if (el) el.value = hora;
+  }
+
+  // ── Editar Rota (aprovadores, no modal de detalhes) ────────────────────────
+
+  function _abrirEditarRota(reserva) {
+    var el = document.getElementById('carro-det-editar-rota');
+    if (!el) return;
+    var rota    = reserva.rota || {};
+    var rid     = JSON.stringify(reserva.id).replace(/"/g, "'");
+    var paradas = Array.isArray(rota.paradas) ? rota.paradas : [];
+    var paradasHtml = paradas.map(function(p, i) {
+      var local = (typeof p === 'string') ? p : (p.local || '');
+      return '<div style="display:flex;gap:6px;margin-bottom:4px;">' +
+        '<input type="text" class="form-control carro-det-parada-inp" data-idx="' + i + '" value="' + escaparHtml(local) + '" style="flex:1;font-size:13px;">' +
+        '</div>';
+    }).join('');
+    el.style.display = '';
+    el.innerHTML =
+      '<details style="margin-top:4px;">' +
+        '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px;">' +
+          '<span class="ms ms-sm" style="font-size:14px;">edit_location_alt</span> Editar Rota' +
+        '</summary>' +
+        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">' +
+          '<div class="form-group" style="margin:0;">' +
+            '<label class="form-label" style="font-size:11px;">Local de chegada</label>' +
+            '<input id="carro-det-edit-chegada" type="text" class="form-control" value="' + escaparHtml(rota.localChegada || '') + '" style="font-size:13px;">' +
+          '</div>' +
+          (paradas.length > 0 ?
+            '<div class="form-group" style="margin:0;">' +
+              '<label class="form-label" style="font-size:11px;">Paradas</label>' +
+              paradasHtml +
+            '</div>' : '') +
+          '<button class="btn btn-primario btn-sm" id="btn-carro-salvar-rota" onclick="ReservasCarroUI._confirmarEditarRota(' + rid + ')" data-bg-skip="1">' +
+            '<span class="ms ms-sm">save</span> Salvar alterações na rota' +
+          '</button>' +
+        '</div>' +
+      '</details>';
+  }
+
+  function _confirmarEditarRota(id) {
+    var novaChegada = (document.getElementById('carro-det-edit-chegada') || {}).value || '';
+    var paradasInputs = document.querySelectorAll('#carro-det-editar-rota .carro-det-parada-inp');
+    var paradas = [];
+    paradasInputs.forEach(function(inp) {
+      var v = inp.value.trim();
+      if (v) paradas.push({ local: v });
+    });
+    var btn = document.getElementById('btn-carro-salvar-rota');
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.reservasCarro.editarRota(id, { localChegada: novaChegada, paradas: paradas }, function(r) {
+        liberar();
+        if (r && r.ok) {
+          Toast.sucesso('Rota atualizada!');
+          _fecharDetalhes();
+          carregar();
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar rota.');
+        }
+      }, function(err) {
+        liberar();
+        Toast.erro((err && err.message) || 'Erro de comunicação.');
+      });
+    });
+  }
+
+  // ── Escala de disponibilidade ───────────────────────────────────────────────
+
+  function _carregarEscala() {
+    var el = document.getElementById('carro-escala-content');
+    if (el) el.innerHTML = '<div class="card" style="padding:20px;"><p class="muted-text">Carregando…</p></div>';
+    GAS.reservasCarro.listarEscalas({}, function(r) {
+      _escalaCache = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      _renderEscala();
+    }, function() {
+      if (el) el.innerHTML = '<div class="card" style="padding:20px;"><p class="error-text">Erro ao carregar escala.</p></div>';
+    });
+  }
+
+  function _renderEscala() {
+    var el = document.getElementById('carro-escala-content');
+    if (!el) return;
+    var DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    var listaHtml = _escalaCache.filter(function(e){ return e.ativo !== false; }).map(function(e) {
+      var eid = JSON.stringify(e.id).replace(/"/g, "'");
+      var diasStr = (e.tipo === 'semanal' && Array.isArray(e.diasSemana))
+        ? e.diasSemana.map(function(d){ return DIAS[d] || d; }).join(', ')
+        : '';
+      var periodoStr = e.tipo === 'semanal'
+        ? (fmtDataPtBR(e.dataInicio || '') + ' a ' + fmtDataPtBR(e.dataFim || ''))
+        : fmtDataPtBR(e.data || '');
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:13px;font-weight:500;">' + escaparHtml(e.nome || (e.tipo === 'semanal' ? 'Semanal' : 'Data específica')) + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);">' +
+            (diasStr ? diasStr + ' · ' : '') + periodoStr +
+            ' · ' + escaparHtml((e.horaInicio || '') + '–' + (e.horaFim || '')) +
+          '</div>' +
+        '</div>' +
+        '<button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._removerEscala(' + eid + ')" data-bg-skip="1" style="color:#ef4444;" title="Desativar"><span class="ms ms-sm">delete</span></button>' +
+      '</div>';
+    }).join('');
+    if (!listaHtml) listaHtml = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Nenhuma escala. Veículo livre o dia todo.</div>';
+    var veiculosHtml = _veiculosData.map(function(v) {
+      return '<div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;">' +
+        '<strong>' + escaparHtml(v.nome || '—') + '</strong>' +
+        (v.placa   ? ' — ' + escaparHtml(v.placa)   : '') +
+        (v.modelo  ? ' · ' + escaparHtml(v.modelo)  : '') +
+        (v.capacidade ? ' · ' + v.capacidade + ' lugares' : '') +
+      '</div>';
+    }).join('');
+    el.innerHTML =
+      '<div class="card" style="padding:0;margin-bottom:16px;">' +
+        '<div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">' +
+          'Escalas de disponibilidade' +
+          '<button class="btn btn-primario btn-sm" onclick="ReservasCarroUI.abrirModalEscala()" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova escala</button>' +
+        '</div>' +
+        listaHtml +
+      '</div>' +
+      '<div class="card" style="padding:0;">' +
+        '<div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;">' +
+          'Frota de veículos' +
+          '<button class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirModalVeiculo()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo</button>' +
+        '</div>' +
+        (veiculosHtml || '<div style="padding:16px;font-size:13px;color:var(--muted);">Nenhum veículo cadastrado.</div>') +
+      '</div>';
+  }
+
+  function abrirModalEscala() {
+    // Reset form
+    var el = document.getElementById('esc-nome'); if (el) el.value = '';
+    var i = document.getElementById('esc-data-inicio'); if (i) i.value = '';
+    var f = document.getElementById('esc-data-fim');    if (f) f.value = '';
+    var e = document.getElementById('esc-data-especifica'); if (e) e.value = '';
+    var hi = document.getElementById('esc-hora-inicio'); if (hi) hi.value = '08:00';
+    var hf = document.getElementById('esc-hora-fim');    if (hf) hf.value = '18:00';
+    // Reset dia buttons
+    document.querySelectorAll('.esc-dia-btn').forEach(function(b) {
+      var dia = parseInt(b.getAttribute('data-dia'), 10);
+      if (dia >= 1 && dia <= 5) { b.style.background = 'var(--primario)'; b.style.color = '#fff'; b.classList.add('ativo-dia'); }
+      else { b.style.background = ''; b.style.color = ''; b.classList.remove('ativo-dia'); }
+    });
+    _setTipoEscala('semanal');
+    var overlay = document.getElementById('carro-escala-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
+  }
+
+  function fecharModalEscala() {
+    var overlay = document.getElementById('carro-escala-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function _setTipoEscala(tipo) {
+    var semHtml = document.getElementById('esc-form-semanal');
+    var espHtml = document.getElementById('esc-form-especifica');
+    var btnSem  = document.getElementById('btn-esc-tipo-semanal');
+    var btnEsp  = document.getElementById('btn-esc-tipo-especifica');
+    if (semHtml) semHtml.style.display = tipo === 'semanal' ? '' : 'none';
+    if (espHtml) espHtml.style.display = tipo === 'especifica' ? '' : 'none';
+    if (btnSem) btnSem.className = 'btn btn-sm' + (tipo === 'semanal' ? ' btn-primario' : ' btn-ghost');
+    if (btnEsp) btnEsp.className = 'btn btn-sm' + (tipo === 'especifica' ? ' btn-primario' : ' btn-ghost');
+  }
+
+  function _toggleDiaEscala(btn) {
+    var ativo = btn.classList.contains('ativo-dia');
+    if (ativo) { btn.style.background = ''; btn.style.color = ''; btn.classList.remove('ativo-dia'); }
+    else { btn.style.background = 'var(--primario)'; btn.style.color = '#fff'; btn.classList.add('ativo-dia'); }
+  }
+
+  function _salvarEscala(btn) {
+    var espForm = document.getElementById('esc-form-especifica');
+    var tipo    = (espForm && espForm.style.display !== 'none') ? 'especifica' : 'semanal';
+    var horaIni = (document.getElementById('esc-hora-inicio') || {}).value || '';
+    var horaFim = (document.getElementById('esc-hora-fim')    || {}).value || '';
+    var nome    = (document.getElementById('esc-nome')        || {}).value || '';
+    if (!horaIni || !horaFim) { Toast.aviso('Informe os horários.'); return; }
+    var veiculoId = (_veiculosData.length === 1 ? _veiculosData[0].id : null) || 'default';
+    var dados;
+    if (tipo === 'semanal') {
+      var dias = [];
+      document.querySelectorAll('.esc-dia-btn').forEach(function(b) {
+        if (b.classList.contains('ativo-dia')) dias.push(parseInt(b.getAttribute('data-dia'), 10));
+      });
+      if (!dias.length) { Toast.aviso('Selecione ao menos um dia da semana.'); return; }
+      var dIni = (document.getElementById('esc-data-inicio') || {}).value || '';
+      var dFim = (document.getElementById('esc-data-fim')    || {}).value || '';
+      if (!dIni || !dFim) { Toast.aviso('Informe o período de vigência.'); return; }
+      dados = { tipo: 'semanal', diasSemana: dias, dataInicio: dIni, dataFim: dFim, horaInicio: horaIni, horaFim: horaFim, nome: nome, veiculoId: veiculoId };
+    } else {
+      var dEsp = (document.getElementById('esc-data-especifica') || {}).value || '';
+      if (!dEsp) { Toast.aviso('Informe a data.'); return; }
+      dados = { tipo: 'especifica', data: dEsp, horaInicio: horaIni, horaFim: horaFim, nome: nome, veiculoId: veiculoId };
+    }
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.reservasCarro.salvarEscala(dados, function(r) {
+        liberar();
+        fecharModalEscala();
+        if (r && r.ok) { Toast.sucesso('Escala salva!'); _carregarEscala(); }
+        else Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar escala.');
+      }, function(err) {
+        liberar();
+        Toast.erro((err && err.message) || 'Erro de comunicação.');
+      });
+    });
+  }
+
+  function _removerEscala(id) {
+    var _raw = confirm('Desativar esta escala?');
+    if (!_raw) return;
+    GAS.reservasCarro.removerEscala(id, function(r) {
+      if (r && r.ok) { Toast.sucesso('Escala removida.'); _carregarEscala(); }
+      else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+    }, function(err) {
+      Toast.erro((err && err.message) || 'Erro de comunicação.');
+    });
+  }
+
+  // ── Veículos ────────────────────────────────────────────────────────────────
+
+  function abrirModalVeiculo() {
+    ['vei-nome','vei-placa','vei-modelo'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    var elCap = document.getElementById('vei-capacidade');
+    if (elCap) elCap.value = '5';
+    var overlay = document.getElementById('carro-veiculo-modal-overlay');
+    if (overlay) overlay.style.display = 'flex';
+  }
+
+  function fecharModalVeiculo() {
+    var overlay = document.getElementById('carro-veiculo-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  function _salvarVeiculo(btn) {
+    var nome = (document.getElementById('vei-nome') || {}).value || '';
+    if (!nome.trim()) { Toast.aviso('Informe o nome do veículo.'); return; }
+    var dados = {
+      nome:       nome.trim(),
+      placa:      (document.getElementById('vei-placa')      || {}).value || '',
+      modelo:     (document.getElementById('vei-modelo')     || {}).value || '',
+      capacidade: parseInt((document.getElementById('vei-capacidade') || {}).value || '5', 10) || 5
+    };
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.reservasCarro.salvarVeiculo(dados, function(r) {
+        liberar();
+        fecharModalVeiculo();
+        if (r && r.ok) {
+          Toast.sucesso('Veículo salvo!');
+          carregar();
+          if (_modo === 'escala') _carregarEscala();
+        } else {
+          Toast.erro((r && r.error && r.error.message) || 'Erro ao salvar veículo.');
+        }
+      }, function(err) {
+        liberar();
+        Toast.erro((err && err.message) || 'Erro de comunicação.');
+      });
+    });
   }
 
   function aoAbrir() {
@@ -16499,7 +17169,27 @@ var ReservasCarroUI = (function() {
     // Passageiros internos / paradas
     _adicionarPassInterno: _adicionarPassInterno,
     _removerPassInterno:   _removerPassInterno,
-    _adicionarParada:      _adicionarParada
+    _adicionarParada:      _adicionarParada,
+    _onParadaInput:        _onParadaInput,
+    _removerParada:        _removerParada,
+    abrirMapaPickerParada: abrirMapaPickerParada,
+    // Cálculo de rota e disponibilidade
+    calcularRota:          calcularRota,
+    _debounceCalcRota:     _debounceCalcRota,
+    _usarProximoHorario:   _usarProximoHorario,
+    // Editar rota (aprovadores)
+    _confirmarEditarRota:  _confirmarEditarRota,
+    // Escala
+    abrirModalEscala:      abrirModalEscala,
+    fecharModalEscala:     fecharModalEscala,
+    _setTipoEscala:        _setTipoEscala,
+    _toggleDiaEscala:      _toggleDiaEscala,
+    _salvarEscala:         _salvarEscala,
+    _removerEscala:        _removerEscala,
+    // Veículos
+    abrirModalVeiculo:     abrirModalVeiculo,
+    fecharModalVeiculo:    fecharModalVeiculo,
+    _salvarVeiculo:        _salvarVeiculo
   };
 })();
 

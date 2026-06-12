@@ -3,12 +3,16 @@
  * @layer modules/infraestrutura
  * @description Engine de Reservas de Veículo Institucional.
  *   Regras de negócio:
- *   - TODA reserva exige aprovação de habilitador ou superadmin (sem modo responsável — diferente de espaços).
- *   - Criação é bloqueada se já existir reserva APROVADA com horário sobreposto (slot ocupado).
- *   - Aprovação é bloqueada atomicamente se outra reserva for aprovada no mesmo slot (race-safe).
+ *   - TODA reserva exige aprovação.
+ *   - Quem pode aprovar: habilitador, admin, superadmin, e gestor com setor 'infraestrutura'.
+ *   - Criação é bloqueada se já existir reserva APROVADA com horário sobreposto no mesmo veículo.
+ *   - Aprovação é bloqueada atomicamente se outra reserva for aprovada no mesmo slot/veículo.
  *   - Colaboradores comuns só veem e cancelam as próprias reservas.
- *   - Habilitador e superadmin veem todas e podem aprovar, recusar ou concluir.
+ *   - Aprovadores veem todas e podem aprovar, recusar, concluir e editar a rota.
+ *   - editarRota() permite ao aprovador alterar destino e paradas de uma reserva PENDENTE ou APROVADA.
  * @depends modules/infraestrutura/reserva_carro_repository.gs,
+ *          modules/infraestrutura/escala_carro_engine.gs,
+ *          modules/infraestrutura/veiculos_repository.gs,
  *          core/services/auditoria_service.gs,
  *          core/services/acesso_service.gs,
  *          core/events_constants.gs
@@ -32,27 +36,18 @@ var ReservaCarroEngine = (function() {
     'CONCLUIDA': []
   };
 
-  // Apenas habilitador (equipe de infraestrutura) e superadmin aprovam carros
-  var PAPEIS_APROVACAO = ['habilitador', 'superadmin'];
-
   FsmGuardian.registrar('reservas_carro', _TRANSICOES);
 
   function _getOrgId() { return getOrgConfig().orgId; }
 
-  function _getRegistro(email) {
-    try {
-      var a = AcessoService.verificar(email);
-      return (a && a.registro) ? a.registro : {};
-    } catch(_) { return {}; }
-  }
-
-  function _getPapel(email) {
-    return _getRegistro(email).papel || 'colaborador';
-  }
-
-  function _podAprovar(email) {
-    var papel = (_getRegistro(email).papel || '').toLowerCase();
-    return PAPEIS_APROVACAO.indexOf(papel) >= 0;
+  /**
+   * Verifica se o usuário pode aprovar/gerenciar reservas de veículo.
+   * Habilitador, admin e superadmin têm acesso irrestrito.
+   * Gestor precisa ter 'infraestrutura' em setoresGerenciados.
+   * Delegado para EscalaCarroEngine.podAprovarCarro (fonte única da regra).
+   */
+  function _podAprovarCarro(email) {
+    return EscalaCarroEngine.podAprovarCarro(email);
   }
 
   function _horaParaMin(hora) {
@@ -64,21 +59,18 @@ var ReservaCarroEngine = (function() {
   }
 
   /**
-   * Verifica sobreposição de horário com reservas APROVADAS na mesma data.
-   * Retorna o objeto de conflito ou null.
-   * @param {string} ignorarId — ID da própria reserva (para edições futuras)
+   * Verifica sobreposição de horário com reservas APROVADAS na mesma data e veículo.
    */
-  function _verificarConflito(data, horaSaida, horaChegada, orgId, ignorarId) {
-    var aprovadas = ReservaCarroRepository.listarAprovadasNaData(data, orgId);
+  function _verificarConflito(data, horaSaida, horaChegadaEst, veiculoId, orgId, ignorarId) {
+    var aprovadas = ReservaCarroRepository.listarAprovadasNaData(data, veiculoId || 'default', orgId);
     var iniNovo   = _horaParaMin(horaSaida);
-    var fimNovo   = _horaParaMin(horaChegada);
+    var fimNovo   = _horaParaMin(horaChegadaEst);
 
     for (var i = 0; i < aprovadas.length; i++) {
       var r = aprovadas[i];
       if (ignorarId && r.id === ignorarId) continue;
       var ini = _horaParaMin(r.horaSaida);
-      var fim = _horaParaMin(r.horaChegada);
-      // Sobreposição: iniNovo < fim E fimNovo > ini
+      var fim = _horaParaMin(r.horaChegadaEstimada || r.horaChegada);
       if (iniNovo < fim && fimNovo > ini) return r;
     }
     return null;
@@ -102,9 +94,7 @@ var ReservaCarroEngine = (function() {
       var lista = readJSON('usuarios_acesso.json');
       if (!Array.isArray(lista)) return [];
       return lista
-        .filter(function(u) {
-          return u.status === 'ativo' && PAPEIS_APROVACAO.indexOf(u.papel) >= 0;
-        })
+        .filter(function(u) { return u.status === 'ativo' && _podAprovarCarro(u.email); })
         .map(function(u) { return u.email; })
         .filter(function(e) { return !!e; });
     } catch(_) { return []; }
@@ -114,35 +104,55 @@ var ReservaCarroEngine = (function() {
 
   /**
    * Cria nova solicitação de reserva de veículo (status PENDENTE).
+   * horaChegadaEstimada é calculada no frontend via ctrl_carro_tempo_rota.
+   * O campo horaChegada manual é aceito como fallback.
    */
   function criar(dados, email) {
     var orgId = _getOrgId();
 
-    if (!dados.data)        throw new Error('Data da viagem é obrigatória.');
-    if (!dados.horaSaida)   throw new Error('Hora de saída é obrigatória.');
-    if (!dados.horaChegada) throw new Error('Hora de chegada é obrigatória.');
-    if (_horaParaMin(dados.horaSaida) >= _horaParaMin(dados.horaChegada))
+    if (!dados.data)      throw new Error('Data da viagem é obrigatória.');
+    if (!dados.horaSaida) throw new Error('Hora de saída é obrigatória.');
+    if (!dados.horaChegadaEstimada && !dados.horaChegada)
+      throw new Error('Hora de chegada estimada é obrigatória. Calcule a rota antes de enviar.');
+
+    var horaChegada = dados.horaChegadaEstimada || dados.horaChegada;
+    if (_horaParaMin(dados.horaSaida) >= _horaParaMin(horaChegada))
       throw new Error('Hora de chegada deve ser posterior à hora de saída.');
 
-    var conflitoAprovado = _verificarConflito(dados.data, dados.horaSaida, dados.horaChegada, orgId, null);
+    var veiculoId = dados.veiculoId || 'default';
+    VeiculosRepository.getDefault(orgId); // garante que veículo default existe
+
+    var conflitoAprovado = _verificarConflito(
+      dados.data, dados.horaSaida, horaChegada, veiculoId, orgId, null
+    );
     if (conflitoAprovado) {
       throw new Error(
         'Horário indisponível: o veículo já está reservado em ' + dados.data +
-        ' das ' + conflitoAprovado.horaSaida + ' às ' + conflitoAprovado.horaChegada + '.'
+        ' das ' + conflitoAprovado.horaSaida +
+        ' às ' + (conflitoAprovado.horaChegadaEstimada || conflitoAprovado.horaChegada) + '.'
       );
     }
 
+    var rota = dados.rota || {};
     var payload = {
-      data:             dados.data,
-      horaSaida:        dados.horaSaida,
-      horaChegada:      dados.horaChegada,
-      solicitante:      email,
-      solicitanteSetor: dados.solicitanteSetor || '',
-      passageiros:      Array.isArray(dados.passageiros) ? dados.passageiros : [],
+      veiculoId:            veiculoId,
+      data:                 dados.data,
+      horaSaida:            dados.horaSaida,
+      horaChegadaEstimada:  horaChegada,
+      solicitante:          email,
+      solicitanteSetor:     dados.solicitanteSetor || '',
+      passageiros:          Array.isArray(dados.passageiros)         ? dados.passageiros         : [],
+      passageirosInternos:  Array.isArray(dados.passageirosInternos) ? dados.passageirosInternos : [],
+      passageirosExternos:  Array.isArray(dados.passageirosExternos) ? dados.passageirosExternos : [],
       rota: {
-        localSaida:   dados.localSaida   || '',
-        localChegada: dados.localChegada || '',
-        mapaUrl:      dados.mapaUrl      || ''
+        localSaida:       rota.localSaida   || dados.localSaida   || '',
+        coordSaida:       rota.coordSaida   || null,
+        localChegada:     rota.localChegada || dados.localChegada || '',
+        coordChegada:     rota.coordChegada || null,
+        mapaUrl:          rota.mapaUrl      || dados.mapaUrl      || '',
+        paradas:          Array.isArray(rota.paradas) ? rota.paradas : [],
+        tempoEstimadoMin: rota.tempoEstimadoMin || dados.tempoEstimadoMin || 0,
+        distanciaKm:      rota.distanciaKm      || dados.distanciaKm      || 0
       },
       acaoId:     dados.acaoId   || '',
       acaoNome:   dados.acaoNome || '',
@@ -155,17 +165,18 @@ var ReservaCarroEngine = (function() {
       entidadeId: resultado.id, orgId: orgId, usuario: email, data: dados.data
     });
 
-    var destinos = _obterEmailsInfra();
+    var destinos     = _obterEmailsInfra();
+    var localSaida   = payload.rota.localSaida   || '—';
+    var localChegada = payload.rota.localChegada || '—';
     _notificar(destinos,
       'Nova Solicitação de Veículo — ' + dados.data,
       'Uma reserva de veículo aguarda sua aprovação.\n\n' +
       'Solicitante: ' + email + '\n' +
       'Setor: '       + (dados.solicitanteSetor || '—') + '\n' +
       'Data: '        + dados.data + '\n' +
-      'Saída: '       + dados.horaSaida + ' | Chegada: ' + dados.horaChegada + '\n' +
-      'Origem: '      + (dados.localSaida   || '—') + '\n' +
-      'Destino: '     + (dados.localChegada || '—') + '\n' +
-      'Passageiros: ' + ((Array.isArray(dados.passageiros) ? dados.passageiros : []).join(', ') || '—') + '\n\n' +
+      'Saída: '       + dados.horaSaida + ' | Chegada est.: ' + horaChegada + '\n' +
+      'Origem: '      + localSaida + '\n' +
+      'Destino: '     + localChegada + '\n\n' +
       'Acesse o sistema para aprovar ou recusar.'
     );
 
@@ -173,31 +184,22 @@ var ReservaCarroEngine = (function() {
     return resultado;
   }
 
-  /**
-   * Lista reservas visíveis para o usuário.
-   * Equipe infra/gestor/admin vê todas.
-   * Demais: apenas as próprias.
-   */
   function listar(filtros, email) {
     var orgId = _getOrgId();
     var lista = ReservaCarroRepository.listar(filtros || {}, orgId);
-    if (_podAprovar(email)) return lista;
+    if (_podAprovarCarro(email)) return lista;
     return lista.filter(function(r) { return r.solicitante === email; });
   }
 
-  /**
-   * Aprova uma reserva. Bloqueia se houver conflito de horário.
-   */
   function aprovar(id, emailAprovador) {
     var orgId = _getOrgId();
-    if (!_podAprovar(emailAprovador))
+    if (!_podAprovarCarro(emailAprovador))
       throw new Error('Sem permissão para aprovar reservas de veículo.');
 
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.APROVADA,
-      id, emailAprovador);
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.APROVADA, id, emailAprovador);
 
     var resultadoAprovacao = ReservaCarroRepository.aprovarAtomico(id, {
       status:        STATUS.APROVADA,
@@ -208,7 +210,7 @@ var ReservaCarroEngine = (function() {
       var c = resultadoAprovacao.conflito;
       throw new Error(
         'Conflito de horário: já existe reserva aprovada em ' + rc.data +
-        ' das ' + c.horaSaida + ' às ' + c.horaChegada + '.'
+        ' das ' + c.horaSaida + ' às ' + (c.horaChegadaEstimada || c.horaChegada) + '.'
       );
     }
     if (!resultadoAprovacao.atualizado) throw new Error('Erro ao aprovar reserva: ' + id);
@@ -218,12 +220,14 @@ var ReservaCarroEngine = (function() {
       entidadeId: id, orgId: orgId, usuario: emailAprovador, solicitante: rc.solicitante
     });
 
+    var rota = rc.rota || {};
     _notificar([rc.solicitante],
       'Sua reserva de veículo foi APROVADA',
       'Sua reserva foi aprovada por ' + emailAprovador + '.\n\n' +
-      'Data: ' + rc.data + ' | Saída: ' + rc.horaSaida + ' | Chegada: ' + rc.horaChegada + '\n' +
-      'Origem: '  + ((rc.rota || {}).localSaida   || '—') + '\n' +
-      'Destino: ' + ((rc.rota || {}).localChegada || '—') + '\n\n' +
+      'Data: ' + rc.data + ' | Saída: ' + rc.horaSaida +
+      ' | Chegada est.: ' + (rc.horaChegadaEstimada || '—') + '\n' +
+      'Origem: '  + (rota.localSaida   || '—') + '\n' +
+      'Destino: ' + (rota.localChegada || '—') + '\n\n' +
       'Acesse o sistema para visualizar os detalhes.'
     );
 
@@ -231,19 +235,15 @@ var ReservaCarroEngine = (function() {
     return atualizado;
   }
 
-  /**
-   * Recusa uma reserva (com motivo obrigatório).
-   */
   function recusar(id, motivo, emailAprovador) {
     var orgId = _getOrgId();
-    if (!_podAprovar(emailAprovador))
+    if (!_podAprovarCarro(emailAprovador))
       throw new Error('Sem permissão para recusar reservas de veículo.');
 
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.RECUSADA,
-      id, emailAprovador);
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.RECUSADA, id, emailAprovador);
 
     var atualizado = ReservaCarroRepository.atualizar(id, {
       status:        STATUS.RECUSADA,
@@ -267,19 +267,15 @@ var ReservaCarroEngine = (function() {
     return atualizado;
   }
 
-  /**
-   * Cancela uma reserva. Solicitante cancela a própria; infra/admin cancela qualquer.
-   */
   function cancelar(id, motivo, email) {
     var orgId = _getOrgId();
     var rc    = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    if (rc.solicitante !== email && !_podAprovar(email))
+    if (rc.solicitante !== email && !_podAprovarCarro(email))
       throw new Error('Sem permissão para cancelar esta reserva.');
 
-    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CANCELADA,
-      id, email);
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CANCELADA, id, email);
 
     var atualizado = ReservaCarroRepository.atualizar(id, {
       status:       STATUS.CANCELADA,
@@ -294,23 +290,17 @@ var ReservaCarroEngine = (function() {
     return atualizado;
   }
 
-  /**
-   * Conclui uma reserva após a viagem (apenas infra/gestor/admin).
-   */
   function concluir(id, email) {
     var orgId = _getOrgId();
-    if (!_podAprovar(email))
+    if (!_podAprovarCarro(email))
       throw new Error('Sem permissão para concluir reservas de veículo.');
 
     var rc = ReservaCarroRepository.buscarPorId(id, orgId);
     if (!rc) throw new Error('Reserva não encontrada: ' + id);
 
-    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CONCLUIDA,
-      id, email);
+    FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CONCLUIDA, id, email);
 
-    var atualizado = ReservaCarroRepository.atualizar(id, {
-      status: STATUS.CONCLUIDA
-    }, orgId);
+    var atualizado = ReservaCarroRepository.atualizar(id, { status: STATUS.CONCLUIDA }, orgId);
 
     AuditoriaService.registrar('RESERVA_CARRO_CONCLUIDA', 'reservas_carro', {
       entidadeId: id, orgId: orgId, usuario: email
@@ -320,9 +310,33 @@ var ReservaCarroEngine = (function() {
     return atualizado;
   }
 
+  /**
+   * Aprovador edita a rota de uma reserva PENDENTE ou APROVADA.
+   * Pode alterar localChegada, coordChegada e/ou paradas.
+   */
+  function editarRota(id, dadosRota, email) {
+    var orgId = _getOrgId();
+    if (!_podAprovarCarro(email))
+      throw new Error('Sem permissão para editar a rota desta reserva.');
+
+    var rc = ReservaCarroRepository.buscarPorId(id, orgId);
+    if (!rc) throw new Error('Reserva não encontrada: ' + id);
+
+    if (rc.status !== STATUS.PENDENTE && rc.status !== STATUS.APROVADA)
+      throw new Error('A rota só pode ser editada em reservas PENDENTE ou APROVADA.');
+
+    var atualizado = ReservaCarroRepository.atualizarRota(id, dadosRota, orgId);
+
+    AuditoriaService.registrar('RESERVA_CARRO_ROTA_EDITADA', 'reservas_carro', {
+      entidadeId: id, orgId: orgId, usuario: email, rota: dadosRota
+    });
+
+    return atualizado;
+  }
+
   function obterMetricas(email) {
     var orgId = _getOrgId();
-    var lista = _podAprovar(email)
+    var lista = _podAprovarCarro(email)
       ? ReservaCarroRepository.listar({}, orgId)
       : ReservaCarroRepository.listar({ solicitante: email }, orgId);
 
@@ -344,6 +358,7 @@ var ReservaCarroEngine = (function() {
     recusar:       recusar,
     cancelar:      cancelar,
     concluir:      concluir,
+    editarRota:    editarRota,
     obterMetricas: obterMetricas
   };
 

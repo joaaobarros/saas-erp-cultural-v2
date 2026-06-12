@@ -47,7 +47,8 @@ var SCHEMA_ABAS = {
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
     'Ativos', 'MovimentacoesAtivos', 'Manutencoes', 'UsoAtivos', 'BaixasAtivos',
-    'AlertasInfra', 'Solicitacoes', 'ReservasCarro', 'SolicitacoesMaterial'
+    'AlertasInfra', 'Solicitacoes', 'ReservasCarro', 'SolicitacoesMaterial',
+    'Veiculos', 'EscalaCarro'
   ],
   PESSOAL: ['Tarefas', 'Demandas', 'Processos'],
   EQUIPES: [
@@ -269,6 +270,20 @@ function inicializarSistema() {
       typeof ReservaCarroRepository.prepararIndice === 'function') {
     try { ReservaCarroRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'ReservaCarroRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Fase 22 — Frota e Escala de Veículos: garante ESPACOS.Veiculos e ESPACOS.EscalaCarro
+  if (typeof VeiculosRepository !== 'undefined' &&
+      typeof VeiculosRepository.prepararIndice === 'function') {
+    try { VeiculosRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'VeiculosRepository.prepararIndice: ' + e.message);
+    }
+  }
+  if (typeof EscalaCarroRepository !== 'undefined' &&
+      typeof EscalaCarroRepository.prepararIndice === 'function') {
+    try { EscalaCarroRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'EscalaCarroRepository.prepararIndice: ' + e.message);
     }
   }
 

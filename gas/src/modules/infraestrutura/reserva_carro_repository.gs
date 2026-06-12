@@ -4,6 +4,16 @@
  * @description Repositório de Reservas de Veículo (carro institucional).
  *   Fonte canônica: reservas_carro.json no Drive.
  *   Índice secundário: planilha ESPACOS.ReservasCarro.
+ *
+ *   Schema canônico (campos adicionados na Fase 22):
+ *   - veiculoId: string ('default' para o veículo padrão)
+ *   - rota.coordSaida:   { lat, lng }
+ *   - rota.coordChegada: { lat, lng }
+ *   - rota.paradas:      [{ local, lat, lng, mapaUrl }]  (enriquecido com mapa)
+ *   - rota.tempoEstimadoMin: number
+ *   - rota.distanciaKm:     number
+ *   - horaChegadaEstimada:  'HH:MM' (calculada via Maps, substituiu o campo manual)
+ *
  * @depends core/data_layer.gs, core/utils.gs, core/services/data_gateway.gs
  */
 
@@ -14,21 +24,28 @@ var ReservaCarroRepository = (function() {
   var _ABA      = 'ReservasCarro';
 
   var _CABECALHO = [
-    'ID', 'OrgId', 'Data', 'HoraSaida', 'HoraChegada',
+    'ID', 'OrgId', 'VeiculoId', 'Data', 'HoraSaida', 'HoraChegadaEstimada',
     'Solicitante', 'Setor', 'Passageiros',
-    'LocalSaida', 'LocalChegada', 'MapaUrl',
+    'LocalSaida', 'LocalChegada', 'Paradas', 'MapaUrl',
+    'TempoEstimadoMin', 'DistanciaKm',
     'Status', 'Aprovador', 'Observacao',
     'DataSolicitacao', 'CriadoEm'
   ];
 
   function _serializarIndice(rc) {
+    var rota = rc.rota || {};
     return [
-      rc.id, rc.orgId, rc.data, rc.horaSaida, rc.horaChegada,
+      rc.id, rc.orgId,
+      rc.veiculoId || 'default',
+      rc.data, rc.horaSaida, rc.horaChegadaEstimada || '',
       rc.solicitante, rc.solicitanteSetor || '',
       (rc.passageiros || []).join('; '),
-      (rc.rota || {}).localSaida    || '',
-      (rc.rota || {}).localChegada  || '',
-      (rc.rota || {}).mapaUrl       || '',
+      rota.localSaida   || '',
+      rota.localChegada || '',
+      JSON.stringify(rota.paradas || []),
+      rota.mapaUrl      || '',
+      rota.tempoEstimadoMin || '',
+      rota.distanciaKm      || '',
       rc.status, rc.aprovador || '', rc.observacao || '',
       rc.dataSolicitacao, rc.criadoEm
     ];
@@ -69,8 +86,8 @@ var ReservaCarroRepository = (function() {
     if (filtros.status)      lista = lista.filter(function(r) { return r.status === filtros.status; });
     if (filtros.data)        lista = lista.filter(function(r) { return r.data === filtros.data; });
     if (filtros.solicitante) lista = lista.filter(function(r) { return r.solicitante === filtros.solicitante; });
+    if (filtros.veiculoId)   lista = lista.filter(function(r) { return (r.veiculoId || 'default') === filtros.veiculoId; });
     return lista.sort(function(a, b) {
-      // Ordena por data de viagem desc, depois por horário desc
       var cmp = (b.data || '').localeCompare(a.data || '');
       if (cmp !== 0) return cmp;
       return (b.horaSaida || '').localeCompare(a.horaSaida || '');
@@ -89,25 +106,33 @@ var ReservaCarroRepository = (function() {
   function inserir(dados, orgId) {
     var agr = agora();
     var id  = gerarId('rc');
+    var rotaEntrada = dados.rota || {};
     var rc  = {
       id:              id,
       orgId:           orgId,
+      veiculoId:       dados.veiculoId       || 'default',
       data:            dados.data            || '',
       horaSaida:       dados.horaSaida       || '',
-      horaChegada:     dados.horaChegada     || '',
+      horaChegadaEstimada: dados.horaChegadaEstimada || '',
       solicitante:     dados.solicitante     || '',
       solicitanteSetor: dados.solicitanteSetor || '',
       passageiros:          Array.isArray(dados.passageiros)         ? dados.passageiros         : [],
       passageirosInternos:  Array.isArray(dados.passageirosInternos) ? dados.passageirosInternos : [],
       passageirosExternos:  Array.isArray(dados.passageirosExternos) ? dados.passageirosExternos : [],
       rota: {
-        localSaida:   (dados.rota || {}).localSaida   || dados.localSaida   || '',
-        localChegada: (dados.rota || {}).localChegada || dados.localChegada || '',
-        mapaUrl:      (dados.rota || {}).mapaUrl      || dados.mapaUrl      || '',
-        paradas:      Array.isArray((dados.rota || {}).paradas) ? dados.rota.paradas :
-                      Array.isArray(dados.paradas) ? dados.paradas : []
+        localSaida:       rotaEntrada.localSaida   || dados.localSaida   || '',
+        coordSaida:       rotaEntrada.coordSaida   || null,
+        localChegada:     rotaEntrada.localChegada || dados.localChegada || '',
+        coordChegada:     rotaEntrada.coordChegada || null,
+        mapaUrl:          rotaEntrada.mapaUrl      || dados.mapaUrl      || '',
+        paradas:          Array.isArray(rotaEntrada.paradas) ? rotaEntrada.paradas :
+                          Array.isArray(dados.paradas)       ? dados.paradas : [],
+        tempoEstimadoMin: rotaEntrada.tempoEstimadoMin || dados.tempoEstimadoMin || 0,
+        distanciaKm:      rotaEntrada.distanciaKm      || dados.distanciaKm      || 0
       },
-      observacao:      dados.observacao      || '',
+      acaoId:          dados.acaoId     || '',
+      acaoNome:        dados.acaoNome   || '',
+      observacao:      dados.observacao || '',
       status:          'PENDENTE',
       aprovador:       '',
       motivoRecusa:    '',
@@ -141,19 +166,51 @@ var ReservaCarroRepository = (function() {
   }
 
   /**
-   * Retorna todas as reservas APROVADAS em uma data específica (para verificação de conflito).
+   * Atualiza apenas os campos de rota (localChegada, coordChegada, paradas, mapaUrl).
+   * Usado pelo aprovador para editar a rota sem alterar status ou horários.
    */
-  function listarAprovadasNaData(data, orgId) {
+  function atualizarRota(id, dadosRota, orgId) {
+    var atualizado = null;
+    modifyJSON(_ARQUIVO, function(lista) {
+      if (!Array.isArray(lista)) return lista;
+      return lista.map(function(r) {
+        if (r.id !== id || r.orgId !== orgId) return r;
+        var rotaAtual = r.rota || {};
+        var novaRota  = Object.assign({}, rotaAtual, {
+          localChegada: dadosRota.localChegada !== undefined ? dadosRota.localChegada : rotaAtual.localChegada,
+          coordChegada: dadosRota.coordChegada !== undefined ? dadosRota.coordChegada : rotaAtual.coordChegada,
+          paradas:      Array.isArray(dadosRota.paradas)     ? dadosRota.paradas      : rotaAtual.paradas,
+          mapaUrl:      dadosRota.mapaUrl      !== undefined ? dadosRota.mapaUrl       : rotaAtual.mapaUrl
+        });
+        atualizado = Object.assign({}, r, { rota: novaRota, atualizadoEm: agora() });
+        return atualizado;
+      });
+    });
+    if (atualizado) _indexar(orgId, atualizado);
+    return atualizado;
+  }
+
+  /**
+   * Retorna todas as reservas APROVADAS de um veículo em uma data específica.
+   * Usado para verificação de conflito e cálculo de disponibilidade.
+   */
+  function listarAprovadasNaData(data, veiculoId, orgId) {
     var lista = readJSON(_ARQUIVO);
     if (!Array.isArray(lista)) return [];
+    var vid = veiculoId || 'default';
     return lista.filter(function(r) {
-      return r.orgId === orgId && r.data === data && r.status === 'APROVADA';
+      return r.orgId === orgId &&
+             r.data  === data  &&
+             r.status === 'APROVADA' &&
+             (r.veiculoId || 'default') === vid;
     });
   }
 
   /**
    * Verifica sobreposição com reservas APROVADAS e, se não houver conflito, aprova atomicamente.
    * A verificação e a escrita ocorrem dentro do mesmo lock (modifyJSON), eliminando race condition.
+   * Filtra conflitos pelo mesmo veículo.
+   *
    * @returns {{ atualizado: object|null, conflito: object|null }}
    */
   function aprovarAtomico(id, patch, orgId) {
@@ -169,15 +226,17 @@ var ReservaCarroRepository = (function() {
       }
       if (!rc) return lista;
 
+      var vid     = rc.veiculoId || 'default';
       var iniNovo = _horaParaMinRepo(rc.horaSaida);
-      var fimNovo = _horaParaMinRepo(rc.horaChegada);
+      var fimNovo = _horaParaMinRepo(rc.horaChegadaEstimada || rc.horaChegada);
 
       for (var j = 0; j < lista.length; j++) {
         var r = lista[j];
         if (r.orgId !== orgId || r.data !== rc.data || r.id === id) continue;
+        if ((r.veiculoId || 'default') !== vid) continue;
         if (r.status !== 'APROVADA') continue;
         var ini = _horaParaMinRepo(r.horaSaida);
-        var fim = _horaParaMinRepo(r.horaChegada);
+        var fim = _horaParaMinRepo(r.horaChegadaEstimada || r.horaChegada);
         if (iniNovo < fim && fimNovo > ini) { conflito = r; return lista; }
       }
 
@@ -206,13 +265,14 @@ var ReservaCarroRepository = (function() {
   }
 
   return {
-    listar:               listar,
-    buscarPorId:          buscarPorId,
-    inserir:              inserir,
-    atualizar:            atualizar,
+    listar:                listar,
+    buscarPorId:           buscarPorId,
+    inserir:               inserir,
+    atualizar:             atualizar,
+    atualizarRota:         atualizarRota,
     listarAprovadasNaData: listarAprovadasNaData,
-    aprovarAtomico:       aprovarAtomico,
-    prepararIndice:       prepararIndice
+    aprovarAtomico:        aprovarAtomico,
+    prepararIndice:        prepararIndice
   };
 
 })();
