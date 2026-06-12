@@ -492,7 +492,7 @@
 
 ### Pendentes / próxima ação
 - **Migração obrigatória**: rodar `fase1_colaboradores_migrarHistoricosDemograficos()` no GAS Editor → deve retornar `{ok:true, seeded:N, ignored:M}`
-- **Testar no browser (@821)**: Meu Perfil → Saúde → "PcD = Sim" → preencher detalhes + "Vigente desde" → salvar → abrir de novo → data vigente pré-preenchida; Ficha RH → mesmo fluxo; confirmar que genero/racaCor/sexualidade também criam histórico
+- **Testar no browser (@825)**: Meu Perfil → Saúde → "PcD = Sim" → preencher detalhes → salvar → confirmar persiste; reabrir → dados preenchidos; Ficha RH → mesmo fluxo
 - **Pendente anterior**: Deduplificação João Paulo — `recuperar_diagnosticar_duplicatas()` → `recuperar_deduplicar_joao_paulo(id)`
 
 ---
