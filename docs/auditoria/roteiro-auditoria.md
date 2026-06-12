@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @799 · BI Demográfico — fix modulo RELATORIOS→PESSOAS
+> Deploy atual: @802 · BI Demográfico — UI redesenhada (ícones ms, headers coloridos, sem termos vazados)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -850,7 +850,37 @@ Ponto: consolidado como filtro nos cards + carga no form de colaborador + nomes 
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 48 (2026-06-11)
+## HANDOFF ATUAL — SESSÃO 62 (2026-06-11)
+
+### Estado atual: Deploy @802
+
+### O que foi feito nesta sessão
+
+BI Demográfico — UI redesenhada: ícones corrigidos (material-icons-round→ms), cabeçalhos de cards com faixa colorida por categoria, semântica de ícones melhorada, `modulo:'PESSOAS'` no menu.
+
+| Arquivo | Mudança |
+|---|---|
+| `index.html` | View `#view-bi-demografico`: `view-titulo`/`view-subtitulo` no cabeçalho; `ms ms-sm` em todos os ícones; 4 cards (gênero, sexualidade, raça, faixa etária) + setor + território com `border-bottom:3px solid` colorido + gradiente de fundo; ícones: `people`, `volunteer_activism`, `groups`, `person`, `account_tree`, `location_city`, `travel_explore`, `psychology`; KPI placeholder "Carregando métricas…" |
+| `PROGRESS.md` | Fase @802 documentada |
+| `docs/auditoria/roteiro-auditoria.md` | Header + HANDOFF atualizados |
+
+### Checklist da sessão
+- [x] `ms` em todos os ícones da view BI — zero `material-icons-round`
+- [x] GAS.biDemografico.equipe + .beneficiarios — bindings existem
+- [x] modulo:'PESSOAS' no menu — módulo ativo sem necessidade de ativação manual
+- [x] BtnGuard em: bi-dem-btn-atualizar, bi-dem-btn-mapa, bi-dem-btn-personas
+- [x] data-bg-skip="1" em botões de navegação/filtro
+- [x] MetricsToggle.init chamado em _renderKpis após popular #bi-dem-kpis
+
+### Próxima sessão
+
+1. Testar BI Demográfico no browser: abrir módulo → KPIs carregam → 4 cards renderizam → filtros funcionam → mapa abre (Carregar Mapa) → Personas geradas
+2. Testar tab Beneficiários → ajusta título, oculta filtros vinculo/status, recarrega dados
+3. Verificar console F12 — zero TypeError/undefined
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 48 (2026-06-11)
 
 ### Estado atual: Deploy @787
 

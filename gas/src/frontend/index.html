@@ -8867,8 +8867,13 @@ select.form-control { cursor: pointer; }
 
         <!-- Barra de filtros -->
         <div class="filter-bar" id="bi-dem-filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center;">
-          <select class="select-sm" id="bi-dem-sel-periodo" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
-            <option value="">Todos os períodos</option>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap;">De:</span>
+          <select class="select-sm" id="bi-dem-sel-de" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="">—</option>
+          </select>
+          <span style="font-size:12px;color:var(--text2);white-space:nowrap;">Até:</span>
+          <select class="select-sm" id="bi-dem-sel-ate" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
+            <option value="">—</option>
           </select>
           <select class="select-sm" id="bi-dem-sel-setor" onchange="BiDemograficoUI.aplicarFiltros()" data-bg-skip="1">
             <option value="">Todos os setores</option>
@@ -35952,19 +35957,32 @@ var BiDemograficoUI = (function () {
     var d = _dados[_contexto];
     if (!d || !d.registros) return;
 
-    // Período (anos presentes nos dados)
-    var selPer = document.getElementById('bi-dem-sel-periodo');
-    if (selPer) {
-      var anos = {};
-      var campoPer = _contexto === 'equipe' ? 'dataAdmissao' : 'criadoEm';
+    // Período — intervalo De/Até populado com todos os anos do dataset
+    var selDe  = document.getElementById('bi-dem-sel-de');
+    var selAte = document.getElementById('bi-dem-sel-ate');
+    if (selDe && selAte) {
+      var anoMin = 9999, anoMax = new Date().getFullYear();
       d.registros.forEach(function (r) {
-        var a = String(r[campoPer]||'').slice(0,4);
-        if (/^\d{4}$/.test(a)) anos[a] = true;
+        var a1 = parseInt(String(r.dataAdmissao || r.criadoEm || '').slice(0,4), 10);
+        var a2 = parseInt(String(r.dataDesligamento || '').slice(0,4), 10);
+        if (a1 >= 2000 && a1 < anoMin) anoMin = a1;
+        if (a1 >= 2000 && a1 > anoMax) anoMax = a1;
+        if (a2 >= 2000 && a2 > anoMax) anoMax = a2;
       });
-      var anosArr = Object.keys(anos).sort().reverse();
-      var optsP = '<option value="">Todos os períodos</option>';
-      anosArr.forEach(function (a) { optsP += '<option value="' + a + '">' + a + '</option>'; });
-      selPer.innerHTML = optsP;
+      if (anoMin === 9999) anoMin = anoMax;
+      var optsD = '<option value="">—</option>';
+      var optsA = '<option value="">—</option>';
+      for (var y = anoMin; y <= anoMax; y++) {
+        optsD += '<option value="' + y + '">' + y + '</option>';
+        optsA += '<option value="' + y + '">' + y + '</option>';
+      }
+      // preserva seleção atual ao recarregar
+      var prevDe  = selDe.value;
+      var prevAte = selAte.value;
+      selDe.innerHTML  = optsD;
+      selAte.innerHTML = optsA;
+      if (prevDe)  selDe.value  = prevDe;
+      if (prevAte) selAte.value = prevAte;
     }
 
     // Setor / Ação
@@ -35987,7 +36005,8 @@ var BiDemograficoUI = (function () {
 
   function _getFiltros() {
     return {
-      periodo: (document.getElementById('bi-dem-sel-periodo')||{}).value || '',
+      de:      parseInt((document.getElementById('bi-dem-sel-de') ||{}).value, 10) || 0,
+      ate:     parseInt((document.getElementById('bi-dem-sel-ate')||{}).value, 10) || 0,
       setor:   (document.getElementById('bi-dem-sel-setor')  ||{}).value || '',
       vinculo: (document.getElementById('bi-dem-sel-vinculo')||{}).value || '',
       status:  ((document.getElementById('bi-dem-sel-status') ||{}).value !== undefined
@@ -36000,11 +36019,20 @@ var BiDemograficoUI = (function () {
     var d = _dados[_contexto];
     if (!d || !d.registros) return [];
     var f = _getFiltros();
+    var anoAtual = new Date().getFullYear();
     return d.registros.filter(function (r) {
       if (_contexto === 'equipe') {
         if (f.status === 'ativo'     && r.status !== 'ativo')    return false;
         if (f.status === 'desligado' && r.status === 'ativo')    return false;
-        if (f.periodo && String(r.dataAdmissao||'').slice(0,4)  !== f.periodo) return false;
+        if (f.de || f.ate) {
+          // sobreposição: pessoa ativa em [iniPessoa, fimPessoa] ∩ [de, ate]
+          var iniPessoa = parseInt(String(r.dataAdmissao||'').slice(0,4), 10) || 0;
+          var fimRaw    = String(r.dataDesligamento||'').slice(0,4);
+          var fimPessoa = fimRaw ? parseInt(fimRaw, 10) : anoAtual;
+          var filtroIni = f.de  || 0;
+          var filtroFim = f.ate || anoAtual;
+          if (fimPessoa < filtroIni || iniPessoa > filtroFim) return false;
+        }
         if (f.setor   && r.setor !== f.setor) return false;
         if (f.vinculo) {
           var tv = String(r.tipoVinculo||'').toLowerCase().replace(/\s+/g,'');
@@ -36013,8 +36041,11 @@ var BiDemograficoUI = (function () {
           if (fv !== 'pj' && tv.indexOf(fv) === -1) return false;
         }
       } else {
-        if (f.periodo && String(r.criadoEm||'').slice(0,4) !== f.periodo) return false;
-        if (f.setor   && r.acaoNome !== f.setor) return false;
+        if (f.de || f.ate) {
+          var anoReg = parseInt(String(r.criadoEm||'').slice(0,4), 10) || 0;
+          if ((f.de && anoReg < f.de) || (f.ate && anoReg > f.ate)) return false;
+        }
+        if (f.setor && r.acaoNome !== f.setor) return false;
       }
       return true;
     });
@@ -36023,13 +36054,13 @@ var BiDemograficoUI = (function () {
   function aplicarFiltros() {
     _renderizar();
     var f = _getFiltros();
-    var temFiltro = f.periodo || f.setor || f.vinculo || (f.status && f.status !== 'ativo');
+    var temFiltro = f.de || f.ate || f.setor || f.vinculo || (f.status && f.status !== 'ativo');
     var btn = document.getElementById('bi-dem-btn-limpar');
     if (btn) btn.style.display = temFiltro ? '' : 'none';
   }
 
   function limparFiltros() {
-    ['bi-dem-sel-periodo','bi-dem-sel-setor','bi-dem-sel-vinculo'].forEach(function (id) {
+    ['bi-dem-sel-de','bi-dem-sel-ate','bi-dem-sel-setor','bi-dem-sel-vinculo'].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.value = '';
     });
