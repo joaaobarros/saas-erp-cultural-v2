@@ -205,6 +205,19 @@ function ctrl_pessoas_excluir(id) {
     if (nivel !== 'superadmin' && nivel !== 'rh')
       throw new Error('Apenas RH e Superadmin podem excluir colaboradores.');
     if (!id) throw new Error('ID é obrigatório.');
+
+    // Bloqueia auto-exclusão: impede apagar o próprio registro de colaborador.
+    var alvo = ColaboradorRepository.buscarPorId(ctx.orgId, id);
+    if (alvo) {
+      var emailAlvo = String(alvo.emailInstitucional || alvo.email || '').toLowerCase().trim();
+      if (emailAlvo && emailAlvo === ctx.email.toLowerCase().trim()) {
+        throw new Error(
+          'Não é permitido excluir seu próprio registro de colaborador. ' +
+          'Solicite a outro administrador ou use "Registrar desligamento" para desativar.'
+        );
+      }
+    }
+
     ColaboradorRepository.excluir(ctx.orgId, id);
     AuditoriaService.registrar('COLABORADOR_EXCLUIDO', 'pessoas', { id: id, operador: ctx.email });
     return { ok: true };
@@ -758,6 +771,87 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
 // ═══════════════════════════════════════════════════════════════════
 
 /**
+ * DIAGNÓSTICO — lista todos os registros de colaboradores.json que possuem o
+ * mesmo emailInstitucional de João Paulo Rodrigues Barros, para identificar
+ * o registro duplicado criado acidentalmente.
+ *
+ * Executar no GAS Editor. Copiar os IDs retornados e usar em
+ * recuperar_deduplicar_joao_paulo(idParaExcluir) para remover o duplicado.
+ */
+function recuperar_diagnosticar_duplicatas() {
+  var EMAIL = 'joao.barros@idm.org.br';
+  var todos  = lerJSON('colaboradores.json') || [];
+  var matches = todos.filter(function(c) {
+    return (String(c.emailInstitucional || c.email || '')).toLowerCase().trim() === EMAIL.toLowerCase() ||
+           (c.nome || '').toLowerCase().indexOf('joão paulo rodrigues barros') !== -1 ||
+           (c.nome || '').toLowerCase().indexOf('joao paulo rodrigues barros') !== -1;
+  });
+
+  return {
+    totalEncontrados: matches.length,
+    registros: matches.map(function(c) {
+      var campos = Object.keys(c).filter(function(k) { return !!c[k]; }).length;
+      return {
+        id:           c.id,
+        nome:         c.nome,
+        email:        c.emailInstitucional,
+        numRegistro:  c.numRegistro,
+        criadoEm:     c.criadoEm,
+        atualizadoEm: c.atualizadoEm,
+        status:       c.status,
+        camposPreenchidos: campos,
+        temDadosPessoais: !!(c.cpf || c.dataNascimento || c.telefone || c.emailPessoal || c.endereco)
+      };
+    }).sort(function(a, b) {
+      // Mais completo primeiro
+      return b.camposPreenchidos - a.camposPreenchidos;
+    }),
+    instrucao: 'Execute recuperar_deduplicar_joao_paulo("ID_DO_DUPLICADO") passando o ID do registro com menos campos preenchidos.'
+  };
+}
+
+/**
+ * Remove o registro duplicado/esparso de João Paulo, preservando o original completo.
+ * Executar somente após confirmar o ID correto via recuperar_diagnosticar_duplicatas().
+ *
+ * @param {string} idParaExcluir - ID do registro DUPLICADO (o esparso, com menos dados)
+ */
+function recuperar_deduplicar_joao_paulo(idParaExcluir) {
+  if (!idParaExcluir) {
+    return { ok: false, erro: 'Passe o ID do registro duplicado. Use recuperar_diagnosticar_duplicatas() para encontrá-lo.' };
+  }
+  var orgId = getOrgConfig().orgId;
+
+  // Confirma que o registro a excluir é realmente o esparso
+  var alvo = ColaboradorRepository.buscarPorId(orgId, idParaExcluir);
+  if (!alvo) return { ok: false, erro: 'Registro ' + idParaExcluir + ' não encontrado.' };
+
+  // Segurança: não apagar registro com dados pessoais ricos
+  var temDadosPessoais = !!(alvo.cpf || alvo.dataNascimento || alvo.emailPessoal ||
+                            (alvo.telefone && alvo.telefone.length > 5));
+  if (temDadosPessoais) {
+    return {
+      ok: false,
+      erro: 'ATENÇÃO: o registro ' + idParaExcluir + ' parece ter dados pessoais (cpf/nascimento/telefone/emailPessoal). ' +
+            'Verifique novamente os IDs via recuperar_diagnosticar_duplicatas() antes de prosseguir.',
+      dadosEncontrados: { cpf: !!alvo.cpf, nascimento: alvo.dataNascimento, telefone: alvo.telefone, emailPessoal: alvo.emailPessoal }
+    };
+  }
+
+  ColaboradorRepository.excluir(orgId, idParaExcluir);
+  AuditoriaService.registrar('COLABORADOR_DUPLICADO_REMOVIDO', 'pessoas', {
+    id: idParaExcluir, nome: alvo.nome, numRegistro: alvo.numRegistro,
+    operador: 'recuperacao_emergencia'
+  });
+
+  return {
+    ok: true,
+    mensagem: 'Registro duplicado ' + idParaExcluir + ' (numRegistro: ' + alvo.numRegistro + ') removido com sucesso.',
+    registroOriginalPreservado: 'Execute recuperar_diagnosticar_duplicatas() para confirmar que o registro completo persiste.'
+  };
+}
+
+/**
  * Fase 1.2 — prepara índice da aba EQUIPES.Funcionarios.
  */
 function fase1_colaboradores_prepararIndice() {
@@ -830,7 +924,9 @@ function recuperar_colaborador_historico() {
       for (var j = 0; j < lista.length; j++) {
         var c = lista[j];
         if ((c.nome || '').toLowerCase().indexOf('joão paulo rodrigues barros') !== -1 ||
-            (c.emailInstitucional || '').indexOf('jpbarros') !== -1) {
+            (c.emailInstitucional || '').toLowerCase().indexOf('joao.barros') !== -1 ||
+            (c.emailInstitucional || '').toLowerCase().indexOf('jpbarros') !== -1 ||
+            (c.emailPessoal || '').toLowerCase().indexOf('jpbarros') !== -1) {
           // Critério de "dados ricos": pelo menos 3 campos pessoais não-vazios
           var camposRicos = ['nomeApelido','pronomes','emailPessoal','dataNascimento',
                              'genero','sexualidade','racaCor','telefone','cpf',
@@ -874,13 +970,35 @@ function recuperar_colaborador_aplicar() {
   var resultado = recuperar_colaborador_historico();
   if (!resultado.ok) return resultado;
 
-  var snap   = resultado.dadosRecuperados;
-  var orgId  = snap.orgId || getOrgConfig().orgId;
-  var atual  = ColaboradorRepository.buscarPorId(orgId, snap.id);
+  var snap  = resultado.dadosRecuperados;
+  var orgId = snap.orgId || getOrgConfig().orgId;
+  var atual = ColaboradorRepository.buscarPorId(orgId, snap.id);
 
-  if (!atual) return { ok: false, erro: 'Colaborador ID ' + snap.id + ' não encontrado no estado atual.' };
+  // Tentar também por email quando o registro não é encontrado pelo ID original
+  if (!atual && snap.emailInstitucional) {
+    atual = ColaboradorRepository.buscarPorEmail(orgId, snap.emailInstitucional);
+  }
 
-  // Preservar status e datas atuais; restaurar dados pessoais/profissionais do snapshot
+  if (!atual) {
+    // Registro foi deletado — recriar a partir do snapshot (salvar faz insert quando ID não existe)
+    Logger.info('recuperar_colaborador_aplicar', 'Registro deletado — recriando a partir do snapshot de ' + resultado.revisaoData);
+    snap.orgId = orgId;
+    if (!snap.status) snap.status = 'ativo';
+    if (snap.ativo === undefined) snap.ativo = true;
+    ColaboradorRepository.salvar(orgId, snap);
+    AuditoriaService.registrar('COLABORADOR_RESTAURADO_HISTORICO', 'pessoas', {
+      id: snap.id, nome: snap.nome, revisaoId: resultado.revisaoId,
+      revisaoData: resultado.revisaoData, operador: 'recuperacao_emergencia', acao: 'RECRIADO'
+    });
+    return {
+      ok: true,
+      acao: 'RECRIADO',
+      mensagem: 'Colaborador ' + snap.nome + ' RECRIADO a partir do snapshot de ' + resultado.revisaoData +
+                '. Verifique a ficha no módulo RH.'
+    };
+  }
+
+  // Registro existe — mesclar dados do snapshot preservando status atual
   var _PRESERVAR_ATUAL = ['status', 'ativo', 'atualizadoEm'];
   Object.keys(snap).forEach(function(k) {
     if (_PRESERVAR_ATUAL.indexOf(k) === -1) atual[k] = snap[k];
@@ -889,10 +1007,130 @@ function recuperar_colaborador_aplicar() {
   ColaboradorRepository.salvar(orgId, atual);
   AuditoriaService.registrar('COLABORADOR_RESTAURADO_HISTORICO', 'pessoas', {
     id: snap.id, nome: snap.nome, revisaoId: resultado.revisaoId,
-    revisaoData: resultado.revisaoData, operador: 'recuperacao_emergencia'
+    revisaoData: resultado.revisaoData, operador: 'recuperacao_emergencia', acao: 'ATUALIZADO'
   });
 
-  return { ok: true, mensagem: 'Dados de ' + snap.nome + ' restaurados a partir da revisão ' + resultado.revisaoData };
+  return { ok: true, acao: 'ATUALIZADO', mensagem: 'Dados de ' + snap.nome + ' restaurados a partir da revisão ' + resultado.revisaoData };
+}
+
+/**
+ * DIAGNÓSTICO — mostra o estado atual de colaboradores.json para João Paulo.
+ *
+ * Executar no GAS Editor quando o colaborador some da lista mas Meu Perfil ainda funciona.
+ * Retorna todos os registros que casam com o email ou nome, independente de status.
+ */
+function recuperar_diagnosticar_estado() {
+  var orgId   = getOrgConfig().orgId;
+  var EMAIL_INST  = 'joao.barros@idm.org.br';
+  var EMAIL_PESS  = 'jpbarros.boletos@gmail.com';
+  var NOME_BUSCA  = 'joão paulo rodrigues barros';
+
+  var todos = lerJSON('colaboradores.json') || [];
+  var matches = todos.filter(function(c) {
+    var eInst = String(c.emailInstitucional || '').toLowerCase().trim();
+    var ePess = String(c.emailPessoal || c.email || '').toLowerCase().trim();
+    var nome  = String(c.nome || '').toLowerCase().trim();
+    return eInst === EMAIL_INST ||
+           ePess === EMAIL_PESS ||
+           nome.indexOf(NOME_BUSCA) !== -1;
+  });
+
+  var acesso = lerJSON('usuarios_acesso.json') || [];
+  var regAcesso = acesso.filter(function(u) {
+    return (u.email || '').toLowerCase() === EMAIL_INST ||
+           (u.email || '').toLowerCase() === EMAIL_PESS;
+  });
+
+  return {
+    totalColaboradores: todos.length,
+    matchesEncontrados: matches.length,
+    colaboradores: matches.map(function(c) {
+      return {
+        id: c.id, nome: c.nome, emailInstitucional: c.emailInstitucional,
+        emailPessoal: c.emailPessoal, status: c.status, ativo: c.ativo,
+        numRegistro: c.numRegistro, cargo: c.cargo, setor: c.setor,
+        criadoEm: c.criadoEm, atualizadoEm: c.atualizadoEm,
+        camposPreenchidos: Object.keys(c).filter(function(k){ return !!c[k]; }).length
+      };
+    }),
+    registrosAcesso: regAcesso.map(function(u) {
+      return { email: u.email, nome: u.nome, papel: u.papel, status: u.status };
+    }),
+    diagnostico: matches.length === 0
+      ? 'ALERTA: nenhum registro de colaborador encontrado — execute recuperar_colaborador_aplicar() ou recuperar_colaborador_do_acesso()'
+      : (matches.length > 1
+        ? 'ATENÇÃO: ' + matches.length + ' registros encontrados (duplicata) — use recuperar_deduplicar_joao_paulo(idEsparso)'
+        : 'OK: 1 registro encontrado com status "' + matches[0].status + '"')
+  };
+}
+
+/**
+ * RECUPERAÇÃO SEM HISTÓRICO — cria registro de colaborador a partir de usuarios_acesso.json.
+ *
+ * Usar quando recuperar_colaborador_aplicar() falha porque o histórico do Drive
+ * não tem uma revisão útil (arquivo novo demais, poucas revisões, etc.).
+ *
+ * O registro criado tem: nome, email institucional, email pessoal, papel/cargo básico.
+ * Os campos de RH (CPF, numRegistro, dataAdmissao, salário etc.) devem ser preenchidos
+ * manualmente na ficha RH após a execução desta função.
+ *
+ * Idempotente: não cria duplicata se já existe um registro para o mesmo email.
+ */
+function recuperar_colaborador_do_acesso() {
+  var EMAIL_INST  = 'joao.barros@idm.org.br';
+  var EMAIL_PESS  = 'jpbarros.boletos@gmail.com';
+  var orgId       = getOrgConfig().orgId;
+
+  // Verificar se já existe um registro para não duplicar
+  var existente = ColaboradorRepository.buscarPorEmail(orgId, EMAIL_INST) ||
+                  ColaboradorRepository.buscarPorEmail(orgId, EMAIL_PESS);
+  if (existente) {
+    return {
+      ok: false,
+      mensagem: 'Colaborador já existe com ID ' + existente.id + ' e status "' + existente.status + '". ' +
+                'Use recuperar_diagnosticar_estado() para ver o estado completo.',
+      colaborador: existente
+    };
+  }
+
+  // Buscar dados base em usuarios_acesso.json
+  var acesso = lerJSON('usuarios_acesso.json') || [];
+  var usr = null;
+  for (var i = 0; i < acesso.length; i++) {
+    var email = String(acesso[i].email || '').toLowerCase().trim();
+    if (email === EMAIL_INST || email === EMAIL_PESS) { usr = acesso[i]; break; }
+  }
+
+  var novoColab = {
+    orgId:              orgId,
+    nome:               (usr && usr.nome) ? usr.nome : 'João Paulo Rodrigues Barros',
+    emailInstitucional: EMAIL_INST,
+    emailPessoal:       EMAIL_PESS,
+    nomeApelido:        usr ? (usr.nomeApelido || '') : '',
+    pronomes:           usr ? (usr.pronomes || 'Ele/dele') : 'Ele/dele',
+    telefone:           usr ? (usr.telefone || '') : '',
+    fotoPerfil:         usr ? (usr.fotoPerfil || '') : '',
+    setor:              'gestao',
+    cargo:              'Gerente Executivo I',
+    tipoVinculo:        'clt',
+    status:             'ativo',
+    ativo:              true,
+    origem:             'recuperacao_sem_historico'
+  };
+
+  ColaboradorRepository.salvar(orgId, novoColab);
+  AuditoriaService.registrar('COLABORADOR_RECRIADO_DO_ACESSO', 'pessoas', {
+    nome: novoColab.nome, email: EMAIL_INST, operador: 'recuperacao_emergencia'
+  });
+
+  var criado = ColaboradorRepository.buscarPorEmail(orgId, EMAIL_INST);
+  return {
+    ok: true,
+    mensagem: 'Colaborador recriado com ID ' + (criado ? criado.id : '?') + '. ' +
+              'ATENÇÃO: CPF, numRegistro, dataAdmissao, salário e outros campos RH ' +
+              'precisam ser preenchidos manualmente na ficha RH.',
+    colaborador: criado
+  };
 }
 
 /**

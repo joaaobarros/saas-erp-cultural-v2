@@ -468,7 +468,60 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 61 (2026-06-11) → SESSÃO 62
+## HANDOFF ATUAL — SESSÃO 62 (2026-06-11) → SESSÃO 63
+
+### Estado atual: ~266 bugs registrados · Deploy @803 (GAS)
+
+### O que foi feito nesta sessão (s62)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @803 | RH — fix 3 bugs críticos de exclusão/recuperação de colaborador | **Bug 1 — auto-exclusão**: `ctrl_pessoas_excluir` bloqueava hard-delete do próprio registro (erro explícito antes de qualquer operação). **Bug 2 — recuperação pós-delete**: `recuperar_colaborador_aplicar` fazia `buscarPorId` → recebia null → retornava erro; agora tenta também por email e, se não encontrar, RECRIA o registro via `ColaboradorRepository.salvar` (insert). **Bug 3 — busca no histórico**: `recuperar_colaborador_historico` usava `indexOf('jpbarros')` no email institucional `joao.barros@idm.org.br` — nunca casava; corrigido para `indexOf('joao.barros')`. **Nova** `recuperar_diagnosticar_estado()`: mostra estado real de `colaboradores.json` (matches por email/nome, duplicatas, registros em `usuarios_acesso.json`). **Nova** `recuperar_colaborador_do_acesso()`: caminho de recuperação sem histórico Drive — cria registro mínimo de `usuarios_acesso.json` (campos RH completados manualmente depois); idempotente. |
+| @802 | BI Demográfico — UI redesenhada | Fase anterior. |
+| @797 | BI Demográfico — Painel de análise de perfil | **Backend**: `bi_demografico_controller.gs` (já existia) — `ctrl_bi_demografico_equipe` (microdados anonimizados, geocodificação Maps API + cache `bi_geo_cache.json`) e `ctrl_bi_demografico_beneficiarios` (inscrições Público, CEP→bairro ViaCEP + geocodificação). **Frontend**: view `#view-bi-demografico`; tabs Equipe/Beneficiários; filtros (período/ano, setor/ação, vínculo CLT/PJ/Estagiário/Terceirizado, status); KPI strip MetricsToggle; 4 cards demográficos com barras coloridas por categoria (Gênero, Sexualidade, Raça/Cor, Faixa Etária); grid Setor+Território (toggle Bairros/Cidades); mapa de calor Leaflet+leaflet-heat (OpenStreetMap; fallback círculos); análise de Personas (perfil predominante, jovens <30, sênior 40+). `GAS.biDemografico.equipe/beneficiarios`. Menu RELATORIOS. |
+
+### Checklist de auditoria — s62
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* namespace — sem mudanças no frontend
+[x] CSS — sem mudanças de CSS
+[x] IDs de DOM — sem mudanças de DOM
+[x] FsmGuardian — sem transições de status nesta fase
+[x] Modais — sem modais novos
+[x] Datas — sem datas em UI
+[x] BtnGuard — sem botões novos
+```
+
+### Protocolo de recuperação do colaborador (executar no GAS Editor após deploy)
+
+**Passo 1** — diagnóstico:
+```javascript
+recuperar_diagnosticar_estado()
+// Retorna: matchesEncontrados, status de cada registro, registros em usuarios_acesso.json
+```
+
+**Passo 2A** — se Drive tiver histórico útil:
+```javascript
+recuperar_colaborador_aplicar()
+// Agora consegue RECRIAR o registro se foi deletado
+```
+
+**Passo 2B** — se `recuperar_colaborador_aplicar()` retornar ok:false:
+```javascript
+recuperar_colaborador_do_acesso()
+// Cria registro mínimo; completar campos RH na ficha depois
+```
+
+### Pendentes / próxima ação
+- **Executar protocolo de recuperação acima no GAS Editor**
+- **Testar no browser**: RH → Equipe → "João Paulo" deve aparecer na lista; Meu Perfil → dados presentes (recarregar após deploy para limpar cache de sessão)
+- **Testar no browser (@797 — BI Demográfico)**: navegar em BI Demográfico → KPIs carregam; barras de gênero/sexualidade/raça/faixa etária aparecem
+- **Testar no browser (@796 — Ficha RH)**: CPF na ficha; gênero Cis/Trans; vínculo Terceirizado
+- **Pós-deploy @790 (obrigatório p/ professores)**: Ficha RH → marcar como "Apuração semanal" + rodar `ctrl_ponto_recalcular_bh_todos`
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 61 (2026-06-11) → SESSÃO 62
 
 ### Estado atual: ~266 bugs registrados · Deploy @797 (GAS)
 
