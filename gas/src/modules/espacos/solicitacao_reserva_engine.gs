@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file modules/espacos/solicitacao_reserva_engine.gs
  * @layer modules/espacos
  * @description Engine de Solicitações de Reserva — workflow de aprovação.
@@ -25,8 +25,8 @@
 var SolicitacaoReservaEngine = (function() {
 
   var PAPEIS_APROVACAO_DIRETA = ['gestor','admin','superadmin','habilitador'];
-  // Papéis soberanos: ignoram verificação de prioridade de setor ao criar E podem aprovar qualquer solicitação
-  var PAPEIS_SOBERANOS        = ['admin','superadmin','gestor','habilitador'];
+  // Soberanos para aprovação de solicitações (admin/superadmin aprovam qualquer, sem restrição de responsável)
+  var PAPEIS_SOBERANOS        = ['admin','superadmin'];
 
   function _getOrgId() { return getOrgConfig().orgId; }
 
@@ -153,7 +153,7 @@ var SolicitacaoReservaEngine = (function() {
    * Lança erro se emailAprovador não puder aprovar/recusar esta solicitação.
    */
   function _assertPodeAprovar(emailAprovador, sol) {
-    // Soberanos (admin, superadmin, gestor, habilitador) aprovam qualquer solicitação
+    // Admin e superadmin são soberanos — aprovam qualquer solicitação sem restrição
     if (_ehSoberano(emailAprovador)) return;
 
     var resp = _resolverResponsaveisDaSolicitacao(sol);
@@ -163,10 +163,14 @@ var SolicitacaoReservaEngine = (function() {
         return String(e).toLowerCase().trim() === emailNorm;
       });
       if (ehResponsavel) return;
-      throw new Error('Sem permiss��o: você não é responsável por este espaço/período.');
+      // Ha responsavel — habilitador respeita a prioridade do responsavel
+      throw new Error('Sem permissao: voce nao e responsavel por este espaco/periodo.');
     }
 
-    throw new Error('Sem permissão para aprovar esta solicitação.');
+    // Sem responsavel configurado: habilitador e gestor aprovam diretamente
+    var papel = _getPapel(emailAprovador);
+    if (['gestor','habilitador'].indexOf(papel) >= 0) return;
+    throw new Error('Sem permissao para aprovar esta solicitacao.');
   }
 
   // ── API pública ──────────────────────────────────────────────────────────
@@ -197,8 +201,9 @@ var SolicitacaoReservaEngine = (function() {
    * @returns {{ exigeSolicitacao: boolean, responsaveis: string[] }}
    */
   function verificarPrioridadeSetor(espacoId, dataStr, horaInicio, horaTermino, setorSolicitante, emailSolicitante) {
-    // Soberanos (admin, superadmin, gestor, habilitador) nunca são bloqueados por prioridade de setor
-    if (_ehSoberano(emailSolicitante)) return { exigeSolicitacao: false, responsaveis: [] };
+    // Papéis com aprovação direta (gestor, admin, superadmin, habilitador) nunca são bloqueados por prioridade de setor
+    if (PAPEIS_APROVACAO_DIRETA.indexOf(_getPapel(emailSolicitante)) >= 0)
+      return { exigeSolicitacao: false, responsaveis: [] };
 
     try {
       var dt   = _resolverDiaTurno(dataStr, horaInicio, horaTermino);
@@ -298,8 +303,9 @@ var SolicitacaoReservaEngine = (function() {
     try {
       var papel = _getPapel(email);
 
-      // Soberanos veem todas as pendentes
-      if (PAPEIS_SOBERANOS.indexOf(papel) >= 0) {
+      // Soberanos e gestão de infraestrutura veem todas as pendentes
+      // (habilitador precisa ver o responsável antes de decidir se aprova)
+      if (['admin','superadmin','gestor','habilitador'].indexOf(papel) >= 0) {
         return SolicitacaoReservaRepository.listarPorStatus('PENDENTE', orgId);
       }
 
@@ -336,7 +342,7 @@ var SolicitacaoReservaEngine = (function() {
   function listarTodas(email) {
     var orgId  = _getOrgId();
     var papel  = _getPapel(email);
-    if (PAPEIS_SOBERANOS.indexOf(papel) === -1)
+    if (['admin','superadmin','gestor','habilitador'].indexOf(papel) === -1)
       throw new Error('Sem permissão para listar todas as solicitações.');
     return SolicitacaoReservaRepository.listarPorStatus('TODOS', orgId);
   }

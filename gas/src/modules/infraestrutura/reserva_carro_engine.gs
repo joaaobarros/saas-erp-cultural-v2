@@ -3,11 +3,11 @@
  * @layer modules/infraestrutura
  * @description Engine de Reservas de Veículo Institucional.
  *   Regras de negócio:
- *   - TODA reserva exige aprovação de infraestrutura/gestor/admin/superadmin.
+ *   - TODA reserva exige aprovação de habilitador ou superadmin (sem modo responsável — diferente de espaços).
  *   - Criação é bloqueada se já existir reserva APROVADA com horário sobreposto (slot ocupado).
  *   - Aprovação é bloqueada atomicamente se outra reserva for aprovada no mesmo slot (race-safe).
  *   - Colaboradores comuns só veem e cancelam as próprias reservas.
- *   - Equipe infra/gestor/admin vê todas e pode aprovar, recusar ou concluir.
+ *   - Habilitador e superadmin veem todas e podem aprovar, recusar ou concluir.
  * @depends modules/infraestrutura/reserva_carro_repository.gs,
  *          core/services/auditoria_service.gs,
  *          core/services/acesso_service.gs,
@@ -32,7 +32,8 @@ var ReservaCarroEngine = (function() {
     'CONCLUIDA': []
   };
 
-  var PAPEIS_APROVACAO = ['habilitador', 'gestor', 'admin', 'superadmin'];
+  // Apenas habilitador (equipe de infraestrutura) e superadmin aprovam carros
+  var PAPEIS_APROVACAO = ['habilitador', 'superadmin'];
 
   FsmGuardian.registrar('reservas_carro', _TRANSICOES);
 

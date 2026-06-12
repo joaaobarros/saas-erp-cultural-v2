@@ -51,11 +51,11 @@ function _nivelReservas(email) {
 var _NIVEL_GESTAO       = ['superadmin', 'admin', 'gestor', 'habilitador'];
 var _NIVEL_CANCELAMENTO = ['superadmin', 'admin', 'gestor'];
 
-// Papéis soberanos: confirmam a qualquer momento, independente de responsável
-var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor', 'habilitador'];
-// Papéis com escalonamento: aguardam _DIAS_ESCALACAO dias sem resposta antes de confirmar
-var _NIVEL_ESCALACAO = [];
-// Dias de espera para escalonamento (sem resposta do responsável do slot)
+// Soberanos: confirmam imediatamente, independente de responsável configurado
+var _NIVEL_CONFIRMAR_SEMPRE = ['superadmin', 'admin', 'gestor'];
+// Habilitador respeita a prioridade do responsável: aguarda _DIAS_ESCALACAO dias sem resposta
+var _NIVEL_ESCALACAO = ['habilitador'];
+// Dias de espera antes de habilitador poder confirmar no lugar do responsável
 var _DIAS_ESCALACAO = 2;
 
 /**
@@ -342,9 +342,11 @@ function ctrl_reservas_cancelar(id, motivo) {
  * Confirma uma reserva (pendente → confirmado).
  *
  * Quem pode confirmar:
- *   • admin / superadmin / gestor / habilitador — soberanos, a qualquer momento
+ *   • admin / superadmin / gestor — soberanos, a qualquer momento
  *   • responsável cadastrado no espaço/slot — a qualquer momento
  *   • mesmo setor do responsável — a qualquer momento
+ *   • habilitador — somente após _DIAS_ESCALACAO dias sem resposta do responsável
+ *     (responsável tem prioridade; habilitador é fallback de escalação)
  *
  * @param {string} id
  */

@@ -267,7 +267,7 @@ var PermissoesV2Engine = (function () {
       { id: 'gerenciar_chaves',      label: 'Gerenciar chaves de espaços',         papeis: ['admin','superadmin','habilitador'] },
       { id: 'gerenciar_ativos',      label: 'Gerenciar ativos e inventário',       papeis: ['admin','superadmin','habilitador'] },
       { id: 'reservar_carro',        label: 'Reservar carro institucional',        papeis: ['colaborador','habilitador','rh','financeiro','comunicacao','coordenador','gestor','admin','superadmin'] },
-      { id: 'aprovar_reserva_carro', label: 'Aprovar reserva de carro',            papeis: ['admin','superadmin','gestor','habilitador'] }
+      { id: 'aprovar_reserva_carro', label: 'Aprovar reserva de carro',            papeis: ['habilitador','superadmin'] }
     ],
     PESSOAS: [
       { id: 'aprovar_ferias',        label: 'Aprovar férias / afastamento',        papeis: ['admin','superadmin','rh','gestor'] },
