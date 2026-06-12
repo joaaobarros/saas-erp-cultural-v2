@@ -8967,6 +8967,18 @@ select.form-control { cursor: pointer; }
                 <span class="ms ms-sm">hourglass_empty</span>
                 <span id="bi-dem-geo-pendentes-txt"></span>
               </span>
+              <div style="display:flex;gap:3px;">
+                <button class="btn btn-ghost btn-sm tab-btn tab-ativa" id="bi-dem-modo-calor"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.setModoMapa('calor')" data-bg-skip="1">
+                  <span class="ms ms-sm">whatshot</span> Calor
+                </button>
+                <button class="btn btn-ghost btn-sm tab-btn" id="bi-dem-modo-bairros"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.setModoMapa('bairros')" data-bg-skip="1">
+                  <span class="ms ms-sm">location_city</span> Bairros
+                </button>
+              </div>
               <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
                 onclick="BtnGuard.wrap('bi-dem-btn-mapa','Carregando mapa…',BiDemograficoUI.iniciarMapa)">
                 <span class="ms ms-sm">travel_explore</span> Carregar Mapa
@@ -35889,6 +35901,7 @@ var BiDemograficoUI = (function () {
   var _mapa        = null;
   var _heatLayer   = null;
   var _mapaAtivo   = false;
+  var _modoMapa    = 'calor'; // 'calor' | 'bairros'
 
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -35953,30 +35966,49 @@ var BiDemograficoUI = (function () {
 
   // ── Filtros ──────────────────────────────────────────────────────────────
 
+  var _MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function _avancaMes(ym) {
+    var y = parseInt(ym.slice(0,4), 10);
+    var m = parseInt(ym.slice(5,7), 10) + 1;
+    if (m > 12) { m = 1; y++; }
+    return y + '-' + (m < 10 ? '0'+m : ''+m);
+  }
+
+  function _ymLabel(ym) {
+    var m = parseInt(ym.slice(5,7), 10);
+    return _MESES[m-1] + '/' + ym.slice(0,4);
+  }
+
   function _popularFiltros() {
     var d = _dados[_contexto];
     if (!d || !d.registros) return;
 
-    // Período — intervalo De/Até populado com todos os anos do dataset
+    // Período De/Até — granularidade mensal (valor: "YYYY-MM")
     var selDe  = document.getElementById('bi-dem-sel-de');
     var selAte = document.getElementById('bi-dem-sel-ate');
     if (selDe && selAte) {
-      var anoMin = 9999, anoMax = new Date().getFullYear();
+      var hojeYM = new Date().toISOString().slice(0,7);
+      var minMes = '9999-99', maxMes = hojeYM;
       d.registros.forEach(function (r) {
-        var a1 = parseInt(String(r.dataAdmissao || r.criadoEm || '').slice(0,4), 10);
-        var a2 = parseInt(String(r.dataDesligamento || '').slice(0,4), 10);
-        if (a1 >= 2000 && a1 < anoMin) anoMin = a1;
-        if (a1 >= 2000 && a1 > anoMax) anoMax = a1;
-        if (a2 >= 2000 && a2 > anoMax) anoMax = a2;
+        var m1 = String(r.dataAdmissao || r.criadoEm || '').slice(0,7);
+        var m2 = String(r.dataDesligamento || '').slice(0,7);
+        if (/^\d{4}-\d{2}$/.test(m1)) {
+          if (m1 < minMes) minMes = m1;
+          if (m1 > maxMes) maxMes = m1;
+        }
+        if (/^\d{4}-\d{2}$/.test(m2) && m2 > maxMes) maxMes = m2;
       });
-      if (anoMin === 9999) anoMin = anoMax;
+      if (minMes === '9999-99') minMes = hojeYM.slice(0,4) + '-01';
       var optsD = '<option value="">—</option>';
       var optsA = '<option value="">—</option>';
-      for (var y = anoMin; y <= anoMax; y++) {
-        optsD += '<option value="' + y + '">' + y + '</option>';
-        optsA += '<option value="' + y + '">' + y + '</option>';
+      var cur = minMes;
+      while (cur <= maxMes) {
+        var lbl = _ymLabel(cur);
+        optsD += '<option value="' + cur + '">' + lbl + '</option>';
+        optsA += '<option value="' + cur + '">' + lbl + '</option>';
+        cur = _avancaMes(cur);
       }
-      // preserva seleção atual ao recarregar
       var prevDe  = selDe.value;
       var prevAte = selAte.value;
       selDe.innerHTML  = optsD;
@@ -35985,28 +36017,43 @@ var BiDemograficoUI = (function () {
       if (prevAte) selAte.value = prevAte;
     }
 
-    // Setor / Ação
+    // Setor — usa catálogo d.setores (id/label); beneficiários usam acaoNome
     var selSet = document.getElementById('bi-dem-sel-setor');
     if (selSet) {
-      var items = {};
-      var campoSet = _contexto === 'equipe' ? 'setor' : 'acaoNome';
-      d.registros.forEach(function (r) {
-        var v = String(r[campoSet]||'').trim();
-        if (v) items[v] = true;
-      });
-      var label = _contexto === 'equipe' ? 'setor' : 'ação';
-      var optsS = '<option value="">Todos os ' + label + 's</option>';
-      Object.keys(items).sort().forEach(function (v) {
-        optsS += '<option value="' + _esc(v) + '">' + _esc(v) + '</option>';
-      });
+      var optsS;
+      if (_contexto === 'equipe') {
+        optsS = '<option value="">Todos os setores</option>';
+        var comDados = {};
+        d.registros.forEach(function(r) { if (r.setor) comDados[r.setor] = true; });
+        var catalogo = (d.setores && d.setores.length) ? d.setores : [];
+        catalogo.forEach(function(s) {
+          if (comDados[s.id]) {
+            optsS += '<option value="' + _esc(s.id) + '">' + _esc(s.label || s.id) + '</option>';
+            delete comDados[s.id];
+          }
+        });
+        Object.keys(comDados).sort().forEach(function(id) {
+          optsS += '<option value="' + _esc(id) + '">' + _esc(id) + '</option>';
+        });
+      } else {
+        optsS = '<option value="">Todas as ações</option>';
+        var acoes = {};
+        d.registros.forEach(function(r) {
+          var v = String(r.acaoNome||'').trim();
+          if (v) acoes[v] = true;
+        });
+        Object.keys(acoes).sort().forEach(function(v) {
+          optsS += '<option value="' + _esc(v) + '">' + _esc(v) + '</option>';
+        });
+      }
       selSet.innerHTML = optsS;
     }
   }
 
   function _getFiltros() {
     return {
-      de:      parseInt((document.getElementById('bi-dem-sel-de') ||{}).value, 10) || 0,
-      ate:     parseInt((document.getElementById('bi-dem-sel-ate')||{}).value, 10) || 0,
+      de:      (document.getElementById('bi-dem-sel-de') ||{}).value || '',
+      ate:     (document.getElementById('bi-dem-sel-ate')||{}).value || '',
       setor:   (document.getElementById('bi-dem-sel-setor')  ||{}).value || '',
       vinculo: (document.getElementById('bi-dem-sel-vinculo')||{}).value || '',
       status:  ((document.getElementById('bi-dem-sel-status') ||{}).value !== undefined
@@ -36019,21 +36066,20 @@ var BiDemograficoUI = (function () {
     var d = _dados[_contexto];
     if (!d || !d.registros) return [];
     var f = _getFiltros();
-    var anoAtual = new Date().getFullYear();
+    var hojeYM = new Date().toISOString().slice(0,7);
     return d.registros.filter(function (r) {
       if (_contexto === 'equipe') {
         if (f.status === 'ativo'     && r.status !== 'ativo')    return false;
         if (f.status === 'desligado' && r.status === 'ativo')    return false;
         if (f.de || f.ate) {
-          // sobreposição: pessoa ativa em [iniPessoa, fimPessoa] ∩ [de, ate]
-          var iniPessoa = parseInt(String(r.dataAdmissao||'').slice(0,4), 10) || 0;
-          var fimRaw    = String(r.dataDesligamento||'').slice(0,4);
-          var fimPessoa = fimRaw ? parseInt(fimRaw, 10) : anoAtual;
-          var filtroIni = f.de  || 0;
-          var filtroFim = f.ate || anoAtual;
+          // sobreposição: [iniPessoa, fimPessoa] ∩ [de, ate] — comparação YYYY-MM lexicográfica
+          var iniPessoa = String(r.dataAdmissao||'').slice(0,7)    || '0000-00';
+          var fimPessoa = String(r.dataDesligamento||'').slice(0,7) || hojeYM;
+          var filtroIni = f.de  || '0000-00';
+          var filtroFim = f.ate || '9999-99';
           if (fimPessoa < filtroIni || iniPessoa > filtroFim) return false;
         }
-        if (f.setor   && r.setor !== f.setor) return false;
+        if (f.setor && r.setor !== f.setor) return false;
         if (f.vinculo) {
           var tv = String(r.tipoVinculo||'').toLowerCase().replace(/\s+/g,'');
           var fv = f.vinculo.toLowerCase().replace(/\s+/g,'');
@@ -36042,8 +36088,8 @@ var BiDemograficoUI = (function () {
         }
       } else {
         if (f.de || f.ate) {
-          var anoReg = parseInt(String(r.criadoEm||'').slice(0,4), 10) || 0;
-          if ((f.de && anoReg < f.de) || (f.ate && anoReg > f.ate)) return false;
+          var ymReg = String(r.criadoEm||'').slice(0,7);
+          if ((f.de && ymReg < f.de) || (f.ate && ymReg > f.ate)) return false;
         }
         if (f.setor && r.acaoNome !== f.setor) return false;
       }
@@ -36222,8 +36268,29 @@ var BiDemograficoUI = (function () {
     el.innerHTML = html;
   }
 
+  function _setorLabel(id) {
+    var d = _dados[_contexto];
+    if (!id) return id;
+    if (d && d.setores) {
+      for (var i = 0; i < d.setores.length; i++) {
+        if (d.setores[i].id === id) return d.setores[i].label || id;
+      }
+    }
+    return id;
+  }
+
   function _renderSetorDist(regs) {
-    _renderBarras('setor-dist', regs, _contexto === 'equipe' ? 'setor' : 'acaoNome');
+    if (_contexto === 'equipe') {
+      var mapped = regs.map(function(r) {
+        var copy = {}, k;
+        for (k in r) copy[k] = r[k];
+        copy._setorLabel = _setorLabel(r.setor) || 'Não informado';
+        return copy;
+      });
+      _renderBarras('setor-dist', mapped, '_setorLabel');
+    } else {
+      _renderBarras('setor-dist', regs, 'acaoNome');
+    }
   }
 
   // ── Território (lista) ───────────────────────────────────────────────────
@@ -36275,6 +36342,15 @@ var BiDemograficoUI = (function () {
   }
 
   // ── Mapa Leaflet + leaflet-heat ──────────────────────────────────────────
+
+  function setModoMapa(modo) {
+    _modoMapa = modo;
+    ['calor', 'bairros'].forEach(function (m) {
+      var b = document.getElementById('bi-dem-modo-' + m);
+      if (b) b.classList.toggle('tab-ativa', m === modo);
+    });
+    if (_mapaAtivo) _atualizarMapa(_getDadosFiltrados());
+  }
 
   function iniciarMapa() {
     var regs = _getDadosFiltrados();
@@ -36356,20 +36432,21 @@ var BiDemograficoUI = (function () {
     if (!_mapa) return;
     if (_heatLayer) { _mapa.removeLayer(_heatLayer); _heatLayer = null; }
     _mapa.eachLayer(function(l){ if (l._biDemMarker) _mapa.removeLayer(l); });
+    if (_modoMapa === 'bairros') { _renderBairros(regs, geo); return; }
+    _renderCalor(regs, geo);
+  }
 
+  function _renderCalor(regs, geo) {
     var cont = {};
     regs.forEach(function(r) {
       var k = r.geoKey;
       if (k && geo[k]) cont[k] = (cont[k]||0) + 1;
     });
-    var pontos = [];
-    var maxN   = 1;
+    var pontos = [], maxN = 1;
     Object.keys(cont).forEach(function(k) {
       if (geo[k]) { pontos.push([geo[k].lat, geo[k].lng, cont[k]]); if (cont[k]>maxN) maxN=cont[k]; }
     });
-
     if (!pontos.length) { Toast.aviso('Nenhum ponto geocodificado para os filtros atuais.'); return; }
-
     if (typeof L.heatLayer !== 'undefined') {
       _heatLayer = L.heatLayer(pontos, {
         radius:25, blur:20, maxZoom:16, max:maxN,
@@ -36384,9 +36461,35 @@ var BiDemograficoUI = (function () {
         m._biDemMarker = true;
       });
     }
-    try {
-      _mapa.fitBounds(pontos.map(function(p){return[p[0],p[1]];}), {padding:[40,40]});
-    } catch(e) {}
+    try { _mapa.fitBounds(pontos.map(function(p){return[p[0],p[1]];}), {padding:[40,40]}); } catch(e) {}
+  }
+
+  function _renderBairros(regs, geo) {
+    // Agrupa por bairroKey (sempre nível bairro); usa geoKey como fallback
+    var bData = {};
+    regs.forEach(function(r) {
+      var bk = r.bairroKey || r.geoKey;
+      if (!bk || !geo[bk]) return;
+      if (!bData[bk]) bData[bk] = { count:0, lat:geo[bk].lat, lng:geo[bk].lng, nome:r.bairro||bk, cidade:r.cidade||'' };
+      bData[bk].count++;
+    });
+    var pontos = Object.keys(bData).map(function(k){ return bData[k]; });
+    pontos.sort(function(a,b){ return b.count - a.count; });
+    if (!pontos.length) { Toast.aviso('Nenhum bairro geocodificado para os filtros atuais.'); return; }
+    var maxN = pontos[0].count;
+    pontos.forEach(function(p) {
+      var pct    = p.count / maxN;
+      var radius = Math.max(10, Math.min(34, 10 + pct * 24));
+      var fill   = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f97316' : pct > 0.2 ? '#facc15' : '#22c55e';
+      var tip    = '<strong>' + _esc(p.nome) + '</strong>' +
+                   (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
+                   '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+      var m = L.circleMarker([p.lat, p.lng], {
+        radius: radius, color:'#fff', weight:2, fillColor: fill, fillOpacity:0.82
+      }).bindTooltip(tip, { permanent:false, direction:'top' }).addTo(_mapa);
+      m._biDemMarker = true;
+    });
+    try { _mapa.fitBounds(pontos.map(function(p){return[p.lat,p.lng];}), {padding:[40,40]}); } catch(e) {}
   }
 
   // ── Personas ─────────────────────────────────────────────────────────────
@@ -36495,6 +36598,7 @@ var BiDemograficoUI = (function () {
     aplicarFiltros:aplicarFiltros,
     limparFiltros: limparFiltros,
     setGeoView:    setGeoView,
+    setModoMapa:   setModoMapa,
     iniciarMapa:   iniciarMapa,
     gerarPersonas: gerarPersonas
   };

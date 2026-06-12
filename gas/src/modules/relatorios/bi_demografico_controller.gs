@@ -89,10 +89,22 @@ function _biViaCep(cep) {
   }
 }
 
-/** Geocodifica "bairro, cidade, uf" via Maps. Retorna {lat,lng} ou {erro:true}. */
-function _biGeocodificar(bairro, cidade, uf) {
-  var query = [bairro, cidade, uf || 'CE', 'Brasil']
-    .filter(function (p) { return !!String(p || '').trim(); }).join(', ');
+/**
+ * Geocodifica via Maps usando o endereço completo disponível.
+ * info: { logradouro?, numero?, bairro, cidade, uf, cep? }
+ * Retorna {lat,lng} ou {erro:true}.
+ */
+function _biGeocodificar(info) {
+  var partes = [];
+  if (info.logradouro && info.numero) partes.push(info.logradouro + ', ' + info.numero);
+  else if (info.logradouro)           partes.push(info.logradouro);
+  if (info.bairro) partes.push(info.bairro);
+  if (info.cidade) partes.push(info.cidade);
+  partes.push(info.uf || 'CE');
+  if (info.cep && info.cep.length === 8)
+    partes.push(info.cep.slice(0, 5) + '-' + info.cep.slice(5));
+  partes.push('Brasil');
+  var query = partes.filter(function (p) { return !!String(p || '').trim(); }).join(', ');
   try {
     var r = Maps.newGeocoder().setRegion('br').setLanguage('pt-BR').geocode(query);
     if (r && r.status === 'OK' && r.results && r.results.length) {
@@ -148,7 +160,7 @@ function _biResolverGeo(locais) {
       if (consultas >= _BI_GEO_MAX_NOVOS) { pendentes++; return; }
       consultas++;
       var l = locais[chave];
-      hit = _biGeocodificar(l.bairro, l.cidade, l.uf);
+      hit = _biGeocodificar(l);
       hit.em = new Date().toISOString();
       novos[cacheKey] = hit;
     }
@@ -180,19 +192,35 @@ function ctrl_bi_demografico_equipe() {
 
     var locais    = {};
     var registros = todos.map(function (c) {
-      var end    = c.endereco || {};
-      var bairro = _biTitleCase(end.bairro);
-      var cidade = _biTitleCase(end.cidade);
-      var uf     = String(end.uf || '').toUpperCase();
-      var geoKey = '';
+      var end        = c.endereco || {};
+      var bairro     = _biTitleCase(end.bairro);
+      var cidade     = _biTitleCase(end.cidade);
+      var uf         = String(end.uf || '').toUpperCase();
+      var logradouro = _biTitleCase(end.logradouro);
+      var numero     = String(end.numero || '').trim();
+      var cep        = String(end.cep || '').replace(/\D/g, '');
+
+      // Chave de bairro — sempre registrada; usada pela view de bairros
+      var bairroKey = '';
       if (bairro && cidade) {
-        geoKey = _biNormalizar(bairro) + '|' + _biNormalizar(cidade);
-        locais[geoKey] = { bairro: bairro, cidade: cidade, uf: uf };
+        bairroKey = _biNormalizar(bairro) + '|' + _biNormalizar(cidade);
+        locais[bairroKey] = { bairro: bairro, cidade: cidade, uf: uf };
       }
       var cidKey = '';
       if (cidade) {
         cidKey = '|' + _biNormalizar(cidade);
         locais[cidKey] = { bairro: '', cidade: cidade, uf: uf };
+      }
+      // Chave precisa — usa endereço completo quando disponível para melhor geocodificação
+      var geoKey = '';
+      if (cep.length === 8 && logradouro) {
+        geoKey = 'end:' + cep + ':' + _biNormalizar(logradouro);
+        locais[geoKey] = { logradouro: logradouro, numero: numero, bairro: bairro, cidade: cidade, uf: uf, cep: cep };
+      } else if (cep.length === 8 && bairro) {
+        geoKey = 'cep:' + cep;
+        locais[geoKey] = { bairro: bairro, cidade: cidade, uf: uf, cep: cep };
+      } else {
+        geoKey = bairroKey;
       }
       return {
         setor:            c.setor       || '',
@@ -208,6 +236,7 @@ function ctrl_bi_demografico_equipe() {
         cidade:           cidade,
         uf:               uf,
         geoKey:           geoKey,
+        bairroKey:        bairroKey,
         cidadeKey:        cidKey,
         horasSemanais:    c.horasSemanais || null,
         dataAdmissao:     String(c.dataAdmissao || '').slice(0, 10),
@@ -264,8 +293,10 @@ function ctrl_bi_demografico_beneficiarios() {
       var cidade = (endCep && !endCep.erro) ? _biTitleCase(endCep.cidade) : '';
       var uf     = (endCep && !endCep.erro) ? endCep.uf : '';
       var geoKey = '';
+      var bairroKey = '';
       if (bairro && cidade) {
         geoKey = _biNormalizar(bairro) + '|' + _biNormalizar(cidade);
+        bairroKey = geoKey;
         locais[geoKey] = { bairro: bairro, cidade: cidade, uf: uf };
       }
       var cidKey = '';
@@ -287,6 +318,7 @@ function ctrl_bi_demografico_beneficiarios() {
         cidade:    cidade,
         uf:        uf,
         geoKey:    geoKey,
+        bairroKey: bairroKey,
         cidadeKey: cidKey,
         criadoEm:  String(i.criadoEm || '').slice(0, 10)
       };
