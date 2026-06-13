@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix — atualizarEvento exportado + admissão requer setor — Deploy @851.** (1) `atualizarEvento` faltava no `return` do `PessoasEngine` — corrigido. (2) `_EV_CAMPOS.admissao` agora inclui `'setor'`; backend aplica `alteraSetor` em admissão.
+**Fase atual**: **Fix — admissão requer salário — Deploy @854.** `_EV_CAMPOS.admissao` inclui `'salario'`; backend aplica `alteraSalario` em admissão.
+
+**Fase anterior**: **Fix — atualizarEvento exportado + admissão requer setor — Deploy @853.** (1) `atualizarEvento` faltava no `return` do `PessoasEngine` — corrigido. (2) `_EV_CAMPOS.admissao` agora inclui `'setor'`; backend aplica `alteraSetor` em admissão.
 
 **Fase anterior**: **RH — Permissões de escrita restritas a superadmin/rh — Deploy @850.** Função global `_podeEscreverRh()` criada. `aoAbrir()` oculta botões estáticos de escrita (Novo Evento, Novo Plano, Nova Avaliação, Processar Folha, Exportar, Encargos) para quem não é rh/superadmin. Renders dinâmicas condicionais: editar/excluir evento (Histórico), editar plano/cargo/"Novo Cargo" (PCCS), excluir (Avaliações), "Marcar Pago" (Folha). Rescisão e Indicadores são somente leitura e não foram alterados.
 

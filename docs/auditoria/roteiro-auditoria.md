@@ -1338,7 +1338,18 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49d (2026-06-13) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 49e (2026-06-13) → SESSÃO 50
+
+### Estado: Deploy @854 · Fix admissão requer salário
+
+### O que foi feito (s49e)
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @854 | Fix | `admissao:['admissao','cargo','setor','salario']`; backend: `alteraSalario` ativado em admissão. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 49d (2026-06-13) → SESSÃO 49e
 
 ### Estado: Deploy @851 · Fix atualizarEvento + admissão requer setor
 

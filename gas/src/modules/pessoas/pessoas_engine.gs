@@ -559,7 +559,7 @@ var PessoasEngine = (function () {
    */
   function _aplicarEfeitosEvento(dados, emailOperador, orgId) {
     var tipo = dados.tipo;
-    var alteraSalario  = (tipo === 'promocao' || tipo === 'reajuste') &&
+    var alteraSalario  = (tipo === 'promocao' || tipo === 'reajuste' || tipo === 'admissao') &&
                          dados.novoSalario !== undefined && dados.novoSalario !== null && dados.novoSalario !== '';
     var alteraCargo    = (tipo === 'promocao' || tipo === 'mudanca_cargo' || tipo === 'admissao') && dados.novoCargo;
     var alteraSetor    = (tipo === 'mudanca_setor' || tipo === 'admissao') && dados.novoSetor;
