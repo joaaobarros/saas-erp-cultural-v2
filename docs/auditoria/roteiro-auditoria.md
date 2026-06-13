@@ -1338,9 +1338,36 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49b (2026-06-13) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 49c (2026-06-13) → SESSÃO 50
 
-### Estado: Deploy @848 · RH Histórico — Edição de eventos por superadmin/rh
+### Estado: Deploy @850 · RH — Permissões de escrita restritas a superadmin/rh
+
+### O que foi feito nesta sessão (s49c)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @850 | RH Permissões | `_podeEscreverRh()` global. `aoAbrir()` oculta 9 botões estáticos. Renders dinâmicas: Histórico (editar+excluir evento), PCCS (editar plano, editar/excluir cargo, Novo Cargo), Avaliações (excluir), Folha (Marcar Pago × 2). |
+
+### Checklist de auditoria — Deploy @850
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* — sem novos bindings
+[x] CSS — sem alterações CSS
+[x] IDs de DOM — sem novos IDs
+[x] FsmGuardian — não aplicável
+[x] Modais — não aplicável
+[x] BtnGuard — botões ocultos, não removidos do DOM (BtnGuard não quebra)
+[x] Datas — não aplicável
+```
+
+### Pendentes / próxima ação
+- Testar como colaborador (papel != rh/superadmin): nenhum botão de escrita deve aparecer nas abas Histórico, PCCS, Avaliações, Folha, Encargos.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 49b (2026-06-13) → SESSÃO 49c
+
+### Estado: Deploy @849 · RH Histórico — Edição de eventos por superadmin/rh
 
 ### O que foi feito nesta sessão (s49b)
 

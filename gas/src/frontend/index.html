@@ -133,7 +133,7 @@ body {
   overflow: hidden;
   transition: width var(--slow) var(--ease);
   position: relative;
-  z-index: 100;
+  z-index: 250;
   user-select: none;
   box-shadow: 14px 0 34px rgba(15,23,42,.10);
 }
@@ -947,9 +947,9 @@ body {
     transition: transform var(--slow) var(--ease), width var(--slow) var(--ease);
     box-shadow: 22px 0 50px rgba(15,23,42,.28);
   }
-  #sidebar { z-index: 200; }
+  #sidebar { z-index: 300; }
   #sidebar.aberto { transform: translateX(0); }
-  #sidebar-backdrop { display:none; position:fixed; inset:0; z-index:199; background:rgba(0,0,0,.35); }
+  #sidebar-backdrop { display:none; position:fixed; inset:0; z-index:299; background:rgba(0,0,0,.45); }
   #sidebar-backdrop.visivel { display:block; }
   #sidebar.recolhido { width: var(--sidebar-w); }
   #sidebar.recolhido #sidebar-org-info,
@@ -1895,6 +1895,9 @@ select.form-control { cursor: pointer; }
 .hol-empresa-box  { background:var(--surface2); border-radius:8px; padding:14px 16px; font-size:12px; }
 .hol-empresa-row  { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border); }
 .hol-empresa-row:last-child { border-bottom:none; font-weight:700; font-size:13px; }
+
+  /* ── Leaflet: isola contexto de empilhamento ──────────────────────────── */
+  .leaflet-container { z-index: 0; isolation: isolate; }
 
   </style>
 </head>
@@ -10382,6 +10385,13 @@ function fmtDataPtBR(d) {
   if (!d) return '';
   var p = String(d).split('-');
   return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+}
+
+// ── Permissão de escrita no módulo RH ────────────────────────
+function _podeEscreverRh() {
+  var b = App.getBoot && App.getBoot();
+  var p = (b && b.usuarioPapel) || '';
+  return p === 'superadmin' || p === 'rh';
 }
 
 // ── Resolver de setor — converte slug para label legível ─────
@@ -34444,12 +34454,6 @@ var RhUI = (function() {
   var _eventoEditandoId = null;  // null = modo criar; string = modo editar
   var _historicoCache   = [];    // cache da última lista carregada (para lookup no edit)
 
-  function _podeEditarEvento() {
-    var b = App.getBoot && App.getBoot();
-    var papel = (b && b.usuarioPapel) || '';
-    return papel === 'superadmin' || papel === 'rh';
-  }
-
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
   function _fmtData(d) { return (d||'').slice(0,10).split('-').reverse().join('/'); }
@@ -34497,6 +34501,15 @@ var RhUI = (function() {
       _popularAnoSelect();
       _carregado = true;
     }
+    // Oculta botões de escrita para quem não é rh/superadmin
+    var escreve = _podeEscreverRh();
+    ['rh-btn-novo-evento','rh-btn-novo-pccs','rh-btn-nova-aval',
+     'hol-btn-processar','hol-btn-exportar',
+     'enc-btn-buscar-online','enc-btn-aplicar','enc-btn-editar-inss','enc-btn-editar-irrf'
+    ].forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.style.display = escreve ? '' : 'none';
+    });
     setTab(_abaAtiva); // setTab carrega os dados da aba ativa (equipe → carregarEquipe, etc.)
   }
 
@@ -35449,8 +35462,10 @@ var RhUI = (function() {
               '<td style="padding:7px 10px;font-size:12px;color:var(--text2);">'+_esc(tipoClasse)+' '+_esc(classe)+(nSteps?' <span style="color:var(--muted);">'+nSteps+' ref.</span>':'')+'</td>'+
               '<td style="padding:7px 10px;font-size:12px;font-weight:600;">'+faixaTxt+'</td>'+
               '<td style="padding:7px 10px;text-align:right;white-space:nowrap;">'+
-                '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
-                '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+                (_podeEscreverRh()
+                  ? '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+                    '<button class="btn btn-error btn-sm" data-bg-skip="1" onclick="RhUI.excluirCargo(\''+_esc(p.id)+'\',\''+_esc(c.id)+'\')"><span class="ms ms-sm">delete</span></button>'
+                  : '') +
               '</td></tr>';
           });
         });
@@ -35480,7 +35495,7 @@ var RhUI = (function() {
               '<strong style="font-size:14px;">'+_esc(p.nome||'Plano')+'</strong>'+activoTag+
               '<span style="font-size:12px;color:var(--text2);">'+_esc(vigTxt)+' · '+totCargos+' cargo'+(totCargos!==1?'s':'')+'</span>'+
             '</div>'+
-            '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+            (_podeEscreverRh() ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" title="Editar plano" onclick="RhUI.abrirFormPccs(\''+_esc(p.id)+'\')"><span class="ms ms-sm">edit</span></button>' : '')+
           '</div>'+
           // ── Sub-nav (abas V1-style)
           '<div style="display:flex;gap:0;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;">'+
@@ -35495,10 +35510,12 @@ var RhUI = (function() {
               '<input type="text" id="pccs-busca-'+p.id+'" class="form-input" placeholder="Filtrar cargos…" style="flex:1;max-width:300px;" oninput="RhUI._pccsFiltrarCargos(\''+_esc(p.id)+'\',this.value)">'+
             '</div>'+
             cargosContent+
-            '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
-              '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
-                '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
-            '</div>'+
+            (_podeEscreverRh()
+              ? '<div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">'+
+                  '<button class="btn btn-ghost btn-sm" id="rh-btn-add-cargo-'+_esc(p.id)+'" data-bg-skip="1" onclick="RhUI.abrirFormCargo(\''+_esc(p.id)+'\')">'+
+                    '<span class="ms ms-sm">add</span> Novo Cargo</button>'+
+                '</div>'
+              : '')+
           '</div>'+
           // ── Painel Tabela Salarial (lazy, escondido)
           '<div id="pccs-panel-'+p.id+'-tabela" style="display:none;"></div>'+
@@ -36160,11 +36177,14 @@ var RhUI = (function() {
         return db.localeCompare(da);
       });
       _historicoCache = lista;
-      var podeEditar = _podeEditarEvento();
+      var escreve = _podeEscreverRh();
       el.innerHTML='<ul class="rh-timeline">'+lista.map(function(ev){
         var nome = ev.colaboradorNome || (function(){ var c=_colaboradores.find(function(x){return x.id===ev.idColaborador;}); return c?c.nome:''; })();
-        var btnEditar = podeEditar
-          ? '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" id="rh-btn-edit-ev-'+_esc(ev.id)+'" onclick="RhUI.editarEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">edit</span></button>'
+        var acoes = escreve
+          ? '<div style="display:flex;gap:6px;margin-top:6px;">'+
+              '<button class="btn btn-ghost btn-sm" id="rh-btn-edit-ev-'+_esc(ev.id)+'" onclick="RhUI.editarEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">edit</span></button>'+
+              '<button class="btn btn-error btn-sm" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+            '</div>'
           : '';
         return '<li><div class="tl-dot"></div><div class="tl-body">'+
           '<strong style="font-size:13px;">'+_esc(_evLabel(ev.tipo||ev.tipoEvento))+'</strong>'+
@@ -36172,10 +36192,7 @@ var RhUI = (function() {
           (ev.editadoPor?'<span style="font-size:10px;color:var(--muted);margin-left:6px;">(editado)</span>':'')+
           (nome?'<br><span style="font-size:12px;color:var(--text2)">'+_esc(nome)+'</span>':'')+
           (ev.descricao?'<p style="margin:4px 0 0;font-size:13px;">'+_esc(ev.descricao)+'</p>':'')+
-          _evMudancasHtml(ev)+
-          '<div style="display:flex;gap:6px;margin-top:6px;">'+btnEditar+
-          '<button class="btn btn-error btn-sm" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
-          '</div>'+
+          _evMudancasHtml(ev)+acoes+
           '</div></li>';
       }).join('')+'</ul>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
@@ -36397,7 +36414,7 @@ var RhUI = (function() {
             '<td>'+_esc(a.periodo||'—')+'</td>'+
             '<td><strong style="color:'+cor+'">'+nota+'</strong></td>'+
             '<td>'+_esc(a.avaliador||'—')+'</td>'+
-            '<td><button class="btn btn-error btn-sm" id="rh-btn-del-aval-'+_esc(a.id)+'" onclick="RhUI.excluirAvaliacao(\''+_esc(a.id)+'\')"><span class="ms ms-sm">delete</span></button></td>'+
+            '<td>'+(_podeEscreverRh() ? '<button class="btn btn-error btn-sm" id="rh-btn-del-aval-'+_esc(a.id)+'" onclick="RhUI.excluirAvaliacao(\''+_esc(a.id)+'\')"><span class="ms ms-sm">delete</span></button>' : '')+'</td>'+
             '</tr>';
         }).join('')+'</tbody></table>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
@@ -38679,7 +38696,7 @@ var HoleriteUI = (function() {
             'onclick="HoleriteUI.abrirHolerite(' + idStr + ')" data-bg-skip="1">' +
             '<span class="ms ms-sm">visibility</span> Ver' +
           '</button>' +
-          (h.status === 'gerado'
+          (h.status === 'gerado' && _podeEscreverRh()
             ? ' <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#16a34a;" ' +
                 'onclick="HoleriteUI.marcarPago(' + idStr + ')" data-bg-skip="1">' +
                 '<span class="ms ms-sm">check_circle</span> Pagar' +
@@ -38886,7 +38903,7 @@ var HoleriteUI = (function() {
           '</div>' + // /hol-modal-body
 
           '<div class="hol-modal-footer">' +
-            (h.status === 'gerado'
+            (h.status === 'gerado' && _podeEscreverRh()
               ? '<button class="btn btn-primario btn-sm" onclick="document.getElementById(\'hol-modal-detalhe\').remove();HoleriteUI.marcarPago(' + JSON.stringify(h.id).replace(/"/g,"'") + ')" data-bg-skip="1">' +
                 '<span class="ms ms-sm">check_circle</span> Marcar como Pago</button>'
               : '') +
