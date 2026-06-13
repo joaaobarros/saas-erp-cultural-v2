@@ -1338,7 +1338,18 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49e (2026-06-13) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 49f (2026-06-13) → SESSÃO 50
+
+### Estado: Deploy @857 · Fix badge setor no histórico
+
+### O que foi feito (s49f)
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @857 | Fix | `_evMudancas`: `ev.novoSetor` gera badge `_labelSetor(setorAnterior) → _labelSetor(novoSetor)`. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 49e (2026-06-13) → SESSÃO 49f
 
 ### Estado: Deploy @854 · Fix admissão requer salário
 

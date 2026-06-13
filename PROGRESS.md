@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix — admissão requer salário — Deploy @854.** `_EV_CAMPOS.admissao` inclui `'salario'`; backend aplica `alteraSalario` em admissão.
+**Fase atual**: **Fix — Mudança de Setor exibe badge "de → para" no histórico — Deploy @857.** `_evMudancas` agora inclui `ev.novoSetor` com `_labelSetor(setorAnterior) → _labelSetor(novoSetor)`.
+
+**Fase anterior**: **Fix — admissão requer salário — Deploy @856.** `_EV_CAMPOS.admissao` inclui `'salario'`; backend aplica `alteraSalario` em admissão.
 
 **Fase anterior**: **Fix — atualizarEvento exportado + admissão requer setor — Deploy @853.** (1) `atualizarEvento` faltava no `return` do `PessoasEngine` — corrigido. (2) `_EV_CAMPOS.admissao` agora inclui `'setor'`; backend aplica `alteraSetor` em admissão.
 
