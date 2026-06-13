@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @867 · Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores sem auth
+> Deploy atual: @871 · Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores sem auth
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -470,13 +470,13 @@
 
 ## HANDOFF ATUAL — SESSÃO 70 (2026-06-13) → SESSÃO 71
 
-### Estado atual: ~264 bugs registrados · Deploy @867 (GAS)
+### Estado atual: ~264 bugs registrados · Deploy @871 (GAS)
 
 ### O que foi feito nesta sessão (s70)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @867 | Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores | `acesso_service.gs`: `ctrl_acesso_getSetores()` sem verificação de auth (setores são dados públicos da org). `primeiro_acesso.html`: `window.addEventListener('load')` — se `<select id="setor">` tiver apenas o placeholder, busca setores via `google.script.run.ctrl_acesso_getSetores()` e popula dinamicamente. Cobre todos os cenários onde o template server-side falha (orgId mismatch, Drive permission, "Execute as: User"). |
+| @871 | Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores | `acesso_service.gs`: `ctrl_acesso_getSetores()` sem verificação de auth (setores são dados públicos da org). `primeiro_acesso.html`: `window.addEventListener('load')` — se `<select id="setor">` tiver apenas o placeholder, busca setores via `google.script.run.ctrl_acesso_getSetores()` e popula dinamicamente. Cobre todos os cenários onde o template server-side falha (orgId mismatch, Drive permission, "Execute as: User"). |
 | @866 | Perf — AppCache em reservas e reservas-de-carros | `reservas_controller.gs` + `reserva_carro_controller.gs`: AppCache 60-120s em listar/metricas/dados; invalidação em todos os write paths. |
 | @865 | Fix getSetores() — fallback para dados sem orgId | `config_service.gs → getSetores()`: tenta sem filtro de orgId antes de cair no `_defaultSetores()`. |
 | @863 | Perf — AppCache em 5 módulos + boot TTL 300s | boot TTL 60s → 300s; pessoas/tarefas/balcao/financeiro: AppCache 60–120s. |
@@ -495,7 +495,7 @@
 ```
 
 ### Pendentes / próxima ação
-- Testar com usuário real de primeiro acesso (@867): abrir sistema → dropdown de setor deve exibir opções (do servidor ou fallback JS).
+- Testar com usuário real de primeiro acesso (@871): abrir sistema → dropdown de setor deve exibir opções (do servidor ou fallback JS).
 - Se dropwdown carregar corretamente → marcar PREVIEW-01 como CORRIGIDO.
 - Testar RH → Novo Evento → Mudança de Setor → campo "Setor Anterior" legível.
 - Testar Admin → Acessos Pendentes: mensagem de erro se backend falhar.
