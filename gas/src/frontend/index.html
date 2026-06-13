@@ -2428,7 +2428,7 @@ select.form-control { cursor: pointer; }
               </div>
               <div class="form-group">
                 <label class="form-label">Hora de Saída *</label>
-                <input id="carro-f-saida" type="time" class="form-control" required onchange="ReservasCarroUI._debounceCalcRota()">
+                <input id="carro-f-saida" type="time" class="form-control" required onchange="ReservasCarroUI._debounceCalcRota();ReservasCarroUI._atualizarDisponibilidade()">
               </div>
               <div class="form-group">
                 <label class="form-label">Hora de Chegada (estimada)</label>
@@ -2441,7 +2441,7 @@ select.form-control { cursor: pointer; }
               </div>
               <div id="carro-disp-panel" style="display:none;grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:12px 14px;border:1px solid var(--border);">
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-                  <span class="ms ms-sm" style="font-size:14px;">access_time</span> Disponibilidade do veículo
+                  <span class="ms ms-sm" style="font-size:14px;">access_time</span> Disponibilidade do veículo<span id="carro-disp-data-label" style="font-weight:700;color:var(--texto);margin-left:4px;"></span>
                 </div>
                 <div id="carro-disp-content">—</div>
               </div>
@@ -16270,6 +16270,8 @@ var ReservasCarroUI = (function() {
     _debounceTimer = setTimeout(function() {
       _atualizarPreviewMapa();
       _debounceCalcRota();
+      // Recalcula disponibilidade para refletir buffer de retorno ao novo local de saída
+      _atualizarDisponibilidade();
     }, 600);
   }
 
@@ -16865,6 +16867,15 @@ var ReservasCarroUI = (function() {
             if (txt) txt += ' (+ 5 min de buffer)';
             elDetalhe.textContent = txt;
           }
+          // Atualiza campos com endereço geocodificado para evitar ambiguidade no servidor
+          if (r.data.origemResolvida) {
+            var elS = document.getElementById('carro-f-local-saida');
+            if (elS) elS.value = r.data.origemResolvida;
+          }
+          if (r.data.destinoResolvido) {
+            var elC = document.getElementById('carro-f-local-chegada');
+            if (elC) elC.value = r.data.destinoResolvido;
+          }
         } else {
           if (elEst) elEst.textContent = '—';
           Toast.aviso((r && r.error && r.error.message) || 'Não foi possível calcular o tempo de rota.');
@@ -16898,6 +16909,8 @@ var ReservasCarroUI = (function() {
     if (!panel || !content) return;
     if (!data) { panel.style.display = 'none'; return; }
     panel.style.display = '';
+    var lblData = document.getElementById('carro-disp-data-label');
+    if (lblData) lblData.textContent = '— ' + fmtDataPtBR(data);
     content.innerHTML = '<p style="font-size:12px;color:var(--muted);">Carregando…</p>';
     GAS.reservasCarro.disponibilidade({ data: data, localSaida: saida, veiculoId: veiculo }, function(r) {
       if (!r || !r.ok || !r.data) {
@@ -16933,9 +16946,32 @@ var ReservasCarroUI = (function() {
           });
           html += '</div>';
         }
+        // Aviso se o horário selecionado cai em janela bloqueada (incluindo buffer de retorno)
+        var horaSel = (document.getElementById('carro-f-saida') || {}).value || '';
+        if (horaSel) {
+          var hSelMin = (function(h) {
+            var p = h.split(':'); return parseInt(p[0],10)*60 + parseInt(p[1],10);
+          })(horaSel);
+          var bloqAtivo = bloqueios.filter(function(b) {
+            var bi = (function(h){var p=h.split(':');return parseInt(p[0],10)*60+parseInt(p[1],10);})(b.inicio);
+            var bf = (function(h){var p=h.split(':');return parseInt(p[0],10)*60+parseInt(p[1],10);})(b.fim);
+            return hSelMin >= bi && hSelMin < bf;
+          });
+          if (bloqAtivo.length) {
+            var temBuffer = bloqAtivo.some(function(b){ return b.isBuffer; });
+            var aviso = temBuffer
+              ? 'Não há tempo de deslocamento para este local até às ' + horaSel + '.'
+              : 'Veículo ocupado às ' + horaSel + '.';
+            html += '<div style="display:flex;align-items:flex-start;gap:6px;padding:8px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;margin-top:6px;">' +
+              '<span class="ms ms-sm" style="font-size:15px;color:#dc2626;flex-shrink:0;margin-top:1px;">warning</span>' +
+              '<div style="font-size:12px;color:#b91c1c;">' + escaparHtml(aviso) + (d.proximoHorario ? ' Mínimo disponível: <strong>' + escaparHtml(d.proximoHorario) + '</strong>.' : '') + '</div>' +
+              '</div>';
+          }
+        }
         if (d.proximoHorario) {
+          var rotuloPH  = bloqueios.some(function(b){ return b.isBuffer; }) ? 'Saída mínima (c/ retorno)' : 'Próximo disponível';
           var pHSafe = JSON.stringify(d.proximoHorario).replace(/"/g, "'");
-          html += '<div style="font-size:11px;margin-top:4px;color:var(--primario);">Próximo disponível: <strong>' + escaparHtml(d.proximoHorario) + '</strong>' +
+          html += '<div style="font-size:11px;margin-top:4px;color:var(--primario);">' + escaparHtml(rotuloPH) + ': <strong>' + escaparHtml(d.proximoHorario) + '</strong>' +
             ' <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._usarProximoHorario(' + pHSafe + ')" data-bg-skip="1" style="font-size:11px;padding:1px 8px;">Usar</button></div>';
         }
       }
@@ -17250,9 +17286,10 @@ var ReservasCarroUI = (function() {
     _removerParada:        _removerParada,
     abrirMapaPickerParada: abrirMapaPickerParada,
     // Cálculo de rota e disponibilidade
-    calcularRota:          calcularRota,
-    _debounceCalcRota:     _debounceCalcRota,
-    _usarProximoHorario:   _usarProximoHorario,
+    calcularRota:              calcularRota,
+    _debounceCalcRota:         _debounceCalcRota,
+    _usarProximoHorario:       _usarProximoHorario,
+    _atualizarDisponibilidade: _atualizarDisponibilidade,
     // Editar rota (aprovadores)
     _confirmarEditarRota:  _confirmarEditarRota,
     // Escala

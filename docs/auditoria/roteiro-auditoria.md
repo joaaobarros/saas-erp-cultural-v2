@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @829 · UX — Erradicação de prompt()/confirm()/alert() — helpers _modalInput + _abrirModalConfirmar
+> Deploy atual: @830 · Reserva Veículo — disponibilidade por data + geocodificação resolvida + bloqueio buffer na aprovação
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,34 +468,54 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 67 (2026-06-12) → SESSÃO 68
+## HANDOFF ATUAL — SESSÃO 68 (2026-06-12) → SESSÃO 69
 
-### Estado atual: ~266 bugs registrados · Deploy @828 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @830 (GAS)
+
+### O que foi feito nesta sessão (s68)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @830 | Infraestrutura — Reserva de Veículo: disponibilidade por data + geocodificação + bloqueio buffer aprovação | **Backend**: `escala_carro_engine.gs` — (1) `calcularTempoRota` retorna `origemResolvida`/`destinoResolvido` extraídos de `legs[0].start_address` / `legs[last].end_address` da resposta Maps API — endereço geocodificado real, não a abreviação informada. (2) Buffer de retorno: descrição agora inclui locais (`"Retorno: Pinacoteca → CCBJ (44 min + 5 min buffer)"`). (3) `proximoHorario` usa `baseMins=0` para datas futuras (antes usava hora atual → mostrava 21:14 para datas do dia seguinte). `reserva_carro_engine.gs` — `aprovar()` chama `EscalaCarroEngine.calcularDisponibilidade` antes de `aprovarAtomico`; se `horaSaida` não cair em janela livre (considerando buffer de retorno), aprovação bloqueada com mensagem clara + próximo horário. **Frontend**: `index.html` — (1) Cabeçalho painel disponibilidade exibe data (`fmtDataPtBR`). (2) `calcularRota()`: ao receber resultado, atualiza campos `carro-f-local-saida`/`carro-f-local-chegada` com endereço resolvido — elimina ambiguidade de abreviações no payload salvo. (3) `debouncePreviewMapa()` + `onchange` de `carro-f-saida` disparam `_atualizarDisponibilidade()` — painel recalcula buffer ao mudar local de saída ou hora. (4) Aviso inline vermelho quando horaSaida está em janela bloqueada; rótulo "Saída mínima (c/ retorno)" quando há blocos de buffer. (5) `_atualizarDisponibilidade` exposta no objeto público. |
+
+### Checklist de auditoria — s68
+```
+[x] prompt()/confirm()/alert() — sem novas ocorrências
+[x] GAS.* namespace — sem novos endpoints; bindings existentes inalterados
+[x] CSS — sem classes novas
+[x] IDs de DOM — carro-disp-data-label adicionado; consistente
+[x] FsmGuardian — aprovar() mantém assertValida; novo check é PRÉ-FSM, não substitui
+[x] Modais — sem novos modais
+[x] BtnGuard — sem novos botões assíncronos; _atualizarDisponibilidade não tem BtnGuard (correto: é silencioso)
+[x] Datas — carro-disp-data-label usa fmtDataPtBR(); sem ISO cru
+```
+
+### Pendentes / próxima ação
+- **Testar no browser (@830)**: Criar reserva CCBJ→AEUSM → Calcular → confirmar que campo atualiza com endereço completo e tempo é ~6 min
+- **Testar buffer de retorno**: reserva anterior CCBJ→Pinacoteca aprovada → abrir Nova Reserva na mesma data → digitar "ccbj" → painel deve mostrar bloco buffer "Retorno: Pinacoteca → CCBJ (Xmin + 5min buffer)" e horário mínimo correto
+- **Testar bloqueio na aprovação**: tentar aprovar reserva com `horaSaida` dentro do buffer → deve retornar erro com próximo horário disponível
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 67 (2026-06-12) → SESSÃO 68
+
+### Estado anterior: ~266 bugs registrados · Deploy @828 (GAS)
 
 ### O que foi feito nesta sessão (s67)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @828 | Infraestrutura — Fase 22 completa: reserva de carro complexificada | **Backend (22a)**: 5 novos arquivos GAS. `veiculos_repository.gs`: frota multi-veículo, `id:'default'` auto-criado. `escala_carro_repository.gs`: disponibilidade por tipo (semanal com diasSemana[]+vigência ou específica por data). `escala_carro_engine.gs`: `podAprovarCarro(email)` centralizado (habilitador/admin/superadmin ou gestor com 'infraestrutura' em setoresGerenciados); `calcularDisponibilidade()` com algoritmo de subtração de intervalos + buffer de deslocamento via Maps API; `calcularTempoRota()` com waypoints; CRUD escalas + veículos. `escala_carro_controller.gs`: 9 novos endpoints. `acesso_service.gs`: campo `setoresGerenciados[]` em aprovarAcesso + editarPapel. `reserva_carro_repository.gs`: schema enriquecido (veiculoId, horaChegadaEstimada, rota.paradas como objetos, coords, tempoEstimadoMin, distanciaKm), aprovarAtomico filtrado por veiculoId. `reserva_carro_engine.gs`: editarRota() para aprovadores. `setup.gs`: abas Veiculos+EscalaCarro. **Frontend (22b)**: formulário Nova Reserva — seletor veículo (oculto se 1 veículo), paradas com map picker + iframe preview + `_paradasData[]` (objects com lat/lng/mapaUrl), hora chegada estimada (display+botão Calcular via tempoRota), painel disponibilidade (janelas/bloqueios/próximoHorário), debounce 2s. Toggle "Escala" (oculto para não-aprovadores). Aba Escala: lista + formulário semanal (dias-semana checkboxes + vigência) e específica. Seção veículos. Modal detalhes: seção "Editar Rota" colapsável (PENDENTE/APROVADA). Admin editarPapel: `setoresGerenciados` multi-select visível só para papel=gestor. |
+| @829 | UX — Erradicação de prompt()/confirm()/alert() | Proibição formal adicionada ao CLAUDE.md. `_modalInput(opts, cb)` e `_abrirModalConfirmar` atualizados (suporte a `cbCancelar`). 45 ocorrências substituídas em `index.html`, `terreno_editor.html`, `mapa_acao_editor.html`. `alert()` em `primeiro_acesso.html` e `portal_aprovacao.html` → display inline de erro. Zero diálogos nativos em código ativo. |
+| @828 | Infraestrutura — Fase 22 completa: reserva de carro complexificada | **Backend (22a)**: 5 novos arquivos GAS. `veiculos_repository.gs`: frota multi-veículo, `id:'default'` auto-criado. `escala_carro_repository.gs`: disponibilidade por tipo (semanal com diasSemana[]+vigência ou específica por data). `escala_carro_engine.gs`: `podAprovarCarro(email)` centralizado; `calcularDisponibilidade()` com subtração de intervalos + buffer Maps API; `calcularTempoRota()` com waypoints; CRUD escalas + veículos. `escala_carro_controller.gs`: 9 novos endpoints. `acesso_service.gs`: `setoresGerenciados[]`. `reserva_carro_repository.gs`: schema enriquecido, `aprovarAtomico` com lock. `reserva_carro_engine.gs`: `editarRota()`. **Frontend (22b)**: seletor veículo, paradas com map picker, hora estimada, painel disponibilidade, aba Escala, modal detalhes com Editar Rota. |
 
 ### Checklist de auditoria — s67
 ```
 [x] prompt()/confirm() — _removerEscala usa confirm() que retorna boolean (sem null)
-[x] GAS.* namespace — 10 novos bindings: disponibilidade, tempoRota, editarRota, listarVeiculos, salvarVeiculo, listarEscalas, salvarEscala, atualizarEscala, removerEscala + geocode atualizado
-[x] CSS — sem classes novas que precisem de CSS; carro-parada-bloco, esc-dia-btn usados só em JS
-[x] IDs de DOM — consistentes em toda a base; carro-parada-preview-N e carro-parada-iframe-N com mesmo N
-[x] FsmGuardian — editarRota() no backend verifica FSM (PENDENTE|APROVADA); sem transição de status nesta fase
-[x] Modais — carro-escala-modal-overlay e carro-veiculo-modal-overlay com background:rgba(0,0,0,.5), caixas com background:var(--surface)
-[x] BtnGuard — calcularRota, _salvarEscala, _salvarVeiculo, _confirmarEditarRota todos usam BtnGuard.wrap
-[x] Datas — _renderEscala usa fmtDataPtBR(); sem ISO cru exposto ao usuário
-[x] Paradas — _verDetalhesAgenda e renderLista/agenda tratam p como objeto ou string (backward compat)
+[x] GAS.* namespace — 10 novos bindings
+[x] Modais — background opaco em todos os novos overlays
+[x] BtnGuard — calcularRota, _salvarEscala, _salvarVeiculo, _confirmarEditarRota usam BtnGuard.wrap
+[x] Datas — fmtDataPtBR() em _renderEscala
 ```
-
-### Pendentes / próxima ação
-- **Setup obrigatório**: rodar `fase22_carro_prepararIndice()` no GAS Editor após deploy → `{veiculos:{ok:true}, escala:{ok:true}}`
-- **Testar no browser (@828)**: Nova Reserva → selecionar data → painel disponibilidade aparece → preencher saída+chegada → Calcular → hora estimada atualiza → Adicionar parada → botão mapa funciona → Enviar → persiste veiculoId, horaChegadaEstimada, rota.paradas como objetos
-- **Testar Escala**: Como habilitador → aba "Escala" visível → Nova escala semanal → salva → lista atualiza
-- **Testar Admin**: Editar usuário papel=gestor → bloco "Setores Gerenciados" aparece → marcar infraestrutura → salvar → usuário passa a ter podAprovarCarro
 
 ---
 

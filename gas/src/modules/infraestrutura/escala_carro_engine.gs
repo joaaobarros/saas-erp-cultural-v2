@@ -162,10 +162,13 @@ var EscalaCarroEngine = (function() {
         var tempoDeslocMin = _calcularTempoEntre(localChegadaReserva, localSaida);
         var bufferTotal    = tempoDeslocMin + BUFFER_MIN;
         if (bufferTotal > 0) {
+          var lblOrigem  = String(localChegadaReserva).split(',')[0].trim();
+          var lblDestino = String(localSaida).split(',')[0].trim();
           bloqueios.push({
             inicio:    fimReserva,
             fim:       fimReserva + bufferTotal,
-            descricao: 'Buffer deslocamento (' + bufferTotal + ' min)',
+            descricao: 'Retorno: ' + lblOrigem + ' → ' + lblDestino +
+                       ' (' + tempoDeslocMin + ' min + ' + BUFFER_MIN + ' min buffer)',
             isBuffer:  true
           });
         }
@@ -215,12 +218,14 @@ var EscalaCarroEngine = (function() {
       };
     });
 
-    // Próximo horário disponível a partir de agora
+    // Próximo horário disponível: a partir de agora se for hoje, do início do dia se for data futura
     var proximoHorario = null;
-    var agoraMins = _horaAtualMin();
+    var tz       = getOrgConfig().timezone || 'America/Fortaleza';
+    var hojeISO  = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    var baseMins = (data === hojeISO) ? _horaAtualMin() : 0;
     for (var k = 0; k < livres.length; k++) {
-      if (livres[k].fim > agoraMins) {
-        proximoHorario = _minParaHora(Math.max(livres[k].inicio, agoraMins));
+      if (livres[k].fim > baseMins) {
+        proximoHorario = _minParaHora(Math.max(livres[k].inicio, baseMins));
         break;
       }
     }
@@ -283,7 +288,12 @@ var EscalaCarroEngine = (function() {
       var chegadaMin   = horaSaidaMin + minutos;
       var horaChegadaSugerida = _minParaHora(chegadaMin);
 
-      return { minutos: minutos, km: km, horaChegadaSugerida: horaChegadaSugerida };
+      // Endereços resolvidos pelo geocoder do Maps (permite detectar geocodificação errada)
+      var origemResolvida  = legs[0].start_address                  || '';
+      var destinoResolvido = legs[legs.length - 1].end_address       || '';
+
+      return { minutos: minutos, km: km, horaChegadaSugerida: horaChegadaSugerida,
+               origemResolvida: origemResolvida, destinoResolvido: destinoResolvido };
     } catch(e) {
       Logger.warn('escala_carro_engine', 'calcularTempoRota', e.message);
       throw new Error('Não foi possível calcular a rota: ' + e.message);

@@ -201,6 +201,23 @@ var ReservaCarroEngine = (function() {
 
     FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.APROVADA, id, emailAprovador);
 
+    // Verificação com buffer: o carro precisa ter tempo hábil de retornar de reservas anteriores
+    var rotaRc     = rc.rota || {};
+    var disponib   = EscalaCarroEngine.calcularDisponibilidade(
+      rc.data, rotaRc.localSaida || '', rc.veiculoId || 'default', orgId, id
+    );
+    var horaSaidaMin = _horaParaMin(rc.horaSaida);
+    var dentroDeJanela = disponib.janelas.some(function(j) {
+      return _horaParaMin(j.inicio) <= horaSaidaMin && horaSaidaMin < _horaParaMin(j.fim);
+    });
+    if (!dentroDeJanela) {
+      throw new Error(
+        'Aprovação bloqueada: considerando o tempo de retorno de reservas anteriores, ' +
+        'o veículo não estará disponível às ' + rc.horaSaida + ' em ' + rc.data + '. ' +
+        'Próximo horário possível: ' + (disponib.proximoHorario || 'indisponível no dia') + '.'
+      );
+    }
+
     var resultadoAprovacao = ReservaCarroRepository.aprovarAtomico(id, {
       status:        STATUS.APROVADA,
       aprovador:     emailAprovador,
