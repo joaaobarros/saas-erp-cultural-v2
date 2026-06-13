@@ -57,13 +57,19 @@ var SistemaConfigService = (function () {
       var orgId = getOrgConfig().orgId;
       var lista = readJSON('setores_config.json');
       if (Array.isArray(lista) && lista.length > 0) {
-        return lista.filter(function(s) { return s.ativo !== false && s.orgId === orgId; })
-                    .map(function(s) { return s.label ? s : Object.assign({}, s, { label: s.nome }); });
+        var normalize = function(s) { return s.label ? s : Object.assign({}, s, { label: s.nome }); };
+        // Tenta com filtro de orgId (dados recentes)
+        var comOrgId = lista.filter(function(s) { return s.ativo !== false && s.orgId === orgId; })
+                            .map(normalize);
+        if (comOrgId.length > 0) return comOrgId;
+        // Fallback: dados legados sem orgId ou com orgId diferente — inclui todos os ativos
+        var semFiltro = lista.filter(function(s) { return s.ativo !== false; }).map(normalize);
+        if (semFiltro.length > 0) return semFiltro;
       }
     } catch(e) {
       Logger.warn('config_service', 'getSetores', 'setores_config.json indisponível: ' + e.message);
     }
-    // Fallback: config_org.json legado ou defaults
+    // Fallback final: config_org.json legado ou defaults embutidos
     var cfg = _getConfigOrg();
     return (cfg.setores || _defaultSetores()).filter(function(s) { return s.ativo !== false; });
   }
