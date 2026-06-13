@@ -16,7 +16,7 @@
 var BootService = (function () {
 
   var _CACHE_PREFIX = 'boot_dados_';
-  var _CACHE_TTL    = 60; // segundos
+  var _CACHE_TTL    = 300; // segundos — dados de boot mudam raramente (setores, espaços, permissões)
 
   function _chaveCache(email, orgId) {
     return _CACHE_PREFIX + orgId + '_' + email.replace(/[^a-z0-9]/g, '_');

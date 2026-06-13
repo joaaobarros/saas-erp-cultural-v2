@@ -4,6 +4,19 @@
  * @description Bridge GAS oficial para o domínio Tarefas.
  */
 
+// Cache de leitura — chave inclui email pois tarefas são filtradas por usuário
+var _CK_TAREFAS_LISTA    = 'tarefas_lista_';
+var _CK_TAREFAS_METRICAS = 'tarefas_metricas_';
+
+function _invalidarCachesTarefas(orgId) {
+  try {
+    // Não é possível invalidar todas as chaves por usuário de forma eficiente;
+    // usamos prefixo de orgId como aproximação conservadora.
+    // A chave inclui orgId + email — deixamos expirar naturalmente para chaves de outros users.
+    AppCache.remove(_CK_TAREFAS_METRICAS + (orgId || ''));
+  } catch(_) {}
+}
+
 function _ctrlTarefasContexto() {
   var email = getEmailSessao();
   var acesso = AcessoService.verificar(email);
@@ -21,7 +34,12 @@ function _ctrlTarefasContexto() {
 function ctrl_tarefas_listar(filtros) {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {}, ctx.setor);
+    var ck = _CK_TAREFAS_LISTA + ctx.orgId + '_' + ctx.email.replace(/[^a-z0-9]/g,'_') + '_' + JSON.stringify(filtros || {});
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
+    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {}, ctx.setor);
+    AppCache.set(ck, lista, 60);
+    return lista;
   }, 'ctrl_tarefas_listar');
 }
 
@@ -40,21 +58,27 @@ function ctrl_tarefas_obter(id) {
 function ctrl_tarefas_salvar(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaEngine.salvar(dados || {}, ctx.email);
+    var r = TarefaEngine.salvar(dados || {}, ctx.email);
+    _invalidarCachesTarefas(ctx.orgId);
+    return r;
   }, 'ctrl_tarefas_salvar');
 }
 
 function ctrl_tarefas_criar(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaEngine.criar(dados || {}, ctx.email);
+    var r = TarefaEngine.criar(dados || {}, ctx.email);
+    _invalidarCachesTarefas(ctx.orgId);
+    return r;
   }, 'ctrl_tarefas_criar');
 }
 
 function ctrl_tarefas_mudar_status(id, status, comentario) {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaEngine.mudarStatus(id, status, comentario || '', ctx.email);
+    var r = TarefaEngine.mudarStatus(id, status, comentario || '', ctx.email);
+    _invalidarCachesTarefas(ctx.orgId);
+    return r;
   }, 'ctrl_tarefas_mudar_status');
 }
 
@@ -73,14 +97,21 @@ function ctrl_tarefas_excluir(id) {
     if (['admin', 'superadmin', 'gestor'].indexOf(ctx.papel) === -1 && tarefa.criadoPor !== ctx.email) {
       throw new Error('Sem permissao para excluir esta tarefa.');
     }
-    return TarefaRepository.excluir(ctx.orgId, id);
+    var r = TarefaRepository.excluir(ctx.orgId, id);
+    _invalidarCachesTarefas(ctx.orgId);
+    return r;
   }, 'ctrl_tarefas_excluir');
 }
 
 function ctrl_tarefas_metricas() {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();
-    return TarefaEngine.obterMetricas(ctx.email);
+    var ck = _CK_TAREFAS_METRICAS + ctx.orgId + '_' + ctx.email.replace(/[^a-z0-9]/g,'_');
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
+    var m = TarefaEngine.obterMetricas(ctx.email);
+    AppCache.set(ck, m, 60);
+    return m;
   }, 'ctrl_tarefas_metricas');
 }
 

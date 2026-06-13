@@ -17,6 +17,19 @@
  *          core/config.gs (getOrgConfig)
  */
 
+// ── Cache de leitura ──────────────────────────────────────────────────
+
+var _CK_PESSOAS_LISTA    = 'pessoas_lista_';
+var _CK_PESSOAS_METRICAS = 'pessoas_metricas_';
+
+function _invalidarCachesPessoas(orgId) {
+  try {
+    var prefixo = orgId || getOrgConfig().orgId;
+    AppCache.remove(_CK_PESSOAS_LISTA    + prefixo);
+    AppCache.remove(_CK_PESSOAS_METRICAS + prefixo);
+  } catch(_) {}
+}
+
 // ── Helpers privados do controller ───────────────────────────────────
 
 function _ctxPessoas() {
@@ -70,9 +83,14 @@ function ctrl_pessoas_listar(filtros) {
     var ctx   = _ctxPessoas();
     var nivel = _ctxPessoasNivel(ctx.email);
     if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) !== -1) {
-      return PessoasEngine.listar(filtros || {}, ctx.orgId);
+      var ck = _CK_PESSOAS_LISTA + ctx.orgId + '_' + JSON.stringify(filtros || {});
+      var cached = AppCache.get(ck);
+      if (cached) return cached;
+      var lista = PessoasEngine.listar(filtros || {}, ctx.orgId);
+      AppCache.set(ck, lista, 120);
+      return lista;
     }
-    // Colaborador: retorna apenas o próprio perfil
+    // Colaborador: retorna apenas o próprio perfil (path rápido — sem cache compartilhado)
     var c = PessoasEngine.buscarPorEmail(ctx.email, ctx.orgId);
     return c ? [c] : [];
   }, 'ctrl_pessoas_listar');
@@ -109,7 +127,12 @@ function ctrl_pessoas_metricas() {
     var nivel = _ctxPessoasNivel(ctx.email);
     if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) === -1)
       throw new Error('Métricas disponíveis apenas para gestores e RH.');
-    return PessoasEngine.obterMetricas(ctx.orgId);
+    var ck = _CK_PESSOAS_METRICAS + ctx.orgId;
+    var cached = AppCache.get(ck);
+    if (cached) return cached;
+    var m = PessoasEngine.obterMetricas(ctx.orgId);
+    AppCache.set(ck, m, 120);
+    return m;
   }, 'ctrl_pessoas_metricas');
 }
 
@@ -283,6 +306,7 @@ function ctrl_pessoas_salvar(dados) {
     }
 
     var id = PessoasEngine.salvar(dados || {}, ctx.email, ctx.orgId);
+    _invalidarCachesPessoas(ctx.orgId);
     // Sync mínimo para usuarios_acesso.json: apenas setor e nome como fallback de exibição
     var emailInst = String((dados||{}).emailInstitucional || '').toLowerCase().trim();
     if (emailInst) {
@@ -297,6 +321,7 @@ function ctrl_pessoas_salvar(dados) {
           return lista;
         });
         try { BootService.limparCache(emailInst); } catch(_e) {}
+        try { AcessoService.invalidarCacheVerificar(emailInst); } catch(_e) {}
       } catch(_e) { Logger.warn('ctrl_pessoas_salvar', 'sync_usuario', _e.message); }
     }
     return { id: id };
@@ -313,7 +338,9 @@ function ctrl_pessoas_mudar_status(id, novoStatus) {
     if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
       throw new Error('Apenas RH pode alterar status de colaboradores.');
     if (!id || !novoStatus) throw new Error('ID e novoStatus são obrigatórios.');
-    return PessoasEngine.mudarStatus(id, novoStatus, ctx.email, ctx.orgId);
+    var r = PessoasEngine.mudarStatus(id, novoStatus, ctx.email, ctx.orgId);
+    _invalidarCachesPessoas(ctx.orgId);
+    return r;
   }, 'ctrl_pessoas_mudar_status');
 }
 
@@ -343,6 +370,7 @@ function ctrl_pessoas_excluir(id) {
 
     ColaboradorRepository.excluir(ctx.orgId, id);
     AuditoriaService.registrar('COLABORADOR_EXCLUIDO', 'pessoas', { id: id, operador: ctx.email });
+    _invalidarCachesPessoas(ctx.orgId);
     return { ok: true };
   }, 'ctrl_pessoas_excluir');
 }
@@ -357,7 +385,9 @@ function ctrl_pessoas_registrar_desligamento(dados) {
     if (nivel !== 'superadmin' && nivel !== 'admin' && nivel !== 'rh')
       throw new Error('Apenas RH pode registrar desligamentos.');
     if (!dados || !dados.idColaborador) throw new Error('idColaborador é obrigatório.');
-    return PessoasEngine.registrarDesligamento(dados, ctx.email, ctx.orgId);
+    var r = PessoasEngine.registrarDesligamento(dados, ctx.email, ctx.orgId);
+    _invalidarCachesPessoas(ctx.orgId);
+    return r;
   }, 'ctrl_pessoas_registrar_desligamento');
 }
 

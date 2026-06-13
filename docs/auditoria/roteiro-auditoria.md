@@ -1456,6 +1456,27 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ATUAL — SESSÃO 50 (2026-06-13) → SESSÃO 51
+
+### Estado: Deploy @863 · Performance — AppCache em 5 módulos + boot TTL 300s
+
+### O que foi feito nesta sessão (s50)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @863 | Perf: boot TTL | `boot_service.gs` TTL 60s → 300s — cold boot a cada 5 min |
+| @863 | Perf: Pessoas | AppCache 120s em `ctrl_pessoas_listar` (admin/rh/gestor) e `ctrl_pessoas_metricas`; invalidação em salvar/excluir/mudar_status/desligar |
+| @863 | Perf: Tarefas | AppCache 60s em `ctrl_tarefas_listar` (por email) e `ctrl_tarefas_metricas`; invalidação em criar/salvar/mudar_status/excluir |
+| @863 | Perf: Balcão | AppCache 60s em `ctrl_balcao_listar` e `ctrl_balcao_metricas`; invalidação em todas as escritas |
+| @863 | Perf: Financeiro | AppCache 120s em listar/metricas de fontes, remanejamentos e aditivos; `_invalidarCachesFinanceiro()` em todos os write paths |
+
+### Contexto: data_layer._jsonCache e AcessoService.verificar cache já implementados em sessão anterior (@46b5091)
+
+### Pendentes / próxima ação
+- Retomar auditoria de bugs: TAR-04, HUB-13 ou outros abertos
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 49 (2026-06-13) → SESSÃO 49b
 
 ### Estado: Deploy @847 · RH Histórico — Mudança de Setor + cargo na Admissão + ordenação por data
