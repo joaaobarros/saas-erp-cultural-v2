@@ -37252,23 +37252,24 @@ var BiDemograficoUI = (function () {
     if (!_carregado) _carregar();
   }
 
-  function atualizar() {
+  function atualizar(done) {
     _carregado = false;
     _dados = {};
     _resetarMapa();
-    _carregar();
+    _carregar(done);
   }
 
-  function _carregar() {
+  function _carregar(onDone) {
     _mostrarLoading();
     var fn = _contexto === 'equipe' ? GAS.biDemografico.equipe : GAS.biDemografico.beneficiarios;
     fn(function (r) {
-      if (!r || !r.ok) { _mostrarErro((r && r.error && r.error.message) || 'Erro ao carregar dados.'); return; }
+      if (!r || !r.ok) { _mostrarErro((r && r.error && r.error.message) || 'Erro ao carregar dados.'); if (onDone) onDone(); return; }
       _dados[_contexto] = r.data;
       _carregado = true;
       _popularFiltros();
       _renderizar();
-    }, function (e) { _mostrarErro(e.message || String(e)); });
+      if (onDone) onDone();
+    }, function (e) { _mostrarErro(e.message || String(e)); if (onDone) onDone(); });
   }
 
   // ── Contexto / Tabs ─────────────────────────────────────────────────────
@@ -37300,6 +37301,12 @@ var BiDemograficoUI = (function () {
       if (selStatus)  selStatus.style.display  = 'none';
     }
     if (selSetor) selSetor.value = '';
+    // Mostrar/ocultar cards exclusivos de equipe
+    var soEquipe = ['bi-dem-grid-cargo-tempo','bi-dem-grid-pcd-familia','bi-dem-card-restricoes'];
+    soEquipe.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = ctx === 'equipe' ? '' : 'none';
+    });
     _resetarMapa();
     if (_dados[_contexto]) { _popularFiltros(); _renderizar(); }
     else _carregar();
@@ -37307,56 +37314,53 @@ var BiDemograficoUI = (function () {
 
   // ── Filtros ──────────────────────────────────────────────────────────────
 
-  var _MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var _MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-  function _avancaMes(ym) {
-    var y = parseInt(ym.slice(0,4), 10);
-    var m = parseInt(ym.slice(5,7), 10) + 1;
-    if (m > 12) { m = 1; y++; }
-    return y + '-' + (m < 10 ? '0'+m : ''+m);
-  }
-
-  function _ymLabel(ym) {
-    var m = parseInt(ym.slice(5,7), 10);
-    return _MESES[m-1] + '/' + ym.slice(0,4);
+  // Combina selects de mês e ano em 'YYYY-MM' ou '' se algum estiver vazio
+  function _ymDeSel(idMes, idAno) {
+    var mes = (document.getElementById(idMes)||{}).value || '';
+    var ano = (document.getElementById(idAno)||{}).value || '';
+    return (mes && ano) ? ano + '-' + mes : '';
   }
 
   function _popularFiltros() {
     var d = _dados[_contexto];
     if (!d || !d.registros) return;
 
-    // Período De/Até — granularidade mensal (valor: "YYYY-MM")
-    var selDe  = document.getElementById('bi-dem-sel-de');
-    var selAte = document.getElementById('bi-dem-sel-ate');
-    if (selDe && selAte) {
-      var hojeYM = new Date().toISOString().slice(0,7);
-      var minMes = '9999-99', maxMes = hojeYM;
-      d.registros.forEach(function (r) {
-        var m1 = String(r.dataAdmissao || r.criadoEm || '').slice(0,7);
-        var m2 = String(r.dataDesligamento || '').slice(0,7);
-        if (/^\d{4}-\d{2}$/.test(m1)) {
-          if (m1 < minMes) minMes = m1;
-          if (m1 > maxMes) maxMes = m1;
-        }
-        if (/^\d{4}-\d{2}$/.test(m2) && m2 > maxMes) maxMes = m2;
-      });
-      if (minMes === '9999-99') minMes = hojeYM.slice(0,4) + '-01';
-      var optsD = '<option value="">—</option>';
-      var optsA = '<option value="">—</option>';
-      var cur = minMes;
-      while (cur <= maxMes) {
-        var lbl = _ymLabel(cur);
-        optsD += '<option value="' + cur + '">' + lbl + '</option>';
-        optsA += '<option value="' + cur + '">' + lbl + '</option>';
-        cur = _avancaMes(cur);
-      }
-      var prevDe  = selDe.value;
-      var prevAte = selAte.value;
-      selDe.innerHTML  = optsD;
-      selAte.innerHTML = optsA;
-      if (prevDe)  selDe.value  = prevDe;
-      if (prevAte) selAte.value = prevAte;
-    }
+    // Calcular faixa de anos presente nos dados
+    var hojeYM = new Date().toISOString().slice(0,7);
+    var minAno = 9999, maxAno = parseInt(hojeYM.slice(0,4), 10);
+    d.registros.forEach(function (r) {
+      var m1 = String(r.dataAdmissao || r.criadoEm || '').slice(0,7);
+      var m2 = String(r.dataDesligamento || '').slice(0,7);
+      if (/^\d{4}-\d{2}$/.test(m1)) { var y=parseInt(m1.slice(0,4),10); if(y<minAno)minAno=y; if(y>maxAno)maxAno=y; }
+      if (/^\d{4}-\d{2}$/.test(m2)) { var y2=parseInt(m2.slice(0,4),10); if(y2>maxAno)maxAno=y2; }
+    });
+    if (minAno === 9999) minAno = maxAno;
+
+    // Popular selects de mês (fixos) e ano (range dinâmico)
+    var optsMes = '<option value="">—</option>';
+    _MESES_ABREV.forEach(function(m, i) {
+      var v = (i+1 < 10 ? '0' : '') + (i+1);
+      optsMes += '<option value="'+v+'">'+m+'</option>';
+    });
+    var optsAno = '<option value="">—</option>';
+    for (var y = minAno; y <= maxAno; y++) optsAno += '<option value="'+y+'">'+y+'</option>';
+
+    ['bi-dem-sel-de-mes','bi-dem-sel-ate-mes'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var prev = el.value;
+      el.innerHTML = optsMes;
+      if (prev) el.value = prev;
+    });
+    ['bi-dem-sel-de-ano','bi-dem-sel-ate-ano'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var prev = el.value;
+      el.innerHTML = optsAno;
+      if (prev) el.value = prev;
+    });
 
     // Setor — usa catálogo d.setores (id/label); beneficiários usam acaoNome
     var selSet = document.getElementById('bi-dem-sel-setor');
@@ -37392,9 +37396,11 @@ var BiDemograficoUI = (function () {
   }
 
   function _getFiltros() {
+    var de  = _ymDeSel('bi-dem-sel-de-mes',  'bi-dem-sel-de-ano');
+    var ate = _ymDeSel('bi-dem-sel-ate-mes', 'bi-dem-sel-ate-ano');
     return {
-      de:      (document.getElementById('bi-dem-sel-de') ||{}).value || '',
-      ate:     (document.getElementById('bi-dem-sel-ate')||{}).value || '',
+      de:      de,
+      ate:     ate,
       setor:   (document.getElementById('bi-dem-sel-setor')  ||{}).value || '',
       vinculo: (document.getElementById('bi-dem-sel-vinculo')||{}).value || '',
       status:  ((document.getElementById('bi-dem-sel-status') ||{}).value !== undefined
@@ -37441,13 +37447,19 @@ var BiDemograficoUI = (function () {
   function aplicarFiltros() {
     _renderizar();
     var f = _getFiltros();
-    var temFiltro = f.de || f.ate || f.setor || f.vinculo || (f.status && f.status !== 'ativo');
+    var temFiltro = f.de || f.ate || f.setor || f.vinculo || (f.status && f.status !== 'ativo') ||
+      (document.getElementById('bi-dem-sel-de-mes')||{}).value ||
+      (document.getElementById('bi-dem-sel-de-ano')||{}).value ||
+      (document.getElementById('bi-dem-sel-ate-mes')||{}).value ||
+      (document.getElementById('bi-dem-sel-ate-ano')||{}).value;
     var btn = document.getElementById('bi-dem-btn-limpar');
     if (btn) btn.style.display = temFiltro ? '' : 'none';
   }
 
   function limparFiltros() {
-    ['bi-dem-sel-de','bi-dem-sel-ate','bi-dem-sel-setor','bi-dem-sel-vinculo'].forEach(function (id) {
+    ['bi-dem-sel-de-mes','bi-dem-sel-de-ano',
+     'bi-dem-sel-ate-mes','bi-dem-sel-ate-ano',
+     'bi-dem-sel-setor','bi-dem-sel-vinculo'].forEach(function (id) {
       var e = document.getElementById(id);
       if (e) e.value = '';
     });
@@ -37465,17 +37477,25 @@ var BiDemograficoUI = (function () {
     _renderKpis(regs);
     _renderBarras('genero',      regs, 'genero');
     _renderBarras('sexualidade', regs, 'sexualidade');
-    _renderBarras('raca',        regs, _contexto === 'equipe' ? 'racaCor' : 'racaCor');
+    _renderBarras('raca',        regs, 'racaCor');
     _renderFaixaEtaria(regs);
     _renderSetorDist(regs);
     _renderGeo(regs);
+    if (_contexto === 'equipe') {
+      _renderCargo(regs);
+      _renderTempoAtuacao(regs);
+      _renderPcd(regs);
+      _renderRestricoes(regs);
+      _renderFamilias(regs);
+    }
     if (_mapaAtivo) _atualizarMapa(regs);
   }
 
   function _mostrarLoading() {
     var el = document.getElementById('bi-dem-kpis');
     if (el) el.innerHTML = '<div class="stat-card" style="min-width:200px;"><span class="muted-text">Carregando dados demográficos…</span></div>';
-    ['genero','sexualidade','raca','faixaetaria','setor-dist','bairro'].forEach(function (id) {
+    ['genero','sexualidade','raca','faixaetaria','setor-dist','bairro',
+     'cargo','tempo','pcd','restricoes','familias'].forEach(function (id) {
       var e = document.getElementById('bi-dem-' + id);
       if (e) e.innerHTML = '<p class="muted-text" style="font-size:12px;padding:8px 0;">Carregando…</p>';
     });
@@ -37493,28 +37513,43 @@ var BiDemograficoUI = (function () {
     if (!el) return;
     var total = regs.length;
     var cards = [];
+    var f = _getFiltros();
 
     if (_contexto === 'equipe') {
       var clt = regs.filter(function(r){ return /clt/i.test(r.tipoVinculo||''); }).length;
-      var pj  = regs.filter(function(r){ return /pj|pessoa.?jur/i.test(r.tipoVinculo||''); }).length;
       var est = regs.filter(function(r){ return /estagi/i.test(r.tipoVinculo||''); }).length;
       var ter = regs.filter(function(r){ return /tercei/i.test(r.tipoVinculo||''); }).length;
-      var iv  = regs.filter(function(r){ return r.idade != null; });
-      var mid = iv.length ? (Math.round(iv.reduce(function(s,r){return s+r.idade;},0)/iv.length*10)/10).toFixed(1) : '—';
+      var vol = regs.filter(function(r){ return /volunt/i.test(r.tipoVinculo||''); }).length;
+      var pcd = regs.filter(function(r){ return r.pcd === 'sim'; }).length;
+
+      var idades = regs.filter(function(r){ return r.idade != null; }).map(function(r){ return r.idade; });
+      var medId  = _mediana(idades);
+      var midLbl = medId !== null ? String(medId) : '—';
+
+      var refYM   = f.ate || '';
+      var tempos  = regs.map(function(r){ return _tempoMeses(r, refYM); }).filter(function(t){ return t !== null; });
+      var medTmp  = _mediana(tempos);
+      var medTmpLbl = medTmp !== null
+        ? (medTmp >= 12 ? Math.floor(medTmp / 12) + 'a ' + (medTmp % 12) + 'm' : medTmp + 'm')
+        : '—';
+
       cards.push(_kpi('Equipe Total', total, '', ''));
       cards.push(_kpi('CLT', clt, total ? Math.round(clt/total*100)+'%' : '', ''));
       cards.push(_kpi('Estagiários', est, total ? Math.round(est/total*100)+'%' : '', ''));
-      cards.push(_kpi('Prof. PJ', pj, total ? Math.round(pj/total*100)+'%' : '', ''));
       cards.push(_kpi('Terceirizados', ter, total ? Math.round(ter/total*100)+'%' : '', ''));
-      cards.push(_kpi('Média de Idade', mid, '', 'anos'));
+      cards.push(_kpi('Voluntários', vol, total ? Math.round(vol/total*100)+'%' : '', ''));
+      cards.push(_kpi('PcD', pcd, total ? Math.round(pcd/total*100)+'%' : '', ''));
+      cards.push(_kpi('Mediana de Idade', midLbl, '', 'anos'));
+      cards.push(_kpi('Mediana de Tempo', medTmpLbl, '', ''));
     } else {
-      var iv2 = regs.filter(function(r){ return r.idade != null; });
-      var mid2 = iv2.length ? (Math.round(iv2.reduce(function(s,r){return s+r.idade;},0)/iv2.length*10)/10).toFixed(1) : '—';
+      var idades2 = regs.filter(function(r){ return r.idade != null; }).map(function(r){ return r.idade; });
+      var medId2  = _mediana(idades2);
+      var midLbl2 = medId2 !== null ? String(medId2) : '—';
       var uniq = {};
       regs.forEach(function(r){ if (r.pessoa) uniq[r.pessoa] = true; });
-      cards.push(_kpi('Inscrições',    total, '', ''));
-      cards.push(_kpi('Pessoas Únicas', Object.keys(uniq).length, '', ''));
-      cards.push(_kpi('Média de Idade', mid2, '', 'anos'));
+      cards.push(_kpi('Inscrições',      total, '', ''));
+      cards.push(_kpi('Pessoas Únicas',  Object.keys(uniq).length, '', ''));
+      cards.push(_kpi('Mediana de Idade', midLbl2, '', 'anos'));
     }
 
     el.innerHTML = cards.join('');
@@ -37530,39 +37565,152 @@ var BiDemograficoUI = (function () {
       pctHtml + '</div>';
   }
 
+  // ── Normalização de labels (tags → nomenclatura exibida) ─────────────────
+
+  var _LABELS = {
+    'homem_cis':'Homem Cis','mulher_cis':'Mulher Cis',
+    'homem_trans':'Homem Trans','mulher_trans':'Mulher Trans',
+    'nao_binario':'Não Binário','nao-binario':'Não Binário','nao_binarx':'Não Binário',
+    'fluido':'Fluido de Gênero','agender':'Agênero',
+    'outro_genero':'Outro','outro':'Outro',
+    'heterossexual':'Heterossexual','homosexual':'Homossexual',
+    'gay':'Gay','lesbica':'Lésbica','bissexual':'Bissexual',
+    'pansexual':'Pansexual','assexual':'Assexual','outra_sexualidade':'Outra',
+    'branca':'Branca','preta':'Preta','parda':'Parda','amarela':'Amarela','indigena':'Indígena',
+    'clt':'CLT','pj':'Prof. PJ','estagiario':'Estagiário','estagiária':'Estagiária',
+    'terceirizado':'Terceirizado','terceirizada':'Terceirizada',
+    'voluntario':'Voluntário','voluntaria':'Voluntária',
+    'sim':'Sim','nao':'Não','reabilitado':'Reabilitado Prof.',
+    'fisica':'Física','auditiva':'Auditiva','visual':'Visual',
+    'intelectual':'Intelectual','psicossocial':'Mental/Psicossocial','multipla':'Múltipla',
+    'vegano':'Vegano','vegetariano':'Vegetariano',
+    'sem_gluten':'Sem Glúten','sem_lactose':'Sem Lactose','halal':'Halal','kosher':'Kosher'
+  };
+
+  function _biLabel(v) {
+    if (!v) return '';
+    var n = String(v).trim().toLowerCase();
+    if (_LABELS[n]) return _LABELS[n];
+    return n.replace(/_/g, ' ').replace(/(^|\s)\S/g, function(c) { return c.toUpperCase(); });
+  }
+
+  // ── Mediana ──────────────────────────────────────────────────────────────
+
+  function _mediana(vals) {
+    if (!vals || !vals.length) return null;
+    var s = vals.slice().sort(function(a, b) { return a - b; });
+    var m = Math.floor(s.length / 2);
+    return s.length % 2 === 0 ? Math.round((s[m - 1] + s[m]) / 2) : s[m];
+  }
+
+  // ── Tempo de atuação em meses ─────────────────────────────────────────────
+  // refYM: 'YYYY-MM' — usa fim do período filtrado; vazio = hoje
+
+  function _tempoMeses(r, refYM) {
+    var ini = String(r.dataAdmissao || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ini)) return null;
+    var fimStr;
+    if (r.dataDesligamento && r.dataDesligamento < (refYM ? refYM + '-31' : '9999')) {
+      fimStr = r.dataDesligamento;
+    } else {
+      fimStr = refYM ? refYM + '-28' : new Date().toISOString().slice(0, 10);
+    }
+    var p1 = ini.split('-'), p2 = fimStr.split('-');
+    var diff = (parseInt(p2[0], 10) * 12 + parseInt(p2[1], 10)) -
+               (parseInt(p1[0], 10) * 12 + parseInt(p1[1], 10));
+    return diff >= 0 ? diff : null;
+  }
+
+  // ── Cargo em período (reconstrução histórica via eventosCargo) ────────────
+  // eventosCargo chega sorted DESC. Para cada evento POSTERIOR a ateYM,
+  // desfazemos a mudança usando cargoAnterior.
+  // setor e tipoVinculo não têm rastreamento — refletem estado atual.
+
+  function _cargoEmData(r, ateYM) {
+    var cargo = r.cargo || '';
+    if (!ateYM || !r.eventosCargo || !r.eventosCargo.length) return cargo;
+    var refFull = ateYM + '-31';
+    r.eventosCargo.forEach(function(ev) {
+      if (ev.data > refFull && ev.cargoAnterior) cargo = ev.cargoAnterior;
+    });
+    return cargo;
+  }
+
+  // Retorna o valor de `campo` no histórico SCD ativo na data `ateYM`
+  // Se ateYM ausente, retorna o registro com dataFim === null (vigente)
+  function _demografiaEmData(historico, campo, ateYM) {
+    if (!Array.isArray(historico) || !historico.length) return null;
+    var refDate = ateYM ? ateYM + '-28' : '9999-12-31';
+    var ativa = null;
+    historico.forEach(function(e) {
+      var ini = e.dataInicio || '0000-01-01';
+      var fim = e.dataFim   || '9999-12-31';
+      if (ini <= refDate && fim >= refDate) ativa = e;
+    });
+    if (!ativa && !ateYM) {
+      // fallback: pega a entrada sem dataFim (vigente)
+      historico.forEach(function(e) { if (!e.dataFim) ativa = e; });
+    }
+    return ativa ? ativa[campo] : null;
+  }
+
+  // Retorna o objeto de entrada SCD inteiro (para campos com múltiplos valores, ex: pcd+pcdTipos)
+  function _entryEmData(historico, ateYM) {
+    if (!Array.isArray(historico) || !historico.length) return null;
+    var refDate = ateYM ? ateYM + '-28' : '9999-12-31';
+    var ativa = null;
+    historico.forEach(function(e) {
+      var ini = e.dataInicio || '0000-01-01';
+      var fim = e.dataFim   || '9999-12-31';
+      if (ini <= refDate && fim >= refDate) ativa = e;
+    });
+    if (!ativa && !ateYM) {
+      historico.forEach(function(e) { if (!e.dataFim) ativa = e; });
+    }
+    return ativa;
+  }
+
   // ── Barras horizontais ───────────────────────────────────────────────────
 
   var _CORES = {
-    'mulher cis':'#ec4899','homem cis':'#3b82f6','mulher trans':'#d946ef',
-    'homem trans':'#6366f1','não-binárie':'#8b5cf6','não binário':'#8b5cf6',
-    'outra':'#f59e0b','negro pardo':'#92400e','negro preto':'#292524',
-    'branco':'#94a3b8','amarelo':'#ca8a04','indígena':'#16a34a',
-    'heterossexual':'#22c55e','gay / lésbica':'#a855f7','lésbica':'#a855f7',
+    // Gênero (labels normalizados via _biLabel)
+    'mulher cis':'#ec4899','homem cis':'#3b82f6',
+    'mulher trans':'#d946ef','homem trans':'#6366f1',
+    'não binário':'#8b5cf6','fluido de gênero':'#a78bfa','agênero':'#c4b5fd',
+    'outro':'#f59e0b',
+    // Raça/Cor (IBGE — labels normalizados)
+    'preta':'#292524','parda':'#92400e','branca':'#94a3b8',
+    'amarela':'#ca8a04','indígena':'#16a34a',
+    // Orientação sexual
+    'heterossexual':'#22c55e','lésbica':'#a855f7',
     'gay':'#6366f1','bissexual':'#ec4899','pansexual':'#f97316','assexual':'#94a3b8'
   };
   function _cor(label) {
     return _CORES[String(label||'').toLowerCase().trim()] || 'var(--primary)';
   }
 
-  function _renderBarras(elId, regs, campo) {
+  function _renderBarras(elId, regs, campo, opts) {
     var el = document.getElementById('bi-dem-' + elId);
     if (!el) return;
+    opts = opts || {};
+    var cor1 = opts.cor || null;
     var cont = {};
     regs.forEach(function(r) {
-      var v = String(r[campo]||'').trim() || 'Não informado';
-      cont[v] = (cont[v]||0) + 1;
+      var raw = String(r[campo]||'').trim() || 'Não informado';
+      cont[raw] = (cont[raw]||0) + 1;
     });
     var total = regs.length;
     var ents = Object.keys(cont).map(function(k){
-      return { k:k, n:cont[k], pct: total ? Math.round(cont[k]/total*100) : 0 };
+      return { raw:k, label:_biLabel(k)||k, n:cont[k], pct: total ? Math.round(cont[k]/total*100) : 0 };
     }).sort(function(a,b){ return b.n - a.n; });
     if (!ents.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
+    var max9 = opts.max || 9;
     var html = '<table style="width:100%;border-collapse:collapse;">';
     ents.forEach(function(e, i) {
-      if (i >= 9) return;
-      var cor = _cor(e.k);
+      if (i >= max9) return;
+      var cor = cor1 || _cor(e.label.toLowerCase());
       html += '<tr>' +
-        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="' + _esc(e.k) + '">' + _esc(e.k) + '</td>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="' + _esc(e.label) + '">' + _esc(e.label) + '</td>' +
         '<td style="width:100%;padding:4px 6px;">' +
           '<div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;">' +
             '<div style="background:' + cor + ';height:14px;width:' + Math.max(2,e.pct) + '%;border-radius:4px;transition:width .4s;"></div>' +
@@ -37571,8 +37719,8 @@ var BiDemograficoUI = (function () {
           e.n + ' <span style="color:var(--text3);">(' + e.pct + '%)</span></td>' +
         '</tr>';
     });
-    if (ents.length > 9) {
-      html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:4px 0;">… mais ' + (ents.length-9) + ' categorias</td></tr>';
+    if (ents.length > max9) {
+      html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:4px 0;">… mais ' + (ents.length-max9) + ' categorias</td></tr>';
     }
     html += '</table>';
     el.innerHTML = html;
@@ -37634,6 +37782,187 @@ var BiDemograficoUI = (function () {
     }
   }
 
+  // ── Cargo (com reconstrução histórica por período) ───────────────────────
+
+  function _renderCargo(regs) {
+    var el = document.getElementById('bi-dem-cargo');
+    if (!el) return;
+    var f    = _getFiltros();
+    var ateYM = f.ate || '';
+    var cont = {};
+    regs.forEach(function(r) {
+      var v = _cargoEmData(r, ateYM) || 'Não informado';
+      if (!v) v = 'Não informado';
+      cont[v] = (cont[v]||0) + 1;
+    });
+    var total = regs.length;
+    var ents = Object.keys(cont).map(function(k){
+      return { label:k, n:cont[k], pct: total ? Math.round(cont[k]/total*100) : 0 };
+    }).sort(function(a,b){ return b.n - a.n; });
+    if (!ents.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
+    var nota = ateYM
+      ? '<p style="font-size:10px;color:var(--text3);margin:6px 0 0;">Cargo no período filtrado — mudanças posteriores revertidas via histórico RH.</p>'
+      : '<p style="font-size:10px;color:var(--text3);margin:6px 0 0;">Cargo atual. Filtre por período para ver o cargo histórico.</p>';
+    var html = '<table style="width:100%;border-collapse:collapse;">';
+    ents.forEach(function(e, i) {
+      if (i >= 10) return;
+      html += '<tr>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);" title="'+_esc(e.label)+'">' + _esc(e.label) + '</td>' +
+        '<td style="width:100%;padding:4px 6px;"><div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;"><div style="background:#0f766e;height:14px;width:'+Math.max(2,e.pct)+'%;border-radius:4px;transition:width .4s;"></div></div></td>' +
+        '<td style="font-size:12px;padding:4px 0 4px 8px;color:var(--text2);white-space:nowrap;text-align:right;">'+e.n+' <span style="color:var(--text3);">('+e.pct+'%)</span></td>' +
+        '</tr>';
+    });
+    if (ents.length > 10) html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:4px 0;">… mais '+(ents.length-10)+' cargos</td></tr>';
+    html += '</table>' + nota;
+    el.innerHTML = html;
+  }
+
+  // ── Tempo de atuação (por faixa, em meses) ───────────────────────────────
+
+  function _renderTempoAtuacao(regs) {
+    var el = document.getElementById('bi-dem-tempo');
+    if (!el) return;
+    var f    = _getFiltros();
+    var ateYM = f.ate || '';
+    var faixas = [
+      {label:'< 6 meses', min:0,  max:5},
+      {label:'6 – 11 m',  min:6,  max:11},
+      {label:'1 – 2 anos', min:12, max:23},
+      {label:'2 – 5 anos', min:24, max:59},
+      {label:'5 – 10 anos',min:60, max:119},
+      {label:'10+ anos',   min:120,max:9999}
+    ];
+    var tempos = regs.map(function(r){ return _tempoMeses(r, ateYM); }).filter(function(t){ return t !== null; });
+    var semData = regs.length - tempos.length;
+    var html = '<table style="width:100%;border-collapse:collapse;">';
+    faixas.forEach(function(fx) {
+      var n   = tempos.filter(function(t){ return t >= fx.min && t <= fx.max; }).length;
+      var pct = tempos.length ? Math.round(n/tempos.length*100) : 0;
+      html += '<tr>' +
+        '<td style="font-size:12px;padding:4px 8px 4px 0;white-space:nowrap;">'+_esc(fx.label)+'</td>' +
+        '<td style="width:100%;padding:4px 6px;"><div style="background:var(--surface2);border-radius:4px;height:14px;overflow:hidden;"><div style="background:#52525b;opacity:.8;height:14px;width:'+Math.max(2,pct)+'%;border-radius:4px;transition:width .4s;"></div></div></td>' +
+        '<td style="font-size:12px;padding:4px 0 4px 8px;color:var(--text2);white-space:nowrap;text-align:right;">'+n+' <span style="color:var(--text3);">('+pct+'%)</span></td>' +
+        '</tr>';
+    });
+    if (semData > 0) html += '<tr><td colspan="3" style="font-size:11px;color:var(--text2);padding:6px 0 2px;">'+semData+' sem data de admissão cadastrada</td></tr>';
+    html += '</table>';
+    el.innerHTML = html;
+  }
+
+  // ── PcD ──────────────────────────────────────────────────────────────────
+
+  function _renderPcd(regs) {
+    var el = document.getElementById('bi-dem-pcd');
+    if (!el) return;
+    var pcdSim  = regs.filter(function(r){ return r.pcd === 'sim'; });
+    var pcdNao  = regs.filter(function(r){ return r.pcd === 'nao'; }).length;
+    var pcdNInf = regs.filter(function(r){ return !r.pcd; }).length;
+    var total   = regs.length;
+    if (!total) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
+    var pct = Math.round(pcdSim.length / total * 100);
+    // Tipos de deficiência
+    var tipos = {};
+    pcdSim.forEach(function(r) {
+      (r.pcdTipos || []).forEach(function(t) {
+        var lbl = _biLabel(t) || t;
+        tipos[lbl] = (tipos[lbl]||0) + 1;
+      });
+    });
+    var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+      '<div style="font-size:28px;font-weight:700;color:#6d28d9;">'+pcdSim.length+'</div>' +
+      '<div style="font-size:12px;color:var(--text2);">pessoa'+( pcdSim.length!==1?'s':'' )+' com deficiência<br><span style="color:var(--text3);">'+pct+'% da equipe filtrada</span></div>' +
+      '</div>';
+    if (Object.keys(tipos).length) {
+      html += '<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Tipos declarados</div>';
+      html += '<table style="width:100%;border-collapse:collapse;">';
+      Object.keys(tipos).sort(function(a,b){ return tipos[b]-tipos[a]; }).forEach(function(t) {
+        html += '<tr>' +
+          '<td style="font-size:12px;padding:3px 6px 3px 0;color:var(--text);">'+_esc(t)+'</td>' +
+          '<td style="font-size:12px;padding:3px 0;color:var(--text2);text-align:right;">'+tipos[t]+'</td></tr>';
+      });
+      html += '</table>';
+    } else if (pcdSim.length) {
+      html += '<p style="font-size:11px;color:var(--text3);">Tipos não detalhados no cadastro.</p>';
+    }
+    html += '<p style="font-size:10px;color:var(--text3);margin-top:8px;">'+pcdNao+' declararam não ter deficiência · '+pcdNInf+' não informaram</p>';
+    el.innerHTML = html;
+  }
+
+  // ── Restrições alimentares (consolidado para eventos) ────────────────────
+
+  function _renderRestricoes(regs) {
+    var el = document.getElementById('bi-dem-restricoes');
+    if (!el) return;
+    // Contagem por tipo e lista de nomes
+    var tipos   = {};
+    var comRest = [];
+    regs.forEach(function(r) {
+      var rests = Array.isArray(r.restricoesAlimentares) ? r.restricoesAlimentares : [];
+      var outro = r.restricoesOutro ? 'Outro: ' + r.restricoesOutro : null;
+      if (rests.length || outro) comRest.push(r);
+      rests.forEach(function(t) {
+        var lbl = _biLabel(t) || t;
+        if (!tipos[lbl]) tipos[lbl] = [];
+        tipos[lbl].push(r.nomeDisplay || '?');
+      });
+      if (outro) {
+        if (!tipos[outro]) tipos[outro] = [];
+        tipos[outro].push(r.nomeDisplay || '?');
+      }
+    });
+    if (!comRest.length) {
+      el.innerHTML = '<p class="muted-text" style="font-size:13px;">Nenhuma restrição alimentar cadastrada na equipe filtrada.</p>';
+      return;
+    }
+    var tiposOrdenados = Object.keys(tipos).sort(function(a,b){ return tipos[b].length - tipos[a].length; });
+    var html = '<div style="margin-bottom:10px;font-size:13px;color:var(--text);">' +
+      '<strong>'+comRest.length+'</strong> pessoa'+(comRest.length!==1?'s':'')+' com alguma restrição alimentar ('+
+      Math.round(comRest.length/regs.length*100)+'% da equipe filtrada)</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
+    tiposOrdenados.forEach(function(t) {
+      var nomes = tipos[t];
+      html += '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">' +
+        '<div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px;">'+_esc(t)+
+        ' <span style="font-weight:400;font-size:12px;color:var(--text2);">('+nomes.length+')</span></div>' +
+        '<div style="font-size:11px;color:var(--text2);">'+nomes.map(function(n){return _esc(n);}).join(', ')+'</div>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  // ── Pais / Mães e Filhos ─────────────────────────────────────────────────
+
+  function _renderFamilias(regs) {
+    var el = document.getElementById('bi-dem-familias');
+    if (!el) return;
+    var pais   = regs.filter(function(r){ return r.ePaiMae === 'sim'; });
+    var naoSao = regs.filter(function(r){ return r.ePaiMae === 'nao'; }).length;
+    var nInf   = regs.filter(function(r){ return !r.ePaiMae; }).length;
+    var total  = regs.length;
+    if (!total) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
+    var pct = Math.round(pais.length / total * 100);
+    // Total de filhos informados
+    var totalFilhos = 0;
+    pais.forEach(function(r){ if (r.numFilhos) totalFilhos += Number(r.numFilhos) || 0; });
+    var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+      '<div style="font-size:28px;font-weight:700;color:#059669;">'+pais.length+'</div>' +
+      '<div style="font-size:12px;color:var(--text2);">pai'+(pais.length!==1?'s/mães':'/mãe')+' na equipe<br>' +
+      '<span style="color:var(--text3);">'+pct+'% · '+totalFilhos+' filho'+(totalFilhos!==1?'s':'')+'/ dependente'+(totalFilhos!==1?'s':'')+' declarado'+(totalFilhos!==1?'s':'')+'</span></div>' +
+      '</div>';
+    if (pais.length) {
+      html += '<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;">Lista</div>' +
+        '<div style="font-size:12px;color:var(--text);line-height:1.8;">';
+      pais.forEach(function(r) {
+        var nf = r.numFilhos ? ' ('+r.numFilhos+' filho'+(r.numFilhos!==1?'s':'')+'/' +'dep.)' : '';
+        html += _esc(r.nomeDisplay || '?') + nf + ' &nbsp;';
+      });
+      html += '</div>';
+    }
+    html += '<p style="font-size:10px;color:var(--text3);margin-top:8px;">'+naoSao+' declararam não ser pai/mãe · '+nInf+' não informaram</p>';
+    el.innerHTML = html;
+  }
+
   // ── Território (lista) ───────────────────────────────────────────────────
 
   function setGeoView(view) {
@@ -37693,16 +38022,52 @@ var BiDemograficoUI = (function () {
     if (_mapaAtivo) _atualizarMapa(_getDadosFiltrados());
   }
 
-  function iniciarMapa() {
+  // Cache de polígonos de bairros do Nominatim (memória, não persiste entre sessões)
+  var _bairroGeoCache = {};
+
+  // Busca sequencial com rate-limit 1 req/s; onDone() chamado ao finalizar
+  function _fetchBairrosSequencial(bairros, onDone) {
+    var pendentes = bairros.filter(function(b) {
+      return !Object.prototype.hasOwnProperty.call(_bairroGeoCache, b.key);
+    });
+    if (!pendentes.length) { onDone(); return; }
+    var i = 0;
+    function next() {
+      if (i >= pendentes.length) { onDone(); return; }
+      var b = pendentes[i++];
+      var q = encodeURIComponent(b.nome + ', ' + b.cidade + ', Brasil');
+      fetch('https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&limit=3&q=' + q, {
+        headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'ccbj-erp-bi/1.0' }
+      }).then(function(r) { return r.json(); })
+        .then(function(data) {
+          var geom = null;
+          if (data.features) {
+            for (var j = 0; j < data.features.length; j++) {
+              var t = data.features[j].geometry && data.features[j].geometry.type;
+              if (t === 'Polygon' || t === 'MultiPolygon') {
+                geom = data.features[j].geometry; break;
+              }
+            }
+          }
+          _bairroGeoCache[b.key] = geom; // null se não encontrou polígono
+        })
+        .catch(function() { _bairroGeoCache[b.key] = null; })
+        .then(function() { setTimeout(next, 1100); }); // respeita rate-limit Nominatim
+    }
+    next();
+  }
+
+  function iniciarMapa(done) {
+    done = done || function(){};
     var regs = _getDadosFiltrados();
     var d    = _dados[_contexto];
     if (!d || !d.geo || !Object.keys(d.geo).length) {
       Toast.aviso('Dados geográficos ainda não disponíveis. Atualize para iniciar a geocodificação.');
-      return;
+      done(); return;
     }
     _atualizarIndicadorPendentes(d.geoPendentes || 0);
-    if (!_mapa) _inicializarLeaflet(regs, d.geo);
-    else        _atualizarMapa(regs);
+    if (!_mapa) _inicializarLeaflet(regs, d.geo, done);
+    else        { _atualizarMapa(regs); done(); }
     _mapaAtivo = true;
   }
 
@@ -37731,9 +38096,10 @@ var BiDemograficoUI = (function () {
       '</div>';
   }
 
-  function _inicializarLeaflet(regs, geo) {
+  function _inicializarLeaflet(regs, geo, done) {
+    done = done || function(){};
     var mapaEl = document.getElementById('bi-dem-mapa');
-    if (!mapaEl) return;
+    if (!mapaEl) { done(); return; }
     mapaEl.innerHTML = '';
 
     function _criarMapa() {
@@ -37742,6 +38108,7 @@ var BiDemograficoUI = (function () {
         attribution: '© OpenStreetMap contributors', maxZoom: 18
       }).addTo(_mapa);
       _renderPontosNoMapa(regs, geo);
+      done(); // libera BtnGuard após mapa criado
     }
 
     function _carregarHeat(onload) {
@@ -37749,7 +38116,7 @@ var BiDemograficoUI = (function () {
       var s = document.createElement('script');
       s.src = 'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js';
       s.onload = onload;
-      s.onerror = onload; // cria mapa mesmo sem heat (fallback círculos)
+      s.onerror = onload;
       document.head.appendChild(s);
     }
 
@@ -37763,6 +38130,7 @@ var BiDemograficoUI = (function () {
       var scr = document.createElement('script');
       scr.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       scr.onload = function () { _carregarHeat(_criarMapa); };
+      scr.onerror = function() { Toast.erro('Falha ao carregar Leaflet. Verifique a conexão.'); done(); };
       document.head.appendChild(scr);
     } else {
       _carregarHeat(_criarMapa);
@@ -37806,19 +38174,20 @@ var BiDemograficoUI = (function () {
   }
 
   function _renderBairros(regs, geo) {
-    // Agrupa por bairroKey (sempre nível bairro); usa geoKey como fallback
     var bData = {};
     regs.forEach(function(r) {
       var bk = r.bairroKey || r.geoKey;
       if (!bk || !geo[bk]) return;
-      if (!bData[bk]) bData[bk] = { count:0, lat:geo[bk].lat, lng:geo[bk].lng, nome:r.bairro||bk, cidade:r.cidade||'' };
+      if (!bData[bk]) bData[bk] = { count:0, lat:geo[bk].lat, lng:geo[bk].lng, nome:r.bairro||bk, cidade:r.cidade||'', key: bk };
       bData[bk].count++;
     });
     var pontos = Object.keys(bData).map(function(k){ return bData[k]; });
     pontos.sort(function(a,b){ return b.count - a.count; });
     if (!pontos.length) { Toast.aviso('Nenhum bairro geocodificado para os filtros atuais.'); return; }
     var maxN = pontos[0].count;
-    pontos.forEach(function(p) {
+
+    // Desenha círculos imediatamente (feedback rápido)
+    function _desenharCirculo(p) {
       var pct    = p.count / maxN;
       var radius = Math.max(10, Math.min(34, 10 + pct * 24));
       var fill   = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f97316' : pct > 0.2 ? '#facc15' : '#22c55e';
@@ -37826,11 +38195,38 @@ var BiDemograficoUI = (function () {
                    (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
                    '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
       var m = L.circleMarker([p.lat, p.lng], {
-        radius: radius, color:'#fff', weight:2, fillColor: fill, fillOpacity:0.82
-      }).bindTooltip(tip, { permanent:false, direction:'top' }).addTo(_mapa);
+        radius:radius, color:'#fff', weight:2, fillColor:fill, fillOpacity:0.82
+      }).bindTooltip(tip, {permanent:false, direction:'top'}).addTo(_mapa);
       m._biDemMarker = true;
-    });
+      return m;
+    }
+
+    // Substitui círculo por polígono GeoJSON quando disponível
+    function _aplicarPoligono(p, circulo) {
+      var geom = _bairroGeoCache[p.key];
+      if (!geom) return;
+      try {
+        var pct  = p.count / maxN;
+        var fill = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f97316' : pct > 0.2 ? '#facc15' : '#22c55e';
+        var tip  = '<strong>' + _esc(p.nome) + '</strong>' +
+                   (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
+                   '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+        var layer = L.geoJSON({ type:'Feature', geometry: geom }, {
+          style: { color:'#fff', weight:2, fillColor:fill, fillOpacity:0.65 }
+        }).bindTooltip(tip, {permanent:false, direction:'top'}).addTo(_mapa);
+        layer._biDemMarker = true;
+        if (circulo && _mapa.hasLayer(circulo)) _mapa.removeLayer(circulo);
+      } catch(e) {}
+    }
+
+    var circulos = {};
+    pontos.forEach(function(p) { circulos[p.key] = _desenharCirculo(p); });
     try { _mapa.fitBounds(pontos.map(function(p){return[p.lat,p.lng];}), {padding:[40,40]}); } catch(e) {}
+
+    // Busca polígonos via Nominatim e substitui círculos progressivamente
+    _fetchBairrosSequencial(pontos, function() {
+      pontos.forEach(function(p) { _aplicarPoligono(p, circulos[p.key]); });
+    });
   }
 
   // ── Personas ─────────────────────────────────────────────────────────────
@@ -37888,45 +38284,53 @@ var BiDemograficoUI = (function () {
     return '60+';
   }
 
-  var _EMOJIS_GENERO = {'mulher cis':'👩','homem cis':'👨','mulher trans':'👩‍🦱','homem trans':'👨‍🦱','não-binárie':'🧑'};
+  var _EMOJIS_GENERO = {
+    'homem cis':'👨','mulher cis':'👩',
+    'homem trans':'👨','mulher trans':'👩',
+    'não binário':'🧑','não-binárie':'🧑'
+  };
 
   function _calcPersonas(regs) {
     var total   = regs.length;
     var personas = [];
     var campoSetor = _contexto === 'equipe' ? 'setor' : 'acaoNome';
+    var f = _getFiltros();
 
     function _add(nome, desc, subRegs, emoji) {
       if (!subRegs.length) return;
-      var mg  = _moda(subRegs,'genero');
-      var mr  = _moda(subRegs,'racaCor');
-      var ms  = _moda(subRegs, campoSetor);
-      var iv  = subRegs.filter(function(r){return r.idade!=null;});
-      var mId = iv.length ? Math.round(iv.reduce(function(s,r){return s+r.idade;},0)/iv.length) : null;
-      var em  = emoji || _EMOJIS_GENERO[(mg||'').toLowerCase()] || '🧑';
-      var rep = subRegs.length / total * 100;
-      personas.push({
-        emoji: em,
-        nome:  nome,
-        desc:  desc + ' (' + subRegs.length + ' pessoas)',
-        attrs: [
-          ['Gênero',     mg  || '—'],
-          ['Raça/Cor',   mr  || '—'],
-          [_contexto==='equipe'?'Setor':'Ação', ms||'—'],
-          ['Faixa etária', _fxEtLabel(mId)||'—']
-        ],
-        rep: rep
-      });
+      var mgRaw = _moda(subRegs, 'genero');
+      var mrRaw = _moda(subRegs, 'racaCor');
+      var ms    = _moda(subRegs, campoSetor);
+      var mc    = _contexto === 'equipe' ? _moda(subRegs, '_cargoLabel') : null;
+      var idades = subRegs.filter(function(r){return r.idade!=null;}).map(function(r){return r.idade;});
+      var mId   = _mediana(idades);
+      var mgLabel = mgRaw ? _biLabel(mgRaw) : null;
+      var em    = emoji || _EMOJIS_GENERO[(mgLabel||'').toLowerCase()] || '🧑';
+      var rep   = subRegs.length / total * 100;
+      var attrs = [
+        ['Gênero',       mgLabel || '—'],
+        ['Raça/Cor',     mrRaw ? _biLabel(mrRaw) : '—'],
+        [_contexto==='equipe'?'Setor':'Ação', ms || '—'],
+        ['Faixa etária', _fxEtLabel(mId) || '—']
+      ];
+      if (mc) attrs.splice(2, 0, ['Cargo', mc]);
+      personas.push({ emoji:em, nome:nome, desc:desc+' ('+subRegs.length+' pessoas)', attrs:attrs, rep:rep });
     }
 
-    // Perfil geral
-    _add('Perfil Predominante', 'Combinação mais comum', regs);
+    // Enriquecer registros com _cargoLabel (cargo no período)
+    var ateYM = f.ate || '';
+    var enriched = regs.map(function(r) {
+      var copy = {}; for (var k in r) copy[k] = r[k];
+      copy._cargoLabel = _cargoEmData(r, ateYM) || '';
+      return copy;
+    });
 
-    // Jovens < 30
-    var jovens = regs.filter(function(r){return r.idade!=null&&r.idade<30;});
+    _add('Perfil Predominante', 'Combinação mais comum', enriched);
+
+    var jovens = enriched.filter(function(r){return r.idade!=null&&r.idade<30;});
     if (jovens.length/total >= 0.1) _add('Jovem Talento', 'Até 29 anos', jovens, '🧑‍🎤');
 
-    // Sêniores 40+
-    var seniors = regs.filter(function(r){return r.idade!=null&&r.idade>=40;});
+    var seniors = enriched.filter(function(r){return r.idade!=null&&r.idade>=40;});
     if (seniors.length/total >= 0.1) _add('Profissional Sênior', '40 anos ou mais', seniors, '🧑‍💼');
 
     return personas;

@@ -190,6 +190,34 @@ function ctrl_bi_demografico_equipe() {
           desligamentos[h.idColaborador] = String(h.dataDesligamento || h.criadoEm || '').slice(0, 10);
       });
 
+    // Extrai apenas os campos BI-relevantes de um array SCD (remove dados sensíveis extras)
+    function _slimHistorico(arr, campos) {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(function(e) {
+        var out = { dataInicio: String(e.dataInicio || '').slice(0, 10), dataFim: e.dataFim ? String(e.dataFim).slice(0, 10) : null };
+        campos.forEach(function(c) { if (e[c] !== undefined) out[c] = e[c]; });
+        return out;
+      });
+    }
+
+    // Histórico de cargo por colaborador — permite reconstruir cargo em qualquer período
+    var todosEventos = ColaboradorRepository.listarHistorico({ orgId: ctx.orgId });
+    var eventosCargoMap = {};
+    todosEventos.forEach(function (ev) {
+      if ((ev.tipo === 'promocao' || ev.tipo === 'mudanca_cargo') && ev.novoCargo && ev.cargoAnterior) {
+        if (!eventosCargoMap[ev.idColaborador]) eventosCargoMap[ev.idColaborador] = [];
+        eventosCargoMap[ev.idColaborador].push({
+          data:          String(ev.criadoEm || ev.data || '').slice(0, 10),
+          cargoNovo:     ev.novoCargo,
+          cargoAnterior: ev.cargoAnterior
+        });
+      }
+    });
+    // Ordena cada lista DESC (mais recente primeiro) — facilita rollback no frontend
+    Object.keys(eventosCargoMap).forEach(function (id) {
+      eventosCargoMap[id].sort(function (a, b) { return b.data.localeCompare(a.data); });
+    });
+
     var locais    = {};
     var registros = todos.map(function (c) {
       var end        = c.endereco || {};
@@ -228,6 +256,10 @@ function ctrl_bi_demografico_equipe() {
         ? nomePartes[0] + ' ' + nomePartes[nomePartes.length - 1].charAt(0) + '.'
         : nomePartes[0] || '';
 
+      // PcD e Família — preferir entrada vigente no histórico SCD; fallback campos planos (legado)
+      var _vigPcd = (function() { var h = c.pcdHistorico; if (!Array.isArray(h)) return null; for (var _i = h.length - 1; _i >= 0; _i--) { if (!h[_i].dataFim) return h[_i]; } return null; })();
+      var _vigPm  = (function() { var h = c.paiMaeHistorico; if (!Array.isArray(h)) return null; for (var _i = h.length - 1; _i >= 0; _i--) { if (!h[_i].dataFim) return h[_i]; } return null; })();
+
       return {
         setor:                 c.setor       || '',
         cargo:                 c.cargo       || '',
@@ -251,10 +283,18 @@ function ctrl_bi_demografico_equipe() {
         nomeDisplay:           nomeDisplay,
         restricoesAlimentares: Array.isArray(c.restricoesAlimentares) ? c.restricoesAlimentares : [],
         restricoesOutro:       c.restricoesOutro || '',
-        pcd:                   c.pcd || '',
-        pcdTipos:              Array.isArray(c.pcdTipos) ? c.pcdTipos : [],
-        ePaiMae:               c.ePaiMae || '',
-        numFilhos:             c.numFilhos != null ? c.numFilhos : null
+        pcd:                   (_vigPcd || c).pcd || '',
+        pcdTipos:              Array.isArray((_vigPcd || c).pcdTipos) ? (_vigPcd || c).pcdTipos : [],
+        ePaiMae:               (_vigPm  || c).ePaiMae || '',
+        numFilhos:             (_vigPm  || c).numFilhos != null ? (_vigPm  || c).numFilhos : null,
+        // histórico de cargo para reconstrução temporal no frontend
+        eventosCargo:          eventosCargoMap[c.id] || [],
+        // arrays SCD para reconstrução demográfica por período no frontend
+        generoHistorico:       _slimHistorico(c.generoHistorico,      ['genero', 'pronomes']),
+        racaCorHistorico:      _slimHistorico(c.racaCorHistorico,      ['racaCor']),
+        sexualidadeHistorico:  _slimHistorico(c.sexualidadeHistorico,  ['sexualidade']),
+        pcdHistorico:          _slimHistorico(c.pcdHistorico,          ['pcd', 'pcdTipos']),
+        paiMaeHistorico:       _slimHistorico(c.paiMaeHistorico,       ['ePaiMae', 'numFilhos'])
       };
     });
 

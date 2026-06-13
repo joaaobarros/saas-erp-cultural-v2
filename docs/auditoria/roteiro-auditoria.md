@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @830 · Reserva Veículo — disponibilidade por data + geocodificação resolvida + bloqueio buffer na aprovação
+> Deploy atual: @831 · BI Demográfico — fix carregamento eterno + leitura de histórico SCD para PcD/Família
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -468,9 +468,38 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 68 (2026-06-12) → SESSÃO 69
+## HANDOFF ATUAL — SESSÃO 69 (2026-06-13) → SESSÃO 70
 
-### Estado atual: ~266 bugs registrados · Deploy @830 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @831 (GAS)
+
+### O que foi feito nesta sessão (s69)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @831 | BI Demográfico — fix carregamento eterno + leitura de histórico SCD | **Frontend** (`index.html`): `atualizar(done)` declara o parâmetro `done` e o repassa para `_carregar(onDone)` — BtnGuard now chamado de `done()` após o carregamento. `_carregar(onDone)` chama `onDone()` nos três ramos de retorno (sucesso, erro de servidor e erro de rede); callers sem callback (`aoAbrir`, `setContexto`) não são afetados (parâmetro opcional). **Backend** (`bi_demografico_controller.gs`): `ctrl_bi_demografico_equipe` lê `pcdHistorico`/`paiMaeHistorico` (entrada vigente `dataFim===null`) com fallback para campos planos legados — colaboradores atualizados pelo SCD exibem dados PcD/Família corretos no BI. Helpers IIFE inline `_vigPcd`/`_vigPm` dentro do `.map()`. |
+
+### Checklist de auditoria — s69
+```
+[x] prompt()/confirm()/alert() — sem novas ocorrências
+[x] GAS.* namespace — sem novos endpoints
+[x] CSS — sem classes novas
+[x] IDs de DOM — sem novos IDs
+[x] FsmGuardian — sem novas transições
+[x] Modais — sem novos modais
+[x] BtnGuard — atualizar(done) agora chama done() corretamente após _renderizar()
+[x] Datas — sem novas datas na UI
+```
+
+### Pendentes / próxima ação
+- **Testar no browser (@831)**: BI Demográfico → clicar "Atualizar" → botão deve ser liberado após carregamento (não ficar preso em "Carregando…")
+- **Testar PcD no BI**: cadastrar colaborador com PcD pelo novo sistema SCD → verificar se aparece em "Pessoas com deficiência" no BI
+- **Testar no browser (@830)**: Criar reserva CCBJ→AEUSM → Calcular → confirmar que campo atualiza com endereço completo e tempo é ~6 min
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 68 (2026-06-12) → SESSÃO 69
+
+### Estado anterior: ~266 bugs registrados · Deploy @830 (GAS)
 
 ### O que foi feito nesta sessão (s68)
 
@@ -489,11 +518,6 @@
 [x] BtnGuard — sem novos botões assíncronos; _atualizarDisponibilidade não tem BtnGuard (correto: é silencioso)
 [x] Datas — carro-disp-data-label usa fmtDataPtBR(); sem ISO cru
 ```
-
-### Pendentes / próxima ação
-- **Testar no browser (@830)**: Criar reserva CCBJ→AEUSM → Calcular → confirmar que campo atualiza com endereço completo e tempo é ~6 min
-- **Testar buffer de retorno**: reserva anterior CCBJ→Pinacoteca aprovada → abrir Nova Reserva na mesma data → digitar "ccbj" → painel deve mostrar bloco buffer "Retorno: Pinacoteca → CCBJ (Xmin + 5min buffer)" e horário mínimo correto
-- **Testar bloqueio na aprovação**: tentar aprovar reserva com `horaSaida` dentro do buffer → deve retornar erro com próximo horário disponível
 
 ---
 
