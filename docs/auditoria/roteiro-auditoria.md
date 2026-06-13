@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @858 · Auditoria — 4 correções: setor-anterior display, ADM-01 erro pendentes, datas ISO Ocorrências e Habilitações
+> Deploy atual: @861 · Auditoria — 4 correções: setor-anterior display, ADM-01 erro pendentes, datas ISO Ocorrências e Habilitações
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -371,7 +371,7 @@
 | ESP-28 | Infraestrutura — Pós-evento | Sem formulário de pós-evento ao "Concluir" | 🔴 |
 | ESP-28b | Infraestrutura — Pós-evento | Edição posterior e histórico de alterações ausentes | 🔴 |
 | ESP-29 | Infraestrutura — Horário Local | UX validação visual dinâmica conforme espaço selecionado | 🟡 |
-| ~~ADM-01~~ | Admin | ✅ CORRIGIDO @858 — `_carregarPendentes()` recebe error callback; DOM atualizado com mensagem de erro em vez de "⏳ Carregando…" eterno | — |
+| ~~ADM-01~~ | Admin | ✅ CORRIGIDO @861 — `_carregarPendentes()` recebe error callback; DOM atualizado com mensagem de erro em vez de "⏳ Carregando…" eterno | — |
 | ADM-02 | Admin | Permissões por módulo sem granularidade por funcionalidade | 🔴 |
 | ADM-03 | Admin | Campo Setor no modal "Editar usuário" | 🟡 |
 | ADM-05 | Admin | UI de Administração truncada — revisão de layout necessária | 🟡 |
@@ -476,7 +476,7 @@
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @858 | Auditoria de bugs — 4 correções | (1) `rh-ev-setor-anterior`: convertido de `<select>` (com opções nunca populadas) para `<p>` display readonly. `_atualizarCamposEvento()` agora usa `.textContent = _labelSetor(c2.setor)` em vez de `.value` (que ignorava o select vazio). `editarEvento()` popula `ev.setorAnterior` no painel display ao abrir modo edição. (2) ADM-01 corrigido: `_carregarPendentes()` ganhou error callback que atualiza `admin-pendentes-lista` com mensagem de erro — antes ficava "⏳ Carregando…" eterno se o backend falhasse. (3) OcorrenciasUI: `(o.criadoEm||'').slice(0,10)` → `fmtDataPtBR((o.criadoEm||'').slice(0,10))` — datas exibidas em DD/MM/AAAA. (4) HabilitacoesUI: mesmo fix de formato. |
+| @861 | Auditoria de bugs — 4 correções | (1) `rh-ev-setor-anterior`: convertido de `<select>` (com opções nunca populadas) para `<p>` display readonly. `_atualizarCamposEvento()` agora usa `.textContent = _labelSetor(c2.setor)` em vez de `.value` (que ignorava o select vazio). `editarEvento()` popula `ev.setorAnterior` no painel display ao abrir modo edição. (2) ADM-01 corrigido: `_carregarPendentes()` ganhou error callback que atualiza `admin-pendentes-lista` com mensagem de erro — antes ficava "⏳ Carregando…" eterno se o backend falhasse. (3) OcorrenciasUI: `(o.criadoEm||'').slice(0,10)` → `fmtDataPtBR((o.criadoEm||'').slice(0,10))` — datas exibidas em DD/MM/AAAA. (4) HabilitacoesUI: mesmo fix de formato. |
 
 ### Checklist de auditoria — s70
 ```

@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Auditoria de bugs — 4 correções — Deploy @858.** (1) `rh-ev-setor-anterior` convertido de `<select>` sem opções para `<p>` display readonly — `_atualizarCamposEvento` usa `textContent` + `_labelSetor()`; `editarEvento` popula `ev.setorAnterior` no modo edição. (2) ADM-01 corrigido: `_carregarPendentes()` recebe error callback que atualiza DOM em vez de deixar "⏳ Carregando…" eterno. (3) OcorrenciasUI: `criadoEm` passa por `fmtDataPtBR()` — sem ISO cru na tabela. (4) HabilitacoesUI: `criadoEm` idem.
+**Fase atual**: **Auditoria de bugs — 4 correções — Deploy @861.** (1) `rh-ev-setor-anterior` convertido de `<select>` sem opções para `<p>` display readonly — `_atualizarCamposEvento` usa `textContent` + `_labelSetor()`; `editarEvento` popula `ev.setorAnterior` no modo edição. (2) ADM-01 corrigido: `_carregarPendentes()` recebe error callback que atualiza DOM em vez de deixar "⏳ Carregando…" eterno. (3) OcorrenciasUI: `criadoEm` passa por `fmtDataPtBR()` — sem ISO cru na tabela. (4) HabilitacoesUI: `criadoEm` idem.
 
 **Fase anterior**: **Fix — Mudança de Setor exibe badge "de → para" no histórico — Deploy @857.** `_evMudancas` agora inclui `ev.novoSetor` com `_labelSetor(setorAnterior) → _labelSetor(novoSetor)`.
 
