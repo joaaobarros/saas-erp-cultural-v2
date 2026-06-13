@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @871 · Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores sem auth
+> Deploy atual: @872 · Manual 3-camadas + IA dual-provider Groq→OpenRouter
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -1611,6 +1611,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 |---|---|---|
 | @637 | CAR-08 (auditoria) | Linha dedicada "Setor Solicitante" no modal `carro-det-overlay`; `_verDetalhesAgenda` popula setor separado. |
 | @637 | FIN-12 (auditoria) | Histórico com "Ver diff" + restauração de versão (diff modal 7 campos + backup automático + `ContratosEngine.restaurarVersao`). |
+| @872 | Manual + Busca IA | `manual.html`: 7 seções reescritas + seção `bi-demografico` criada. Motor de busca 3 camadas: NFD normalize + score ranking + sinônimos + IA Groq→OpenRouter failover silencioso. `manual_controller.gs`: novo `ctrl_manual_buscar_ia`. `index.html`: `GAS.manual.buscarIA`. |
 | @638 | CAR-09 (auditoria) | Passageiros separados: internos (select colaboradores + chip tags `_passInternosData`) e externos (texto livre); `passageirosInternos/Externos` no backend; legado `passageiros[]` preservado. |
 | @638 | CAR-10 (auditoria) | Paradas intermediárias dinâmicas no form; `rota.paradas[]` persistido; modal de detalhes: ícones dinâmicos Saída→Paradas→Chegada. |
 | @641 | CAR-11 (auditoria) | Agenda: dias passados não-clicáveis (sem onclick, opacidade .55, background surface2); `_abrirFormularioDia` guarda com Toast para datas passadas; `_onDataChange` atualiza `min` nos inputs de hora quando data = hoje. |

@@ -57,6 +57,7 @@ var ManualUI = (function () {
     'comunicacao':    'comunicacao',
     'balcao':         'balcao',
     'relatorios':     'relatorios',
+    'bi-demografico': 'bi-demografico',
     'voluntarios':    'voluntarios',
     'agentes':        'agentes',
     'admin':          'admin',
@@ -127,7 +128,7 @@ var ManualUI = (function () {
   var _GRUPOS = [
     { label: 'PRINCIPAL',    ids: ['home','dashboard','taskhub','acoes','estrategia','parcerias','acervo','publico','espacos','aprovacoes','reservas-carro'] },
     { label: 'GESTÃO',       ids: ['rh','pessoas','ponto','escuta','escuta-lgpd','contratacoes','financeiro','tarefas','reunioes'] },
-    { label: 'OPERACIONAL',  ids: ['comunicacao','balcao','relatorios'] },
+    { label: 'OPERACIONAL',  ids: ['comunicacao','balcao','relatorios','bi-demografico'] },
     { label: 'VOLUNTARIADO', ids: ['voluntarios','agentes'] },
     { label: 'SISTEMA',      ids: ['admin'] }
   ];
@@ -137,7 +138,7 @@ var ManualUI = (function () {
     // ── GERAL ─────────────────────────────────────────────────────────────
 
     { id:'home', label:'Início & Navegação', icone:'home', modulo:null,
-      tags:['início','menu','navegação','sidebar','sair','logout','notificações'],
+      tags:['início','menu','navegação','sidebar','sair','logout','notificações','toast','alerta','compactar'],
       descricao:'Como usar o painel principal e navegar pelo sistema',
       content: function(papel, feat) {
         return _p('O TRAMAR centraliza todos os processos do CCBJ em um único lugar. Acesse qualquer funcionalidade pelo menu lateral à esquerda.')
@@ -157,23 +158,30 @@ var ManualUI = (function () {
     },
 
     { id:'dashboard', label:'Dashboard', icone:'dashboard', modulo:null,
-      tags:['dashboard','métricas','indicadores','gráficos','resumo'],
-      descricao:'Visão geral dos números e indicadores do sistema',
+      tags:['dashboard','métricas','indicadores','gráficos','resumo','sla','orçamento','kpi','operacional','financeiro','estratégico'],
+      descricao:'Visão geral dos números e indicadores do sistema — três pilares: Operacional, Financeiro e Estratégico',
       content: function(papel, feat) {
-        return _p('O Dashboard reúne os principais números da instituição em um único painel. Use-o para acompanhar o dia a dia.')
-          + _h2('<span class="ms ms-sm">bar_chart</span> O que você encontra aqui')
+        return _p('O Dashboard reúne os principais indicadores da instituição organizados em três pilares. Use-o para acompanhar o dia a dia e identificar pontos de atenção rapidamente.')
+          + _h2('<span class="ms ms-sm">speed</span> Pilar Operacional')
           + _card('museum', 'Espaços', 'Quantos espaços estão disponíveis, em uso ou em manutenção.')
-          + _card('people', 'Equipe', 'Total de colaboradores ativos, afastados e cargos.')
-          + _card('event', 'Ações culturais', 'Quantidade de ações em cada fase: planejamento, aprovadas, em execução.')
-          + _card('task_alt', 'Tarefas', 'Resumo das tarefas em aberto e concluídas.')
-          + _calloutInfo('O Dashboard é atualizado automaticamente cada vez que você acessa. Recarregue a página para ver os números mais recentes.');
+          + _card('people', 'Equipe', 'Total de colaboradores ativos e afastados.')
+          + _card('event', 'Ações culturais', 'Quantidade de ações em cada fase: planejadas, em produção, em execução e concluídas.')
+          + _card('task_alt', 'Tarefas', 'Resumo das tarefas em aberto, concluídas e bloqueadas.')
+          + _card('support_agent', 'SLA de Demandas', 'Demandas do Balcão dentro ou fora do prazo (SLA). Identifique gargalos antes que vençam.')
+          + _h2('<span class="ms ms-sm">account_balance</span> Pilar Financeiro')
+          + _card('pie_chart', 'Execução orçamentária', 'Percentual executado do orçamento total por fonte de recurso. Atualizado em tempo real a partir dos contratos e pagamentos.')
+          + _card('description', 'Contratos ativos', 'Número de contratos em vigor, encerrados no mês e com vigência vencendo nos próximos 30 dias.')
+          + _h2('<span class="ms ms-sm">flag</span> Pilar Estratégico')
+          + _card('bar_chart', 'KPIs calculados automaticamente', 'Indicadores-chave derivados dos dados reais do sistema: taxa de ocupação dos espaços, conclusão de ações no prazo, custo médio por ação, satisfação do público (NPS) e renovação de agentes culturais.')
+          + _card('warning', 'Riscos identificados', 'Alertas automáticos: ações com prazo vencido, objetivos estratégicos sem ações vinculadas, contratos vencendo e índice de clima organizacional abaixo do limiar.')
+          + _calloutInfo('O Dashboard é atualizado automaticamente cada vez que você acessa. As métricas financeiras e estratégicas usam cache de até 2 minutos para garantir performance.');
       }
     },
 
     // ── PROGRAMAÇÃO ───────────────────────────────────────────────────────
 
     { id:'acoes', label:'Ações', icone:'event', modulo:'ACOES',
-      tags:['ação','evento','cultural','criar','editar','aprovar','agenda','publicar','mapa'],
+      tags:['ação','evento','cultural','criar','editar','aprovar','agenda','publicar','mapa','kanban','orçamento','território','local','estratégia','vinculo'],
       descricao:'Planejamento, execução e acompanhamento de ações culturais',
       content: function(papel, feat) {
         var html = _p('Uma <strong>Ação Cultural</strong> é qualquer evento, projeto ou atividade realizada pelo CCBJ. Cada ação evolui por um fluxo de produção antes de entrar em execução.')
@@ -183,25 +191,37 @@ var ManualUI = (function () {
               ['Em Produção','Produção em andamento: materiais, equipe e recursos sendo preparados.'],
               ['Em execução','Acontecendo agora. Equipe e recursos alocados.'],
               ['Concluída','Encerrada. Dados disponíveis para relatórios.'],
-              ['Arquivada','Guardada para referência histórica.']
+              ['Arquivada','Guardada para referência histórica.'],
+              ['Cancelada','Ação cancelada em qualquer etapa. Motivo registrado no histórico.']
             ])
           + _h2('<span class="ms ms-sm">visibility</span> O que você pode ver')
           + _card('list', 'Lista de ações', 'Todas as ações do CCBJ com filtros por status, período e responsável.')
-          + _card('view_kanban', 'Kanban', 'Visualize as ações organizadas por status em colunas de quadro Kanban.');
+          + _card('view_kanban', 'Kanban', 'Visualize as ações organizadas por status em colunas de quadro Kanban. É a visualização padrão ao abrir o módulo.')
+          + _h2('<span class="ms ms-sm">location_on</span> Localização da ação')
+          + _tabela(['Tipo de local','Quando usar'],[
+              ['Sede','Ação acontece nas instalações físicas do CCBJ.'],
+              ['Território','Ação itinerante em endereço externo. Informe logradouro, bairro e referência.'],
+              ['Itinerante','Ação que percorre múltiplos locais.'],
+              ['Virtual','Ação online. Informe o link ou plataforma.']
+            ])
+          + _h2('<span class="ms ms-sm">attach_money</span> Orçamento da ação')
+          + _card('savings', 'Orçamento próprio', 'Cada ação pode ter um orçamento dedicado com valor total aprovado, executado e saldo disponível. As linhas de orçamento seguem as rubricas das fontes de recurso.')
+          + _card('link', 'Vínculo estratégico', 'Uma ação pode ser vinculada a um objetivo estratégico. Quando vinculada, ela aparece no calendário estratégico e contribui para os KPIs de conclusão.');
         if (feat && feat.editar) {
           html += _h2('<span class="ms ms-sm">edit</span> Criar e editar ações')
-            + _card('add_circle', 'Nova ação', 'Clique em "Nova Ação", preencha título, data, espaço, equipe envolvida e salve.')
-            + _card('edit', 'Editar ação', 'Ações podem ser editadas enquanto ainda estão em planejamento ou produção.')
-            + _card('map', 'Mapa de ação', 'Planeje recursos, atividades e cronograma detalhado da ação usando o editor visual.');
+            + _card('add_circle', 'Nova ação', 'Clique em "Nova Ação", preencha título, tipo, data de início/fim, local, responsável e equipe envolvida.')
+            + _card('edit', 'Editar ação', 'Ações podem ser editadas enquanto ainda estão em planejamento ou produção.');
         }
         if (feat && feat.publicar_agenda) {
           html += _h2('<span class="ms ms-sm">public</span> Publicar na agenda pública')
-            + _card('share', 'Publicar', 'Ações em execução podem ser publicadas na agenda pública do CCBJ para divulgação ao público externo.')
-            + _calloutAviso('Verifique todas as informações antes de publicar. Datas, local e descrição ficam visíveis para qualquer pessoa.');
+            + _card('share', 'Publicar', 'Ações em execução podem ser publicadas na agenda pública do CCBJ para divulgação ao público externo. Preencha a descrição pública antes de publicar.')
+            + _calloutAviso('Verifique todas as informações antes de publicar. Datas, local e descrição ficam visíveis para qualquer pessoa sem login.');
         }
         if (feat && feat.aprovar_acao) {
           html += _h2('<span class="ms ms-sm">task_alt</span> Avançar ou recusar etapas')
             + _card('play_circle', 'Iniciar Produção', 'Move a ação de Planejada para Em Produção. Use quando os preparativos tiverem começado.')
+            + _card('rocket_launch', 'Iniciar Execução', 'Move a ação de Em Produção para Em Execução. A ação está acontecendo.')
+            + _card('check_circle', 'Concluir', 'Encerra a ação. Dados ficam disponíveis para relatórios e histórico.')
             + _card('cancel', 'Cancelar', 'Cancela a ação em qualquer etapa. Registre o motivo para histórico.');
         }
         return html;
@@ -209,7 +229,7 @@ var ManualUI = (function () {
     },
 
     { id:'estrategia', label:'Estratégia', icone:'flag', modulo:'ACOES',
-      tags:['estratégia','objetivo','kpi','indicador','risco','meta','planejamento'],
+      tags:['estratégia','objetivo','kpi','indicador','risco','meta','planejamento','calendário','longo prazo','curto prazo','horizonte'],
       descricao:'Objetivos estratégicos, indicadores e acompanhamento de metas',
       content: function(papel, feat) {
         var html = _p('O módulo de Estratégia conecta o planejamento de longo prazo com a execução do dia a dia por meio de objetivos mensuráveis.')
@@ -228,7 +248,7 @@ var ManualUI = (function () {
     },
 
     { id:'publico', label:'Público', icone:'groups', modulo:'PUBLICO',
-      tags:['público','inscrição','presença','certificado','pesquisa','satisfação','lista espera'],
+      tags:['público','inscrição','presença','certificado','pesquisa','satisfação','lista espera','nps','participante','frequência','portal'],
       descricao:'Inscrições de participantes, presenças, pesquisas e certificados',
       content: function(papel, feat) {
         var html = _p('O módulo de Público gerencia tudo relacionado aos participantes das ações culturais: quem se inscreveu, quem compareceu e como avaliou o evento.')
@@ -250,7 +270,7 @@ var ManualUI = (function () {
     },
 
     { id:'parcerias', label:'Parcerias', icone:'handshake', modulo:'ACOES',
-      tags:['parceria','parceiro','institucional','vinculo','organização'],
+      tags:['parceria','parceiro','institucional','vínculo','organização','colaboração','externo'],
       descricao:'Parcerias institucionais e seus vínculos com ações culturais',
       content: function(papel, feat) {
         var html = _p('O módulo de Parcerias registra organizações e pessoas com as quais o CCBJ mantém relações institucionais.')
@@ -289,7 +309,7 @@ var ManualUI = (function () {
     // ── ESPAÇOS ───────────────────────────────────────────────────────────
 
     { id:'espacos', label:'Infraestrutura', icone:'meeting_room', modulo:'ESPACOS',
-      tags:['espaço','sala','reserva','disponibilidade','calendário','chave','ativo','inventário'],
+      tags:['espaço','sala','reserva','disponibilidade','calendário','chave','ativo','inventário','mapa','planta','vértice','mesclar','equipamento','patrimônio','empréstimo'],
       descricao:'Consulta e reserva de espaços físicos do CCBJ',
       content: function(papel, feat) {
         var html = _p('O módulo de Espaços permite consultar a disponibilidade e fazer reservas dos espaços físicos do CCBJ.')
@@ -339,7 +359,7 @@ var ManualUI = (function () {
     },
 
     { id:'aprovacoes', label:'Aprovações', icone:'task_alt', modulo:'ESPACOS',
-      tags:['aprovação','pendente','reserva','solicitação','recusar','aceitar','acesso','carro','permissão'],
+      tags:['aprovação','pendente','reserva','solicitação','recusar','aceitar','acesso','carro','permissão','analisar','domínio','usuário novo'],
       descricao:'Central de solicitações aguardando análise: reservas, acessos, veículos e permissões',
       content: function(papel, feat) {
         return _p('A central de Aprovações reúne as solicitações que precisam da sua avaliação, organizadas em abas por tipo.')
@@ -378,24 +398,24 @@ var ManualUI = (function () {
     // ── PESSOAS & RH ──────────────────────────────────────────────────────
 
     { id:'pessoas', label:'Colaboradores', icone:'badge', modulo:'PESSOAS',
-      tags:['colaborador','cadastro','pessoa','equipe','status','desligamento','afastamento'],
+      tags:['colaborador','cadastro','pessoa','equipe','status','desligamento','afastamento','meu perfil','dados pessoais','pcd','gênero','raça','demográfico','aniversário'],
       descricao:'Cadastro e acompanhamento dos colaboradores da instituição',
       content: function(papel, feat) {
         var html = _p('O módulo de Colaboradores é o cadastro central de todas as pessoas que trabalham ou trabalharam no CCBJ.')
           + _h2('<span class="ms ms-sm">badge</span> O que você vê')
           + _card('list', 'Lista de colaboradores', 'Nome, cargo, setor e status de cada colaborador.')
-          + _card('account_circle', 'Ficha do colaborador', 'Histórico de cargos, setor, data de entrada, contato e observações.')
+          + _card('account_circle', 'Ficha do colaborador', 'Histórico de cargos, setor, data de entrada, contato, vínculo e observações.')
           + _tabela(['Status','Significado'],[
               ['Ativo','Trabalhando normalmente.'],
               ['Afastado','Temporariamente afastado (licença, férias, etc.).'],
-              ['Desligado','Não faz mais parte da equipe.']
+              ['Desligado','Não faz mais parte da equipe. Acesso ao sistema bloqueado automaticamente.']
             ]);
         if (feat && feat.editar) {
-          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar cadastros')
-            + _card('person_add', 'Novo colaborador', 'Preencha nome, cargo, setor, data de início e dados de contato.')
+          html += _h2('<span class="ms ms-sm">edit</span> Gerenciar cadastros (RH / Admin)')
+            + _card('person_add', 'Novo colaborador', 'Preencha nome, cargo, setor, tipo de vínculo (CLT, PJ, Bolsista, Professor, Voluntário, Estagiário), data de início e dados de contato.')
             + _card('edit', 'Editar informações', 'Atualize cargo, setor ou qualquer dado cadastral.')
             + _card('cake', 'Data de nascimento', 'Campo opcional no formulário de cadastro. Quando preenchido, o colaborador aparece na seção de aniversariantes do Meu Centro nos 7 dias anteriores ao seu aniversário.')
-            + _card('swap_horiz', 'Mudar status', 'Registre afastamentos, retornos ou desligamentos.');
+            + _card('swap_horiz', 'Mudar status', 'Registre afastamentos, retornos ou desligamentos. Ao desligar, o e-mail do colaborador é bloqueado automaticamente em todos os módulos.');
         }
         html += _calloutInfo('Colaboradores sem <strong>data de nascimento</strong> preenchida não aparecem na seção de aniversariantes do Meu Centro. Mantenha esse campo atualizado para que a equipe possa ser lembrada das datas.');
         if (feat && feat.ver_salario) {
@@ -403,49 +423,109 @@ var ManualUI = (function () {
             + _card('payments', 'Salário e carga horária', 'Visualize e edite o salário bruto, carga horária e benefícios.')
             + _calloutEscuro('Dados salariais são visíveis apenas para RH, Financeiro e Administração. Trate com discrição.');
         }
+        html += _h2('<span class="ms ms-sm">person</span> Meu Perfil — auto-edição pelo colaborador')
+          + _p('Todo colaborador pode editar seus próprios dados pessoais sem precisar solicitar ao RH. Acesse "Meu Perfil" no menu ou na ficha própria. Campos disponíveis para auto-edição:')
+          + _ul([
+              '<strong>Apelido / Pronomes</strong> — como você prefere ser chamado(a)',
+              '<strong>E-mail pessoal e telefone</strong>',
+              '<strong>Endereço residencial</strong>',
+              '<strong>Contato de emergência</strong> — nome, parentesco e telefone',
+              '<strong>Gênero, orientação sexual e raça/cor</strong> — autodeclarados, visíveis apenas para RH e Admin',
+              '<strong>PcD</strong> — se é pessoa com deficiência, tipo e descrição do suporte necessário',
+              '<strong>Dados familiares</strong> — se é pai/mãe/responsável e número de filhos',
+              '<strong>Tipo sanguíneo, alergias e restrições alimentares</strong>',
+              '<strong>Observações pessoais</strong>'
+            ])
+          + _calloutEscuro('Dados demográficos (gênero, orientação, raça/cor, PcD, família) são autodeclarados e voluntários. Eles alimentam o BI Demográfico de forma agregada — nunca individual.');
         return html;
       }
     },
 
     { id:'ponto', label:'Ponto & Escalas', icone:'schedule', modulo:'PESSOAS',
-      tags:['ponto','escala','horário','férias','afastamento','presença','folha'],
-      descricao:'Registro de ponto, escalas de trabalho e solicitações de férias',
+      tags:['ponto','escala','horário','férias','afastamento','presença','folha','afd','banco de horas','clt','regime','semanal','importar','espelho'],
+      descricao:'Espelho de ponto, banco de horas, escalas e solicitações de férias',
       content: function(papel, feat) {
-        var html = _p('Este módulo cuida do controle de frequência e das escalas de trabalho da equipe.')
-          + _h2('<span class="ms ms-sm">calendar_month</span> Escala de trabalho')
-          + _card('view_week', 'Ver sua escala', 'Consulte seus dias e horários de trabalho do mês atual e dos próximos meses.')
-          + _card('event_busy', 'Solicitar férias', 'Registre uma solicitação de férias informando o período desejado. Aguarde aprovação.')
-          + _h2('<span class="ms ms-sm">fingerprint</span> Registro de ponto')
-          + _card('login', 'Registrar entrada/saída', 'Use o botão "Registrar Ponto" para lançar entrada, intervalo ou saída. Faça isso no mesmo dia para evitar divergências.')
-          + _card('sick', 'Lançar afastamento', 'Registre faltas justificadas, licenças médicas ou outros tipos de afastamento com o documento de suporte.');
+        var html = _p('O módulo de Ponto controla a frequência da equipe com espelho mensal, banco de horas automático, alertas CLT e importação de arquivo AFD do relógio de ponto.')
+          + _h2('<span class="ms ms-sm">calendar_view_month</span> Espelho de ponto')
+          + _card('view_week', 'Espelho mensal', 'Visualize entrada, saída e intervalos de cada dia do mês, com crédito/débito de horas calculado automaticamente.')
+          + _card('calendar_month', 'Ver sua escala', 'Consulte seus dias e horários de trabalho configurados e os turnos da semana.')
+          + _card('event_busy', 'Solicitar férias', 'Registre uma solicitação de férias informando o período desejado. O sistema calcula o período aquisitivo e a janela concessiva automaticamente.')
+          + _card('sick', 'Lançar afastamento', 'Registre faltas justificadas, licenças médicas ou outros tipos de afastamento com o documento de suporte.')
+          + _h2('<span class="ms ms-sm">savings</span> Banco de horas')
+          + _card('add_circle', 'Crédito automático', 'Sempre que a jornada diária (ou semanal, no caso de professores) excede a carga horária contratada, o saldo positivo é creditado automaticamente no banco de horas.')
+          + _card('remove_circle', 'Débito automático', 'Horas não trabalhadas abaixo da carga horária contratada geram débito no banco de horas.')
+          + _calloutInfo('O banco de horas é recalculado de forma idempotente — é seguro reprocessar sem duplicar créditos.')
+          + _h2('<span class="ms ms-sm">warning</span> Alertas CLT')
+          + _p('O sistema emite alertas automáticos quando detecta situações fora dos limites da CLT:')
+          + _ul([
+              'Jornada diária acima de 10 horas',
+              'Ausência de intervalo intrajornada (descanso não registrado)',
+              'Banco de horas positivo acima de 40 horas (risco de perda de crédito)'
+            ])
+          + _h2('<span class="ms ms-sm">swap_horiz</span> Regime de apuração de jornada')
+          + _tabela(['Regime','Quem usa','Como funciona'],[
+              ['Diário','Colaboradores CLT padrão','Apura horas extras/faltas por dia. Crédito/débito diário.'],
+              ['Semanal','Professores e cargas variáveis','Apura de segunda a domingo. O crédito ou débito é calculado ao final da semana, não dia a dia.']
+            ]);
         if (feat && feat.aprovar_ferias) {
           html += _h2('<span class="ms ms-sm">task_alt</span> Aprovar férias e afastamentos')
             + _card('inbox', 'Solicitações pendentes', 'Veja as solicitações da equipe aguardando sua análise.')
-            + _card('check_circle', 'Aprovar ou ajustar período', 'Aprove o período solicitado ou sugira datas alternativas com justificativa.');
+            + _card('check_circle', 'Aprovar ou ajustar período', 'Aprove o período solicitado ou sugira datas alternativas com justificativa.')
+            + _card('handshake', 'Registrar acordo de férias', 'Após o período gozado, registre o acordo de férias com as datas reais. O saldo do período aquisitivo é debitado automaticamente.');
         }
         if (feat && feat.lancar_ponto_outros) {
           html += _h2('<span class="ms ms-sm">edit_calendar</span> Corrigir ponto de outros')
-            + _card('edit', 'Editar registro', 'Corrija entradas incorretas de outros colaboradores. Todas as edições ficam registradas na auditoria.');
+            + _card('edit', 'Editar registro', 'Corrija entradas incorretas de outros colaboradores. Todas as edições ficam registradas na auditoria.')
+            + _h2('<span class="ms ms-sm">upload_file</span> Importação de AFD')
+            + _card('upload', 'Importar arquivo AFD', 'Carregue o arquivo AFD exportado pelo relógio de ponto (layout Colabore / iDClass). O sistema processa as batidas, cruza com as escalas e popula o espelho automaticamente.')
+            + _card('check_circle', 'Confirmar importação', 'Após o processamento, revise o resumo (N registros importados) e confirme para salvar em lote. A operação é atômica — ou salva tudo, ou nada.')
+            + _calloutAviso('Verifique a data do arquivo AFD antes de importar. Importar um arquivo errado pode sobrescrever batidas já confirmadas.');
         }
         return html;
       }
     },
 
     { id:'rh', label:'Pessoas / RH — Configurações', icone:'work', modulo:'PESSOAS',
-      tags:['rh','cargo','pcc','plano de cargos','setor','escala','turno','departamento'],
-      descricao:'Gestão de pessoas: equipe, PCCS, escalas, férias, folha e indicadores de RH',
+      tags:['rh','cargo','pccs','plano de cargos','setor','escala','turno','departamento','histórico','promoção','reajuste','advertência','desligamento','férias','período aquisitivo','rescisão','folha','avaliação','disciplinar'],
+      descricao:'Gestão de pessoas: equipe, PCCS, histórico de eventos, férias, desligamento, folha e indicadores de RH',
       content: function(papel, feat) {
         return _p('O módulo de RH centraliza toda a gestão de pessoas da instituição, organizado em abas: Equipe, PCCS, Histórico, Avaliações, Escalas, Documentos, Férias, Folha, Rescisão e Indicadores.')
           + _h2('<span class="ms ms-sm">group</span> Equipe')
-          + _card('badge', 'Lista da equipe', 'Veja todos os colaboradores ativos, seus cargos, setores e situação no PCCS.')
+          + _card('badge', 'Lista da equipe', 'Veja todos os colaboradores ativos, seus cargos, setores, tipo de vínculo e situação no PCCS.')
           + _h2('<span class="ms ms-sm">schema</span> PCCS — Plano de Cargos, Carreiras e Salários')
-          + _card('trending_up', 'Estrutura de progressão', 'Define as tabelas salariais e os níveis de carreira. Cada colaborador é enquadrado em uma posição do PCCS ativo. Use como referência para promoções e reajustes.')
+          + _card('trending_up', 'Estrutura de progressão', 'Define as tabelas salariais e os níveis de carreira. Cada colaborador é enquadrado em um nível, classe e referência. Use como base para promoções e reajustes.')
+          + _card('history', 'Tabelas por ano', 'O PCCS mantém histórico de tabelas salariais por ano. Consulte valores vigentes e anteriores.')
+          + _h2('<span class="ms ms-sm">event_note</span> Histórico de Eventos RH')
+          + _p('O histórico registra todos os eventos que marcaram a trajetória de cada colaborador. Cada tipo de evento tem campos específicos:')
+          + _tabela(['Tipo de evento','Campos registrados','Efeito automático na ficha'],
+              [
+                ['Admissão','Data de início','Define data de admissão e inicia período aquisitivo de férias'],
+                ['Promoção','Novo cargo, novo salário','Atualiza cargo e salário na ficha'],
+                ['Reajuste Salarial','Novo salário, percentual','Atualiza salário na ficha'],
+                ['Mudança de Cargo','Novo cargo','Atualiza cargo na ficha'],
+                ['Mudança de Carga Horária','Nova carga (20h / 30h / 40h / custom)','Atualiza carga horária e recalcula banco de horas'],
+                ['Advertência','Nível (Verbal / 1ª Escrita / 2ª Escrita / 3ª Escrita / Demissão) + gravidade + descrição','Nenhum; fica em histórico disciplinar'],
+                ['Desligamento','Data, motivo, tipo de rescisão','Muda status para Desligado; bloqueia e-mails automaticamente']
+              ])
+          + _calloutInfo('Editores de histórico só estão disponíveis para RH e SuperAdmin. Gestores podem visualizar, mas não editar.')
+          + _h2('<span class="ms ms-sm">beach_access</span> Férias — Períodos Aquisitivos')
+          + _card('date_range', 'Período aquisitivo', 'Calculado automaticamente a partir da data de admissão: a cada 360 dias, um novo período aquisitivo se abre. Consulte o saldo disponível de cada colaborador na aba Férias.')
+          + _card('event_available', 'Janela concessiva', 'A lei exige que as férias sejam concedidas dentro dos 12 meses seguintes ao vencimento do período aquisitivo. O sistema alerta quando a janela está se esgotando.')
+          + _card('handshake', 'Solicitar férias', 'O colaborador solicita o período desejado. RH ou Gestor aprova.')
+          + _card('task_alt', 'Registrar acordo de férias', 'Após as férias gozadas, RH registra o acordo com as datas reais. O saldo do período aquisitivo correspondente é debitado automaticamente.')
+          + _h2('<span class="ms ms-sm">person_off</span> Desligamento')
+          + _card('exit_to_app', 'Registrar desligamento', 'Informe data, motivo e se haverá rescisão calculada. O colaborador tem o status alterado para "Desligado" e o sistema bloqueia o envio de e-mails para ele em todos os módulos.')
+          + _card('calculate', 'Calcular rescisão', 'O sistema calcula os valores de rescisão com base no PCCS, banco de horas, férias vencidas e proporcional.')
           + _h2('<span class="ms ms-sm">schedule</span> Escalas')
-          + _card('view_week', 'Configurar escalas', 'Defina os padrões de escala (ex: segunda a sexta, 08h–17h) e aplique a cada colaborador.')
-          + _h2('<span class="ms ms-sm">star</span> Avaliações · Documentos · Folha · Rescisão')
+          + _card('view_week', 'Configurar escalas', 'Defina os padrões de escala (ex: segunda a sexta, 08h–17h) e aplique a cada colaborador. Professores podem ter escala semanal com carga variável.')
+          + _h2('<span class="ms ms-sm">star</span> Avaliações · Documentos · Folha')
           + _card('star', 'Avaliações de desempenho', 'Registre e consulte avaliações periódicas de cada colaborador.')
           + _card('folder', 'Documentos', 'Centralize documentos de RH de cada colaborador (contratos, atestados, etc.).')
-          + _card('payments', 'Folha e Rescisão', 'Visualize a folha de pagamento e calcule rescisões com base no PCCS e nas marcações de ponto.')
+          + _card('payments', 'Folha de pagamento', 'Visualize a folha mensal com base no PCCS, deduções e benefícios.')
+          + _h2('<span class="ms ms-sm">insights</span> Indicadores de RH')
+          + _card('mood', 'Clima organizacional', 'Índice consolidado a partir das respostas da Escuta Institucional.')
+          + _card('gavel', 'Disciplinar', 'Contagem de advertências por nível no período. Monitore reincidências.')
+          + _card('timer', 'Jornada e banco de horas', 'Alertas CLT: colaboradores com jornada acima de 10h, sem intervalo ou banco de horas excessivo.')
           + _calloutInfo('As escalas definidas aqui são usadas automaticamente para calcular frequência e gerar alertas de atraso no espelho de ponto.');
       }
     },
@@ -574,7 +654,7 @@ var ManualUI = (function () {
     // ── FINANCEIRO ────────────────────────────────────────────────────────
 
     { id:'financeiro', label:'Financeiro', icone:'account_balance', modulo:'FINANCEIRO',
-      tags:['financeiro','contrato','rubrica','orçamento','holerite','folha','pagamento','movimentação'],
+      tags:['financeiro','contrato','rubrica','orçamento','pagamento','movimentação','remanejamento','aditivo','fonte','recurso','prestador','exportação','csv','prestação de contas'],
       descricao:'Contratos, rubricas, orçamento e processamento financeiro',
       content: function(papel, feat) {
         var html = _p('O módulo Financeiro centraliza a gestão de contratos, fontes de recurso, remanejamentos e exportações financeiras da instituição. Organizado em abas: Contratos, Remanejamentos, Aditivos, Exportações e Fontes de Recurso.')
@@ -698,7 +778,7 @@ var ManualUI = (function () {
     // ── COMUNICAÇÃO ───────────────────────────────────────────────────────
 
     { id:'comunicacao', label:'Comunicação', icone:'campaign', modulo:'COMUNICACAO',
-      tags:['comunicação','rece','demanda','entrega','evento externo','divulgação','comunicado','email'],
+      tags:['comunicação','rece','demanda','entrega','evento externo','divulgação','comunicado','email','agenda pública','registro','enviar'],
       descricao:'Demandas de comunicação, entregas e registro de eventos para divulgação',
       content: function(papel, feat) {
         var html = _p('O módulo de Comunicação gerencia as demandas e entregas de materiais de divulgação, além do RECE — Registro de Eventos Culturais para divulgação externa.')
@@ -767,7 +847,7 @@ var ManualUI = (function () {
     // ── VOLUNTARIADO ──────────────────────────────────────────────────────
 
     { id:'voluntarios', label:'Voluntários', icone:'volunteer_activism', modulo:'MASTER',
-      tags:['voluntário','voluntariado','colaboração','parceiro','externo'],
+      tags:['voluntário','voluntariado','colaboração','parceiro','externo','alocação','convidar','confirmar'],
       descricao:'Cadastro e acompanhamento de voluntários da instituição',
       content: function(papel, feat) {
         var html = _p('O módulo de Voluntários registra todas as pessoas que contribuem com o CCBJ de forma voluntária, sem vínculo empregatício. Organizado em duas abas: Cadastro e Alocações.')
@@ -782,7 +862,7 @@ var ManualUI = (function () {
     },
 
     { id:'agentes', label:'Agentes Culturais', icone:'person_pin', modulo:'MASTER',
-      tags:['agente','cultural','artista','parceiro','externo','CCBJ'],
+      tags:['agente','cultural','artista','parceiro','externo','produtor','linguagem','especialidade','cnpj','cpf','pj','pf'],
       descricao:'Cadastro de agentes e produtores culturais parceiros',
       content: function(papel, feat) {
         var html = _p('Os Agentes Culturais são artistas, produtores e outros profissionais da cultura com os quais o CCBJ mantém relação. Diferente de colaboradores, não têm vínculo empregatício com a instituição.')
@@ -798,20 +878,43 @@ var ManualUI = (function () {
     // ── SISTEMA ───────────────────────────────────────────────────────────
 
     { id:'relatorios', label:'Relatórios', icone:'summarize', modulo:'RELATORIOS',
-      tags:['relatório','exportar','dados','análise','planilha'],
-      descricao:'Relatórios gerenciais disponíveis conforme o seu perfil',
+      tags:['relatório','exportar','dados','análise','planilha','codip','csv','afd','clima','estoque'],
+      descricao:'Relatórios e exportações por módulo, mais o painel de BI Demográfico',
       content: function(papel, feat) {
-        return _p('Os relatórios e exportações estão disponíveis dentro de cada módulo — não em uma tela central. Acesse o módulo correspondente para exportar os dados que precisa.')
+        return _p('A maioria das exportações está disponível dentro de cada módulo. O painel de <strong>BI Demográfico</strong> é um módulo dedicado, acessível pelo menu.')
+          + _h2('<span class="ms ms-sm">download</span> Exportações por módulo')
           + _card('groups', 'Público — CODIP', 'Relatório mensal de público (CODIP/Secult-CE). Disponível na aba Exportações do módulo Público.')
           + _card('account_balance', 'Financeiro — CSV/Excel', 'Exportação dos dados financeiros por período e fonte de recurso. Disponível na aba Exportações do módulo Financeiro.')
           + _card('schedule', 'Ponto — AFD e CSV', 'Espelho de ponto e exportação no formato AFD (Colabore) ou CSV. Disponível nas abas do módulo Ponto & RH.')
           + _card('bar_chart', 'Escuta — relatório climático', 'Relatório de clima organizacional por período, dimensão e setor. Disponível na aba Relatórios do módulo Escuta.')
-          + _card('inventory_2', 'Estoque — saídas', 'Relatório de movimentações de saída do almoxarifado. Disponível na aba Relatórios do módulo Estoque.');
+          + _card('inventory_2', 'Estoque — saídas', 'Relatório de movimentações de saída do almoxarifado. Disponível na aba Relatórios do módulo Estoque.')
+          + _h2('<span class="ms ms-sm">diversity_3</span> BI Demográfico')
+          + _card('bar_chart', 'Painel dedicado', 'O BI Demográfico tem seção própria no menu (veja "BI Demográfico" no grupo OPERACIONAL). Analisa a composição da equipe e dos beneficiários por gênero, raça/cor, orientação, território, faixa etária e PcD.');
+      }
+    },
+
+    { id:'bi-demografico', label:'BI Demográfico', icone:'diversity_3', modulo:'RELATORIOS',
+      tags:['bi','demográfico','gênero','raça','cor','orientação','pcd','território','faixa etária','mapa de calor','diversidade','beneficiário','equipe','análise','dados'],
+      descricao:'Análise demográfica da equipe e dos beneficiários — gênero, raça/cor, PcD, território e mais',
+      content: function(papel, feat) {
+        return _p('O BI Demográfico transforma os dados autodeclarados pelos colaboradores e os dados de inscrições do público em painéis de análise agregados. Nunca exibe dados individuais.')
+          + _h2('<span class="ms ms-sm">group</span> Análise da equipe')
+          + _card('wc', 'Gênero e orientação', 'Distribuição da equipe por gênero (Feminino, Masculino, Não-binário, Outro, Prefiro não informar) e orientação sexual.')
+          + _card('palette', 'Raça e cor', 'Distribuição por autodeclaração de raça/cor (Branca, Preta, Parda, Indígena, Amarela). Conforme os critérios do IBGE.')
+          + _card('accessible', 'Pessoas com Deficiência (PcD)', 'Percentual da equipe com deficiência declarada e tipos mais frequentes.')
+          + _card('corporate_fare', 'Por setor', 'Compare a diversidade entre os diferentes setores da organização.')
+          + _card('cake', 'Faixa etária', 'Pirâmide etária da equipe: percentual por faixa de 10 anos.')
+          + _h2('<span class="ms ms-sm">groups</span> Análise de beneficiários (Público)')
+          + _card('map', 'Território', 'De quais bairros e regiões vêm as pessoas que participam das ações culturais. Mapa de calor por localização informada no momento da inscrição.')
+          + _card('wc', 'Gênero do público', 'Distribuição de gênero dos participantes inscritos nas ações.')
+          + _card('cake', 'Faixa etária do público', 'Pirâmide etária dos beneficiários.')
+          + _calloutInfo('Os dados demográficos da equipe são alimentados pelo campo "Meu Perfil" de cada colaborador. Grupos com menos de 5 pessoas são ocultados para proteger identidades.')
+          + _calloutAviso('Dados demográficos são visíveis apenas para RH, Admin e SuperAdmin. Nunca compartilhe capturas de tela com dados individuais identificáveis.');
       }
     },
 
     { id:'admin', label:'Administração', icone:'admin_panel_settings', modulo:'ADMIN',
-      tags:['admin','superadmin','usuário','acesso','módulo','configuração','auditoria','organização'],
+      tags:['admin','superadmin','usuário','acesso','módulo','configuração','auditoria','organização','setor','categoria','tema','cor','banco de dados','diagnóstico','revogar','aprovar acesso'],
       descricao:'Gerenciamento de usuários, módulos e configurações do sistema',
       content: function(papel, feat) {
         var ehAdmin = (papel === 'admin' || papel === 'superadmin');
@@ -842,6 +945,225 @@ var ManualUI = (function () {
     }
 
   ];
+
+  // ─── Motor de busca inteligente ──────────────────────────────────────
+
+  // Remove acentos e normaliza para minúsculas para comparação sem acentuação
+  function _normalizar(str) {
+    return String(str || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  // Dicionário de sinônimos: termo normalizado → array de IDs de seção
+  var _SINONIMOS = {
+    'ferias':             ['ponto','rh'],
+    'ferias vencidas':    ['rh'],
+    'periodo aquisitivo': ['rh'],
+    'janela concessiva':  ['rh'],
+    'acordo de ferias':   ['rh'],
+    'banco de horas':     ['ponto'],
+    'bh':                 ['ponto'],
+    'horas extras':       ['ponto'],
+    'horas negativas':    ['ponto'],
+    'espelho':            ['ponto'],
+    'espelho de ponto':   ['ponto'],
+    'importar ponto':     ['ponto'],
+    'importar afd':       ['ponto'],
+    'afd':                ['ponto'],
+    'regime semanal':     ['ponto'],
+    'regime diario':      ['ponto'],
+    'alerta clt':         ['ponto'],
+    'folha':              ['rh'],
+    'folha de pagamento': ['rh'],
+    'holerite':           ['rh'],
+    'contracheque':       ['rh'],
+    'admissao':           ['rh'],
+    'demissao':           ['rh'],
+    'desligamento':       ['rh'],
+    'rescisao':           ['rh'],
+    'promocao':           ['rh'],
+    'reajuste salarial':  ['rh'],
+    'mudanca de cargo':   ['rh'],
+    'advertencia':        ['rh'],
+    'historico rh':       ['rh'],
+    'avaliacao desempenho':['rh'],
+    'pccs':               ['rh'],
+    'plano de cargos':    ['rh'],
+    'cargo':              ['rh','pessoas'],
+    'salario':            ['rh','financeiro'],
+    'escala':             ['ponto','rh'],
+    'turno':              ['ponto','rh','admin'],
+    'afastamento':        ['ponto'],
+    'licenca':            ['ponto'],
+    'pcd':                ['pessoas','bi-demografico'],
+    'deficiencia':        ['pessoas','bi-demografico'],
+    'genero':             ['pessoas','bi-demografico','escuta-lgpd'],
+    'orientacao sexual':  ['pessoas','bi-demografico'],
+    'raca':               ['pessoas','bi-demografico'],
+    'cor':                ['pessoas','bi-demografico'],
+    'diversidade':        ['bi-demografico'],
+    'demografico':        ['bi-demografico'],
+    'meu perfil':         ['pessoas'],
+    'dados pessoais':     ['pessoas'],
+    'cadastro':           ['pessoas','agentes','voluntarios'],
+    'colaborador':        ['pessoas'],
+    'equipe':             ['pessoas','rh'],
+    'reserva de sala':    ['espacos'],
+    'sala':               ['espacos','aprovacoes'],
+    'espaco':             ['espacos'],
+    'chave':              ['espacos'],
+    'inventario':         ['espacos'],
+    'ativo':              ['espacos'],
+    'patrimonio':         ['espacos'],
+    'equipamento':        ['espacos'],
+    'emprestimo':         ['espacos'],
+    'mapa':               ['espacos'],
+    'planta':             ['espacos'],
+    'veiculo':            ['reservas-carro'],
+    'carro':              ['reservas-carro'],
+    'transporte':         ['reservas-carro'],
+    'aprovacao':          ['aprovacoes'],
+    'pendente':           ['aprovacoes','taskhub'],
+    'solicitacao':        ['aprovacoes','contratacoes'],
+    'orcamento':          ['financeiro','acoes'],
+    'contrato':           ['financeiro','contratacoes'],
+    'rubrica':            ['financeiro'],
+    'pagamento':          ['financeiro'],
+    'remanejamento':      ['financeiro'],
+    'fonte de recurso':   ['financeiro'],
+    'aditivo':            ['financeiro'],
+    'compra':             ['contratacoes'],
+    'cotacao':            ['contratacoes'],
+    'prestador':          ['contratacoes','financeiro'],
+    'bolsa':              ['contratacoes'],
+    'habilitacao':        ['contratacoes'],
+    'clima':              ['escuta'],
+    'clima organizacional':['escuta'],
+    'anonimo':            ['escuta','escuta-lgpd'],
+    'bem estar':          ['escuta'],
+    'pulse':              ['escuta'],
+    'pesquisa clima':     ['escuta'],
+    'lgpd':               ['escuta-lgpd'],
+    'privacidade':        ['escuta-lgpd'],
+    'anonimato':          ['escuta-lgpd'],
+    'uwes':               ['escuta-lgpd'],
+    'reuniao':            ['reunioes'],
+    'ata':                ['reunioes'],
+    'pauta':              ['reunioes'],
+    'encaminhamento':     ['reunioes','taskhub'],
+    'decisao':            ['reunioes'],
+    'tarefa':             ['tarefas','taskhub'],
+    'urgente':            ['tarefas','taskhub'],
+    'prazo':              ['tarefas','taskhub'],
+    'meu dia':            ['taskhub'],
+    'meu time':           ['taskhub'],
+    'produtividade':      ['taskhub'],
+    'aniversario':        ['taskhub','pessoas'],
+    'pendencias':         ['taskhub'],
+    'design':             ['balcao','comunicacao'],
+    'cartaz':             ['balcao'],
+    'video':              ['balcao'],
+    'sla':                ['balcao','dashboard'],
+    'demanda':            ['balcao','comunicacao'],
+    'comunicado':         ['comunicacao'],
+    'rece':               ['comunicacao'],
+    'agenda publica':     ['comunicacao','acoes'],
+    'divulgacao':         ['comunicacao','balcao'],
+    'inscricao':          ['publico'],
+    'certificado':        ['publico'],
+    'presenca':           ['publico'],
+    'nps':                ['publico','escuta'],
+    'participante':       ['publico'],
+    'lista de espera':    ['publico'],
+    'voluntario':         ['voluntarios'],
+    'alocacao':           ['voluntarios'],
+    'agente':             ['agentes'],
+    'artista':            ['agentes'],
+    'produtor':           ['agentes'],
+    'parceria':           ['parcerias'],
+    'acervo':             ['acervo'],
+    'foto':               ['acervo','balcao'],
+    'imagem':             ['acervo'],
+    'autorizacao':        ['acervo'],
+    'usuario':            ['admin'],
+    'acesso':             ['admin','aprovacoes'],
+    'permissao':          ['admin','aprovacoes'],
+    'setor':              ['admin','rh'],
+    'auditoria':          ['admin'],
+    'configuracao':       ['admin'],
+    'tema':               ['admin'],
+    'cor do sistema':     ['admin'],
+    'modulo':             ['admin'],
+    'relatorio':          ['relatorios'],
+    'codip':              ['relatorios'],
+    'exportar':           ['relatorios'],
+    'csv':                ['relatorios','financeiro'],
+    'acao cultural':      ['acoes'],
+    'evento':             ['acoes','comunicacao'],
+    'producao':           ['acoes'],
+    'kanban':             ['acoes'],
+    'kpi':                ['estrategia','dashboard'],
+    'meta':               ['estrategia'],
+    'objetivo':           ['estrategia'],
+    'risco':              ['estrategia','dashboard'],
+    'estrategia':         ['estrategia'],
+    'login':              ['home','admin'],
+    'sair':               ['home'],
+    'menu':               ['home'],
+    'dashboard':          ['dashboard'],
+    'metricas':           ['dashboard'],
+    'indicadores':        ['dashboard']
+  };
+
+  // Timer para debounce da busca com IA
+  var _timerBuscaIA = null;
+
+  // Renderiza a lista de resultados (interna e IA compartilham este helper)
+  function _renderResultados(encontradas, query, viaIA) {
+    var ul = document.getElementById('manual-nav-lista');
+    if (!ul) return;
+    var html = '';
+    if (!encontradas.length) {
+      html = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum resultado para "' + escaparHtml(query) + '"</div>';
+    } else {
+      var label = viaIA
+        ? '<span class="ms ms-sm" style="font-size:13px;vertical-align:middle;margin-right:3px;">auto_awesome</span>' + encontradas.length + ' resultado' + (encontradas.length > 1 ? 's' : '') + ' — busca inteligente'
+        : encontradas.length + ' resultado' + (encontradas.length > 1 ? 's' : '');
+      html += '<div style="font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:10px 16px 4px;font-weight:700;">' + label + '</div>';
+      encontradas.forEach(function(sec) {
+        var ativo = sec.id === _secaoAtual;
+        html += '<div class="manual-nav-item' + (ativo ? ' ativo' : '') + '" onclick="ManualUI.navegar(\'' + sec.id + '\')">'
+          + '<span class="ms ms-sm" style="' + (ativo ? '' : 'color:var(--muted);') + '">' + (sec.icone || 'article') + '</span>'
+          + escaparHtml(sec.label)
+          + '</div>';
+      });
+    }
+    ul.innerHTML = html;
+  }
+
+  // Busca com IA via backend: chamada assíncrona ao Groq/llama
+  function _buscarComIA(query) {
+    var ul = document.getElementById('manual-nav-lista');
+    if (ul) {
+      ul.innerHTML = '<div style="padding:16px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;">'
+        + '<span class="ms ms-sm" style="animation:spin 1s linear infinite;font-size:16px;">progress_activity</span>'
+        + 'Buscando com IA…</div>';
+    }
+    if (typeof GAS === 'undefined' || !GAS.manual) return;
+    GAS.manual.buscarIA(query, function(r) {
+      if (!r || !r.ok || !r.ids || !r.ids.length) {
+        _renderResultados([], query, true);
+        return;
+      }
+      var secoes = _secoesFiltradas();
+      var encontradas = r.ids.map(function(id) {
+        return secoes.filter(function(s){ return s.id === id; })[0];
+      }).filter(Boolean);
+      _renderResultados(encontradas, query, true);
+    }, function() {
+      _renderResultados([], query, true);
+    });
+  }
 
   // ─── Funções internas ─────────────────────────────────────────────────
 
@@ -996,32 +1318,86 @@ var ManualUI = (function () {
     _renderNav();
   }
 
-  function buscar(q) {
-    var ul = document.getElementById('manual-nav-lista');
-    if (!ul) return;
-    if (!q || !q.trim()) { _renderNav(); return; }
-    var ql = q.toLowerCase().trim();
-    var secoes = _secoesFiltradas();
-    var html = '';
-    var encontradas = secoes.filter(function(s) {
-      return s.label.toLowerCase().indexOf(ql) !== -1
-          || (s.descricao || '').toLowerCase().indexOf(ql) !== -1
-          || (s.tags || []).some(function(t){ return t.toLowerCase().indexOf(ql) !== -1; });
-    });
-    if (!encontradas.length) {
-      html = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">Nenhum resultado para "' + escaparHtml(q) + '"</div>';
-    } else {
-      html += '<div style="font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:10px 16px 4px;font-weight:700;">'
-        + encontradas.length + ' resultado' + (encontradas.length > 1 ? 's' : '') + '</div>';
-      encontradas.forEach(function(sec) {
-        var ativo = sec.id === _secaoAtual;
-        html += '<div class="manual-nav-item' + (ativo ? ' ativo' : '') + '" onclick="ManualUI.navegar(\'' + sec.id + '\')">'
-          + '<span class="ms ms-sm" style="' + (ativo ? '' : 'color:var(--muted);') + '">' + (sec.icone || 'article') + '</span>'
-          + escaparHtml(sec.label)
-          + '</div>';
+  // Palavras irrelevantes que não devem ser usadas como termos de busca
+  var _STOP_WORDS = { 'o':1,'a':1,'os':1,'as':1,'um':1,'uma':1,'de':1,'do':1,'da':1,'dos':1,'das':1,
+    'em':1,'no':1,'na':1,'nos':1,'nas':1,'para':1,'com':1,'por':1,'que':1,'e':1,'ou':1,
+    'como':1,'onde':1,'qual':1,'quando':1,'quem':1,'o que':1,'ve':1,'ver':1,'sei':1 };
+
+  // Calcula score de relevância de uma seção para os termos da query
+  function _scoreSecao(sec, termos) {
+    var score = 0;
+    var labelN  = _normalizar(sec.label);
+    var descN   = _normalizar(sec.descricao || '');
+    var tagsN   = (sec.tags || []).map(_normalizar);
+    termos.forEach(function(t) {
+      if (!t || t.length < 2) return;
+      if (labelN === t)               score += 10;  // match exato no label
+      else if (labelN.indexOf(t) !== -1)  score += 6;   // match parcial no label
+      tagsN.forEach(function(tag) {
+        if (tag === t)                  score += 4;   // match exato na tag
+        else if (tag.indexOf(t) !== -1 || t.indexOf(tag) !== -1) score += 2; // parcial
       });
+      if (descN.indexOf(t) !== -1)    score += 1;   // match na descrição
+    });
+    return score;
+  }
+
+  function buscar(q) {
+    if (_timerBuscaIA) { clearTimeout(_timerBuscaIA); _timerBuscaIA = null; }
+    if (!q || !q.trim()) { _renderNav(); return; }
+
+    var qNorm   = _normalizar(q.trim());
+    var secoes  = _secoesFiltradas();
+
+    // Decompõe a query em termos significativos (remove stop words)
+    var termos = qNorm.split(/\s+/).filter(function(t) { return t.length >= 2 && !_STOP_WORDS[t]; });
+    if (!termos.length) termos = [qNorm];
+
+    // Camada 1 + Score: busca normalizada com ranking por relevância
+    var scored = [];
+    secoes.forEach(function(s) {
+      var labelN  = _normalizar(s.label);
+      var descN   = _normalizar(s.descricao || '');
+      var tagsN   = (s.tags || []).map(_normalizar);
+
+      // Match se QUALQUER termo aparece em algum campo
+      var hit = termos.some(function(t) {
+        return labelN.indexOf(t) !== -1 || descN.indexOf(t) !== -1
+            || tagsN.some(function(tag){ return tag.indexOf(t) !== -1 || t.indexOf(tag) !== -1; });
+      });
+      if (hit) scored.push({ sec: s, score: _scoreSecao(s, termos) });
+    });
+    scored.sort(function(a, b) { return b.score - a.score; });
+    var encontradas = scored.map(function(x){ return x.sec; });
+
+    // Camada 2: expansão por sinônimos (adiciona resultados não cobertos pela camada 1)
+    var termosFull = [qNorm].concat(termos);
+    Object.keys(_SINONIMOS).forEach(function(termo) {
+      var termoNorm = _normalizar(termo);
+      var match = termosFull.some(function(t) {
+        return t.indexOf(termoNorm) !== -1 || termoNorm.indexOf(t) !== -1;
+      });
+      if (match) {
+        _SINONIMOS[termo].forEach(function(id) {
+          if (!encontradas.some(function(s){ return s.id === id; })) {
+            var sec = secoes.filter(function(s){ return s.id === id; })[0];
+            if (sec) encontradas.push(sec);
+          }
+        });
+      }
+    });
+
+    if (encontradas.length) {
+      _renderResultados(encontradas, q, false);
+      return;
     }
-    ul.innerHTML = html;
+
+    // Camada 3: IA semântica (Groq → OpenRouter) — só se termos têm substância
+    if (qNorm.length >= 3) {
+      _timerBuscaIA = setTimeout(function() { _buscarComIA(q); }, 500);
+    } else {
+      _renderResultados([], q, false);
+    }
   }
 
   function confirmarPermissao() {
