@@ -14,6 +14,16 @@
  *          core/config.gs
  */
 
+// ── AppCache ─────────────────────────────────────────────────────────────────
+var _CK_CARRO_DADOS = 'carro_dados_';
+var _CK_CARRO_LISTA = 'carro_lista_';
+var _CK_CARRO_MET   = 'carro_metricas_';
+
+function _invalidarCachesCarros(orgId) {
+  try { AppCache.remove(_CK_CARRO_MET + (orgId || '')); } catch(_) {}
+  // Chaves de lista/dados são por usuário — expiram naturalmente (TTL 60s)
+}
+
 function _ctxCarro() {
   var email  = getEmailSessao();
   var acesso = AcessoService.verificar(email);
@@ -28,49 +38,68 @@ function _ctxCarro() {
 function ctrl_carro_listar(filtros) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.listar(filtros || {}, ctx.email);
+    var f = filtros || {};
+    var ck = _CK_CARRO_LISTA + ctx.orgId + '_' + ctx.email.replace(/[^a-z0-9]/g,'_') + '_' + JSON.stringify(f);
+    try { var cached = AppCache.get(ck); if (cached) return cached; } catch(_) {}
+    var lista = ReservaCarroEngine.listar(f, ctx.email);
+    try { AppCache.set(ck, lista, 60); } catch(_) {}
+    return lista;
   }, 'ctrl_carro_listar');
 }
 
 function ctrl_carro_salvar(dados) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.criar(dados || {}, ctx.email);
+    var r = ReservaCarroEngine.criar(dados || {}, ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
   }, 'ctrl_carro_salvar');
 }
 
 function ctrl_carro_aprovar(id) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.aprovar(id, ctx.email);
+    var r = ReservaCarroEngine.aprovar(id, ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
   }, 'ctrl_carro_aprovar');
 }
 
 function ctrl_carro_recusar(id, motivo) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.recusar(id, motivo || '', ctx.email);
+    var r = ReservaCarroEngine.recusar(id, motivo || '', ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
   }, 'ctrl_carro_recusar');
 }
 
 function ctrl_carro_cancelar(id, motivo) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.cancelar(id, motivo || '', ctx.email);
+    var r = ReservaCarroEngine.cancelar(id, motivo || '', ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
   }, 'ctrl_carro_cancelar');
 }
 
 function ctrl_carro_concluir(id) {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.concluir(id, ctx.email);
+    var r = ReservaCarroEngine.concluir(id, ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
   }, 'ctrl_carro_concluir');
 }
 
 function ctrl_carro_metricas() {
   return GasResponse.wrap(function() {
     var ctx = _ctxCarro();
-    return ReservaCarroEngine.obterMetricas(ctx.email);
+    var ck = _CK_CARRO_MET + ctx.orgId;
+    try { var cached = AppCache.get(ck); if (cached) return cached; } catch(_) {}
+    var m = ReservaCarroEngine.obterMetricas(ctx.email);
+    try { AppCache.set(ck, m, 60); } catch(_) {}
+    return m;
   }, 'ctrl_carro_metricas');
 }
 
@@ -79,7 +108,11 @@ function ctrl_carro_metricas() {
  */
 function ctrl_carro_dados(filtros) {
   return GasResponse.wrap(function() {
-    var ctx   = _ctxCarro();
+    var ctx = _ctxCarro();
+    var f = filtros || {};
+    var ck = _CK_CARRO_DADOS + ctx.orgId + '_' + ctx.email.replace(/[^a-z0-9]/g,'_') + '_' + JSON.stringify(f);
+    try { var cached = AppCache.get(ck); if (cached) return cached; } catch(_) {}
+
     var todas = ReservaCarroEngine.listar({}, ctx.email);
     var metricas = {
       total:     todas.length,
@@ -97,7 +130,6 @@ function ctrl_carro_dados(filtros) {
     } catch(e) { /* silencioso */ }
     function _nome(email) { return nomeMap[email] || (email ? email.replace(/@.*$/, '') : '—'); }
 
-    var f = filtros || {};
     var lista = todas;
     if (f.status) lista = lista.filter(function(r){ return r.status === f.status; });
     if (f.data)   lista = lista.filter(function(r){ return r.data   === f.data;   });
@@ -111,12 +143,14 @@ function ctrl_carro_dados(filtros) {
     var veiculos = [];
     try { veiculos = EscalaCarroEngine.listarVeiculos(ctx.email); } catch(e) { /* silencioso */ }
 
-    return {
+    var resultado = {
       lista:        lista,
       metricas:     metricas,
       veiculos:     veiculos,
       podGerenciar: EscalaCarroEngine.podAprovarCarro(ctx.email)
     };
+    try { AppCache.set(ck, resultado, 60); } catch(_) {}
+    return resultado;
   }, 'ctrl_carro_dados');
 }
 

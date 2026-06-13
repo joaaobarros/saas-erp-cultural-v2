@@ -18,6 +18,15 @@
  *          core/config.gs (getOrgConfig)
  */
 
+// ── AppCache ─────────────────────────────────────────────────────────────────
+var _CK_RES_LISTA    = 'reservas_lista_';
+var _CK_RES_METRICAS = 'reservas_metricas_';
+
+function _invalidarCachesReservas(orgId) {
+  try { AppCache.remove(_CK_RES_METRICAS + (orgId || '')); } catch(_) {}
+  // Chaves de lista são por usuário — expiram naturalmente (TTL 60s)
+}
+
 // ── Helpers privados ─────────────────────────────────────────────────────
 
 function _ctxReservas() {
@@ -165,6 +174,9 @@ function ctrl_reservas_listar(filtros) {
     var nivel = _nivelReservas(ctx.email);
     if (nivel === 'colaborador') f.responsavel = ctx.email;
 
+    var ck = _CK_RES_LISTA + ctx.orgId + '_' + ctx.email.replace(/[^a-z0-9]/g,'_') + '_' + JSON.stringify(f);
+    try { var cached = AppCache.get(ck); if (cached) return cached; } catch(_) {}
+
     var lista = ReservaEngine.listar(f, ctx.orgId);
 
     // Anotar cada reserva com campos de aprovação e escalação
@@ -191,6 +203,7 @@ function ctrl_reservas_listar(filtros) {
       });
     }
 
+    try { AppCache.set(ck, lista, 60); } catch(_) {}
     return lista;
   }, 'ctrl_reservas_listar');
 }
@@ -201,7 +214,11 @@ function ctrl_reservas_listar(filtros) {
 function ctrl_reservas_metricas() {
   return GasResponse.wrap(function () {
     var ctx = _ctxReservas();
-    return ReservaEngine.metricas(ctx.orgId);
+    var ck = _CK_RES_METRICAS + ctx.orgId;
+    try { var cached = AppCache.get(ck); if (cached) return cached; } catch(_) {}
+    var m = ReservaEngine.metricas(ctx.orgId);
+    try { AppCache.set(ck, m, 120); } catch(_) {}
+    return m;
   }, 'ctrl_reservas_metricas');
 }
 
@@ -250,6 +267,7 @@ function ctrl_reservas_criar(dados) {
     delete dados.itensMateriais;
 
     var reserva = ReservaEngine.criar(dados, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
 
     // Fase 79: auto-criar SolicitacaoMaterial vinculada (best-effort — falha não cancela reserva)
     var solicitacaoCodigo = '';
@@ -293,7 +311,9 @@ function ctrl_reservas_criar_lote(dados, datas) {
     if (!dados.responsavel || nivel === 'colaborador') {
       dados.responsavel = ctx.email;
     }
-    return ReservaEngine.criarLote(dados, datas, ctx.email, ctx.orgId);
+    var r = ReservaEngine.criarLote(dados, datas, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_criar_lote');
 }
 
@@ -314,7 +334,9 @@ function ctrl_reservas_atualizar(id, dados) {
         .filter(function (r) { return r.id === id; })[0];
       if (!reserva) throw new Error('Sem permissão para editar esta reserva.');
     }
-    return ReservaEngine.atualizar(id, dados, ctx.email, ctx.orgId);
+    var r = ReservaEngine.atualizar(id, dados, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_atualizar');
 }
 
@@ -334,7 +356,9 @@ function ctrl_reservas_cancelar(id, motivo) {
       var propria = lista.filter(function (r) { return r.id === id; })[0];
       if (!propria) throw new Error('Sem permissão para cancelar esta reserva.');
     }
-    return ReservaEngine.mudarStatus(id, 'cancelado', ctx.email, ctx.orgId, motivo || '');
+    var r = ReservaEngine.mudarStatus(id, 'cancelado', ctx.email, ctx.orgId, motivo || '');
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_cancelar');
 }
 
@@ -388,7 +412,9 @@ function ctrl_reservas_confirmar(id) {
       );
     }
 
-    return ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
+    var r = ReservaEngine.mudarStatus(id, 'confirmado', ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_confirmar');
 }
 
@@ -405,7 +431,9 @@ function ctrl_reservas_iniciar(id) {
     if (_NIVEL_GESTAO.indexOf(nivel) === -1) {
       throw new Error('Sem permissão para iniciar uso de espaço.');
     }
-    return ReservaEngine.mudarStatus(id, 'em_uso', ctx.email, ctx.orgId);
+    var r = ReservaEngine.mudarStatus(id, 'em_uso', ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_iniciar');
 }
 
@@ -422,7 +450,9 @@ function ctrl_reservas_habilitar(id) {
     if (_NIVEL_GESTAO.indexOf(nivel) === -1) {
       throw new Error('Sem permissão para habilitar reservas.');
     }
-    return ReservaEngine.mudarStatus(id, 'habilitado', ctx.email, ctx.orgId);
+    var r = ReservaEngine.mudarStatus(id, 'habilitado', ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_habilitar');
 }
 
@@ -438,7 +468,9 @@ function ctrl_reservas_concluir(id) {
     if (_NIVEL_GESTAO.indexOf(nivel) === -1) {
       throw new Error('Sem permissão para concluir uso de espaço.');
     }
-    return ReservaEngine.mudarStatus(id, 'concluido', ctx.email, ctx.orgId);
+    var r = ReservaEngine.mudarStatus(id, 'concluido', ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_concluir');
 }
 
@@ -470,7 +502,9 @@ function ctrl_reservas_bloquear(params, datas) {
     if (!Array.isArray(datas) || datas.length === 0) throw new Error('Informe ao menos uma data.');
     if (datas.length > 120)            throw new Error('Máximo de 120 datas por operação de bloqueio.');
 
-    return ReservaEngine.criarBloqueio(params, datas, ctx.email, ctx.orgId);
+    var r = ReservaEngine.criarBloqueio(params, datas, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_bloquear');
 }
 
@@ -499,6 +533,7 @@ function ctrl_reservas_cancelar_bloqueios(ids) {
       }
     });
 
+    _invalidarCachesReservas(ctx.orgId);
     return { cancelados: cancelados, total: ids.length };
   }, 'ctrl_reservas_cancelar_bloqueios');
 }
@@ -536,7 +571,9 @@ function ctrl_reservas_registrarPosEvento(id, dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxReservas();
     if (!id) throw new Error('ID da reserva é obrigatório.');
-    return ReservaEngine.registrarPosEvento(id, dados || {}, ctx.email, ctx.orgId);
+    var r = ReservaEngine.registrarPosEvento(id, dados || {}, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
   }, 'ctrl_reservas_registrarPosEvento');
 }
 
@@ -561,6 +598,7 @@ function ctrl_reservas_concluir_atrasadas() {
         }
       } catch (_e) {}
     });
+    if (concluidas > 0) _invalidarCachesReservas(ctx.orgId);
     return { concluidas: concluidas };
   }, 'ctrl_reservas_concluir_atrasadas');
 }

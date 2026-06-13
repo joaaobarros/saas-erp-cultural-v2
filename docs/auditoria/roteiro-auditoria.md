@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @865 · Fix getSetores() — dropdown de setor vazio em primeiro_acesso e qualquer módulo que usa setores legados sem orgId
+> Deploy atual: @866 · Perf — AppCache em reservas_controller + reserva_carro_controller (listar/metricas/dados cacheados 60-120s; invalidação em todos os write paths)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
