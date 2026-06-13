@@ -562,7 +562,7 @@ var PessoasEngine = (function () {
     var alteraSalario  = (tipo === 'promocao' || tipo === 'reajuste') &&
                          dados.novoSalario !== undefined && dados.novoSalario !== null && dados.novoSalario !== '';
     var alteraCargo    = (tipo === 'promocao' || tipo === 'mudanca_cargo' || tipo === 'admissao') && dados.novoCargo;
-    var alteraSetor    = tipo === 'mudanca_setor' && dados.novoSetor;
+    var alteraSetor    = (tipo === 'mudanca_setor' || tipo === 'admissao') && dados.novoSetor;
     var alteraCarga    = tipo === 'alteracao_carga' && dados.novaCargaHoraria;
     var alteraAdmissao = tipo === 'admissao' && dados.dataAdmissao;
 
@@ -1206,6 +1206,7 @@ var PessoasEngine = (function () {
     listarHistorico:           listarHistorico,
     listarHistoricoFiltrado:   listarHistoricoFiltrado,
     registrarEvento:           registrarEvento,
+    atualizarEvento:           atualizarEvento,
     excluirEvento:             excluirEvento,
     registrarDesligamento:     registrarDesligamento,
 

@@ -1338,7 +1338,19 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49c (2026-06-13) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 49d (2026-06-13) → SESSÃO 50
+
+### Estado: Deploy @851 · Fix atualizarEvento + admissão requer setor
+
+### O que foi feito nesta sessão (s49d)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @851 | Fix | `atualizarEvento` adicionado ao return de `PessoasEngine`. `_EV_CAMPOS.admissao` inclui `'setor'`; backend: `alteraSetor` ativado em admissão. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 49c (2026-06-13) → SESSÃO 49d
 
 ### Estado: Deploy @850 · RH — Permissões de escrita restritas a superadmin/rh
 
