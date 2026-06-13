@@ -18,6 +18,11 @@
 
 var _dataFolderCache = null;
 
+// Cache por execução GAS: elimina Drive I/O quando o mesmo JSON é lido mais de uma vez
+// na mesma chamada (ex: verificar() + _ctxPessoas() ambos lêem usuarios_acesso.json).
+// Escopo: válido apenas durante a execução atual (GAS é stateless entre chamadas).
+var _jsonCache = {};
+
 /**
  * Localiza a pasta de dados da organização no Drive.
  * Usa ID em PropertiesService para acesso direto; fallback para busca por nome.
@@ -63,9 +68,12 @@ function getFile(nome) {
  * @returns {Array}
  */
 function readJSON(nome) {
+  if (_jsonCache.hasOwnProperty(nome)) return _jsonCache[nome];
   try {
     var conteudo = getFile(nome).getBlob().getDataAsString();
-    return JSON.parse(conteudo || '[]');
+    var parsed = JSON.parse(conteudo || '[]');
+    _jsonCache[nome] = parsed;
+    return parsed;
   } catch (e) {
     Logger.error('data_layer', 'readJSON', 'Falha em "' + nome + '": ' + e.message);
     return [];
@@ -81,7 +89,9 @@ function writeJSON(nome, data) {
   lock.waitLock(30000);
   try {
     getFile(nome).setContent(JSON.stringify(data));
+    _jsonCache[nome] = data;
   } catch (e) {
+    delete _jsonCache[nome];
     Logger.error('data_layer', 'writeJSON', 'Falha em "' + nome + '": ' + e.message);
     throw new Error('Falha ao salvar dados: ' + nome);
   } finally {
@@ -99,16 +109,21 @@ function writeJSON(nome, data) {
  * @throws se arquivo corrompido ou fn lançar exceção
  */
 function modifyJSON(nome, fn) {
+  // Lê sempre fresco do Drive (sob lock) — invalida cache antes para evitar stale reads
+  delete _jsonCache[nome];
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    var arquivo  = getFile(nome);
-    var conteudo = arquivo.getBlob().getDataAsString();
-    var lista    = JSON.parse(conteudo || '[]');
+    var arquivo   = getFile(nome);
+    var conteudo  = arquivo.getBlob().getDataAsString();
+    var lista     = JSON.parse(conteudo || '[]');
     var resultado = fn(lista);
-    arquivo.setContent(JSON.stringify(resultado !== undefined ? resultado : lista));
+    var novoConteudo = resultado !== undefined ? resultado : lista;
+    arquivo.setContent(JSON.stringify(novoConteudo));
+    _jsonCache[nome] = novoConteudo;
     return resultado;
   } catch (e) {
+    delete _jsonCache[nome];
     Logger.error('data_layer', 'modifyJSON', 'Falha em "' + nome + '": ' + e.message);
     throw e;
   } finally {
@@ -149,4 +164,16 @@ function lerJSON(nome) {
  */
 function invalidarCacheDataFolder() {
   _dataFolderCache = null;
+}
+
+/**
+ * Invalida cache por-execução de um ou todos os arquivos JSON.
+ * @param {string} [nome] — se omitido, limpa todo o cache.
+ */
+function invalidarCacheJSON(nome) {
+  if (nome) {
+    delete _jsonCache[nome];
+  } else {
+    _jsonCache = {};
+  }
 }

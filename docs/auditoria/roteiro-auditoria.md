@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @831 · BI Demográfico — fix carregamento eterno + leitura de histórico SCD para PcD/Família
+> Deploy atual: @858 · Auditoria — 4 correções: setor-anterior display, ADM-01 erro pendentes, datas ISO Ocorrências e Habilitações
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -371,7 +371,7 @@
 | ESP-28 | Infraestrutura — Pós-evento | Sem formulário de pós-evento ao "Concluir" | 🔴 |
 | ESP-28b | Infraestrutura — Pós-evento | Edição posterior e histórico de alterações ausentes | 🔴 |
 | ESP-29 | Infraestrutura — Horário Local | UX validação visual dinâmica conforme espaço selecionado | 🟡 |
-| ADM-01 | Admin | "Acessos Pendentes" — carregando sem concluir | 🟡 |
+| ~~ADM-01~~ | Admin | ✅ CORRIGIDO @858 — `_carregarPendentes()` recebe error callback; DOM atualizado com mensagem de erro em vez de "⏳ Carregando…" eterno | — |
 | ADM-02 | Admin | Permissões por módulo sem granularidade por funcionalidade | 🔴 |
 | ADM-03 | Admin | Campo Setor no modal "Editar usuário" | 🟡 |
 | ADM-05 | Admin | UI de Administração truncada — revisão de layout necessária | 🟡 |
@@ -468,7 +468,36 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 69 (2026-06-13) → SESSÃO 70
+## HANDOFF ATUAL — SESSÃO 70 (2026-06-13) → SESSÃO 71
+
+### Estado atual: ~264 bugs registrados · Deploy @858 (GAS)
+
+### O que foi feito nesta sessão (s70)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @858 | Auditoria de bugs — 4 correções | (1) `rh-ev-setor-anterior`: convertido de `<select>` (com opções nunca populadas) para `<p>` display readonly. `_atualizarCamposEvento()` agora usa `.textContent = _labelSetor(c2.setor)` em vez de `.value` (que ignorava o select vazio). `editarEvento()` popula `ev.setorAnterior` no painel display ao abrir modo edição. (2) ADM-01 corrigido: `_carregarPendentes()` ganhou error callback que atualiza `admin-pendentes-lista` com mensagem de erro — antes ficava "⏳ Carregando…" eterno se o backend falhasse. (3) OcorrenciasUI: `(o.criadoEm||'').slice(0,10)` → `fmtDataPtBR((o.criadoEm||'').slice(0,10))` — datas exibidas em DD/MM/AAAA. (4) HabilitacoesUI: mesmo fix de formato. |
+
+### Checklist de auditoria — s70
+```
+[x] prompt()/confirm()/alert() — zero ocorrências
+[x] GAS.* namespace — sem novos endpoints
+[x] CSS — sem classes novas
+[x] IDs de DOM — rh-ev-setor-anterior mudou de select para p (sem colisão)
+[x] FsmGuardian — sem novas transições
+[x] Modais — sem novos modais
+[x] BtnGuard — sem novos botões assíncronos
+[x] Datas — criadoEm em Ocorrências e Habilitações agora passam por fmtDataPtBR()
+```
+
+### Pendentes / próxima ação
+- Testar no browser (@858): RH → Novo Evento → Mudança de Setor → campo "Setor Anterior" deve exibir label legível do setor atual do colaborador. Modo edição: setor anterior do evento original deve aparecer.
+- Testar Admin → Acessos Pendentes: se backend falhar, deve mostrar mensagem de erro em vez de loading.
+- Testar Ocorrências e Habilitações: coluna "Data" deve mostrar DD/MM/AAAA.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 69 (2026-06-13) → SESSÃO 70
 
 ### Estado atual: ~266 bugs registrados · Deploy @834 (GAS)
 

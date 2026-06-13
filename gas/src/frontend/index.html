@@ -8482,6 +8482,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">Data do Evento *</label><input id="rh-ev-data" class="form-input" type="date"></div>
                 <div class="form-group" id="rh-ev-wrap-admissao" style="display:none;"><label class="form-label">Data de Admissão *</label><input id="rh-ev-admissao" class="form-input" type="date"><span id="rh-ev-hint-admissao" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-cargo" style="display:none;"><label class="form-label">Novo Cargo *</label><select id="rh-ev-cargo" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-cargo" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" id="rh-ev-wrap-setor-anterior" style="display:none;"><label class="form-label">Setor Anterior</label><p id="rh-ev-setor-anterior" style="margin:0;padding:8px 10px;background:var(--surface2);border-radius:6px;font-size:14px;color:var(--text2);">— (não informado)</p></div>
                 <div class="form-group" id="rh-ev-wrap-setor" style="display:none;"><label class="form-label">Novo Setor *</label><select id="rh-ev-setor" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-setor" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-salario" style="display:none;"><label class="form-label">Novo Salário Bruto (R$) *</label><input id="rh-ev-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"><span id="rh-ev-hint-salario" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Horária (h/semana) *</label><input id="rh-ev-carga" class="form-input" type="number" min="1" max="60" step="1" placeholder="40"><span id="rh-ev-hint-carga" style="font-size:11px;color:var(--text2);"></span></div>
@@ -10712,6 +10713,9 @@ var IdentidadeAdmin = (function() {
           IdentidadeAdmin.aprovar(this.getAttribute('data-email') || '');
         });
       });
+    }, function(e) {
+      lista.innerHTML = '<p class="error-text" style="padding:16px;">Erro ao carregar acessos: ' + escaparHtml((e&&e.message)||String(e)) + '</p>';
+      if(badge) badge.style.display='none';
     });
   }
 
@@ -24286,7 +24290,7 @@ var OcorrenciasUI = (function() {
             +'<td>'+_badge(o.tipo)+'</td>'
             +'<td style="max-width:200px;white-space:normal">'+escaparHtml(o.descricao||'—')+'</td>'
             +'<td>'+escaparHtml(o.registradoPor||'—')+'</td>'
-            +'<td>'+escaparHtml((o.criadoEm||'').slice(0,10))+'</td>'
+            +'<td>'+escaparHtml(fmtDataPtBR((o.criadoEm||'').slice(0,10))||'—')+'</td>'
             +'<td><button class="btn btn-error btn-sm" id="btn-oco-del-'+o.id+'" onclick="OcorrenciasUI.excluir(\''+o.id+'\')"><span class="ms ms-sm">delete</span></button></td>'
             +'</tr>';
         }).join('')+'</tbody></table>';
@@ -25707,7 +25711,7 @@ var HabilitacoesUI = (function() {
             +'<td>'+escaparHtml(h.idContratado||'—')+'</td>'
             +'<td>'+escaparHtml((h.documentos||[]).length + ' doc(s)')+'</td>'
             +'<td>'+_badge(h.status)+'</td>'
-            +'<td>'+escaparHtml((h.criadoEm||'').slice(0,10))+'</td>'
+            +'<td>'+escaparHtml(fmtDataPtBR((h.criadoEm||'').slice(0,10))||'—')+'</td>'
             +'<td style="white-space:nowrap">'+acoes+'</td>'
             +'</tr>';
         }).join('')+'</tbody></table>';
@@ -36209,6 +36213,14 @@ var RhUI = (function() {
       var w = document.getElementById('rh-ev-wrap-'+c);
       if (w) w.style.display = campos.indexOf(c) >= 0 ? '' : 'none';
     });
+    // setor-anterior: display informativo (somente leitura) — backend calcula setorAnterior automaticamente
+    var wSA = document.getElementById('rh-ev-wrap-setor-anterior');
+    if (wSA) wSA.style.display = campos.indexOf('setor') >= 0 ? '' : 'none';
+    if (campos.indexOf('setor') >= 0 && !_eventoEditandoId) {
+      var c2 = _colaboradores.find(function(x){ return x.id === (document.getElementById('rh-ev-colab')||{}).value; });
+      var dispSA = document.getElementById('rh-ev-setor-anterior');
+      if (dispSA) dispSA.textContent = (c2 && c2.setor) ? (_labelSetor(c2.setor) || c2.setor) : '— (não informado)';
+    }
     ['nivel-adv','gravidade'].forEach(function(c){
       var w = document.getElementById('rh-ev-wrap-'+c);
       if (w) w.style.display = ehAdv ? '' : 'none';
@@ -36303,6 +36315,7 @@ var RhUI = (function() {
     // Campos estruturados
     if (ev.novoCargo)        { var sc=document.getElementById('rh-ev-cargo');    if(sc){ sc.value=ev.novoCargo; } }
     if (ev.novoSetor)        { var ss=document.getElementById('rh-ev-setor');    if(ss){ ss.value=ev.novoSetor; } }
+    if (ev.setorAnterior != null) { var sa=document.getElementById('rh-ev-setor-anterior'); if(sa){ sa.textContent=_labelSetor(ev.setorAnterior)||ev.setorAnterior||'— (não informado)'; } }
     if (ev.novoSalario!=null){ var si=document.getElementById('rh-ev-salario');  if(si){ si.value=_fmtMoeda(ev.novoSalario); } }
     if (ev.novaCargaHoraria) { var sh=document.getElementById('rh-ev-carga');    if(sh){ sh.value=ev.novaCargaHoraria; } }
     if (ev.dataAdmissao)     { var sa=document.getElementById('rh-ev-admissao'); if(sa){ sa.value=(ev.dataAdmissao||'').slice(0,10); } }

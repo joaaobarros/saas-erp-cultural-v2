@@ -33,7 +33,16 @@
 
 var AcessoService = (function () {
 
-  var _ARQUIVO = 'usuarios_acesso.json';
+  var _ARQUIVO    = 'usuarios_acesso.json';
+  var _CACHE_TTL  = 120; // segundos — acesso muda raramente; 2 min é seguro
+
+  function _chaveCacheVerificar(email) {
+    return 'acesso_v_' + String(email || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  }
+
+  function _invalidarCacheEmail(email) {
+    try { AppCache.remove(_chaveCacheVerificar(email)); } catch(_) {}
+  }
 
   // ── Leitura ────────────────────────────────────────────────────────────────
 
@@ -85,6 +94,13 @@ var AcessoService = (function () {
                mensagem: 'Email de sessão inválido. Faça login com sua conta institucional.' };
     }
 
+    // Cache hit — evita readJSON('usuarios_acesso.json') a cada requisição
+    var ck = _chaveCacheVerificar(email);
+    try {
+      var cached = AppCache.get(ck);
+      if (cached) return cached;
+    } catch(_) {}
+
     if (!_emailNoDominio(email)) {
       Logger.warn('acesso_service', 'verificar',
         'Acesso negado — email fora do domínio: ' + email);
@@ -103,7 +119,9 @@ var AcessoService = (function () {
     }
 
     if (registro.status === 'ativo') {
-      return { status: 'ativo', registro: registro, mensagem: '' };
+      var resultado = { status: 'ativo', registro: registro, mensagem: '' };
+      try { AppCache.set(ck, resultado, _CACHE_TTL); } catch(_) {}
+      return resultado;
     }
 
     if (registro.status === 'pendente') {
@@ -247,6 +265,7 @@ var AcessoService = (function () {
       registros[idx].aprovadoPor = emailAdmin;
 
       _salvarRegistros(registros);
+      _invalidarCacheEmail(emailAlvo);
 
       // Notificar usuário aprovado
       _notificarAprovado(registros[idx]);
@@ -279,6 +298,7 @@ var AcessoService = (function () {
       if (idx === -1) return { ok: false, mensagem: 'Usuário não encontrado.' };
       registros[idx].status = 'inativo';
       _salvarRegistros(registros);
+      _invalidarCacheEmail(emailAlvo);
       Logger.info('acesso_service', 'revogarAcesso', emailAlvo + ' revogado por ' + emailAdmin);
       return { ok: true, mensagem: 'Acesso de ' + emailAlvo + ' revogado.' };
     } catch (e) {
@@ -379,13 +399,14 @@ var AcessoService = (function () {
   // ── API pública ─────────────────────────────────────────────────────────────
 
   return {
-    verificar:          verificar,
-    solicitarAcesso:    solicitarAcesso,
-    aprovarAcesso:      aprovarAcesso,
-    revogarAcesso:      revogarAcesso,
-    listarUsuarios:     listarUsuarios,
-    listarPendentes:    listarPendentes,
-    registrarSuperAdmin:registrarSuperAdmin
+    verificar:                 verificar,
+    invalidarCacheVerificar:   _invalidarCacheEmail,
+    solicitarAcesso:           solicitarAcesso,
+    aprovarAcesso:             aprovarAcesso,
+    revogarAcesso:             revogarAcesso,
+    listarUsuarios:            listarUsuarios,
+    listarPendentes:           listarPendentes,
+    registrarSuperAdmin:       registrarSuperAdmin
   };
 
 })();
@@ -544,8 +565,9 @@ function ctrl_acesso_editarPapel(params) {
       return lista;
     });
 
-    // Invalida o cache de boot do usuário editado para refletir novas permissões
+    // Invalida o cache de boot e de verificar() do usuário editado
     try { BootService.limparCache(params.email); } catch(_e) {}
+    try { AcessoService.invalidarCacheVerificar(params.email); } catch(_e) {}
 
     // Propagar setor para colaboradores.json (fonte canônica de RH)
     if (params.setor !== undefined && typeof ColaboradorRepository !== 'undefined') {
