@@ -38255,12 +38255,12 @@ var BiDemograficoUI = (function () {
 
   // ── Personas ─────────────────────────────────────────────────────────────
 
-  function gerarPersonas() {
+  function gerarPersonas(done) {
     var f    = _getFiltros();
     var regs = _enriquecerComHistorico(_getDadosFiltrados(), f.ate);
     var el   = document.getElementById('bi-dem-personas-content');
-    if (!el) return;
-    if (!regs.length) { el.innerHTML = '<p class="muted-text">Sem dados para os filtros atuais.</p>'; return; }
+    if (!el) { if (done) done(); return; }
+    if (!regs.length) { el.innerHTML = '<p class="muted-text">Sem dados para os filtros atuais.</p>'; if (done) done(); return; }
 
     var personas = _calcPersonas(regs);
     var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">';
@@ -38286,6 +38286,7 @@ var BiDemograficoUI = (function () {
     html += '</div>' +
       '<p style="font-size:11px;color:var(--text2);margin-top:10px;">Personas geradas a partir da moda de cada atributo nos ' + regs.length + ' registros filtrados.</p>';
     el.innerHTML = html;
+    if (done) done();
   }
 
   function _moda(arr, campo) {
@@ -38335,7 +38336,7 @@ var BiDemograficoUI = (function () {
       var attrs = [
         ['Gênero',       mgLabel || '—'],
         ['Raça/Cor',     mrRaw ? _biLabel(mrRaw) : '—'],
-        [_contexto==='equipe'?'Setor':'Ação', ms || '—'],
+        [_contexto==='equipe'?'Setor':'Ação', (_contexto==='equipe' ? _setorLabel(ms) : ms) || '—'],
         ['Faixa etária', _fxEtLabel(mId) || '—']
       ];
       if (mc) attrs.splice(2, 0, ['Cargo', mc]);

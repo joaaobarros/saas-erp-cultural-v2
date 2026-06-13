@@ -470,13 +470,15 @@
 
 ## HANDOFF ATUAL — SESSÃO 69 (2026-06-13) → SESSÃO 70
 
-### Estado atual: ~266 bugs registrados · Deploy @831 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @833 (GAS)
 
 ### O que foi feito nesta sessão (s69)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @831 | BI Demográfico — fix carregamento eterno + leitura de histórico SCD | **Frontend** (`index.html`): `atualizar(done)` declara o parâmetro `done` e o repassa para `_carregar(onDone)` — BtnGuard now chamado de `done()` após o carregamento. `_carregar(onDone)` chama `onDone()` nos três ramos de retorno (sucesso, erro de servidor e erro de rede); callers sem callback (`aoAbrir`, `setContexto`) não são afetados (parâmetro opcional). **Backend** (`bi_demografico_controller.gs`): `ctrl_bi_demografico_equipe` lê `pcdHistorico`/`paiMaeHistorico` (entrada vigente `dataFim===null`) com fallback para campos planos legados — colaboradores atualizados pelo SCD exibem dados PcD/Família corretos no BI. Helpers IIFE inline `_vigPcd`/`_vigPm` dentro do `.map()`. |
+| @833 | BI Demográfico — fix Personas: carregamento eterno + setor slug cru | **Frontend** (`index.html`): `gerarPersonas(done)` declara parâmetro `done` do BtnGuard e chama `done()` ao final e nos early-returns — botão "Gerar Personas" liberado corretamente. `_setorLabel(ms)` aplicado no card de Personas para contexto `equipe` — exibe label legível ("Escola de Cultura e Artes") em vez do slug interno (`escola_de_cultura_e_artes`). |
+| @832 | BI Demográfico — reconstrução SCD completa por período | `_enriquecerComHistorico(regs, ateYM)` sobrepõe campos com valores do período filtrado via `_demografiaEmData`; `_renderizar` e `gerarPersonas` passam `regH` para sub-renders. |
+| @831 | BI Demográfico — fix carregamento eterno + leitura de histórico SCD | `atualizar(done)`/`_carregar(onDone)` com callback; BI controller lê `pcdHistorico`/`paiMaeHistorico` com fallback plano. |
 
 ### Checklist de auditoria — s69
 ```
@@ -486,14 +488,13 @@
 [x] IDs de DOM — sem novos IDs
 [x] FsmGuardian — sem novas transições
 [x] Modais — sem novos modais
-[x] BtnGuard — atualizar(done) agora chama done() corretamente após _renderizar()
+[x] BtnGuard — gerarPersonas(done) e atualizar(done) chamam done() corretamente
 [x] Datas — sem novas datas na UI
 ```
 
 ### Pendentes / próxima ação
-- **Testar no browser (@831)**: BI Demográfico → clicar "Atualizar" → botão deve ser liberado após carregamento (não ficar preso em "Carregando…")
-- **Testar PcD no BI**: cadastrar colaborador com PcD pelo novo sistema SCD → verificar se aparece em "Pessoas com deficiência" no BI
-- **Testar no browser (@830)**: Criar reserva CCBJ→AEUSM → Calcular → confirmar que campo atualiza com endereço completo e tempo é ~6 min
+- **Testar no browser (@833)**: BI Demográfico → Gerar Personas → botão liberado após gerar; setor exibe "Escola de Cultura e Artes" (não slug)
+- **Testar no browser (@831)**: BI Demográfico → clicar "Atualizar" → botão liberado após carregamento
 
 ---
 
