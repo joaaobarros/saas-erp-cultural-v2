@@ -37472,23 +37472,47 @@ var BiDemograficoUI = (function () {
 
   // ── Render principal ─────────────────────────────────────────────────────
 
+  // Sobrepõe campos demográficos planos com o valor correto para o período filtrado,
+  // usando os arrays SCD (generoHistorico, racaCorHistorico, etc.)
+  function _enriquecerComHistorico(regs, ateYM) {
+    return regs.map(function(r) {
+      var genero      = _demografiaEmData(r.generoHistorico,      'genero',      ateYM);
+      var racaCor     = _demografiaEmData(r.racaCorHistorico,     'racaCor',     ateYM);
+      var sexualidade = _demografiaEmData(r.sexualidadeHistorico, 'sexualidade', ateYM);
+      var pcdEntry    = _entryEmData(r.pcdHistorico,    ateYM);
+      var pmEntry     = _entryEmData(r.paiMaeHistorico, ateYM);
+      var out = {};
+      for (var k in r) out[k] = r[k];
+      out.genero      = genero      !== null ? genero      : (r.genero      || '');
+      out.racaCor     = racaCor     !== null ? racaCor     : (r.racaCor     || '');
+      out.sexualidade = sexualidade !== null ? sexualidade : (r.sexualidade || '');
+      out.pcd         = pcdEntry ? (pcdEntry.pcd      || '')  : (r.pcd      || '');
+      out.pcdTipos    = pcdEntry ? (pcdEntry.pcdTipos || [])  : (r.pcdTipos || []);
+      out.ePaiMae     = pmEntry  ? (pmEntry.ePaiMae   || '')  : (r.ePaiMae  || '');
+      out.numFilhos   = pmEntry  ? (pmEntry.numFilhos != null ? pmEntry.numFilhos : null) : r.numFilhos;
+      return out;
+    });
+  }
+
   function _renderizar() {
     var regs = _getDadosFiltrados();
-    _renderKpis(regs);
-    _renderBarras('genero',      regs, 'genero');
-    _renderBarras('sexualidade', regs, 'sexualidade');
-    _renderBarras('raca',        regs, 'racaCor');
-    _renderFaixaEtaria(regs);
-    _renderSetorDist(regs);
-    _renderGeo(regs);
+    var f    = _getFiltros();
+    var regH = _enriquecerComHistorico(regs, f.ate); // valores demográficos no período filtrado
+    _renderKpis(regH);
+    _renderBarras('genero',      regH, 'genero');
+    _renderBarras('sexualidade', regH, 'sexualidade');
+    _renderBarras('raca',        regH, 'racaCor');
+    _renderFaixaEtaria(regH);
+    _renderSetorDist(regH);
+    _renderGeo(regH);
     if (_contexto === 'equipe') {
-      _renderCargo(regs);
-      _renderTempoAtuacao(regs);
-      _renderPcd(regs);
-      _renderRestricoes(regs);
-      _renderFamilias(regs);
+      _renderCargo(regH);
+      _renderTempoAtuacao(regH);
+      _renderPcd(regH);
+      _renderRestricoes(regH);
+      _renderFamilias(regH);
     }
-    if (_mapaAtivo) _atualizarMapa(regs);
+    if (_mapaAtivo) _atualizarMapa(regH);
   }
 
   function _mostrarLoading() {
@@ -38232,7 +38256,8 @@ var BiDemograficoUI = (function () {
   // ── Personas ─────────────────────────────────────────────────────────────
 
   function gerarPersonas() {
-    var regs = _getDadosFiltrados();
+    var f    = _getFiltros();
+    var regs = _enriquecerComHistorico(_getDadosFiltrados(), f.ate);
     var el   = document.getElementById('bi-dem-personas-content');
     if (!el) return;
     if (!regs.length) { el.innerHTML = '<p class="muted-text">Sem dados para os filtros atuais.</p>'; return; }

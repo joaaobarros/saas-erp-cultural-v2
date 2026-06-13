@@ -1336,33 +1336,57 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 46 (2026-06-11) → SESSÃO 47
+## HANDOFF ATUAL — SESSÃO 48 (2026-06-13) → SESSÃO 49
 
-### Estado: Deploy @800 · Fix crítico perda de dados RH + função de recuperação
+### Estado: Deploy @832 · BI Demográfico — reconstrução SCD por período (todos os campos demográficos)
 
-### O que foi feito nesta sessão (s46)
+### O que foi feito nesta sessão (s48)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @800 | Fix crítico RH | `ColaboradorRepository.salvar`: merge protege `_CAMPOS_PROTEGIDOS` contra sobrescrita por string vazia. `salvarColab` frontend: restaura `funcoes/substituicoes/salarioBruto/salario/fotoPerfil/beneficios/pccs/cpf` de `_colabAtual`. `pessoas_controller.gs`: `recuperar_colaborador_historico()` + `recuperar_colaborador_aplicar()` via Drive API v3 para recuperar João Paulo Rodrigues Barros. |
+| @832 | BI Demográfico SCD | `_enriquecerComHistorico(regs, ateYM)` — sobrepõe campos planos (genero, racaCor, sexualidade, pcd, pcdTipos, ePaiMae, numFilhos) com valores point-in-time a partir dos arrays SCD. Helpers `_demografiaEmData(historico, campo, ateYM)` e `_entryEmData(historico, ateYM)` para leitura SCD. `_renderizar` e `gerarPersonas` passam `regH` (enriquecido) — todo gráfico e KPI reflete o período filtrado, não os valores atuais. |
 
-### Checklist de auditoria — Fix @800
+### Checklist de auditoria — Deploy @832
 ```
 [x] prompt()/confirm() — não usados
-[x] GAS.* namespace — sem novos bindings frontend (funções de recuperação são executadas no GAS Editor)
+[x] GAS.* namespace — sem novos bindings (só lógica interna BiDemograficoUI)
 [x] CSS — sem alterações CSS
 [x] IDs de DOM — sem novos IDs
-[x] FsmGuardian — não aplicável (fix é no merge do repositório)
+[x] FsmGuardian — não aplicável
 [x] Modais — não aplicável
-[x] BtnGuard — não aplicável
-[x] Datas — não aplicável
+[x] BtnGuard — não aplicável (nenhum botão novo)
+[x] Datas — não aplicável (lógica interna de comparação ISO)
 ```
 
 ### Pendentes / próxima ação
-- **Recuperação de dados João Paulo Rodrigues Barros:**
-  1. Executar `recuperar_colaborador_historico()` no GAS Editor — lista revisões e localiza dados pré-perda
-  2. Verificar o campo `dadosRecuperados` no resultado
-  3. Se correto, executar `recuperar_colaborador_aplicar()` para restaurar
+- Testar no browser: selecionar período anterior (ex: 2023-01 a 2023-12) e verificar se gráficos de gênero/raça/sexualidade mostram valores históricos distintos dos atuais para colaboradores com histórico de mudança.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 47 (2026-06-13) → SESSÃO 48
+
+### Estado: Deploy @831 · BI Demográfico — fix carregamento eterno + SCD PcD/Família no microdado
+
+### O que foi feito nesta sessão (s47)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @831 | BI Demográfico fix | `atualizar(done)` declara parâmetro `done`; `_carregar(onDone)` chama `onDone()` nos 3 ramos (sucesso/erro servidor/erro rede). Backend: `_slimHistorico` no controller + 5 arrays SCD nos microdados (`generoHistorico`, `racaCorHistorico`, `sexualidadeHistorico`, `pcdHistorico`, `paiMaeHistorico`). Labels normalizados via `_biLabel`, filtros mês/ano separados, mapa Nominatim, mediana, cargo histórico, restrições alimentares, pais/mães, PcD. |
+
+### Checklist de auditoria — Deploy @831
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* namespace — GAS.biDemografico.equipe + .beneficiarios (já existentes)
+[x] CSS — sem alterações novas
+[x] IDs de DOM — novos IDs bi-dem-* documentados
+[x] FsmGuardian — não aplicável
+[x] Modais — não aplicável
+[x] BtnGuard — done() propagado em iniciarMapa() — carregamento eterno corrigido
+[x] Datas — fmtDataPtBR() em toda data exibida; sem ISO cru
+```
+
+### Pendentes / próxima ação
+- Continuado na sessão 48 (SCD completo)
 
 ---
 
