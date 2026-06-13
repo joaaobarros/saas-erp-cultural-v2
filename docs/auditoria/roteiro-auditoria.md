@@ -1338,9 +1338,37 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 49 (2026-06-13) → SESSÃO 50
+## HANDOFF ATUAL — SESSÃO 49b (2026-06-13) → SESSÃO 50
 
-### Estado: Deploy @835 · RH Histórico — Mudança de Setor + cargo na Admissão + ordenação por data
+### Estado: Deploy @848 · RH Histórico — Edição de eventos por superadmin/rh
+
+### O que foi feito nesta sessão (s49b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @848 | RH Edição Histórico | `atualizarEvento` em `pessoas_engine.gs` (mescla segura de campos permitidos, sem re-aplicar efeitos na ficha). `ctrl_rh_atualizar_evento` restrito a superadmin/rh. `GAS.rh.atualizarEvento` binding. `editarEvento(id)` em RhUI: carrega do `_historicoCache`, pré-preenche form, bloqueia select de colaborador, muda botão para "Salvar alterações", exibe aviso amarelo. `fecharFormEvento` restaura estado. Timeline mostra botão editar apenas para superadmin/rh e tag "(editado)" quando `editadoPor` presente. |
+
+### Checklist de auditoria — Deploy @848
+```
+[x] prompt()/confirm() — não usados
+[x] GAS.* — GAS.rh.atualizarEvento adicionado
+[x] CSS — sem alterações CSS
+[x] IDs de DOM — rh-ev-aviso-edicao adicionado; rh-btn-edit-ev-{id} gerado dinamicamente
+[x] FsmGuardian — não aplicável
+[x] Modais — aviso amarelo com background opaco (#fff8e1) — correto
+[x] BtnGuard — rh-btn-salvar-evento já coberto; rh-btn-edit-ev-{id} é data-bg-skip implícito (abre form, não async)
+[x] Datas — sem datas novas exibidas
+```
+
+### Pendentes / próxima ação
+- Testar edição: clicar no lápis em um evento → form abre pré-preenchido → alterar descrição → "Salvar alterações" → timeline mostra "(editado)".
+- Confirmar que colaborador sem papel superadmin/rh NÃO vê o botão editar.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 49 (2026-06-13) → SESSÃO 49b
+
+### Estado: Deploy @847 · RH Histórico — Mudança de Setor + cargo na Admissão + ordenação por data
 
 ### O que foi feito nesta sessão (s49)
 

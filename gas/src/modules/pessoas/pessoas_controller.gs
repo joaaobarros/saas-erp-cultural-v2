@@ -613,6 +613,17 @@ function ctrl_rh_registrar_evento(dados) {
   }, 'ctrl_rh_registrar_evento');
 }
 
+function ctrl_rh_atualizar_evento(dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (['superadmin', 'rh'].indexOf(nivel) === -1)
+      throw new Error('Apenas superadmin ou RH pode editar eventos do histórico.');
+    if (!dados || !dados.id) throw new Error('Dados com id são obrigatórios.');
+    return PessoasEngine.atualizarEvento(dados, ctx.email);
+  }, 'ctrl_rh_atualizar_evento');
+}
+
 function ctrl_rh_excluir_evento(id) {
   return GasResponse.wrap(function () {
     var ctx   = _ctxPessoas();

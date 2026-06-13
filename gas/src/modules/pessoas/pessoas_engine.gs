@@ -659,6 +659,30 @@ var PessoasEngine = (function () {
     return r.id;
   }
 
+  function atualizarEvento(dados, emailOperador) {
+    if (!dados || !dados.id) throw new Error('id é obrigatório para atualizar evento.');
+    var historico = ColaboradorRepository.listarHistorico({});
+    var original = null;
+    for (var i = 0; i < historico.length; i++) { if (historico[i].id === dados.id) { original = historico[i]; break; } }
+    if (!original) throw new Error('Evento não encontrado: ' + dados.id);
+    // Mescla: preserva campos estruturais imutáveis (idColaborador, orgId, criadoEm)
+    // e permite atualizar tipo, data, descricao e campos auxiliares descritivos
+    var permitidos = ['tipo','tipoEvento','data','descricao','novoCargo','cargoAnterior',
+      'novoSalario','salarioAnterior','novaCargaHoraria','cargaAnterior',
+      'novoSetor','setorAnterior','dataAdmissao','dataAdmissaoAnterior',
+      'nivelAdvertencia','gravidade','motivo','tipoRescisao','observacao'];
+    var atualizado = {};
+    for (var k in original) { if (original.hasOwnProperty(k)) atualizado[k] = original[k]; }
+    for (var j = 0; j < permitidos.length; j++) {
+      var campo = permitidos[j];
+      if (dados.hasOwnProperty(campo)) atualizado[campo] = dados[campo];
+    }
+    atualizado.editadoPor = emailOperador || '';
+    ColaboradorRepository.salvarHistorico(atualizado);
+    _audit('HISTORICO_EVENTO_EDITADO', { id: dados.id, operador: emailOperador || '' });
+    return { ok: true };
+  }
+
   function excluirEvento(id, emailOperador) {
     ColaboradorRepository.excluirHistorico(id);
     _audit('HISTORICO_EVENTO_EXCLUIDO', { id: id, operador: emailOperador || '' });

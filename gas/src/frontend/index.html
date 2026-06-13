@@ -599,6 +599,8 @@ body {
 /* form-grid (usado em modais de cadastro) */
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-grid .full-width { grid-column:1/-1; }
+/* Utilitário: grid 3 colunas responsivo */
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    UTILITÁRIOS GLOBAIS
@@ -980,6 +982,7 @@ body {
   /* Holerite: grids fixos colapsam para 1 coluna */
   .hol-totais { grid-template-columns: 1fr !important; }
   .hol-ch-header { grid-template-columns: 1fr !important; }
+  .grid-3 { grid-template-columns: 1fr !important; }
 }
 
 /* ── Tabelas sem wrapper: overflow horizontal nativo ─────────────────── */
@@ -6148,7 +6151,7 @@ select.form-control { cursor: pointer; }
           </div>
           <!-- Aba Financeiro -->
           <div id="painel-tab-financeiro" class="oculto">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+            <div class="grid-3" style="margin-bottom:16px;">
               <div class="stat-card"><div class="stat-value" id="painel-fin-previsto">—</div><div class="stat-label">Previsto (R$)</div></div>
               <div class="stat-card"><div class="stat-value" style="color:var(--color-success)" id="painel-fin-executado">—</div><div class="stat-label">Executado (R$)</div></div>
               <div class="stat-card"><div class="stat-value" style="color:var(--color-info)" id="painel-fin-saldo">—</div><div class="stat-label">Saldo (R$)</div></div>
@@ -8499,6 +8502,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group" style="grid-column:span 2"><label class="form-label"><span id="rh-ev-desc-label">Descrição</span> <span id="rh-ev-desc-req">*</span></label><textarea id="rh-ev-descricao" class="form-input" rows="3" style="resize:vertical" placeholder="Descreva o evento…"></textarea></div>
               </div>
               <div id="rh-ev-aviso-ficha" style="display:none;margin-top:8px;font-size:12px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:8px 10px;"><span class="ms ms-sm" style="vertical-align:middle;">info</span> Ao registrar, a ficha do colaborador é atualizada automaticamente e os valores anteriores ficam guardados no histórico.</div>
+              <div id="rh-ev-aviso-edicao" style="display:none;margin-top:8px;font-size:12px;color:#b26a00;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 10px;"><span class="ms ms-sm" style="vertical-align:middle;">warning</span> <strong>Modo edição</strong> — alterações em campos estruturados (cargo, salário, setor) não reatualizam a ficha do colaborador retroativamente.</div>
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <button class="btn btn-primario" id="rh-btn-salvar-evento" onclick="RhUI.salvarEvento()"><span class="ms ms-sm">save</span> Registrar</button>
                 <button class="btn btn-ghost" onclick="RhUI.fecharFormEvento()" data-bg-skip="1">Cancelar</button>
@@ -8663,7 +8667,7 @@ select.form-control { cursor: pointer; }
 
               <!-- Remuneração -->
               <div class="form-section-title" style="margin-top:0;">Remuneração</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:800px;margin-bottom:4px;">
+              <div class="grid-3" style="max-width:800px;margin-bottom:4px;">
                 <div class="form-group">
                   <label class="form-label">Salário Bruto (R$)</label>
                   <input type="text" inputmode="decimal" id="rh-clt-salario" class="form-control" placeholder="3.500,00" oninput="RhUI._maskMoeda(this)" onblur="RhUI.calcularCLT()">
@@ -8680,7 +8684,7 @@ select.form-control { cursor: pointer; }
 
               <!-- Benefícios -->
               <div class="form-section-title">Benefícios</div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:800px;margin-bottom:4px;">
+              <div class="grid-3" style="max-width:800px;margin-bottom:4px;">
                 <div class="form-group">
                   <label class="form-label">VT — valor por passagem (R$)</label>
                   <input type="text" inputmode="decimal" id="rh-clt-vt-passe" class="form-control" placeholder="5,40" oninput="RhUI._maskMoeda(this)" onblur="RhUI.calcularCLT()">
@@ -9639,6 +9643,7 @@ var GAS = {
     // Histórico RH
     historico:             function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_historico(id||null); },
     registrarEvento:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_evento(d); },
+    atualizarEvento:       function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_atualizar_evento(d); },
     excluirEvento:         function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_evento(id); },
     registrarDesligamento: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_pessoas_registrar_desligamento(d); },
     // Avaliações
@@ -33846,12 +33851,12 @@ var PontoUI = (function() {
         '<div style="font-size:52px;margin-bottom:10px;">' + (ok ? '✅' : '⚠️') + '</div>' +
         '<h3 style="margin:0 0 4px;font-size:18px;">Importação ' + (ok ? 'Concluída!' : 'sem novos registros') + '</h3>' +
         '<p style="font-size:13px;color:var(--text2);margin:0 0 20px;">As jornadas foram processadas automaticamente.</p>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:540px;margin:0 auto 8px;">' +
+        '<div class="grid-3" style="max-width:540px;margin:0 auto 8px;">' +
           _afdStat(resultado.importados||0,        'Importados',   'var(--success)') +
           _afdStat(resultado.jornadasProcessadas||0,'Jornadas',    'var(--primario)') +
           _afdStat(resultado.autoCriados||0,        'Cadastrados', 'var(--primario)') +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:540px;margin:0 auto 20px;">' +
+        '<div class="grid-3" style="max-width:540px;margin:0 auto 20px;">' +
           _afdStat(resultado.semCadastro||0,        'Sem vínculo', '#f59e0b') +
           _afdStat(resultado.duplicados||0,         'Duplicados',  'var(--muted)') +
           _afdStat(resultado.erros||0,              'Erros',       'var(--danger)') +
@@ -34436,6 +34441,14 @@ var RhUI = (function() {
   var _colaboradores  = [];
   var _pccsList       = [];
   var _usuariosAtivos = [];
+  var _eventoEditandoId = null;  // null = modo criar; string = modo editar
+  var _historicoCache   = [];    // cache da última lista carregada (para lookup no edit)
+
+  function _podeEditarEvento() {
+    var b = App.getBoot && App.getBoot();
+    var papel = (b && b.usuarioPapel) || '';
+    return papel === 'superadmin' || papel === 'rh';
+  }
 
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
@@ -34962,7 +34975,7 @@ var RhUI = (function() {
             '<button class="btn btn-ghost btn-sm" onclick="RhUI._fecharModalRh()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>' +
           '</div>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">' +
+        '<div class="grid-3" style="margin-bottom:20px;">' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(_labelSetor(c.setor)||'—') + '</p></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Cargo</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.cargo||'—') + '</p></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Admissão</p><p style="margin:4px 0 0;font-size:13px;">' + _fmtData(c.dataAdmissao) + '</p></div>' +
@@ -36146,15 +36159,23 @@ var RhUI = (function() {
         var da = a.data || a.criadoEm || ''; var db = b.data || b.criadoEm || '';
         return db.localeCompare(da);
       });
+      _historicoCache = lista;
+      var podeEditar = _podeEditarEvento();
       el.innerHTML='<ul class="rh-timeline">'+lista.map(function(ev){
         var nome = ev.colaboradorNome || (function(){ var c=_colaboradores.find(function(x){return x.id===ev.idColaborador;}); return c?c.nome:''; })();
+        var btnEditar = podeEditar
+          ? '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" id="rh-btn-edit-ev-'+_esc(ev.id)+'" onclick="RhUI.editarEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">edit</span></button>'
+          : '';
         return '<li><div class="tl-dot"></div><div class="tl-body">'+
           '<strong style="font-size:13px;">'+_esc(_evLabel(ev.tipo||ev.tipoEvento))+'</strong>'+
           '<span style="font-size:11px;color:var(--text2);margin-left:8px;">'+_esc(_fmtData(ev.data||ev.criadoEm))+'</span>'+
+          (ev.editadoPor?'<span style="font-size:10px;color:var(--muted);margin-left:6px;">(editado)</span>':'')+
           (nome?'<br><span style="font-size:12px;color:var(--text2)">'+_esc(nome)+'</span>':'')+
           (ev.descricao?'<p style="margin:4px 0 0;font-size:13px;">'+_esc(ev.descricao)+'</p>':'')+
           _evMudancasHtml(ev)+
-          '<button class="btn btn-error btn-sm" style="margin-top:6px;" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+          '<div style="display:flex;gap:6px;margin-top:6px;">'+btnEditar+
+          '<button class="btn btn-error btn-sm" id="rh-btn-del-ev-'+_esc(ev.id)+'" onclick="RhUI.excluirEvento(\''+_esc(ev.id)+'\')"><span class="ms ms-sm">delete</span></button>'+
+          '</div>'+
           '</div></li>';
       }).join('')+'</ul>';
     },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
@@ -36232,7 +36253,50 @@ var RhUI = (function() {
     if (idColabPre) { var s = document.getElementById('rh-ev-colab'); if (s) s.value = idColabPre; }
     _atualizarCamposEvento();
   }
-  function fecharFormEvento(){ document.getElementById('rh-evento-form').style.display='none'; }
+  function fecharFormEvento(){
+    document.getElementById('rh-evento-form').style.display='none';
+    _eventoEditandoId = null;
+    var btn = document.getElementById('rh-btn-salvar-evento');
+    if (btn) btn.innerHTML = '<span class="ms ms-sm">save</span> Registrar';
+    var aviso = document.getElementById('rh-ev-aviso-edicao');
+    if (aviso) aviso.style.display = 'none';
+    var selColab = document.getElementById('rh-ev-colab');
+    if (selColab) selColab.disabled = false;
+  }
+
+  function editarEvento(id) {
+    var ev = null;
+    for (var i = 0; i < _historicoCache.length; i++) { if (_historicoCache[i].id === id) { ev = _historicoCache[i]; break; } }
+    if (!ev) { Toast.erro('Evento não encontrado.'); return; }
+    // Abre o form no modo edição
+    abrirFormEvento(ev.idColaborador);
+    _eventoEditandoId = id;
+    // Bloqueia o select de colaborador (não muda o titular do evento)
+    var selColab = document.getElementById('rh-ev-colab');
+    if (selColab) { selColab.value = ev.idColaborador; selColab.disabled = true; }
+    // Preenche os campos
+    var tipoSel = document.getElementById('rh-ev-tipo');
+    if (tipoSel) tipoSel.value = ev.tipo || ev.tipoEvento || 'outro';
+    var dataEl = document.getElementById('rh-ev-data');
+    if (dataEl) dataEl.value = (ev.data || '').slice(0, 10);
+    var descEl = document.getElementById('rh-ev-descricao');
+    if (descEl) descEl.value = ev.descricao || '';
+    // Campos estruturados
+    if (ev.novoCargo)        { var sc=document.getElementById('rh-ev-cargo');    if(sc){ sc.value=ev.novoCargo; } }
+    if (ev.novoSetor)        { var ss=document.getElementById('rh-ev-setor');    if(ss){ ss.value=ev.novoSetor; } }
+    if (ev.novoSalario!=null){ var si=document.getElementById('rh-ev-salario');  if(si){ si.value=_fmtMoeda(ev.novoSalario); } }
+    if (ev.novaCargaHoraria) { var sh=document.getElementById('rh-ev-carga');    if(sh){ sh.value=ev.novaCargaHoraria; } }
+    if (ev.dataAdmissao)     { var sa=document.getElementById('rh-ev-admissao'); if(sa){ sa.value=(ev.dataAdmissao||'').slice(0,10); } }
+    if (ev.nivelAdvertencia) { var sn=document.getElementById('rh-ev-nivel-adv'); if(sn){ sn.value=ev.nivelAdvertencia; } }
+    if (ev.gravidade)        { var sg=document.getElementById('rh-ev-gravidade'); if(sg){ sg.value=ev.gravidade; } }
+    _atualizarCamposEvento();
+    // Atualiza botão e aviso
+    var btn = document.getElementById('rh-btn-salvar-evento');
+    if (btn) btn.innerHTML = '<span class="ms ms-sm">save</span> Salvar alterações';
+    var aviso = document.getElementById('rh-ev-aviso-edicao');
+    if (aviso) aviso.style.display = '';
+    document.getElementById('rh-evento-form').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
 
   function salvarEvento() {
     var idColab=document.getElementById('rh-ev-colab').value;
@@ -36279,18 +36343,27 @@ var RhUI = (function() {
       if (!da){ Toast.aviso('Informe a data de admissão.'); return; }
       dados.dataAdmissao=da;
     }
-    BtnGuard.wrap('rh-btn-salvar-evento','Registrando…',function(done){
-      GAS.rh.registrarEvento(dados,function(resp){
+    var modoEdicao = !!_eventoEditandoId;
+    if (modoEdicao) dados.id = _eventoEditandoId;
+    var labelBtn = modoEdicao ? 'Salvando…' : 'Registrando…';
+    BtnGuard.wrap('rh-btn-salvar-evento', labelBtn, function(done){
+      var fn = modoEdicao ? GAS.rh.atualizarEvento : GAS.rh.registrarEvento;
+      fn(dados, function(resp){
         done();
         if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro.'); return; }
-        Toast.sucesso(campos.length?'Evento registrado — ficha do colaborador atualizada!':'Evento registrado!');
-        if (dados.nivelAdvertencia==='escrita_3')
-          Toast.aviso('3ª advertência escrita registrada — a próxima medida prevista é a demissão.');
-        else if (dados.gravidade==='gravissima')
-          Toast.aviso('Advertência GRAVÍSSIMA registrada — avalie o desligamento direto (justa causa).');
+        if (modoEdicao) {
+          Toast.sucesso('Evento atualizado.');
+        } else {
+          Toast.sucesso(campos.length?'Evento registrado — ficha do colaborador atualizada!':'Evento registrado!');
+          if (dados.nivelAdvertencia==='escrita_3')
+            Toast.aviso('3ª advertência escrita registrada — a próxima medida prevista é a demissão.');
+          else if (dados.gravidade==='gravissima')
+            Toast.aviso('Advertência GRAVÍSSIMA registrada — avalie o desligamento direto (justa causa).');
+        }
+        var selColab = document.getElementById('rh-ev-colab'); if (selColab) selColab.disabled = false;
         fecharFormEvento(); carregarHistorico();
-        if (campos.length){ carregarEquipe(); _carregarMetricas(); }
-      },function(e){ done(); Toast.erro(e.message||e); });
+        if (!modoEdicao && campos.length){ carregarEquipe(); _carregarMetricas(); }
+      }, function(e){ done(); Toast.erro(e.message||e); });
     });
   }
 
@@ -37306,7 +37379,7 @@ var RhUI = (function() {
     _pccsRecalcRow:_pccsRecalcRow, _pccsRecalcTodos:_pccsRecalcTodos, _salvarTabelaSalarial:_salvarTabelaSalarial,
     _aplicarReajustePccsInline:_aplicarReajustePccsInline,
     carregarHistorico:carregarHistorico, abrirFormEvento:abrirFormEvento, fecharFormEvento:fecharFormEvento,
-    salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento,
+    salvarEvento:salvarEvento, excluirEvento:excluirEvento, _confirmarExcluirEvento:_confirmarExcluirEvento, editarEvento:editarEvento,
     _atualizarCamposEvento:_atualizarCamposEvento, _pintarAlertaAdv:_pintarAlertaAdv,
     carregarAvaliacoes:carregarAvaliacoes, abrirFormAvaliacao:abrirFormAvaliacao,
     fecharFormAvaliacao:fecharFormAvaliacao, salvarAvaliacao:salvarAvaliacao,
