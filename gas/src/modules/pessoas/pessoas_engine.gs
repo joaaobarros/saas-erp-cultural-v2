@@ -561,7 +561,8 @@ var PessoasEngine = (function () {
     var tipo = dados.tipo;
     var alteraSalario  = (tipo === 'promocao' || tipo === 'reajuste') &&
                          dados.novoSalario !== undefined && dados.novoSalario !== null && dados.novoSalario !== '';
-    var alteraCargo    = (tipo === 'promocao' || tipo === 'mudanca_cargo') && dados.novoCargo;
+    var alteraCargo    = (tipo === 'promocao' || tipo === 'mudanca_cargo' || tipo === 'admissao') && dados.novoCargo;
+    var alteraSetor    = tipo === 'mudanca_setor' && dados.novoSetor;
     var alteraCarga    = tipo === 'alteracao_carga' && dados.novaCargaHoraria;
     var alteraAdmissao = tipo === 'admissao' && dados.dataAdmissao;
 
@@ -571,10 +572,12 @@ var PessoasEngine = (function () {
       throw new Error('Reajuste salarial exige o novo salário.');
     if (tipo === 'mudanca_cargo' && !alteraCargo)
       throw new Error('Mudança de cargo exige o novo cargo.');
+    if (tipo === 'mudanca_setor' && !alteraSetor)
+      throw new Error('Mudança de setor exige o novo setor.');
     if (tipo === 'alteracao_carga' && !alteraCarga)
       throw new Error('Alteração de carga horária exige a nova carga.');
 
-    if (!alteraSalario && !alteraCargo && !alteraCarga && !alteraAdmissao) return false;
+    if (!alteraSalario && !alteraCargo && !alteraSetor && !alteraCarga && !alteraAdmissao) return false;
 
     var c = ColaboradorRepository.buscarPorId(orgId, dados.idColaborador);
     if (!c) throw new Error('Colaborador não encontrado: ' + dados.idColaborador);
@@ -588,6 +591,10 @@ var PessoasEngine = (function () {
     if (alteraCargo) {
       dados.cargoAnterior = c.cargo || '';
       c.cargo             = dados.novoCargo;
+    }
+    if (alteraSetor) {
+      dados.setorAnterior = c.setor || '';
+      c.setor             = dados.novoSetor;
     }
     if (alteraCarga) {
       dados.novaCargaHoraria = Number(dados.novaCargaHoraria);
@@ -604,6 +611,7 @@ var PessoasEngine = (function () {
     _audit('FICHA_ATUALIZADA_POR_EVENTO_RH', {
       idColaborador: c.id, tipo: tipo, operador: emailOperador || '',
       cargoAnterior: dados.cargoAnterior, novoCargo: dados.novoCargo,
+      setorAnterior: dados.setorAnterior, novoSetor: dados.novoSetor,
       cargaAnterior: dados.cargaAnterior, novaCargaHoraria: dados.novaCargaHoraria
     });
     return true;

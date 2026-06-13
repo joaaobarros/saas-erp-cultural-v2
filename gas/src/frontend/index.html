@@ -968,6 +968,58 @@ body {
   .card { padding: 18px; }
   .mapa-wrap { flex-direction: column; height: auto; }
   .mapa-svg-area { height: 380px; flex-shrink: 0; }
+  /* Espaçamento interno reduzido */
+  #conteudo { padding: 16px; }
+  /* Tipografia adaptada */
+  .page-title, .view-title, .view-titulo { font-size: 18px; }
+  .stat-valor { font-size: 22px; }
+  /* Modais: padding menor */
+  .modal-overlay { padding: 12px; }
+  /* Headers de módulo empilhados */
+  .view-header, .mod-header { flex-direction: column; align-items: flex-start; }
+  /* Holerite: grids fixos colapsam para 1 coluna */
+  .hol-totais { grid-template-columns: 1fr !important; }
+  .hol-ch-header { grid-template-columns: 1fr !important; }
+}
+
+/* ── Tabelas sem wrapper: overflow horizontal nativo ─────────────────── */
+@media (max-width: 768px) {
+  .pc-table,
+  .ind-mes-table,
+  .hol-lista,
+  .aud-table,
+  .tabela { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+}
+
+/* ── Celulares compactos (≤ 480 px) ─────────────────────────────────── */
+@media (max-width: 480px) {
+  #conteudo { padding: 12px; }
+  .card { padding: 14px; }
+  .stats-grid { gap: 10px; }
+  .quick-actions { gap: 10px; }
+  /* Alertas: painel ocupa largura total */
+  .alertas-painel { width: 100% !important; max-width: 100% !important; }
+  /* Toast: estica da borda esquerda à direita */
+  #toast-container { left: 10px; right: 10px; bottom: 10px; }
+  .toast { min-width: 0; max-width: 100%; }
+  /* Modais: margem mínima */
+  .modal-overlay { padding: 8px; }
+  /* Dashboards com colunas mínimas: 2 colunas em vez de auto-fill */
+  .hol-stats-strip { grid-template-columns: repeat(2, 1fr); }
+  .rh-dash-strip   { grid-template-columns: repeat(2, 1fr); }
+  /* Banner: layout em coluna */
+  #home-banner { flex-direction: column; gap: 8px; }
+  /* Topbar: padding mínimo */
+  #topbar { padding: 0 10px; gap: 6px; }
+}
+
+/* ── Redução de movimento (acessibilidade) ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
   /* ═══════════════════════════════════════════════════════
@@ -8414,6 +8466,7 @@ select.form-control { cursor: pointer; }
                     <option value="promocao">Promoção</option>
                     <option value="reajuste">Reajuste Salarial</option>
                     <option value="mudanca_cargo">Mudança de Cargo</option>
+                    <option value="mudanca_setor">Mudança de Setor</option>
                     <option value="alteracao_carga">Alteração de Carga Horária</option>
                     <option value="advertencia">Advertência</option>
                     <option value="elogio">Elogio</option>
@@ -8423,6 +8476,7 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">Data do Evento *</label><input id="rh-ev-data" class="form-input" type="date"></div>
                 <div class="form-group" id="rh-ev-wrap-admissao" style="display:none;"><label class="form-label">Data de Admissão *</label><input id="rh-ev-admissao" class="form-input" type="date"><span id="rh-ev-hint-admissao" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-cargo" style="display:none;"><label class="form-label">Novo Cargo *</label><select id="rh-ev-cargo" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-cargo" style="font-size:11px;color:var(--text2);"></span></div>
+                <div class="form-group" id="rh-ev-wrap-setor" style="display:none;"><label class="form-label">Novo Setor *</label><select id="rh-ev-setor" class="form-input"><option value="">Selecione…</option></select><span id="rh-ev-hint-setor" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-salario" style="display:none;"><label class="form-label">Novo Salário Bruto (R$) *</label><input id="rh-ev-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"><span id="rh-ev-hint-salario" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Horária (h/semana) *</label><input id="rh-ev-carga" class="form-input" type="number" min="1" max="60" step="1" placeholder="40"><span id="rh-ev-hint-carga" style="font-size:11px;color:var(--text2);"></span></div>
                 <div class="form-group" id="rh-ev-wrap-nivel-adv" style="display:none;"><label class="form-label">Nível da Advertência *</label>
@@ -34936,6 +34990,10 @@ var RhUI = (function() {
       if (!el) return;
       var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
       if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
+      lista = lista.slice().sort(function(a,b){
+        var da = a.data || a.criadoEm || ''; var db = b.data || b.criadoEm || '';
+        return db.localeCompare(da);
+      });
       // Banner disciplinar: posição do colaborador na sequência de advertências
       var advs = lista.filter(function(ev){ return (ev.tipo||ev.tipoEvento)==='advertencia'; });
       var bannerAdv = '';
@@ -34990,6 +35048,7 @@ var RhUI = (function() {
             '<option value="outro" selected>Outro</option>' +
             '<option value="reajuste">Reajuste Salarial</option>' +
             '<option value="mudanca_cargo">Mudan\u00e7a de Cargo</option>' +
+            '<option value="mudanca_setor">Mudan\u00e7a de Setor</option>' +
             '<option value="promocao">Promo\u00e7\u00e3o</option>' +
             '<option value="alteracao_carga">Altera\u00e7\u00e3o de Carga Hor\u00e1ria</option>' +
             '<option value="advertencia">Advert\u00eancia</option>' +
@@ -34999,6 +35058,8 @@ var RhUI = (function() {
           '<input id="rh-ev-sec-data" class="form-input" type="date"></div>' +
         '<div class="form-group" id="rh-ev-sec-wrap-cargo" style="display:none;grid-column:span 2;"><label class="form-label">Novo Cargo *</label>' +
           '<select id="rh-ev-sec-cargo" class="form-input"><option value="">Selecione\u2026</option></select></div>' +
+        '<div class="form-group" id="rh-ev-sec-wrap-setor" style="display:none;grid-column:span 2;"><label class="form-label">Novo Setor *</label>' +
+          '<select id="rh-ev-sec-setor" class="form-input"><option value="">Selecione\u2026</option></select></div>' +
         '<div class="form-group" id="rh-ev-sec-wrap-salario" style="display:none;"><label class="form-label">Novo Sal\u00e1rio Bruto (R$) *</label>' +
           '<input id="rh-ev-sec-salario" class="form-input" type="text" placeholder="0,00" oninput="RhUI._maskMoeda(this)"></div>' +
         '<div class="form-group" id="rh-ev-sec-wrap-carga" style="display:none;"><label class="form-label">Nova Carga Hor\u00e1ria (h/sem) *</label>' +
@@ -35040,6 +35101,13 @@ var RhUI = (function() {
       sel.innerHTML = '<option value="">Selecione…</option>' +
         cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
     }, function(){});
+    // Popular select de setores
+    (function(){
+      var fn=function(setores){ var sel=document.getElementById('rh-ev-sec-setor'); if(!sel) return;
+        sel.innerHTML='<option value="">Selecione…</option>'+setores.map(function(s){ return '<option value="'+_esc(s.id)+'">'+_esc(s.label||s.nome||s.id)+'</option>'; }).join(''); };
+      if (_rhSetores !== null) { fn(_rhSetores); return; }
+      GAS.admin.listarSetores(function(r){ _rhSetores=(r&&r.ok&&Array.isArray(r.data))?r.data:[]; fn(_rhSetores); },function(){ fn([]); });
+    })();
     _evSecAtualizarCampos();
   }
 
@@ -35047,11 +35115,13 @@ var RhUI = (function() {
     var tipo = (document.getElementById('rh-ev-sec-tipo')||{}).value||'outro';
     var mostrar = function(id, show) { var el=document.getElementById(id); if(el) el.style.display=show?'':'none'; };
     var temCargo   = ['promocao','mudanca_cargo'].indexOf(tipo)>=0;
+    var temSetor   = tipo==='mudanca_setor';
     var temSalario = ['promocao','reajuste'].indexOf(tipo)>=0;
     var temCarga   = tipo==='alteracao_carga';
     var temAdv     = tipo==='advertencia';
-    var temDesc    = tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='alteracao_carga';
+    var temDesc    = tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='mudanca_setor' && tipo!=='alteracao_carga';
     mostrar('rh-ev-sec-wrap-cargo',    temCargo);
+    mostrar('rh-ev-sec-wrap-setor',    temSetor);
     mostrar('rh-ev-sec-wrap-salario',  temSalario);
     mostrar('rh-ev-sec-wrap-carga',    temCarga);
     mostrar('rh-ev-sec-wrap-nivel',    temAdv);
@@ -35066,9 +35136,9 @@ var RhUI = (function() {
     var desc    = ((document.getElementById('rh-ev-sec-desc')||{}).value||'').trim();
     var dataEv  = (document.getElementById('rh-ev-sec-data')||{}).value||'';
     if (!idColab) { Toast.aviso('Colaborador não identificado.'); return; }
-    var campos = { promocao:['cargo','salario'], reajuste:['salario'], mudanca_cargo:['cargo'], alteracao_carga:['carga'], advertencia:['nivel','gravidade'] };
+    var campos = { promocao:['cargo','salario'], reajuste:['salario'], mudanca_cargo:['cargo'], mudanca_setor:['setor'], alteracao_carga:['carga'], advertencia:['nivel','gravidade'] };
     var camposTipo = campos[tipo] || [];
-    if (!desc && tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='alteracao_carga' && tipo!=='advertencia') {
+    if (!desc && tipo!=='promocao' && tipo!=='mudanca_cargo' && tipo!=='mudanca_setor' && tipo!=='alteracao_carga' && tipo!=='advertencia') {
       Toast.aviso('Informe a descrição.'); return;
     }
     var dados = { idColaborador:idColab, tipo:tipo, tipoEvento:tipo, descricao:desc, data:dataEv };
@@ -35082,6 +35152,11 @@ var RhUI = (function() {
       var nc=(document.getElementById('rh-ev-sec-cargo')||{}).value||'';
       if (!nc) { Toast.aviso('Selecione o novo cargo.'); return; }
       dados.novoCargo=nc;
+    }
+    if (camposTipo.indexOf('setor')>=0) {
+      var nst=(document.getElementById('rh-ev-sec-setor')||{}).value||'';
+      if (!nst) { Toast.aviso('Selecione o novo setor.'); return; }
+      dados.novoSetor=nst;
     }
     if (camposTipo.indexOf('salario')>=0) {
       var ns=_parseMoeda((document.getElementById('rh-ev-sec-salario')||{}).value||'');
@@ -35924,14 +35999,14 @@ var RhUI = (function() {
   // ─── HISTÓRICO ──────────────────────────────────────────────
   var _EV_TIPO_LABEL = {
     admissao:'Admissão', promocao:'Promoção', reajuste:'Reajuste Salarial',
-    mudanca_cargo:'Mudança de Cargo', alteracao_carga:'Alteração de Carga Horária',
+    mudanca_cargo:'Mudança de Cargo', mudanca_setor:'Mudança de Setor', alteracao_carga:'Alteração de Carga Horária',
     advertencia:'Advertência', elogio:'Elogio', desligamento:'Desligamento',
     alteracaoSalarial:'Alteração Salarial', suspensao:'Suspensão', outro:'Outro'
   };
   // Campos estruturados exigidos por tipo de evento (atualizam a ficha)
   var _EV_CAMPOS = {
     promocao:['cargo','salario'], reajuste:['salario'],
-    mudanca_cargo:['cargo'], alteracao_carga:['carga'], admissao:['admissao']
+    mudanca_cargo:['cargo'], mudanca_setor:['setor'], alteracao_carga:['carga'], admissao:['admissao','cargo']
   };
 
   // ── Advertências — sequência disciplinar + gravidade ─────────
@@ -36067,6 +36142,10 @@ var RhUI = (function() {
     GAS.rh.historico(idColab,function(resp){
       var lista=(resp&&resp.ok)?resp.data:[];
       if (!lista||!lista.length){ el.innerHTML=_empty('Nenhum evento registrado.'); return; }
+      lista = lista.slice().sort(function(a,b){
+        var da = a.data || a.criadoEm || ''; var db = b.data || b.criadoEm || '';
+        return db.localeCompare(da);
+      });
       el.innerHTML='<ul class="rh-timeline">'+lista.map(function(ev){
         var nome = ev.colaboradorNome || (function(){ var c=_colaboradores.find(function(x){return x.id===ev.idColaborador;}); return c?c.nome:''; })();
         return '<li><div class="tl-dot"></div><div class="tl-body">'+
@@ -36086,7 +36165,7 @@ var RhUI = (function() {
     var tipo   = (document.getElementById('rh-ev-tipo')||{}).value || 'outro';
     var campos = _EV_CAMPOS[tipo] || [];
     var ehAdv  = tipo === 'advertencia';
-    ['cargo','salario','carga','admissao'].forEach(function(c){
+    ['cargo','salario','carga','admissao','setor'].forEach(function(c){
       var w = document.getElementById('rh-ev-wrap-'+c);
       if (w) w.style.display = campos.indexOf(c) >= 0 ? '' : 'none';
     });
@@ -36114,7 +36193,8 @@ var RhUI = (function() {
       cargo:    c ? 'Atual: ' + (c.cargo || '—') : '',
       salario:  c ? 'Atual: R$ ' + _fmtMoeda(c.salarioBruto || c.salario || 0) : '',
       carga:    c ? 'Atual: ' + (c.horasSemanais || 40) + 'h/semana' : '',
-      admissao: (c && c.dataAdmissao) ? 'Atual: ' + _fmtData(c.dataAdmissao) : ''
+      admissao: (c && c.dataAdmissao) ? 'Atual: ' + _fmtData(c.dataAdmissao) : '',
+      setor:    c ? 'Atual: ' + (_labelSetor(c.setor) || '—') : ''
     };
     Object.keys(hints).forEach(function(k){
       var h = document.getElementById('rh-ev-hint-'+k);
@@ -36142,6 +36222,12 @@ var RhUI = (function() {
       sel.innerHTML = '<option value="">Selecione…</option>'+
         cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
     }, function(){});
+    (function(){
+      var fn = function(setores){ var sel=document.getElementById('rh-ev-setor'); if(!sel) return;
+        sel.innerHTML='<option value="">Selecione…</option>'+setores.map(function(s){ return '<option value="'+_esc(s.id)+'">'+_esc(s.label||s.nome||s.id)+'</option>'; }).join(''); };
+      if (_rhSetores !== null) { fn(_rhSetores); return; }
+      GAS.admin.listarSetores(function(r){ _rhSetores=(r&&r.ok&&Array.isArray(r.data))?r.data:[]; fn(_rhSetores); },function(){ fn([]); });
+    })();
     document.getElementById('rh-evento-form').style.display='';
     if (idColabPre) { var s = document.getElementById('rh-ev-colab'); if (s) s.value = idColabPre; }
     _atualizarCamposEvento();
@@ -36169,6 +36255,11 @@ var RhUI = (function() {
       var nc=(document.getElementById('rh-ev-cargo')||{}).value;
       if (!nc && tipo==='mudanca_cargo'){ Toast.aviso('Selecione o novo cargo.'); return; }
       if (nc) dados.novoCargo=nc;
+    }
+    if (campos.indexOf('setor')>=0){
+      var nst=(document.getElementById('rh-ev-setor')||{}).value;
+      if (!nst){ Toast.aviso('Selecione o novo setor.'); return; }
+      dados.novoSetor=nst;
     }
     if (campos.indexOf('salario')>=0){
       var ns=_parseMoeda((document.getElementById('rh-ev-salario')||{}).value);
@@ -37131,6 +37222,10 @@ var RhUI = (function() {
       if (!document.getElementById('rh-det-eventos')) return;
       var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
       if (!lista.length) { el.innerHTML = _empty('Nenhum evento registrado.'); return; }
+      lista = lista.slice().sort(function(a,b){
+        var da = a.data || a.criadoEm || ''; var db = b.data || b.criadoEm || '';
+        return db.localeCompare(da);
+      });
       var advs = lista.filter(function(ev){ return (ev.tipo||ev.tipoEvento)==='advertencia'; });
       var bannerAdv = '';
       if (advs.length) {

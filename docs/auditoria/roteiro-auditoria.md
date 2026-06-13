@@ -1338,7 +1338,38 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 48 (2026-06-13) → SESSÃO 49
+## HANDOFF ATUAL — SESSÃO 49 (2026-06-13) → SESSÃO 50
+
+### Estado: Deploy @835 · RH Histórico — Mudança de Setor + cargo na Admissão + ordenação por data
+
+### O que foi feito nesta sessão (s49)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @835 | RH Histórico | Novo tipo `mudanca_setor`: select de setores no form principal e modal secundário; `_EV_CAMPOS`, `_EV_TIPO_LABEL`, `_evSecAtualizarCampos`, `salvarEvento`, `_salvarEventoSec` atualizados; backend `_aplicarEfeitosEvento` atualiza `c.setor` e audita `setorAnterior`/`novoSetor`. |
+| @835 | RH Admissão | `admissao:['admissao','cargo']` — campo cargo exibido ao admitir; backend aceita `novoCargo` em eventos de admissão. |
+| @835 | RH Ordenação | Histórico ordenado por `ev.data` desc em 3 pontos: `carregarHistorico`, `_recarregarDetEventos`, modal de ficha. |
+
+### Checklist de auditoria — Deploy @835
+```
+[x] prompt()/confirm() — não usados; sem alert/confirm nativos
+[x] GAS.* namespace — sem novos bindings necessários (registrarEvento já existia)
+[x] CSS — sem alterações CSS
+[x] IDs de DOM — rh-ev-wrap-setor / rh-ev-setor / rh-ev-hint-setor / rh-ev-sec-wrap-setor / rh-ev-sec-setor adicionados consistentemente
+[x] FsmGuardian — não aplicável (histórico não tem FSM)
+[x] Modais — não aplicável
+[x] BtnGuard — sem botões novos; BtnGuard.wrap já cobre rh-btn-salvar-evento e rh-btn-ev-sec-salvar
+[x] Datas — ordenação usa string ISO diretamente (localeCompare); sem datas exibidas sem formato
+```
+
+### Pendentes / próxima ação
+- Testar no browser: selecionar tipo "Mudança de Setor" → select de setores aparece → registrar → ficha do colaborador tem setor atualizado.
+- Testar Admissão: campo Cargo aparece → preencher → ficha atualiza.
+- Verificar que o histórico exibe do mais recente ao mais antigo pela data do evento.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 48 (2026-06-13) → SESSÃO 49
 
 ### Estado: Deploy @832 · BI Demográfico — reconstrução SCD por período (todos os campos demográficos)
 
