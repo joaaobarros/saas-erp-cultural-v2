@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @866 · Perf — AppCache em reservas_controller + reserva_carro_controller (listar/metricas/dados cacheados 60-120s; invalidação em todos os write paths)
+> Deploy atual: @867 · Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores sem auth
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -470,20 +470,22 @@
 
 ## HANDOFF ATUAL — SESSÃO 70 (2026-06-13) → SESSÃO 71
 
-### Estado atual: ~264 bugs registrados · Deploy @865 (GAS)
+### Estado atual: ~264 bugs registrados · Deploy @867 (GAS)
 
 ### O que foi feito nesta sessão (s70)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @865 | Fix getSetores() — dropdown vazio em primeiro_acesso | `config_service.gs → getSetores()`: filtro `s.orgId === orgId` retornava array vazio quando setores foram salvos antes de `orgId` ser adicionado ao schema. A função agora tenta novamente sem o filtro de `orgId` antes de cair no `_defaultSetores()`. Dropdown de setor em `primeiro_acesso.html` (e qualquer módulo que usa `SistemaConfigService.getSetores()`) deixa de aparecer vazio em instalações com dados legados. `color-scheme: light` adicionado ao `:root` de `primeiro_acesso.html` (já commitado em @861). |
-| @863 | Perf — AppCache em 5 módulos + boot TTL 300s | boot_service: TTL 60s → 300s. pessoas_controller, tarefas_controller, balcao_controller, financeiro_controller: AppCache 60–120s em listar/metricas; invalidação em todas as escritas. |
-| @861 | Auditoria de bugs — 4 correções | (1) `rh-ev-setor-anterior`: convertido de `<select>` (com opções nunca populadas) para `<p>` display readonly. (2) ADM-01: `_carregarPendentes()` ganhou error callback — sem mais loading eterno. (3) OcorrenciasUI: `criadoEm` → `fmtDataPtBR()`. (4) HabilitacoesUI: idem. |
+| @867 | Fix primeiro_acesso dropdown — fallback JS + ctrl_acesso_getSetores | `acesso_service.gs`: `ctrl_acesso_getSetores()` sem verificação de auth (setores são dados públicos da org). `primeiro_acesso.html`: `window.addEventListener('load')` — se `<select id="setor">` tiver apenas o placeholder, busca setores via `google.script.run.ctrl_acesso_getSetores()` e popula dinamicamente. Cobre todos os cenários onde o template server-side falha (orgId mismatch, Drive permission, "Execute as: User"). |
+| @866 | Perf — AppCache em reservas e reservas-de-carros | `reservas_controller.gs` + `reserva_carro_controller.gs`: AppCache 60-120s em listar/metricas/dados; invalidação em todos os write paths. |
+| @865 | Fix getSetores() — fallback para dados sem orgId | `config_service.gs → getSetores()`: tenta sem filtro de orgId antes de cair no `_defaultSetores()`. |
+| @863 | Perf — AppCache em 5 módulos + boot TTL 300s | boot TTL 60s → 300s; pessoas/tarefas/balcao/financeiro: AppCache 60–120s. |
+| @861 | Auditoria de bugs — 4 correções | rh-ev-setor-anterior display; ADM-01 erro pendentes; datas Ocorrências e Habilitações. |
 
 ### Checklist de auditoria — s70
 ```
 [x] prompt()/confirm()/alert() — zero ocorrências
-[x] GAS.* namespace — sem novos endpoints
+[x] GAS.* namespace — ctrl_acesso_getSetores adicionado sem auth
 [x] CSS — sem classes novas
 [x] IDs de DOM — sem novos IDs
 [x] FsmGuardian — sem novas transições
@@ -493,10 +495,10 @@
 ```
 
 ### Pendentes / próxima ação
-- Testar no browser (@865): Admin → "Visualizar Cadastro" (Preview de Primeiro Acesso) → dropdown de setor deve exibir as opções configuradas.
-- Testar RH → Novo Evento → Mudança de Setor → campo "Setor Anterior" deve exibir label legível do setor atual do colaborador.
-- Testar Admin → Acessos Pendentes: se backend falhar, deve mostrar mensagem de erro em vez de loading.
-- PREVIEW-01 pode ser dado como corrigido após teste confirmado do dropdown.
+- Testar com usuário real de primeiro acesso (@867): abrir sistema → dropdown de setor deve exibir opções (do servidor ou fallback JS).
+- Se dropwdown carregar corretamente → marcar PREVIEW-01 como CORRIGIDO.
+- Testar RH → Novo Evento → Mudança de Setor → campo "Setor Anterior" legível.
+- Testar Admin → Acessos Pendentes: mensagem de erro se backend falhar.
 
 ---
 

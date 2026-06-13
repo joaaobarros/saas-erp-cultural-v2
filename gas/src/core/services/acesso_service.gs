@@ -427,6 +427,18 @@ function ctrl_acesso_solicitar(dados) {
   }, 'ctrl_acesso_solicitar');
 }
 
+/**
+ * Retorna lista de setores ativos para exibição na tela de primeiro acesso.
+ * Não exige autenticação — setores são dados organizacionais públicos (não sensíveis).
+ * Usado como fallback JS quando o template server-side não popula o select de setor.
+ */
+function ctrl_acesso_getSetores() {
+  return GasResponse.wrap(function () {
+    return SistemaConfigService.getSetores()
+      .map(function(s) { return { id: s.id, label: s.label }; });
+  }, 'ctrl_acesso_getSetores');
+}
+
 function ctrl_acesso_listarPendentes() {
   return GasResponse.wrap(function () {
     var email  = getEmailSessao();

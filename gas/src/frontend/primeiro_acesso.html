@@ -184,6 +184,36 @@
 </div>
 
 <script>
+  // Fallback: se o template server-side não populou o select (orgId mismatch, Drive access, etc.),
+  // busca os setores via google.script.run e preenche dinamicamente.
+  window.addEventListener('load', function() {
+    var sel = document.getElementById('setor');
+    if (!sel) return; // template mostrou jaSolicitou=true, select não existe
+    if (sel.options.length > 1) return; // já tem opções do servidor — OK
+    sel.disabled = true;
+    sel.options[0].text = 'Carregando setores…';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        sel.options[0].text = 'Selecione o setor...';
+        sel.disabled = false;
+        if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+          res.data.forEach(function(s) {
+            var opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.label;
+            sel.appendChild(opt);
+          });
+        } else {
+          sel.options[0].text = 'Erro ao carregar setores — recarregue a página';
+        }
+      })
+      .withFailureHandler(function() {
+        sel.options[0].text = 'Erro ao carregar setores — recarregue a página';
+        sel.disabled = false;
+      })
+      .ctrl_acesso_getSetores();
+  });
+
   function solicitar() {
     var nome  = document.getElementById('nome').value.trim();
     var setor = document.getElementById('setor').value;
