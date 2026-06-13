@@ -10325,6 +10325,17 @@ function fmtDataPtBR(d) {
   return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
 }
 
+// ── Resolver de setor — converte slug para label legível ─────
+function _labelSetor(id) {
+  if (!id) return '';
+  var setores = ((App.getBoot && App.getBoot()) || {}).setores || [];
+  for (var i = 0; i < setores.length; i++) {
+    var s = setores[i];
+    if (s.id === id || s.nome === id) return s.label || s.nome || id;
+  }
+  return id;
+}
+
 // ── Utilitários de moeda (R$ 0,00) ──────────────────────────
 function mascaraMoeda(el) {
   var digits = el.value.replace(/\D/g, '');
@@ -14379,7 +14390,7 @@ var AdminCadastrosUI = (function() {
             '<span style="font-size:13px;">' + escaparHtml(u.email) + '</span>' +
           '</div></td>' +
           '<td><span style="font-size:13px;">' + papelLabel + '</span></td>' +
-          '<td><span style="font-size:13px;color:var(--muted);">' + escaparHtml(u.setor||'—') + '</span></td>' +
+          '<td><span style="font-size:13px;color:var(--muted);">' + escaparHtml(_labelSetor(u.setor)||'—') + '</span></td>' +
           '<td><span class="badge ' + statusCls + '">' + escaparHtml(u.status||'?') + '</span></td>' +
           '<td style="white-space:nowrap;">' + acoes + '</td>' +
           '</tr>';
@@ -34127,7 +34138,7 @@ var PontoUI = (function() {
     var mesNome = new Date(periodo.ano||new Date().getFullYear(), (periodo.mes||new Date().getMonth()+1)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     var colsN = setorFiltro ? 8 : 9;
 
-    var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">'+mesNome+(setorFiltro?' · '+_esc(setorFiltro):'')+'</h4>'+
+    var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">'+mesNome+(setorFiltro?' · '+_esc(_labelSetor(setorFiltro)||setorFiltro):'')+'</h4>'+
       '<div class="stats-grid" style="margin-bottom:16px;">'+
       _metCard('Ativos', rsm.totalAtivos != null ? rsm.totalAtivos : '—', 'group')+
       _metCard('Cumpriram carga', (rsm.cumpriramCarga||0)+' ('+(rsm.pctCumprimento||0)+'%)', 'check_circle', (rsm.pctCumprimento||0)>=80?'sucesso':'alerta')+
@@ -34147,7 +34158,7 @@ var PontoUI = (function() {
       porSetor.forEach(function(s, i) {
         var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
         html += '<tr style="'+bg+';cursor:pointer;" onclick="document.getElementById(\'ponto-metricas-setor\').value='+JSON.stringify(s.setor).replace(/"/g,"'")+';PontoUI.filtrarMetricasSetor();">'+
-          '<td style="padding:5px 8px;font-weight:500;">'+_esc(s.setor)+'</td>'+
+          '<td style="padding:5px 8px;font-weight:500;">'+_esc(_labelSetor(s.setor)||s.setor)+'</td>'+
           '<td style="text-align:center;padding:5px 8px;">'+s.total+'</td>'+
           '<td style="text-align:center;padding:5px 8px;color:'+_cor(s.pctCumprimento>=80)+';font-weight:600;">'+s.pctCumprimento+'%</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalMinutosHM)+'</td>'+
@@ -34188,7 +34199,7 @@ var PontoUI = (function() {
         html += '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--erro,#c62828);border-radius:8px;padding:12px 14px;">'+
           '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">'+
             '<strong style="font-size:13px;">'+_esc(_nomeExib(p))+'</strong>'+
-            '<span style="font-size:11px;color:var(--text2);white-space:nowrap;">'+_esc(p.setor)+'</span></div>'+
+            '<span style="font-size:11px;color:var(--text2);white-space:nowrap;">'+_esc(_labelSetor(p.setor)||p.setor)+'</span></div>'+
           '<div style="display:flex;flex-direction:column;gap:6px;">'+linhas.join('')+'</div></div>';
       });
       html += '</div>';
@@ -34241,7 +34252,7 @@ var PontoUI = (function() {
         var semReg = (p.diasTrabalhados||0) === 0;
         html += '<tr style="'+bg+';cursor:pointer;" onclick="PontoUI._toggleDrilldown(\''+pid+'\',\''+_esc(p.id)+'\','+colsN+')">'+
           '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(_nomeExib(p))+'</td>'+
-          (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(p.setor)+'</td>':'')+
+          (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(_labelSetor(p.setor)||p.setor)+'</td>':'')+
           '<td style="text-align:center;padding:5px 8px;white-space:nowrap;">'+p.horasSemanais+'h/sem'+_badgeRegime(p)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;'+(semReg?'color:var(--text2);':'font-weight:600;')+'">'+_esc(p.realizado)+'</td>'+
@@ -34518,7 +34529,7 @@ var RhUI = (function() {
         return '<tr>'+
           '<td style="padding:6px 4px 6px 8px;">'+_avatarMini(c)+'</td>'+
           '<td>'+nomeExib+'<br><span style="font-size:10px;color:var(--muted)">'+_esc(c.emailInstitucional||c.email||'')+'</span></td>'+
-          '<td>'+_esc(c.setor||'—')+'</td>'+
+          '<td>'+_esc(_labelSetor(c.setor)||'—')+'</td>'+
           '<td>'+_esc(c.cargo||'—')+'</td>'+
           '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
           '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
@@ -34898,7 +34909,7 @@ var RhUI = (function() {
           '</div>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;">' +
-          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.setor||'—') + '</p></div>' +
+          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(_labelSetor(c.setor)||'—') + '</p></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Cargo</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.cargo||'—') + '</p></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Admissão</p><p style="margin:4px 0 0;font-size:13px;">' + _fmtData(c.dataAdmissao) + '</p></div>' +
         '</div>' +
@@ -39445,7 +39456,7 @@ var PerfilUI = (function() {
     if (pro) pro.innerHTML =
       _ro('Nome completo', c.nome) +
       _ro('E-mail institucional', c.emailInstitucional||c.email) +
-      _ro('Setor', c.setor) +
+      _ro('Setor', _labelSetor(c.setor)||c.setor) +
       _ro('Cargo / Função', c.cargo) +
       _ro('Vínculo', c.tipoVinculo||c.vinculo) +
       _ro('Carga horária', (c.horasSemanais||40)+'h / semana') +

@@ -470,15 +470,16 @@
 
 ## HANDOFF ATUAL — SESSÃO 69 (2026-06-13) → SESSÃO 70
 
-### Estado atual: ~266 bugs registrados · Deploy @833 (GAS)
+### Estado atual: ~266 bugs registrados · Deploy @834 (GAS)
 
 ### O que foi feito nesta sessão (s69)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @833 | BI Demográfico — fix Personas: carregamento eterno + setor slug cru | **Frontend** (`index.html`): `gerarPersonas(done)` declara parâmetro `done` do BtnGuard e chama `done()` ao final e nos early-returns — botão "Gerar Personas" liberado corretamente. `_setorLabel(ms)` aplicado no card de Personas para contexto `equipe` — exibe label legível ("Escola de Cultura e Artes") em vez do slug interno (`escola_de_cultura_e_artes`). |
-| @832 | BI Demográfico — reconstrução SCD completa por período | `_enriquecerComHistorico(regs, ateYM)` sobrepõe campos com valores do período filtrado via `_demografiaEmData`; `_renderizar` e `gerarPersonas` passam `regH` para sub-renders. |
-| @831 | BI Demográfico — fix carregamento eterno + leitura de histórico SCD | `atualizar(done)`/`_carregar(onDone)` com callback; BI controller lê `pcdHistorico`/`paiMaeHistorico` com fallback plano. |
+| @834 | UX — setor legível em todos os módulos | Helper global `_labelSetor(id)` adicionado — consulta `App.getBoot().setores` por `id`/`nome`, retorna `label\|\|nome` ou o id como fallback. Aplicado em: tabela equipe RH, modal detalhes colaborador, cabeçalho período Ponto/Métricas, tabela "Por Setor" Ponto, card Risco CLT, tabela individual Ponto, tabela usuários Admin, seção "Dados Profissionais" Meu Perfil. |
+| @833 | BI Demográfico — fix Personas: carregamento eterno + setor slug cru | `gerarPersonas(done)` declara parâmetro `done`; `_setorLabel(ms)` no card de Personas. |
+| @832 | BI Demográfico — reconstrução SCD completa por período | `_enriquecerComHistorico(regs, ateYM)` + `_renderizar`/`gerarPersonas` passam `regH`. |
+| @831 | BI Demográfico — fix carregamento eterno + leitura de histórico SCD | `atualizar(done)`/`_carregar(onDone)` com callback; BI controller lê histórico SCD. |
 
 ### Checklist de auditoria — s69
 ```
@@ -493,8 +494,8 @@
 ```
 
 ### Pendentes / próxima ação
-- **Testar no browser (@833)**: BI Demográfico → Gerar Personas → botão liberado após gerar; setor exibe "Escola de Cultura e Artes" (não slug)
-- **Testar no browser (@831)**: BI Demográfico → clicar "Atualizar" → botão liberado após carregamento
+- **Testar no browser (@834)**: RH → lista equipe → coluna Setor deve exibir label legível (ex. "Escola de Cultura e Artes", não slug). Ponto → Métricas RH → tabela "Por Setor" → labels legíveis.
+- **Testar no browser (@833)**: BI Demográfico → Gerar Personas → botão liberado após gerar; setor no card exibe label legível.
 
 ---
 
