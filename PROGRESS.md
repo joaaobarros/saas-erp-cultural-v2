@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix — Rescisão: FGTS Saldo separado do custo total + nota explicativa — Deploy @878.** FGTS Saldo removido do grid de custos; exibido em card separado abaixo do total com nota "já depositado mensalmente — não é custo adicional". Multa FGTS permanece no grid pois é custo real da rescisão.
+**Fase atual**: **Feat — Rescisão: férias vencidas em dias reais (API) + custo total estimado com encargos — Deploy @879.** Backend: `calcularRescisao` aceita `diasFeriasVencidas` (dias reais do saldo da API) — pagamento proporcional ao saldo real, não mais fixo em N×30. Frontend: campo "Férias vencidas" trocado de select (0/1/2 períodos) para input numérico de dias; ao selecionar colaborador, soma o `saldo` real de cada período `vencido` via `GAS.rh.resumoFeriasColaborador` + detalhamento por período. "Economia esperada" renomeada para "Custo mensal total para a empresa" e auto-preenchida com salário×1,55 (FGTS 8% + INSS patronal ~28% + provisões 13º/férias ~19%) com breakdown textual visível; benefícios variáveis excluídos mas campo editável.
+
+**Fase anterior**: **Fix — Rescisão: FGTS Saldo separado do custo total + nota explicativa — Deploy @878.** FGTS Saldo removido do grid de custos; exibido em card separado abaixo do total com nota "já depositado mensalmente — não é custo adicional". Multa FGTS permanece no grid pois é custo real da rescisão.
 
 **Fase anterior**: **Fix — Rescisão: férias vencidas exibe quantidade de dias (N × 30 dias) — Deploy @877.** Card de férias vencidas no resultado passa a mostrar `N × 30 = X dias a pagar` além do valor monetário.
 

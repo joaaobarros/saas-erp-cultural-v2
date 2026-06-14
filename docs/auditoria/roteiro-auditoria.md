@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @878 · Rescisão: FGTS Saldo separado do custo total com nota explicativa
+> Deploy atual: @879 · Rescisão: férias vencidas em dias reais + custo total estimado com encargos
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

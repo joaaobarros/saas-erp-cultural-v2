@@ -382,12 +382,20 @@ var PontoEngine = (function() {
     }
 
     // ── Férias vencidas não gozadas ───────────────────────────────────────────
-    var periodosVencidos = (p.periodosVencidosNaoGozados != null)
-      ? Math.max(0, Math.min(2, Number(p.periodosVencidosNaoGozados) || 0))
-      : (anosCompletos > 0 ? 1 : 0);
+    // Prioridade: diasFeriasVencidas (dias reais do saldo da API) > periodosVencidosNaoGozados * 30
+    var diasFeriasVencidas;
+    if (p.diasFeriasVencidas != null && p.diasFeriasVencidas >= 0) {
+      diasFeriasVencidas = Math.max(0, Number(p.diasFeriasVencidas) || 0);
+    } else {
+      var periodosVencidos = (p.periodosVencidosNaoGozados != null)
+        ? Math.max(0, Math.min(2, Number(p.periodosVencidosNaoGozados) || 0))
+        : (anosCompletos > 0 ? 1 : 0);
+      diasFeriasVencidas = periodosVencidos * 30;
+    }
 
     // Justa causa: só paga férias vencidas; proporcionais e 13º são perdidos
-    var feriasVencidas      = periodosVencidos * s * (1 + 1/3);
+    // Pagamento: (dias_vencidos / 30) × salário × (1 + 1/3)
+    var feriasVencidas      = (diasFeriasVencidas / 30) * s * (1 + 1/3);
     var feriasProporcionais = tipo === 'justa_causa' ? 0 : (s * (1 + 1/3)) * (mesesPropFerias / 12);
     var decimo3             = tipo === 'justa_causa' ? 0 : s * (meses13 / 12);
 
@@ -409,7 +417,7 @@ var PontoEngine = (function() {
       salarioBruto:           s,
       mesesTrabalhados:       meses,
       diasAvisoPrevio:        diasAP,
-      periodosVencidos:       periodosVencidos,
+      diasFeriasVencidas:     Math.round(diasFeriasVencidas * 10) / 10,
       meses13:                meses13,
       mesesPropFerias:        mesesPropFerias,
       avisoPrevio:            Math.round(valorAP * 100) / 100,

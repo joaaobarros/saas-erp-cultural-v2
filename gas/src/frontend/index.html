@@ -8892,14 +8892,15 @@ select.form-control { cursor: pointer; }
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Férias vencidas não gozadas</label>
-                  <select id="rh-resc-periodos-vencidos" class="form-control">
-                    <option value="0">Nenhuma (já gozou ou &lt; 12 meses)</option>
-                    <option value="1" selected>1 período (padrão)</option>
-                    <option value="2">2 períodos (mora em dobro)</option>
-                  </select>
+                  <label class="form-label">Férias vencidas não gozadas (dias)</label>
+                  <input type="number" id="rh-resc-dias-fv" class="form-control" min="0" max="60" placeholder="0" value="0">
+                  <div id="rh-resc-dias-fv-info" style="font-size:11px;color:var(--text2);margin-top:3px;display:none;"></div>
                 </div>
-                <div class="form-group"><label class="form-label">Economia esperada/mês (R$)</label><input type="text" inputmode="decimal" id="rh-resc-economia" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this)"></div>
+                <div class="form-group">
+                  <label class="form-label">Custo mensal total para a empresa (R$)</label>
+                  <input type="text" inputmode="decimal" id="rh-resc-economia" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this)">
+                  <div id="rh-resc-custo-info" style="font-size:11px;color:var(--text2);margin-top:3px;display:none;"></div>
+                </div>
               </div>
               <div style="margin-top:12px;"><button id="rh-btn-calc-rescisao" class="btn btn-primary" onclick="BtnGuard.wrap('rh-btn-calc-rescisao','Calculando…',RhUI.calcularRescisao)">Calcular Rescisão</button></div>
               <div id="rh-resc-resultado" style="margin-top:20px;"></div>
@@ -37292,27 +37293,56 @@ var RhUI = (function() {
       info.style.display = '';
     }
 
-    // ── Economia esperada = salário atual ────────────────────────────────────
+    // ── Custo mensal total estimado (salário + encargos + provisões) ──────────
+    // FGTS 8% + INSS patronal ~28% + provisão 13º 8.33% + provisão férias+1/3 11.11% ≈ 55%
+    var custoTotal = Math.round(salario * 1.55 * 100) / 100;
     var ecoInput = document.getElementById('rh-resc-economia');
-    if (ecoInput) ecoInput.value = salario > 0 ? _fmtMoedaResc(salario) : '';
+    if (ecoInput) ecoInput.value = custoTotal > 0 ? _fmtMoedaResc(custoTotal) : '';
+    var custoInfoEl = document.getElementById('rh-resc-custo-info');
+    if (custoInfoEl && salario > 0) {
+      custoInfoEl.innerHTML =
+        'Estimativa: '
+        + _fmtMoedaResc(salario) + ' salário'
+        + ' + ' + _fmtMoedaResc(Math.round(salario * 0.08 * 100) / 100) + ' FGTS (8%)'
+        + ' + ' + _fmtMoedaResc(Math.round(salario * 0.28 * 100) / 100) + ' INSS patronal (~28%)'
+        + ' + ' + _fmtMoedaResc(Math.round(salario * 0.1944 * 100) / 100) + ' provisões 13º/férias'
+        + ' ≈ <strong>' + _fmtMoedaResc(custoTotal) + '</strong>. Benefícios não inclusos — ajuste se necessário.';
+      custoInfoEl.style.display = '';
+    }
 
     // ── Limpar resultado anterior ────────────────────────────────────────────
     var res = document.getElementById('rh-resc-resultado');
     if (res) res.innerHTML = '';
 
-    // ── Férias: buscar períodos vencidos reais via API ────────────────────────
-    var selPer = document.getElementById('rh-resc-periodos-vencidos');
-    if (selPer) selPer.value = '0'; // reset enquanto carrega
+    // ── Férias: buscar dias vencidos reais via API ────────────────────────────
+    var diasFvEl = document.getElementById('rh-resc-dias-fv');
+    var diasFvInfoEl = document.getElementById('rh-resc-dias-fv-info');
+    if (diasFvEl) diasFvEl.value = '0';
     GAS.rh.resumoFeriasColaborador(id, function(resp) {
       if (!resp || !resp.ok || !resp.data || !resp.data.periodos) return;
-      var vencidos = resp.data.periodos.filter(function(p) {
-        return p.status === 'vencido' && (p.saldo || 0) > 0;
-      }).length;
-      var selPerAfter = document.getElementById('rh-resc-periodos-vencidos');
-      if (selPerAfter) selPerAfter.value = String(Math.min(2, vencidos));
+      var periodos = resp.data.periodos;
+      var totalDias = 0;
+      var detalhes = [];
+      periodos.forEach(function(p) {
+        if (p.status === 'vencido' && (p.saldo || 0) > 0) {
+          totalDias += p.saldo;
+          detalhes.push('Período ' + p.numero + ': ' + p.saldo + 'd');
+        }
+      });
+      var el = document.getElementById('rh-resc-dias-fv');
+      if (el) el.value = Math.round(totalDias);
+      var infoEl = document.getElementById('rh-resc-dias-fv-info');
+      if (infoEl) {
+        infoEl.textContent = detalhes.length
+          ? detalhes.join(' · ') + ' (saldo real da API)'
+          : 'Nenhum período vencido com saldo pendente.';
+        infoEl.style.display = '';
+      }
     }, function() {
-      // Fallback: estimar por anos completos se a API falhar
-      if (selPer) selPer.value = String(Math.floor(meses / 12) > 0 ? 1 : 0);
+      // Fallback: estimativa por anos completos
+      var anosComp = Math.floor(meses / 12);
+      if (diasFvEl) diasFvEl.value = anosComp > 0 ? 30 : 0;
+      if (diasFvInfoEl) { diasFvInfoEl.textContent = 'Estimativa: API indisponível.'; diasFvInfoEl.style.display = ''; }
     });
   }
 
@@ -37322,7 +37352,7 @@ var RhUI = (function() {
     var tipo             = (document.getElementById('rh-resc-tipo')||{}).value || 'sem_justa_causa';
     var modo             = (document.getElementById('rh-resc-ap-modo')||{}).value || 'indenizado';
     var economia         = parseMoeda((document.getElementById('rh-resc-economia')||{}).value) || 0;
-    var periodosVencidos = parseInt((document.getElementById('rh-resc-periodos-vencidos')||{}).value || '0') || 0;
+    var diasFV           = parseFloat((document.getElementById('rh-resc-dias-fv')||{}).value || '0') || 0;
     var dataDesl         = (document.getElementById('rh-resc-data-desl')||{}).value || '';
     var dataAdm          = (document.getElementById('rh-resc-data-adm')||{}).value || '';
     var el = document.getElementById('rh-resc-resultado');
@@ -37330,7 +37360,7 @@ var RhUI = (function() {
     var payload = {
       salarioBruto: salario, mesesTrabalhados: meses, tipoRescisao: tipo,
       modoAvisoPrevio: modo, economiaEsperada: economia || salario,
-      periodosVencidosNaoGozados: periodosVencidos,
+      diasFeriasVencidas: diasFV,
       dataDesligamento: dataDesl, dataAdmissao: dataAdm
     };
     GAS.ponto.calcularRescisao(payload, function(r) {
@@ -37352,11 +37382,11 @@ var RhUI = (function() {
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'
             + '<div style="font-size:11px;color:var(--text2);">' + escaparHtml(labelAP) + '</div>'
             + '<div style="font-size:13px;color:var(--muted);">— não indenizado</div></div>';
-      var diasFV = c.periodosVencidos * 30;
+      var diasFV = c.diasFeriasVencidas || 0;
       var cardFV = c.feriasVencidas > 0
         ? '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;">'
-            + '<div style="font-size:11px;color:var(--text2);">Férias Vencidas (' + c.periodosVencidos + ' período' + (c.periodosVencidos > 1 ? 's' : '') + ' + 1/3)</div>'
-            + '<div style="font-size:11px;color:var(--text2);margin-top:2px;">' + c.periodosVencidos + ' × 30 = <strong>' + diasFV + ' dias</strong> a pagar</div>'
+            + '<div style="font-size:11px;color:var(--text2);">Férias Vencidas (+ 1/3 constitucional)</div>'
+            + '<div style="font-size:11px;color:var(--text2);margin-top:2px;"><strong>' + diasFV + ' dias</strong> não gozados a pagar</div>'
             + '<div style="font-size:15px;font-weight:600;margin-top:4px;">R$ ' + _fmtMoeda(c.feriasVencidas) + '</div>'
           + '</div>'
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'
