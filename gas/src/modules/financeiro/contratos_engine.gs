@@ -509,6 +509,11 @@ var ContratosEngine = (function () {
     // Calcular campos derivados automaticamente
     dados = calcularCustoPessoal(dados);
 
+    // Guard: bloquear vínculo se custo real ultrapassar total previsto
+    if (dados.idColaborador) {
+      _assertSaldoPessoalVinculo(c, dados, orgId);
+    }
+
     var idPes = ContratoRepository.adicionarPessoal(orgId, idContrato, idMeta, dados);
     _audit('CONTRATO_PESSOAL_SALVO', {
       idContrato: idContrato, idMeta: idMeta, idPessoal: idPes, operador: emailOperador || ''
@@ -523,6 +528,388 @@ var ContratosEngine = (function () {
       idContrato: idContrato, idMeta: idMeta, idPessoal: idPessoal, operador: emailOperador || ''
     });
     return { ok: ok };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // ORÇAMENTO REAL DE PESSOAL — timeline salarial + controle de saldo
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Reconstrói a linha do tempo salarial de um colaborador dentro do
+   * período de vigência do contrato, usando os eventos de historico_rh.json
+   * (tipo reajuste / promocao / desligamento).
+   *
+   * Retorna array de segmentos [{from, to, salario, benefícios}] onde cada
+   * segmento representa um intervalo contínuo com mesmo salário.
+   * Benefícios são os valores atuais do colaborador (histórico de benefícios
+   * não é rastreado por evento ainda).
+   */
+  function _timelineSalarial(colab, historico, vigIni, vigFim) {
+    var vigIniStr = vigIni.toISOString().slice(0, 10);
+    var vigFimStr = vigFim.toISOString().slice(0, 10);
+
+    // Eventos do colaborador
+    var events = (historico || []).filter(function(h) {
+      return h.idColaborador === colab.id;
+    });
+
+    // Data de desligamento (se houver)
+    var dataDeslig = null;
+    events.filter(function(h) { return h.tipo === 'desligamento'; })
+      .sort(function(a, b) { return String(b.data || '').localeCompare(String(a.data || '')); })
+      .forEach(function(h, i) { if (i === 0) dataDeslig = String(h.data || ''); });
+
+    // Período ativo do colaborador dentro da vigência
+    var admStr = String(colab.dataAdmissao || vigIniStr).slice(0, 10);
+    var activeFrom = admStr > vigIniStr ? admStr : vigIniStr;
+    var activeTo   = (dataDeslig && dataDeslig < vigFimStr) ? dataDeslig : vigFimStr;
+
+    if (activeFrom >= activeTo) return []; // não estava ativo no período
+
+    // Benefícios atuais (histórico de benefícios não é rastreado por evento)
+    var ben = {
+      valeAlimentacao:     Number(colab.valeAlimentacao     || 0),
+      valeTransporte:      Number(colab.valeTransporte      || 0),
+      planoSaude:          Number(colab.planoSaude          || 0),
+      descontoAlimentacao: Number(colab.descontoAlimentacao || 0)
+    };
+
+    // Eventos que alteram salário, ordenados DESC
+    var salEvents = events.filter(function(h) {
+      return (h.tipo === 'reajuste' || h.tipo === 'promocao') &&
+             h.novoSalario !== undefined && h.novoSalario !== null && h.novoSalario !== '' &&
+             h.data;
+    }).sort(function(a, b) { return String(b.data).localeCompare(String(a.data)); });
+
+    // Caminha do mais recente para o mais antigo ajustando o salário
+    var curSal = Number(colab.salarioBruto || colab.salario || 0);
+    var curEnd = activeTo;
+    var segments = [];
+
+    salEvents.forEach(function(ev) {
+      var evDate = String(ev.data).slice(0, 10);
+      if (evDate >= activeTo) {
+        // Evento após o período — ajusta salário inicial retroativamente
+        curSal = Number(ev.salarioAnterior !== undefined ? ev.salarioAnterior : curSal);
+        return;
+      }
+      if (evDate < activeFrom) return; // antes do período — ignora
+      // Evento dentro do período
+      segments.unshift(Object.assign({ from: evDate, to: curEnd, salario: curSal }, ben));
+      curSal = Number(ev.salarioAnterior !== undefined ? ev.salarioAnterior : curSal);
+      curEnd = evDate;
+    });
+
+    // Segmento inicial (do começo do período até o primeiro evento interno)
+    segments.unshift(Object.assign({ from: activeFrom, to: curEnd, salario: curSal }, ben));
+
+    return segments.filter(function(s) { return s.from < s.to; });
+  }
+
+  /** Meses fracionários entre dois strings ISO 'YYYY-MM-DD'. */
+  function _mesesEntreDatas(from, to) {
+    if (!from || !to || from >= to) return 0;
+    var d1 = new Date(from + 'T00:00:00');
+    var d2 = new Date(to   + 'T00:00:00');
+    var m  = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    var frac = (d2.getDate() - d1.getDate()) / 30;
+    return Math.max(0, m + frac);
+  }
+
+  /**
+   * Calcula o custo real de um colaborador durante a vigência do contrato,
+   * usando a linha do tempo salarial reconstruída do histórico de RH.
+   */
+  function _calcularCustoRealColaborador(colab, historico, vigIni, vigFim) {
+    var segs = _timelineSalarial(colab, historico, vigIni, vigFim);
+    if (!segs.length) return { custoTotal: 0, meses: 0, segmentos: [] };
+
+    var totalCusto = 0;
+    var totalMeses = 0;
+    var segmentosDetalhados = [];
+
+    segs.forEach(function(seg) {
+      var meses = _mesesEntreDatas(seg.from, seg.to);
+      if (meses <= 0) return;
+      var calc = calcularCustoPessoal({
+        salarioAtual:        seg.salario,
+        reajuste:            0,
+        qtd:                 1,
+        qtdMeses:            meses,
+        valeTransporte:      seg.valeTransporte,
+        alimentacao:         seg.valeAlimentacao,
+        descontoAlimentacao: seg.descontoAlimentacao,
+        planoSaude:          seg.planoSaude
+      });
+      totalCusto += calc.custoTotal;
+      totalMeses += meses;
+      segmentosDetalhados.push({
+        from:        seg.from,
+        to:          seg.to,
+        meses:       +meses.toFixed(2),
+        salario:     seg.salario,
+        custoMensal: calc.custoMensal,
+        custoTotal:  calc.custoTotal
+      });
+    });
+
+    return {
+      custoTotal: +totalCusto.toFixed(2),
+      meses:      +totalMeses.toFixed(2),
+      segmentos:  segmentosDetalhados
+    };
+  }
+
+  /**
+   * Verifica saldo antes de vincular um colaborador a um item de pessoal.
+   * Lança Error se o custo real do vínculo ultrapassar o total previsto.
+   */
+  function _assertSaldoPessoalVinculo(contrato, itemNovo, orgId) {
+    var vigIniStr = contrato.vigenciaInicio || '';
+    var vigFimStr = contrato.vigenciaFim   || '';
+    if (!vigIniStr || !vigFimStr || !itemNovo.idColaborador) return;
+
+    var vigIni = new Date(vigIniStr + 'T00:00:00');
+    var vigFim = new Date(vigFimStr + 'T00:00:00');
+    if (isNaN(vigIni.getTime()) || isNaN(vigFim.getTime())) return;
+
+    var colaboradores = ColaboradorRepository.listar({ orgId: orgId });
+    var colabMap = {};
+    colaboradores.forEach(function(c) { colabMap[c.id] = c; });
+
+    var historico = ColaboradorRepository.listarHistorico({ orgId: orgId });
+
+    // Total previsto — todos os itens de pessoal (incluindo o novo/editado)
+    var totalPrevisto = Number(itemNovo.custoTotal || 0);
+    (contrato.metas || []).forEach(function(meta) {
+      (meta.pessoal || []).forEach(function(p) {
+        if (p.id === itemNovo.id) return; // excluir se edição do mesmo item
+        totalPrevisto += Number(p.custoTotal || 0);
+      });
+    });
+
+    // Total realizado — colaboradores já vinculados + o novo
+    var totalRealizado = 0;
+    (contrato.metas || []).forEach(function(meta) {
+      (meta.pessoal || []).forEach(function(p) {
+        if (p.id === itemNovo.id) return; // excluir se edição do mesmo item
+        if (!p.idColaborador || !colabMap[p.idColaborador]) return;
+        var cr = _calcularCustoRealColaborador(colabMap[p.idColaborador], historico, vigIni, vigFim);
+        totalRealizado += cr.custoTotal;
+      });
+    });
+
+    if (colabMap[itemNovo.idColaborador]) {
+      var crNovo = _calcularCustoRealColaborador(colabMap[itemNovo.idColaborador], historico, vigIni, vigFim);
+      totalRealizado += crNovo.custoTotal;
+    }
+
+    var saldo = totalPrevisto - totalRealizado;
+    if (saldo < -0.01) {
+      throw new Error(
+        'Saldo de pessoal insuficiente para este vínculo. ' +
+        'Total previsto: R$ ' + totalPrevisto.toFixed(2) + '. ' +
+        'Custo real estimado (todos os vínculos): R$ ' + totalRealizado.toFixed(2) + '. ' +
+        'Defasagem: R$ ' + Math.abs(saldo).toFixed(2) + '. ' +
+        'Ajuste o orçamento ou revise o vínculo.'
+      );
+    }
+  }
+
+  /**
+   * Vincula automaticamente colaboradores a itens de pessoal sem vínculo,
+   * usando correspondência por cargo (case-insensitive), respeitando o período
+   * ativo de cada colaborador vs. a vigência do contrato.
+   *
+   * Um colaborador desligado antes do início do contrato é excluído.
+   * Cada colaborador pode ser vinculado a no máximo um item por execução.
+   */
+  function autoVincularPessoal(idContrato, idMeta, orgId) {
+    orgId = orgId || _orgId();
+    var contrato = ContratoRepository.buscarPorId(orgId, idContrato);
+    if (!contrato) throw new Error('Contrato não encontrado.');
+
+    var vigIniStr = contrato.vigenciaInicio || '';
+    var vigFimStr = contrato.vigenciaFim   || '';
+
+    var colaboradores = ColaboradorRepository.listar({ orgId: orgId });
+    var historico     = ColaboradorRepository.listarHistorico({ orgId: orgId });
+
+    // Mapa de data de desligamento por idColaborador
+    var desligMap = {};
+    historico.forEach(function(h) {
+      if (h.tipo !== 'desligamento') return;
+      var prev = desligMap[h.idColaborador];
+      if (!prev || String(h.data) > prev) desligMap[h.idColaborador] = String(h.data || '');
+    });
+
+    // Filtra colaboradores ativos OU desligados depois do início do contrato
+    var elegiveis = colaboradores.filter(function(c) {
+      if (c.status === 'desligado') {
+        var d = desligMap[c.id] || '';
+        return !vigIniStr || d >= vigIniStr; // desligado durante ou após vigência
+      }
+      // Admitido antes do fim do contrato
+      var adm = String(c.dataAdmissao || '');
+      return !vigFimStr || !adm || adm <= vigFimStr;
+    });
+
+    // Índice cargo → lista de elegíveis
+    var porCargo = {};
+    elegiveis.forEach(function(c) {
+      var k = (c.cargo || '').toLowerCase().trim();
+      if (!k) return;
+      if (!porCargo[k]) porCargo[k] = [];
+      porCargo[k].push(c);
+    });
+
+    // Conjunto de IDs já vinculados (qualquer meta do contrato)
+    var vinculados = {};
+    (contrato.metas || []).forEach(function(m) {
+      (m.pessoal || []).forEach(function(p) {
+        if (p.idColaborador) vinculados[p.idColaborador] = true;
+      });
+    });
+
+    var qtdVinculados = 0;
+    var metas = contrato.metas || [];
+
+    for (var mi = 0; mi < metas.length; mi++) {
+      var meta = metas[mi];
+      if (idMeta && meta.id !== idMeta) continue;
+      var pessoal = meta.pessoal || [];
+
+      for (var pi = 0; pi < pessoal.length; pi++) {
+        var item = pessoal[pi];
+        if (item.idColaborador) continue; // já vinculado
+
+        var key  = (item.cargo || '').toLowerCase().trim();
+        var cands = porCargo[key] || [];
+        var match = null;
+
+        for (var ci = 0; ci < cands.length; ci++) {
+          if (!vinculados[cands[ci].id]) { match = cands[ci]; break; }
+        }
+
+        if (match) {
+          var itemAtualizado = Object.assign({}, item, {
+            idColaborador:   match.id,
+            nomeColaborador: match.nome || match.email || match.id
+          });
+          ContratoRepository.adicionarPessoal(orgId, idContrato, meta.id, itemAtualizado);
+          vinculados[match.id] = true;
+          qtdVinculados++;
+        }
+      }
+    }
+
+    _audit('CONTRATO_PESSOAL_AUTO_VINCULADO', {
+      idContrato: idContrato, idMeta: idMeta || 'todas',
+      vinculados: qtdVinculados, orgId: orgId
+    });
+    return { ok: true, vinculados: qtdVinculados };
+  }
+
+  /**
+   * Painel de controle orçamentário de pessoal.
+   * Para cada item de pessoal do contrato, compara o custo previsto
+   * (orçado no item) com o custo real estimado do colaborador vinculado,
+   * usando a linha do tempo salarial do histórico de RH.
+   *
+   * Retorna: { previsto, realizado, saldo, desvioPercent, alerta, itens[] }
+   */
+  function painelOrcamentoPessoal(idContrato, orgId) {
+    orgId = orgId || _orgId();
+    var contrato = ContratoRepository.buscarPorId(orgId, idContrato);
+    if (!contrato) return { ok: false, erro: 'Contrato não encontrado.' };
+
+    var vigIniStr = contrato.vigenciaInicio || '';
+    var vigFimStr = contrato.vigenciaFim   || '';
+    if (!vigIniStr || !vigFimStr) {
+      return {
+        ok: true,
+        aviso: 'Vigência do contrato não definida — cálculo do realizado indisponível.',
+        itens: [], previsto: 0, realizado: 0, saldo: 0, desvioPercent: 0, alerta: 'ok'
+      };
+    }
+
+    var vigIni = new Date(vigIniStr + 'T00:00:00');
+    var vigFim = new Date(vigFimStr + 'T00:00:00');
+    if (isNaN(vigIni.getTime()) || isNaN(vigFim.getTime())) {
+      return {
+        ok: true,
+        aviso: 'Datas de vigência inválidas.',
+        itens: [], previsto: 0, realizado: 0, saldo: 0, desvioPercent: 0, alerta: 'ok'
+      };
+    }
+
+    // Carregar dados de pessoas uma única vez
+    var colaboradores = ColaboradorRepository.listar({ orgId: orgId });
+    var colabMap = {};
+    colaboradores.forEach(function(c) { colabMap[c.id] = c; });
+    var historico = ColaboradorRepository.listarHistorico({ orgId: orgId });
+
+    var totalPrevisto  = 0;
+    var totalRealizado = 0;
+    var itensPainel    = [];
+
+    (contrato.metas || []).forEach(function(meta) {
+      (meta.pessoal || []).forEach(function(item) {
+        var previsto = Number(item.custoTotal || 0);
+        totalPrevisto += previsto;
+
+        var realizadoItem    = 0;
+        var segmentos        = [];
+        var nomeColaborador  = item.nomeColaborador || null;
+        var alertaItem       = 'sem_vinculo';
+
+        if (item.idColaborador && colabMap[item.idColaborador]) {
+          var colab = colabMap[item.idColaborador];
+          nomeColaborador = colab.nome || colab.email || item.nomeColaborador;
+          var cr = _calcularCustoRealColaborador(colab, historico, vigIni, vigFim);
+          realizadoItem = cr.custoTotal;
+          segmentos     = cr.segmentos;
+          var pct = previsto > 0 ? (realizadoItem / previsto * 100) : (realizadoItem > 0 ? 999 : 0);
+          alertaItem = pct > 105 ? 'critico' : pct > 90 ? 'atencao' : pct < 50 ? 'folga' : 'ok';
+        }
+
+        totalRealizado += realizadoItem;
+        var desvio    = realizadoItem - previsto;
+        var pctItem   = previsto > 0 ? (realizadoItem / previsto * 100) : 0;
+
+        itensPainel.push({
+          id:              item.id,
+          idMeta:          meta.id,
+          cargo:           item.cargo,
+          qtd:             item.qtd    || 1,
+          qtdMeses:        item.qtdMeses || 12,
+          salarioAtual:    item.salarioAtual || 0,
+          previsto:        +previsto.toFixed(2),
+          realizado:       +realizadoItem.toFixed(2),
+          desvio:          +desvio.toFixed(2),
+          desvioPercent:   +pctItem.toFixed(1),
+          idColaborador:   item.idColaborador   || null,
+          nomeColaborador: nomeColaborador,
+          segmentos:       segmentos,
+          alerta:          alertaItem
+        });
+      });
+    });
+
+    var saldo        = totalPrevisto - totalRealizado;
+    var desvioTotal  = totalPrevisto > 0 ? (totalRealizado / totalPrevisto * 100) : 0;
+
+    return {
+      ok:             true,
+      previsto:       +totalPrevisto.toFixed(2),
+      realizado:      +totalRealizado.toFixed(2),
+      saldo:          +saldo.toFixed(2),
+      desvioPercent:  +desvioTotal.toFixed(1),
+      alerta:         desvioTotal > 105 ? 'critico' : desvioTotal > 90 ? 'atencao' : desvioTotal < 50 ? 'folga' : 'ok',
+      itens:          itensPainel,
+      vigenciaInicio: vigIniStr,
+      vigenciaFim:    vigFimStr
+    };
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -1072,9 +1459,11 @@ var ContratosEngine = (function () {
     excluirAtividade: excluirAtividade,
 
     // Pessoal
-    salvarPessoal:       salvarPessoal,
-    excluirPessoal:      excluirPessoal,
-    calcularCustoPessoal: calcularCustoPessoal,
+    salvarPessoal:          salvarPessoal,
+    excluirPessoal:         excluirPessoal,
+    calcularCustoPessoal:   calcularCustoPessoal,
+    autoVincularPessoal:    autoVincularPessoal,
+    painelOrcamentoPessoal: painelOrcamentoPessoal,
 
     // Rubricas / Itens de Despesa
     salvarRubrica:               salvarRubrica,

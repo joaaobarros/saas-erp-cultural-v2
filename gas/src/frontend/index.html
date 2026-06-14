@@ -3856,8 +3856,10 @@ select.form-control { cursor: pointer; }
               </div><!-- /cd-pes-modal -->
 
               <div id="cd-pes-lista"><p class="muted-text" style="padding:8px;">Carregando…</p></div>
-              <div style="margin-top:10px;">
+              <div id="cd-pes-orc-panel"></div>
+              <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn btn-ghost btn-sm" id="btn-cd-novo-pessoal" onclick="ContratosDetailUI.abrirPesModal()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Adicionar Pessoal</button>
+                <button class="btn btn-ghost btn-sm" id="btn-cd-pes-vincular" onclick="ContratosDetailUI.autoVincularPessoal()"><span class="ms ms-sm">link</span> Vincular Automaticamente</button>
               </div>
             </div><!-- /cd-tab-pessoal -->
 
@@ -9884,9 +9886,11 @@ var GAS = {
     salvarAtividade:  function(cid,mid,d,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar_atividade(cid,mid,d); },
     excluirAtividade: function(cid,mid,aid,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir_atividade(cid,mid,aid); },
     // ── Fase 12: Pessoal ──
-    salvarPessoal:   function(cid,mid,d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar_pessoal(cid,mid,d); },
-    excluirPessoal:  function(cid,mid,pid,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir_pessoal(cid,mid,pid); },
-    calcularPessoal: function(d,cb,err)               { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_calcular_pessoal(d); },
+    salvarPessoal:        function(cid,mid,d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar_pessoal(cid,mid,d); },
+    excluirPessoal:       function(cid,mid,pid,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir_pessoal(cid,mid,pid); },
+    calcularPessoal:      function(d,cb,err)               { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_calcular_pessoal(d); },
+    pessoalOrcamento:     function(cid,cb,err)             { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_pessoal_orcamento(cid); },
+    autoVincularPessoal:  function(cid,mid,cb,err)         { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_auto_vincular_pessoal(cid,mid||null); },
     // ── Fase 12: Rubricas (com idAtividade) ──
     salvarRubrica:  function(cid,mid,aid,d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_salvar_rubrica(cid,mid,aid,d); },
     excluirRubrica: function(cid,mid,aid,rid,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_excluir_rubrica(cid,mid,aid,rid); },
@@ -12587,13 +12591,18 @@ var ContratosDetailUI = (function() {
 
     if (!todos.length) {
       el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhum item de pessoal. Clique em "+ Adicionar Pessoal".</p>';
+      var orcEl = document.getElementById('cd-pes-orc-panel');
+      if (orcEl) orcEl.innerHTML = '';
       return;
     }
     el.innerHTML = todos.map(function(obj) {
       var p = obj.p; var m = obj.m;
+      var badgeVinculo = p.nomeColaborador
+        ? '<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;background:#e0f2fe;color:#0369a1;border-radius:20px;padding:1px 7px;margin-left:4px;"><span class="ms" style="font-size:10px;">person</span>'+escaparHtml(p.nomeColaborador)+'</span>'
+        : '<span style="font-size:10px;color:var(--muted);margin-left:4px;">sem vínculo</span>';
       return '<div class="pes-card">'
         +'<div class="pes-info">'
-        +'<div class="pes-cargo">'+escaparHtml(p.cargo||p.id)+'</div>'
+        +'<div class="pes-cargo">'+escaparHtml(p.cargo||p.id)+badgeVinculo+'</div>'
         +'<div class="pes-detalhe">'+escaparHtml(m.titulo||m.nome||'Meta')
         +' · '+escaparHtml(p.vincFunc||p.enquadramento||'')
         +' · '+escaparHtml(p.qtd||1)+'x · '+escaparHtml(p.qtdMeses||'?')+'m</div>'
@@ -12609,6 +12618,8 @@ var ContratosDetailUI = (function() {
         +'</div>'
         +'</div>';
     }).join('');
+    // Carregar painel de controle orçamentário (async)
+    if (_cid) _carregarPainelOrcamento(_cid);
   }
 
   function _popularMetaSelect(selectId) {
@@ -12637,6 +12648,7 @@ var ContratosDetailUI = (function() {
     if (metaId) document.getElementById('cd-pes-meta-id').value = metaId;
     // Carregar lista de colaboradores ativos para o seletor de importação
     var selColab = document.getElementById('cd-pes-colab-import');
+    var _targetColabId = p && p.idColaborador ? p.idColaborador : '';
     if (selColab && selColab.options.length <= 1) {
       GAS.pessoas.autocomplete(function(resp) {
         if (!resp || !resp.ok || !Array.isArray(resp.data)) return;
@@ -12646,7 +12658,10 @@ var ContratosDetailUI = (function() {
           opt.textContent = c.nome + (c.cargo ? ' — ' + c.cargo : '');
           if (selColab) selColab.appendChild(opt);
         });
+        if (_targetColabId && selColab) selColab.value = _targetColabId;
       }, function() {});
+    } else if (selColab) {
+      selColab.value = _targetColabId;
     }
     calcularPessoal();
     document.getElementById('cd-pes-modal').classList.remove('oculto');
@@ -12724,6 +12739,12 @@ var ContratosDetailUI = (function() {
     var cargo  = (document.getElementById('cd-pes-cargo').value||'').trim();
     if (!metaId) { Toast.aviso('Selecione a meta.'); return; }
     if (!cargo)  { Toast.aviso('Cargo é obrigatório.'); return; }
+    var selColab = document.getElementById('cd-pes-colab-import');
+    var idColaborador   = selColab && selColab.value ? selColab.value : null;
+    var nomeColaborador = null;
+    if (selColab && selColab.selectedIndex > 0) {
+      nomeColaborador = (selColab.options[selColab.selectedIndex].textContent || '').split(' — ')[0].trim() || null;
+    }
     var dados = {
       id:                  document.getElementById('cd-pes-id').value || undefined,
       cargo:               cargo,
@@ -12736,9 +12757,13 @@ var ContratosDetailUI = (function() {
       valeTransporte:      parseMoeda(document.getElementById('cd-pes-vt').value)||0,
       alimentacao:         parseMoeda(document.getElementById('cd-pes-alim').value)||0,
       descontoAlimentacao: parseMoeda(document.getElementById('cd-pes-desc-alim').value)||0,
-      planoSaude:          parseMoeda(document.getElementById('cd-pes-saude').value)||0
+      planoSaude:          parseMoeda(document.getElementById('cd-pes-saude').value)||0,
+      idColaborador:       idColaborador   || undefined,
+      nomeColaborador:     nomeColaborador || undefined
     };
-    if (!dados.id) delete dados.id;
+    if (!dados.id)             delete dados.id;
+    if (!dados.idColaborador)  delete dados.idColaborador;
+    if (!dados.nomeColaborador) delete dados.nomeColaborador;
     BtnGuard.wrap('btn-cd-pes-salvar', 'Salvando…', function(done) {
       GAS.contratos.salvarPessoal(_cid, metaId, dados, function(resp) {
         done();
@@ -12764,6 +12789,127 @@ var ContratosDetailUI = (function() {
     GAS.contratos.excluirPessoal(_cid, p.metaId, p.pesId, function(resp) {
       if (!resp || !resp.ok) { Toast.erro('Erro ao excluir.'); return; }
       Toast.sucesso('Excluído.'); _carregarContrato(_renderPessoal);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // CONTROLE ORÇAMENTÁRIO DE PESSOAL
+  // ══════════════════════════════════════════════════════════
+
+  function _carregarPainelOrcamento(cid) {
+    var panel = document.getElementById('cd-pes-orc-panel');
+    if (!panel) return;
+    panel.innerHTML = '<p class="muted-text" style="padding:8px 0;font-size:12px;">Calculando custo real via histórico salarial…</p>';
+    GAS.contratos.pessoalOrcamento(cid, function(resp) {
+      var p2 = document.getElementById('cd-pes-orc-panel');
+      if (!p2) return;
+      if (!resp || !resp.ok) { p2.innerHTML = ''; return; }
+      var d = resp.data || resp;
+      if (d.aviso) {
+        p2.innerHTML = '<p class="muted-text" style="font-size:11px;padding:6px 0;">'+escaparHtml(d.aviso)+'</p>';
+        return;
+      }
+      var corSaldo  = d.saldo < 0 ? '#ef4444' : (d.desvioPercent||0) > 85 ? '#f59e0b' : '#16a34a';
+      var corDevio  = (d.desvioPercent||0) > 105 ? '#ef4444' : (d.desvioPercent||0) > 85 ? '#f59e0b' : '#16a34a';
+      var html = '<div style="margin-top:16px;border-top:2px solid var(--border);padding-top:14px;">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px;">';
+      html += '<strong style="font-size:13px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm" style="color:var(--color-primary);">account_balance_wallet</span>Controle Orçamentário de Pessoal</strong>';
+      html += '</div>';
+
+      // Banner de alerta
+      if (d.saldo < 0) {
+        html += '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+        html += '<span class="ms ms-sm" style="color:#ef4444;">block</span>';
+        html += '<span style="font-size:12px;color:#991b1b;font-weight:600;">Custo real supera o orçamento em '+_R(Math.abs(d.saldo))+'. Novas vinculações bloqueadas pelo sistema.</span>';
+        html += '</div>';
+      } else if ((d.desvioPercent||0) > 85) {
+        html += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">';
+        html += '<span class="ms ms-sm" style="color:#d97706;">warning</span>';
+        html += '<span style="font-size:12px;color:#92400e;font-weight:600;">Atenção: '+(d.desvioPercent||0).toFixed(1)+'% do orçamento comprometido. Saldo restante: '+_R(d.saldo)+'.</span>';
+        html += '</div>';
+      }
+
+      // Stats
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px;">';
+      [
+        {l:'Previsto (orçado)',     v:_R(d.previsto||0),           cor:'var(--color-primary)'},
+        {l:'Realizado (histórico)', v:_R(d.realizado||0),          cor:'var(--color-accent)'},
+        {l:'Saldo disponível',      v:_R(d.saldo||0),              cor:corSaldo},
+        {l:'% comprometido',        v:(d.desvioPercent||0).toFixed(1)+'%', cor:corDevio}
+      ].forEach(function(s) {
+        html += '<div style="background:var(--surface1,#f8fafc);border-radius:8px;padding:10px 12px;border:1px solid var(--border);">';
+        html += '<div style="font-size:15px;font-weight:700;color:'+s.cor+';">'+s.v+'</div>';
+        html += '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+s.l+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // Tabela por item
+      if (d.itens && d.itens.length) {
+        html += '<div style="overflow-x:auto;">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        html += '<thead><tr style="border-bottom:2px solid var(--border);">';
+        ['Cargo','Colaborador vinculado','Previsto','Realizado','Desvio','Períodos','Status'].forEach(function(h) {
+          html += '<th style="text-align:left;padding:5px 8px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;">'+h+'</th>';
+        });
+        html += '</tr></thead><tbody>';
+
+        d.itens.forEach(function(item) {
+          var desvioPos = (item.desvio||0) > 0;
+          var corDev    = desvioPos ? '#ef4444' : ((item.desvio||0) < 0 ? '#16a34a' : 'var(--text)');
+          var icone     = {critico:'⛔',atencao:'⚠️',ok:'✅',folga:'💰',sem_vinculo:'🔗'}[item.alerta] || '—';
+          var rowStyle  = desvioPos ? 'background:#fff5f5;' : '';
+          var segInfo   = (item.segmentos && item.segmentos.length > 1)
+            ? item.segmentos.length + ' per.'
+            : (item.segmentos && item.segmentos.length === 1 ? '1 per.' : '—');
+          var segTip = '';
+          if (item.segmentos && item.segmentos.length) {
+            segTip = item.segmentos.map(function(s) {
+              return fmtDataPtBR(s.from||'')+' → '+fmtDataPtBR(s.to||'')+': '+_R(s.salario)+'/mês × '+Number(s.meses||0).toFixed(1)+'m = '+_R(s.custoTotal||0);
+            }).join('\n');
+          }
+          html += '<tr style="border-bottom:1px solid var(--border);'+rowStyle+'">';
+          html += '<td style="padding:5px 8px;font-weight:500;">'+escaparHtml(item.cargo||'')+'</td>';
+          html += '<td style="padding:5px 8px;">';
+          if (item.nomeColaborador) {
+            html += '<span style="color:var(--text);">'+escaparHtml(item.nomeColaborador)+'</span>';
+          } else {
+            html += '<span style="color:var(--muted);font-style:italic;">sem vínculo</span>';
+          }
+          html += '</td>';
+          html += '<td style="padding:5px 8px;white-space:nowrap;">'+_R(item.previsto||0)+'</td>';
+          html += '<td style="padding:5px 8px;white-space:nowrap;">'+_R(item.realizado||0)+'</td>';
+          html += '<td style="padding:5px 8px;white-space:nowrap;color:'+corDev+';font-weight:600;">'+(desvioPos?'+':'')+_R(item.desvio||0)+'</td>';
+          html += '<td style="padding:5px 8px;white-space:nowrap;" title="'+escaparHtml(segTip)+'">'+escaparHtml(segInfo)+'</td>';
+          html += '<td style="padding:5px 8px;">'+icone+'</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+
+      html += '<p style="font-size:10px;color:var(--muted);margin-top:8px;">Vigência: '+fmtDataPtBR(d.vigenciaInicio||'')+' a '+fmtDataPtBR(d.vigenciaFim||'')+' · Passe o mouse sobre "Períodos" para ver a linha do tempo salarial.</p>';
+      html += '</div>';
+      p2.innerHTML = html;
+    }, function() {
+      var p3 = document.getElementById('cd-pes-orc-panel');
+      if (p3) p3.innerHTML = '';
+    });
+  }
+
+  function autoVincularPessoal() {
+    var btn = document.getElementById('btn-cd-pes-vincular');
+    BtnGuard.wrap(btn, 'Vinculando…', function(done) {
+      GAS.contratos.autoVincularPessoal(_cid, null, function(resp) {
+        done();
+        if (!resp || !resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao vincular.'); return; }
+        var v = (resp.data && resp.data.vinculados) || 0;
+        if (v > 0) {
+          Toast.sucesso(v + ' vínculo(s) criado(s) automaticamente.');
+          _carregarContrato(_renderPessoal);
+        } else {
+          Toast.aviso('Nenhum novo vínculo encontrado. Verifique se os cargos dos itens de pessoal correspondem aos cargos dos colaboradores cadastrados.');
+        }
+      }, function(e) { done(); Toast.erro(e.message||e); });
     });
   }
 
@@ -13266,6 +13412,7 @@ var ContratosDetailUI = (function() {
     salvarPessoal: salvarPessoal,
     _editarPes: _editarPes,
     _excluirPes: _excluirPes, _confirmarExcluirPes: _confirmarExcluirPes,
+    autoVincularPessoal: autoVincularPessoal,
     // Indicadores
     abrirSubInd: abrirSubInd,
     abrirIndrModal: abrirIndrModal,

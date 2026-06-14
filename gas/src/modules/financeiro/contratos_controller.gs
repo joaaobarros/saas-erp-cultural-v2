@@ -253,6 +253,37 @@ function ctrl_contratos_calcular_pessoal(dados) {
   }, 'ctrl_contratos_calcular_pessoal');
 }
 
+/**
+ * Painel de controle orçamentário de pessoal.
+ * Retorna previsto × realizado × saldo para cada item de pessoal,
+ * com custo real calculado via histórico salarial do colaborador vinculado.
+ */
+function ctrl_contratos_pessoal_orcamento(idContrato) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratos();
+    var nivel = _nivelContratos(ctx.email);
+    if (_LEITURA_CONTRATOS.indexOf(nivel) === -1)
+      throw new Error('Acesso negado.');
+    if (!idContrato) throw new Error('idContrato é obrigatório.');
+    return ContratosEngine.painelOrcamentoPessoal(idContrato, ctx.orgId);
+  }, 'ctrl_contratos_pessoal_orcamento');
+}
+
+/**
+ * Vincula automaticamente colaboradores aos itens de pessoal sem vínculo,
+ * por correspondência de cargo. idMeta opcional: se omitido, processa todas.
+ */
+function ctrl_contratos_auto_vincular_pessoal(idContrato, idMeta) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratos();
+    var nivel = _nivelContratos(ctx.email);
+    if (_ESCRITA_CONTRATOS.indexOf(nivel) === -1)
+      throw new Error('Apenas equipe financeira pode vincular pessoal.');
+    if (!idContrato) throw new Error('idContrato é obrigatório.');
+    return ContratosEngine.autoVincularPessoal(idContrato, idMeta || null, ctx.orgId);
+  }, 'ctrl_contratos_auto_vincular_pessoal');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // RUBRICAS / ITENS DE DESPESA
 // ═══════════════════════════════════════════════════════════════

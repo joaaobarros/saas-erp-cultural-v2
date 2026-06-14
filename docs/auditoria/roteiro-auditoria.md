@@ -1490,7 +1490,29 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 51 (2026-06-14) → SESSÃO 52
+## HANDOFF ATUAL — SESSÃO 51b (2026-06-14) → SESSÃO 52
+
+### Estado: Deploy @891 · Pessoal: controle orçamentário real via histórico salarial + auto-vínculo + guard de saldo
+
+### O que foi feito nesta sessão (s51b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @891 | Feat: timeline salarial | `contratos_engine._timelineSalarial()` — reconstrói linha do tempo de salários do colaborador usando eventos `reajuste`/`promocao`/`desligamento` do `historico_rh.json`; corretamente clampada à vigência do contrato e ao período ativo (admissão → desligamento) |
+| @891 | Feat: custo real histórico | `_calcularCustoRealColaborador()` — percorre segmentos da timeline, chama `calcularCustoPessoal` por segmento com meses fracionários, retorna `{custoTotal, meses, segmentos[]}` |
+| @891 | Feat: auto-vínculo por cargo | `autoVincularPessoal(idContrato, idMeta, orgId)` — match automático colaborador ↔ item de pessoal por cargo (case-insensitive), respeitando período ativo vs. vigência; salva com `ContratoRepository.adicionarPessoal`; exposto via `ctrl_contratos_auto_vincular_pessoal` |
+| @891 | Feat: painel orçamentário | `painelOrcamentoPessoal(idContrato, orgId)` — agrega previsto × realizado × saldo × desvio% por item e total; alerta `ok`/`atencao`/`critico`/`folga`; exposto via `ctrl_contratos_pessoal_orcamento` |
+| @891 | Feat: guard de saldo | `_assertSaldoPessoalVinculo()` — chamado em `salvarPessoal` quando `idColaborador` presente; bloqueia se `totalRealizado > totalPrevisto` |
+| @891 | Feat: UI orçamento | Card "Controle Orçamentário de Pessoal" abaixo da lista de pessoal: stats (previsto/realizado/saldo/%), tabela por item com badge colaborador + desvio colorido + tooltip com períodos salariais; banner ⛔ quando saldo negativo |
+| @891 | Feat: botão Vincular Auto | Botão "Vincular Automaticamente" na barra da aba Pessoal → chama `autoVincularPessoal` com BtnGuard → recarrega lista + painel |
+| @891 | Fix: vínculo persistido no salvar | `salvarPessoal` (JS) agora inclui `idColaborador`+`nomeColaborador` lidos do select; `abrirPesModal` restaura o colaborador selecionado ao editar item existente |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) vincular automaticamente → verificar painel; (2) editar item com vínculo → colaborador pré-selecionado; (3) tentar vínculo com custo > previsto → deve bloquear com mensagem
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 51 (2026-06-14) → SESSÃO 51b
 
 ### Estado: Deploy @880 · Pessoal: fórmula CLT corrigida + benefícios no perfil + importar colaborador
 
