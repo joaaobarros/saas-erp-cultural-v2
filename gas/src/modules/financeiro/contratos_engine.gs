@@ -413,6 +413,13 @@ var ContratosEngine = (function () {
     } catch (_) { return 0; }
   }
 
+  function _getEncargosProvisaoFeriasPerc() {
+    try {
+      var cfg = readJSON('config_org.json');
+      return Number(((cfg || {}).parametrosRH || {}).encargos_provisao_ferias_perc || 0.35);
+    } catch (_) { return 0.35; }
+  }
+
   /**
    * Calcula todos os campos derivados de um item de pessoal.
    * Alíquotas lidas de encargos_trabalhistas.json (Admin → Encargos) — nunca hardcoded.
@@ -423,8 +430,8 @@ var ContratosEngine = (function () {
    *   V    = (VT − descVT) + (VA − descVA) + BSF + (Plano − DescPlano)
    *          descVT = min(III × 6%, VT bruto); BSF e descPlanoPerc de config_org.json
    *   VI   = Férias + 13° + FGTS Rescisório
-   *          Férias    = (III + IV) / 3 / 12   (apenas adicional 1/3 + encargos)
-   *          13°       = (III + IV) / 12        (13° completo + encargos)
+   *          Férias    = III × (1 + encProvFeriasPerc) / 3 / 12  (taxa simplificada de config)
+   *          13°       = (III + IV) / 12        (13° completo + encargos reais)
    *          FGTS Resc = fgts × 40%             (multa rescisória proporcional)
    *   VII  = III + IV + V + VI   (custo mensal)
    *   VIII = VII × qtdMeses      (custo total)
@@ -467,9 +474,11 @@ var ContratosEngine = (function () {
     var totalBeneficios     = vtLiq + (alimentacao - descontoAlimentacao) + beneficioSocialFam + (planoSaude - descontoPlanoSaude);
 
     // VI — Provisões mensais
-    // Férias: apenas o adicional 1/3 + encargos sobre ele (salário base já é custo mensal)
-    var ferias         = (totalSalario + totalEncargos) / 3 / 12;
-    // 13°: um mês completo de salário + todos os encargos patronais
+    // Férias: adicional 1/3 com taxa simplificada de encargos (35% padrão — config_org.json)
+    // A taxa simplificada é padrão de mercado; 13° usa encargos reais do mês
+    var encProvFerias  = _getEncargosProvisaoFeriasPerc();
+    var ferias         = totalSalario * (1 + encProvFerias) / 3 / 12;
+    // 13°: um mês completo de salário + todos os encargos patronais reais
     var decimoTerceiro = (totalSalario + totalEncargos) / 12;
     // FGTS rescisório: 40% do FGTS mensal (passivo de multa em demissão sem justa causa)
     var fgtsRescisao   = fgts * 0.40;
@@ -499,7 +508,8 @@ var ContratosEngine = (function () {
       ferias:              +ferias.toFixed(2),
       decimoTerceiro:      +decimoTerceiro.toFixed(2),
       fgtsRescisao:        +fgtsRescisao.toFixed(2),
-      _descPlanoSaudePerc: descPlanoSaudePerc,
+      _descPlanoSaudePerc:   descPlanoSaudePerc,
+      _encProvFeriasPerc:    encProvFerias,
       totalProvisoes:      +totalProvisoes.toFixed(2),
       custoMensal:         +custoMensal.toFixed(2),
       custoTotal:          +custoTotal.toFixed(2),
