@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @873 · Manual 3-camadas + IA dual-provider Groq→OpenRouter
+> Deploy atual: @874 · Ações: Fases de projeto + cronograma + filtro "Minhas ações"
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

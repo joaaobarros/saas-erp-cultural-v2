@@ -5906,6 +5906,10 @@ select.form-control { cursor: pointer; }
             <option value="atividade_territorial">Atividade Territorial</option>
             <option value="outro">Outro</option>
           </select>
+          <button id="acao-filtro-minhas" class="btn btn-secondary btn-sm" data-bg-skip="1"
+            onclick="AcoesUI._toggleMinhasAcoes(this)" title="Exibir apenas ações em que estou envolvido">
+            <span class="ms ms-sm">person</span> Minhas ações
+          </button>
           <button class="btn btn-ghost btn-sm" id="acao-refresh-btn"
             onclick="BtnGuard.wrap('acao-refresh-btn','Atualizando…',function(done){ AcoesUI._recarregar(done); })"
             title="Atualizar">
@@ -6101,6 +6105,9 @@ select.form-control { cursor: pointer; }
             <button class="tab-btn" onclick="AcoesUI._abrirTab('contratacoes_acao', this)" data-tab="contratacoes_acao">
               <span class="ms ms-sm">handshake</span> Contratações
             </button>
+            <button class="tab-btn" onclick="AcoesUI._abrirTab('fases', this)" data-tab="fases">
+              <span class="ms ms-sm">view_timeline</span> Fases
+            </button>
             <button class="tab-btn" onclick="AcoesUI._abrirTab('mapa', this)" data-tab="mapa">
               <span class="ms ms-sm">map</span> Mapa do Evento
             </button>
@@ -6169,6 +6176,18 @@ select.form-control { cursor: pointer; }
               <button class="btn btn-primary btn-sm" onclick="SolicitacoesUI.novaParaAcao(AcoesUI.getPainelAcao()&&AcoesUI.getPainelAcao().id)" data-bg-skip="1"><span class="ms ms-sm">add</span> Nova Contratação</button>
             </div>
             <div id="painel-contratacoes-acao-lista"><p class="muted-text" style="font-size:13px;">Carregando…</p></div>
+          </div>
+          <!-- Aba Fases do Projeto -->
+          <div id="painel-tab-fases" class="oculto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <p class="muted-text" style="font-size:12px;margin:0;">Pipeline de fases deste projeto</p>
+              <button id="btn-nova-fase-acao" class="btn btn-primary btn-sm"
+                onclick="BtnGuard.wrap('btn-nova-fase-acao','…',function(done){ AcoesUI._abrirModalFase(null); done(); })">
+                <span class="ms ms-sm">add</span> Nova Fase
+              </button>
+            </div>
+            <div id="painel-fases-cronograma" style="margin-bottom:20px;"></div>
+            <div id="painel-fases-container"></div>
           </div>
           <!-- Aba Mapa do Evento -->
           <div id="painel-tab-mapa" class="oculto" style="height:100%;min-height:480px;overflow:hidden;position:relative;">
@@ -8578,12 +8597,26 @@ select.form-control { cursor: pointer; }
         <!-- Tab: DOCUMENTOS -->
         <div id="rh-tab-documentos" class="rh-tab-pane">
           <div class="card">
-            <div style="padding:60px 20px;text-align:center;">
-              <span class="ms" style="font-size:56px;color:var(--muted)">folder_open</span>
-              <h3 style="margin:16px 0 8px;font-size:18px;font-weight:600;">Documentos</h3>
-              <p style="font-size:14px;color:var(--text2);max-width:400px;margin:0 auto;">Repositório de documentos dos colaboradores (contratos, atestados, certificados). Em desenvolvimento.</p>
-              <span class="badge badge-muted" style="margin-top:12px;display:inline-block;">Em breve</span>
+            <div class="card-header">
+              <div class="card-titulo"><span class="ms">folder_open</span> Documentos</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="rh-doc-filtro-colab" class="form-input select-sm" onchange="RhUI.carregarDocumentos()">
+                  <option value="">Todos os colaboradores</option>
+                </select>
+                <select id="rh-doc-filtro-tipo" class="form-input select-sm" onchange="RhUI.carregarDocumentos()">
+                  <option value="">Todos os tipos</option>
+                  <option value="contrato">Contrato</option>
+                  <option value="atestado">Atestado</option>
+                  <option value="certificado">Certificado</option>
+                  <option value="treinamento">Treinamento</option>
+                  <option value="identificacao">Identificação</option>
+                  <option value="outros">Outros</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarDocumentos()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-primario btn-sm" id="rh-doc-btn-add" onclick="RhUI.abrirFormDocumento(null)" data-bg-skip="1"><span class="ms ms-sm">add</span> Documento</button>
+              </div>
             </div>
+            <div id="rh-doc-lista"></div>
           </div>
         </div>
 
@@ -8830,6 +8863,13 @@ select.form-control { cursor: pointer; }
               <div style="font-size:11px;color:var(--text2);margin-top:4px;margin-left:28px;">Estimativa gerencial — não substitui cálculo jurídico oficial</div>
             </div>
             <div style="padding:20px 24px;">
+              <div class="form-group" style="max-width:700px;margin-bottom:20px;">
+                <label class="form-label">Colaborador</label>
+                <select id="rh-resc-colab" class="form-control" onchange="RhUI._aoSelecionarColabRescisao()">
+                  <option value="">Preenchimento manual…</option>
+                </select>
+                <div id="rh-resc-colab-info" style="font-size:11px;color:var(--text2);margin-top:4px;display:none;"></div>
+              </div>
               <div class="form-section-title" style="margin-top:0;">Dados do Contrato</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;">
                 <div class="form-group"><label class="form-label">Salário Bruto (R$)</label><input type="text" inputmode="decimal" id="rh-resc-salario" class="form-control" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this)"></div>
@@ -9686,7 +9726,11 @@ var GAS = {
     holeriteProcessarFolha: function(p,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_processarFolha(p||{}); },
     holeriteMarcarPago:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_marcarPago(id); },
     holeriteCancelar:       function(id,m,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_cancelar(id,m||''); },
-    holeriteExportarCSV:    function(mr,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_exportarCSV(mr); }
+    holeriteExportarCSV:    function(mr,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_holerite_exportarCSV(mr); },
+    // Documentos RH
+    listarDocumentos:       function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_listar_documentos(id||null); },
+    salvarDocumento:        function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_salvar_documento(d); },
+    excluirDocumento:       function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_excluir_documento(id); }
   },
   // Solicitações de Reserva (workflow de aprovação)
   solicitacoes: {
@@ -9972,6 +10016,8 @@ var GAS = {
     mudarStatus: function(p,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_mudar_status(p); },
     excluir:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_excluir(id); },
     painel:      function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_painel(id); },
+    salvarFase:  function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_salvar_fase(d); },
+    excluirFase: function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_excluir_fase(d); },
     mapaAcao: {
       listar:         function(acaoId,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_listar(acaoId); },
       obter:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_obter(id); },
@@ -25983,6 +26029,7 @@ var AcoesUI = (function() {
   var _lista    = [];
   var _carregado = false;
   var _modoView  = 'kanban'; // 'kanban' | 'lista'
+  var _filtroMinhas = false; // filtro "ações em que estou envolvido"
 
   // ── Referência pública da ação atualmente aberta no painel ──
   var _painelAcao = null;
@@ -26084,10 +26131,16 @@ var AcoesUI = (function() {
     var busca   = (document.getElementById('acao-busca')      || {}).value || '';
     var filtroS = (document.getElementById('acao-filtro-status') || {}).value || '';
     var filtroT = (document.getElementById('acao-filtro-tipo')   || {}).value || '';
+    var meuEmail = (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '';
 
     var lista = _lista.filter(function(a) {
       if (filtroS && a.status !== filtroS) return false;
       if (filtroT && a.tipo   !== filtroT) return false;
+      if (_filtroMinhas && meuEmail) {
+        var eqEmails = (a.equipe || []).map(function(e) { return typeof e === 'string' ? e : (e.email || ''); });
+        var envolvido = a.responsavel === meuEmail || eqEmails.indexOf(meuEmail) !== -1;
+        if (!envolvido) return false;
+      }
       if (busca) {
         var b = busca.toLowerCase();
         return (a.nome||'').toLowerCase().indexOf(b) !== -1 ||
@@ -26182,6 +26235,16 @@ var AcoesUI = (function() {
   // ────────────────────────────────────────────────────────
 
   function _filtrar() {
+    _renderizar();
+  }
+
+  function _toggleMinhasAcoes(btn) {
+    _filtroMinhas = !_filtroMinhas;
+    if (btn) {
+      btn.style.background = _filtroMinhas ? 'var(--color-primary,#4f46e5)' : '';
+      btn.style.color      = _filtroMinhas ? '#fff' : '';
+      btn.style.borderColor = _filtroMinhas ? 'var(--color-primary,#4f46e5)' : '';
+    }
     _renderizar();
   }
 
@@ -26371,11 +26434,15 @@ var AcoesUI = (function() {
   }
 
   function _abrirTab(tabId, btnEl) {
-    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro','contratacoes_acao','mapa'];
+    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro','contratacoes_acao','fases','mapa'];
     tabs.forEach(function(t) {
       var content = document.getElementById('painel-tab-'+t);
       if (content) content.classList.toggle('oculto', t !== tabId);
     });
+    // Lazy-load aba Fases
+    if (tabId === 'fases' && _painelAcao) {
+      _renderizarFases(_painelAcao);
+    }
     // Lazy-load aba Mapa
     if (tabId === 'mapa' && _painelAcao && typeof MapaAcaoUI !== 'undefined') {
       MapaAcaoUI.aoAbrir(_painelAcao);
@@ -26691,6 +26758,193 @@ var AcoesUI = (function() {
     if (btn) btn.addEventListener('click', toggleView);
   })();
 
+  // ═══════════════════════════════════════════════════════════
+  // FASES DO PROJETO
+  // ═══════════════════════════════════════════════════════════
+
+  var _FASE_STATUS_LABEL = { pendente:'Pendente', em_andamento:'Em andamento', concluida:'Concluída', cancelada:'Cancelada' };
+  var _FASE_STATUS_COR   = { pendente:'#94a3b8', em_andamento:'#3b82f6', concluida:'#10b981', cancelada:'#ef4444' };
+  var _faseEditando = null;
+
+  function _renderizarFases(acao) {
+    var fases = (acao && acao.fases) || [];
+    var c  = document.getElementById('painel-fases-container');
+    var tl = document.getElementById('painel-fases-cronograma');
+    if (!c) return;
+
+    if (tl) {
+      var comDatas = fases.filter(function(f) { return f.dataInicio && f.dataFim; });
+      if (comDatas.length > 0) {
+        var dMin = comDatas.reduce(function(m,f){ return f.dataInicio < m ? f.dataInicio : m; }, comDatas[0].dataInicio);
+        var dMax = comDatas.reduce(function(m,f){ return f.dataFim   > m ? f.dataFim   : m; }, comDatas[0].dataFim);
+        var span = Math.max(1, new Date(dMax) - new Date(dMin));
+        var barras = comDatas.map(function(f) {
+          var left  = Math.max(0, (new Date(f.dataInicio) - new Date(dMin)) / span * 100);
+          var width = Math.max(2, (new Date(f.dataFim) - new Date(f.dataInicio)) / span * 100);
+          var cor   = _FASE_STATUS_COR[f.status] || '#94a3b8';
+          return '<div style="position:relative;height:26px;margin-bottom:6px;">' +
+            '<div style="position:absolute;left:0;right:0;top:8px;height:6px;background:var(--surface2,#f1f5f9);border-radius:3px;"></div>' +
+            '<div style="position:absolute;left:'+left+'%;width:'+width+'%;top:8px;height:6px;background:'+cor+';border-radius:3px;min-width:4px;" title="'+escaparHtml(f.nome)+'"></div>' +
+            '<div style="position:absolute;left:'+left+'%;top:17px;font-size:10.5px;color:var(--text2,#64748b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">'+escaparHtml(f.nome)+'</div>' +
+          '</div>';
+        }).join('');
+        tl.innerHTML = '<div style="padding:12px 14px 4px;background:var(--surface2,#f8fafc);border-radius:8px;margin-bottom:16px;">' +
+          '<p style="font-size:11px;font-weight:600;color:var(--muted,#94a3b8);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;">Cronograma</p>' +
+          '<div style="padding:0 0 28px;">'+barras+'</div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted,#94a3b8);border-top:1px solid var(--border,#e2e8f0);padding-top:4px;">' +
+            '<span>'+escaparHtml(fmtDataPtBR(dMin))+'</span><span>'+escaparHtml(fmtDataPtBR(dMax))+'</span>' +
+          '</div></div>';
+      } else {
+        tl.innerHTML = '';
+      }
+    }
+
+    if (fases.length === 0) {
+      c.innerHTML = '<div style="text-align:center;padding:32px 0;">' +
+        '<span class="ms" style="font-size:40px;color:var(--muted,#94a3b8);">view_timeline</span>' +
+        '<p style="font-weight:600;margin:8px 0 4px;">Nenhuma fase criada</p>' +
+        '<p class="muted-text" style="font-size:13px;">Crie fases para organizar o pipeline deste projeto.</p>' +
+      '</div>';
+      return;
+    }
+
+    var sorted = fases.slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+    c.innerHTML = sorted.map(function(f, idx) {
+      var cor   = _FASE_STATUS_COR[f.status] || '#94a3b8';
+      var label = _FASE_STATUS_LABEL[f.status] || f.status;
+      var per   = f.dataInicio && f.dataFim ? fmtDataPtBR(f.dataInicio)+' → '+fmtDataPtBR(f.dataFim)
+                : f.dataInicio ? 'Início '+fmtDataPtBR(f.dataInicio)
+                : f.dataFim   ? 'Até '+fmtDataPtBR(f.dataFim) : '';
+      var faseJson = JSON.stringify(f).replace(/"/g,"'");
+      return '<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border,#e2e8f0);border-left:4px solid '+cor+';border-radius:8px;margin-bottom:8px;background:var(--surface,#fff);">' +
+        '<div style="width:26px;height:26px;border-radius:50%;background:'+cor+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+          '<span style="color:#fff;font-size:12px;font-weight:700;">'+(idx+1)+'</span>' +
+        '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--text,#1e293b);margin-bottom:4px;">'+escaparHtml(f.nome||'')+'</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+            '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:'+cor+'22;color:'+cor+';font-weight:600;">'+escaparHtml(label)+'</span>' +
+            (per ? '<span style="font-size:11px;color:var(--muted,#94a3b8);">'+escaparHtml(per)+'</span>' : '') +
+          '</div>' +
+          (f.descricao ? '<p style="font-size:12px;color:var(--text2,#64748b);margin:5px 0 0;line-height:1.5;">'+escaparHtml(f.descricao)+'</p>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0;">' +
+          '<button class="btn btn-secondary btn-sm" data-bg-skip="1" title="Editar" onclick="AcoesUI._abrirModalFase('+faseJson+')"><span class="ms ms-sm">edit</span></button>' +
+          '<button class="btn btn-secondary btn-sm" data-bg-skip="1" title="Excluir" style="color:var(--color-error,#ef4444);" onclick="AcoesUI._excluirFase(\''+escaparHtml(f.id)+'\',\''+escaparHtml(acao.id)+'\',this)"><span class="ms ms-sm">delete</span></button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function _abrirModalFase(fase) {
+    var acaoAtual = _painelAcao;
+    if (!acaoAtual) return;
+    _faseEditando = fase || null;
+    var statusOpts = Object.keys(_FASE_STATUS_LABEL).map(function(s) {
+      var sel = (fase && fase.status===s)||(!fase&&s==='pendente') ? ' selected' : '';
+      return '<option value="'+s+'"'+sel+'>'+_FASE_STATUS_LABEL[s]+'</option>';
+    }).join('');
+    var ordemPad = fase ? (typeof fase.ordem==='number'?fase.ordem:0) : (acaoAtual.fases||[]).length;
+    var html = '<div style="padding:24px;">' +
+      '<h3 style="margin:0 0 20px;font-size:16px;font-weight:700;">'+(fase?'Editar Fase':'Nova Fase')+'</h3>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div class="form-group" style="grid-column:1/-1;">' +
+          '<label class="form-label">Nome da Fase *</label>' +
+          '<input type="text" id="fase-f-nome" class="form-control" placeholder="Ex: Planejamento, Captação, Entrega…" value="'+escaparHtml(fase&&fase.nome||'')+'">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">Status</label>' +
+          '<select id="fase-f-status" class="form-control">'+statusOpts+'</select>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">Ordem</label>' +
+          '<input type="number" id="fase-f-ordem" class="form-control" min="0" value="'+ordemPad+'">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">Data Início</label>' +
+          '<input type="date" id="fase-f-inicio" class="form-control" value="'+escaparHtml(fase&&fase.dataInicio||'')+'">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">Data Fim</label>' +
+          '<input type="date" id="fase-f-fim" class="form-control" value="'+escaparHtml(fase&&fase.dataFim||'')+'">' +
+        '</div>' +
+        '<div class="form-group" style="grid-column:1/-1;">' +
+          '<label class="form-label">Descrição</label>' +
+          '<textarea id="fase-f-desc" class="form-control" rows="2" placeholder="Breve descrição…">'+escaparHtml(fase&&fase.descricao||'')+'</textarea>' +
+        '</div>' +
+        '<div id="fase-f-erro" class="error-text oculto" style="grid-column:1/-1;"></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:16px;">' +
+        '<button id="btn-fase-salvar" class="btn btn-primary" onclick="BtnGuard.wrap(\'btn-fase-salvar\',\'Salvando…\',AcoesUI._salvarFase)">Salvar</button>' +
+        '<button class="btn btn-secondary" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+      '</div>' +
+    '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _salvarFase(done) {
+    var acaoAtual = _painelAcao;
+    if (!acaoAtual) { if(done)done(); return; }
+    var nome = (document.getElementById('fase-f-nome')||{}).value||'';
+    if (!nome.trim()) {
+      var erEl = document.getElementById('fase-f-erro');
+      if (erEl) { erEl.textContent = 'Nome da fase é obrigatório.'; erEl.classList.remove('oculto'); }
+      if(done)done();
+      return;
+    }
+    var dados = {
+      acaoId: acaoAtual.id,
+      fase: {
+        id:         _faseEditando ? _faseEditando.id : undefined,
+        nome:       nome.trim(),
+        status:     (document.getElementById('fase-f-status')||{}).value||'pendente',
+        ordem:      parseInt((document.getElementById('fase-f-ordem')||{}).value||'0',10),
+        dataInicio: (document.getElementById('fase-f-inicio')||{}).value||'',
+        dataFim:    (document.getElementById('fase-f-fim')||{}).value||'',
+        descricao:  ((document.getElementById('fase-f-desc')||{}).value||'').trim()
+      }
+    };
+    GAS.acoes.salvarFase(dados, function(r) {
+      if(done)done();
+      if (!r||!r.ok) { Toast.erro((r&&r.erro)||(r&&r.error&&r.error.message)||'Erro ao salvar fase.'); return; }
+      _painelAcao.fases = _painelAcao.fases||[];
+      if (dados.fase.id) {
+        for (var i=0;i<_painelAcao.fases.length;i++) {
+          if (_painelAcao.fases[i].id===dados.fase.id) { _painelAcao.fases[i]=Object.assign({},_painelAcao.fases[i],dados.fase); break; }
+        }
+      } else {
+        dados.fase.id = r.data&&r.data.faseId;
+        _painelAcao.fases.push(dados.fase);
+      }
+      for (var j=0;j<_lista.length;j++) { if (_lista[j].id===acaoAtual.id) { _lista[j].fases=_painelAcao.fases; break; } }
+      var m = document.querySelector('.modal-simples'); if (m) m.remove();
+      _renderizarFases(_painelAcao);
+      Toast.sucesso(_faseEditando ? 'Fase atualizada.' : 'Fase criada.');
+      _faseEditando = null;
+    }, function(err) { if(done)done(); Toast.erro(err||'Erro de comunicação.'); });
+  }
+
+  function _excluirFase(faseId, acaoId) {
+    _abrirModalConfirmar({
+      titulo: 'Excluir Fase',
+      icone: 'delete_forever',
+      corIcone: '#ef4444',
+      mensagem: 'Excluir esta fase? Esta ação não pode ser desfeita.',
+      labelConfirmar: 'Excluir',
+      cb: function() {
+        GAS.acoes.excluirFase({ acaoId: acaoId, faseId: faseId }, function(r) {
+          if (!r||!r.ok) { Toast.erro((r&&r.erro)||(r&&r.error&&r.error.message)||'Erro ao excluir.'); return; }
+          if (_painelAcao&&_painelAcao.id===acaoId) {
+            _painelAcao.fases = (_painelAcao.fases||[]).filter(function(f){ return f.id!==faseId; });
+            for (var j=0;j<_lista.length;j++) { if (_lista[j].id===acaoId) { _lista[j].fases=_painelAcao.fases; break; } }
+            _renderizarFases(_painelAcao);
+          }
+          Toast.sucesso('Fase excluída.');
+        }, function(err) { Toast.erro(err||'Erro de comunicação.'); });
+      }
+    });
+  }
+
   return {
     aoAbrir:               aoAbrir,
     carregar:              carregar,
@@ -26700,12 +26954,16 @@ var AcoesUI = (function() {
     abrirPainel:           abrirPainel,
     fecharPainel:          fecharPainel,
     _filtrar:              _filtrar,
+    _toggleMinhasAcoes:    _toggleMinhasAcoes,
     _recarregar:           _recarregar,
     _abrirTab:             _abrirTab,
     _confirmarMudarStatus: _confirmarMudarStatus,
     _executarMudarStatus:  _executarMudarStatus,
     _addComprovacaoEnc:    _addComprovacaoEnc,
     _confirmarEncerramento: _confirmarEncerramento,
+    _abrirModalFase:       _abrirModalFase,
+    _salvarFase:           _salvarFase,
+    _excluirFase:          _excluirFase,
     getPainelAcao:         function() { return _painelAcao; }
   };
 
@@ -34563,9 +34821,11 @@ var RhUI = (function() {
     if (tab==='historico')   carregarHistorico();
     if (tab==='avaliacoes')  carregarAvaliacoes();
     if (tab==='escalas')     carregarEscalas();
+    if (tab==='documentos')  { carregarDocumentos(); _popularSelectColaboradores('rh-doc-filtro-colab'); }
     if (tab==='ferias')      { carregarFerias(); _popularSelectColaboradores('rh-per-colab'); }
     if (tab==='indicadores') { carregarIndicadores(); carregarTurnover12m(); _inicializarCalendarioPonto(); }
     if (tab==='folha')       { carregarDashboardFolha(); }
+    if (tab==='rescisao')    _popularSelectColaboradores('rh-resc-colab');
     if (tab==='encargos')    EncargosUI.aoAbrir();
   }
 
@@ -36965,6 +37225,46 @@ var RhUI = (function() {
   }
 
   // ─── RESCISÃO ───────────────────────────────────────────────
+  function _aoSelecionarColabRescisao() {
+    var sel = document.getElementById('rh-resc-colab');
+    var info = document.getElementById('rh-resc-colab-info');
+    var id = sel ? sel.value : '';
+    if (!id) { if (info) info.style.display = 'none'; return; }
+    var c = _colaboradores.find(function(x){ return x.id === id; });
+    if (!c) return;
+    // Salário
+    var salario = Number(c.salarioBruto || c.salario || 0);
+    var salInput = document.getElementById('rh-resc-salario');
+    if (salInput && salario > 0) {
+      var digits = String(Math.round(salario * 100));
+      var n = parseInt(digits, 10) / 100;
+      var pts = n.toFixed(2).split('.');
+      salInput.value = 'R$ ' + pts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + pts[1];
+    }
+    // Meses trabalhados a partir da data de admissão
+    if (c.dataAdmissao) {
+      var admissao = new Date(c.dataAdmissao);
+      var hoje = new Date();
+      var meses = Math.max(0, Math.floor((hoje - admissao) / (1000 * 60 * 60 * 24 * 30.4375)));
+      var mesesInput = document.getElementById('rh-resc-meses');
+      if (mesesInput) mesesInput.value = meses;
+      // Pré-selecionar férias vencidas com base em anos completos
+      var selPer = document.getElementById('rh-resc-periodos-vencidos');
+      if (selPer) selPer.value = String(Math.floor(meses / 12) > 0 ? 1 : 0);
+      // Info contextual
+      if (info) {
+        info.textContent = 'Admissão: ' + fmtDataPtBR(c.dataAdmissao) + ' · ' + meses + ' meses · Cargo: ' + (c.cargo || '—');
+        info.style.display = '';
+      }
+    }
+    // Economia padrão = 1 salário (campo fica vazio; engine usa default)
+    var ecoInput = document.getElementById('rh-resc-economia');
+    if (ecoInput) ecoInput.value = '';
+    // Limpar resultado anterior
+    var res = document.getElementById('rh-resc-resultado');
+    if (res) res.innerHTML = '';
+  }
+
   function calcularRescisao(done) {
     var salario=parseMoeda((document.getElementById('rh-resc-salario')||{}).value)||0;
     var meses=parseInt((document.getElementById('rh-resc-meses')||{}).value||'0')||0;
@@ -37433,7 +37733,7 @@ var RhUI = (function() {
     _evSecAtualizarCampos:_evSecAtualizarCampos, _salvarEventoSec:_salvarEventoSec,
     _fecharModalSecundario:_fecharModalSecundario,
     abrirModalDesligamento:abrirModalDesligamento, _confirmarDesligamento:_confirmarDesligamento,
-    calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, _maskCpf:_maskCpf, _maskPis:_maskPis, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao,
+    calcularCLT:calcularCLT, _maskMoeda:_maskMoeda, _maskCpf:_maskCpf, _maskPis:_maskPis, simularReajuste:simularReajuste, calcularRescisao:calcularRescisao, _aoSelecionarColabRescisao:_aoSelecionarColabRescisao,
     carregarIndicadores:carregarIndicadores, _fecharModalRh:_fecharModalRh,
     // F16.3 — Dashboard RH
     setSubAbaFolha:setSubAbaFolha,

@@ -167,6 +167,52 @@ function ctrl_acoes_excluir(id) {
   }, 'ctrl_acoes_excluir');
 }
 
+// ─── Fases do Projeto ─────────────────────────────────────────────────────
+
+/**
+ * Cria ou atualiza uma fase dentro de uma Ação.
+ * @param {Object} dados — { acaoId*, fase: { id?, nome*, status?, dataInicio?, dataFim?, descricao? } }
+ */
+function ctrl_acoes_salvar_fase(dados) {
+  return GasResponse.wrap(function() {
+    dados = dados || {};
+    if (!dados.acaoId) throw new Error('acaoId obrigatório.');
+    if (!dados.fase)   throw new Error('fase obrigatória.');
+
+    var email = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = AcaoEngine.salvarFase(dados.acaoId, dados.fase, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao salvar fase.');
+
+    _invalidarCache();
+    return resultado;
+  }, 'ctrl_acoes_salvar_fase');
+}
+
+/**
+ * Remove uma fase de uma Ação.
+ * @param {Object} dados — { acaoId*, faseId* }
+ */
+function ctrl_acoes_excluir_fase(dados) {
+  return GasResponse.wrap(function() {
+    dados = dados || {};
+    if (!dados.acaoId) throw new Error('acaoId obrigatório.');
+    if (!dados.faseId) throw new Error('faseId obrigatório.');
+
+    var email = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = AcaoEngine.excluirFase(dados.acaoId, dados.faseId, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao excluir fase.');
+
+    _invalidarCache();
+    return resultado;
+  }, 'ctrl_acoes_excluir_fase');
+}
+
 // ─── RBAC helpers ─────────────────────────────────────────────────────────
 
 function _assertPodeEscrever(email) {

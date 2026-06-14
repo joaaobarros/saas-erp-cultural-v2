@@ -122,6 +122,7 @@ var AcaoEngine = (function () {
           publicoPrevisto:     parseInt(dados.publicoPrevisto || 0, 10),
           metaExecucao:        dados.metaExecucao || null,
           riderTecnico:        dados.riderTecnico || [],
+          fases:               dados.fases || [],
           criadoEm:            agora,
           atualizadoEm:        agora,
           criadoPor:           emailUsuario || '',
@@ -317,12 +318,108 @@ var AcaoEngine = (function () {
     var campos = [
       'nome', 'tipo', 'descricao', 'descricaoPublica', 'visibilidadePublica',
       'responsavel', 'setor', 'equipe', 'dataInicio', 'dataFim',
-      'publicoPrevisto', 'metaExecucao', 'riderTecnico'
+      'publicoPrevisto', 'metaExecucao', 'riderTecnico', 'fases'
     ];
     campos.forEach(function(c) {
       if (novos[c] !== undefined && novos[c] !== null) {
         existente[c] = novos[c];
       }
+    });
+    return existente;
+  }
+
+  // ─── Fases do Projeto ─────────────────────────────────────────────────────
+
+  /**
+   * Cria ou atualiza uma fase dentro de uma Ação.
+   * @param {string} acaoId
+   * @param {Object} fase — { id?, nome*, status?, dataInicio?, dataFim?, descricao?, ordem? }
+   * @param {string} emailUsuario
+   * @param {string} [orgId]
+   * @returns {{ ok: boolean, faseId?: string, erro?: string }}
+   */
+  function salvarFase(acaoId, fase, emailUsuario, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      var acao = AcaoRepository.buscarPorId(orgId, acaoId);
+      if (!acao) throw new Error('Ação não encontrada: ' + acaoId);
+      if (!fase || !String(fase.nome || '').trim()) throw new Error('Nome da fase é obrigatório.');
+
+      var agora = new Date().toISOString();
+      acao.fases = acao.fases || [];
+
+      var faseId;
+      if (fase.id) {
+        // Atualizar fase existente
+        var idx = -1;
+        for (var i = 0; i < acao.fases.length; i++) {
+          if (acao.fases[i].id === fase.id) { idx = i; break; }
+        }
+        if (idx === -1) throw new Error('Fase não encontrada: ' + fase.id);
+        acao.fases[idx] = _mergeFase(acao.fases[idx], fase);
+        acao.fases[idx].atualizadoEm = agora;
+        faseId = fase.id;
+      } else {
+        // Criar nova fase
+        faseId = 'fase_' + new Date().getTime() + '_' + Math.random().toString(36).slice(2, 5);
+        var novaFase = {
+          id:          faseId,
+          nome:        String(fase.nome).trim(),
+          status:      fase.status || 'pendente',
+          dataInicio:  fase.dataInicio || '',
+          dataFim:     fase.dataFim    || '',
+          descricao:   (fase.descricao || '').trim(),
+          ordem:       typeof fase.ordem === 'number' ? fase.ordem : acao.fases.length,
+          criadoEm:    agora,
+          atualizadoEm: agora,
+          criadoPor:   emailUsuario || ''
+        };
+        acao.fases.push(novaFase);
+      }
+
+      acao.atualizadoEm = agora;
+      acao.versao = (acao.versao || 1) + 1;
+      AcaoRepository.salvar(orgId, acao);
+
+      _auditoria('FASE_' + (fase.id ? 'ATUALIZADA' : 'CRIADA'), acaoId, emailUsuario, {
+        faseId: faseId, faseNome: fase.nome
+      });
+
+      return { ok: true, faseId: faseId };
+    } catch(e) {
+      Logger.error('acao_engine', 'salvarFase', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
+  /**
+   * Remove uma fase de uma Ação.
+   * @param {string} acaoId
+   * @param {string} faseId
+   * @param {string} emailUsuario
+   * @param {string} [orgId]
+   * @returns {{ ok: boolean, erro?: string }}
+   */
+  function excluirFase(acaoId, faseId, emailUsuario, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      var acao = AcaoRepository.buscarPorId(orgId, acaoId);
+      if (!acao) throw new Error('Ação não encontrada: ' + acaoId);
+      acao.fases = (acao.fases || []).filter(function(f) { return f.id !== faseId; });
+      acao.atualizadoEm = new Date().toISOString();
+      acao.versao = (acao.versao || 1) + 1;
+      AcaoRepository.salvar(orgId, acao);
+      _auditoria('FASE_EXCLUIDA', acaoId, emailUsuario, { faseId: faseId });
+      return { ok: true };
+    } catch(e) {
+      Logger.error('acao_engine', 'excluirFase', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
+  function _mergeFase(existente, novos) {
+    ['nome', 'status', 'dataInicio', 'dataFim', 'descricao', 'ordem'].forEach(function(c) {
+      if (novos[c] !== undefined && novos[c] !== null) existente[c] = novos[c];
     });
     return existente;
   }
@@ -344,6 +441,8 @@ var AcaoEngine = (function () {
     excluir:             excluir,
     obterPainelIntegrado: obterPainelIntegrado,
     obterMetricas:       obterMetricas,
+    salvarFase:          salvarFase,
+    excluirFase:         excluirFase,
     ESTADOS:             ESTADOS,
     TIPOS:               TIPOS
   };
