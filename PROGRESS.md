@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix — Rescisão: férias vencidas exibe quantidade de dias (N × 30 dias) — Deploy @877.** Card de férias vencidas no resultado passa a mostrar `N × 30 = X dias a pagar` além do valor monetário.
+**Fase atual**: **Fix — Rescisão: FGTS Saldo separado do custo total + nota explicativa — Deploy @878.** FGTS Saldo removido do grid de custos; exibido em card separado abaixo do total com nota "já depositado mensalmente — não é custo adicional". Multa FGTS permanece no grid pois é custo real da rescisão.
+
+**Fase anterior**: **Fix — Rescisão: férias vencidas exibe quantidade de dias (N × 30 dias) — Deploy @877.** Card de férias vencidas no resultado passa a mostrar `N × 30 = X dias a pagar` além do valor monetário.
 
 **Fase anterior**: **Feat — Rescisão: cálculo completo com aviso prévio indenizado/trabalhado, datas reais e férias da API — Deploy @876.** `ponto_engine.gs`: `calcularRescisao` reescrito — (1) `modoAvisoPrevio` indenizado vs. trabalhado: trabalhado zera custo do AP; (2) `dataDesligamento` para 13º proporcional pelo mês real do ano calendário; (3) `dataAdmissao + dataDesligamento` para férias proporcionais pelo aniversário real do contrato; (4) `justa_causa` como tipo válido (AP=0, 13º=0, férias prop.=0, multa FGTS=0). `index.html`: formulário com campos Data de Desligamento (default hoje), Data de Admissão, Aviso Prévio Indenizado/Trabalhado (ocultado para pedido_demissao e justa_causa), Justa Causa no tipo; `_aoSelecionarColabRescisao` preenche todos os campos ao selecionar colaborador + busca férias vencidas reais via `GAS.rh.resumoFeriasColaborador`; resultado detalha meses13, mesesPropFerias e diasAP.
 

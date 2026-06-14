@@ -37372,18 +37372,25 @@ var RhUI = (function() {
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'
             + '<div style="font-size:11px;color:var(--text2);">13º Proporcional</div>'
             + '<div style="font-size:13px;color:var(--muted);">— não aplicável (justa causa)</div></div>';
+      var pctMulta = c.tipoRescisao === 'sem_justa_causa' ? '40' : c.tipoRescisao === 'culpa_reciproca' ? '20' : '0';
       el.innerHTML =
         '<div style="font-size:11px;color:var(--text2);margin-bottom:10px;">'
           + escaparHtml(TIPO_LABEL[c.tipoRescisao] || c.tipoRescisao) + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
           + cardAP + cardFV
           + cardFP + cardD3
-          + _lRh('FGTS Saldo (est.)', c.fgtsSaldoEstimado)
-          + _lRh('Multa FGTS (' + (c.tipoRescisao === 'sem_justa_causa' ? '40' : c.tipoRescisao === 'culpa_reciproca' ? '20' : '0') + '%)', c.multaFGTS)
+          + _lRh('Multa FGTS (' + pctMulta + '% do saldo)', c.multaFGTS)
         + '</div>'
         + '<div style="background:var(--color-error,#c62828);color:#fff;border-radius:8px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;">'
           + '<span style="font-weight:600;">CUSTO TOTAL DA RESCISÃO</span>'
           + '<span style="font-size:20px;font-weight:700;">R$ ' + _fmtMoeda(c.totalRescisao) + '</span>'
+        + '</div>'
+        + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">'
+          + '<div>'
+            + '<div style="font-size:11px;color:var(--text2);">FGTS Saldo acumulado (est.) — <em>já depositado mensalmente; não é custo adicional</em></div>'
+            + '<div style="font-size:11px;color:var(--text2);margin-top:2px;">O colaborador saca diretamente da conta FGTS após a rescisão.</div>'
+          + '</div>'
+          + '<div style="font-size:14px;font-weight:600;white-space:nowrap;margin-left:16px;">R$ ' + _fmtMoeda(c.fgtsSaldoEstimado) + '</div>'
         + '</div>'
         + (c.mesesBreakEven
             ? '<p style="font-size:13px;margin-top:10px;">Break-even: <strong>' + c.mesesBreakEven + ' meses</strong> para a economia de R$ ' + _fmtMoeda(c.economiaEsperadaMes) + '/mês superar o custo.</p>'

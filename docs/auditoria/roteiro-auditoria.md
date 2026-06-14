@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @877 · Rescisão: férias vencidas exibe N × 30 dias a pagar
+> Deploy atual: @878 · Rescisão: FGTS Saldo separado do custo total com nota explicativa
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
