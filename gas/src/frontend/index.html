@@ -40260,8 +40260,10 @@ var EncargosUI = (function() {
   }
   function _confirmarRestaurar() {
     var chave = _pendRestaurarEnc; _pendRestaurarEnc = null;
-    var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
+    var btn = document.getElementById('_enc-modal-conf');
+    if (btn) { btn.disabled = true; btn.textContent = 'Restaurando…'; }
     GAS.encargos.restaurarOficial({ chave: chave }, function(resp) {
+      var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
       if (resp && resp.ok) { Toast.sucesso('Valor oficial restaurado.'); _carregado = false; carregar(); }
       else Toast.erro('Erro ao restaurar.');
     });
@@ -40343,8 +40345,10 @@ var EncargosUI = (function() {
     );
   }
   function _confirmarRestaurarSalMin() {
-    var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
+    var btn = document.getElementById('_enc-modal-conf');
+    if (btn) { btn.disabled = true; btn.textContent = 'Restaurando…'; }
     GAS.encargos.restaurarOficial({chave:'salarioMinimo'}, function(resp){
+      var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
       if (resp&&resp.ok){ Toast.sucesso('Restaurado.'); _carregado=false; carregar(); }
       else Toast.erro('Erro.');
     });
@@ -40551,13 +40555,15 @@ var EncargosUI = (function() {
   }
   function _confirmarAplicarOficial() {
     var ano = _pendAplicarAno; _pendAplicarAno = null;
-    var _m3 = document.querySelector('.enc-modal-overlay'); if (_m3) _m3.remove();
+    var btn = document.getElementById('_enc-modal-conf');
+    if (btn) { btn.disabled = true; btn.textContent = 'Aplicando…'; }
     GAS.encargos.aplicarOficial(ano, function(resp) {
+      var _m3 = document.querySelector('.enc-modal-overlay'); if (_m3) _m3.remove();
       if (resp && resp.ok) {
         Toast.sucesso('Tabela ' + ano + ' aplicada. ' + (resp.data.itensAtualizados||0) + ' itens atualizados.');
         _carregado = false; carregar();
       } else { Toast.erro('Erro ao aplicar tabela oficial.'); }
-    }, function(e){ Toast.erro(e.message||'Erro.'); });
+    }, function(e){ var _m3 = document.querySelector('.enc-modal-overlay'); if (_m3) _m3.remove(); Toast.erro(e.message||'Erro.'); });
   }
 
   // ── Histórico ────────────────────────────────────────────────────────────

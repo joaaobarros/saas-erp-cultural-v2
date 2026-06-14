@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @910+ · Fix: Sistema S 5,66%→5,81% + backfill alíquotas + TypeError confirmar restaurar em EncargosUI
+> Deploy atual: @918+ · Fix: modal Encargos não fecha antes da resposta GAS — botão trava com loading até o callback
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
