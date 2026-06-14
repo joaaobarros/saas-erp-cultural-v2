@@ -1490,7 +1490,24 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 52c (2026-06-14) → SESSÃO 53
+## HANDOFF ATUAL — SESSÃO 52d (2026-06-14) → SESSÃO 53
+
+### Estado: Deploy @909 · Fix: provisões Financeiro recomputadas ao ler + rescisão sem benefícios
+
+### O que foi feito nesta sessão (s52d)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @909 | Fix: provisões Financeiro | `contratos_engine.buscarPorId` recomputa itens de pessoal com `calcularCustoPessoal` ao ler — elimina valores cacheados da fórmula antiga (férias=salary×4/3/12 + 13°=salary/12 + inssDecimo); provisões exibirão R$1.479,28 correto |
+| @909 | Fix: rescisão sem benefícios | Custo mensal no break-even: salário + encargos + provisões (VT/VA/PS zerados na chamada); benefícios excluídos de qualquer cálculo da rescisão |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Financeiro → Pessoal → provisões devem ser R$1.479,28 e custo mensal ~R$13.249; (2) Rescisão → custo mensal deve ser salário+encargos+provisões (sem benefícios)
+- Verificar se custo mensal Financeiro/Pessoal bate com planilha após recomputa (diferença residual pode estar em valores de benefícios diferentes)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 52c (2026-06-14) → SESSÃO 52d
 
 ### Estado: Deploy @903 · Fix: custo mensal rescisão com benefícios reais
 

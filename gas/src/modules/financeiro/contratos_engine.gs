@@ -213,7 +213,18 @@ var ContratosEngine = (function () {
   }
 
   function buscarPorId(id, orgId) {
-    return ContratoRepository.buscarPorId(orgId || _orgId(), id);
+    var c = ContratoRepository.buscarPorId(orgId || _orgId(), id);
+    if (!c || !c.metas) return c;
+    // Recomputa campos derivados de pessoal com alíquotas e fórmulas atuais
+    // (evita exibir valores obsoletos salvos com fórmulas antigas)
+    c.metas.forEach(function(meta) {
+      if (Array.isArray(meta.pessoal)) {
+        meta.pessoal = meta.pessoal.map(function(p) {
+          return calcularCustoPessoal(p);
+        });
+      }
+    });
+    return c;
   }
 
   function salvar(dados, emailOperador, orgId) {

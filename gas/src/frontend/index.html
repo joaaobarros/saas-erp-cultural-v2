@@ -37780,39 +37780,28 @@ var RhUI = (function() {
       info.style.display = '';
     }
 
-    // ── Custo mensal real (salário + encargos + provisões + benefícios) ─────────
-    var ecoInput   = document.getElementById('rh-resc-economia');
+    // ── Custo mensal (salário + encargos + provisões — sem benefícios) ──────────
+    var ecoInput    = document.getElementById('rh-resc-economia');
     var custoInfoEl = document.getElementById('rh-resc-custo-info');
-    if (custoInfoEl) { custoInfoEl.innerHTML = 'Calculando custo mensal…'; custoInfoEl.style.display = ''; }
+    if (custoInfoEl) { custoInfoEl.innerHTML = 'Calculando…'; custoInfoEl.style.display = ''; }
     GAS.contratos.calcularPessoal({
-      salarioAtual:        salario,
-      reajuste:            0,
-      valeTransporte:      Number(c.valeTransporte      || 0),
-      alimentacao:         Number(c.valeAlimentacao     || 0),
-      descontoAlimentacao: Number(c.descontoAlimentacao || 0),
-      planoSaude:          Number(c.planoSaude          || 0),
-      meses:               1
+      salarioAtual: salario, reajuste: 0,
+      valeTransporte: 0, alimentacao: 0, descontoAlimentacao: 0, planoSaude: 0,
+      meses: 1
     }, function(resp) {
-      if (!resp || !resp.ok || !resp.data) {
-        if (custoInfoEl) { custoInfoEl.textContent = 'Não foi possível calcular o custo mensal automaticamente.'; }
-        return;
-      }
+      if (!resp || !resp.ok || !resp.data) { if (custoInfoEl) custoInfoEl.style.display = 'none'; return; }
       var r = resp.data;
-      if (ecoInput) ecoInput.value = r.custoMensal > 0 ? _fmtMoedaResc(r.custoMensal) : '';
+      var custoSemBen = r.totalSalario + r.totalEncargos + r.totalProvisoes;
+      if (ecoInput) ecoInput.value = custoSemBen > 0 ? _fmtMoedaResc(custoSemBen) : '';
       if (custoInfoEl) {
         custoInfoEl.innerHTML =
           _fmtMoedaResc(r.totalSalario) + ' salário'
           + ' + ' + _fmtMoedaResc(r.totalEncargos)  + ' encargos'
           + ' + ' + _fmtMoedaResc(r.totalProvisoes) + ' provisões'
-          + (r.totalBeneficios > 0 ? ' + ' + _fmtMoedaResc(r.totalBeneficios) + ' benefícios' : '')
-          + ' = <strong>' + _fmtMoedaResc(r.custoMensal) + '</strong>'
-          + '<span style="color:var(--text2);font-size:10px;margin-left:6px;">(benefícios contam no break-even; não entram na rescisão)</span>';
+          + ' = <strong>' + _fmtMoedaResc(custoSemBen) + '</strong>';
         custoInfoEl.style.display = '';
       }
-    }, function() {
-      // fallback silencioso — campo permanece editável
-      if (custoInfoEl) custoInfoEl.style.display = 'none';
-    });
+    }, function() { if (custoInfoEl) custoInfoEl.style.display = 'none'; });
 
     // ── Limpar resultado anterior ────────────────────────────────────────────
     var res = document.getElementById('rh-resc-resultado');

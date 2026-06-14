@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual**: **Fix — Rescisão: custo mensal calculado com benefícios reais via calcularPessoal — Deploy @903.** Campo "Custo mensal total" substituiu estimativa `salario×1,55` por chamada real a `GAS.contratos.calcularPessoal` com VT, VA, PS do colaborador; breakdown mostra salário + encargos + provisões + benefícios = total; nota explica que benefícios contam no break-even mas não entram na rescisão; fallback silencioso se endpoint falhar.
+**Fase atual**: **Fix — Pessoal/Rescisão: recomputa provisões ao ler contrato + rescisão sem benefícios — Deploy @908.** `contratos_engine.buscarPorId`: recomputa todos os itens de pessoal via `calcularCustoPessoal` ao ler (elimina valores cacheados com fórmula antiga de provisões: férias×4/3/12 + 13°/12 + inssDecimo). Financeiro/Pessoal exibirá provisões corretas (1.479,28 em vez de 1.970,02). Rescisão: custo mensal revertido para salário + encargos + provisões sem benefícios.
+
+**Fase anterior**: **Fix — Rescisão: custo mensal calculado com benefícios reais via calcularPessoal — Deploy @903.** Campo "Custo mensal total" substituiu estimativa `salario×1,55` por chamada real a `GAS.contratos.calcularPessoal` com VT, VA, PS do colaborador; breakdown mostra salário + encargos + provisões + benefícios = total; nota explica que benefícios contam no break-even mas não entram na rescisão; fallback silencioso se endpoint falhar.
 
 **Fase anterior**: **Fix — Rescisão: aviso de férias vencidas só aparece ao ultrapassar prazo legal + ícones Material Symbols — Deploy @902.** Info de férias só mostra mensagem quando `totalDobro > 0`; texto sem jargão técnico ("API", "Período N"); ícones emoji substituídos por `<span class="ms ms-sm">warning/report/error/info</span>` em toda a área de férias vencidas (rescisão, tabela de períodos e alertas). Fallback silencioso quando dados indisponíveis.
 
