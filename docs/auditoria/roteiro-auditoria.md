@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @897 · Feat: BSF/DescontoPS/EncFerias editáveis via RH → Encargos (não mais hardcode em config_org.json)
+> Deploy atual: @910+ · Fix: Sistema S 5,66%→5,81% + backfill alíquotas + TypeError confirmar restaurar em EncargosUI
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

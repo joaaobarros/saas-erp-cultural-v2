@@ -406,7 +406,7 @@ var ContratosEngine = (function () {
       aliquota_fgts:          0.08,
       aliquota_pis:           0.01,
       aliquota_sat:           0.01,
-      aliquota_sistema_s:     0.0566
+      aliquota_sistema_s:     0.0581
     };
   }
 
@@ -472,7 +472,7 @@ var ContratosEngine = (function () {
     var fgtsAliq         = aliq.aliquota_fgts          || 0.08;
     var pisAliq          = aliq.aliquota_pis            || 0.01;
     var satAliq          = aliq.aliquota_sat            || 0.01;
-    var sistemaSAliq     = aliq.aliquota_sistema_s      || 0.0566;
+    var sistemaSAliq     = aliq.aliquota_sistema_s      || 0.0581;
 
     var inssPatronal  = totalSalario * inssPatronalAliq;
     var sat           = totalSalario * satAliq;

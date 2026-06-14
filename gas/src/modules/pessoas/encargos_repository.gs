@@ -82,10 +82,25 @@ var EncargosRepository = (function () {
   // ── Leitura ───────────────────────────────────────────────────────────────────
 
   /**
+   * Garante que todos os campos de aliquotas definidos em _buildDocOficial
+   * existem no doc lido do JSON. Itens ausentes recebem o valor padrão sem
+   * persistir — a persistência só ocorre na próxima edição manual.
+   */
+  function _preencherAliquotasAusentes(doc, orgId) {
+    var defaults = _buildDocOficial(orgId, doc.anoAtivo || new Date().getFullYear(), null).aliquotas;
+    doc.aliquotas = doc.aliquotas || {};
+    Object.keys(defaults).forEach(function(chave) {
+      if (!doc.aliquotas[chave]) doc.aliquotas[chave] = defaults[chave];
+    });
+  }
+
+  /**
    * Retorna o documento completo de encargos.
    */
   function obter(orgId) {
-    return _ler(orgId) || inicializar(orgId);
+    var doc = _ler(orgId) || inicializar(orgId);
+    _preencherAliquotasAusentes(doc, orgId);
+    return doc;
   }
 
   /**
@@ -122,7 +137,7 @@ var EncargosRepository = (function () {
    * @param {string} justificativa
    * @param {string} email
    */
-  function editarAliquota(orgId, chave, valor, justificativa, email) {
+  function editarAliquota(orgId, chave, valor, justificativa, email, novaUnidade) {
     var doc = obter(orgId);
     if (!doc.aliquotas[chave]) throw new Error('Alíquota não encontrada: ' + chave);
 
@@ -132,6 +147,9 @@ var EncargosRepository = (function () {
     doc.aliquotas[chave].editadoPor   = email;
     doc.aliquotas[chave].editadoEm    = _ts();
     doc.aliquotas[chave].justificativa = justificativa || '';
+    if (novaUnidade === 'reais' || novaUnidade === 'percentual') {
+      doc.aliquotas[chave].unidade = novaUnidade;
+    }
 
     _adicionarHistorico(doc, 'edicao_manual', null, email,
       [{ campo: chave, anterior: anterior, novo: Number(valor), justificativa: justificativa }]);
@@ -373,7 +391,7 @@ var EncargosRepository = (function () {
       fgts:                      _itemAliquota('fgts',                      'FGTS',                         0.08,  'percentual', 'Fundo de Garantia do Tempo de Serviço', ano),
       pisPasep:                  _itemAliquota('pisPasep',                  'PIS/PASEP Patronal',           0.01,  'percentual', 'Programa de Integração Social — folha de pagamento', ano),
       sat:                       _itemAliquota('sat',                       'SAT/RAT',                      0.01,  'percentual', 'Seguro de Acidente de Trabalho (risco leve — CNAE cultural)', ano),
-      sistemaS:                  _itemAliquota('sistemaS',                  'Sistema S',                    0.0566,'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (3.º setor/serviços — verifique CNAE)', ano),
+      sistemaS:                  _itemAliquota('sistemaS',                  'Sistema S',                    0.0581,'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (3.º setor/serviços — verifique CNAE)', ano),
       beneficioSocialFamiliar:   _itemAliquota('beneficioSocialFamiliar',   'Benefício Social Familiar',    23.00, 'reais',      'Valor fixo R$/mês por colaborador CLT — editar conforme CCT/acordo coletivo', ano),
       descontoPlanoSaudePerc:    _itemAliquota('descontoPlanoSaudePerc',    'Desconto Plano de Saúde',      0.30,  'percentual', 'Percentual do plano de saúde descontado do colaborador (contribuição do empregado)', ano),
       encargosProvisaoFeriasPerc:_itemAliquota('encargosProvisaoFeriasPerc','Encargos Provisão de Férias',  0.35,  'percentual', 'Taxa simplificada de encargos usada na provisão mensal de férias (padrão de mercado)', ano)

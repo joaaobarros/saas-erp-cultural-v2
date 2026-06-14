@@ -180,7 +180,7 @@ var PontoEngine = (function() {
     var fgtsAliq         = cfg.aliquota_fgts              || 0.08;
     var inssPatronalAliq = cfg.aliquota_inss_patronal      || 0.20;
     var satAliq          = cfg.aliquota_sat                || 0.01;
-    var sistemaSAliq     = cfg.aliquota_sistema_s          || 0.0566;
+    var sistemaSAliq     = cfg.aliquota_sistema_s          || 0.0581;
     var pisAliq          = cfg.aliquota_pis                || 0.01;
 
     // ── Encargos patronais — lidos de encargos_trabalhistas.json (ou defaults)

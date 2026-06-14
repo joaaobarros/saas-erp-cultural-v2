@@ -100,7 +100,7 @@ function ctrl_encargos_salvar_aliquota(dados) {
     if (isNaN(valor) || valor < 0) throw new Error('Valor inválido: ' + dados.valor);
 
     var doc = EncargosRepository.editarAliquota(
-      ctx.orgId, dados.chave, valor, dados.justificativa || '', ctx.email
+      ctx.orgId, dados.chave, valor, dados.justificativa || '', ctx.email, dados.unidade || null
     );
     return { ok: true, anoAtivo: doc.anoAtivo, atualizadoEm: doc.atualizadoEm };
   }, 'ctrl_encargos_salvar_aliquota');

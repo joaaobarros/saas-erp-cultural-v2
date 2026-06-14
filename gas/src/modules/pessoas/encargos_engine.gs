@@ -41,7 +41,7 @@ var EncargosEngine = (function () {
         fgts:         { chave: 'fgts',         label: 'FGTS',               valor: 0.08,   unidade: 'percentual', descricao: 'Lei 8.036/90 art. 15' },
         pisPasep:     { chave: 'pisPasep',      label: 'PIS/PASEP Patronal', valor: 0.01,   unidade: 'percentual', descricao: 'Lei 9.715/98 art. 8' },
         sat:          { chave: 'sat',           label: 'SAT/RAT',            valor: 0.01,   unidade: 'percentual', descricao: 'Risco leve — CNAE cultural/educacional' },
-        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0566, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
+        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0581, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
       },
       salarioMinimo: { chave: 'salarioMinimo', label: 'Salário Mínimo', valor: 1412.00, unidade: 'reais', descricao: 'Decreto 11.936/2024' },
       tabelaINSS: [
@@ -69,7 +69,7 @@ var EncargosEngine = (function () {
         fgts:         { chave: 'fgts',         label: 'FGTS',               valor: 0.08,   unidade: 'percentual', descricao: 'Lei 8.036/90 art. 15' },
         pisPasep:     { chave: 'pisPasep',      label: 'PIS/PASEP Patronal', valor: 0.01,   unidade: 'percentual', descricao: 'Lei 9.715/98 art. 8' },
         sat:          { chave: 'sat',           label: 'SAT/RAT',            valor: 0.01,   unidade: 'percentual', descricao: 'Risco leve — CNAE cultural/educacional' },
-        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0566, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
+        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0581, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
       },
       salarioMinimo: { chave: 'salarioMinimo', label: 'Salário Mínimo', valor: 1518.00, unidade: 'reais', descricao: 'Decreto 12.302/2024' },
       tabelaINSS: [
@@ -99,7 +99,7 @@ var EncargosEngine = (function () {
         fgts:         { chave: 'fgts',         label: 'FGTS',               valor: 0.08,   unidade: 'percentual', descricao: 'Lei 8.036/90 art. 15' },
         pisPasep:     { chave: 'pisPasep',      label: 'PIS/PASEP Patronal', valor: 0.01,   unidade: 'percentual', descricao: 'Lei 9.715/98 art. 8' },
         sat:          { chave: 'sat',           label: 'SAT/RAT',            valor: 0.01,   unidade: 'percentual', descricao: 'Risco leve — CNAE cultural/educacional' },
-        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0566, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
+        sistemaS:     { chave: 'sistemaS',      label: 'Sistema S',          valor: 0.0581, unidade: 'percentual', descricao: 'SESC+SENAC+SEBRAE+INCRA+SENAT+SEST (3.º setor/serviços — verifique CNAE)' }
       },
       salarioMinimo: { chave: 'salarioMinimo', label: 'Salário Mínimo', valor: 1621.00, unidade: 'reais', descricao: 'Decreto presidencial — vigência 01/01/2026 (fonte: BCB/SGS Série 1619)' },
       tabelaINSS: [
@@ -338,7 +338,7 @@ var EncargosEngine = (function () {
       // Campos extras disponibilizados ao ponto_engine
       aliquota_inss_patronal:     enc.inssPatronal              || 0.20,
       aliquota_sat:               enc.sat                       || 0.01,
-      aliquota_sistema_s:         enc.sistemaS                  || 0.0566,
+      aliquota_sistema_s:         enc.sistemaS                  || 0.0581,
       salario_minimo:             enc.salarioMinimo              || 1518.00,
       tabela_irrf:                enc.tabelaIRRF                || [],
       desconto_simplificado_irrf: enc.descontoSimplificadoIRRF  || 528.00,

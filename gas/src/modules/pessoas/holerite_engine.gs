@@ -129,7 +129,7 @@ var HoleriteEngine = (function () {
       aliquota_fgts:           0.08,
       aliquota_inss_patronal:  0.20,
       aliquota_sat:            0.01,
-      aliquota_sistema_s:      0.0566,
+      aliquota_sistema_s:      0.0581,
       aliquota_pis:            0.01,
       tabela_inss:             [],
       tabela_irrf:             []
@@ -171,7 +171,7 @@ var HoleriteEngine = (function () {
     var aliqFgts          = enc.aliquota_fgts           || 0.08;
     var aliqInssPatronal  = enc.aliquota_inss_patronal  || 0.20;
     var aliqSat           = enc.aliquota_sat            || 0.01;
-    var aliqSistemaS      = enc.aliquota_sistema_s      || 0.0566;
+    var aliqSistemaS      = enc.aliquota_sistema_s      || 0.0581;
     var aliqPis           = enc.aliquota_pis            || 0.01;
 
     // ── 3. Salário e horas extras ───────────────────────────────────────────────

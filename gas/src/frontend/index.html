@@ -40161,23 +40161,51 @@ var EncargosUI = (function() {
     tbody.innerHTML = linhas.join('');
   }
 
+  function _encModalAtualizarTipo() {
+    var sel  = document.getElementById('_enc-modal-tipo');
+    var inp  = document.getElementById('_enc-modal-val');
+    var lbl  = document.getElementById('_enc-modal-val-lbl');
+    if (!sel || !inp || !lbl) return;
+    var agora    = sel.value;
+    var anterior = inp.getAttribute('data-unidade');
+    var num      = parseFloat((inp.value||'0').replace(',','.')) || 0;
+    // converter o valor exibido ao trocar de tipo
+    if (anterior === 'percentual' && agora === 'reais') {
+      inp.value = (num / 100).toFixed(2);
+      inp.step  = '0.01';
+    } else if (anterior === 'reais' && agora === 'percentual') {
+      inp.value = (num * 100).toFixed(4);
+      inp.step  = '0.0001';
+    }
+    inp.setAttribute('data-unidade', agora);
+    lbl.textContent = agora === 'reais' ? 'Novo valor (R$)' : 'Nova alíquota (%)';
+  }
+
   function _editarAliquota(chave, valorAtual, unidade) {
     unidade = unidade || 'percentual';
-    var label = _CHAVE_LABEL[chave] || chave;
-    var isReais = unidade === 'reais';
-    var inputLabel = isReais ? 'Novo valor (R$)' : 'Nova alíquota (%)';
-    var inputVal   = isReais ? Number(valorAtual||0).toFixed(2) : (Number(valorAtual||0)*100).toFixed(4);
+    var label    = _CHAVE_LABEL[chave] || chave;
+    var isReais  = unidade === 'reais';
+    var inputVal = isReais ? Number(valorAtual||0).toFixed(2) : (Number(valorAtual||0)*100).toFixed(4);
     var box = document.createElement('div');
+    box.className = 'enc-modal-overlay';
     box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
     overlay.onclick = function(){ document.body.removeChild(box); };
     var modal = document.createElement('div');
-    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:28px 32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
+    modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:28px 32px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
     modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">Editar ' + _esc(label) + '</h3>'
       + '<div class="form-group" style="margin-bottom:12px;">'
-      + '<label class="form-label">' + inputLabel + '</label>'
-      + '<input id="_enc-modal-val" data-unidade="'+unidade+'" type="number" class="form-control" step="0.01" min="0" value="'+inputVal+'">'
+      + '<label class="form-label">Tipo de valor</label>'
+      + '<select id="_enc-modal-tipo" class="form-control" onchange="EncargosUI._encModalAtualizarTipo()">'
+      + '<option value="percentual"'+(unidade==='percentual'?' selected':'')+'>Percentual (%)</option>'
+      + '<option value="reais"'+(unidade==='reais'?' selected':'')+'>Valor fixo (R$)</option>'
+      + '</select>'
+      + '</div>'
+      + '<div class="form-group" style="margin-bottom:12px;">'
+      + '<label id="_enc-modal-val-lbl" class="form-label">' + (isReais ? 'Novo valor (R$)' : 'Nova alíquota (%)') + '</label>'
+      + '<input id="_enc-modal-val" data-unidade="'+unidade+'" type="number" class="form-control"'
+      + ' step="'+(isReais?'0.01':'0.0001')+'" min="0" value="'+inputVal+'">'
       + '</div>'
       + '<div class="form-group" style="margin-bottom:16px;">'
       + '<label class="form-label">Justificativa (obrigatória)</label>'
@@ -40197,22 +40225,23 @@ var EncargosUI = (function() {
     var valEl  = document.getElementById('_enc-modal-val');
     var justEl = document.getElementById('_enc-modal-just');
     if (!valEl || !justEl) return;
-    var rawStr   = (valEl.value||'').replace(',','.');
-    var rawNum   = parseFloat(rawStr);
+    var rawStr  = (valEl.value||'').replace(',','.');
+    var rawNum  = parseFloat(rawStr);
     if (isNaN(rawNum) || rawNum < 0) { Toast.aviso('Valor inválido.'); return; }
     var just = (justEl.value||'').trim();
     if (!just) { Toast.aviso('Informe uma justificativa.'); return; }
-    var isReais = (valEl.getAttribute('data-unidade') || '') === 'reais';
-    var valorFinal = isReais ? rawNum : rawNum / 100;
+    var unidadeFinal = valEl.getAttribute('data-unidade') || 'percentual';
+    var isReais      = unidadeFinal === 'reais';
+    var valorFinal   = isReais ? rawNum : rawNum / 100;
     var btn = document.getElementById('_enc-modal-btn');
     BtnGuard.travar(btn, 'Salvando…');
     GAS.encargos.salvarAliquota(
-      { chave: chave, valor: valorFinal, justificativa: just },
+      { chave: chave, valor: valorFinal, justificativa: just, unidade: unidadeFinal },
       function(resp) {
         BtnGuard.liberar(btn);
         if (resp && resp.ok) {
           Toast.sucesso(isReais ? 'Valor salvo.' : 'Alíquota salva.');
-          document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
+          var _m1 = document.querySelector('.enc-modal-overlay'); if (_m1) _m1.remove();
           _carregado = false; carregar();
         } else { Toast.erro('Erro ao salvar.'); }
       },
@@ -40231,7 +40260,7 @@ var EncargosUI = (function() {
   }
   function _confirmarRestaurar() {
     var chave = _pendRestaurarEnc; _pendRestaurarEnc = null;
-    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
+    var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
     GAS.encargos.restaurarOficial({ chave: chave }, function(resp) {
       if (resp && resp.ok) { Toast.sucesso('Valor oficial restaurado.'); _carregado = false; carregar(); }
       else Toast.erro('Erro ao restaurar.');
@@ -40263,6 +40292,7 @@ var EncargosUI = (function() {
 
   function _editarSalMin(valorAtual) {
     var box = document.createElement('div');
+    box.className = 'enc-modal-overlay';
     box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
@@ -40300,7 +40330,7 @@ var EncargosUI = (function() {
     BtnGuard.travar(btn,'Salvando…');
     GAS.encargos.salvarSalMin({valor:val,justificativa:just}, function(resp){
       BtnGuard.liberar(btn);
-      if (resp&&resp.ok){ Toast.sucesso('Salário mínimo salvo.'); document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove(); _carregado=false; carregar(); }
+      if (resp&&resp.ok){ Toast.sucesso('Salário mínimo salvo.'); var _m2=document.querySelector('.enc-modal-overlay');if(_m2)_m2.remove(); _carregado=false; carregar(); }
       else Toast.erro('Erro ao salvar.');
     }, function(e){ BtnGuard.liberar(btn); Toast.erro(e.message||'Erro.'); });
   }
@@ -40313,7 +40343,7 @@ var EncargosUI = (function() {
     );
   }
   function _confirmarRestaurarSalMin() {
-    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
+    var _m = document.querySelector('.enc-modal-overlay'); if (_m) _m.remove();
     GAS.encargos.restaurarOficial({chave:'salarioMinimo'}, function(resp){
       if (resp&&resp.ok){ Toast.sucesso('Restaurado.'); _carregado=false; carregar(); }
       else Toast.erro('Erro.');
@@ -40395,6 +40425,7 @@ var EncargosUI = (function() {
 
   function _abrirModalTabela(titulo, colunas, linhasIniciais, onSalvar) {
     var box = document.createElement('div');
+    box.className = 'enc-modal-overlay';
     box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
@@ -40446,7 +40477,7 @@ var EncargosUI = (function() {
   }
 
   function _confirmarModalTabela() {
-    var box = document.querySelector('[style*="position:fixed"][style*="z-index:3000"]');
+    var box = document.querySelector('.enc-modal-overlay');
     if (!box) return;
     var tbody = document.getElementById('_enc-tabela-body');
     var justEl = document.getElementById('_enc-tabela-just');
@@ -40520,7 +40551,7 @@ var EncargosUI = (function() {
   }
   function _confirmarAplicarOficial() {
     var ano = _pendAplicarAno; _pendAplicarAno = null;
-    document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
+    var _m3 = document.querySelector('.enc-modal-overlay'); if (_m3) _m3.remove();
     GAS.encargos.aplicarOficial(ano, function(resp) {
       if (resp && resp.ok) {
         Toast.sucesso('Tabela ' + ano + ' aplicada. ' + (resp.data.itensAtualizados||0) + ' itens atualizados.');
@@ -40559,6 +40590,7 @@ var EncargosUI = (function() {
 
   function _abrirModalSimples(titulo, conteudoHtml, onConfirmar, largura) {
     var box = document.createElement('div');
+    box.className = 'enc-modal-overlay';
     box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,.5);';
@@ -40588,6 +40620,7 @@ var EncargosUI = (function() {
     abrirModalTabelaIRRF:   abrirModalTabelaIRRF,
     _editarAliquota:        _editarAliquota,
     _confirmarEditarAliquota: _confirmarEditarAliquota,
+    _encModalAtualizarTipo: _encModalAtualizarTipo,
     _restaurar:             _restaurar, _confirmarRestaurar: _confirmarRestaurar,
     _editarSalMin:          _editarSalMin,
     _confirmarSalMin:       _confirmarSalMin,
