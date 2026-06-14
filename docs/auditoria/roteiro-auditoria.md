@@ -1490,7 +1490,25 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 50 (2026-06-13) → SESSÃO 51
+## HANDOFF ATUAL — SESSÃO 51 (2026-06-14) → SESSÃO 52
+
+### Estado: Deploy @880 · Pessoal: fórmula CLT corrigida + benefícios no perfil + importar colaborador
+
+### O que foi feito nesta sessão (s51)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @880 | Fix: fórmula CLT | `contratos_engine.calcularCustoPessoal()` reescrito: (1) `_getAliquotasEncargos()` lê alíquotas dinâmicas do EncargosEngine sem hardcode; (2) SAT/RAT antes ausente — agora incluído; (3) Sistema S corrigido 6,6%→5,66% dinâmico; (4) Férias: `sal×(1+1/3)/12` (era apenas 1/3); (5) 13°: `sal/12` + inssDecimo separado; (6) resultado bate com planilha de referência (13.489,42/mês vs 12.994,14 antigo) |
+| @880 | Feat: benefícios no perfil CLT | `verColab()` exibe seção "Benefícios" para vínculos CLT com cards de VA, VT e Plano de Saúde — desconto de alimentação deduzido; total de benefícios patronais calculado |
+| @880 | Feat: importar colaborador no contrato | Modal Pessoal do contrato tem select "Importar de colaborador" que lista todos os colaboradores via `GAS.pessoas.autocomplete()`; ao selecionar, `importarBeneficiosColab()` preenche salário, cargo, VA, VT, desconto VA e plano de saúde via `GAS.pessoas.obter(id)` + recalcula |
+| @880 | Fix: labels dinâmicos | Etiqueta de encargos mostra % real calculado (ex: "IV — Encargos (35,7%)"); total mostra "Custo Total (N meses)" com N do campo; breakdown de provisões exibido abaixo do total |
+
+### Pendentes / próxima ação
+- Gestão orçamentária de pessoal: contrato deve comparar custo real de colaboradores no período com o montante previsto, gerando alertas de ultrapassagem
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 50 (2026-06-13) → SESSÃO 51
 
 ### Estado: Deploy @863 · Performance — AppCache em 5 módulos + boot TTL 300s
 

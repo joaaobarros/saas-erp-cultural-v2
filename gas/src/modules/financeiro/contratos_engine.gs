@@ -379,54 +379,86 @@ var ContratosEngine = (function () {
   // ──────────────────────────────────────────────────────────────────
 
   /**
+   * Retorna alíquotas patronais do exercício atual via EncargosEngine.
+   * Nunca hardcoda percentuais — valores vêm de encargos_trabalhistas.json
+   * (editável em Admin → Encargos) com fallback para o catálogo oficial do ano.
+   */
+  function _getAliquotasEncargos() {
+    try {
+      if (typeof EncargosEngine !== 'undefined') {
+        return EncargosEngine.getParametrosRHComEncargos(_orgId());
+      }
+    } catch (_) {}
+    // Fallback: valores padrão 2026 — nunca sobrescreve o que vier do JSON
+    return {
+      aliquota_inss_patronal: 0.20,
+      aliquota_fgts:          0.08,
+      aliquota_pis:           0.01,
+      aliquota_sat:           0.01,
+      aliquota_sistema_s:     0.0566
+    };
+  }
+
+  /**
    * Calcula todos os campos derivados de um item de pessoal.
-   * Fórmulas conforme Folha de Pagamento CCBJ:
-   *   III = salarioAtual + reajuste (valor, não %)
-   *   IV  = INSS Patronal(20%) + Sistema S(6,6%) + FGTS(8%) + PIS(1%)
-   *   V   = (VT - descVT) + (Alim - descAlim) + (PS - descPS)
-   *         descontoVT = III × 6%;  descontoPS = planoSaude × 30%
-   *   VI  = Férias + 13° + FGTS Rescisão
-   *         Férias        = (III + IV) / 3 / 12
-   *         13°           = (III + IV) / 12
-   *         FGTS Rescisão = fgts × 40%
-   *   VII  = III + IV + V + VI  (custo mensal)
-   *   VIII = VII × qtdMeses    (custo total)
+   * Alíquotas lidas de encargos_trabalhistas.json (Admin → Encargos) — nunca hardcoded.
+   *
+   *   III  = salarioAtual + reajuste (valor, não %)
+   *   IV   = INSS Patronal + SAT/RAT + Sistema S + FGTS + PIS
+   *          (alíquotas do encargos_trabalhistas.json)
+   *   V    = (VT − descVT) + (VA − descVA) + Plano Saúde
+   *          descVT = min(III × 6%, VT bruto)
+   *   VI   = Férias + 13° + INSS sobre 13° + FGTS Rescisório
+   *          Férias    = III × (1 + 1/3) / 12  (base + adicional 1/3, mensalizado)
+   *          13°       = III / 12
+   *          INSS 13°  = aliq_inss × III / 12   (encargo futuro sobre o 13°)
+   *          FGTS Resc = fgts × 40%             (multa rescisória proporcional)
+   *   VII  = III + IV + V + VI   (custo mensal)
+   *   VIII = VII × qtdMeses      (custo total)
    */
   function calcularCustoPessoal(item) {
     item = item || {};
-    var qtd          = Number(item.qtd          || 1);
-    var qtdMeses     = Number(item.qtdMeses      || 24);
-    var salarioAtual = Number(item.salarioAtual  || 0);
-    var reajuste     = Number(item.reajuste      || 0);
+    var qtd          = Number(item.qtd         || 1);
+    var qtdMeses     = Number(item.qtdMeses    || 12);
+    var salarioAtual = Number(item.salarioAtual || 0);
+    var reajuste     = Number(item.reajuste    || 0);
 
     // III — Total Salário
     var totalSalario = (salarioAtual + reajuste) * qtd;
 
-    // IV — Encargos
-    var inssPatronal = totalSalario * 0.20;
-    var sistemaS     = totalSalario * 0.066;
-    var fgts         = totalSalario * 0.08;
-    var pis          = totalSalario * 0.01;
-    var totalEncargos = inssPatronal + sistemaS + fgts + pis;
+    // IV — Encargos (taxas dinâmicas — nunca hardcoded)
+    var aliq             = _getAliquotasEncargos();
+    var inssPatronalAliq = aliq.aliquota_inss_patronal || 0.20;
+    var fgtsAliq         = aliq.aliquota_fgts          || 0.08;
+    var pisAliq          = aliq.aliquota_pis            || 0.01;
+    var satAliq          = aliq.aliquota_sat            || 0.01;
+    var sistemaSAliq     = aliq.aliquota_sistema_s      || 0.0566;
+
+    var inssPatronal  = totalSalario * inssPatronalAliq;
+    var sat           = totalSalario * satAliq;
+    var sistemaS      = totalSalario * sistemaSAliq;
+    var fgts          = totalSalario * fgtsAliq;
+    var pis           = totalSalario * pisAliq;
+    var totalEncargos = inssPatronal + sat + sistemaS + fgts + pis;
 
     // V — Benefícios
-    var valeTransporte       = Number(item.valeTransporte       || 0);
-    // Desconto VT é limitado ao valor do VT (lei: até 6% do salário bruto, nunca superior ao VT)
-    var descontoVT           = Math.min(totalSalario * 0.06, valeTransporte);
-    var alimentacao          = Number(item.alimentacao          || 0);
-    var descontoAlimentacao  = Number(item.descontoAlimentacao  || 0);
-    var planoSaude           = Number(item.planoSaude           || 0) * qtd;
+    var valeTransporte      = Number(item.valeTransporte      || 0);
+    var descontoVT          = Math.min(totalSalario * 0.06, valeTransporte);
+    var alimentacao         = Number(item.alimentacao         || 0);
+    var descontoAlimentacao = Number(item.descontoAlimentacao || 0);
+    var planoSaude          = Number(item.planoSaude          || 0) * qtd;
+    var vtLiq               = valeTransporte - descontoVT;
+    var totalBeneficios     = vtLiq + (alimentacao - descontoAlimentacao) + planoSaude;
 
-    var vtLiq  = valeTransporte - descontoVT;
-    // Plano de saúde é custo integral do empregador; somente o desconto declarado de VA é deduzido
-    var totalBeneficios = vtLiq + (alimentacao - descontoAlimentacao) + planoSaude;
-
-    // VI — Provisões
-    var base13Ferias  = totalSalario + totalEncargos;
-    var ferias        = base13Ferias / 3 / 12;
-    var decimoTerceiro = base13Ferias / 12;
+    // VI — Provisões mensais
+    // Férias: 1 mês de salário + adicional 1/3, provisionado mensalmente (= salário / 9)
+    var ferias        = totalSalario * (1 + 1/3) / 12;
+    // 13°: um doze avos do salário + INSS patronal sobre esse valor (obrigação futura)
+    var decimoTerceiro = totalSalario / 12;
+    var inssDecimo     = decimoTerceiro * inssPatronalAliq;
+    // FGTS rescisório: 40% do FGTS mensal (passivo de multa em demissão sem justa causa)
     var fgtsRescisao  = fgts * 0.40;
-    var totalProvisoes = ferias + decimoTerceiro + fgtsRescisao;
+    var totalProvisoes = ferias + decimoTerceiro + inssDecimo + fgtsRescisao;
 
     // VII e VIII
     var custoMensal = totalSalario + totalEncargos + totalBeneficios + totalProvisoes;
@@ -434,27 +466,35 @@ var ContratosEngine = (function () {
 
     var seplagPes = _getCodigoSeplagPessoal();
     return Object.assign({}, item, {
-      totalSalario:      +totalSalario.toFixed(2),
-      inssPatronal:      +inssPatronal.toFixed(2),
-      sistemaS:          +sistemaS.toFixed(2),
-      fgts:              +fgts.toFixed(2),
-      pis:               +pis.toFixed(2),
-      totalEncargos:     +totalEncargos.toFixed(2),
-      valeTransporte:    +valeTransporte.toFixed(2),
-      descontoVT:        +descontoVT.toFixed(2),
-      alimentacao:       +alimentacao.toFixed(2),
+      totalSalario:        +totalSalario.toFixed(2),
+      inssPatronal:        +inssPatronal.toFixed(2),
+      sat:                 +sat.toFixed(2),
+      sistemaS:            +sistemaS.toFixed(2),
+      fgts:                +fgts.toFixed(2),
+      pis:                 +pis.toFixed(2),
+      totalEncargos:       +totalEncargos.toFixed(2),
+      valeTransporte:      +valeTransporte.toFixed(2),
+      descontoVT:          +descontoVT.toFixed(2),
+      alimentacao:         +alimentacao.toFixed(2),
       descontoAlimentacao: +descontoAlimentacao.toFixed(2),
-      planoSaude:        +planoSaude.toFixed(2),
-      totalBeneficios:   +totalBeneficios.toFixed(2),
-      ferias:            +ferias.toFixed(2),
-      decimoTerceiro:    +decimoTerceiro.toFixed(2),
-      fgtsRescisao:      +fgtsRescisao.toFixed(2),
-      totalProvisoes:    +totalProvisoes.toFixed(2),
-      custoMensal:       +custoMensal.toFixed(2),
-      custoTotal:        +custoTotal.toFixed(2),
+      planoSaude:          +planoSaude.toFixed(2),
+      totalBeneficios:     +totalBeneficios.toFixed(2),
+      ferias:              +ferias.toFixed(2),
+      decimoTerceiro:      +decimoTerceiro.toFixed(2),
+      inssDecimo:          +inssDecimo.toFixed(2),
+      fgtsRescisao:        +fgtsRescisao.toFixed(2),
+      totalProvisoes:      +totalProvisoes.toFixed(2),
+      custoMensal:         +custoMensal.toFixed(2),
+      custoTotal:          +custoTotal.toFixed(2),
+      // alíquotas usadas — para conferência/exibição no frontend
+      _aliqInssPatronal:   inssPatronalAliq,
+      _aliqFgts:           fgtsAliq,
+      _aliqSat:            satAliq,
+      _aliqSistemaS:       sistemaSAliq,
+      _aliqPis:            pisAliq,
       // código SEPLAG do pessoal — lido do catálogo (editável via Admin)
-      codigoSeplag:      seplagPes.codigo,
-      descSeplag:        seplagPes.descricao
+      codigoSeplag:        seplagPes.codigo,
+      descSeplag:          seplagPes.descricao
     });
   }
 

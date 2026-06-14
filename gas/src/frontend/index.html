@@ -3807,6 +3807,14 @@ select.form-control { cursor: pointer; }
                     <div class="form-group"><label class="form-label">Qtd. Funcionários</label><input id="cd-pes-qtd" class="form-input" type="number" min="1" value="1" oninput="ContratosDetailUI.calcularPessoal()"></div>
                     <div class="form-group"><label class="form-label">Qtd. Meses</label><input id="cd-pes-meses" class="form-input" type="number" min="1" value="24" oninput="ContratosDetailUI.calcularPessoal()"></div>
                   </div>
+                  <!-- Importar benefícios de colaborador cadastrado -->
+                  <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span class="ms ms-sm" style="color:var(--muted);">person_search</span>
+                    <span style="font-size:12px;color:var(--muted);white-space:nowrap;">Importar de colaborador:</span>
+                    <select id="cd-pes-colab-import" class="form-input select-sm" style="flex:1;min-width:160px;" onchange="ContratosDetailUI.importarBeneficiosColab()">
+                      <option value="">— selecionar —</option>
+                    </select>
+                  </div>
                   <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 8px;">Salário e Benefícios</div>
                   <div class="form-grid">
                     <div class="form-group"><label class="form-label">Salário Atual (R$)</label><input id="cd-pes-salario" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI.calcularPessoal()"></div>
@@ -3821,15 +3829,19 @@ select.form-control { cursor: pointer; }
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px;">Cálculo Automático (Fórmulas CCBJ)</div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;">
                       <div><div class="form-label" style="margin-bottom:2px;">III — Salário Total</div><div id="cd-pes-r-salario" style="font-weight:600;font-size:13px;">R$ 0,00</div></div>
-                      <div><div class="form-label" style="margin-bottom:2px;">IV — Encargos (36%)</div><div id="cd-pes-r-encargos" style="font-weight:600;font-size:13px;">R$ 0,00</div></div>
+                      <div><div class="form-label" style="margin-bottom:2px;" id="cd-pes-lbl-encargos">IV — Encargos</div><div id="cd-pes-r-encargos" style="font-weight:600;font-size:13px;">R$ 0,00</div></div>
                       <div><div class="form-label" style="margin-bottom:2px;">V — Benefícios líq.</div><div id="cd-pes-r-beneficios" style="font-weight:600;font-size:13px;">R$ 0,00</div></div>
-                      <div><div class="form-label" style="margin-bottom:2px;">VI — Provisões</div><div id="cd-pes-r-provisoes" style="font-weight:600;font-size:13px;">R$ 0,00</div></div>
+                      <div>
+                        <div class="form-label" style="margin-bottom:2px;">VI — Provisões</div>
+                        <div id="cd-pes-r-provisoes" style="font-weight:600;font-size:13px;">R$ 0,00</div>
+                        <div id="cd-pes-r-provisoes-det" style="font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4;"></div>
+                      </div>
                       <div style="border-left:2px solid var(--border);padding-left:10px;">
                         <div class="form-label" style="margin-bottom:2px;">Custo Mensal</div>
                         <div id="cd-pes-r-mensal" style="font-size:16px;font-weight:700;color:var(--color-primary);">R$ 0,00</div>
                       </div>
                       <div style="border-left:2px solid var(--color-primary);padding-left:10px;">
-                        <div class="form-label" style="margin-bottom:2px;">Custo Total</div>
+                        <div class="form-label" style="margin-bottom:2px;" id="cd-pes-lbl-total">Custo Total</div>
                         <div id="cd-pes-r-total" style="font-size:20px;font-weight:700;color:var(--color-primary);">R$ 0,00</div>
                       </div>
                     </div>
@@ -12623,6 +12635,19 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-pes-modal-titulo').textContent = p ? 'Editar Pessoal' : 'Adicionar Pessoal';
     _popularMetaSelect('cd-pes-meta-id');
     if (metaId) document.getElementById('cd-pes-meta-id').value = metaId;
+    // Carregar lista de colaboradores ativos para o seletor de importação
+    var selColab = document.getElementById('cd-pes-colab-import');
+    if (selColab && selColab.options.length <= 1) {
+      GAS.pessoas.autocomplete(function(resp) {
+        if (!resp || !resp.ok || !Array.isArray(resp.data)) return;
+        resp.data.forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.nome + (c.cargo ? ' — ' + c.cargo : '');
+          if (selColab) selColab.appendChild(opt);
+        });
+      }, function() {});
+    }
     calcularPessoal();
     document.getElementById('cd-pes-modal').classList.remove('oculto');
     document.getElementById('cd-pes-cargo').focus();
@@ -12633,9 +12658,10 @@ var ContratosDetailUI = (function() {
   function fecharPesModal() { document.getElementById('cd-pes-modal').classList.add('oculto'); }
 
   function calcularPessoal() {
+    var qtdMeses = parseInt(document.getElementById('cd-pes-meses').value,10)||12;
     var dados = {
       qtd:                 parseInt(document.getElementById('cd-pes-qtd').value,10)||1,
-      qtdMeses:            parseInt(document.getElementById('cd-pes-meses').value,10)||24,
+      qtdMeses:            qtdMeses,
       salarioAtual:        parseMoeda(document.getElementById('cd-pes-salario').value)||0,
       reajuste:            parseMoeda(document.getElementById('cd-pes-reajuste').value)||0,
       valeTransporte:      parseMoeda(document.getElementById('cd-pes-vt').value)||0,
@@ -12646,13 +12672,51 @@ var ContratosDetailUI = (function() {
     GAS.contratos.calcularPessoal(dados, function(resp) {
       if (!resp || !resp.ok) return;
       var r = resp.data;
-      document.getElementById('cd-pes-r-salario').textContent   = _R(r.totalSalario);
-      document.getElementById('cd-pes-r-encargos').textContent  = _R(r.totalEncargos);
-      document.getElementById('cd-pes-r-beneficios').textContent= _R(r.totalBeneficios);
-      document.getElementById('cd-pes-r-provisoes').textContent = _R(r.totalProvisoes);
-      document.getElementById('cd-pes-r-mensal').textContent    = _R(r.custoMensal);
-      document.getElementById('cd-pes-r-total').textContent     = _R(r.custoTotal);
+      document.getElementById('cd-pes-r-salario').textContent    = _R(r.totalSalario);
+      document.getElementById('cd-pes-r-encargos').textContent   = _R(r.totalEncargos);
+      document.getElementById('cd-pes-r-beneficios').textContent = _R(r.totalBeneficios);
+      document.getElementById('cd-pes-r-provisoes').textContent  = _R(r.totalProvisoes);
+      document.getElementById('cd-pes-r-mensal').textContent     = _R(r.custoMensal);
+      document.getElementById('cd-pes-r-total').textContent      = _R(r.custoTotal);
+      // detalhe provisões
+      var detEl = document.getElementById('cd-pes-r-provisoes-det');
+      if (detEl) detEl.textContent = 'Férias+1/3 ' + _R(r.ferias) + ' · 13°+INSS ' + _R((r.decimoTerceiro||0)+(r.inssDecimo||0)) + ' · FGTS resc. ' + _R(r.fgtsRescisao);
+      // label encargos com alíquota total
+      var lblEnc = document.getElementById('cd-pes-lbl-encargos');
+      if (lblEnc && r._aliqInssPatronal) {
+        var pct = ((r._aliqInssPatronal||0)+(r._aliqFgts||0)+(r._aliqPis||0)+(r._aliqSat||0)+(r._aliqSistemaS||0))*100;
+        lblEnc.textContent = 'IV — Encargos (' + pct.toFixed(1) + '%)';
+      }
+      // label custo total com N meses
+      var lblTot = document.getElementById('cd-pes-lbl-total');
+      if (lblTot) lblTot.textContent = 'Custo Total (' + qtdMeses + ' meses)';
     });
+  }
+
+  // Preenche salário e benefícios a partir de um colaborador selecionado
+  function importarBeneficiosColab() {
+    var sel = document.getElementById('cd-pes-colab-import');
+    if (!sel || !sel.value) return;
+    GAS.pessoas.obter(sel.value, function(resp) {
+      if (!resp || !resp.ok || !resp.data) return;
+      var c = resp.data;
+      var _set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = fmtMoeda(val || 0);
+      };
+      // salário bruto mais recente (salarioBruto ou salarioBase)
+      var sal = Number(c.salarioBruto || c.salarioBase || c.salario || 0);
+      if (sal > 0) _set('cd-pes-salario', sal);
+      // cargo (se campo estiver vazio)
+      var cargEl = document.getElementById('cd-pes-cargo');
+      if (cargEl && !cargEl.value && c.cargo) cargEl.value = c.cargo;
+      // benefícios
+      _set('cd-pes-vt',       Number(c.valeTransporte      || 0));
+      _set('cd-pes-alim',     Number(c.valeAlimentacao     || 0));
+      _set('cd-pes-desc-alim',Number(c.descontoAlimentacao || 0));
+      _set('cd-pes-saude',    Number(c.planoSaude          || 0));
+      calcularPessoal();
+    }, function() { Toast.aviso('Não foi possível carregar os dados do colaborador.'); });
   }
 
   function salvarPessoal() {
@@ -13198,6 +13262,7 @@ var ContratosDetailUI = (function() {
     abrirPesModal: abrirPesModal,
     fecharPesModal: fecharPesModal,
     calcularPessoal: calcularPessoal,
+    importarBeneficiosColab: importarBeneficiosColab,
     salvarPessoal: salvarPessoal,
     _editarPes: _editarPes,
     _excluirPes: _excluirPes, _confirmarExcluirPes: _confirmarExcluirPes,
@@ -35287,6 +35352,27 @@ var RhUI = (function() {
           '<div id="rh-det-ferias">' + _empty('Carregando…') + '</div>' +
           '<button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="RhUI._abrirFeriasComColab(\'' + eid + '\')" data-bg-skip="1"><span class="ms ms-sm">beach_access</span> Solicitar férias</button>' +
         '</div>' +
+        (c.vinculo === 'clt' || c.tipoVinculo === 'clt' || c.vinculo === 'CLT' || c.tipoVinculo === 'CLT' ? (function() {
+          var va  = Number(c.valeAlimentacao  || 0);
+          var vt  = Number(c.valeTransporte   || 0);
+          var ps  = Number(c.planoSaude       || 0);
+          var descVA = Number(c.descontoAlimentacao || 0);
+          var hasBen = va > 0 || vt > 0 || ps > 0;
+          var _rb = function(v) { return 'R$ ' + _fmtMoeda(v); };
+          return '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+              '<h4 style="margin:0;font-size:13px;font-weight:700;">Benefícios (custo empresa)</h4>' +
+            '</div>' +
+            (hasBen
+              ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">' +
+                  (va > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Vale Alimentação</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(va) + (descVA > 0 ? '<span style="font-size:11px;color:var(--muted);margin-left:4px;">(desc. ' + _rb(descVA) + ')</span>' : '') + '</p></div>' : '') +
+                  (vt > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Vale Transporte</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(vt) + '</p></div>' : '') +
+                  (ps > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Plano de Saúde</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(ps) + '</p></div>' : '') +
+                  '<div style="background:var(--surface2);border-radius:8px;padding:10px;border-left:2px solid var(--color-primary);"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Total Benefícios</p><p style="margin:4px 0 0;font-size:13px;font-weight:700;color:var(--color-primary);">' + _rb(Math.max(0, vt) + Math.max(0, va - descVA) + Math.max(0, ps)) + '</p></div>' +
+                '</div>'
+              : _empty('Nenhum benefício cadastrado. Clique em Editar para configurar.')) +
+          '</div>';
+        })() : '') +
       '</div>';
     _abrirModalRhLargo(html);
     GAS.rh.historico(c.id, function(r) {
