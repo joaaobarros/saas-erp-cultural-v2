@@ -8244,7 +8244,6 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn rh-tab-btn" data-rh-tab="documentos" onclick="RhUI.setTab('documentos',this)" data-bg-skip="1"><span class="ms ms-sm">folder</span> Documentos</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="ferias" onclick="RhUI.setTab('ferias',this)" data-bg-skip="1"><span class="ms ms-sm">beach_access</span> Férias</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="folha" onclick="RhUI.setTab('folha',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> Folha</button>
-          <button class="tab-btn rh-tab-btn" data-rh-tab="rescisao" onclick="RhUI.setTab('rescisao',this)" data-bg-skip="1"><span class="ms ms-sm">receipt_long</span> Rescisão</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="indicadores" onclick="RhUI.setTab('indicadores',this)" data-bg-skip="1"><span class="ms ms-sm">bar_chart</span> Indicadores</button>
           <button class="tab-btn rh-tab-btn" data-rh-tab="encargos" onclick="RhUI.setTab('encargos',this)" data-bg-skip="1"><span class="ms ms-sm">account_balance</span> Encargos</button>
         </div>
@@ -8704,6 +8703,10 @@ select.form-control { cursor: pointer; }
               onclick="RhUI.setSubAbaFolha('proc',this)" data-bg-skip="1">
               <span class="ms ms-sm">receipt_long</span> Processamento
             </button>
+            <button class="rh-folha-sub-btn" id="rh-folha-btn-rescisao"
+              onclick="RhUI.setSubAbaFolha('rescisao',this)" data-bg-skip="1">
+              <span class="ms ms-sm">person_off</span> Rescisão
+            </button>
           </div>
 
           <!-- Painel: Dashboard de Folha -->
@@ -8883,13 +8886,11 @@ select.form-control { cursor: pointer; }
 
           </div><!-- /rh-folha-painel-proc -->
 
-        </div><!-- /rh-tab-folha -->
-
-        <!-- Tab: RESCISÃO -->
-        <div id="rh-tab-rescisao" class="rh-tab-pane">
+          <!-- Painel: Calculadora de Rescisão -->
+          <div id="rh-folha-painel-rescisao" class="rh-folha-painel">
           <div class="card" style="padding:0;overflow:hidden;">
             <div style="padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);">
-              <div class="card-titulo"><span class="ms">receipt_long</span> Calculadora de Rescisão</div>
+              <div class="card-titulo"><span class="ms">person_off</span> Calculadora de Rescisão</div>
               <div style="font-size:11px;color:var(--text2);margin-top:4px;margin-left:28px;">Estimativa gerencial — não substitui cálculo jurídico oficial</div>
             </div>
             <div style="padding:20px 24px;">
@@ -8937,7 +8938,12 @@ select.form-control { cursor: pointer; }
               <div id="rh-resc-resultado" style="margin-top:20px;"></div>
             </div>
           </div>
-        </div>
+          </div><!-- /rh-folha-painel-rescisao -->
+
+        </div><!-- /rh-tab-folha -->
+
+        <!-- Tab: RESCISÃO — redireciona para Folha → Rescisão -->
+        <div id="rh-tab-rescisao" class="rh-tab-pane" style="display:none;"></div>
 
         <!-- Tab: INDICADORES -->
         <div id="rh-tab-indicadores" class="rh-tab-pane">
@@ -34963,8 +34969,9 @@ var RhUI = (function() {
   var _colaboradores  = [];
   var _pccsList       = [];
   var _usuariosAtivos = [];
-  var _eventoEditandoId = null;  // null = modo criar; string = modo editar
-  var _historicoCache   = [];    // cache da última lista carregada (para lookup no edit)
+  var _eventoEditandoId  = null;
+  var _historicoCache    = [];
+  var _descPSPercCache   = 0.30; // padrão; sobrescrito quando encargos carregam
 
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
@@ -35012,6 +35019,13 @@ var RhUI = (function() {
       _carregarMetricas();
       _popularAnoSelect();
       _carregado = true;
+      GAS.encargos.listar(function(resp) {
+        try {
+          var al = ((resp||{}).data||{}).doc||{};
+          var v = ((al.aliquotas||{}).descontoPlanoSaudePerc||{}).valor;
+          if (v != null) _descPSPercCache = Number(v);
+        } catch(_) {}
+      }, function(){});
     }
     // Oculta botões de escrita para quem não é rh/superadmin
     var escreve = _podeEscreverRh();
@@ -35072,7 +35086,7 @@ var RhUI = (function() {
     if (tab==='ferias')      { carregarFerias(); _popularSelectColaboradores('rh-per-colab'); }
     if (tab==='indicadores') { carregarIndicadores(); carregarTurnover12m(); _inicializarCalendarioPonto(); }
     if (tab==='folha')       { carregarDashboardFolha(); }
-    if (tab==='rescisao')    _popularSelectColaboradores('rh-resc-colab');
+    if (tab==='rescisao')    { setTab('folha'); setSubAbaFolha('rescisao', document.getElementById('rh-folha-btn-rescisao')); return; }
     if (tab==='encargos')    EncargosUI.aoAbrir();
   }
 
@@ -35538,7 +35552,16 @@ var RhUI = (function() {
               ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">' +
                   (va > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Vale Alimentação</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(va) + (descVA > 0 ? '<span style="font-size:11px;color:var(--muted);margin-left:4px;">(desc. ' + _rb(descVA) + ')</span>' : '') + '</p></div>' : '') +
                   (vt > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Vale Transporte</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(vt) + '</p></div>' : '') +
-                  (ps > 0 ? '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Plano de Saúde</p><p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(ps) + '</p></div>' : '') +
+                  (ps > 0 ? (function(){
+                    var psDesc = ps * _descPSPercCache;
+                    var psEmp  = ps - psDesc;
+                    return '<div style="background:var(--surface2);border-radius:8px;padding:10px;">' +
+                      '<p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Plano de Saúde — Total</p>' +
+                      '<p style="margin:4px 0 0;font-size:13px;font-weight:600;">' + _rb(ps) + '</p>' +
+                      '<p style="margin:3px 0 0;font-size:11px;color:var(--text2);">Funcionário: ' + _rb(psDesc) + '</p>' +
+                      '<p style="margin:2px 0 0;font-size:11px;color:var(--text2);">Empresa: <strong>' + _rb(psEmp) + '</strong></p>' +
+                    '</div>';
+                  })() : '') +
                   '<div style="background:var(--surface2);border-radius:8px;padding:10px;border-left:2px solid var(--color-primary);"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Total Benefícios</p><p style="margin:4px 0 0;font-size:13px;font-weight:700;color:var(--color-primary);">' + _rb(Math.max(0, vt) + Math.max(0, va - descVA) + Math.max(0, ps)) + '</p></div>' +
                 '</div>'
               : _empty('Nenhum benefício cadastrado. Clique em Editar para configurar.')) +
@@ -38030,8 +38053,9 @@ var RhUI = (function() {
     if (btn) btn.classList.add('ativo');
     var painel = document.getElementById('rh-folha-painel-' + aba);
     if (painel) painel.classList.add('ativo');
-    if (aba === 'dash')  carregarDashboardFolha();
-    if (aba === 'proc')  HoleriteUI.aoAbrirProcessamento();
+    if (aba === 'dash')     carregarDashboardFolha();
+    if (aba === 'proc')     HoleriteUI.aoAbrirProcessamento();
+    if (aba === 'rescisao') _popularSelectColaboradores('rh-resc-colab');
   }
 
   // ─── F16.3: Dashboard de Folha ───────────────────────────────
@@ -39912,7 +39936,12 @@ var HoleriteUI = (function() {
               '<div class="hol-empresa-row"><span>Prov. FGTS Rescisório (40%)</span><span>' + _fR(pr.fgtsResc) + '</span></div>' +
               '<div class="hol-empresa-row"><span>Total Provisões</span><span style="color:#d97706;font-weight:700;">' + _fR(pr.total) + '</span></div>' +
               (h.beneficiosEmpresa > 0
-                ? '<div class="hol-empresa-row"><span>Benefícios (empresa)</span><span>' + _fR(h.beneficiosEmpresa) + '</span></div>'
+                ? '<div class="hol-empresa-row"><span>Benefícios — Total</span><span style="color:#d97706;font-weight:600;">' + _fR(h.beneficiosEmpresa) + '</span></div>' +
+                  (h.psBruto > 0
+                    ? '<div class="hol-empresa-row" style="padding-left:12px;font-size:12px;color:var(--text2);"><span>↳ Plano de Saúde total</span><span>' + _fR(h.psBruto) + '</span></div>' +
+                      '<div class="hol-empresa-row" style="padding-left:12px;font-size:12px;color:var(--text2);"><span>↳ Desc. Funcionário</span><span>- ' + _fR(h.psDescEmpregado) + '</span></div>' +
+                      '<div class="hol-empresa-row" style="padding-left:12px;font-size:12px;"><span>↳ Custo Empresa (PS)</span><span>' + _fR(h.psEmpresa) + '</span></div>'
+                    : '')
                 : '') +
               '<div class="hol-empresa-row" style="border-top:2px solid var(--border);margin-top:6px;padding-top:6px;font-size:15px;">' +
                 '<span>💼 Custo Total Empresa</span><span style="color:#7c3aed;">' + _fR(h.custoTotalEmpresa) + '</span>' +

@@ -396,6 +396,9 @@ var HoleriteEngine = (function () {
       provisoes:          provisoes,
       fgtsCompetencia:    fgtsCompetencia,
       beneficiosEmpresa:  beneficiosEmpresa,
+      psBruto:            _R(Number(colab.psMensal || colab.psBruto || 0)),
+      psDescEmpregado:    psDescEmpregado,
+      psEmpresa:          psEmpresa,
       custoTotalEmpresa:  custoTotalEmpresa,
       // Metadados
       observacoes:    opcoesExtra.observacoes || '',

@@ -1490,7 +1490,24 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 51b (2026-06-14) → SESSÃO 52
+## HANDOFF ATUAL — SESSÃO 52 (2026-06-14) → SESSÃO 53
+
+### Estado: Deploy @900 · Folha: Rescisão movida para sub-painel + PS breakdown verColab/holerite
+
+### O que foi feito nesta sessão (s52)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @900 | Feat: Rescisão → sub-painel Folha | Aba "Rescisão" removida do nav principal RH; conteúdo (`rh-folha-painel-rescisao`) movido para dentro da aba Folha; novo botão "Rescisão" no sub-nav; `setSubAbaFolha('rescisao')` popula select; `setTab('rescisao')` redireciona para Folha→Rescisão |
+| @900 | Feat: PS breakdown verColab | Card Plano de Saúde exibe 3 linhas: total do plano, desconto do funcionário (k×`_descPSPercCache`), custo empresa (k−l); `_descPSPercCache` carregado de EncargosEngine em `aoAbrir()` |
+| @900 | Feat: PS breakdown holerite | `holerite_engine.gs` expõe `psBruto`, `psDescEmpregado`, `psEmpresa`; modal holerite exibe breakdown PS (total → desc. funcionário → custo empresa) |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Folha → Rescisão — sub-painel abre, select colaboradores popula; (2) verColab CLT com PS — ver 3 linhas do plano de saúde; (3) Abrir holerite — seção Benefícios exibe breakdown PS
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 51b (2026-06-14) → SESSÃO 52
 
 ### Estado: Deploy @891 · Pessoal: controle orçamentário real via histórico salarial + auto-vínculo + guard de saldo
 
