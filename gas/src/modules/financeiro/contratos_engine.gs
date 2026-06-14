@@ -399,6 +399,20 @@ var ContratosEngine = (function () {
     };
   }
 
+  function _getBeneficioSocialFamiliar() {
+    try {
+      var cfg = readJSON('config_org.json');
+      return Number(((cfg || {}).parametrosRH || {}).beneficio_social_familiar || 0);
+    } catch (_) { return 0; }
+  }
+
+  function _getDescontoPlanoSaudePerc() {
+    try {
+      var cfg = readJSON('config_org.json');
+      return Number(((cfg || {}).parametrosRH || {}).desconto_plano_saude_perc || 0);
+    } catch (_) { return 0; }
+  }
+
   /**
    * Calcula todos os campos derivados de um item de pessoal.
    * Alíquotas lidas de encargos_trabalhistas.json (Admin → Encargos) — nunca hardcoded.
@@ -406,12 +420,11 @@ var ContratosEngine = (function () {
    *   III  = salarioAtual + reajuste (valor, não %)
    *   IV   = INSS Patronal + SAT/RAT + Sistema S + FGTS + PIS
    *          (alíquotas do encargos_trabalhistas.json)
-   *   V    = (VT − descVT) + (VA − descVA) + Plano Saúde
-   *          descVT = min(III × 6%, VT bruto)
-   *   VI   = Férias + 13° + INSS sobre 13° + FGTS Rescisório
-   *          Férias    = III × (1 + 1/3) / 12  (base + adicional 1/3, mensalizado)
-   *          13°       = III / 12
-   *          INSS 13°  = aliq_inss × III / 12   (encargo futuro sobre o 13°)
+   *   V    = (VT − descVT) + (VA − descVA) + BSF + (Plano − DescPlano)
+   *          descVT = min(III × 6%, VT bruto); BSF e descPlanoPerc de config_org.json
+   *   VI   = Férias + 13° + FGTS Rescisório
+   *          Férias    = (III + IV) / 3 / 12   (apenas adicional 1/3 + encargos)
+   *          13°       = (III + IV) / 12        (13° completo + encargos)
    *          FGTS Resc = fgts × 40%             (multa rescisória proporcional)
    *   VII  = III + IV + V + VI   (custo mensal)
    *   VIII = VII × qtdMeses      (custo total)
@@ -447,18 +460,20 @@ var ContratosEngine = (function () {
     var alimentacao         = Number(item.alimentacao         || 0);
     var descontoAlimentacao = Number(item.descontoAlimentacao || 0);
     var planoSaude          = Number(item.planoSaude          || 0) * qtd;
+    var descPlanoSaudePerc  = _getDescontoPlanoSaudePerc();
+    var descontoPlanoSaude  = planoSaude * descPlanoSaudePerc;
+    var beneficioSocialFam  = _getBeneficioSocialFamiliar() * qtd;
     var vtLiq               = valeTransporte - descontoVT;
-    var totalBeneficios     = vtLiq + (alimentacao - descontoAlimentacao) + planoSaude;
+    var totalBeneficios     = vtLiq + (alimentacao - descontoAlimentacao) + beneficioSocialFam + (planoSaude - descontoPlanoSaude);
 
     // VI — Provisões mensais
-    // Férias: 1 mês de salário + adicional 1/3, provisionado mensalmente (= salário / 9)
-    var ferias        = totalSalario * (1 + 1/3) / 12;
-    // 13°: um doze avos do salário + INSS patronal sobre esse valor (obrigação futura)
-    var decimoTerceiro = totalSalario / 12;
-    var inssDecimo     = decimoTerceiro * inssPatronalAliq;
+    // Férias: apenas o adicional 1/3 + encargos sobre ele (salário base já é custo mensal)
+    var ferias         = (totalSalario + totalEncargos) / 3 / 12;
+    // 13°: um mês completo de salário + todos os encargos patronais
+    var decimoTerceiro = (totalSalario + totalEncargos) / 12;
     // FGTS rescisório: 40% do FGTS mensal (passivo de multa em demissão sem justa causa)
-    var fgtsRescisao  = fgts * 0.40;
-    var totalProvisoes = ferias + decimoTerceiro + inssDecimo + fgtsRescisao;
+    var fgtsRescisao   = fgts * 0.40;
+    var totalProvisoes = ferias + decimoTerceiro + fgtsRescisao;
 
     // VII e VIII
     var custoMensal = totalSalario + totalEncargos + totalBeneficios + totalProvisoes;
@@ -478,11 +493,13 @@ var ContratosEngine = (function () {
       alimentacao:         +alimentacao.toFixed(2),
       descontoAlimentacao: +descontoAlimentacao.toFixed(2),
       planoSaude:          +planoSaude.toFixed(2),
+      descontoPlanoSaude:  +descontoPlanoSaude.toFixed(2),
+      beneficioSocialFam:  +beneficioSocialFam.toFixed(2),
       totalBeneficios:     +totalBeneficios.toFixed(2),
       ferias:              +ferias.toFixed(2),
       decimoTerceiro:      +decimoTerceiro.toFixed(2),
-      inssDecimo:          +inssDecimo.toFixed(2),
       fgtsRescisao:        +fgtsRescisao.toFixed(2),
+      _descPlanoSaudePerc: descPlanoSaudePerc,
       totalProvisoes:      +totalProvisoes.toFixed(2),
       custoMensal:         +custoMensal.toFixed(2),
       custoTotal:          +custoTotal.toFixed(2),

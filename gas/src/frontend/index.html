@@ -3823,6 +3823,8 @@ select.form-control { cursor: pointer; }
                     <div class="form-group"><label class="form-label">Alimentação (R$/mês/pessoa)</label><input id="cd-pes-alim" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI.calcularPessoal()"></div>
                     <div class="form-group"><label class="form-label">Desconto Alimentação (R$)</label><input id="cd-pes-desc-alim" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI.calcularPessoal()"></div>
                     <div class="form-group"><label class="form-label">Plano de Saúde (R$/mês/pessoa)</label><input id="cd-pes-saude" class="form-input" type="text" inputmode="decimal" data-moeda="1" placeholder="R$ 0,00" oninput="mascaraMoeda(this);ContratosDetailUI.calcularPessoal()"></div>
+                    <div class="form-group"><label class="form-label" title="30% do plano — percentual definido em Admin">Desconto Plano de Saúde (R$/pessoa)</label><input id="cd-pes-desc-saude" class="form-input" type="text" readonly style="background:var(--surface2);color:var(--muted);" placeholder="auto"></div>
+                    <div class="form-group"><label class="form-label" title="Benefício Social Familiar — definido em Admin">Benefício Social Familiar (R$/pessoa)</label><input id="cd-pes-bsf" class="form-input" type="text" readonly style="background:var(--surface2);color:var(--muted);" placeholder="auto"></div>
                   </div>
                   <!-- Painel calculado -->
                   <div style="background:var(--surface2);border-radius:8px;padding:14px;margin-top:14px;">
@@ -12693,9 +12695,14 @@ var ContratosDetailUI = (function() {
       document.getElementById('cd-pes-r-provisoes').textContent  = _R(r.totalProvisoes);
       document.getElementById('cd-pes-r-mensal').textContent     = _R(r.custoMensal);
       document.getElementById('cd-pes-r-total').textContent      = _R(r.custoTotal);
+      // campos informativos readonly (valores calculados na org)
+      var elDescPS = document.getElementById('cd-pes-desc-saude');
+      if (elDescPS) elDescPS.value = fmtMoeda(r.descontoPlanoSaude || 0);
+      var elBsf = document.getElementById('cd-pes-bsf');
+      if (elBsf) elBsf.value = fmtMoeda(r.beneficioSocialFam != null ? r.beneficioSocialFam : 0);
       // detalhe provisões
       var detEl = document.getElementById('cd-pes-r-provisoes-det');
-      if (detEl) detEl.textContent = 'Férias+1/3 ' + _R(r.ferias) + ' · 13°+INSS ' + _R((r.decimoTerceiro||0)+(r.inssDecimo||0)) + ' · FGTS resc. ' + _R(r.fgtsRescisao);
+      if (detEl) detEl.textContent = 'Férias 1/3 ' + _R(r.ferias) + ' · 13°+enc. ' + _R(r.decimoTerceiro||0) + ' · FGTS resc. ' + _R(r.fgtsRescisao);
       // label encargos com alíquota total
       var lblEnc = document.getElementById('cd-pes-lbl-encargos');
       if (lblEnc && r._aliqInssPatronal) {

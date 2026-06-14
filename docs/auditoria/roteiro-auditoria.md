@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @879 · Rescisão: férias vencidas em dias reais + custo total estimado com encargos
+> Deploy atual: @893 · Fix: provisões CLT (férias=1/3, 13°+enc.), BSF e Desconto PS via org config
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
