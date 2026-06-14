@@ -81,6 +81,28 @@ var NotificationEngine = (function() {
                 'Verifique se é necessário renovar ou encerrar.\n\n' +
                 '— {org}'
     },
+    ferias_vencendo: {
+      assunto:  '[{org}] ⚠️ Férias a vencer — {nome} (período {periodo})',
+      corpo:    'As férias de {nome} (Período {periodo}) estão vencendo em breve.\n\n' +
+                'Cargo: {cargo}\nSetor: {setor}\n' +
+                'Saldo a gozar: {saldo} dias\n' +
+                'Prazo final do período concessivo: {concessivoFim}\n' +
+                'Dias restantes: {diasRestantes}\n\n' +
+                'É necessário programar e registrar as férias antes do prazo para evitar pagamento em dobro (CLT Art. 137).\n\n' +
+                'Acesse o sistema: {url}\n\n' +
+                '— {org}'
+    },
+    ferias_vencidas_dobro: {
+      assunto:  '[{org}] 🚨 Férias VENCIDAS (em dobro) — {nome} (período {periodo})',
+      corpo:    'ATENÇÃO: o período concessivo de férias de {nome} (Período {periodo}) EXPIROU.\n\n' +
+                'Cargo: {cargo}\nSetor: {setor}\n' +
+                'Saldo pendente: {saldo} dias\n' +
+                'Prazo concessivo era: {concessivoFim}\n\n' +
+                'Por força do Art. 137 da CLT, as férias devem ser pagas em dobro.\n' +
+                'É necessário registrar o gozo ou incluir na rescisão com pagamento em dobro.\n\n' +
+                'Acesse o sistema: {url}\n\n' +
+                '— {org}'
+    },
     reuniao_ata_pendente: {
       assunto:  '[{org}] 📝 Ata pendente de aprovação: {titulo}',
       corpo:    'A reunião "{titulo}" tem ata aguardando aprovação há {dias} dias.\n\n' +
@@ -429,6 +451,85 @@ var NotificationEngine = (function() {
         });
       } catch(e) {
         resultado.erros.push('solicitacoes: ' + e.message);
+      }
+
+      // ── Alertas de férias a vencer (semanal) ─────────────────────────────────
+      try {
+        var rhEmails = [];
+        try {
+          rhEmails = AcessoService.listarUsuarios().filter(function(u) {
+            return u.status === 'ativo' && (u.papel === 'rh' || u.papel === 'admin' || u.papel === 'superadmin');
+          }).map(function(u) { return u.email; });
+        } catch(_) {}
+
+        var orgCfg = getOrgConfig();
+        var alertasFerias = PessoasEngine.alertasFeriasAtivos(orgCfg.orgId);
+        var url = _getAppUrl();
+        var props = PropertiesService.getScriptProperties();
+
+        alertasFerias.forEach(function(a) {
+          var chave = 'ferias_alerta_' + a.colaboradorId + '_' + a.periodoConcNum;
+          var ultimoEnvio = props.getProperty(chave);
+          var jaEnviouEssaSemana = ultimoEnvio
+            && (Date.now() - new Date(ultimoEnvio).getTime()) < 7 * 86400000;
+          if (jaEnviouEssaSemana) return;
+
+          var templateKey = a.urgencia === 'vencido' ? 'ferias_vencidas_dobro' : 'ferias_vencendo';
+          var tpl = _TEMPLATES_EMAIL[templateKey];
+          if (!tpl) return;
+
+          var diasRestantes = a.urgencia === 'vencido'
+            ? 'Expirado há ' + Math.abs(a.diasParaVencer || 0) + ' dias'
+            : String(a.diasParaVencer || 0) + ' dias';
+
+          var dados = {
+            nome:           a.nome,
+            cargo:          a.cargo || '—',
+            setor:          a.setor || '—',
+            periodo:        a.periodoConcNum,
+            saldo:          a.saldo,
+            concessivoFim:  a.concessivoFim ? a.concessivoFim.split('-').reverse().join('/') : '—',
+            diasRestantes:  diasRestantes,
+            url:            url
+          };
+
+          var destinatarios = [];
+          // RH / Admin
+          rhEmails.forEach(function(e) { if (destinatarios.indexOf(e) < 0) destinatarios.push(e); });
+          // Colaborador
+          if (a.email && destinatarios.indexOf(a.email) < 0) destinatarios.push(a.email);
+          // Gestor do setor
+          try {
+            AcessoService.listarUsuarios().forEach(function(u) {
+              if (u.status !== 'ativo') return;
+              if (u.papel !== 'gestor') return;
+              var gerencia = u.setoresGerenciados || (u.setor ? [u.setor] : []);
+              if (gerencia.indexOf(a.setor) >= 0 && destinatarios.indexOf(u.email) < 0) {
+                destinatarios.push(u.email);
+              }
+            });
+          } catch(_) {}
+
+          var enviouAlgum = false;
+          destinatarios.forEach(function(dest) {
+            try {
+              var assunto = _interpolar(tpl.assunto, dados);
+              var corpo   = _interpolar(tpl.corpo,   dados);
+              if (_enviarEmail(dest, assunto, corpo)) {
+                resultado.emailsEnviados++;
+                enviouAlgum = true;
+              }
+            } catch(e) {
+              resultado.erros.push('ferias_alerta/' + a.colaboradorId + '/' + dest + ': ' + e.message);
+            }
+          });
+
+          if (enviouAlgum) {
+            props.setProperty(chave, new Date().toISOString());
+          }
+        });
+      } catch(e) {
+        resultado.erros.push('ferias_alertas: ' + e.message);
       }
 
       Logger.info('[NotificationEngine.verificarTodosAlertasDiario] Resultado: ' + JSON.stringify({

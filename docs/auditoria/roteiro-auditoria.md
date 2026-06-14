@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @895 · Fix: férias = III×(1+35%)/36 — alinha com planilha referência (R$13.530,85)
+> Deploy atual: @896 · Feat: rescisão — consolidado holerites + break-even dias + férias dobro + alertas + emails
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

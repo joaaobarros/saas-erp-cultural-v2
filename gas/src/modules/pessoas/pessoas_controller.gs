@@ -517,6 +517,16 @@ function ctrl_rh_resumo_ferias_colaborador(idColaborador) {
   }, 'ctrl_rh_resumo_ferias_colaborador');
 }
 
+function ctrl_rh_alertas_ferias() {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) === -1)
+      throw new Error('Acesso negado.');
+    return PessoasEngine.alertasFeriasAtivos(ctx.orgId);
+  }, 'ctrl_rh_alertas_ferias');
+}
+
 function ctrl_rh_registrar_acordo_ferias(id, dados) {
   return GasResponse.wrap(function () {
     var ctx   = _ctxPessoas();

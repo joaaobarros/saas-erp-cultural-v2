@@ -200,6 +200,21 @@ function ctrl_ponto_calcular_rescisao(params) {
 }
 
 /**
+ * Consolida histórico de holerites de um colaborador para uso na calculadora de rescisão.
+ * @param {object} params — { colaboradorId }
+ */
+function ctrl_ponto_consolidado_rescisao(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxPonto();
+    if (['rh','admin','superadmin'].indexOf(ctx.papel) < 0)
+      throw new Error('Acesso negado.');
+    if (!params.colaboradorId) throw new Error('colaboradorId obrigatório.');
+    return PontoEngine.consolidadoRescisao(ctx.orgId, params.colaboradorId);
+  }, 'ctrl_ponto_consolidado_rescisao');
+}
+
+/**
  * Indicadores de turnover do período.
  */
 function ctrl_ponto_turnover(params) {

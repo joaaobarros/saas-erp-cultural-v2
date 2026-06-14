@@ -8638,6 +8638,20 @@ select.form-control { cursor: pointer; }
 
         <!-- Tab: FÉRIAS -->
         <div id="rh-tab-ferias" class="rh-tab-pane">
+
+          <!-- Painel de Alertas de Férias -->
+          <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+            <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;">
+              <div class="card-titulo" style="flex:1;"><span class="ms">warning</span> Alertas de Férias a Vencer</div>
+              <button class="btn btn-ghost btn-sm" id="rh-btn-alertas-ferias"
+                onclick="BtnGuard.wrap('rh-btn-alertas-ferias','Verificando…',RhUI.carregarAlertasFerias)"
+                style="font-size:12px;"><span class="ms ms-sm">refresh</span> Verificar</button>
+            </div>
+            <div id="rh-alertas-ferias-conteudo" style="padding:12px 20px;">
+              <p class="muted-text" style="font-size:13px;">Clique em <strong>Verificar</strong> para listar colaboradores com férias prestes a vencer.</p>
+            </div>
+          </div>
+
           <div class="card">
             <div class="card-header">
               <div class="card-titulo"><span class="ms">beach_access</span> Férias</div>
@@ -8918,6 +8932,7 @@ select.form-control { cursor: pointer; }
                   <div id="rh-resc-custo-info" style="font-size:11px;color:var(--text2);margin-top:3px;display:none;"></div>
                 </div>
               </div>
+              <div id="rh-resc-consolidado" style="display:none;margin-top:16px;max-width:700px;"></div>
               <div style="margin-top:12px;"><button id="rh-btn-calc-rescisao" class="btn btn-primary" onclick="BtnGuard.wrap('rh-btn-calc-rescisao','Calculando…',RhUI.calcularRescisao)">Calcular Rescisão</button></div>
               <div id="rh-resc-resultado" style="margin-top:20px;"></div>
             </div>
@@ -9740,6 +9755,7 @@ var GAS = {
     // ── GAP-07 corrigido ──
     solicitarAjuste:          function(id,obs,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_solicitar_ajuste_ferias(id,obs||''); },
     resumoFeriasColaborador:  function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_resumo_ferias_colaborador(id); },
+    alertasFerias:            function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_alertas_ferias(); },
     registrarAcordoFerias:    function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_acordo_ferias(id,d||{}); },
     // ── F16.3 — Dashboard RH ──
     dashboardFolha:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_folha(p||{}); },
@@ -10264,6 +10280,7 @@ var GAS = {
     custoCLT:            function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_custo_clt(d||{}); },
     simularReajuste:     function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_simular_reajuste(d||{}); },
     calcularRescisao:    function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_calcular_rescisao(d||{}); },
+    consolidadoRescisao: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_consolidado_rescisao(d||{}); },
     turnover:            function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_turnover(d||{}); },
     exportarAFD:         function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_exportar_afd(d||{}); },
     exportarCSVColabore: function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_ponto_exportar_csv_colabore(d||{}); },
@@ -34038,7 +34055,7 @@ var PontoUI = (function() {
             '<span style="font-weight:600;">CUSTO TOTAL DA RESCISÃO</span>' +
             '<span style="font-size:20px;font-weight:700;">R$ ' + _fmtMoeda(c.totalRescisao) + '</span>' +
           '</div>' +
-          (c.mesesBreakEven ? '<p style="font-size:13px;margin-top:10px;">⏱ Break-even: <strong>' + c.mesesBreakEven + ' meses</strong> até a economia superar o custo da rescisão.</p>' : '') +
+          (c.mesesBreakEven != null ? (function(){ var s=c.mesesBreakEven>0?c.mesesBreakEven+' meses':''; if(c.diasBreakEven>0) s+=(s?' e ':'')+c.diasBreakEven+' dias'; return '<p style="font-size:13px;margin-top:10px;">⏱ Break-even: <strong>'+(s||'menos de 1 dia')+'</strong> até a economia superar o custo da rescisão.</p>'; })() : '') +
         '</div>';
       }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
   }
@@ -37243,11 +37260,26 @@ var RhUI = (function() {
       if (!resp||!resp.ok) { el.innerHTML=_empty('Erro ao carregar.'); return; }
       var d = resp.data;
       if (!d||!d.periodos||!d.periodos.length) { el.innerHTML='<p class="muted-text" style="padding:10px;">Nenhum período calculado — verifique a data de admissão.</p>'; return; }
+      var hoje = new Date().toISOString().slice(0,10);
       var SL = { em_aquisicao:'Em aquisição', em_concessao:'Em concessão', gozado:'Gozado', vencido:'Vencido' };
       var SC = { em_aquisicao:'badge-info', em_concessao:'badge-warning', gozado:'badge-success', vencido:'badge-error' };
+
+      function _urgenciaFeriasInfo(p) {
+        if (p.saldo <= 0 || p.status === 'em_aquisicao' || p.status === 'gozado') return null;
+        if (p.status === 'vencido') {
+          return { label:'Em dobro (vencido)', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' };
+        }
+        var dias = Math.round((new Date(p.concessivoFim) - new Date(hoje)) / 86400000);
+        if (dias < 0)  return { label:'Expirado', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' };
+        if (dias < 60) return { label:'Crítico — ' + dias + 'd', cor:'#c62828', bg:'#ffebee', icon:'🔴' };
+        if (dias < 90) return { label:'Urgente — ' + dias + 'd', cor:'#e65100', bg:'#fff3e0', icon:'🟠' };
+        if (dias <= 180) return { label:'Atenção — ' + dias + 'd', cor:'#f9a825', bg:'#fffde7', icon:'🟡' };
+        return null;
+      }
+
       el.innerHTML = '<table class="tabela"><thead><tr>' +
         '<th>#</th><th>Período Aquisitivo</th><th>Janela Concessiva</th>' +
-        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th>' +
+        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th><th>Urgência</th>' +
         '</tr></thead><tbody>' +
         d.periodos.slice().reverse().map(function(p) {
           var cls = SC[p.status]||'badge-muted';
@@ -37255,6 +37287,10 @@ var RhUI = (function() {
           var saldoStr = p.saldo > 0
             ? '<strong style="color:var(--warning,#e65100)">'+p.saldo+'d</strong>'
             : '<strong style="color:var(--success,#2e7d32)">0d</strong>';
+          var urg = _urgenciaFeriasInfo(p);
+          var urgStr = urg
+            ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';">' + urg.icon + ' ' + escaparHtml(urg.label) + '</span>'
+            : '<span style="font-size:11px;color:var(--muted);">—</span>';
           return '<tr>' +
             '<td>'+p.numero+'</td>' +
             '<td>'+_fmtData(p.aquisitivoInicio)+' – '+_fmtData(p.aquisitivoFim)+'</td>' +
@@ -37263,9 +37299,60 @@ var RhUI = (function() {
             '<td>'+(p.diasGozados||0)+'d</td>' +
             '<td>'+saldoStr+'</td>' +
             '<td><span class="badge '+cls+'">'+lbl+'</span></td>' +
+            '<td>'+urgStr+'</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
     }, function(e) { if (el) el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  }
+
+  function carregarAlertasFerias(done) {
+    var el = document.getElementById('rh-alertas-ferias-conteudo');
+    if (el) el.innerHTML = '<p class="muted-text" style="font-size:13px;">Verificando colaboradores…</p>';
+    GAS.rh.alertasFerias(function(resp) {
+      if (done) done();
+      if (!el) return;
+      if (!resp || !resp.ok) {
+        el.innerHTML = '<p style="color:var(--color-error);font-size:13px;">Erro ao verificar alertas.</p>';
+        return;
+      }
+      var lista = resp.data || [];
+      if (!lista.length) {
+        el.innerHTML = '<p style="font-size:13px;color:var(--success,#2e7d32);">Todos os colaboradores estão dentro dos prazos de férias.</p>';
+        return;
+      }
+      var URGENCIA_CFG = {
+        vencido: { label:'Em dobro (vencido)', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' },
+        critico: { label:'Crítico',            cor:'#c62828', bg:'#ffebee', icon:'🔴' },
+        urgente: { label:'Urgente',            cor:'#e65100', bg:'#fff3e0', icon:'🟠' },
+        atencao: { label:'Atenção',            cor:'#f9a825', bg:'#fffde7', icon:'🟡' }
+      };
+      var html = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">'
+        + lista.length + ' colaborador(es) com férias a vencer ou já vencidas.</div>';
+      html += '<table class="tabela" style="font-size:12px;"><thead><tr>'
+        + '<th>Colaborador</th><th>Setor</th><th>Período</th>'
+        + '<th>Saldo</th><th>Prazo Concessivo</th><th>Urgência</th><th></th>'
+        + '</tr></thead><tbody>';
+      lista.forEach(function(a) {
+        var urg = URGENCIA_CFG[a.urgencia] || URGENCIA_CFG.atencao;
+        var diasStr = a.urgencia === 'vencido'
+          ? 'Exp. há ' + Math.abs(a.diasParaVencer||0) + 'd'
+          : (a.diasParaVencer||0) + 'd restantes';
+        html += '<tr>'
+          + '<td>' + escaparHtml(a.nome) + '</td>'
+          + '<td>' + escaparHtml(a.setor||'—') + '</td>'
+          + '<td>Período ' + a.periodoConcNum + '</td>'
+          + '<td><strong>' + a.saldo + 'd</strong></td>'
+          + '<td>' + fmtDataPtBR(a.concessivoFim) + '<br><small style="color:var(--text2);">' + diasStr + '</small></td>'
+          + '<td><span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';">' + urg.icon + ' ' + urg.label + '</span></td>'
+          + '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias(' + JSON.stringify(a.colaboradorId).replace(/"/g,"'") + ')">Agendar</button></td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    }, function() {
+      if (done) done();
+      if (el) el.innerHTML = '<p style="color:var(--color-error);font-size:13px;">Erro ao verificar alertas.</p>';
+    });
   }
 
   function abrirFormFerias(idColabPre) {
@@ -37630,6 +37717,8 @@ var RhUI = (function() {
     var id   = sel ? sel.value : '';
     if (!id) {
       if (info) info.style.display = 'none';
+      var _ce = document.getElementById('rh-resc-consolidado');
+      if (_ce) { _ce.style.display = 'none'; _ce.innerHTML = ''; }
       return;
     }
     var c = _colaboradores.find(function(x){ return x.id === id; });
@@ -37696,22 +37785,33 @@ var RhUI = (function() {
     GAS.rh.resumoFeriasColaborador(id, function(resp) {
       if (!resp || !resp.ok || !resp.data || !resp.data.periodos) return;
       var periodos = resp.data.periodos;
-      var totalDias = 0;
-      var detalhes = [];
+      var totalDias = 0, totalDobro = 0;
+      var detalhes = [], detalhesDobro = [];
       periodos.forEach(function(p) {
-        if (p.status === 'vencido' && (p.saldo || 0) > 0) {
+        if ((p.saldo || 0) <= 0) return;
+        if (p.status === 'vencido') {
+          totalDias  += p.saldo;
+          totalDobro += p.saldo;
+          detalhes.push('Período ' + p.numero + ': ' + p.saldo + 'd 🚨em dobro');
+          detalhesDobro.push('Período ' + p.numero + ': ' + p.saldo + 'd');
+        } else if (p.status === 'em_concessao') {
           totalDias += p.saldo;
           detalhes.push('Período ' + p.numero + ': ' + p.saldo + 'd');
         }
       });
-      var el = document.getElementById('rh-resc-dias-fv');
-      if (el) el.value = Math.round(totalDias);
+      // Guardar diasDobro como atributo para calcularRescisao usar
+      var fvEl = document.getElementById('rh-resc-dias-fv');
+      if (fvEl) {
+        fvEl.value = Math.round(totalDias);
+        fvEl.dataset.diasDobro = totalDobro;
+      }
       var infoEl = document.getElementById('rh-resc-dias-fv-info');
       if (infoEl) {
-        infoEl.textContent = detalhes.length
-          ? detalhes.join(' · ') + ' (saldo real da API)'
-          : 'Nenhum período vencido com saldo pendente.';
+        var msg = detalhes.length ? detalhes.join(' · ') + ' (saldo real da API)' : 'Nenhum período com saldo pendente.';
+        if (totalDobro > 0) msg += ' — ' + totalDobro + 'd serão pagos em dobro (CLT Art. 137).';
+        infoEl.textContent = msg;
         infoEl.style.display = '';
+        infoEl.style.color = totalDobro > 0 ? 'var(--color-error,#c62828)' : '';
       }
     }, function() {
       // Fallback: estimativa por anos completos
@@ -37719,6 +37819,93 @@ var RhUI = (function() {
       if (diasFvEl) diasFvEl.value = anosComp > 0 ? 30 : 0;
       if (diasFvInfoEl) { diasFvInfoEl.textContent = 'Estimativa: API indisponível.'; diasFvInfoEl.style.display = ''; }
     });
+
+    // ── Consolidado de holerites ──────────────────────────────────────────────
+    var consolidadoEl = document.getElementById('rh-resc-consolidado');
+    if (consolidadoEl && id) {
+      consolidadoEl.style.display = '';
+      consolidadoEl.innerHTML =
+        '<div style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;">Histórico de Holerites</div>'
+        + '<p style="font-size:12px;color:var(--muted);">Carregando…</p>';
+      GAS.ponto.consolidadoRescisao({ colaboradorId: id }, function(r) {
+        if (!r || !r.ok || !r.data) {
+          consolidadoEl.innerHTML =
+            '<div style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;">Histórico de Holerites</div>'
+            + '<p style="font-size:12px;color:var(--muted);">Nenhum holerite registrado.</p>';
+          return;
+        }
+        var d = r.data;
+        var t = d.totais;
+        var html = '<div style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;">Histórico de Holerites</div>';
+        if (t.mesesComHolerite === 0) {
+          html += '<p style="font-size:12px;color:var(--muted);">Nenhum holerite processado para este colaborador.</p>';
+          consolidadoEl.innerHTML = html;
+          return;
+        }
+        // Resumo em 3 chips
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+          + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;">'
+            + '<span style="color:var(--text2);">Meses com holerite: </span><strong>' + t.mesesComHolerite + '</strong>'
+          + '</div>'
+          + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;">'
+            + '<span style="color:var(--text2);">FGTS real acumulado: </span><strong>' + _fmtMoedaResc(t.totalFgtsReal) + '</strong>'
+          + '</div>'
+          + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;">'
+            + '<span style="color:var(--text2);">Média salário bruto: </span><strong>' + _fmtMoedaResc(t.mediaSalarioBruto) + '</strong>'
+          + '</div>'
+        + '</div>';
+        // Tabela dos últimos 12 meses
+        var exibir = d.meses.slice(0, 12);
+        html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          + '<thead><tr style="background:var(--surface2);">'
+            + '<th style="padding:5px 8px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">Competência</th>'
+            + '<th style="padding:5px 8px;text-align:right;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">Salário Bruto</th>'
+            + '<th style="padding:5px 8px;text-align:right;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">Salário Líquido</th>'
+            + '<th style="padding:5px 8px;text-align:right;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">FGTS</th>'
+            + '<th style="padding:5px 8px;text-align:right;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">Prov. Férias</th>'
+            + '<th style="padding:5px 8px;text-align:right;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);">Prov. 13°</th>'
+          + '</tr></thead><tbody>';
+        exibir.forEach(function(m, i) {
+          var bg = i % 2 === 0 ? '' : 'background:var(--surface2);';
+          html += '<tr style="' + bg + '">'
+            + '<td style="padding:5px 8px;border-bottom:1px solid var(--border);">' + escaparHtml(m.competencia || m.mesRef) + '</td>'
+            + '<td style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border);">' + _fmtMoedaResc(m.salarioBruto) + '</td>'
+            + '<td style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border);">' + _fmtMoedaResc(m.salarioLiquido) + '</td>'
+            + '<td style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border);">' + _fmtMoedaResc(m.fgts) + '</td>'
+            + '<td style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border);">' + _fmtMoedaResc(m.provFerias) + '</td>'
+            + '<td style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border);">' + _fmtMoedaResc(m.provD3) + '</td>'
+          + '</tr>';
+        });
+        if (d.meses.length > 12) {
+          html += '<tr><td colspan="6" style="padding:4px 8px;font-size:11px;color:var(--text2);">…+ ' + (d.meses.length - 12) + ' meses anteriores não exibidos</td></tr>';
+        }
+        html += '<tr style="font-weight:600;background:var(--surface2);">'
+          + '<td style="padding:5px 8px;border-top:2px solid var(--border);">Total (' + t.mesesComHolerite + ' meses)</td>'
+          + '<td style="padding:5px 8px;text-align:right;border-top:2px solid var(--border);">' + _fmtMoedaResc(t.totalSalarioBruto) + '</td>'
+          + '<td style="padding:5px 8px;border-top:2px solid var(--border);"></td>'
+          + '<td style="padding:5px 8px;text-align:right;border-top:2px solid var(--border);">' + _fmtMoedaResc(t.totalFgtsReal) + '</td>'
+          + '<td style="padding:5px 8px;text-align:right;border-top:2px solid var(--border);">' + _fmtMoedaResc(t.totalProvFerias) + '</td>'
+          + '<td style="padding:5px 8px;text-align:right;border-top:2px solid var(--border);">' + _fmtMoedaResc(t.totalProvD3) + '</td>'
+        + '</tr>';
+        html += '</tbody></table></div>';
+        // Nota sobre FGTS real vs estimado
+        if (t.totalFgtsReal > 0) {
+          var fgtsEstimado = parseMoeda((document.getElementById('rh-resc-salario')||{}).value||'') * 0.08 * t.mesesComHolerite;
+          var diff = t.totalFgtsReal - fgtsEstimado;
+          if (Math.abs(diff) > 10) {
+            html += '<div style="font-size:11px;color:var(--text2);margin-top:6px;">'
+              + 'FGTS real (' + _fmtMoedaResc(t.totalFgtsReal) + ') vs. estimativa linear (' + _fmtMoedaResc(Math.round(fgtsEstimado*100)/100) + ')'
+              + (diff > 0 ? ' — histórico salarial crescente' : ' — histórico salarial com variações')
+              + '.</div>';
+          }
+        }
+        consolidadoEl.innerHTML = html;
+      }, function() {
+        consolidadoEl.innerHTML =
+          '<div style="font-size:11px;color:var(--text2);font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;">Histórico de Holerites</div>'
+          + '<p style="font-size:12px;color:var(--muted);">Não foi possível carregar o histórico.</p>';
+      });
+    }
   }
 
   function calcularRescisao(done) {
@@ -37727,7 +37914,9 @@ var RhUI = (function() {
     var tipo             = (document.getElementById('rh-resc-tipo')||{}).value || 'sem_justa_causa';
     var modo             = (document.getElementById('rh-resc-ap-modo')||{}).value || 'indenizado';
     var economia         = parseMoeda((document.getElementById('rh-resc-economia')||{}).value) || 0;
-    var diasFV           = parseFloat((document.getElementById('rh-resc-dias-fv')||{}).value || '0') || 0;
+    var diasFVEl         = document.getElementById('rh-resc-dias-fv');
+    var diasFV           = parseFloat((diasFVEl||{}).value || '0') || 0;
+    var diasFVDobro      = parseFloat(((diasFVEl||{}).dataset||{}).diasDobro || '0') || 0;
     var dataDesl         = (document.getElementById('rh-resc-data-desl')||{}).value || '';
     var dataAdm          = (document.getElementById('rh-resc-data-adm')||{}).value || '';
     var el = document.getElementById('rh-resc-resultado');
@@ -37736,6 +37925,7 @@ var RhUI = (function() {
       salarioBruto: salario, mesesTrabalhados: meses, tipoRescisao: tipo,
       modoAvisoPrevio: modo, economiaEsperada: economia || salario,
       diasFeriasVencidas: diasFV,
+      diasFeriasVencidasDobro: diasFVDobro,
       dataDesligamento: dataDesl, dataAdmissao: dataAdm
     };
     GAS.ponto.calcularRescisao(payload, function(r) {
@@ -37757,11 +37947,15 @@ var RhUI = (function() {
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'
             + '<div style="font-size:11px;color:var(--text2);">' + escaparHtml(labelAP) + '</div>'
             + '<div style="font-size:13px;color:var(--muted);">— não indenizado</div></div>';
-      var diasFV = c.diasFeriasVencidas || 0;
+      var diasFV_total = c.diasFeriasVencidas || 0;
+      var diasFV_dobro = c.diasFeriasVencidasDobro || 0;
+      var temDobro = diasFV_dobro > 0;
+      var fvLabel = 'Férias Vencidas (+ 1/3 constitucional)' + (temDobro ? ' 🚨 ' + diasFV_dobro + 'd em dobro (CLT 137)' : '');
       var cardFV = c.feriasVencidas > 0
-        ? '<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;">'
-            + '<div style="font-size:11px;color:var(--text2);">Férias Vencidas (+ 1/3 constitucional)</div>'
-            + '<div style="font-size:11px;color:var(--text2);margin-top:2px;"><strong>' + diasFV + ' dias</strong> não gozados a pagar</div>'
+        ? '<div style="background:var(--surface);border:1px solid ' + (temDobro ? '#c62828' : 'var(--border)') + ';border-radius:6px;padding:10px 14px;">'
+            + '<div style="font-size:11px;color:' + (temDobro ? '#c62828' : 'var(--text2)') + ';">' + escaparHtml(fvLabel) + '</div>'
+            + '<div style="font-size:11px;color:var(--text2);margin-top:2px;"><strong>' + diasFV_total + ' dias</strong> não gozados a pagar'
+              + (temDobro ? ' <span style="font-size:10px;background:#ffebee;color:#c62828;padding:1px 5px;border-radius:3px;font-weight:700;">2× DOBRO</span>' : '') + '</div>'
             + '<div style="font-size:15px;font-weight:600;margin-top:4px;">R$ ' + _fmtMoeda(c.feriasVencidas) + '</div>'
           + '</div>'
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'
@@ -37797,8 +37991,13 @@ var RhUI = (function() {
           + '</div>'
           + '<div style="font-size:14px;font-weight:600;white-space:nowrap;margin-left:16px;">R$ ' + _fmtMoeda(c.fgtsSaldoEstimado) + '</div>'
         + '</div>'
-        + (c.mesesBreakEven
-            ? '<p style="font-size:13px;margin-top:10px;">Break-even: <strong>' + c.mesesBreakEven + ' meses</strong> para a economia de R$ ' + _fmtMoeda(c.economiaEsperadaMes) + '/mês superar o custo.</p>'
+        + (c.mesesBreakEven != null
+            ? (function() {
+                var beStr = c.mesesBreakEven > 0 ? c.mesesBreakEven + ' meses' : '';
+                if (c.diasBreakEven > 0) beStr += (beStr ? ' e ' : '') + c.diasBreakEven + ' dias';
+                if (!beStr) beStr = 'menos de 1 dia';
+                return '<p style="font-size:13px;margin-top:10px;">Break-even: <strong>' + beStr + '</strong> para a economia de R$ ' + _fmtMoeda(c.economiaEsperadaMes) + '/mês superar o custo.</p>';
+              })()
             : '');
     }, function(e) { if (done) done(); if (el) el.innerHTML = '<p style="color:var(--color-error)">Erro: ' + escaparHtml(e.message || '') + '</p>'; });
   }
@@ -38237,6 +38436,7 @@ var RhUI = (function() {
     abrirFormAcordoFerias:abrirFormAcordoFerias, _acordoCalcDias:_acordoCalcDias,
     _acordoCalcSaldo:_acordoCalcSaldo, _confirmarAcordoFerias:_confirmarAcordoFerias,
     carregarPeriodosFerias:carregarPeriodosFerias,
+    carregarAlertasFerias:carregarAlertasFerias,
     _ferSecToggleTipo:_ferSecToggleTipo, _ferSecCalcSaldo:_ferSecCalcSaldo, _enviarFeriasSec:_enviarFeriasSec,
     _evSecAtualizarCampos:_evSecAtualizarCampos, _salvarEventoSec:_salvarEventoSec,
     _fecharModalSecundario:_fecharModalSecundario,

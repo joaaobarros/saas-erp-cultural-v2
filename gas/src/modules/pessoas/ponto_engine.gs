@@ -392,10 +392,16 @@ var PontoEngine = (function() {
         : (anosCompletos > 0 ? 1 : 0);
       diasFeriasVencidas = periodosVencidos * 30;
     }
+    // CLT Art. 137: férias concedidas após o término do período concessivo → pagamento em dobro.
+    // diasFeriasVencidasDobro = dias de períodos cujo concessivo já expirou (status='vencido').
+    var diasFV_dobro  = Math.min(diasFeriasVencidas, Math.max(0, Number(p.diasFeriasVencidasDobro || 0)));
+    var diasFV_normal = diasFeriasVencidas - diasFV_dobro;
 
     // Justa causa: só paga férias vencidas; proporcionais e 13º são perdidos
-    // Pagamento: (dias_vencidos / 30) × salário × (1 + 1/3)
-    var feriasVencidas      = (diasFeriasVencidas / 30) * s * (1 + 1/3);
+    // Pagamento normal: (dias/30) × salário × (1 + 1/3)
+    // Pagamento em dobro: (dias/30) × salário × (1 + 1/3) × 2
+    var feriasVencidas = (diasFV_normal / 30) * s * (1 + 1/3)
+                       + (diasFV_dobro  / 30) * s * (1 + 1/3) * 2;
     var feriasProporcionais = tipo === 'justa_causa' ? 0 : (s * (1 + 1/3)) * (mesesPropFerias / 12);
     var decimo3             = tipo === 'justa_causa' ? 0 : s * (meses13 / 12);
 
@@ -408,8 +414,9 @@ var PontoEngine = (function() {
     var totalRescisao = valorAP + feriasVencidas + feriasProporcionais + decimo3 + multaFGTS;
 
     var economiaEsperada = Number(p.economiaEsperada || s);
-    var mesesBreakEven   = economiaEsperada > 0
-      ? Math.ceil(totalRescisao / economiaEsperada) : null;
+    var rawBreakEven     = economiaEsperada > 0 ? totalRescisao / economiaEsperada : null;
+    var mesesBreakEven   = rawBreakEven != null ? Math.floor(rawBreakEven) : null;
+    var diasBreakEven    = rawBreakEven != null ? Math.round((rawBreakEven - Math.floor(rawBreakEven)) * 30) : null;
 
     return {
       tipoRescisao:           tipo,
@@ -418,6 +425,7 @@ var PontoEngine = (function() {
       mesesTrabalhados:       meses,
       diasAvisoPrevio:        diasAP,
       diasFeriasVencidas:     Math.round(diasFeriasVencidas * 10) / 10,
+      diasFeriasVencidasDobro: Math.round(diasFV_dobro * 10) / 10,
       meses13:                meses13,
       mesesPropFerias:        mesesPropFerias,
       avisoPrevio:            Math.round(valorAP * 100) / 100,
@@ -428,7 +436,59 @@ var PontoEngine = (function() {
       multaFGTS:              Math.round(multaFGTS * 100) / 100,
       totalRescisao:          Math.round(totalRescisao * 100) / 100,
       economiaEsperadaMes:    economiaEsperada,
-      mesesBreakEven:         mesesBreakEven
+      mesesBreakEven:         mesesBreakEven,
+      diasBreakEven:          diasBreakEven
+    };
+  }
+
+  // ─── Consolidado de pagamentos para rescisão ─────────────────────────────────
+
+  function consolidadoRescisao(orgId, colaboradorId) {
+    var todos = HoleriteRepository.listar(orgId, { colaboradorId: colaboradorId });
+    var holerites = todos.filter(function(h) { return h.status !== 'cancelado'; });
+
+    var totalSalarioBruto  = 0;
+    var totalFgtsReal      = 0;
+    var totalProvFerias    = 0;
+    var totalProvD3        = 0;
+    var totalCustoEmpresa  = 0;
+
+    var meses = holerites.map(function(h) {
+      var sal  = Number(h.salarioBruto  || 0);
+      var fgts = Number(h.fgtsCompetencia || (h.encargosPatronais && h.encargosPatronais.fgts) || 0);
+      var provF = Number((h.provisoes && h.provisoes.ferias)      || 0);
+      var provD = Number((h.provisoes && h.provisoes.decTerceiro) || 0);
+      var custo = Number(h.custoTotalEmpresa || 0);
+      totalSalarioBruto += sal;
+      totalFgtsReal     += fgts;
+      totalProvFerias   += provF;
+      totalProvD3       += provD;
+      totalCustoEmpresa += custo;
+      return {
+        mesRef:       h.mesRef,
+        competencia:  h.competencia || h.mesRef,
+        salarioBruto: sal,
+        salarioLiquido: Number(h.salarioLiquido || 0),
+        fgts:         fgts,
+        provFerias:   provF,
+        provD3:       provD,
+        custoEmpresa: custo,
+        status:       h.status
+      };
+    });
+
+    var n = meses.length;
+    return {
+      meses:  meses,
+      totais: {
+        mesesComHolerite:     n,
+        totalSalarioBruto:    Math.round(totalSalarioBruto  * 100) / 100,
+        totalFgtsReal:        Math.round(totalFgtsReal      * 100) / 100,
+        totalProvFerias:      Math.round(totalProvFerias    * 100) / 100,
+        totalProvD3:          Math.round(totalProvD3        * 100) / 100,
+        totalCustoEmpresa:    Math.round(totalCustoEmpresa  * 100) / 100,
+        mediaSalarioBruto:    n > 0 ? Math.round(totalSalarioBruto / n * 100) / 100 : 0
+      }
     };
   }
 
@@ -758,6 +818,7 @@ var PontoEngine = (function() {
     simularReajuste:           simularReajuste,
     calcularRescisao:          calcularRescisao,
     calcularIndicadoresTurnover: calcularIndicadoresTurnover,
+    consolidadoRescisao:       consolidadoRescisao,
     exportarAFD:               exportarAFD,
     exportarCSVColabore:       exportarCSVColabore,
     importarAFD:               importarAFD,

@@ -1189,6 +1189,75 @@ var PessoasEngine = (function () {
     return revertidos;
   }
 
+  // ─── Alertas de vencimento de férias ─────────────────────────────────────────
+
+  /**
+   * Retorna lista de colaboradores ativos com período concessivo vencendo em breve
+   * ou já expirado, com saldo de férias pendente.
+   * Usado por: UI (painel de alertas), notificações por email.
+   *
+   * urgencia: 'critico' (<60d), 'urgente' (60-90d), 'atencao' (90-180d), 'vencido' (expirado)
+   */
+  function alertasFeriasAtivos(orgId) {
+    orgId = orgId || _orgId();
+    var _pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var now = new Date();
+    var hoje = now.getFullYear() + '-' + _pad(now.getMonth()+1) + '-' + _pad(now.getDate());
+
+    var todos = ColaboradorRepository.listar(orgId, { status: 'ativo' });
+    var alertas = [];
+
+    todos.forEach(function(c) {
+      if (!c.dataAdmissao) return;
+      var periodos = calcularPeriodosAquisitivos(c.dataAdmissao);
+      periodos.forEach(function(p) {
+        if (p.saldo <= 0) return;
+        if (p.status === 'em_aquisicao') return; // ainda não venceu, sem urgência
+
+        var urgencia = null;
+        var diasParaVencer = null;
+
+        if (p.status === 'vencido') {
+          urgencia = 'vencido';
+          diasParaVencer = -Math.round((new Date(hoje) - new Date(p.concessivoFim)) / 86400000);
+        } else if (p.status === 'em_concessao') {
+          // Tempo hábil: empregador deve avisar 30 dias antes; férias duram 30 dias.
+          // Portanto: se restam < 60 dias → crítico; 60-90 → urgente; 90-180 → atenção
+          var msRestantes = new Date(p.concessivoFim) - new Date(hoje);
+          diasParaVencer = Math.round(msRestantes / 86400000);
+          if (diasParaVencer < 60)       urgencia = 'critico';
+          else if (diasParaVencer < 90)  urgencia = 'urgente';
+          else if (diasParaVencer <= 180) urgencia = 'atencao';
+        }
+
+        if (!urgencia) return;
+
+        alertas.push({
+          colaboradorId:  c.id,
+          nome:           c.nome || c.apelido || '',
+          setor:          c.setor || '',
+          email:          c.email || '',
+          cargo:          c.cargo || '',
+          dataAdmissao:   c.dataAdmissao,
+          periodoConcNum: p.numero,
+          concessivoFim:  p.concessivoFim,
+          saldo:          p.saldo,
+          diasParaVencer: diasParaVencer,
+          urgencia:       urgencia
+        });
+      });
+    });
+
+    // Ordenar: vencidos primeiro, depois por dias para vencer (crescente)
+    alertas.sort(function(a, b) {
+      if (a.urgencia === 'vencido' && b.urgencia !== 'vencido') return -1;
+      if (b.urgencia === 'vencido' && a.urgencia !== 'vencido') return  1;
+      return (a.diasParaVencer || 0) - (b.diasParaVencer || 0);
+    });
+
+    return alertas;
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // API PÚBLICA
   // ──────────────────────────────────────────────────────────────────
@@ -1266,7 +1335,10 @@ var PessoasEngine = (function () {
 
     // Auto-retorno
     verificarAutoRetornoFerias:      verificarAutoRetornoFerias,
-    verificarAutoRetornoAfastamento: verificarAutoRetornoAfastamento
+    verificarAutoRetornoAfastamento: verificarAutoRetornoAfastamento,
+
+    // Alertas de férias
+    alertasFeriasAtivos:             alertasFeriasAtivos
   };
 
 })();
