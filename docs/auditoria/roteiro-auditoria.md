@@ -1490,7 +1490,22 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 52b (2026-06-14) → SESSÃO 53
+## HANDOFF ATUAL — SESSÃO 52c (2026-06-14) → SESSÃO 53
+
+### Estado: Deploy @903 · Fix: custo mensal rescisão com benefícios reais
+
+### O que foi feito nesta sessão (s52c)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @903 | Fix: custo mensal com benefícios | `_aoSelecionarColabRescisao`: substituiu `salario×1,55` por chamada real a `GAS.contratos.calcularPessoal` com VT/VA/PS do colaborador; breakdown exibe salário + encargos + provisões + benefícios; nota explica que benefícios contam no break-even mas não entram na rescisão |
+
+### Pendentes / próxima ação
+- Testar no browser: selecionar colaborador → custo mensal deve bater com valor da planilha (~R$13.530,85 para salário R$8.103,38 com benefícios reais)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 52b (2026-06-14) → SESSÃO 52c
 
 ### Estado: Deploy @902 · Fix: aviso férias vencidas + ícones MS
 
