@@ -29,6 +29,7 @@ var ColaboradorRepository = (function () {
   var _ARQUIVO_HISTORICO     = 'historico_rh.json';
   var _ARQUIVO_AFASTAMENTOS  = 'afastamentos.json';
   var _ARQUIVO_OCORRENCIAS   = 'ocorrencias.json';
+  var _ARQUIVO_DOCUMENTOS    = 'documentos_rh.json';
 
   var _SHEET_KEY = 'SHEET_ID_EQUIPES';
   var _ABA       = 'Funcionarios';
@@ -497,6 +498,46 @@ var ColaboradorRepository = (function () {
     return true;
   }
 
+  // ── Documentos RH ────────────────────────────────────────────────
+
+  function listarDocumentos(filtros) {
+    var todos = lerJSON(_ARQUIVO_DOCUMENTOS) || [];
+    filtros = filtros || {};
+    return todos.filter(function (d) {
+      if (filtros.orgId && d.orgId !== filtros.orgId) return false;
+      if (filtros.idColaborador && d.idColaborador !== filtros.idColaborador) return false;
+      if (filtros.tipo && d.tipo !== filtros.tipo) return false;
+      return true;
+    });
+  }
+
+  function salvarDocumento(dados) {
+    dados = dados || {};
+    var isNovo = !dados.id;
+    var agr    = _agora();
+    if (isNovo) {
+      dados.id       = 'doc_' + Date.now();
+      dados.criadoEm = agr;
+    }
+    dados.atualizadoEm = agr;
+    modifyJSON(_ARQUIVO_DOCUMENTOS, function (lista) {
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === dados.id) { idx = i; break; }
+      }
+      if (idx >= 0) lista[idx] = dados; else lista.push(dados);
+      return lista;
+    });
+    return { id: dados.id, isNovo: isNovo };
+  }
+
+  function excluirDocumento(id) {
+    modifyJSON(_ARQUIVO_DOCUMENTOS, function (lista) {
+      return lista.filter(function (d) { return d.id !== id; });
+    });
+    return true;
+  }
+
   // ── Manutenção do índice ──────────────────────────────────────────
 
   function protegerIndice() {
@@ -604,6 +645,11 @@ var ColaboradorRepository = (function () {
     listarOcorrencias:        listarOcorrencias,
     salvarOcorrencia:         salvarOcorrencia,
     excluirOcorrencia:        excluirOcorrencia,
+
+    // Documentos RH
+    listarDocumentos:         listarDocumentos,
+    salvarDocumento:          salvarDocumento,
+    excluirDocumento:         excluirDocumento,
 
     // Manutenção
     garantirCabecalhoIndice: _garantirCabecalhoIndice,

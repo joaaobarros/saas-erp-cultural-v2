@@ -489,6 +489,37 @@ var PessoasEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // DOCUMENTOS RH
+  // ──────────────────────────────────────────────────────────────────
+
+  function listarDocumentos(filtros, orgId) {
+    orgId   = orgId || _orgId();
+    filtros = Object.assign({ orgId: orgId }, filtros || {});
+    return ColaboradorRepository.listarDocumentos(filtros);
+  }
+
+  function salvarDocumento(dados, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    dados = dados || {};
+    if (!dados.idColaborador) throw new Error('idColaborador é obrigatório.');
+    if (!dados.titulo) throw new Error('titulo é obrigatório.');
+    if (!dados.tipo)   throw new Error('tipo é obrigatório.');
+    dados.orgId    = orgId;
+    dados.criadoPor = dados.criadoPor || emailOperador || '';
+    var r = ColaboradorRepository.salvarDocumento(dados);
+    _audit(r.isNovo ? 'DOCUMENTO_RH_CRIADO' : 'DOCUMENTO_RH_ATUALIZADO', {
+      id: r.id, idColaborador: dados.idColaborador, tipo: dados.tipo, operador: emailOperador || ''
+    });
+    return r.id;
+  }
+
+  function excluirDocumento(id, emailOperador) {
+    ColaboradorRepository.excluirDocumento(id);
+    _audit('DOCUMENTO_RH_EXCLUIDO', { id: id, operador: emailOperador || '' });
+    return { ok: true };
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // AVALIAÇÕES
   // ──────────────────────────────────────────────────────────────────
 
@@ -1224,6 +1255,11 @@ var PessoasEngine = (function () {
     listarOcorrencias:      listarOcorrencias,
     registrarOcorrencia:    registrarOcorrencia,
     excluirOcorrencia:      excluirOcorrencia,
+
+    // Documentos RH
+    listarDocumentos:       listarDocumentos,
+    salvarDocumento:        salvarDocumento,
+    excluirDocumento:       excluirDocumento,
 
     // Migração
     migrarFuncionariosParaColaboradores: migrarFuncionariosParaColaboradores,

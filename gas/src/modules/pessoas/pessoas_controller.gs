@@ -951,6 +951,52 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// DOCUMENTOS RH
+// ═══════════════════════════════════════════════════════════════════
+
+function ctrl_rh_listar_documentos(idColaborador) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    var filtros = { orgId: ctx.orgId };
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) !== -1) {
+      if (idColaborador) filtros.idColaborador = idColaborador;
+      return PessoasEngine.listarDocumentos(filtros, ctx.orgId);
+    }
+    // Colaborador: apenas os próprios
+    var idProprio = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+    if (!idProprio) throw new Error('Colaborador não encontrado no cadastro.');
+    if (idColaborador && idColaborador !== idProprio)
+      throw new Error('Acesso negado: você só pode visualizar seus próprios documentos.');
+    filtros.idColaborador = idProprio;
+    return PessoasEngine.listarDocumentos(filtros, ctx.orgId);
+  }, 'ctrl_rh_listar_documentos');
+}
+
+function ctrl_rh_salvar_documento(dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode gerenciar documentos.');
+    if (!dados || typeof dados !== 'object') throw new Error('Dados são obrigatórios.');
+    var id = PessoasEngine.salvarDocumento(dados, ctx.email, ctx.orgId);
+    return { id: id };
+  }, 'ctrl_rh_salvar_documento');
+}
+
+function ctrl_rh_excluir_documento(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (_NIVEL_ESCRITA.indexOf(nivel) === -1)
+      throw new Error('Apenas RH pode excluir documentos.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.excluirDocumento(id, ctx.email);
+  }, 'ctrl_rh_excluir_documento');
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════════
 

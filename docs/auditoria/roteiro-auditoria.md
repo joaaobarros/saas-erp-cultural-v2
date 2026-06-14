@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @874 · Ações: Fases de projeto + cronograma + filtro "Minhas ações"
+> Deploy atual: @875 · Documentos RH (backend CRUD) + rescisão com seletor de colaborador + mapa sem atalho direto
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
