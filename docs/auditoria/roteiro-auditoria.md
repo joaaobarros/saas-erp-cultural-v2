@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @918+ · Fix: modal Encargos não fecha antes da resposta GAS — botão trava com loading até o callback
+> Deploy atual: @920+ · Fix: restaurarOficial não atualizava salarioMinimo (campo topo, não em aliquotas)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

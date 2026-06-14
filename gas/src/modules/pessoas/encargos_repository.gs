@@ -341,7 +341,17 @@ var EncargosRepository = (function () {
     var doc = obter(orgId);
     var ano = anoRef || doc.anoAtivo || new Date().getFullYear();
 
-    if (doc.aliquotas && doc.aliquotas[chave]) {
+    if (chave === 'salarioMinimo') {
+      if (doc.salarioMinimo && doc.salarioMinimo.fonte === 'manual') {
+        var smOficial = _buildDocOficial(orgId, ano, null).salarioMinimo;
+        doc.salarioMinimo = Object.assign({}, smOficial, { fonte: 'oficial' });
+        _adicionarHistorico(doc, 'restauracao_oficial', ano, email, [{ campo: chave }]);
+        doc.atualizadoEm = _ts();
+        doc.atualizadoPor = email;
+        _salvar(doc);
+        AuditoriaService.registrar('ENCARGO_RESTAURADO_OFICIAL', 'encargos', { orgId: orgId, chave: chave, email: email });
+      }
+    } else if (doc.aliquotas && doc.aliquotas[chave]) {
       var it = doc.aliquotas[chave];
       if (it.fonte === 'manual') {
         it.fonte = 'oficial';
