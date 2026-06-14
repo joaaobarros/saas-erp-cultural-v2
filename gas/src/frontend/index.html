@@ -37290,13 +37290,13 @@ var RhUI = (function() {
       function _urgenciaFeriasInfo(p) {
         if (p.saldo <= 0 || p.status === 'em_aquisicao' || p.status === 'gozado') return null;
         if (p.status === 'vencido') {
-          return { label:'Em dobro (vencido)', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' };
+          return { label:'Prazo vencido — pago em dobro', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' };
         }
         var dias = Math.round((new Date(p.concessivoFim) - new Date(hoje)) / 86400000);
-        if (dias < 0)  return { label:'Expirado', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' };
-        if (dias < 60) return { label:'Crítico — ' + dias + 'd', cor:'#c62828', bg:'#ffebee', icon:'🔴' };
-        if (dias < 90) return { label:'Urgente — ' + dias + 'd', cor:'#e65100', bg:'#fff3e0', icon:'🟠' };
-        if (dias <= 180) return { label:'Atenção — ' + dias + 'd', cor:'#f9a825', bg:'#fffde7', icon:'🟡' };
+        if (dias < 0)  return { label:'Prazo expirado', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' };
+        if (dias < 60) return { label:'Crítico — ' + dias + 'd restantes', cor:'#c62828', bg:'#ffebee', ms:'error' };
+        if (dias < 90) return { label:'Urgente — ' + dias + 'd restantes', cor:'#e65100', bg:'#fff3e0', ms:'warning' };
+        if (dias <= 180) return { label:'Atenção — ' + dias + 'd restantes', cor:'#f9a825', bg:'#fffde7', ms:'info' };
         return null;
       }
 
@@ -37312,7 +37312,7 @@ var RhUI = (function() {
             : '<strong style="color:var(--success,#2e7d32)">0d</strong>';
           var urg = _urgenciaFeriasInfo(p);
           var urgStr = urg
-            ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';">' + urg.icon + ' ' + escaparHtml(urg.label) + '</span>'
+            ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:' + urg.cor + ';">' + urg.ms + '</span>' + escaparHtml(urg.label) + '</span>'
             : '<span style="font-size:11px;color:var(--muted);">—</span>';
           return '<tr>' +
             '<td>'+p.numero+'</td>' +
@@ -37344,10 +37344,10 @@ var RhUI = (function() {
         return;
       }
       var URGENCIA_CFG = {
-        vencido: { label:'Em dobro (vencido)', cor:'#7b1fa2', bg:'#f3e5f5', icon:'🚨' },
-        critico: { label:'Crítico',            cor:'#c62828', bg:'#ffebee', icon:'🔴' },
-        urgente: { label:'Urgente',            cor:'#e65100', bg:'#fff3e0', icon:'🟠' },
-        atencao: { label:'Atenção',            cor:'#f9a825', bg:'#fffde7', icon:'🟡' }
+        vencido: { label:'Prazo vencido — pago em dobro', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' },
+        critico: { label:'Crítico',                        cor:'#c62828', bg:'#ffebee', ms:'error' },
+        urgente: { label:'Urgente',                        cor:'#e65100', bg:'#fff3e0', ms:'warning' },
+        atencao: { label:'Atenção',                        cor:'#f9a825', bg:'#fffde7', ms:'info' }
       };
       var html = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">'
         + lista.length + ' colaborador(es) com férias a vencer ou já vencidas.</div>';
@@ -37366,7 +37366,7 @@ var RhUI = (function() {
           + '<td>Período ' + a.periodoConcNum + '</td>'
           + '<td><strong>' + a.saldo + 'd</strong></td>'
           + '<td>' + fmtDataPtBR(a.concessivoFim) + '<br><small style="color:var(--text2);">' + diasStr + '</small></td>'
-          + '<td><span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';">' + urg.icon + ' ' + urg.label + '</span></td>'
+          + '<td><span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:' + urg.cor + ';">' + urg.ms + '</span>' + urg.label + '</span></td>'
           + '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias(' + JSON.stringify(a.colaboradorId).replace(/"/g,"'") + ')">Agendar</button></td>'
           + '</tr>';
       });
@@ -37801,46 +37801,50 @@ var RhUI = (function() {
     var res = document.getElementById('rh-resc-resultado');
     if (res) res.innerHTML = '';
 
-    // ── Férias: buscar dias vencidos reais via API ────────────────────────────
+    // ── Férias: buscar dias vencidos reais ───────────────────────────────────
     var diasFvEl = document.getElementById('rh-resc-dias-fv');
     var diasFvInfoEl = document.getElementById('rh-resc-dias-fv-info');
     if (diasFvEl) diasFvEl.value = '0';
+    if (diasFvInfoEl) diasFvInfoEl.style.display = 'none';
     GAS.rh.resumoFeriasColaborador(id, function(resp) {
       if (!resp || !resp.ok || !resp.data || !resp.data.periodos) return;
       var periodos = resp.data.periodos;
-      var totalDias = 0, totalDobro = 0;
-      var detalhes = [], detalhesDobro = [];
+      var totalDias = 0, totalDobro = 0, nVencidos = 0, nConcessao = 0;
       periodos.forEach(function(p) {
         if ((p.saldo || 0) <= 0) return;
         if (p.status === 'vencido') {
           totalDias  += p.saldo;
           totalDobro += p.saldo;
-          detalhes.push('Período ' + p.numero + ': ' + p.saldo + 'd 🚨em dobro');
-          detalhesDobro.push('Período ' + p.numero + ': ' + p.saldo + 'd');
+          nVencidos++;
         } else if (p.status === 'em_concessao') {
           totalDias += p.saldo;
-          detalhes.push('Período ' + p.numero + ': ' + p.saldo + 'd');
+          nConcessao++;
         }
       });
-      // Guardar diasDobro como atributo para calcularRescisao usar
       var fvEl = document.getElementById('rh-resc-dias-fv');
-      if (fvEl) {
-        fvEl.value = Math.round(totalDias);
-        fvEl.dataset.diasDobro = totalDobro;
-      }
+      if (fvEl) { fvEl.value = Math.round(totalDias); fvEl.dataset.diasDobro = totalDobro; }
       var infoEl = document.getElementById('rh-resc-dias-fv-info');
-      if (infoEl) {
-        var msg = detalhes.length ? detalhes.join(' · ') + ' (saldo real da API)' : 'Nenhum período com saldo pendente.';
-        if (totalDobro > 0) msg += ' — ' + totalDobro + 'd serão pagos em dobro (CLT Art. 137).';
-        infoEl.textContent = msg;
-        infoEl.style.display = '';
-        infoEl.style.color = totalDobro > 0 ? 'var(--color-error,#c62828)' : '';
+      if (!infoEl) return;
+      if (!totalDias) { infoEl.style.display = 'none'; return; }
+      if (totalDobro > 0) {
+        var sufixo = nVencidos === 1 ? 'um período vencido' : nVencidos + ' períodos vencidos';
+        infoEl.innerHTML =
+          '<span class="ms ms-sm" style="vertical-align:middle;color:#dc2626;">warning</span> ' +
+          '<strong>' + totalDobro + ' dias</strong> com prazo legal esgotado (' + sufixo + ') — ' +
+          'serão pagos em dobro conforme CLT Art. 137.' +
+          (nConcessao > 0
+            ? ' Mais ' + (totalDias - totalDobro) + ' dias dentro do prazo de concessão.'
+            : '');
+        infoEl.style.cssText = 'font-size:11px;color:#dc2626;margin-top:4px;display:block;';
+      } else {
+        infoEl.innerHTML =
+          '<span class="ms ms-sm" style="vertical-align:middle;color:var(--text2);">info</span> ' +
+          totalDias + ' dias de férias a pagar, ainda dentro do prazo de concessão.';
+        infoEl.style.cssText = 'font-size:11px;color:var(--text2);margin-top:4px;display:block;';
       }
     }, function() {
-      // Fallback: estimativa por anos completos
       var anosComp = Math.floor(meses / 12);
       if (diasFvEl) diasFvEl.value = anosComp > 0 ? 30 : 0;
-      if (diasFvInfoEl) { diasFvInfoEl.textContent = 'Estimativa: API indisponível.'; diasFvInfoEl.style.display = ''; }
     });
 
     // ── Consolidado de holerites ──────────────────────────────────────────────
@@ -37973,12 +37977,12 @@ var RhUI = (function() {
       var diasFV_total = c.diasFeriasVencidas || 0;
       var diasFV_dobro = c.diasFeriasVencidasDobro || 0;
       var temDobro = diasFV_dobro > 0;
-      var fvLabel = 'Férias Vencidas (+ 1/3 constitucional)' + (temDobro ? ' 🚨 ' + diasFV_dobro + 'd em dobro (CLT 137)' : '');
+      var fvLabel = 'Férias Vencidas (+ 1/3 constitucional)' + (temDobro ? ' — ' + diasFV_dobro + 'd com prazo vencido' : '');
       var cardFV = c.feriasVencidas > 0
         ? '<div style="background:var(--surface);border:1px solid ' + (temDobro ? '#c62828' : 'var(--border)') + ';border-radius:6px;padding:10px 14px;">'
             + '<div style="font-size:11px;color:' + (temDobro ? '#c62828' : 'var(--text2)') + ';">' + escaparHtml(fvLabel) + '</div>'
             + '<div style="font-size:11px;color:var(--text2);margin-top:2px;"><strong>' + diasFV_total + ' dias</strong> não gozados a pagar'
-              + (temDobro ? ' <span style="font-size:10px;background:#ffebee;color:#c62828;padding:1px 5px;border-radius:3px;font-weight:700;">2× DOBRO</span>' : '') + '</div>'
+              + (temDobro ? ' <span style="font-size:10px;background:#ffebee;color:#c62828;padding:1px 5px;border-radius:3px;font-weight:700;"><span class="ms ms-sm" style="font-size:11px;vertical-align:middle;">warning</span> pago em dobro</span>' : '') + '</div>'
             + '<div style="font-size:15px;font-weight:600;margin-top:4px;">R$ ' + _fmtMoeda(c.feriasVencidas) + '</div>'
           + '</div>'
         : '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;opacity:.6;">'

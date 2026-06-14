@@ -1490,7 +1490,24 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 52 (2026-06-14) → SESSÃO 53
+## HANDOFF ATUAL — SESSÃO 52b (2026-06-14) → SESSÃO 53
+
+### Estado: Deploy @902 · Fix: aviso férias vencidas + ícones MS
+
+### O que foi feito nesta sessão (s52b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @902 | Fix: aviso férias | Mensagem do campo "Férias vencidas" só aparece quando há períodos com prazo legal vencido; sem jargão "API"/"Período N"; usa Material Symbols `warning`/`report`/`error`/`info` em vez de emoji |
+| @902 | Fix: ícones férias | `_urgenciaFeriasInfo` e `URGENCIA_CFG` substituídos — campo `ms` com nome do ícone MS; render com `<span class="ms ms-sm">` inline |
+| @902 | Fix: resultado rescisão | Label "Férias Vencidas" sem emoji; badge "pago em dobro" com ícone MS `warning` |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Selecionar colaborador com férias vencidas → aviso aparece com ícone MS e mensagem clara; (2) Colaborador sem férias vencidas → campo sem aviso; (3) Tabela de períodos → coluna Urgência com ícones MS
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 52 (2026-06-14) → SESSÃO 52b
 
 ### Estado: Deploy @900 · Folha: Rescisão movida para sub-painel + PS breakdown verColab/holerite
 
