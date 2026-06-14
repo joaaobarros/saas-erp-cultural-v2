@@ -468,7 +468,36 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 70 (2026-06-13) → SESSÃO 71
+## HANDOFF ATUAL — SESSÃO 71 (2026-06-14) → SESSÃO 72
+
+### Estado atual: ~264 bugs registrados · Deploy @888 (GAS)
+
+### O que foi feito nesta sessão (s71)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @888 | Feat — Aba Documentos RH | `colaborador_repository.gs`: `documentos_rh.json` com `listarDocumentos/salvarDocumento/excluirDocumento`. `pessoas_engine.gs`: wraps com validação e auditoria. `pessoas_controller.gs`: 3 controllers RBAC. `index.html`: HTML da aba substituído; `carregarDocumentos()` em `setTab`; modal `_abrirModalSimples` para add/edit; `_abrirModalConfirmar` para exclusão; `GAS.rh` bindings. |
+
+### Checklist de auditoria — s71
+```
+[x] prompt()/confirm()/alert() — zero; exclusão usa _abrirModalConfirmar
+[x] GAS.* namespace — listarDocumentos/salvarDocumento/excluirDocumento adicionados em GAS.rh
+[x] CSS — sem classes novas; usa form-control, form-label, tabela, btn já definidos
+[x] IDs de DOM — rh-doc-filtro-colab, rh-doc-filtro-tipo, rh-doc-lista, rh-doc-btn-add; rh-doc-f-* dentro do modal (dinâmico)
+[x] FsmGuardian — sem transições de status
+[x] Modais — box usa background via _abrirModalSimples (var(--surface)); overlay rgba(15,23,42,.70)
+[x] BtnGuard — rh-doc-btn-add tem data-bg-skip="1"; rh-doc-btn-salvar protegido com BtnGuard.wrap
+[x] Datas — dataDocumento e validade exibidos com fmtDataPtBR()
+```
+
+### Pendentes / próxima ação
+- Testar aba Documentos: Pessoas/RH → Documentos → adicionar documento → lista exibe → editar → excluir.
+- Confirmar que filtro por colaborador + tipo filtra corretamente.
+- Verificar BtnGuard.auditar() no console.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 70 (2026-06-13) → SESSÃO 71
 
 ### Estado atual: ~264 bugs registrados · Deploy @871 (GAS)
 

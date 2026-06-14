@@ -36820,6 +36820,141 @@ var RhUI = (function() {
     });
   }
 
+  // ─── DOCUMENTOS RH ──────────────────────────────────────────
+  function carregarDocumentos() {
+    var el = document.getElementById('rh-doc-lista');
+    if (!el) return;
+    el.innerHTML = _empty('Carregando…');
+    var idColab = (document.getElementById('rh-doc-filtro-colab')||{}).value || null;
+    var tipo    = (document.getElementById('rh-doc-filtro-tipo')||{}).value   || null;
+    GAS.rh.listarDocumentos(idColab, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      if (tipo) lista = lista.filter(function(d){ return d.tipo === tipo; });
+      if (!lista || !lista.length) { el.innerHTML = _empty('Nenhum documento cadastrado.'); return; }
+      var TIPOS = { contrato:'Contrato', atestado:'Atestado', certificado:'Certificado', treinamento:'Treinamento', identificacao:'Identificação', outros:'Outros' };
+      var CORES = { contrato:'#3b82f6', atestado:'#f59e0b', certificado:'#10b981', treinamento:'#6366f1', identificacao:'#0ea5e9', outros:'#94a3b8' };
+      el.innerHTML = '<table class="tabela"><thead><tr><th>Tipo</th><th>Título</th><th>Colaborador</th><th>Data</th><th>Validade</th><th>Link</th><th></th></tr></thead><tbody>' +
+        lista.map(function(d) {
+          var cor = CORES[d.tipo] || '#94a3b8';
+          var badge = '<span style="background:' + cor + '20;color:' + cor + ';border:1px solid ' + cor + '40;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;">' + _esc(TIPOS[d.tipo]||d.tipo||'—') + '</span>';
+          var link = d.url ? '<a href="' + _esc(d.url) + '" target="_blank" style="color:var(--color-primary);"><span class="ms ms-sm">open_in_new</span></a>' : '—';
+          var idSafe = (d.id||'').replace(/"/g,"'");
+          var dadosJson = JSON.stringify(d).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,"'");
+          return '<tr>'+
+            '<td>'+badge+'</td>'+
+            '<td style="font-weight:500;">'+_esc(d.titulo||'—')+(d.descricao?'<br><span style="font-size:11px;color:var(--text2);">'+_esc(d.descricao)+'</span>':'')+'</td>'+
+            '<td>'+_esc(d.nomeColaborador||d.idColaborador||'—')+'</td>'+
+            '<td>'+fmtDataPtBR(d.dataDocumento||'')+'</td>'+
+            '<td>'+(d.validade?fmtDataPtBR(d.validade):'—')+'</td>'+
+            '<td>'+link+'</td>'+
+            '<td style="white-space:nowrap;">'+
+              '<button class="btn btn-ghost btn-sm" id="rh-btn-doc-edit-'+idSafe+'" onclick="RhUI.abrirFormDocumento(JSON.parse(decodeURIComponent(\''+encodeURIComponent(JSON.stringify(d))+'\')))" title="Editar"><span class="ms ms-sm">edit</span></button> '+
+              '<button class="btn btn-error btn-sm" id="rh-btn-doc-del-'+idSafe+'" onclick="RhUI.excluirDocumento(\''+idSafe+'\')" title="Excluir"><span class="ms ms-sm">delete</span></button>'+
+            '</td>'+
+            '</tr>';
+        }).join('') + '</tbody></table>';
+    }, function(e) { el.innerHTML = _empty('Erro: '+(e.message||e)); });
+  }
+
+  function abrirFormDocumento(doc) {
+    doc = doc || {};
+    var html = '<div style="padding:24px 28px;">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">'+
+        '<span class="ms" style="font-size:22px;color:var(--color-primary);">folder_open</span>'+
+        '<h2 style="font-size:16px;font-weight:700;margin:0;">'+(doc.id?'Editar Documento':'Novo Documento')+'</h2>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:14px;">'+
+        '<div><label class="form-label">Colaborador *</label>'+
+          '<select id="rh-doc-f-colab" class="form-control"></select></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'+
+          '<div><label class="form-label">Tipo *</label>'+
+            '<select id="rh-doc-f-tipo" class="form-control">'+
+              '<option value="contrato">Contrato</option>'+
+              '<option value="atestado">Atestado</option>'+
+              '<option value="certificado">Certificado</option>'+
+              '<option value="treinamento">Treinamento</option>'+
+              '<option value="identificacao">Identificação</option>'+
+              '<option value="outros">Outros</option>'+
+            '</select></div>'+
+          '<div><label class="form-label">Data do Documento</label>'+
+            '<input type="date" id="rh-doc-f-data" class="form-control"></div>'+
+        '</div>'+
+        '<div><label class="form-label">Título *</label>'+
+          '<input type="text" id="rh-doc-f-titulo" class="form-control" placeholder="Ex.: Contrato de Trabalho CLT"></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'+
+          '<div><label class="form-label">Validade</label>'+
+            '<input type="date" id="rh-doc-f-validade" class="form-control"></div>'+
+          '<div><label class="form-label">Link (URL)</label>'+
+            '<input type="url" id="rh-doc-f-url" class="form-control" placeholder="https://drive.google.com/…"></div>'+
+        '</div>'+
+        '<div><label class="form-label">Observações</label>'+
+          '<textarea id="rh-doc-f-desc" class="form-control" rows="2" placeholder="Observações adicionais…"></textarea></div>'+
+        '<input type="hidden" id="rh-doc-f-id" value="'+_esc(doc.id||'')+'">'+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">'+
+        '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()">Cancelar</button>'+
+        '<button class="btn btn-primario" id="rh-doc-btn-salvar" onclick="RhUI._salvarDocumento()"><span class="ms ms-sm">save</span> Salvar</button>'+
+      '</div>'+
+    '</div>';
+    _abrirModalSimples(html);
+    _popularSelectColaboradores('rh-doc-f-colab');
+    setTimeout(function(){
+      if (doc.idColaborador){ var s=document.getElementById('rh-doc-f-colab'); if(s) s.value=doc.idColaborador; }
+      if (doc.tipo)         { var st=document.getElementById('rh-doc-f-tipo');  if(st) st.value=doc.tipo; }
+      if (doc.titulo)       { var t=document.getElementById('rh-doc-f-titulo'); if(t) t.value=doc.titulo; }
+      if (doc.dataDocumento){ var dd=document.getElementById('rh-doc-f-data');  if(dd) dd.value=doc.dataDocumento; }
+      if (doc.validade)     { var v=document.getElementById('rh-doc-f-validade');if(v) v.value=doc.validade; }
+      if (doc.url)          { var u=document.getElementById('rh-doc-f-url');    if(u) u.value=doc.url; }
+      if (doc.descricao)    { var d2=document.getElementById('rh-doc-f-desc');  if(d2) d2.value=doc.descricao; }
+    }, 60);
+  }
+
+  function _salvarDocumento() {
+    var idColab = (document.getElementById('rh-doc-f-colab')||{}).value||'';
+    var titulo  = ((document.getElementById('rh-doc-f-titulo')||{}).value||'').trim();
+    var tipo    = (document.getElementById('rh-doc-f-tipo')||{}).value||'';
+    if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
+    if (!titulo) { Toast.aviso('Informe o título do documento.'); return; }
+    if (!tipo)   { Toast.aviso('Selecione o tipo.'); return; }
+    var sel = document.getElementById('rh-doc-f-colab');
+    var nomeColab = sel ? ((sel.options[sel.selectedIndex]||{}).text||'') : '';
+    var dados = {
+      idColaborador:   idColab,
+      nomeColaborador: nomeColab,
+      tipo:            tipo,
+      titulo:          titulo,
+      dataDocumento:   ((document.getElementById('rh-doc-f-data')||{}).value||'').trim()||null,
+      validade:        ((document.getElementById('rh-doc-f-validade')||{}).value||'').trim()||null,
+      url:             ((document.getElementById('rh-doc-f-url')||{}).value||'').trim()||null,
+      descricao:       ((document.getElementById('rh-doc-f-desc')||{}).value||'').trim()||null
+    };
+    var id = ((document.getElementById('rh-doc-f-id')||{}).value||'').trim();
+    if (id) dados.id = id;
+    BtnGuard.wrap('rh-doc-btn-salvar','Salvando…',function(done){
+      GAS.rh.salvarDocumento(dados,function(resp){
+        done();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro ao salvar.'); return; }
+        var m=document.querySelector('.modal-simples'); if(m) m.remove();
+        Toast.sucesso(id?'Documento atualizado!':'Documento adicionado!');
+        carregarDocumentos();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  function excluirDocumento(id) {
+    _abrirModalConfirmar({
+      titulo:'Excluir Documento', icone:'delete_forever', corIcone:'#ef4444',
+      mensagem:'Remover este documento do repositório? Esta ação não pode ser desfeita.',
+      labelConfirmar:'Excluir',
+      cb:function(){
+        GAS.rh.excluirDocumento(id,function(resp){
+          if (!resp||!resp.ok){ Toast.erro('Erro ao excluir.'); return; }
+          Toast.sucesso('Documento excluído.'); carregarDocumentos();
+        },function(e){ Toast.erro(e.message||e); });
+      }
+    });
+  }
+
   // ─── FÉRIAS ─────────────────────────────────────────────────
   function carregarFerias() {
     var el=document.getElementById('rh-fer-lista');
@@ -37853,6 +37988,7 @@ var RhUI = (function() {
     excluirAvaliacao:excluirAvaliacao, _confirmarExcluirAvaliacao:_confirmarExcluirAvaliacao,
     carregarEscalas:carregarEscalas, abrirFormEscala:abrirFormEscala, fecharFormEscala:fecharFormEscala,
     salvarEscala:salvarEscala, excluirEscala:excluirEscala, _confirmarExcluirEscala:_confirmarExcluirEscala,
+    carregarDocumentos:carregarDocumentos, abrirFormDocumento:abrirFormDocumento, _salvarDocumento:_salvarDocumento, excluirDocumento:excluirDocumento,
     carregarFerias:carregarFerias, abrirFormFerias:abrirFormFerias, _enviarFerias:_enviarFerias,
     _feriasToggleTipo:_feriasToggleTipo, _feriasCalcSaldo:_feriasCalcSaldo,
     aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
