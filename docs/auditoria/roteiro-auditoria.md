@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @876 · Rescisão: aviso prévio indenizado/trabalhado, datas reais, justa causa, férias via API
+> Deploy atual: @877 · Rescisão: férias vencidas exibe N × 30 dias a pagar
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
