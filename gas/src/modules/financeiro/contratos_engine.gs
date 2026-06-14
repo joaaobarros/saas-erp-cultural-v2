@@ -274,7 +274,7 @@ var ContratosEngine = (function () {
     var atual = c.status || STATUS_CONTRATO.ATIVO;
 
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('contratos', atual, novoStatus);
+      FsmGuardian.assertValida('contratos', atual, novoStatus);
     } else {
       var perm = _TRANSICOES_CONTRATO[atual] || [];
       if (perm.indexOf(novoStatus) === -1)

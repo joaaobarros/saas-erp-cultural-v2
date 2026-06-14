@@ -159,7 +159,7 @@ var SolicitacaoEngine = (function () {
   function _transitarSolicitacao(solicitacao, novoStatus, emailOperador, dadosExtras) {
     var atual = solicitacao.status || 'rascunho';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('solicitacao_status', atual, novoStatus);
+      FsmGuardian.assertValida('solicitacao_status', atual, novoStatus);
     }
     dadosExtras = dadosExtras || {};
 

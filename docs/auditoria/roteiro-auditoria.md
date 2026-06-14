@@ -1490,7 +1490,32 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 52d (2026-06-14) → SESSÃO 53
+## HANDOFF ATUAL — SESSÃO 53 (2026-06-14) → SESSÃO 54
+
+### Estado: Deploy @910 · Fix: FsmGuardian.validarTransicao inexistente → assertValida em 6 engines
+
+### O que foi feito nesta sessão (s53)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @910 | Fix: FsmGuardian.validarTransicao | Método `validarTransicao` nunca existiu em `FsmGuardian` — API real é `assertValida`. Erro "FsmGuardian.validarTransicao is not a function" aparecia ao encerrar contrato e em transições de status de remanejamento, aditivo, fonte de recurso, contratado e solicitação. Corrigido em 6 arquivos: `contratos_engine.gs`, `remanejamento_engine.gs`, `aditivo_engine.gs`, `fonte_recurso_engine.gs`, `contratado_engine.gs`, `solicitacao_engine.gs`. |
+
+### Checklist de auditoria
+```
+[x] prompt()/confirm()/alert() — não usados nesta sessão
+[x] GAS.* namespace — sem alterações de frontend
+[x] FsmGuardian.assertValida — chamado corretamente em todos os 6 engines afetados
+[x] Datas — sem alterações de frontend
+```
+
+### Pendentes / próxima ação
+- Testar no browser: Financeiro → Contratos → "Encerrar Contrato" → preencher motivo → botão Encerrar → sem erro "FsmGuardian.validarTransicao is not a function"
+- Idem: mudar status de Remanejamento, Aditivo, Fonte de Recurso
+- Bugs auditoria pendentes: TAR-04, HUB-13, FIN-06
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 52d (2026-06-14) → SESSÃO 53
 
 ### Estado: Deploy @909 · Fix: provisões Financeiro recomputadas ao ler + rescisão sem benefícios
 

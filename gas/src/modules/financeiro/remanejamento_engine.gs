@@ -148,7 +148,7 @@ var RemanejamentoEngine = (function () {
   function _transitar(rem, novoStatus, emailOperador, orgId) {
     var atual = rem.status || STATUS_REMANEJAMENTO.RASCUNHO;
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('remanejamentos', atual, novoStatus);
+      FsmGuardian.assertValida('remanejamentos', atual, novoStatus);
     } else {
       var perm = _TRANSICOES_REMANEJAMENTO[atual] || [];
       if (perm.indexOf(novoStatus) === -1)

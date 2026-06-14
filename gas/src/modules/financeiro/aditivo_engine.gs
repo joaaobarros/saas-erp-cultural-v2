@@ -149,7 +149,7 @@ var AditivoEngine = (function () {
   function _transitar(adi, novoStatus, emailOperador, orgId) {
     var atual = adi.status || STATUS_ADITIVO.ELABORANDO;
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('aditivos', atual, novoStatus);
+      FsmGuardian.assertValida('aditivos', atual, novoStatus);
     } else {
       var perm = _TRANSICOES_ADITIVO[atual] || [];
       if (perm.indexOf(novoStatus) === -1)

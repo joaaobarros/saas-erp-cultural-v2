@@ -186,7 +186,7 @@ var FonteRecursoEngine = (function () {
     var atual = f.status || STATUS_FONTE.ATIVO;
 
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('fontes_recurso', atual, novoStatus);
+      FsmGuardian.assertValida('fontes_recurso', atual, novoStatus);
     } else {
       var perm = _TRANSICOES_FONTE[atual] || [];
       if (perm.indexOf(novoStatus) === -1)

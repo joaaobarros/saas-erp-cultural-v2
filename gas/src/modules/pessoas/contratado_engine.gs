@@ -100,7 +100,7 @@ var ContratadoEngine = (function () {
   function _transitarContratado(contratado, novoStatus, emailOperador, motivo) {
     var atual = contratado.status || 'cadastrado';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('contratado_status', atual, novoStatus);
+      FsmGuardian.assertValida('contratado_status', atual, novoStatus);
     }
     contratado.status = novoStatus;
     if (motivo) contratado.motivoUltimaAlteracao = motivo;
@@ -185,7 +185,7 @@ var ContratadoEngine = (function () {
   function _transitarHabilitacao(habilitacao, novoStatus, emailOperador, dadosExtras) {
     var atual = habilitacao.status || 'submetido';
     if (typeof FsmGuardian !== 'undefined') {
-      FsmGuardian.validarTransicao('habilitacao_status', atual, novoStatus);
+      FsmGuardian.assertValida('habilitacao_status', atual, novoStatus);
     }
     dadosExtras = dadosExtras || {};
     habilitacao.status = novoStatus;
