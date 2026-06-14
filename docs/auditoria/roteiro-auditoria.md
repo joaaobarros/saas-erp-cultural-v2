@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @896 · Feat: rescisão — consolidado holerites + break-even dias + férias dobro + alertas + emails
+> Deploy atual: @897 · Feat: BSF/DescontoPS/EncFerias editáveis via RH → Encargos (não mais hardcode em config_org.json)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

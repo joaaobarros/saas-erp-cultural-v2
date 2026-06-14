@@ -96,12 +96,15 @@ var EncargosRepository = (function () {
     var doc = obter(orgId);
     var al  = doc.aliquotas || {};
     return {
-      inssPatronal:  (al.inssPatronal  || {}).valor || 0.20,
-      fgts:          (al.fgts          || {}).valor || 0.08,
-      pisPasep:      (al.pisPasep      || {}).valor || 0.01,
-      sat:           (al.sat           || {}).valor || 0.01,
-      sistemaS:      (al.sistemaS      || {}).valor || 0.056,
-      salarioMinimo: (doc.salarioMinimo || {}).valor || 1518.00,
+      inssPatronal:              (al.inssPatronal              || {}).valor != null ? (al.inssPatronal              || {}).valor : 0.20,
+      fgts:                      (al.fgts                      || {}).valor != null ? (al.fgts                      || {}).valor : 0.08,
+      pisPasep:                  (al.pisPasep                  || {}).valor != null ? (al.pisPasep                  || {}).valor : 0.01,
+      sat:                       (al.sat                       || {}).valor != null ? (al.sat                       || {}).valor : 0.01,
+      sistemaS:                  (al.sistemaS                  || {}).valor != null ? (al.sistemaS                  || {}).valor : 0.056,
+      beneficioSocialFamiliar:   (al.beneficioSocialFamiliar   || {}).valor != null ? (al.beneficioSocialFamiliar   || {}).valor : 23.00,
+      descontoPlanoSaudePerc:    (al.descontoPlanoSaudePerc    || {}).valor != null ? (al.descontoPlanoSaudePerc    || {}).valor : 0.30,
+      encargosProvisaoFeriasPerc:(al.encargosProvisaoFeriasPerc|| {}).valor != null ? (al.encargosProvisaoFeriasPerc|| {}).valor : 0.35,
+      salarioMinimo:             (doc.salarioMinimo || {}).valor || 1518.00,
       tabelaINSS:    doc.tabelaINSS    || [],
       tabelaIRRF:    doc.tabelaIRRF    || [],
       descontoSimplificadoIRRF: (doc.descontoSimplificadoIRRF || {}).valor || 528.00,
@@ -366,11 +369,14 @@ var EncargosRepository = (function () {
    */
   function _buildDocOficial(orgId, ano, usuario) {
     var aliquotas = {
-      inssPatronal: _itemAliquota('inssPatronal', 'INSS Patronal',      0.20,   'percentual', 'Contribuição previdenciária patronal — regra geral CLT', ano),
-      fgts:         _itemAliquota('fgts',         'FGTS',               0.08,   'percentual', 'Fundo de Garantia do Tempo de Serviço', ano),
-      pisPasep:     _itemAliquota('pisPasep',      'PIS/PASEP Patronal', 0.01,   'percentual', 'Programa de Integração Social — folha de pagamento', ano),
-      sat:          _itemAliquota('sat',           'SAT/RAT',            0.01,   'percentual', 'Seguro de Acidente de Trabalho (risco leve — CNAE cultural)', ano),
-      sistemaS:     _itemAliquota('sistemaS',      'Sistema S',          0.0566, 'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (3.º setor/serviços — verifique CNAE)', ano)
+      inssPatronal:              _itemAliquota('inssPatronal',              'INSS Patronal',                0.20,  'percentual', 'Contribuição previdenciária patronal — regra geral CLT', ano),
+      fgts:                      _itemAliquota('fgts',                      'FGTS',                         0.08,  'percentual', 'Fundo de Garantia do Tempo de Serviço', ano),
+      pisPasep:                  _itemAliquota('pisPasep',                  'PIS/PASEP Patronal',           0.01,  'percentual', 'Programa de Integração Social — folha de pagamento', ano),
+      sat:                       _itemAliquota('sat',                       'SAT/RAT',                      0.01,  'percentual', 'Seguro de Acidente de Trabalho (risco leve — CNAE cultural)', ano),
+      sistemaS:                  _itemAliquota('sistemaS',                  'Sistema S',                    0.0566,'percentual', 'SESC 1,5% + SENAC 1% + SEBRAE 0,6% + INCRA 0,2% + SENAT 0,2% + SEST 0,2% = 3,7% (3.º setor/serviços — verifique CNAE)', ano),
+      beneficioSocialFamiliar:   _itemAliquota('beneficioSocialFamiliar',   'Benefício Social Familiar',    23.00, 'reais',      'Valor fixo R$/mês por colaborador CLT — editar conforme CCT/acordo coletivo', ano),
+      descontoPlanoSaudePerc:    _itemAliquota('descontoPlanoSaudePerc',    'Desconto Plano de Saúde',      0.30,  'percentual', 'Percentual do plano de saúde descontado do colaborador (contribuição do empregado)', ano),
+      encargosProvisaoFeriasPerc:_itemAliquota('encargosProvisaoFeriasPerc','Encargos Provisão de Férias',  0.35,  'percentual', 'Taxa simplificada de encargos usada na provisão mensal de férias (padrão de mercado)', ano)
     };
 
     // Tabelas default 2026 (Portaria MPS/MF 13/2026 + Lei 15.270/2025)

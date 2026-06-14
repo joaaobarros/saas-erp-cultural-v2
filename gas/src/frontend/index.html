@@ -39999,11 +39999,14 @@ var EncargosUI = (function() {
   var _doc       = null;    // cache local do documento de encargos
 
   var _CHAVE_LABEL = {
-    inssPatronal: 'INSS Patronal',
-    fgts:         'FGTS',
-    pisPasep:     'PIS/PASEP',
-    sat:          'SAT/RAT',
-    sistemaS:     'Sistema S'
+    inssPatronal:              'INSS Patronal',
+    fgts:                      'FGTS',
+    pisPasep:                  'PIS/PASEP',
+    sat:                       'SAT/RAT',
+    sistemaS:                  'Sistema S',
+    beneficioSocialFamiliar:   'Benefício Social Familiar',
+    descontoPlanoSaudePerc:    'Desconto Plano de Saúde',
+    encargosProvisaoFeriasPerc:'Encargos Provisão Férias'
   };
   var _TIPO_LABEL = {
     atualizacao_oficial: 'Atualização oficial',
@@ -40094,20 +40097,28 @@ var EncargosUI = (function() {
       var btnRestaurar = item.fonte === 'manual'
         ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EncargosUI._restaurar(\''+_esc(chave)+'\')" title="Restaurar valor oficial">↩ Oficial</button>'
         : '';
+      var unidade = item.unidade || 'percentual';
+      var valorFmt = unidade === 'reais'
+        ? 'R$&nbsp;' + (Number(item.valor||0)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
+        : _pct(item.valor);
       return '<tr>'
         + '<td><strong>'+_esc(_CHAVE_LABEL[chave]||chave)+'</strong><br><span style="font-size:11px;color:var(--text2);">'+_esc(item.descricao||'')+'</span></td>'
-        + '<td style="font-size:16px;font-weight:700;">'+_pct(item.valor)+'</td>'
+        + '<td style="font-size:16px;font-weight:700;">'+valorFmt+'</td>'
         + '<td>'+_badgeFonte(item.fonte||'oficial')+(item.justificativa?'<br><span style="font-size:10px;color:var(--text2);">'+_esc(item.justificativa)+'</span>':'')+'</td>'
         + '<td>'+(item.anoRef||'—')+'</td>'
         + '<td style="font-size:11px;">'+editInfo+'</td>'
-        + '<td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EncargosUI._editarAliquota(\''+_esc(chave)+'\','+Number(item.valor||0)+')">✏ Editar</button> '+btnRestaurar+'</td>'
+        + '<td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="EncargosUI._editarAliquota(\''+_esc(chave)+'\','+Number(item.valor||0)+',\''+unidade+'\')">✏ Editar</button> '+btnRestaurar+'</td>'
         + '</tr>';
     });
     tbody.innerHTML = linhas.join('');
   }
 
-  function _editarAliquota(chave, valorAtual) {
+  function _editarAliquota(chave, valorAtual, unidade) {
+    unidade = unidade || 'percentual';
     var label = _CHAVE_LABEL[chave] || chave;
+    var isReais = unidade === 'reais';
+    var inputLabel = isReais ? 'Novo valor (R$)' : 'Nova alíquota (%)';
+    var inputVal   = isReais ? Number(valorAtual||0).toFixed(2) : (Number(valorAtual||0)*100).toFixed(4);
     var box = document.createElement('div');
     box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:3000;';
     var overlay = document.createElement('div');
@@ -40117,12 +40128,12 @@ var EncargosUI = (function() {
     modal.style.cssText = 'position:relative;background:var(--surface);border-radius:12px;padding:28px 32px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);z-index:1;';
     modal.innerHTML = '<h3 style="margin:0 0 16px;font-size:16px;">Editar ' + _esc(label) + '</h3>'
       + '<div class="form-group" style="margin-bottom:12px;">'
-      + '<label class="form-label">Nova alíquota (%)</label>'
-      + '<input id="_enc-modal-val" type="number" class="form-control" step="0.01" min="0" max="100" value="'+(valorAtual*100).toFixed(4)+'">'
+      + '<label class="form-label">' + inputLabel + '</label>'
+      + '<input id="_enc-modal-val" data-unidade="'+unidade+'" type="number" class="form-control" step="0.01" min="0" value="'+inputVal+'">'
       + '</div>'
       + '<div class="form-group" style="margin-bottom:16px;">'
       + '<label class="form-label">Justificativa (obrigatória)</label>'
-      + '<input id="_enc-modal-just" type="text" class="form-control" placeholder="Ex: Portaria MPS 1.234/2025">'
+      + '<input id="_enc-modal-just" type="text" class="form-control" placeholder="Ex: CCT 2026 / Portaria MPS 1.234/2026">'
       + '</div>'
       + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
       + '<button class="btn btn-ghost" onclick="this.closest(\'[style*=fixed]\').remove()">Cancelar</button>'
@@ -40138,19 +40149,21 @@ var EncargosUI = (function() {
     var valEl  = document.getElementById('_enc-modal-val');
     var justEl = document.getElementById('_enc-modal-just');
     if (!valEl || !justEl) return;
-    var pctStr = (valEl.value||'').replace(',','.');
-    var pct = parseFloat(pctStr);
-    if (isNaN(pct) || pct < 0) { Toast.aviso('Valor inválido.'); return; }
+    var rawStr   = (valEl.value||'').replace(',','.');
+    var rawNum   = parseFloat(rawStr);
+    if (isNaN(rawNum) || rawNum < 0) { Toast.aviso('Valor inválido.'); return; }
     var just = (justEl.value||'').trim();
     if (!just) { Toast.aviso('Informe uma justificativa.'); return; }
+    var isReais = (valEl.getAttribute('data-unidade') || '') === 'reais';
+    var valorFinal = isReais ? rawNum : rawNum / 100;
     var btn = document.getElementById('_enc-modal-btn');
     BtnGuard.travar(btn, 'Salvando…');
     GAS.encargos.salvarAliquota(
-      { chave: chave, valor: pct/100, justificativa: just },
+      { chave: chave, valor: valorFinal, justificativa: just },
       function(resp) {
         BtnGuard.liberar(btn);
         if (resp && resp.ok) {
-          Toast.sucesso('Alíquota salva.');
+          Toast.sucesso(isReais ? 'Valor salvo.' : 'Alíquota salva.');
           document.querySelector('[style*="position:fixed"][style*="z-index:3000"]').remove();
           _carregado = false; carregar();
         } else { Toast.erro('Erro ao salvar.'); }

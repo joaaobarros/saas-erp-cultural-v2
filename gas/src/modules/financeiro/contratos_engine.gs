@@ -401,23 +401,32 @@ var ContratosEngine = (function () {
 
   function _getBeneficioSocialFamiliar() {
     try {
-      var cfg = readJSON('config_org.json');
-      return Number(((cfg || {}).parametrosRH || {}).beneficio_social_familiar || 0);
-    } catch (_) { return 0; }
+      if (typeof EncargosEngine !== 'undefined') {
+        var p = EncargosEngine.getParametrosRHComEncargos(_orgId());
+        if (p && p.beneficioSocialFamiliar != null) return Number(p.beneficioSocialFamiliar);
+      }
+    } catch (_) {}
+    return 23.00;
   }
 
   function _getDescontoPlanoSaudePerc() {
     try {
-      var cfg = readJSON('config_org.json');
-      return Number(((cfg || {}).parametrosRH || {}).desconto_plano_saude_perc || 0);
-    } catch (_) { return 0; }
+      if (typeof EncargosEngine !== 'undefined') {
+        var p = EncargosEngine.getParametrosRHComEncargos(_orgId());
+        if (p && p.descontoPlanoSaudePerc != null) return Number(p.descontoPlanoSaudePerc);
+      }
+    } catch (_) {}
+    return 0.30;
   }
 
   function _getEncargosProvisaoFeriasPerc() {
     try {
-      var cfg = readJSON('config_org.json');
-      return Number(((cfg || {}).parametrosRH || {}).encargos_provisao_ferias_perc || 0.35);
-    } catch (_) { return 0.35; }
+      if (typeof EncargosEngine !== 'undefined') {
+        var p = EncargosEngine.getParametrosRHComEncargos(_orgId());
+        if (p && p.encargosProvisaoFeriasPerc != null) return Number(p.encargosProvisaoFeriasPerc);
+      }
+    } catch (_) {}
+    return 0.35;
   }
 
   /**

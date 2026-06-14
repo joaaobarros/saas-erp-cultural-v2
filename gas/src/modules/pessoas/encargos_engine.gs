@@ -336,13 +336,16 @@ var EncargosEngine = (function () {
                          ? enc.tabelaINSS
                          : (base.tabela_inss || []),
       // Campos extras disponibilizados ao ponto_engine
-      aliquota_inss_patronal: enc.inssPatronal || 0.20,
-      aliquota_sat:           enc.sat          || 0.01,
-      aliquota_sistema_s:     enc.sistemaS     || 0.0566,
-      salario_minimo:         enc.salarioMinimo || 1518.00,
-      tabela_irrf:            enc.tabelaIRRF   || [],
-      desconto_simplificado_irrf: enc.descontoSimplificadoIRRF || 528.00,
-      _encargos_ano_ativo:    enc.anoAtivo     || 2025
+      aliquota_inss_patronal:     enc.inssPatronal              || 0.20,
+      aliquota_sat:               enc.sat                       || 0.01,
+      aliquota_sistema_s:         enc.sistemaS                  || 0.0566,
+      salario_minimo:             enc.salarioMinimo              || 1518.00,
+      tabela_irrf:                enc.tabelaIRRF                || [],
+      desconto_simplificado_irrf: enc.descontoSimplificadoIRRF  || 528.00,
+      _encargos_ano_ativo:        enc.anoAtivo                  || 2025,
+      beneficioSocialFamiliar:    enc.beneficioSocialFamiliar    != null ? enc.beneficioSocialFamiliar    : 23.00,
+      descontoPlanoSaudePerc:     enc.descontoPlanoSaudePerc     != null ? enc.descontoPlanoSaudePerc     : 0.30,
+      encargosProvisaoFeriasPerc: enc.encargosProvisaoFeriasPerc != null ? enc.encargosProvisaoFeriasPerc : 0.35
     });
   }
 
