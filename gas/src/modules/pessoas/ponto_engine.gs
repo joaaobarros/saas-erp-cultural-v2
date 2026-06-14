@@ -327,60 +327,100 @@ var PontoEngine = (function() {
   // ─── Calculadora de Rescisão ─────────────────────────────────────────────────
 
   /**
-   * Calcula custo de rescisão e break-even de demissão sem justa causa.
-   * @param {object} p — { salarioBruto, mesesTrabalhados, tipoRescisao, economiaEsperada? }
+   * Calcula custo de rescisão com todas as verbas rescisórias.
+   * @param {object} p — {
+   *   salarioBruto, mesesTrabalhados, tipoRescisao,
+   *   modoAvisoPrevio?,      // 'indenizado' (default) | 'trabalhado'
+   *   dataDesligamento?,     // ISO YYYY-MM-DD — para calcular 13º e férias proporcionais corretos
+   *   dataAdmissao?,         // ISO YYYY-MM-DD — para calcular meses desde último aniversário
+   *   periodosVencidosNaoGozados?, economiaEsperada?
+   * }
+   * tipos: sem_justa_causa | pedido_demissao | culpa_reciproca | justa_causa
    */
   function calcularRescisao(orgId, p) {
     var s     = Number(p.salarioBruto || 0);
     var meses = Number(p.mesesTrabalhados || 0);
-    var tipo  = p.tipoRescisao || 'sem_justa_causa';   // pedido_demissao | sem_justa_causa | culpa_reciproca
+    var tipo  = p.tipoRescisao || 'sem_justa_causa';
+    var modo  = p.modoAvisoPrevio || 'indenizado';
     var cfg   = _getParametrosRH(orgId);
     var fgtsAliq = cfg.aliquota_fgts || 0.08;
 
-    // Aviso prévio (base: 30 dias + 3 por ano, máx 90)
     var anosCompletos = Math.floor(meses / 12);
-    var diasAP  = Math.min(90, 30 + anosCompletos * 3);
-    var valorAP = tipo === 'pedido_demissao' ? 0 : (s / 30 * diasAP);
 
-    // Férias vencidas: usa valor explícito do usuário quando informado;
-    // caso contrário 0 (seguro — usuário deve informar se há períodos não gozados)
+    // ── Aviso Prévio ──────────────────────────────────────────────────────────
+    // Lei 12.506/2011: 30 dias + 3 dias por ano completo, máx 90 dias
+    var diasAP = Math.min(90, 30 + anosCompletos * 3);
+    var valorAP = 0;
+    if (tipo !== 'pedido_demissao' && tipo !== 'justa_causa') {
+      // trabalhado: empregador não tem custo extra (funcionário trabalha o período)
+      // indenizado: empregador paga o AP para dispensar o funcionário imediatamente
+      valorAP = modo === 'indenizado' ? (s / 30 * diasAP) : 0;
+    }
+
+    // ── Meses no ano calendário para 13º ─────────────────────────────────────
+    // Se dataDesligamento fornecida, usa o mês real; senão usa meses%12 como proxy.
+    var meses13;
+    if (p.dataDesligamento) {
+      meses13 = new Date(p.dataDesligamento).getMonth() + 1; // 1=jan … 12=dez
+    } else {
+      meses13 = meses % 12 || 12; // fallback: 0 → 12 (ano completo)
+    }
+
+    // ── Meses desde o último aniversário de contrato (férias proporcionais) ──
+    var mesesPropFerias;
+    if (p.dataAdmissao && p.dataDesligamento) {
+      var adm   = new Date(p.dataAdmissao);
+      var desl  = new Date(p.dataDesligamento);
+      // Avança aniversário até o último antes de desligamento
+      var anivAno = desl.getFullYear();
+      var aniv = new Date(anivAno, adm.getMonth(), adm.getDate());
+      if (aniv > desl) aniv = new Date(anivAno - 1, adm.getMonth(), adm.getDate());
+      var msProp = (desl - aniv) / (1000 * 60 * 60 * 24 * 30.4375);
+      mesesPropFerias = Math.max(0, Math.min(11, Math.floor(msProp)));
+    } else {
+      mesesPropFerias = meses % 12;
+    }
+
+    // ── Férias vencidas não gozadas ───────────────────────────────────────────
     var periodosVencidos = (p.periodosVencidosNaoGozados != null)
       ? Math.max(0, Math.min(2, Number(p.periodosVencidosNaoGozados) || 0))
       : (anosCompletos > 0 ? 1 : 0);
-    var feriasVencidas     = periodosVencidos * s * (1 + 1/3);
-    var mesesPropFerias    = meses % 12;
-    var feriasProporcionais = (s * (1 + 1/3)) * (mesesPropFerias / 12);
-    // 13º proporcional
-    var meses13 = meses % 12;
-    var decimo3 = s * (meses13 / 12);
-    // FGTS saldo estimado + multa (40% sem JC, 20% culpa recíproca, 0 pedido)
-    var fgtsSaldo   = s * fgtsAliq * meses;
-    var multaFGTS   = tipo === 'sem_justa_causa' ? fgtsSaldo * 0.40
-                    : tipo === 'culpa_reciproca' ? fgtsSaldo * 0.20
-                    : 0;
+
+    // Justa causa: só paga férias vencidas; proporcionais e 13º são perdidos
+    var feriasVencidas      = periodosVencidos * s * (1 + 1/3);
+    var feriasProporcionais = tipo === 'justa_causa' ? 0 : (s * (1 + 1/3)) * (mesesPropFerias / 12);
+    var decimo3             = tipo === 'justa_causa' ? 0 : s * (meses13 / 12);
+
+    // ── FGTS ─────────────────────────────────────────────────────────────────
+    var fgtsSaldo = s * fgtsAliq * meses;
+    var multaFGTS = tipo === 'sem_justa_causa' ? fgtsSaldo * 0.40
+                  : tipo === 'culpa_reciproca' ? fgtsSaldo * 0.20
+                  : 0;
 
     var totalRescisao = valorAP + feriasVencidas + feriasProporcionais + decimo3 + multaFGTS;
 
-    // Break-even: quanto tempo até a economia superar o custo
-    var economiaEsperada = Number(p.economiaEsperada || s); // default: 1 salário/mês
+    var economiaEsperada = Number(p.economiaEsperada || s);
     var mesesBreakEven   = economiaEsperada > 0
-      ? Math.ceil(totalRescisao / economiaEsperada)
-      : null;
+      ? Math.ceil(totalRescisao / economiaEsperada) : null;
 
     return {
       tipoRescisao:           tipo,
+      modoAvisoPrevio:        modo,
       salarioBruto:           s,
       mesesTrabalhados:       meses,
+      diasAvisoPrevio:        diasAP,
       periodosVencidos:       periodosVencidos,
+      meses13:                meses13,
+      mesesPropFerias:        mesesPropFerias,
       avisoPrevio:            Math.round(valorAP * 100) / 100,
       feriasVencidas:         Math.round(feriasVencidas * 100) / 100,
       feriasProporcionais:    Math.round(feriasProporcionais * 100) / 100,
-      decimo3Proporcional: Math.round(decimo3 * 100) / 100,
-      fgtsSaldoEstimado:   Math.round(fgtsSaldo * 100) / 100,
-      multaFGTS:           Math.round(multaFGTS * 100) / 100,
-      totalRescisao:       Math.round(totalRescisao * 100) / 100,
-      economiaEsperadaMes: economiaEsperada,
-      mesesBreakEven:      mesesBreakEven
+      decimo3Proporcional:    Math.round(decimo3 * 100) / 100,
+      fgtsSaldoEstimado:      Math.round(fgtsSaldo * 100) / 100,
+      multaFGTS:              Math.round(multaFGTS * 100) / 100,
+      totalRescisao:          Math.round(totalRescisao * 100) / 100,
+      economiaEsperadaMes:    economiaEsperada,
+      mesesBreakEven:         mesesBreakEven
     };
   }
 

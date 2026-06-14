@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @875 · Documentos RH (backend CRUD) + rescisão com seletor de colaborador + mapa sem atalho direto
+> Deploy atual: @876 · Rescisão: aviso prévio indenizado/trabalhado, datas reais, justa causa, férias via API
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
