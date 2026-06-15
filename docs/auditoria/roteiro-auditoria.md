@@ -470,7 +470,37 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 75b (2026-06-15) → SESSÃO 76
+## HANDOFF ATUAL — SESSÃO 81 (2026-06-15) → SESSÃO 82
+
+### Estado atual: UX Férias refinado · Deploy @950
+
+### O que foi feito nesta sessão (s81)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @950 | UX — Férias sem colaborador → lista do mês atual | `carregarFeriasUnificado` modo sem colaborador: filtro `ini ≤ anoMes && fim ≥ anoMes`; cabeçalho "Férias em curso em [Mês Ano]"; ordenação por início asc. |
+| @950 | UX — Expand rows com cards ricos OFICIAL vs ACORDO | Substituída sub-tabela por cards com borda colorida: ACORDO INTERNO (roxo #7c3aed) com nota "não incide pagamento em dobro"; OFICIAL (azul #1d4ed8) com inset roxo se há acordo vinculado. |
+| @950 | UX — Banner de alerta em período vencido com saldo > 0 | Quando `p.status === 'vencido' && p.saldo > 0`: banner vermelho "X dias não cobertos — sujeitos a pagamento em dobro (CLT art. 137)" + nota verde com total de dias cobertos por acordos. |
+
+### Checklist de auditoria — s81
+```
+[x] prompt()/confirm()/alert() — nenhum novo
+[x] GAS.* namespace — sem novos bindings (só frontend)
+[x] CSS — sem novas classes; estilos inline nos cards
+[x] IDs de DOM — rh-per-exp-N não alterado
+[x] FsmGuardian — não tocado
+[x] Modais — não tocado
+[x] BtnGuard — não tocado; botões de ação já protegidos em _acoesFeriasBtns
+[x] Datas — _fmtData() usado em todas as datas dos cards
+```
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+- (Pendente s74) Executar `fase_colaboracao_provisionar()` no GAS Editor se planilha COLABORACAO ainda não existir.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 75b (2026-06-15) → SESSÃO 76
 
 ### Estado atual: bugs de férias corrigidos · Deploy @940
 
