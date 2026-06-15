@@ -992,9 +992,15 @@ var PessoasEngine = (function () {
     var hoje = _now2.getFullYear() + '-' + _pad2(_now2.getMonth() + 1) + '-' + _pad2(_now2.getDate());
     periodos.forEach(function (p) {
       var do_periodo = todas.filter(function (f) {
-        if (f.periodoAquisitivoNum === p.numero) return true;
+        // Atribuição explícita por número de período (criada no momento da solicitação)
+        if (f.periodoAquisitivoNum != null) return Number(f.periodoAquisitivoNum) === p.numero;
         var ref = f.dataInicio || f.inicio || '';
-        return ref && ref >= p.aquisitivoInicio && ref <= p.concessivoFim;
+        if (!ref) return false;
+        // Caso normal: férias tomadas dentro da janela concessiva do período
+        // (janelas concessivas são disjuntas → sem sobreposição entre períodos)
+        if (ref >= p.concessivoInicio && ref <= p.concessivoFim) return true;
+        // Férias antecipadas no período 1: tomadas antes da primeira janela concessiva existir
+        return p.numero === 1 && ref >= p.aquisitivoInicio && ref < p.concessivoInicio;
       });
       var gozados = 0, gozadosOficiais = 0;
       do_periodo.forEach(function (f) {
@@ -1420,7 +1426,10 @@ var PessoasEngine = (function () {
 
     todos.forEach(function(c) {
       if (!c.dataAdmissao) return;
-      var periodos = calcularPeriodosAquisitivos(c.dataAdmissao);
+      // resumoFeriasPorPeriodo inclui os dias realmente gozados e calcula saldo correto
+      var resumo;
+      try { resumo = resumoFeriasPorPeriodo(c.id, orgId); } catch(_) { return; }
+      var periodos = (resumo && resumo.periodos) || [];
       periodos.forEach(function(p) {
         if (p.saldo <= 0) return;
         if (p.status === 'em_aquisicao') return; // ainda não venceu, sem urgência

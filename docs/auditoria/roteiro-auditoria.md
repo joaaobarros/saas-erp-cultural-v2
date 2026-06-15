@@ -470,21 +470,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 75 (2026-06-15) → SESSÃO 76
+## HANDOFF ATUAL — SESSÃO 75b (2026-06-15) → SESSÃO 76
 
-### Estado atual: bugs de férias corrigidos · Deploy pendente (s75)
+### Estado atual: bugs de férias corrigidos · Deploy @940
 
-### O que foi feito nesta sessão (s75)
+### O que foi feito nesta sessão (s75 + s75b)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| pendente | Fix — Bug crítico `hoje` undefined em `resumoFeriasPorPeriodo` | `pessoas_engine.gs`: variável `hoje` não estava definida na função `resumoFeriasPorPeriodo` — causava `ReferenceError` para qualquer colaborador com férias `aprovado`, derrubando toda a seção "Períodos Aquisitivos e Concessivos". Corrigido declarando `hoje` localmente. |
-| pendente | Fix — Lista de férias ordenada da mais recente para a mais antiga | `index.html/carregarFerias`: `.sort()` por `dataInicio` desc antes de renderizar. |
-| pendente | Feat — Botão "Concluir" direto para férias aprovadas (sem obrigar Acordo) | `index.html`: botão Concluir em férias `aprovado`; handlers `concluirFerias` + `_confirmarConcluirFerias` no módulo RhUI. |
-| pendente | Fix — Setor exibido com label legível na calculadora de rescisão | `index.html/_aoSelecionarColabRescisao`: `_labelSetor(c.setor)` em vez de slug cru. |
-| pendente | Feat — Auto-conclusão de férias 12h após fim do período | `event_handler_registry.gs`: `autoConcluirFeriasVencidas()` + `criarTriggerAutoConcluirFerias()`. `pessoas_engine.gs`: `autoConcluirFeriasVencidas()` + `_listarOrgIds()`. Trigger diário 12:00. |
-| pendente | Feat — Notificações por email no fluxo de férias | `pessoas_engine.gs`: helpers `_emailsRH`, `_enviarEmailFerias`, `_notificarRHFeriasSolicitadas`, `_notificarColaboradorFeriasAprovadas`, `_notificarMudancaFerias`. Chamados em: `solicitarFerias` (→ RH), `aprovarFerias` (→ colaborador), `cancelarFerias` (→ ambos), `editarFerias` (→ ambos). |
-| pendente | Feat — Edição de datas de férias pendentes | `pessoas_engine.gs/editarFerias`: valida status=pendente + início futuro, atualiza datas, notifica. `pessoas_controller.gs/ctrl_rh_editar_ferias`. `index.html`: GAS binding, botão Editar para pendentes, modal `abrirFormEditarFerias` + `_enviarEdicaoFerias`. |
+| @938 | Fix — Bug crítico `hoje` undefined em `resumoFeriasPorPeriodo` | `pessoas_engine.gs`: variável `hoje` não estava definida na função `resumoFeriasPorPeriodo` — causava `ReferenceError` para qualquer colaborador com férias `aprovado`, derrubando toda a seção "Períodos Aquisitivos e Concessivos". Corrigido declarando `hoje` localmente. |
+| @938 | Fix — Lista de férias ordenada da mais recente para a mais antiga | `index.html/carregarFerias`: `.sort()` por `dataInicio` desc antes de renderizar. |
+| @938 | Feat — Botão "Concluir" direto para férias aprovadas (sem obrigar Acordo) | `index.html`: botão Concluir em férias `aprovado`; handlers `concluirFerias` + `_confirmarConcluirFerias` no módulo RhUI. |
+| @938 | Fix — Setor exibido com label legível na calculadora de rescisão | `index.html/_aoSelecionarColabRescisao`: `_labelSetor(c.setor)` em vez de slug cru. |
+| @938 | Feat — Auto-conclusão de férias 12h após fim do período | `event_handler_registry.gs`: `autoConcluirFeriasVencidas()` + `criarTriggerAutoConcluirFerias()`. `pessoas_engine.gs`: `autoConcluirFeriasVencidas()` + `_listarOrgIds()`. Trigger diário 12:00. |
+| @938 | Feat — Notificações por email no fluxo de férias | `pessoas_engine.gs`: helpers `_emailsRH`, `_enviarEmailFerias`, `_notificarRHFeriasSolicitadas`, `_notificarColaboradorFeriasAprovadas`, `_notificarMudancaFerias`. Chamados em: `solicitarFerias` (→ RH), `aprovarFerias` (→ colaborador), `cancelarFerias` (→ ambos), `editarFerias` (→ ambos). |
+| @938 | Feat — Edição de datas de férias pendentes | `pessoas_engine.gs/editarFerias`: valida status=pendente + início futuro, atualiza datas, notifica. `pessoas_controller.gs/ctrl_rh_editar_ferias`. `index.html`: GAS binding, botão Editar para pendentes, modal `abrirFormEditarFerias` + `_enviarEdicaoFerias`. |
+| @940 | Fix — Período matching corrigido para janelas concessivas disjuntas | `pessoas_engine.gs/resumoFeriasPorPeriodo`: filtro mudado de `(aquisitivoInicio..concessivoFim)` → `(concessivoInicio..concessivoFim)`. Bug causava dupla/tripla contagem: Felix 21d (Period 2) aparecia como 60d, 9d (Period 3) como 47d. Fallback `p.numero===1` cobre férias antecipadas no período inicial sem janela concessiva. |
+| @940 | Fix — alertasFeriasAtivos usa saldo real | `pessoas_engine.gs/alertasFeriasAtivos`: substituído `calcularPeriodosAquisitivos` (saldo sempre 30d) por `resumoFeriasPorPeriodo` para usar dias gozados reais por colaborador. |
+| @940 | Feat — Botão "Solicitar" na tabela de Períodos | `index.html/carregarPeriodosFerias`: coluna Ação com botão "Solicitar" para períodos `em_concessao` ou `vencido` com saldo > 0; pré-preenche colaborador no modal de solicitação. |
 | pendente | Feat — Cancelamento restrito a férias não iniciadas | `pessoas_engine.gs/cancelarFerias`: bloqueia se `dataInicio ≤ hoje`. Frontend: botão Cancelar visível para `pendente` e `aprovado` apenas se `dataInicio > hoje`. |
 
 ### Checklist de auditoria — s75

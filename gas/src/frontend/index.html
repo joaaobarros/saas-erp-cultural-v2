@@ -38521,9 +38521,10 @@ var RhUI = (function() {
         return null;
       }
 
+      var _colabIdPer = id;
       el.innerHTML = '<table class="tabela"><thead><tr>' +
         '<th>#</th><th>Período Aquisitivo</th><th>Janela Concessiva</th>' +
-        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th><th>Urgência</th>' +
+        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th><th>Urgência</th><th></th>' +
         '</tr></thead><tbody>' +
         d.periodos.slice().reverse().map(function(p) {
           var cls = SC[p.status]||'badge-muted';
@@ -38535,6 +38536,10 @@ var RhUI = (function() {
           var urgStr = urg
             ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:' + urg.cor + ';">' + urg.ms + '</span>' + escaparHtml(urg.label) + '</span>'
             : '<span style="font-size:11px;color:var(--muted);">—</span>';
+          var idS = JSON.stringify(_colabIdPer).replace(/"/g,"'");
+          var acaoBtn = (p.saldo > 0 && (p.status === 'em_concessao' || p.status === 'vencido'))
+            ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias('+idS+')" title="Solicitar ' + p.saldo + 'd restantes do período '+p.numero+'"><span class="ms ms-sm">beach_access</span> Solicitar</button>'
+            : '<span style="font-size:11px;color:var(--muted);">—</span>';
           return '<tr>' +
             '<td>'+p.numero+'</td>' +
             '<td>'+_fmtData(p.aquisitivoInicio)+' – '+_fmtData(p.aquisitivoFim)+'</td>' +
@@ -38544,6 +38549,7 @@ var RhUI = (function() {
             '<td>'+saldoStr+'</td>' +
             '<td><span class="badge '+cls+'">'+lbl+'</span></td>' +
             '<td>'+urgStr+'</td>' +
+            '<td>'+acaoBtn+'</td>' +
             '</tr>';
         }).join('') + '</tbody></table>';
     }, function(e) { if (el) el.innerHTML=_empty('Erro: '+(e.message||e)); });
