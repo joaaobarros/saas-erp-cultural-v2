@@ -30,8 +30,11 @@ var SolicitacaoRepository = (function () {
     'ContratoId', 'MetaId', 'RubricaId',
     'ValorEstimado', 'QtdParcelas', 'TotalPago',
     'Programa', 'CredorNome', 'QtdDocumentos',
-    'CriadoEm', 'AtualizadoEm'
-  ]; // 22 colunas — retrocompat: garantirIndice() expande se tiver < 22
+    'CriadoEm', 'AtualizadoEm',
+    // Campos expandidos para os três CIs
+    'PeriodoInicio', 'PeriodoFim', 'DataAtividade',
+    'PessoaReferencia', 'Modalidade', 'CredorEmail'
+  ]; // 28 colunas — retrocompat: garantirIndice() expande se tiver < 28
 
   function _orgIdPadrao(orgId) { return orgId || getOrgConfig().orgId; }
   function _agora() { return new Date().toISOString(); }
@@ -80,7 +83,14 @@ var SolicitacaoRepository = (function () {
         (s.credor && s.credor.nome)    || '',
         (s.documentos || []).length,
         s.criadoEm                     || '',
-        s.atualizadoEm                 || ''
+        s.atualizadoEm                 || '',
+        // Campos expandidos para os três CIs (colunas 23-28)
+        s.periodoInicio                || '',
+        s.periodoFim                   || '',
+        s.dataAtividade                || '',
+        s.pessoaReferencia             || '',
+        s.modalidade                   || '',
+        (s.credor && s.credor.email)   || ''
       ];
       var atualizado = DataGateway.atualizarLinhaPorColuna(_SHEET_KEY, _ABA, 0, s.id, linha);
       if (!atualizado) DataGateway.salvarLinha(_SHEET_KEY, _ABA, linha);

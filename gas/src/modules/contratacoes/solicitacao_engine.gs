@@ -48,16 +48,33 @@ var TIPO_PROCESSO_CONTRATACAO = Object.freeze({
 });
 
 var NATUREZA_CONTRATACAO = Object.freeze({
-  CACHE_ARTISTICO: 'cache_artistico',
-  PRESTACAO_PF:    'prestacao_pf',
-  PRESTACAO_PJ:    'prestacao_pj',
-  CURSO_OFICINA:   'curso_oficina',
-  PROFESSOR:       'professor',
-  EQUIPE:          'equipe',
-  COMPRAS:         'compras',
-  CONSULTORIA:     'consultoria',
-  BOLSA_FOMENTO:   'bolsa_fomento',
-  OUTRO:           'outro'
+  // CI 3 — Prestação de Serviços
+  CACHE_ARTISTICO:   'cache_artistico',
+  PRESTACAO_PF:      'prestacao_pf',
+  PRESTACAO_PJ:      'prestacao_pj',
+  CURSO_OFICINA:     'curso_oficina',
+  PROFESSOR:         'professor',
+  EQUIPE:            'equipe',
+  TEC_ESPECIALIZADO: 'tec_especializado',
+  ORG_EVENTOS:       'org_eventos',
+  CONSULTORIA:       'consultoria',
+  // CI 1 — Bolsistas / Monitoria
+  BOLSA_FOMENTO:     'bolsa_fomento',
+  // CI 2 — Serviços Operacionais
+  LANCHE:            'lanche',
+  TRANSPORTE:        'transporte',
+  GRAFICA:           'grafica',
+  ESTRUTURA:         'estrutura',
+  // Geral
+  COMPRAS:           'compras',
+  OUTRO:             'outro'
+});
+
+// Agrupa naturezas por CI para uso no frontend
+var GRUPO_NATUREZA_CI = Object.freeze({
+  SERVICO_OPERACIONAL: ['lanche', 'transporte', 'grafica', 'estrutura'],
+  PRESTACAO_SERVICO:   ['cache_artistico', 'prestacao_pf', 'prestacao_pj', 'professor',
+                        'tec_especializado', 'org_eventos', 'consultoria', 'curso_oficina']
 });
 
 // Mantido por compatibilidade com código existente
@@ -230,6 +247,8 @@ var SolicitacaoEngine = (function () {
 
     // tipoProcesso com fallback para legado
     if (!dados.tipoProcesso) dados.tipoProcesso = 'servico';
+    // Aceita alias 'bolsista' como 'bolsa'
+    if (dados.tipoProcesso === 'bolsista') dados.tipoProcesso = 'bolsa';
 
     if (dados.id) {
       var existente = SolicitacaoRepository.buscarPorId(orgId, dados.id);
@@ -237,10 +256,76 @@ var SolicitacaoEngine = (function () {
         throw new Error('Apenas solicitações em rascunho ou devolvidas podem ser editadas.');
     }
 
-    // Normaliza arrays
+    // Normaliza arrays obrigatórios
     if (!dados.parcelas)   dados.parcelas   = [];
     if (!dados.documentos) dados.documentos = [];
     if (!dados.cotacoes)   dados.cotacoes   = [];
+
+    // ── Normaliza campos específicos dos CIs ────────────────────────
+
+    // CI 1 — Bolsistas: garante sub-coleção e campos de cabeçalho
+    if (dados.tipoProcesso === 'bolsa') {
+      if (!Array.isArray(dados.bolsistas)) dados.bolsistas = [];
+      // Cada bolsista: { id, nome, matricula, nomeResponsavel, grauParentesco }
+      dados.bolsistas = dados.bolsistas.map(function(b) {
+        return {
+          id:               b.id || gerarId('bls'),
+          nome:             b.nome             || '',
+          matricula:        b.matricula        || '',
+          nomeResponsavel:  b.nomeResponsavel  || '',
+          grauParentesco:   b.grauParentesco   || ''
+        };
+      });
+    }
+
+    // CI 2 — Serviços Operacionais: sub-objetos condicionais por natureza
+    if (dados.natureza === 'lanche') {
+      dados.lanche = Object.assign({ horarioChegada: '', localEntrega: '' }, dados.lanche || {});
+    }
+    if (dados.natureza === 'transporte') {
+      dados.transporte = Object.assign(
+        { horarioInicio: '', localInicio: '', horarioFim: '', localFim: '', rotas: '' },
+        dados.transporte || {}
+      );
+    }
+    if (dados.natureza === 'grafica') {
+      dados.grafica = dados.grafica || {};
+      if (!dados.grafica.dataArteEnviada) dados.grafica.dataArteEnviada = '';
+      if (!Array.isArray(dados.grafica.itensPregao)) dados.grafica.itensPregao = [];
+      // Cada item: { itemPregao, descricao, quantidade, valorUnitario, valorGlobal }
+      dados.grafica.itensPregao = dados.grafica.itensPregao.map(function(it) {
+        return {
+          itemPregao:    it.itemPregao    || '',
+          descricao:     it.descricao     || '',
+          quantidade:    Number(it.quantidade)    || 0,
+          valorUnitario: Number(it.valorUnitario) || 0,
+          valorGlobal:   Number(it.valorGlobal)   || 0
+        };
+      });
+    }
+
+    // CI 3 — Prestação de Serviços: sub-objetos condicionais por natureza
+    if (dados.natureza === 'cache_artistico') {
+      dados.cache = Object.assign(
+        { tipo: '', linguagem: '', fichaTecnica: '', release: '' },
+        dados.cache || {}
+      );
+    }
+    if (dados.natureza === 'professor' || dados.natureza === 'curso_oficina') {
+      dados.professor = Object.assign(
+        { programaModalidade: '', qtdHoraAula: 0 },
+        dados.professor || {}
+      );
+    }
+
+    // Credor expandido (CI 2 e CI 3): garante campos de pronome, PcD e MEI
+    if (dados.credor && typeof dados.credor === 'object') {
+      dados.credor = Object.assign(
+        { nome: '', pronomeNomeSocial: '', telefone: '', email: '',
+          pcD: false, pcDTipo: '', mei: false, razaoSocial: '' },
+        dados.credor
+      );
+    }
 
     var r = SolicitacaoRepository.salvar(orgId, dados);
     _audit(r.isNovo ? 'SOLICITACAO_CRIADA' : 'SOLICITACAO_ATUALIZADA', {
@@ -424,7 +509,11 @@ var SolicitacaoEngine = (function () {
     var mapa = {
       servico: { instrucao: ['contrato', 'rpa'], conclusao: ['comprovante_pagamento'] },
       compra:  { instrucao: [], execucao: ['nf'], conclusao: ['comprovante_pagamento'] },
-      bolsa:   { instrucao: ['termo_compromisso', 'plano_trabalho'], conclusao: ['comprovante_pagamento'] }
+      // CI 1 — Bolsistas: CI + ATA + Relação de Bolsistas + Termos de Compromisso
+      bolsa:   {
+        instrucao: ['ci', 'ata', 'relacao_bolsistas', 'termos_compromisso'],
+        conclusao: ['comprovante_pagamento']
+      }
     };
     var tipo = mapa[tipoProcesso] || mapa.servico;
     return tipo[etapa] || [];
@@ -799,14 +888,14 @@ var SolicitacaoEngine = (function () {
   return {
     STATUS_SOLICITACAO:     STATUS_SOLICITACAO,
     TIPO_SERVICO:           TIPO_SERVICO_CONTRATACAO,
+    TIPO_PROCESSO:          TIPO_PROCESSO_CONTRATACAO,
+    NATUREZA:               NATUREZA_CONTRATACAO,
+    GRUPO_NATUREZA_CI:      GRUPO_NATUREZA_CI,
 
     // Leitura
     listar:        listar,
     buscarPorId:   buscarPorId,
     obterMetricas: obterMetricas,
-
-    TIPO_PROCESSO:          TIPO_PROCESSO_CONTRATACAO,
-    NATUREZA:               NATUREZA_CONTRATACAO,
 
     // Escrita / Aprovação
     salvar:             salvar,

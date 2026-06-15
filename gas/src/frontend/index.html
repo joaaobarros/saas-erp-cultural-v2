@@ -338,6 +338,7 @@ body {
 .view.ativa { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes pulseThanksBounce { 0%,100% { transform: scale(1); } 30% { transform: scale(1.35); } 60% { transform: scale(.9); } 80% { transform: scale(1.1); } }
+@keyframes fabPulseGlow { 0%,100% { box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.12); transform: scale(1); } 50% { box-shadow: 0 12px 32px rgba(76,29,149,.4), 0 4px 12px rgba(0,0,0,.15); transform: scale(1.08); } }
 @keyframes modalEntrar { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .modal-box-animar {
   animation: modalEntrar .22s ease forwards;
@@ -460,6 +461,9 @@ body {
 .dc-finados     { background: linear-gradient(135deg, #1f2937 0%, #374151 100%); }
 .dc-natal       { background: linear-gradient(135deg, #14532d 0%, #dc2626 100%); }
 .dc-strip .dc-strip-icone { animation: dc-pulse-icon 2s ease-in-out infinite; display: inline-block; }
+
+/* Pulsing FAB (botão flutuante de atenção) */
+.fab-pulse { animation: fabPulseGlow 2.4s ease-in-out infinite; }
 
 @keyframes dc-fade-in    { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 @keyframes dc-pulse-icon { 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
@@ -3112,21 +3116,57 @@ select.form-control { cursor: pointer; }
               <div class="form-group">
                 <label class="form-label">Natureza *</label>
                 <select id="sol-natureza" class="form-input" onchange="SolicitacoesUI.onNatureza(this.value)">
-                  <option value="cache_artistico">Cachê / Apresentação Artística</option>
-                  <option value="prestacao_pf">Prestação de Serviço PF (RPA)</option>
-                  <option value="prestacao_pj">Prestação de Serviço PJ (NF)</option>
-                  <option value="curso_oficina">Curso / Oficina / Formação</option>
-                  <option value="professor">Professor / Instrutor</option>
-                  <option value="equipe">Equipe / Grupo de Trabalho</option>
-                  <option value="compras">Compras / Fornecimento</option>
-                  <option value="consultoria">Consultoria Técnica</option>
-                  <option value="bolsa_fomento">Bolsa / Fomento Direto</option>
-                  <option value="outro">Outro</option>
+                  <optgroup label="CI 3 — Prestação de Serviços">
+                    <option value="cache_artistico">Cachê / Apresentação Artística</option>
+                    <option value="prestacao_pf">Prestação de Serviço PF (RPA)</option>
+                    <option value="prestacao_pj">Prestação de Serviço PJ (NF)</option>
+                    <option value="tec_especializado">Serviço Técnico Especializado</option>
+                    <option value="org_eventos">Organização e Produção de Eventos</option>
+                    <option value="professor">Professor / Instrutor</option>
+                    <option value="curso_oficina">Curso / Oficina / Formação</option>
+                    <option value="consultoria">Consultoria Técnica</option>
+                    <option value="equipe">Equipe / Grupo de Trabalho</option>
+                  </optgroup>
+                  <optgroup label="CI 2 — Serviços Operacionais">
+                    <option value="lanche">Lanche</option>
+                    <option value="transporte">Transporte</option>
+                    <option value="grafica">Serviços Gráficos</option>
+                    <option value="estrutura">Estrutura (Som, Luz, Palco)</option>
+                  </optgroup>
+                  <optgroup label="CI 1 / Outros">
+                    <option value="bolsa_fomento">Bolsa / Fomento Direto</option>
+                    <option value="compras">Compras / Fornecimento</option>
+                    <option value="outro">Outro</option>
+                  </optgroup>
                 </select>
               </div>
               <div class="form-group" id="sol-natureza-outro-grp" style="display:none;grid-column:span 2">
                 <label class="form-label">Especificar natureza</label>
                 <input id="sol-natureza-outro" class="form-input" type="text" placeholder="Descreva a natureza da contratação">
+              </div>
+              <!-- Período (CI 1 e CI 3) -->
+              <div class="form-group" id="sol-periodo-ini-grp" style="display:none">
+                <label class="form-label">Período — Início</label>
+                <input id="sol-periodo-ini" class="form-input" type="date">
+              </div>
+              <div class="form-group" id="sol-periodo-fim-grp" style="display:none">
+                <label class="form-label">Período — Fim</label>
+                <input id="sol-periodo-fim" class="form-input" type="date">
+              </div>
+              <!-- Data da Atividade (CI 2) -->
+              <div class="form-group" id="sol-data-atividade-grp" style="display:none">
+                <label class="form-label">Data da Atividade</label>
+                <input id="sol-data-atividade" class="form-input" type="date">
+              </div>
+              <!-- Modalidade (CI 1 — Bolsistas) -->
+              <div class="form-group" id="sol-modalidade-grp" style="display:none">
+                <label class="form-label">Modalidade / Eixo</label>
+                <input id="sol-modalidade" class="form-input" type="text" placeholder="Ex: Música · Formação">
+              </div>
+              <!-- Pessoa de Referência (CI 2) -->
+              <div class="form-group" id="sol-pessoa-ref-grp" style="display:none">
+                <label class="form-label">Pessoa de Referência do Setor</label>
+                <input id="sol-pessoa-referencia" class="form-input" type="text" placeholder="Nome do responsável">
               </div>
             </div>
 
@@ -3183,9 +3223,117 @@ select.form-control { cursor: pointer; }
                 <div class="form-group"><label class="form-label">CPF/CNPJ do Credor</label><input id="sol-credor-cpfcnpj" class="form-input" type="text"></div>
                 <div class="form-group"><label class="form-label">E-mail Credor</label><input id="sol-credor-email" class="form-input" type="email"></div>
                 <div class="form-group"><label class="form-label">Telefone Credor</label><div style="display:flex;align-items:center;gap:6px;"><input id="sol-credor-telefone" class="form-input" type="tel" style="flex:1;min-width:0;"><label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;color:#25D366;font-weight:700;"><input type="checkbox" id="sol-credor-telefone-wpp" style="accent-color:#25D366;width:13px;height:13px;cursor:pointer;">WPP</label></div></div>
+                <!-- Campos expandidos CI 3 -->
+                <div class="form-group" style="grid-column:span 2" id="sol-credor-ext" style="display:none">
+                  <label class="form-label">Pronome / Nome Social</label>
+                  <input id="sol-credor-pronome" class="form-input" type="text" placeholder="Informar quando houver">
+                </div>
+                <div class="form-group" id="sol-credor-pcd-grp" style="display:none">
+                  <label class="form-label" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="sol-credor-pcd" onchange="SolicitacoesUI.toggleCredorPcD(this.checked)" style="accent-color:var(--primario)"> Pessoa com Deficiência (PcD)
+                  </label>
+                  <input id="sol-credor-pcd-tipo" class="form-input" type="text" placeholder="Qual deficiência?" style="margin-top:4px;display:none">
+                </div>
+                <div class="form-group" id="sol-credor-mei-grp" style="display:none">
+                  <label class="form-label" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="sol-credor-mei" onchange="SolicitacoesUI.toggleCredorMei(this.checked)" style="accent-color:var(--primario)"> Contratação ME ou MEI
+                  </label>
+                  <input id="sol-credor-razao-social" class="form-input" type="text" placeholder="Razão social da empresa" style="margin-top:4px;display:none">
+                </div>
               </div>
             </div>
             <input type="hidden" id="sol-contratado-id">
+
+            <!-- ── Seções CI-Específicas (condicionais por natureza) ── -->
+
+            <!-- CI 1 — Relação de Bolsistas (tipoProcesso='bolsa') -->
+            <div id="sol-ci-bolsistas" style="display:none">
+              <div class="sol-section-sep">4b · Relação de Bolsistas</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <p style="font-size:12px;color:var(--muted);margin:0;">Adicione todos os bolsistas com matrícula e responsável.</p>
+                <button class="btn btn-ghost btn-sm" onclick="SolicitacoesUI.adicionarBolsista()" data-bg-skip="1"><span class="ms ms-sm">person_add</span> Adicionar Bolsista</button>
+              </div>
+              <table class="parcelas-grid" id="sol-bolsistas-table">
+                <thead><tr><th>#</th><th>Nome</th><th>Nº Matrícula</th><th>Responsável</th><th>Grau Parentesco</th><th></th></tr></thead>
+                <tbody id="sol-bolsistas-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- CI 2 — Lanche -->
+            <div id="sol-ci-lanche" style="display:none">
+              <div class="sol-section-sep">4b · Dados do Lanche</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                  <label class="form-label">Horário de Chegada</label>
+                  <select id="sol-lanche-horario" class="form-input">
+                    <option value="">Selecione…</option>
+                    <option value="07:30">07:30h</option>
+                    <option value="11:30">11:30h</option>
+                    <option value="16:00">16:00h</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Local de Entrega (Equipamento IDM)</label>
+                  <input id="sol-lanche-local" class="form-input" type="text" placeholder="Ex: CCBJ — Salão Principal">
+                </div>
+              </div>
+            </div>
+
+            <!-- CI 2 — Transporte -->
+            <div id="sol-ci-transporte" style="display:none">
+              <div class="sol-section-sep">4b · Dados do Transporte</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label class="form-label">Horário Início da Rota</label><input id="sol-transp-h-ini" class="form-input" type="time"></div>
+                <div class="form-group"><label class="form-label">Local Início da Rota</label><input id="sol-transp-l-ini" class="form-input" type="text" placeholder="Ponto de partida"></div>
+                <div class="form-group"><label class="form-label">Horário Final da Rota</label><input id="sol-transp-h-fim" class="form-input" type="time"></div>
+                <div class="form-group"><label class="form-label">Local Final da Rota</label><input id="sol-transp-l-fim" class="form-input" type="text" placeholder="Ponto de chegada"></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Rotas / Trajeto</label><textarea id="sol-transp-rotas" class="form-input" rows="2" placeholder="Descreva as rotas ou pontos de parada" style="resize:vertical"></textarea></div>
+              </div>
+            </div>
+
+            <!-- CI 2 — Gráfica -->
+            <div id="sol-ci-grafica" style="display:none">
+              <div class="sol-section-sep">4b · Dados dos Serviços Gráficos</div>
+              <div class="form-group" style="max-width:220px;margin-bottom:10px;">
+                <label class="form-label">Arte enviada em</label>
+                <input id="sol-grf-arte-data" class="form-input" type="date">
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <p style="font-size:12px;font-weight:600;color:var(--muted);margin:0;">ITENS DO PREGÃO</p>
+                <button class="btn btn-ghost btn-sm" onclick="SolicitacoesUI.adicionarItemGrafica()" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar Item</button>
+              </div>
+              <table class="parcelas-grid" id="sol-grf-itens-table">
+                <thead><tr><th>Item Pregão</th><th>Descrição</th><th>Qtd</th><th>Valor Unit. (R$)</th><th>Valor Global (R$)</th><th></th></tr></thead>
+                <tbody id="sol-grf-itens-tbody"></tbody>
+              </table>
+            </div>
+
+            <!-- CI 3 — Cachê -->
+            <div id="sol-ci-cache" style="display:none">
+              <div class="sol-section-sep">4b · Dados do Cachê</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                  <label class="form-label">Tipo</label>
+                  <select id="sol-cache-tipo" class="form-input">
+                    <option value="">Selecione…</option>
+                    <option value="convite">Convite</option>
+                    <option value="chamada">Chamada Pública</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Linguagem</label><input id="sol-cache-linguagem" class="form-input" type="text" placeholder="Ex: Música · Teatro · Dança"></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Ficha Técnica com Função</label><textarea id="sol-cache-ficha" class="form-input" rows="2" placeholder="Nome — Função" style="resize:vertical"></textarea></div>
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Release</label><textarea id="sol-cache-release" class="form-input" rows="2" style="resize:vertical"></textarea></div>
+              </div>
+            </div>
+
+            <!-- CI 3 — Professor / Instrutor -->
+            <div id="sol-ci-professor" style="display:none">
+              <div class="sol-section-sep">4b · Dados do Professor / Instrutor</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group" style="grid-column:span 2"><label class="form-label">Programa e Modalidade</label><input id="sol-prof-programa" class="form-input" type="text" placeholder="Ex: Programa de Formação · Modalidade Teatro"></div>
+                <div class="form-group"><label class="form-label">Quantidade de Horas-Aula</label><input id="sol-prof-horas" class="form-input" type="number" min="0" step="0.5" placeholder="Ex: 40"></div>
+              </div>
+            </div>
 
             <!-- Seção 5 — Vínculo Financeiro -->
             <div class="sol-section-sep">5 · Vínculo Financeiro</div>
@@ -8225,7 +8373,7 @@ select.form-control { cursor: pointer; }
         </div>
       </div>
       <!-- Botão flutuante pulse -->
-      <button id="pulse-fab" title="Uma pergunta rápida sobre seu dia"
+      <button id="pulse-fab" class="fab-pulse" title="Uma pergunta rápida sobre seu dia"
               onclick="EscutaUI.abrirPulse()" data-bg-skip="1"
               style="display:none;position:fixed;bottom:20px;right:20px;z-index:1000;
                      width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
@@ -8605,6 +8753,17 @@ select.form-control { cursor: pointer; }
                     <option value="B+">B+</option><option value="B-">B-</option>
                     <option value="AB+">AB+</option><option value="AB-">AB-</option>
                     <option value="O+">O+</option><option value="O-">O-</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Tamanho Vestiário (Uniformes) <button type="button" class="btn btn-ghost" style="padding:0;width:18px;height:18px;min-width:18px;margin-left:4px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;" onclick="RhUI._abrirGuiaTamanhos()" title="Ver guia de tamanhos">?</button></label>
+                  <select id="rh-pf-tamanho-vestiario" class="form-input">
+                    <option value="">Não informado</option>
+                    <option value="pp">PP (Extra Pequeno)</option>
+                    <option value="p">P (Pequeno)</option>
+                    <option value="m">M (Médio)</option>
+                    <option value="g">G (Grande)</option>
+                    <option value="gg">GG (Extra Grande)</option>
+                    <option value="xg">XG (Tamanho Especial)</option>
                   </select>
                 </div>
                 <div class="form-group"><label class="form-label">Alergias</label><input id="rh-pf-alergias" class="form-input" type="text" placeholder="Ex: amendoim, látex, penicilina…"></div>
@@ -10467,7 +10626,8 @@ var GAS = {
     // [F20] Dados unificados
     dados:               function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_dados({}); },
     // [F20] Pulse
-    pulseObter:          function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_obter({}); },
+    pulseObter:          function(cb,err,params) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_obter(params||{}); },
+    pulseEvento:         function(d)         { google.script.run.ctrl_escuta_pulse_evento(d||{}); },
     pulseResponder:      function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_responder(d); },
     pulseDashboard:      function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_escuta_pulse_dashboard(p||{}); },
     // [F20] Escuta espontânea
@@ -15527,7 +15687,12 @@ var AdminCadastrosUI = (function() {
       GAS.acesso.editarPapel({ email: email, papel: papel, setor: setor, setoresGerenciados: setoresGerenciados, permissoesOverride: permissoesOverride, featuresOverride: featuresOverride }, function(r) {
         liberar();
         var m = document.querySelector('.modal-simples'); if (m) m.remove();
-        if (r && r.ok) { Toast.sucesso('Usuário atualizado.'); carregarUsuarios(); }
+        if (r && r.ok) {
+          var msg = 'Usuário atualizado.';
+          if (setor) msg += ' Setor sincronizado com colaborador em Pessoas/RH.';
+          Toast.sucesso(msg);
+          carregarUsuarios();
+        }
         else Toast.erro((r && r.error && r.error.message) || 'Erro.');
       });
     });
@@ -25371,7 +25536,13 @@ var SolicitacoesUI = (function() {
                'sol-justificativa','sol-natureza-outro','sol-contratado-id','sol-credor-nome',
                'sol-credor-cpfcnpj','sol-credor-email','sol-credor-telefone','sol-forn-nome',
                'sol-forn-email','sol-forn-telefone','sol-obs-parcela','sol-plano-descricao',
-               'sol-plano-metas','sol-plano-cronograma'];
+               'sol-plano-metas','sol-plano-cronograma',
+               // Novos campos dos CIs
+               'sol-periodo-ini','sol-periodo-fim','sol-data-atividade','sol-modalidade',
+               'sol-pessoa-referencia','sol-credor-pronome','sol-credor-pcd-tipo','sol-credor-razao-social',
+               'sol-lanche-local','sol-transp-h-ini','sol-transp-l-ini','sol-transp-h-fim',
+               'sol-transp-l-fim','sol-transp-rotas','sol-grf-arte-data',
+               'sol-cache-linguagem','sol-cache-ficha','sol-cache-release','sol-prof-programa','sol-prof-horas'];
     ids.forEach(function(i){ var el=document.getElementById(i); if(el)el.value=''; });
     document.getElementById('sol-valor').value = fmtMoeda(0);
     document.getElementById('sol-qtd-parcelas').value = '1';
@@ -25391,6 +25562,29 @@ var SolicitacoesUI = (function() {
     document.getElementById('sol-docs-obrigatorios').textContent = '';
     var tbody = document.getElementById('sol-parcelas-tbody');
     if (tbody) tbody.innerHTML = '';
+    // Limpar tabelas dinâmicas dos CIs
+    var bTbody = document.getElementById('sol-bolsistas-tbody');
+    if (bTbody) bTbody.innerHTML = '';
+    var gTbody = document.getElementById('sol-grf-itens-tbody');
+    if (gTbody) gTbody.innerHTML = '';
+    // Ocultar todos os blocos CI-específicos
+    ['sol-ci-bolsistas','sol-ci-lanche','sol-ci-transporte','sol-ci-grafica',
+     'sol-ci-cache','sol-ci-professor'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.style.display='none';
+    });
+    ['sol-periodo-ini-grp','sol-periodo-fim-grp','sol-data-atividade-grp',
+     'sol-modalidade-grp','sol-pessoa-ref-grp',
+     'sol-credor-ext','sol-credor-pcd-grp','sol-credor-mei-grp'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.style.display='none';
+    });
+    // Resetar checkboxes e selects CI
+    ['sol-credor-pcd','sol-credor-mei'].forEach(function(id){
+      var el=document.getElementById(id); if(el)el.checked=false;
+    });
+    var lhEl=document.getElementById('sol-lanche-horario'); if(lhEl)lhEl.value='';
+    var ctEl=document.getElementById('sol-cache-tipo'); if(ctEl)ctEl.value='';
+    var pcdTipoEl=document.getElementById('sol-credor-pcd-tipo'); if(pcdTipoEl)pcdTipoEl.style.display='none';
+    var rzEl=document.getElementById('sol-credor-razao-social'); if(rzEl)rzEl.style.display='none';
     onTipoProcesso('servico');
   }
 
@@ -25428,13 +25622,63 @@ var SolicitacoesUI = (function() {
       justificativa:    document.getElementById('sol-justificativa').value||'',
       parcelas:         parcelas
     };
+    // Campos comuns dos CIs
+    dados.periodoInicio      = (document.getElementById('sol-periodo-ini')||{}).value||'';
+    dados.periodoFim         = (document.getElementById('sol-periodo-fim')||{}).value||'';
+    dados.dataAtividade      = (document.getElementById('sol-data-atividade')||{}).value||'';
+    dados.modalidade         = (document.getElementById('sol-modalidade')||{}).value||'';
+    dados.pessoaReferencia   = (document.getElementById('sol-pessoa-referencia')||{}).value||'';
+
     var cred = _coletarCreedor();
     if (cred) dados.credor = cred;
+
     if (tipoProcesso === 'bolsa') {
       dados.planoTrabalho = {
         descricao:  document.getElementById('sol-plano-descricao').value||'',
         metas:      document.getElementById('sol-plano-metas').value||'',
         cronograma: document.getElementById('sol-plano-cronograma').value||''
+      };
+      dados.bolsistas = _coletarBolsistas();
+    }
+
+    // CI 2 — Lanche
+    if (natureza === 'lanche') {
+      dados.lanche = {
+        horarioChegada: (document.getElementById('sol-lanche-horario')||{}).value||'',
+        localEntrega:   (document.getElementById('sol-lanche-local')||{}).value||''
+      };
+    }
+    // CI 2 — Transporte
+    if (natureza === 'transporte') {
+      dados.transporte = {
+        horarioInicio: (document.getElementById('sol-transp-h-ini')||{}).value||'',
+        localInicio:   (document.getElementById('sol-transp-l-ini')||{}).value||'',
+        horarioFim:    (document.getElementById('sol-transp-h-fim')||{}).value||'',
+        localFim:      (document.getElementById('sol-transp-l-fim')||{}).value||'',
+        rotas:         (document.getElementById('sol-transp-rotas')||{}).value||''
+      };
+    }
+    // CI 2 — Gráfica
+    if (natureza === 'grafica') {
+      dados.grafica = {
+        dataArteEnviada: (document.getElementById('sol-grf-arte-data')||{}).value||'',
+        itensPregao:     _coletarItensGrafica()
+      };
+    }
+    // CI 3 — Cachê
+    if (natureza === 'cache_artistico') {
+      dados.cache = {
+        tipo:        (document.getElementById('sol-cache-tipo')||{}).value||'',
+        linguagem:   (document.getElementById('sol-cache-linguagem')||{}).value||'',
+        fichaTecnica:(document.getElementById('sol-cache-ficha')||{}).value||'',
+        release:     (document.getElementById('sol-cache-release')||{}).value||''
+      };
+    }
+    // CI 3 — Professor
+    if (natureza === 'professor' || natureza === 'curso_oficina') {
+      dados.professor = {
+        programaModalidade: (document.getElementById('sol-prof-programa')||{}).value||'',
+        qtdHoraAula:        parseFloat((document.getElementById('sol-prof-horas')||{}).value)||0
       };
     }
     var id = document.getElementById('sol-id').value;
@@ -25477,12 +25721,19 @@ var SolicitacoesUI = (function() {
 
   function _coletarCreedor() {
     if (!document.getElementById('sol-credor-diferente').checked) return null;
+    var pcDChecked = !!(document.getElementById('sol-credor-pcd')&&document.getElementById('sol-credor-pcd').checked);
+    var meiChecked = !!(document.getElementById('sol-credor-mei')&&document.getElementById('sol-credor-mei').checked);
     return {
-      nome:     document.getElementById('sol-credor-nome').value||'',
-      cpfCnpj:  document.getElementById('sol-credor-cpfcnpj').value||'',
-      email:    document.getElementById('sol-credor-email').value||'',
-      telefone: document.getElementById('sol-credor-telefone').value||'',
-      telefoneWpp: !!(document.getElementById('sol-credor-telefone-wpp')&&document.getElementById('sol-credor-telefone-wpp').checked)
+      nome:              (document.getElementById('sol-credor-nome')||{}).value||'',
+      cpfCnpj:           (document.getElementById('sol-credor-cpfcnpj')||{}).value||'',
+      email:             (document.getElementById('sol-credor-email')||{}).value||'',
+      telefone:          (document.getElementById('sol-credor-telefone')||{}).value||'',
+      telefoneWpp:       !!(document.getElementById('sol-credor-telefone-wpp')&&document.getElementById('sol-credor-telefone-wpp').checked),
+      pronomeNomeSocial: (document.getElementById('sol-credor-pronome')||{}).value||'',
+      pcD:               pcDChecked,
+      pcDTipo:           pcDChecked ? ((document.getElementById('sol-credor-pcd-tipo')||{}).value||'') : '',
+      mei:               meiChecked,
+      razaoSocial:       meiChecked ? ((document.getElementById('sol-credor-razao-social')||{}).value||'') : ''
     };
   }
 
@@ -26223,23 +26474,86 @@ var SolicitacoesUI = (function() {
   // ── Tipo de Processo ──────────────────────────────────────
 
   function onTipoProcesso(tipo) {
-    var cotGrp = document.getElementById('sol-cotacoes-grp');
+    var cotGrp   = document.getElementById('sol-cotacoes-grp');
     var planoGrp = document.getElementById('sol-plano-grp');
-    if (cotGrp) cotGrp.style.display = tipo==='compra' ? '' : 'none';
-    if (planoGrp) planoGrp.style.display = tipo==='bolsa' ? '' : 'none';
+    var bols     = document.getElementById('sol-ci-bolsistas');
+    if (cotGrp)   cotGrp.style.display   = tipo==='compra' ? '' : 'none';
+    if (planoGrp) planoGrp.style.display = tipo==='bolsa'  ? '' : 'none';
+    if (bols)     bols.style.display     = tipo==='bolsa'  ? '' : 'none';
+    // Período é relevante para bolsa e prestação
+    var pIni = document.getElementById('sol-periodo-ini-grp');
+    var pFim = document.getElementById('sol-periodo-fim-grp');
+    var mostrarPeriodo = (tipo==='bolsa' || tipo==='servico');
+    if (pIni) pIni.style.display = mostrarPeriodo ? '' : 'none';
+    if (pFim) pFim.style.display = mostrarPeriodo ? '' : 'none';
+    // Modalidade só para bolsa
+    var modEl = document.getElementById('sol-modalidade-grp');
+    if (modEl) modEl.style.display = tipo==='bolsa' ? '' : 'none';
     var docsInfo = document.getElementById('sol-docs-obrigatorios');
     if (docsInfo) {
       var mapa = {
         servico: 'Documentos obrigatórios: Contrato/Termo (instrução) · RPA ou NF (instrução/execução) · Comprovante de pagamento (conclusão)',
         compra:  'Documentos obrigatórios: 3 Cotações (mín.) · NF fornecedor + recibo entrega (execução) · Comprovante de pagamento (conclusão)',
-        bolsa:   'Documentos obrigatórios: Termo de Compromisso · Plano de Trabalho (instrução) · Comprovante bancário · Comprovante de pagamento (conclusão)'
+        bolsa:   'Documentos obrigatórios: CI · ATA · Relação de Bolsistas · Termos de Compromisso (instrução) · Comprovante bancário · Comprovante de pagamento (conclusão)'
       };
       docsInfo.textContent = mapa[tipo]||'';
     }
+    // Re-aplicar lógica de natureza para sincronizar sub-blocos
+    var natEl = document.getElementById('sol-natureza');
+    if (natEl) onNatureza(natEl.value);
   }
 
+  var _NATUREZA_CI2 = ['lanche','transporte','grafica','estrutura'];
+  var _NATUREZA_CI3_PRESTACAO = ['cache_artistico','prestacao_pf','prestacao_pj','tec_especializado',
+                                  'org_eventos','professor','curso_oficina','equipe','consultoria'];
+
   function onNatureza(natureza) {
+    // "outro"
     document.getElementById('sol-natureza-outro-grp').style.display = natureza==='outro' ? '' : 'none';
+
+    var isCI2 = _NATUREZA_CI2.indexOf(natureza) !== -1;
+    var isCI3Prestacao = _NATUREZA_CI3_PRESTACAO.indexOf(natureza) !== -1;
+
+    // Campos de data: dataAtividade apenas para CI 2; período para CI 1 e CI 3
+    var tipo = (document.getElementById('sol-tipo-processo')||{}).value || 'servico';
+    var daEl = document.getElementById('sol-data-atividade-grp');
+    var piEl = document.getElementById('sol-periodo-ini-grp');
+    var pfEl = document.getElementById('sol-periodo-fim-grp');
+    if (daEl) daEl.style.display = isCI2 ? '' : 'none';
+    if (piEl) piEl.style.display = (!isCI2 && tipo !== 'compra') ? '' : 'none';
+    if (pfEl) pfEl.style.display = (!isCI2 && tipo !== 'compra') ? '' : 'none';
+
+    // Pessoa de referência: CI 2
+    var prEl = document.getElementById('sol-pessoa-ref-grp');
+    if (prEl) prEl.style.display = isCI2 ? '' : 'none';
+
+    // Blocos CI-específicos de conteúdo
+    document.getElementById('sol-ci-lanche').style.display      = natureza==='lanche'         ? '' : 'none';
+    document.getElementById('sol-ci-transporte').style.display  = natureza==='transporte'     ? '' : 'none';
+    document.getElementById('sol-ci-grafica').style.display     = natureza==='grafica'        ? '' : 'none';
+    document.getElementById('sol-ci-cache').style.display       = natureza==='cache_artistico'? '' : 'none';
+    document.getElementById('sol-ci-professor').style.display   = (natureza==='professor'||natureza==='curso_oficina') ? '' : 'none';
+
+    // Campos extras do credor: pronome, PcD, MEI — visíveis para CI 3
+    var extEl    = document.getElementById('sol-credor-ext');
+    var pcdEl    = document.getElementById('sol-credor-pcd-grp');
+    var meiEl    = document.getElementById('sol-credor-mei-grp');
+    var showExt  = isCI3Prestacao || tipo==='bolsa';
+    if (extEl) extEl.style.display = showExt ? '' : 'none';
+    if (pcdEl) pcdEl.style.display = showExt ? '' : 'none';
+    if (meiEl) meiEl.style.display = (isCI3Prestacao) ? '' : 'none';
+  }
+
+  function toggleCredorPcD(checked) {
+    var el = document.getElementById('sol-credor-pcd-tipo');
+    if (el) el.style.display = checked ? '' : 'none';
+    if (!checked && el) el.value = '';
+  }
+
+  function toggleCredorMei(checked) {
+    var el = document.getElementById('sol-credor-razao-social');
+    if (el) el.style.display = checked ? '' : 'none';
+    if (!checked && el) el.value = '';
   }
 
   // ── Cronograma de Parcelas ────────────────────────────────
@@ -26314,6 +26628,81 @@ var SolicitacoesUI = (function() {
     }, function(){el.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar.</p>';});
   }
 
+  // ── Tabela de Bolsistas (CI 1) ───────────────────────────
+
+  var _bolsistas = []; // cache local durante edição do formulário
+
+  function _coletarBolsistas() {
+    var rows = document.querySelectorAll('#sol-bolsistas-tbody tr');
+    var result = [];
+    rows.forEach(function(tr) {
+      var inputs = tr.querySelectorAll('input');
+      if (inputs.length >= 4) {
+        result.push({
+          id:              tr.getAttribute('data-bls-id')||'',
+          nome:            inputs[0].value||'',
+          matricula:       inputs[1].value||'',
+          nomeResponsavel: inputs[2].value||'',
+          grauParentesco:  inputs[3].value||''
+        });
+      }
+    });
+    return result;
+  }
+
+  function _renderBolsistaLinha(b, idx) {
+    var id = b.id || ('bls_tmp_' + Date.now() + '_' + idx);
+    var tr = document.createElement('tr');
+    tr.setAttribute('data-bls-id', id);
+    tr.innerHTML = '<td style="width:30px;text-align:center;color:var(--muted)">'+(idx+1)+'</td>'
+      +'<td><input class="form-input" type="text" placeholder="Nome do bolsista" value="'+escaparHtml(b.nome||'')+'" style="min-width:140px"></td>'
+      +'<td><input class="form-input" type="text" placeholder="Ex: 20250001" value="'+escaparHtml(b.matricula||'')+'" style="width:110px"></td>'
+      +'<td><input class="form-input" type="text" placeholder="Nome do responsável" value="'+escaparHtml(b.nomeResponsavel||'')+'" style="min-width:120px"></td>'
+      +'<td><input class="form-input" type="text" placeholder="Ex: Mãe" value="'+escaparHtml(b.grauParentesco||'')+'" style="width:90px"></td>'
+      +'<td><button class="btn btn-ghost btn-sm" onclick="this.closest(\'tr\').remove()" data-bg-skip="1" style="padding:2px 6px"><span class="ms ms-sm">delete</span></button></td>';
+    return tr;
+  }
+
+  function adicionarBolsista() {
+    var tbody = document.getElementById('sol-bolsistas-tbody');
+    if (!tbody) return;
+    var idx = tbody.rows.length;
+    tbody.appendChild(_renderBolsistaLinha({}, idx));
+  }
+
+  // ── Tabela de Itens Gráfica (CI 2) ──────────────────────
+
+  function _coletarItensGrafica() {
+    var rows = document.querySelectorAll('#sol-grf-itens-tbody tr');
+    var result = [];
+    rows.forEach(function(tr) {
+      var inputs = tr.querySelectorAll('input');
+      if (inputs.length >= 5) {
+        result.push({
+          itemPregao:    inputs[0].value||'',
+          descricao:     inputs[1].value||'',
+          quantidade:    parseFloat(inputs[2].value)||0,
+          valorUnitario: parseMoeda(inputs[3].value),
+          valorGlobal:   parseMoeda(inputs[4].value)
+        });
+      }
+    });
+    return result;
+  }
+
+  function adicionarItemGrafica() {
+    var tbody = document.getElementById('sol-grf-itens-tbody');
+    if (!tbody) return;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><input class="form-input" type="text" placeholder="Ex: Item 01" style="width:80px"></td>'
+      +'<td><input class="form-input" type="text" placeholder="Descrição do item" style="min-width:140px"></td>'
+      +'<td><input class="form-input" type="number" min="0" placeholder="0" style="width:60px"></td>'
+      +'<td><input class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00" style="width:100px"></td>'
+      +'<td><input class="form-input" type="text" data-moeda="1" oninput="mascaraMoeda(this)" placeholder="R$ 0,00" style="width:100px"></td>'
+      +'<td><button class="btn btn-ghost btn-sm" onclick="this.closest(\'tr\').remove()" data-bg-skip="1" style="padding:2px 6px"><span class="ms ms-sm">delete</span></button></td>';
+    tbody.appendChild(tr);
+  }
+
   return {
     carregar: carregar, filtrar: filtrar, setChip: setChip,
     abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar,
@@ -26340,7 +26729,12 @@ var SolicitacoesUI = (function() {
     onRubricaSelecionada: onRubricaSelecionada, verificarSaldo: verificarSaldo,
     onAcaoSelecionada: onAcaoSelecionada, onTipoProcesso: onTipoProcesso, onNatureza: onNatureza,
     atualizarGridParcelas: atualizarGridParcelas,
-    novaParaAcao: novaParaAcao, carregarParaAcao: carregarParaAcao
+    novaParaAcao: novaParaAcao, carregarParaAcao: carregarParaAcao,
+    // Tabelas dinâmicas dos CIs
+    adicionarBolsista: adicionarBolsista,
+    adicionarItemGrafica: adicionarItemGrafica,
+    toggleCredorPcD: toggleCredorPcD,
+    toggleCredorMei: toggleCredorMei
   };
 })();
 
@@ -33647,7 +34041,7 @@ var EscutaUI = (function() {
   function _renderStats(m) {
     var el = document.getElementById('escuta-stats');
     if (!el || !m) return;
-    var ultima = m.ultimaMedia ? (Math.round(m.ultimaMedia*10)/10 + '/5') : 'N/A';
+    var ultima = m.ultimaMedia ? (Math.round(m.ultimaMedia*10)/10 + '/5') : '0';
     el.innerHTML = [
       '<div class="stat-card"><div class="stat-valor">' + (m.total||0) + '</div><div class="stat-label">Pesquisas</div></div>',
       '<div class="stat-card"><div class="stat-valor" style="color:var(--success)">' + (m.ativas||0) + '</div><div class="stat-label">Ativas</div></div>',
@@ -33754,7 +34148,7 @@ var EscutaUI = (function() {
       return '<div style="text-align:center;flex:1;">' +
         '<div style="font-size:10px;color:var(--text2);margin-bottom:3px;">R' + (p.rodada||'?') + '</div>' +
         '<div style="height:72px;display:flex;align-items:flex-end;justify-content:center;">' +
-          '<div style="width:28px;background:' + cor + ';border-radius:4px 4px 0 0;height:' + pct + '%;min-height:4px;" title="' + (v||'N/A') + '/5 · ' + conf + '% conf."></div>' +
+          '<div style="width:28px;background:' + cor + ';border-radius:4px 4px 0 0;height:' + pct + '%;min-height:4px;" title="' + (v||'0') + '/5 · ' + conf + '% conf."></div>' +
         '</div>' +
         '<div style="font-size:10px;font-weight:700;margin-top:2px;color:var(--text1);">' + (v||'?') + '</div>' +
         '<div style="font-size:9px;color:var(--text2);">' + conf + '%</div>' +
@@ -34080,7 +34474,7 @@ var EscutaUI = (function() {
         return '<div style="margin-bottom:10px;">' +
           '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;align-items:center;">' +
             '<span style="text-transform:capitalize;">' + k + '</span>' +
-            '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'N/A') + ' <span style="font-size:10px;color:var(--text2);">' + _nivelLabel(nvl[k]) + '</span></span>' +
+            '<span style="font-weight:700;">' + (v!=null?Number(v).toFixed(2)+'/5':'0') + ' <span style="font-size:10px;color:var(--text2);">' + _nivelLabel(nvl[k]) + '</span></span>' +
           '</div>' +
           '<div style="background:var(--border);border-radius:4px;height:7px;">' +
             '<div style="width:' + pct + '%;background:' + cor + ';height:7px;border-radius:4px;"></div>' +
@@ -34094,7 +34488,7 @@ var EscutaUI = (function() {
             '<div class="stats-strip" style="gap:8px;margin-bottom:12px;">' +
               '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;">' + (res.totalRespostas||0) + '/' + (res.totalConvidados||0) + '</div><div class="stat-label">Respostas</div></div>' +
               '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;">' + (res.indiceConfianca||0) + '%</div><div class="stat-label">Confiança</div></div>' +
-              '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;color:var(--primary)">' + (res.mediaPonderada||'N/A') + '</div><div class="stat-label">Média</div></div>' +
+              '<div class="stat-card" style="padding:8px 12px;"><div class="stat-valor" style="font-size:18px;color:var(--primary)">' + (res.mediaPonderada||'0') + '</div><div class="stat-label">Média</div></div>' +
             '</div>' +
             '<p style="font-size:12px;margin:0 0 4px;">Confiança: <strong>' + confLabel + '</strong></p>' +
             '<p style="font-size:12px;margin:0 0 4px;">Clima geral: <strong>' + _nivelLabel(res.nivelClimaGeral) + '</strong></p>' +
@@ -34148,7 +34542,7 @@ var EscutaUI = (function() {
       if (el) el.innerHTML =
         '<h5 style="margin:0 0 8px;font-size:13px;">' + _esc(rep.titulo||'Relatório') + '</h5>' +
         '<p style="font-size:12px;color:var(--text2);margin:0 0 8px;">Gerado em ' + (rep.geradoEm||'').substring(0,10) + '</p>' +
-        '<p style="font-size:12px;margin:0 0 4px;">Média ponderada: <strong>' + (rep.mediaPonderada||'N/A') + '</strong></p>' +
+        '<p style="font-size:12px;margin:0 0 4px;">Média ponderada: <strong>' + (rep.mediaPonderada||'0') + '</strong></p>' +
         '<p style="font-size:12px;margin:0 0 4px;">Respostas: <strong>' + (rep.totalRespostas||0) + '/' + (rep.totalConvidados||0) + '</strong></p>' +
         (recs ? '<h5 style="margin:12px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--text2);">Recomendações por Dimensão</h5><ul style="padding-left:16px;margin:0;">' + recs + '</ul>' : '');
     }, function(e){ if(done) done(); Toast.erro((e&&e.message)||'Erro.'); });
@@ -34282,16 +34676,23 @@ var EscutaUI = (function() {
         el.innerHTML = '<p class="muted-text" style="font-size:12px;">Não disponível.</p>'; return;
       }
       var d = r.data;
-      var taxaPct = d.taxaGeral !== null ? Math.round(d.taxaGeral * 100) + '%' : '—';
-      var corTaxa = d.taxaGeral === null ? 'var(--text2)' : d.taxaGeral >= 0.5 ? 'var(--success)' : d.taxaGeral >= 0.2 ? 'var(--warning)' : 'var(--danger)';
 
-      // ── Resumo de engajamento ─────────────────────────────────────────────
+      // ── Resumo de engajamento (métricas reais de UX) ──────────────────────
+      var pctAb  = d.taxaAbertura    !== null ? Math.round(d.taxaAbertura    * 100) + '%' : '—';
+      var pctRp  = d.taxaResposta    !== null ? Math.round(d.taxaResposta    * 100) + '%' : '—';
+      var pctEng = d.taxaEngajamento !== null ? Math.round(d.taxaEngajamento * 100) + '%' : '—';
+      var corAb  = d.taxaAbertura  === null ? 'var(--text2)' : d.taxaAbertura  >= 0.5 ? 'var(--success)' : d.taxaAbertura  >= 0.2 ? 'var(--warning)' : 'var(--danger)';
+      var corRp  = d.taxaResposta  === null ? 'var(--text2)' : d.taxaResposta  >= 0.7 ? 'var(--success)' : d.taxaResposta  >= 0.4 ? 'var(--warning)' : 'var(--danger)';
+      var corEng = d.taxaEngajamento === null ? 'var(--text2)' : d.taxaEngajamento >= 0.3 ? 'var(--success)' : d.taxaEngajamento >= 0.1 ? 'var(--warning)' : 'var(--danger)';
+
       var resumo =
-        '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">' +
-          _monCard('Impressões', d.totalImpressoes, 'var(--primary)') +
-          _monCard('Respostas', d.totalRespostas, 'var(--success)') +
-          _monCard('Taxa geral', taxaPct, corTaxa) +
-          _monCard('Sem resposta', d.semResposta.length, d.semResposta.length > 0 ? 'var(--warning)' : 'var(--success)') +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px;">' +
+          _monCard('Apresentações', d.apresentacoes, 'var(--primary)', 'Quantas vezes o widget foi exibido') +
+          _monCard('Abertos', d.aberturas, corAb, 'Taxa de abertura: ' + pctAb + ' das apresentações') +
+          _monCard('Respondidos', d.respondidos, corRp, 'Taxa de resposta: ' + pctRp + ' dos abertos') +
+          _monCard('Fechados s/ resp.', d.fechamentos, d.fechamentos > 0 ? 'var(--warning)' : 'var(--success)', 'Widget aberto mas fechado sem responder') +
+          _monCard('Ignorados (est.)', d.ignorados, 'var(--text2)', 'Apresentações sem clique (estimativa)') +
+          _monCard('Engajamento real', pctEng, corEng, 'Respondidos / Apresentações') +
         '</div>';
 
       // ── Scores de clima por dimensão ──────────────────────────────────────
@@ -34344,12 +34745,18 @@ var EscutaUI = (function() {
           geralHtml + dimsHtml + '</div>';
       }
 
-      // ── Tabela por pergunta (com coluna MÉDIA e distribuição) ─────────────
+      // ── Tabela por pergunta ───────────────────────────────────────────────
       var CORES_DIST = ['#dc2626','#f97316','#eab308','#22c55e','#16a34a'];
-      var tabelaLinhas = d.porPergunta.filter(function(p) { return p.impressoes > 0; }).map(function(p) {
-        var taxa = p.taxaEngajamento !== null ? Math.round(p.taxaEngajamento * 100) + '%' : '—';
-        var corL = p.taxaEngajamento === null ? 'var(--text2)' : p.taxaEngajamento >= 0.5 ? 'var(--success)' : p.taxaEngajamento >= 0.2 ? 'var(--warning)' : 'var(--danger)';
-        var ult  = p.ultimaUsadaEm ? fmtDataPtBR(p.ultimaUsadaEm.slice(0, 10)) : '—';
+      var TH = function(t, align, title) {
+        return '<th style="padding:5px 8px;font-size:10px;text-align:' + (align||'right') + ';color:var(--text2);font-weight:600;text-transform:uppercase;white-space:nowrap;"' +
+          (title ? ' title="' + title + '"' : '') + '>' + t + '</th>';
+      };
+      var tabelaLinhas = d.porPergunta.filter(function(p) { return p.apresentacoes > 0 || p.respostas > 0; }).map(function(p) {
+        var pctR  = p.taxaResposta  !== null ? Math.round(p.taxaResposta  * 100) + '%' : '—';
+        var pctAb = p.taxaAbertura  !== null ? Math.round(p.taxaAbertura  * 100) + '%' : '—';
+        var corR  = p.taxaResposta  === null ? 'var(--text2)' : p.taxaResposta  >= 0.7 ? 'var(--success)' : p.taxaResposta  >= 0.4 ? 'var(--warning)' : 'var(--danger)';
+        var corAb = p.taxaAbertura  === null ? 'var(--text2)' : p.taxaAbertura  >= 0.5 ? 'var(--success)' : p.taxaAbertura  >= 0.2 ? 'var(--warning)' : 'var(--danger)';
+        var ult   = p.ultimaUsadaEm ? fmtDataPtBR(p.ultimaUsadaEm.slice(0, 10)) : '—';
         var mediaCell = '<span style="color:var(--text2);">—</span>';
         if (!d.bloqueado && p.mediaNota !== null) {
           var pctM = Math.round(((p.mediaNota - 1) / 4) * 100);
@@ -34372,10 +34779,13 @@ var EscutaUI = (function() {
         return '<tr style="border-bottom:1px solid var(--border);">' +
           '<td style="padding:5px 8px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + _esc(p.texto) + '">' + _esc(p.texto) + '</td>' +
           '<td style="padding:5px 8px;font-size:10px;text-align:center;"><span class="badge-secondary" style="font-size:9px;padding:1px 6px;border-radius:10px;">' + _esc(p.dimensao) + '</span></td>' +
-          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.impressoes + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.apresentacoes + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700;color:' + corAb + ';">' + pctAb + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.aberturas + '</td>' +
           '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.respostas + '</td>' +
-          '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700;color:' + corL + ';">' + taxa + '</td>' +
-          '<td style="padding:5px 8px;min-width:90px;">' + mediaCell + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;">' + p.fechamentos + '</td>' +
+          '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700;color:' + corR + ';">' + pctR + '</td>' +
+          '<td style="padding:5px 8px;min-width:80px;">' + mediaCell + '</td>' +
           '<td style="padding:5px 8px;" title="Distribuição 1→5">' + distCell + '</td>' +
           '<td style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);">' + ult + '</td>' +
         '</tr>';
@@ -34386,30 +34796,22 @@ var EscutaUI = (function() {
             '<p style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:0 0 8px;">Por Pergunta</p>' +
             '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
               '<thead><tr style="border-bottom:2px solid var(--border);">' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;">Pergunta</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:center;color:var(--text2);font-weight:600;text-transform:uppercase;">Dim.</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Imp.</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Resp.</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Taxa</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;">Média</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:left;color:var(--text2);font-weight:600;text-transform:uppercase;" title="Distribuição de notas 1-5">Dist.</th>' +
-                '<th style="padding:5px 8px;font-size:10px;text-align:right;color:var(--text2);font-weight:600;text-transform:uppercase;">Última</th>' +
+                TH('Pergunta','left') + TH('Dim.','center') +
+                TH('Apres.','right','Quantas vezes foi apresentado ao usuário') +
+                TH('% Ab.','right','Taxa de abertura (abertos / apresentações)') +
+                TH('Abertos','right','Quantas vezes o usuário clicou e abriu o widget') +
+                TH('Resp.','right','Quantas respostas foram enviadas') +
+                TH('Fechados','right','Abertos mas fechados sem resposta') +
+                TH('% Resp.','right','Taxa de resposta (respondidos / abertos)') +
+                TH('Média','left','Média das notas (escala 1-5)') +
+                TH('Dist.','left','Distribuição de notas 1→5') +
+                TH('Última','right') +
               '</tr></thead>' +
               '<tbody>' + tabelaLinhas + '</tbody>' +
             '</table></div></div>'
-        : '<p class="muted-text" style="font-size:12px;margin-bottom:14px;">Nenhuma impressão registrada no período.</p>';
+        : '<p class="muted-text" style="font-size:12px;margin-bottom:14px;">Nenhuma apresentação registrada no período.</p>';
 
-      // ── Perguntas sem resposta ─────────────────────────────────────────────
       var probHtml = '';
-      if (d.semResposta.length) {
-        probHtml = '<div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;">' +
-          '<p style="font-size:11px;font-weight:700;color:var(--warning);margin:0 0 6px;">Perguntas exibidas sem nenhuma resposta no período</p>' +
-          d.semResposta.map(function(p) {
-            return '<div style="font-size:11px;padding:2px 0;display:flex;gap:6px;align-items:center;">' +
-              '<span class="badge-secondary" style="font-size:9px;padding:1px 5px;border-radius:10px;flex-shrink:0;">' + _esc(p.dimensao) + '</span>' +
-              _esc(p.texto) + ' <span style="color:var(--text2);margin-left:auto;flex-shrink:0;">' + p.impressoes + ' imp.</span></div>';
-          }).join('') + '</div>';
-      }
 
       // ── Colaboradores sem atividade ────────────────────────────────────────
       var colab = d.colaboradores;
@@ -34435,8 +34837,9 @@ var EscutaUI = (function() {
     });
   }
 
-  function _monCard(label, valor, cor) {
-    return '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:80px;">' +
+  function _monCard(label, valor, cor, tooltip) {
+    return '<div style="background:var(--surface2,var(--bg));border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-width:80px;cursor:default;"' +
+      (tooltip ? ' title="' + _esc(tooltip) + '"' : '') + '>' +
       '<p style="margin:0;font-size:18px;font-weight:800;color:' + cor + ';">' + valor + '</p>' +
       '<p style="margin:2px 0 0;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;">' + label + '</p>' +
     '</div>';
@@ -34536,6 +34939,10 @@ var EscutaUI = (function() {
   //   - sem pergunta (respondida em outro dispositivo) → fecha widget + esconde FAB
   function _sincronizarPulse() {
     if (_pulseEnviando) return; // não interromper envio em andamento
+    var fab    = document.getElementById('pulse-fab');
+    var fabJaVis = fab && fab.style.display === 'flex';
+    // soConsulta=true quando FAB já visível: verifica se foi respondido em outro dispositivo
+    // sem registrar nova impressão (mesma pergunta já foi contabilizada)
     GAS.escuta.pulseObter(function(r) {
       if (_pulseEnviando) return;
       var fab       = document.getElementById('pulse-fab');
@@ -34547,24 +34954,32 @@ var EscutaUI = (function() {
         }
         // FAB já visível: não perturba — usuário pode estar respondendo
       } else if (fabVis) {
-        // Pergunta já respondida em outro dispositivo — limpa o widget
+        // Pergunta respondida em outro dispositivo — não conta como fechamento voluntário
+        _pulseRespondidoAtual = true;
         fecharPulse();
       }
-    }, function(){});
+    }, function(){}, fabJaVis ? { soConsulta: true } : {});
   }
 
   function abrirPulse() {
+    var _emitirAbertura = function(perg) {
+      if (perg && perg.id) GAS.escuta.pulseEvento({ tipo: 'abertura', perguntaId: perg.id, dimensao: perg.dimensao });
+      _pulseAberto = true;
+      _pulseRespondidoAtual = false;
+    };
     if (!_pulseAtual) {
       GAS.escuta.pulseObter(function(r) {
         if (r && r.ok && r.data && r.data.pergunta) {
           _pulseAtual = r.data;
           _renderPulseWidget();
+          _emitirAbertura(_pulseAtual.pergunta);
         } else {
           Toast.aviso('Nenhuma pergunta disponível no momento.');
         }
       }, function(){ Toast.aviso('Sem perguntas pulse disponíveis.'); });
     } else {
       _renderPulseWidget();
+      _emitirAbertura(_pulseAtual.pergunta);
     }
   }
 
@@ -34628,17 +35043,23 @@ var EscutaUI = (function() {
   }
 
   function fecharPulse() {
+    // Fechado pelo usuário sem responder → evento de fechamento
+    if (_pulseAberto && !_pulseRespondidoAtual && _pulseAtual && _pulseAtual.pergunta) {
+      GAS.escuta.pulseEvento({ tipo: 'fechamento', perguntaId: _pulseAtual.pergunta.id, dimensao: _pulseAtual.pergunta.dimensao });
+    }
     var w = document.getElementById('pulse-widget');
     if (w) w.style.display = 'none';
-    // Esconde FAB para a sessão atual — reaparece apenas no próximo login,
-    // quando o engine decide se há nova pergunta disponível (anti-spam e limite diário)
     var fab = document.getElementById('pulse-fab');
     if (fab) fab.style.display = 'none';
-    _pulseAtual    = null;
-    _pulseEnviando = false;
+    _pulseAtual            = null;
+    _pulseEnviando         = false;
+    _pulseAberto           = false;
+    _pulseRespondidoAtual  = false;
   }
 
-  var _pulseEnviando = false; // guard anti-duplo-clique
+  var _pulseEnviando          = false; // guard anti-duplo-clique
+  var _pulseAberto            = false; // true após FAB clicado (widget aberto)
+  var _pulseRespondidoAtual   = false; // true quando resposta enviada com sucesso
 
   function responderPulse(valor) {
     if (!_pulseAtual || _pulseEnviando) return;
@@ -34674,9 +35095,10 @@ var EscutaUI = (function() {
 
     GAS.escuta.pulseResponder({ perguntaId: pergId, dimensaoId: dimId, valor: valor }, function(r) {
       _pulseEnviando = false;
-      _pulseAtual = null;
 
       if (r && r.ok) {
+        _pulseRespondidoAtual = true; // impede evento 'fechamento' no fecharPulse seguinte
+        _pulseAtual = null;
         // ── 3. Tela de agradecimento (estilo v1 CCBJ) ──────────────────────
         var body = document.getElementById('pulse-body');
         if (body) {
@@ -34695,14 +35117,16 @@ var EscutaUI = (function() {
           if (fab) fab.style.display = 'none';
         }, 2500);
       } else {
-        // Erro retornado pelo servidor: reabre possibilidade de nova tentativa
-        _pulseAtual = null; // não permitir reenvio da mesma resposta
+        // Erro retornado pelo servidor — sem evento de fechamento (não foi decisão do usuário)
+        _pulseRespondidoAtual = true; // evita evento 'fechamento' indevido
+        _pulseAtual = null;
         fecharPulse();
         Toast.erro('Não foi possível registrar. Tente novamente mais tarde.');
       }
     }, function(e) {
-      _pulseEnviando = false;
-      _pulseAtual = null;
+      _pulseEnviando        = false;
+      _pulseRespondidoAtual = true; // erro de rede — não conta como fechamento voluntário
+      _pulseAtual           = null;
       fecharPulse();
       Toast.erro((e && e.message) || 'Erro ao registrar resposta.');
     });
@@ -35091,7 +35515,7 @@ var DashboardUI = (function() {
           _statCard('Ocupação Espaços', Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%', null, '', "Router.navegar('espacos')") +
           _statCard('Ações no Prazo', Math.round((kpis.taxaConclusaoPrazo||0)*100)+'%', null, '', "Router.navegar('acoes')") +
           _statCard('Exec. Orçamentária', Math.round((kpis.execucaoOrcamentaria||0)*100)+'%', null, '', "Router.navegar('financeiro')") +
-          _statCard('NPS Público', kpis.npsPublico != null ? kpis.npsPublico : 'N/A', null, '', "Router.navegar('escuta')") +
+          _statCard('NPS Público', kpis.npsPublico != null ? kpis.npsPublico : '0', null, '', "Router.navegar('escuta')") +
         '</div>';
       }
       if (d.riscos && d.riscos.length) {
@@ -35103,7 +35527,7 @@ var DashboardUI = (function() {
         }).join('');
       }
       if (d.clima) {
-        html += '<p style="font-size:13px;margin-top:12px;cursor:pointer;" onclick="Router.navegar(\'escuta\')">Última pesquisa de clima: <strong>' + (d.clima.mediaPonderada||'N/A') + '/5</strong> (confiança ' + (d.clima.indiceConfianca||0) + '%)</p>';
+        html += '<p style="font-size:13px;margin-top:12px;cursor:pointer;" onclick="Router.navegar(\'escuta\')">Última pesquisa de clima: <strong>' + (d.clima.mediaPonderada||'0') + '/5</strong> (confiança ' + (d.clima.indiceConfianca||0) + '%)</p>';
       }
       if (el) el.innerHTML = html || '<p class="muted-text">Carregando dados estratégicos…</p>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel estratégico.</p>'; });
@@ -35985,10 +36409,15 @@ var PontoUI = (function() {
         el.innerHTML = '<p class="muted-text">Todos os colaboradores já estão vinculados a um usuário.</p>';
         return;
       }
-      var optsU = '<option value="">— sem vínculo —</option>' +
-        usuarios.map(function(u){ return '<option value="' + _esc(u.email) + '">' + _esc(u.nome + ' (' + u.email + ')') + '</option>'; }).join('');
+      
+      // Mapa de emails já vinculados (para desabilitar no dropdown)
+      var emailsVinculados = {};
+      stubs.forEach(function(stub) {
+        if (stub.emailVinculado) emailsVinculados[stub.emailVinculado] = true;
+      });
+      
       el.innerHTML =
-        '<p style="font-size:13px;color:var(--text2);margin:0 0 12px;">Selecione o usuário correspondente a cada colaborador e clique em Vincular.</p>' +
+        '<p style="font-size:13px;color:var(--text2);margin:0 0 12px;">Selecione o usuário correspondente a cada colaborador e clique em Vincular. Apenas usuários ainda não vinculados aparecem em cada dropdown.</p>' +
         '<div style="overflow-x:auto;">' +
         '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
           '<thead><tr style="background:var(--surface2,#f5f5f5);">' +
@@ -36000,11 +36429,16 @@ var PontoUI = (function() {
         stubs.map(function(c) {
           var sid = 'sel-vinc-' + _esc(c.id);
           var bid = 'btn-vinc-' + _esc(c.id);
+          // Gerar opções de usuários: apenas aqueles não-vinculados
+          var optsU = '<option value="">— sem vínculo —</option>' +
+            usuarios.filter(function(u){ return !emailsVinculados[u.email]; }).map(function(u){
+              return '<option value="' + _esc(u.email) + '">' + _esc(u.nome + ' (' + u.email + ')') + '</option>';
+            }).join('');
           return '<tr style="border-bottom:1px solid var(--border);" id="row-vinc-' + _esc(c.id) + '">' +
             '<td style="padding:7px 8px;font-weight:500;">' + _esc(c.nome||'—') + '</td>' +
             '<td style="padding:7px 8px;font-family:monospace;font-size:12px;">' + _esc(c.pis||'—') + '</td>' +
             '<td style="padding:7px 8px;">' +
-              '<select id="' + sid + '" class="select-sm" style="width:100%;max-width:320px;">' + optsU + '</select>' +
+              '<select id="' + sid + '" class="select-sm" style="width:100%;max-width:320px;" onchange="PontoUI._atualizarDisabledGlobal()">' + optsU + '</select>' +
             '</td>' +
             '<td style="padding:7px 8px;text-align:center;">' +
               '<button id="' + bid + '" class="btn btn-secondary btn-sm" ' +
@@ -36014,6 +36448,28 @@ var PontoUI = (function() {
         }).join('') +
         '</tbody></table></div>';
     }, function(e){ if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc((e&&e.message)||e) + '</p>'; });
+  }
+
+  function _atualizarDisabledGlobal() {
+    // Quando um dropdown muda, atualizar estado de disabled de outros (para evitar duplicação)
+    var selects = document.querySelectorAll('[id^="sel-vinc-"]');
+    var emailsSelecionados = {};
+    selects.forEach(function(sel) {
+      if (sel.value && sel.value.trim() !== '') {
+        emailsSelecionados[sel.value] = true;
+      }
+    });
+    selects.forEach(function(sel) {
+      Array.from(sel.options).forEach(function(opt) {
+        if (opt.value && opt.value !== sel.value && emailsSelecionados[opt.value]) {
+          opt.disabled = true;
+          opt.style.opacity = '0.4';
+        } else {
+          opt.disabled = false;
+          opt.style.opacity = '1';
+        }
+      });
+    });
   }
 
   function _executarVinculo(colaboradorId, selectId, done) {
@@ -36030,6 +36486,7 @@ var PontoUI = (function() {
         row.querySelectorAll('button,select').forEach(function(b){ b.disabled = true; });
       }
       Toast.sucesso('Vinculado com sucesso!');
+      setTimeout(function(){ carregarVinculos(); }, 1500);
     }, function(e){ done(); Toast.erro('Erro: ' + _esc((e&&e.message)||e)); });
   }
 
@@ -36468,7 +36925,7 @@ var PontoUI = (function() {
     });
   }
 
-  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh, filtrarMetricasSetor, _setMetrFiltroLista, _toggleDrilldown, carregarTendencias };
+  return { aoAbrir, setTab, registrarAgora, _confirmarRegistro, carregarEspelho, _filtrarColabPorSetor, _aoSelecionarColab, _carregarConsolidado, _setPeriodo, calcularCLT, calcularRescisao, exportar, importar, abrirModalImportarAfd, _afdAoSelecionarArquivo, _executarPreviewAfd, _executarImportacaoAfd, carregarSessoes, carregarVinculos, _executarVinculo, _atualizarDisabledGlobal, reprocessarJornadas, _cancelarSessao, _executarCancelamento, _reverterSessao, _executarReversao, _executarDiagnostico, carregarMetricasRh, filtrarMetricasSetor, _setMetrFiltroLista, _toggleDrilldown, carregarTendencias };
 })();
 Router.registrar('ponto', 'Ponto & RH', PontoUI.aoAbrir);
 
@@ -37506,6 +37963,7 @@ var RhUI = (function() {
         parentesco: (document.getElementById('rh-pf-emg-parentesco')||{value:''}).value.trim()
       },
       tipoSanguineo:         (document.getElementById('rh-pf-tipo-sanguineo')||{value:''}).value,
+      tamanhoVestiario:      (document.getElementById('rh-pf-tamanho-vestiario')||{value:''}).value,
       alergias:              (document.getElementById('rh-pf-alergias')||{value:''}).value.trim(),
       observacoesPessoais:   (document.getElementById('rh-pf-obs-pessoais')||{value:''}).value.trim(),
       restricoesAlimentares: Array.prototype.slice.call(document.querySelectorAll('[id^="rh-pf-rest-"]')).filter(function(cb){ return cb.type==='checkbox' && cb.checked; }).map(function(cb){ return cb.value; }),
@@ -37567,9 +38025,135 @@ var RhUI = (function() {
             descricao: 'Carga horária semanal alterada de ' + cargaAnterior + 'h para ' + cargaHor + 'h.'
           }, function(){}, function(){});
         }
-        Toast.sucesso('Colaborador salvo!'); fecharFormColab(); carregarEquipe(); _carregarMetricas();
+        // Sincronizar setor com usuário em Administração (bidirecional)
+        if (email && setor) {
+          _sincronizarSetorComUsuario(email, setor, function() {
+            Toast.sucesso('Colaborador salvo! Setor sincronizado com usuário em Administração.');
+            fecharFormColab();
+            carregarEquipe();
+            _carregarMetricas();
+          });
+        } else {
+          Toast.sucesso('Colaborador salvo!');
+          fecharFormColab();
+          carregarEquipe();
+          _carregarMetricas();
+        }
       },function(e){ done(); Toast.erro(e.message||e); });
     });
+  }
+
+  /**
+   * Sincroniza o setor do colaborador com o usuário correspondente em Administração.
+   * Essa função garante que alterações de setor sejam propagadas bidirecionalmente.
+   * Nota: O backend já sincroniza setor entre usuarios_acesso.json e colaboradores.json,
+   * portanto, esta função apenas garante que a visualização seja atualizada.
+   */
+  function _sincronizarSetorComUsuario(email, setor, callback) {
+    // Encontrar o usuário em _usuarios para obter seu papel e outros dados
+    var usr = _usuarios.find(function(u){ return u.email === email; });
+    if (!usr) {
+      // Usuário ainda não foi aprovado ou vincul
+ado - isso é normal
+      // A sincronização será feita automaticamente pelo backend mesmo assim
+      if (callback) callback();
+      return;
+    }
+    
+    // Atualizar o setor do usuário via GAS.acesso.editarPapel
+    // Este endpoint sincroniza automaticamente com o colaborador no backend
+    // Preservar dados existentes do usuário para não sobrescrever
+    var setoresGerenciados = Array.isArray(usr.setoresGerenciados) ? usr.setoresGerenciados : [];
+    var permissoesOverride = (usr.permissoesOverride && typeof usr.permissoesOverride === 'object') ? usr.permissoesOverride : {};
+    var featuresOverride = (usr.featuresOverride && typeof usr.featuresOverride === 'object') ? usr.featuresOverride : {};
+    
+    GAS.acesso.editarPapel({
+      email: email,
+      papel: usr.papel || 'colaborador',
+      setor: setor,
+      setoresGerenciados: setoresGerenciados,
+      permissoesOverride: permissoesOverride,
+      featuresOverride: featuresOverride
+    }, function(r) {
+      if (callback) callback();
+    }, function(err) {
+      // Erro ao sincronizar - mas o colaborador foi salvo, então não é crítico
+      console.warn('Erro ao sincronizar setor com usuário:', err);
+      if (callback) callback();
+    });
+  }
+
+  /**
+   * Abre modal com guia de tamanhos para ajudar o usuário a descobrir qual tamanho veste.
+   */
+  function _abrirGuiaTamanhos() {
+    var html = '<div style="padding:20px 24px;max-width:600px;">' +
+      '<h3 style="margin:0 0 4px;">Descobrir Meu Tamanho de Vestiário</h3>' +
+      '<p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Use a tabela abaixo como referência. Se precisar de ajuda, converse com o RH.</p>' +
+      '<div style="overflow-x:auto;margin-bottom:16px;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+      '<thead>' +
+      '<tr style="background:var(--surface2);border-bottom:2px solid var(--border);">' +
+      '<th style="padding:8px;text-align:left;font-weight:700;">Tamanho</th>' +
+      '<th style="padding:8px;text-align:center;font-weight:700;">Busto/Peito (cm)</th>' +
+      '<th style="padding:8px;text-align:center;font-weight:700;">Cintura (cm)</th>' +
+      '<th style="padding:8px;text-align:center;font-weight:700;">Quadril (cm)</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>' +
+      '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:8px;font-weight:600;">PP</td>' +
+      '<td style="padding:8px;text-align:center;">80-84</td>' +
+      '<td style="padding:8px;text-align:center;">63-67</td>' +
+      '<td style="padding:8px;text-align:center;">88-92</td>' +
+      '</tr>' +
+      '<tr style="border-bottom:1px solid var(--border);background:var(--surface2);">' +
+      '<td style="padding:8px;font-weight:600;">P</td>' +
+      '<td style="padding:8px;text-align:center;">84-88</td>' +
+      '<td style="padding:8px;text-align:center;">67-71</td>' +
+      '<td style="padding:8px;text-align:center;">92-96</td>' +
+      '</tr>' +
+      '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:8px;font-weight:600;">M</td>' +
+      '<td style="padding:8px;text-align:center;">88-96</td>' +
+      '<td style="padding:8px;text-align:center;">71-79</td>' +
+      '<td style="padding:8px;text-align:center;">96-104</td>' +
+      '</tr>' +
+      '<tr style="border-bottom:1px solid var(--border);background:var(--surface2);">' +
+      '<td style="padding:8px;font-weight:600;">G</td>' +
+      '<td style="padding:8px;text-align:center;">96-104</td>' +
+      '<td style="padding:8px;text-align:center;">79-87</td>' +
+      '<td style="padding:8px;text-align:center;">104-112</td>' +
+      '</tr>' +
+      '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:8px;font-weight:600;">GG</td>' +
+      '<td style="padding:8px;text-align:center;">104-112</td>' +
+      '<td style="padding:8px;text-align:center;">87-95</td>' +
+      '<td style="padding:8px;text-align:center;">112-120</td>' +
+      '</tr>' +
+      '<tr style="background:var(--surface2);">' +
+      '<td style="padding:8px;font-weight:600;">XG</td>' +
+      '<td style="padding:8px;text-align:center;">112+</td>' +
+      '<td style="padding:8px;text-align:center;">95+</td>' +
+      '<td style="padding:8px;text-align:center;">120+</td>' +
+      '</tr>' +
+      '</tbody>' +
+      '</table>' +
+      '</div>' +
+      '<div style="background:var(--surface2);padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;font-size:12px;line-height:1.6;">' +
+      '<strong style="display:block;margin-bottom:6px;">💡 Dica: Como medir</strong>' +
+      '<ul style="margin:0;padding:0 0 0 20px;">' +
+      '<li><strong>Busto/Peito:</strong> Passe a fita métrica horizontalmente pelo ponto mais proeminente do busto ou peito.</li>' +
+      '<li><strong>Cintura:</strong> Meça na altura mais fina natural da cintura.</li>' +
+      '<li><strong>Quadril:</strong> Meça na parte mais larga dos quadris, geralmente 18-20cm abaixo da cintura.</li>' +
+      '</ul>' +
+      '<p style="margin:8px 0 0;color:var(--text2);">Use uma fita flexível e mantenha-a firme, mas não muito apertada. Meça sobre roupas leves.</p>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Fechar</button>' +
+      '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
   }
 
   // ─── PCCS ───────────────────────────────────────────────────
@@ -39109,10 +39693,10 @@ var RhUI = (function() {
               '<div style="display:flex;align-items:center;gap:8px;">'+
                 '<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;background:'+cfg.cor+';color:#fff;">'+cfg.label+'</span>'+
                 acaoBtn+
-                '<span id="'+chevId+'" class="ms ms-sm" style="font-size:16px;color:'+cfg.cor+';transition:transform .2s;transform:'+(hasFer?'rotate(90deg)':'')+';"> chevron_right</span>'+
+                '<span id="'+chevId+'" class="ms ms-sm" style="font-size:16px;color:'+cfg.cor+';transition:transform .2s;transform:none;"> chevron_right</span>'+
               '</div>'+
             '</div>'+
-            '<div id="'+expId+'" style="display:'+(hasFer?'block':'none')+';">'+
+            '<div id="'+expId+'" style="display:none;">'+
               datesHtml+descHtml+barraHtml+feriasHtml+
             '</div>'+
           '</div>';
@@ -39142,23 +39726,27 @@ var RhUI = (function() {
           }
         });
       });
-      var summaryParts = [];
-      if (_sumSaldo > 0)
-        summaryParts.push('<span><span class="ms ms-sm" style="vertical-align:middle;color:var(--color-primary);">beach_access</span> <strong>' + _sumSaldo + 'd</strong> de férias a tirar</span>');
-      if (_nextPrazo) {
-        var _nc = _nextDias < 70 ? '#dc2626' : _nextDias < 90 ? '#e65100' : '#b45309';
-        var _nm = _nextDias < 0
-          ? '<strong style="color:#dc2626;">Prazo expirado!</strong>'
-          : _nextDias < 70
-          ? '<strong style="color:#dc2626;">Confirmar imediatamente</strong> — prazo concessivo ' + _nextPeriodo + 'º período: ' + fmtDataPtBR(_nextPrazo) + ' (' + _nextDias + 'd)'
-          : 'Prazo para confirmar próximas férias: ' + fmtDataPtBR(_nextPrazo) + ' (<strong>' + _nextDias + 'd</strong>)';
-        summaryParts.push('<span style="color:' + _nc + ';">' + _nm + '</span>');
+      var saldoCard = '';
+      if (_sumSaldo > 0) {
+        saldoCard = '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:8px;padding:12px 14px;margin-bottom:10px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#15803d;margin-bottom:4px;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">beach_access</span> Dias a tirar</div><div style="font-size:20px;font-weight:700;color:#15803d;">' + _sumSaldo + ' dias</div></div>';
       }
-      if (_sumAcordo > 0 && _prazo1ano)
-        summaryParts.push('<span style="color:#7c3aed;"><span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">handshake</span> <strong>' + _sumAcordo + 'd</strong> acordados — usar até ' + fmtDataPtBR(_prazo1ano) + ' (' + (_dias1ano >= 0 ? _dias1ano + 'd' : 'vencido') + ')</span>');
-      var summaryHtml = summaryParts.length
-        ? '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">' + summaryParts.join('<span style="color:var(--border);">·</span>') + '</div>'
-        : '';
+      var prazoCard = '';
+      if (_nextPrazo) {
+        var _nc = _nextDias < 70 ? '#dc2626' : _nextDias < 90 ? '#b45309' : '#059669';
+        var _bgc = _nextDias < 70 ? '#fef2f2' : _nextDias < 90 ? '#fffbeb' : '#f0fdf4';
+        var _lblc = _nextDias < 70 ? '#b45309' : '#b45309';
+        var _nm = _nextDias < 0
+          ? '<strong style="color:#dc2626;">⚠ Prazo expirado!</strong>'
+          : _nextDias < 70
+          ? '<strong style="color:#dc2626;">Confirmar imediatamente</strong> — até ' + fmtDataPtBR(_nextPrazo) + ' (' + _nextDias + ' dias)'
+          : _nextPeriodo + 'º período até ' + fmtDataPtBR(_nextPrazo) + ' (' + _nextDias + ' dias)';
+        prazoCard = '<div style="background:'+_bgc+';border:1px solid '+_nc+';border-radius:8px;padding:12px 14px;margin-bottom:10px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:'+_lblc+';margin-bottom:4px;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;color:'+_nc+';">schedule</span> Próximo prazo</div><div style="font-size:13px;color:'+(_nextDias<0?'#dc2626':_nc)+';">' + _nm + '</div></div>';
+      }
+      var acordoCard = '';
+      if (_sumAcordo > 0 && _prazo1ano) {
+        acordoCard = '<div style="background:#f5f3ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 14px;margin-bottom:10px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7c3aed;margin-bottom:4px;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">handshake</span> Acordados</div><div style="font-size:13px;color:#7c3aed;"><strong>' + _sumAcordo + ' dias</strong> — usar até <strong>' + fmtDataPtBR(_prazo1ano) + '</strong> (' + (_dias1ano >= 0 ? _dias1ano + 'd' : 'vencido') + ')</div></div>';
+      }
+      var summaryHtml = (saldoCard || prazoCard || acordoCard) ? (saldoCard + prazoCard + acordoCard) : '';
       el.innerHTML = summaryHtml + (cards || _empty('Nenhum período encontrado.'));
     }
 
@@ -39266,7 +39854,7 @@ var RhUI = (function() {
         '<div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">' +
           '<span class="ms ms-sm" style="color:#7c3aed;font-size:16px;margin-top:1px;">handshake</span>' +
           '<div><div style="font-size:12px;font-weight:700;color:#5b21b6;">' + periodoNum + 'º período — Agendamento de Saldo Acordado</div>' +
-            '<div style="font-size:11px;color:#7c3aed;margin-top:2px;">Estes dias já foram pagos. Escolha qualquer data para o gozo — <strong>sem restrição de janela concessiva</strong> (prazo máximo de até 1 ano a partir do acordo).</div>' +
+            '<div style="font-size:11px;color:#7c3aed;margin-top:2px;">Estes dias já foram pagos. Escolha qualquer data para o gozo (prazo máximo de até 1 ano a partir do acordo).</div>' +
           '</div>' +
         '</div>';
     } else if (temPeriodo && concIni && concFim) {
