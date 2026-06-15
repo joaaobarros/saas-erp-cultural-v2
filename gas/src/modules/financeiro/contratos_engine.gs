@@ -148,6 +148,7 @@ var ContratosEngine = (function () {
       var grupo = meses.slice(i, i + 3);
       var qNum  = Math.floor(i / 3) + 1;
       var metaQ = grupo.reduce(function (s, m) { return s + (Number(m.meta) || 0); }, 0);
+      var realQ = grupo.reduce(function (s, m) { return s + (Number(m.realizado) || 0); }, 0);
       // Label: "ABR–JUN/25" etc.
       var labels = grupo.map(function (m) {
         var partes = String(m.mes).split('-');
@@ -159,7 +160,7 @@ var ContratosEngine = (function () {
         trimestre:   'Q' + qNum,
         periodoLabel: label,
         meta:        metaQ,
-        realizado:   null
+        realizado:   realQ
       });
     }
     return trimestres;

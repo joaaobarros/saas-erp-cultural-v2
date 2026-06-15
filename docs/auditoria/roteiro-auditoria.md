@@ -470,9 +470,20 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 86 (2026-06-15) → SESSÃO 87
+## HANDOFF ATUAL — SESSÃO 87 (2026-06-15) → SESSÃO 88
 
-### Estado atual: Financeiro/Contratos — DnD atividades + Setor na Rubrica + Barras orçamentárias — Deploy @972 (pendente clasp)
+### Estado atual: Financeiro/Contratos/Execução — hierarquia orçamentária com agrupamentos + filtros — Deploy @973 (pendente clasp)
+
+### O que foi feito nesta sessão (s87)
+| Deploy | O que foi implementado |
+|---|---|
+| @973 | **Frontend only**: tab Execução de `ContratosDetailUI` totalmente reescrita. Barra de agrupamento (Meta/Atividade/Setor/Rubrica). Filtros: meta, setor, custeio/investimento. `carregarExecucao` simplificada (usa `_obj` já disponível). `_execCollect` coleta todas as rubricas com contexto meta/atividade. `_execHtml_Meta`: hierarquia colapsável Meta › Atividade › Rubrica com subtotais em cada nível. `_execHtml_Grupo`: agrupamento genérico por atividade ou setor. `_execHtml_Flat`: view plana (rubrica) com breadcrumb. Todos os views: Previsto / Comprometido / Executado / Saldo + barra % semafórica. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 86 (2026-06-15) → SESSÃO 87
+
+### Estado atual: Financeiro/Contratos — DnD atividades + Setor na Rubrica + Barras orçamentárias — Deploy @972
 
 ### O que foi feito nesta sessão (s86)
 | Deploy | O que foi implementado |

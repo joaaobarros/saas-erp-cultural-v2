@@ -1711,8 +1711,12 @@ textarea.input { resize: vertical; }
 .ind-mes-table .ind-mes-header-q { background:var(--color-primary);color:#fff; }
 .ind-mes-table .ind-meta-row td { background:#eff6ff; }
 .ind-mes-table .ind-real-row td { background:#f0fdf4; }
-.ind-mes-input { width:48px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--surface); }
+.ind-mes-input { width:62px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--surface); }
 .ind-mes-input:focus { outline:2px solid var(--color-primary);border-color:var(--color-primary); }
+.ind-pct-badge { display:inline-block;padding:1px 5px;border-radius:10px;font-size:11px;font-weight:600; }
+.ind-pct-ok   { background:#dcfce7;color:#166534; }
+.ind-pct-warn { background:#fef9c3;color:#854d0e; }
+.ind-pct-low  { background:#fee2e2;color:#991b1b; }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ALIASES DE COMPATIBILIDADE — Unidade Visual F9+
@@ -4173,7 +4177,30 @@ select.form-control { cursor: pointer; }
 
             <!-- ── Tab: Acompanhamento de Execução Financeira ── -->
             <div id="cd-tab-execucao" style="display:none;">
-              <p class="muted-text" style="font-size:12px;margin-bottom:10px;">Previsto × comprometido × executado por rubrica do Plano de Trabalho, cruzado com as solicitações de contratação vinculadas.</p>
+              <!-- Barra de controles -->
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center;">
+                <!-- Agrupamento -->
+                <div style="display:flex;gap:2px;background:var(--surface2);border-radius:6px;padding:2px;">
+                  <button class="btn btn-ghost btn-sm exec-agrup ativa" data-agrup="meta"      onclick="ContratosDetailUI._execSetAgrup('meta',this)"      data-bg-skip="1" style="font-size:11px;padding:3px 8px;">Meta</button>
+                  <button class="btn btn-ghost btn-sm exec-agrup"      data-agrup="atividade" onclick="ContratosDetailUI._execSetAgrup('atividade',this)" data-bg-skip="1" style="font-size:11px;padding:3px 8px;">Atividade</button>
+                  <button class="btn btn-ghost btn-sm exec-agrup"      data-agrup="setor"     onclick="ContratosDetailUI._execSetAgrup('setor',this)"     data-bg-skip="1" style="font-size:11px;padding:3px 8px;">Setor</button>
+                  <button class="btn btn-ghost btn-sm exec-agrup"      data-agrup="rubrica"   onclick="ContratosDetailUI._execSetAgrup('rubrica',this)"   data-bg-skip="1" style="font-size:11px;padding:3px 8px;">Rubrica</button>
+                </div>
+                <!-- Filtro meta -->
+                <select id="cd-exec-fil-meta" class="form-input" style="font-size:11px;padding:3px 6px;height:auto;width:auto;max-width:200px;" onchange="ContratosDetailUI._execRender()" data-bg-skip="1">
+                  <option value="">Todas as metas</option>
+                </select>
+                <!-- Filtro setor -->
+                <select id="cd-exec-fil-setor" class="form-input" style="font-size:11px;padding:3px 6px;height:auto;width:auto;" onchange="ContratosDetailUI._execRender()" data-bg-skip="1">
+                  <option value="">Todos os setores</option>
+                </select>
+                <!-- Filtro categoria -->
+                <select id="cd-exec-fil-cat" class="form-input" style="font-size:11px;padding:3px 6px;height:auto;width:auto;" onchange="ContratosDetailUI._execRender()" data-bg-skip="1">
+                  <option value="">Custeio + Investimento</option>
+                  <option value="custeio">Custeio</option>
+                  <option value="investimento">Investimento</option>
+                </select>
+              </div>
               <div id="cd-execucao-lista"><p class="muted-text" style="padding:8px;">Carregando…</p></div>
             </div>
           </div><!-- /contrato-detalhe-card -->
@@ -13606,13 +13633,16 @@ var ContratosDetailUI = (function() {
       var ind = obj.ind; var m = obj.m;
       var meses = Array.isArray(ind.meses) ? ind.meses : [];
       var metaTotal = meses.reduce(function(s,ms){ return s+(Number(ms.meta)||0); }, 0);
-      // Grade de meses
+      var realTotal = meses.reduce(function(s,ms){ return s+(Number(ms.realizado)||0); }, 0);
+      var pctTotal  = metaTotal > 0 ? Math.round(realTotal/metaTotal*100) : null;
+      var pctCls    = pctTotal === null ? '' : (pctTotal >= 100 ? 'ind-pct-ok' : (pctTotal >= 70 ? 'ind-pct-warn' : 'ind-pct-low'));
       var gradeHtml = meses.length ? _renderGradeMeses(ind.id, m.id, meses) : '<p class="muted-text" style="font-size:12px;">Meses gerados após salvar.</p>';
-      return '<div class="card" style="margin-bottom:10px;">'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-        +'<div style="flex:1;"><strong style="font-size:13.5px;">'+escaparHtml(ind.nome||ind.id)+'</strong>'
+      return '<div class="card" style="margin-bottom:10px;" data-ind-container="'+escaparHtml(ind.id)+'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
+        +'<div style="flex:1;min-width:0;"><strong style="font-size:13.5px;">'+escaparHtml(ind.nome||ind.id)+'</strong>'
         +'<span style="font-size:12px;color:var(--muted);margin-left:8px;">'+escaparHtml(m.titulo||m.nome||'')+'</span></div>'
-        +'<span class="badge badge-primary">Total meta: '+metaTotal+' '+escaparHtml(ind.unidade||'')+'</span>'
+        +'<span class="badge badge-primary">Meta: '+metaTotal+' '+escaparHtml(ind.unidade||'')+'</span>'
+        +'<span data-total-pct="1">'+(pctTotal !== null ? '<span class="ind-pct-badge '+pctCls+'" style="font-size:12px;">'+realTotal+'/'+metaTotal+' ('+pctTotal+'%)</span>' : '')+'</span>'
         +'</div>'
         +gradeHtml
         +'</div>';
@@ -13620,22 +13650,34 @@ var ContratosDetailUI = (function() {
   }
 
   function _renderGradeMeses(indId, metaId, meses) {
-    // Agrupar em blocos de 3 meses (trimestre)
     var MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    var thMeses = ''; var trMeta = ''; var trReal = '';
+    var thMeses='', trMeta='', trReal='', trPct='';
     var q = 0;
+    var eId = escaparHtml(indId), eMid = escaparHtml(metaId);
     meses.forEach(function(ms, i) {
       var partes = String(ms.mes).split('-');
       var nomeMes = MESES_PT[parseInt(partes[1],10)-1] || partes[1];
+      var meta = Number(ms.meta) || 0;
+      var real = Number(ms.realizado) || 0;
+      var pct  = meta > 0 ? Math.round(real/meta*100) : null;
+      var qLabel = 'Q'+(Math.floor(i/3)+1);
+      var dAttr = 'data-indid="'+eId+'" data-mes="'+ms.mes+'" data-qnum="'+qLabel+'"';
       thMeses += '<th class="ind-mes-table">'+nomeMes+'<br><span style="font-size:10px;font-weight:400;color:var(--muted);">'+partes[0].slice(2)+'</span></th>';
-      trMeta  += '<td class="ind-mes-table ind-meta-row"><input class="ind-mes-input" type="number" min="0" value="'+(ms.meta||0)+'" onchange="ContratosDetailUI._updMes(\''+escaparHtml(indId)+'\',\''+escaparHtml(metaId)+'\',\''+ms.mes+'\',\'meta\',this.value)" title="Meta"></td>';
-      trReal  += '<td class="ind-mes-table ind-real-row"><input class="ind-mes-input" type="number" min="0" value="'+(ms.realizado||0)+'" onchange="ContratosDetailUI._updMes(\''+escaparHtml(indId)+'\',\''+escaparHtml(metaId)+'\',\''+ms.mes+'\',\'realizado\',this.value)" title="Realizado"></td>';
+      trMeta  += '<td class="ind-mes-table" style="background:#eff6ff;"><input class="ind-mes-input" type="number" min="0" value="'+meta+'" '+dAttr+' data-campo="meta" onchange="ContratosDetailUI._updMes(\''+eId+'\',\''+eMid+'\',\''+ms.mes+'\',\'meta\',this.value)" title="Meta"></td>';
+      trReal  += '<td class="ind-mes-table" style="background:#f0fdf4;"><input class="ind-mes-input" type="number" min="0" value="'+real+'" '+dAttr+' data-campo="realizado" onchange="ContratosDetailUI._updMes(\''+eId+'\',\''+eMid+'\',\''+ms.mes+'\',\'realizado\',this.value)" title="Realizado"></td>';
+      trPct   += '<td class="ind-mes-table" style="background:#fafafa;" data-mes-pct="'+ms.mes+'">'+_indPctBadge(pct)+'</td>';
       q++;
-      if (q % 3 === 0 && i < meses.length-1) {
-        var qNum = Math.floor(i/3)+1;
+      if (q % 3 === 0) {
+        var qIdx = Math.floor(i/3);
+        var qNum = qIdx+1;
+        var grupo = meses.slice(qIdx*3, qIdx*3+3);
+        var qM = grupo.reduce(function(s,m){ return s+(Number(m.meta)||0); }, 0);
+        var qR = grupo.reduce(function(s,m){ return s+(Number(m.realizado)||0); }, 0);
+        var qP = qM > 0 ? Math.round(qR/qM*100) : null;
         thMeses += '<th class="ind-mes-header-q">Q'+qNum+'</th>';
-        trMeta  += '<td class="ind-mes-header-q ind-meta-row">—</td>';
-        trReal  += '<td class="ind-mes-header-q ind-real-row">—</td>';
+        trMeta  += '<td style="background:#ede9fe;color:#4c1d95;font-weight:700;border:1px solid var(--border);text-align:center;" data-q-meta="Q'+qNum+'">'+qM+'</td>';
+        trReal  += '<td style="background:#d1fae5;color:#065f46;font-weight:700;border:1px solid var(--border);text-align:center;" data-q-real="Q'+qNum+'">'+qR+'</td>';
+        trPct   += '<td style="background:#f1f5f9;border:1px solid var(--border);text-align:center;" data-q-pct="Q'+qNum+'">'+_indPctBadge(qP)+'</td>';
       }
     });
     return '<div style="overflow-x:auto;"><table class="ind-mes-table" style="min-width:100%;">'
@@ -13643,6 +13685,7 @@ var ContratosDetailUI = (function() {
       +'<tbody>'
       +'<tr><td class="ind-mes-table" style="font-size:11px;font-weight:600;text-align:left;white-space:nowrap;background:#eff6ff;">Meta</td>'+trMeta+'</tr>'
       +'<tr><td class="ind-mes-table" style="font-size:11px;font-weight:600;text-align:left;white-space:nowrap;background:#f0fdf4;">Realizado</td>'+trReal+'</tr>'
+      +'<tr><td class="ind-mes-table" style="font-size:11px;font-weight:600;text-align:left;white-space:nowrap;background:#fafafa;">% Cump.</td>'+trPct+'</tr>'
       +'</tbody></table></div>';
   }
 
@@ -13650,6 +13693,51 @@ var ContratosDetailUI = (function() {
     GAS.contratos.atualizarMetaMes(_cid, metaId, indId, mes, campo, parseFloat(valor)||0, function(){}, function(e) {
       Toast.aviso('Falha ao salvar: '+(e.message||e));
     });
+    _atualizarQCells(indId);
+  }
+
+  function _indPctBadge(pct) {
+    if (pct === null || isNaN(pct)) return '<span style="color:var(--muted);font-size:10px;">—</span>';
+    var cls = pct >= 100 ? 'ind-pct-ok' : (pct >= 70 ? 'ind-pct-warn' : 'ind-pct-low');
+    return '<span class="ind-pct-badge '+cls+'">'+pct+'%</span>';
+  }
+
+  function _atualizarQCells(indId) {
+    var cnt = document.querySelector('[data-ind-container="'+indId+'"]');
+    if (!cnt) return;
+    // % por mês
+    [].forEach.call(cnt.querySelectorAll('.ind-mes-input[data-campo="realizado"]'), function(inp) {
+      var mes = inp.getAttribute('data-mes');
+      var mEl = cnt.querySelector('.ind-mes-input[data-campo="meta"][data-mes="'+mes+'"]');
+      var pEl = cnt.querySelector('[data-mes-pct="'+mes+'"]');
+      if (!mEl || !pEl) return;
+      var m = parseFloat(mEl.value)||0, r = parseFloat(inp.value)||0;
+      pEl.innerHTML = _indPctBadge(m > 0 ? Math.round(r/m*100) : null);
+    });
+    // Soma e % por Q
+    var qSeen = {};
+    [].forEach.call(cnt.querySelectorAll('[data-q-meta]'), function(el) { qSeen[el.getAttribute('data-q-meta')] = 1; });
+    Object.keys(qSeen).forEach(function(q) {
+      var qM = 0, qR = 0;
+      [].forEach.call(cnt.querySelectorAll('.ind-mes-input[data-qnum="'+q+'"][data-campo="meta"]'), function(inp) { qM += parseFloat(inp.value)||0; });
+      [].forEach.call(cnt.querySelectorAll('.ind-mes-input[data-qnum="'+q+'"][data-campo="realizado"]'), function(inp) { qR += parseFloat(inp.value)||0; });
+      var mEl = cnt.querySelector('[data-q-meta="'+q+'"]');
+      var rEl = cnt.querySelector('[data-q-real="'+q+'"]');
+      var pEl = cnt.querySelector('[data-q-pct="'+q+'"]');
+      if (mEl) mEl.textContent = qM;
+      if (rEl) rEl.textContent = qR;
+      if (pEl) pEl.innerHTML = _indPctBadge(qM > 0 ? Math.round(qR/qM*100) : null);
+    });
+    // Total geral no cabeçalho
+    var tM = 0, tR = 0;
+    [].forEach.call(cnt.querySelectorAll('.ind-mes-input[data-campo="meta"]'), function(inp) { tM += parseFloat(inp.value)||0; });
+    [].forEach.call(cnt.querySelectorAll('.ind-mes-input[data-campo="realizado"]'), function(inp) { tR += parseFloat(inp.value)||0; });
+    var tpEl = cnt.querySelector('[data-total-pct]');
+    if (tpEl) {
+      var tp = tM > 0 ? Math.round(tR/tM*100) : null;
+      var tCls = tp === null ? '' : (tp >= 100 ? 'ind-pct-ok' : (tp >= 70 ? 'ind-pct-warn' : 'ind-pct-low'));
+      tpEl.innerHTML = tp !== null ? '<span class="ind-pct-badge '+tCls+'" style="font-size:12px;">'+tR+'/'+tM+' ('+tp+'%)</span>' : '';
+    }
   }
 
   function _renderIndicadoresG() {
@@ -13942,92 +14030,219 @@ var ContratosDetailUI = (function() {
     }, function(e) { Toast.erro('Erro ao restaurar versão: ' + (e.message || e)); });
   }
 
-  // ── Acompanhamento de Execução Financeira ───────────────
+  // ══════════════════════════════════════════════════════════
+  // TAB: EXECUÇÃO FINANCEIRA — hierarquia + agrupamentos + filtros
+  // ══════════════════════════════════════════════════════════
+
+  var _execAgrup = 'meta';
+  var _execSols  = null;
+  var _execReady = false;
+  var _EXEC_SA = ['submetida','aprovada_gestor','aprovada_financeiro','instrucao','em_execucao','concluida'];
+  var _EXEC_SE = ['concluida'];
+
+  function _execSetAgrup(agrup, btn) {
+    _execAgrup = agrup;
+    document.querySelectorAll('.exec-agrup').forEach(function(b){ b.classList.remove('ativa'); });
+    if (btn) btn.classList.add('ativa');
+    _execRender();
+  }
+
+  function _execCor(pct) { return pct>=90?'#ef4444':pct>=70?'#f59e0b':'#10b981'; }
+  function _execPct(c,p) { return p>0?Math.min(100,Math.round(c/p*100)):0; }
+
+  function _execBarCell(pct, cor) {
+    return '<td style="min-width:70px;padding:4px 8px;">'
+      +'<div style="background:var(--surface2);border-radius:3px;height:5px;overflow:hidden;margin-bottom:2px;">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+cor+';border-radius:3px;transition:.3s;"></div></div>'
+      +'<span style="font-size:10px;color:var(--muted);">'+pct+'%</span></td>';
+  }
+
+  function _execThead() {
+    return '<thead><tr style="background:var(--surface2);">'
+      +'<th style="font-size:11px;text-align:left;padding:6px 8px;">Item</th>'
+      +'<th style="font-size:11px;text-align:right;padding:6px 8px;white-space:nowrap;">Previsto</th>'
+      +'<th style="font-size:11px;text-align:right;padding:6px 8px;white-space:nowrap;">Comprometido</th>'
+      +'<th style="font-size:11px;text-align:right;padding:6px 8px;white-space:nowrap;">Executado</th>'
+      +'<th style="font-size:11px;text-align:right;padding:6px 8px;white-space:nowrap;">Saldo</th>'
+      +'<th style="font-size:11px;min-width:70px;padding:6px 8px;">% Comp.</th>'
+      +'</tr></thead>';
+  }
+
+  function _execTfoot(p,c,e) {
+    var s=p-c;
+    return '<tfoot><tr style="font-weight:700;background:var(--surface2);">'
+      +'<td style="font-size:12px;padding:6px 8px;">Total geral</td>'
+      +'<td style="text-align:right;font-size:12px;padding:6px 8px;">'+_R(p)+'</td>'
+      +'<td style="text-align:right;font-size:12px;padding:6px 8px;">'+_R(c)+'</td>'
+      +'<td style="text-align:right;font-size:12px;padding:6px 8px;color:#10b981;">'+_R(e)+'</td>'
+      +'<td style="text-align:right;font-size:12px;padding:6px 8px;color:'+(s<0?'#ef4444':'var(--text)')+';">'+_R(s)+'</td>'
+      +'<td></td></tr></tfoot>';
+  }
+
+  function _execRubRow(it, indent) {
+    var pct=_execPct(it.comp,it.previsto), cor=_execCor(pct);
+    var catBg=it.cat==='investimento'?'#ede9fe':'#dcfce7', catCor=it.cat==='investimento'?'#5b21b6':'#15803d';
+    return '<tr style="border-bottom:1px solid var(--surface2);">'
+      +'<td style="font-size:11px;padding:4px 8px 4px '+indent+'px;">'
+      +escaparHtml(it.rubNome)
+      +(it.setor?' '+_badgeSetor(it.setor):'')
+      +' <span style="font-size:10px;background:'+catBg+';color:'+catCor+';border-radius:4px;padding:1px 5px;">'+it.cat+'</span>'
+      +'</td>'
+      +'<td style="text-align:right;font-size:11px;padding:4px 8px;white-space:nowrap;">'+_R(it.previsto)+'</td>'
+      +'<td style="text-align:right;font-size:11px;padding:4px 8px;white-space:nowrap;">'+_R(it.comp)+'</td>'
+      +'<td style="text-align:right;font-size:11px;padding:4px 8px;white-space:nowrap;color:#10b981;">'+_R(it.exec)+'</td>'
+      +'<td style="text-align:right;font-size:11px;padding:4px 8px;white-space:nowrap;color:'+(it.saldo<0?'#ef4444':'var(--text)')+';">'+_R(it.saldo)+'</td>'
+      +_execBarCell(pct,cor)+'</tr>';
+  }
+
+  function _execGrpRow(label, p, c, e, depth, tid) {
+    var s=p-c, pct=_execPct(c,p), cor=_execCor(pct);
+    var bg  = depth===0?'var(--surface2)':'var(--surface1,#f8fafc)';
+    var fw  = depth===0?'700':'500';
+    var fs  = depth===0?'12px':'11px';
+    var pl  = (depth*16+8)+'px';
+    return '<tr style="background:'+bg+';font-weight:'+fw+';cursor:pointer;" '
+      +'onclick="(function(id,tr){var el=document.getElementById(id);if(!el)return;var vis=el.style.display!==\'none\';el.style.display=vis?\'none\':\'\';tr.querySelector(\'.exec-ch\').textContent=vis?\'chevron_right\':\'expand_more\';})(\''+tid+'\',this)">'
+      +'<td style="font-size:'+fs+';padding:6px 8px 6px '+pl+';">'
+      +(depth===0?'<span class="ms ms-sm exec-ch" style="vertical-align:middle;margin-right:4px;">expand_more</span>':'')
+      +(depth===1?'<span class="ms" style="font-size:14px;vertical-align:middle;color:var(--muted);margin-right:4px;">subdirectory_arrow_right</span>':'')
+      +label+'</td>'
+      +'<td style="text-align:right;font-size:'+fs+';padding:6px 8px;white-space:nowrap;">'+_R(p)+'</td>'
+      +'<td style="text-align:right;font-size:'+fs+';padding:6px 8px;white-space:nowrap;">'+_R(c)+'</td>'
+      +'<td style="text-align:right;font-size:'+fs+';padding:6px 8px;white-space:nowrap;color:#10b981;">'+_R(e)+'</td>'
+      +'<td style="text-align:right;font-size:'+fs+';padding:6px 8px;white-space:nowrap;color:'+(s<0?'#ef4444':'var(--text)')+';">'+_R(s)+'</td>'
+      +_execBarCell(pct,cor)+'</tr>';
+  }
+
+  function _execCollect(filMeta, filSetor, filCat) {
+    var contrato = _obj || {}, sols = _execSols || [], items = [];
+    (contrato.metas||[]).forEach(function(meta){
+      if (filMeta && meta.id!==filMeta) return;
+      function addRub(rub, atvId, atvNome) {
+        if (filSetor && rub.setor!==filSetor) return;
+        if (filCat   && rub.categoria!==filCat) return;
+        var lista=sols.filter(function(s){ return s.rubricaId===rub.id; });
+        var comp=lista.filter(function(s){ return _EXEC_SA.indexOf(s.status)>=0; })
+                      .reduce(function(a,s){ return a+(parseFloat(s.valorEstimado)||0); },0);
+        var exec=lista.filter(function(s){ return _EXEC_SE.indexOf(s.status)>=0; })
+                      .reduce(function(a,s){ return a+(parseFloat(s.valorEstimado)||0); },0);
+        items.push({ metaId:meta.id, metaNome:meta.titulo||meta.nome||meta.id,
+          atvId:atvId||'', atvNome:atvNome||'',
+          rubId:rub.id, rubNome:rub.nome||rub.id,
+          setor:rub.setor||'', cat:rub.categoria||'custeio',
+          previsto:rub.valorTotal||0, comp:comp, exec:exec, saldo:(rub.valorTotal||0)-comp });
+      }
+      (meta.atividades||[]).forEach(function(a){ (a.rubricas||[]).forEach(function(r){ addRub(r,a.id,a.descricao||a.id); }); });
+      (meta.rubricas||[]).forEach(function(r){ addRub(r,'',''); });
+    });
+    return items;
+  }
+
+  function _execHtml_Meta(items) {
+    var mG={},mO=[]; items.forEach(function(it){ if(!mG[it.metaId]){mG[it.metaId]=[];mO.push(it.metaId);} mG[it.metaId].push(it); });
+    var tP=0,tC=0,tE=0, body='';
+    mO.forEach(function(mid,mi){
+      var mI=mG[mid], mP=0,mC=0,mE=0; mI.forEach(function(it){mP+=it.previsto;mC+=it.comp;mE+=it.exec;}); tP+=mP;tC+=mC;tE+=mE;
+      var tid='ex-m-'+mi; body+=_execGrpRow(escaparHtml(mI[0].metaNome),mP,mC,mE,0,tid);
+      body+='<tbody id="'+tid+'">';
+      var aG={},aO=[]; mI.forEach(function(it){ var k=it.atvId||'_root'; if(!aG[k]){aG[k]=[];aO.push(k);} aG[k].push(it); });
+      aO.forEach(function(aid,ai){
+        var aI=aG[aid], aP=0,aC=0,aE=0; aI.forEach(function(it){aP+=it.previsto;aC+=it.comp;aE+=it.exec;});
+        var atid='ex-a-'+mi+'-'+ai;
+        if (aI.length>1) {
+          body+=_execGrpRow(escaparHtml(aI[0].atvNome||'(rubricas da meta)'),aP,aC,aE,1,atid);
+          body+='<tbody id="'+atid+'">'; aI.forEach(function(it){ body+=_execRubRow(it,40); }); body+='</tbody>';
+        } else {
+          body+=_execRubRow(aI[0],24);
+        }
+      });
+      body+='</tbody>';
+    });
+    return _execThead()+'<tbody>'+body+'</tbody>'+_execTfoot(tP,tC,tE);
+  }
+
+  function _execHtml_Grupo(items, keyFn, labelFn) {
+    var gG={},gO=[]; items.forEach(function(it){ var k=keyFn(it); if(!gG[k]){gG[k]=[];gO.push(k);} gG[k].push(it); });
+    var tP=0,tC=0,tE=0, body='';
+    gO.forEach(function(k,gi){
+      var gI=gG[k], gP=0,gC=0,gE=0; gI.forEach(function(it){gP+=it.previsto;gC+=it.comp;gE+=it.exec;}); tP+=gP;tC+=gC;tE+=gE;
+      var tid='ex-g-'+gi; body+=_execGrpRow(labelFn(k,gI),gP,gC,gE,0,tid);
+      body+='<tbody id="'+tid+'">'; gI.forEach(function(it){ body+=_execRubRow(it,24); }); body+='</tbody>';
+    });
+    return _execThead()+'<tbody>'+body+'</tbody>'+_execTfoot(tP,tC,tE);
+  }
+
+  function _execHtml_Flat(items) {
+    var tP=0,tC=0,tE=0;
+    var rows=items.map(function(it){
+      tP+=it.previsto;tC+=it.comp;tE+=it.exec;
+      var pct=_execPct(it.comp,it.previsto),cor=_execCor(pct);
+      var catBg=it.cat==='investimento'?'#ede9fe':'#dcfce7',catCor=it.cat==='investimento'?'#5b21b6':'#15803d';
+      return '<tr style="border-bottom:1px solid var(--surface2);">'
+        +'<td style="font-size:11px;padding:5px 8px;">'
+        +'<div>'+escaparHtml(it.rubNome)+(it.setor?' '+_badgeSetor(it.setor):'')+' <span style="font-size:10px;background:'+catBg+';color:'+catCor+';border-radius:4px;padding:1px 5px;">'+it.cat+'</span></div>'
+        +'<div style="font-size:10px;color:var(--muted);">'+escaparHtml(it.metaNome)+(it.atvNome?' › '+escaparHtml(it.atvNome):'')+'</div>'
+        +'</td>'
+        +'<td style="text-align:right;font-size:11px;padding:5px 8px;white-space:nowrap;">'+_R(it.previsto)+'</td>'
+        +'<td style="text-align:right;font-size:11px;padding:5px 8px;white-space:nowrap;">'+_R(it.comp)+'</td>'
+        +'<td style="text-align:right;font-size:11px;padding:5px 8px;white-space:nowrap;color:#10b981;">'+_R(it.exec)+'</td>'
+        +'<td style="text-align:right;font-size:11px;padding:5px 8px;white-space:nowrap;color:'+(it.saldo<0?'#ef4444':'var(--text)')+';">'+_R(it.saldo)+'</td>'
+        +_execBarCell(pct,cor)+'</tr>';
+    }).join('');
+    return _execThead()+'<tbody>'+rows+'</tbody>'+_execTfoot(tP,tC,tE);
+  }
+
+  function _execPopularFiltros() {
+    var contrato=_obj||{}, setores={}, metas=[];
+    (contrato.metas||[]).forEach(function(meta){
+      metas.push({id:meta.id, nome:meta.titulo||meta.nome||meta.id});
+      (meta.atividades||[]).forEach(function(a){ (a.rubricas||[]).forEach(function(r){ if(r.setor) setores[r.setor]=true; }); });
+      (meta.rubricas||[]).forEach(function(r){ if(r.setor) setores[r.setor]=true; });
+    });
+    var selM=document.getElementById('cd-exec-fil-meta');
+    if (selM) {
+      var curM=selM.value;
+      selM.innerHTML='<option value="">Todas as metas</option>'
+        +metas.map(function(m){ return '<option value="'+escaparHtml(m.id)+'"'+(m.id===curM?' selected':'')+'>'+escaparHtml(m.nome)+'</option>'; }).join('');
+    }
+    var selS=document.getElementById('cd-exec-fil-setor');
+    if (selS) {
+      var curS=selS.value;
+      var boot=(typeof App!=='undefined'&&App.getBoot)?App.getBoot():{};
+      selS.innerHTML='<option value="">Todos os setores</option>'
+        +(boot.setores||[]).filter(function(s){ return setores[s.id]; })
+                           .map(function(s){ return '<option value="'+escaparHtml(s.id)+'"'+(s.id===curS?' selected':'')+'>'+escaparHtml(s.nome||s.id)+'</option>'; }).join('');
+    }
+  }
+
+  function _execRender() {
+    if (!_execReady) return;
+    var el=document.getElementById('cd-execucao-lista'); if(!el) return;
+    var filMeta  =(document.getElementById('cd-exec-fil-meta')  ||{}).value||'';
+    var filSetor =(document.getElementById('cd-exec-fil-setor') ||{}).value||'';
+    var filCat   =(document.getElementById('cd-exec-fil-cat')   ||{}).value||'';
+    var items=_execCollect(filMeta,filSetor,filCat);
+    if (!items.length) { el.innerHTML='<p class="muted-text" style="padding:8px;">Sem rubricas com os filtros selecionados.</p>'; return; }
+    var html;
+    if (_execAgrup==='meta')           html=_execHtml_Meta(items);
+    else if (_execAgrup==='atividade') html=_execHtml_Grupo(items, function(it){ return it.atvId||'_root'; }, function(k,gI){ return escaparHtml(gI[0].atvNome||'(sem atividade)')+' <span style="font-size:10px;color:var(--muted);">'+escaparHtml(gI[0].metaNome)+'</span>'; });
+    else if (_execAgrup==='setor')     html=_execHtml_Grupo(items, function(it){ return it.setor||'_sem_'; }, function(k,gI){ return k==='_sem_'?'<span class="muted-text">Sem setor</span>':(_badgeSetor(k)||escaparHtml(k)); });
+    else                               html=_execHtml_Flat(items);
+    el.innerHTML='<div style="overflow-x:auto;max-height:65vh;overflow-y:auto;"><table class="tabela">'+html+'</table></div>';
+  }
+
   function carregarExecucao() {
     if (!_cid) return;
-    var el = document.getElementById('cd-execucao-lista');
-    el.innerHTML = '<p class="muted-text" style="padding:8px;">Carregando…</p>';
-    var _STATUS_ATIVO = ['submetida','aprovada_gestor','aprovada_financeiro','instrucao','em_execucao','concluida'];
-    var _STATUS_EXEC  = ['concluida'];
-    function _doRender(contrato, sols) {
-      // Coletar todas as rubricas (meta > atividade > rubrica)
-      var rubricas = [];
-      (contrato.metas || []).forEach(function(meta) {
-        (meta.atividades || []).forEach(function(atv) {
-          (atv.rubricas || []).forEach(function(rub) {
-            rubricas.push({ id: rub.id, nome: rub.nome || rub.id, previsto: rub.valorTotal || 0 });
-          });
-        });
-        (meta.rubricas || []).forEach(function(rub) {
-          rubricas.push({ id: rub.id, nome: rub.nome || rub.id, previsto: rub.valorTotal || 0 });
-        });
-      });
-      if (!rubricas.length) { el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhuma rubrica no Plano de Trabalho.</p>'; return; }
-      // Agrupar solicitações por rubricaId
-      var porRub = {};
-      (sols || []).forEach(function(s) {
-        if (!s.rubricaId) return;
-        if (!porRub[s.rubricaId]) porRub[s.rubricaId] = [];
-        porRub[s.rubricaId].push(s);
-      });
-      var totalPrev = 0, totalComp = 0, totalExec = 0;
-      var rows = rubricas.map(function(rub) {
-        var lista = porRub[rub.id] || [];
-        var comp = lista.filter(function(s){ return _STATUS_ATIVO.indexOf(s.status) >= 0; })
-                        .reduce(function(acc, s){ return acc + (parseFloat(s.valorEstimado) || 0); }, 0);
-        var exec = lista.filter(function(s){ return _STATUS_EXEC.indexOf(s.status) >= 0; })
-                        .reduce(function(acc, s){ return acc + (parseFloat(s.valorEstimado) || 0); }, 0);
-        var saldo = rub.previsto - comp;
-        var pct   = rub.previsto > 0 ? Math.min(100, Math.round((comp / rub.previsto) * 100)) : 0;
-        var corBar = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#10b981';
-        totalPrev += rub.previsto; totalComp += comp; totalExec += exec;
-        return '<tr>'
-          + '<td style="font-size:12px;">'+escaparHtml(rub.nome)+'</td>'
-          + '<td style="text-align:right;font-size:12px;">'+_R(rub.previsto)+'</td>'
-          + '<td style="text-align:right;font-size:12px;">'+_R(comp)+'</td>'
-          + '<td style="text-align:right;font-size:12px;color:#10b981;">'+_R(exec)+'</td>'
-          + '<td style="text-align:right;font-size:12px;color:'+(saldo<0?'#ef4444':'var(--text)')+';">'+_R(saldo)+'</td>'
-          + '<td style="min-width:80px;">'
-            + '<div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">'
-              + '<div style="height:100%;width:'+pct+'%;background:'+corBar+';border-radius:4px;"></div>'
-            + '</div>'
-            + '<div style="font-size:10px;color:var(--muted);text-align:right;">'+pct+'%</div>'
-          + '</td>'
-          + '</tr>';
-      }).join('');
-      var totalSaldo = totalPrev - totalComp;
-      el.innerHTML = '<div style="overflow-x:auto;">'
-        + '<table class="tabela"><thead><tr>'
-        + '<th style="font-size:11px;">Rubrica</th>'
-        + '<th style="font-size:11px;text-align:right;">Previsto</th>'
-        + '<th style="font-size:11px;text-align:right;">Comprometido</th>'
-        + '<th style="font-size:11px;text-align:right;">Executado</th>'
-        + '<th style="font-size:11px;text-align:right;">Saldo</th>'
-        + '<th style="font-size:11px;">% Comp.</th>'
-        + '</tr></thead><tbody>' + rows + '</tbody>'
-        + '<tfoot><tr style="font-weight:700;background:var(--surface2);">'
-        + '<td style="font-size:12px;">Total</td>'
-        + '<td style="text-align:right;font-size:12px;">'+_R(totalPrev)+'</td>'
-        + '<td style="text-align:right;font-size:12px;">'+_R(totalComp)+'</td>'
-        + '<td style="text-align:right;font-size:12px;color:#10b981;">'+_R(totalExec)+'</td>'
-        + '<td style="text-align:right;font-size:12px;color:'+(totalSaldo<0?'#ef4444':'var(--text)')+';">'+_R(totalSaldo)+'</td>'
-        + '<td></td>'
-        + '</tr></tfoot></table></div>';
-    }
-    // Carregar contrato + solicitações em paralelo
-    var contrato = null, sols = null;
-    function _tryRender() { if (contrato !== null && sols !== null) _doRender(contrato, sols); }
-    if (_obj) { contrato = _obj; _tryRender(); }
-    else {
-      GAS.contratos.obter(_cid, function(resp) {
-        contrato = (resp && resp.ok) ? resp.data : {};
-        _tryRender();
-      }, function() { contrato = {}; _tryRender(); });
-    }
+    var el=document.getElementById('cd-execucao-lista');
+    if (el) el.innerHTML='<p class="muted-text" style="padding:8px;">Carregando…</p>';
+    _execSols=null; _execReady=false;
+    _execPopularFiltros();
     GAS.contratacoes.listar({ contratoId: _cid }, function(resp) {
-      sols = (resp && resp.ok) ? (resp.data || []) : [];
-      _tryRender();
-    }, function() { sols = []; _tryRender(); });
+      _execSols=(resp&&resp.ok)?(resp.data||[]):[];
+      _execPopularFiltros();
+      _execReady=true;
+      _execRender();
+    }, function() { _execSols=[]; _execPopularFiltros(); _execReady=true; _execRender(); });
   }
 
   // ── API pública ──────────────────────────────────────────
@@ -14094,6 +14309,8 @@ var ContratosDetailUI = (function() {
     _executarRestaurar: _executarRestaurar,
     // Execução Financeira
     carregarExecucao: carregarExecucao,
+    _execSetAgrup: _execSetAgrup,
+    _execRender: _execRender,
     // Exportação SALIC
     exportarSALIC: exportarSALIC,
     // Compat legada (BtnGuard ainda chama via HTML antigo se houver cache)
