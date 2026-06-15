@@ -470,7 +470,22 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 82b (2026-06-15) → SESSÃO 83
+## HANDOFF ATUAL — SESSÃO 83 (2026-06-15) → SESSÃO 84
+
+### Estado atual: BI unificado — Dashboard como Central de Inteligência · Deploy @959
+
+### O que foi feito nesta sessão (s83)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @959 | Feat — BI unificado: Dashboard → "BI — Central de Inteligência" | `index.html`: (1) Header do Dashboard renomeado; tab-bar com 5 abas: BI Operacional, BI Financeiro, BI Estratégico, BI Demográfico, Insights IA. (2) `#view-bi-demografico` retirado do Router (class="view" → style="display:none"); `#dash-tab-demografico` vazio recebe conteúdo via JS DOM-move na primeira abertura. (3) `DashboardUI`: `_montarDemografico()` move DOM do BI para dentro do Dashboard; tab demografico delega ao `BiDemograficoUI`; `atualizar()` inclui tab demografico; `_statCard()` recebe onclick para navegação. (4) Cards clicáveis: Tarefas→taskhub, Reservas→espacos, Balcão→balcao, Alertas→home, Contratos→financeiro, KPIs→módulos correspondentes, Riscos/Clima→estrategia/escuta. (5) `BiDemograficoUI`: `_drilldownData+_drilldownSeq` para memoização; `_drillDown(key,label)` e `_abrirDrillDownModal(label,regs)` — modal com tabela por contexto (equipe: Nome/Setor/Cargo+Vínculo/Admissão; beneficiários: Pessoa/Ação/Data); `_renderBarras`, `_renderFaixaEtaria`, `_renderCargo`, `_renderTempoAtuacao` com rows clicáveis e hover. (6) `_MODULOS_MENU`: `bi-demografico` removido como item separado. (7) `Router.registrar('bi-demografico')`: redireciona para dashboard + aba demográfico. |
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 82b (2026-06-15) → SESSÃO 83
 
 ### Estado atual: Fix Férias — período vencido com retorno acordado · Deploy @956
 
