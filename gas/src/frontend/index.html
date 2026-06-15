@@ -15557,7 +15557,7 @@ var AdminCadastrosUI = (function() {
     MapaEditorUI.abrir(id, nome, cfgAtual, _espacos, function(cfg) {
       _pendingMapaConfig = cfg;
       _atualizarPreviewMapa(cfg);
-    });
+    }, typeof InfraConfigMapaUI !== 'undefined' ? InfraConfigMapaUI.getEscala() : null);
   }
 
   function _atualizarPreviewMapa(cfg) {
@@ -15889,6 +15889,7 @@ var AdminDadosUI = (function() {
 // ═══════════════════════════════════════════════════════════
 var AprovacaoReservaUI = (function() {
   var _tabAtiva = 'reservas';
+  var _cntReservas = 0, _cntAcessos = 0, _cntCarros = 0;
 
   function setTab(aba, btn) {
     _tabAtiva = aba;
@@ -16002,12 +16003,20 @@ var AprovacaoReservaUI = (function() {
   }
 
   function recusarAcesso(email, btn) {
-    BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
-      GAS.acesso.revogar({ emailAlvo: email }, function(r) {
-        liberar();
-        if (r && r.ok) { Toast.sucesso('Acesso recusado.'); carregarAcessos(); }
-        else Toast.erro((r && r.error && r.error.message) || 'Erro.');
-      });
+    _abrirModalConfirmar({
+      titulo: 'Recusar Acesso', icone: 'block', corIcone: '#ef4444',
+      mensagem: 'Recusar o acesso de <strong>' + escaparHtml(email) + '</strong>? O usuário ficará inativo.',
+      labelConfirmar: 'Recusar',
+      cb: function() {
+        BtnGuard.wrap(btn, 'Recusando…', function(liberar) {
+          GAS.acesso.revogar({ emailAlvo: email }, function(r) {
+            liberar();
+            if (r && r.ok) { Toast.sucesso('Acesso recusado.'); carregarAcessos(); carregarPermissoes(); }
+            else Toast.erro((r && r.error && r.error.message) || 'Erro.');
+          });
+        });
+      },
+      cbCancelar: function() {}
     });
   }
 
@@ -16091,13 +16100,15 @@ var AprovacaoReservaUI = (function() {
         +'<th style="padding:8px 12px;text-align:left;"></th>'
         +'</tr></thead><tbody>'
         + usuarios.map(function(u) {
+            var ehPendente = u.status === 'pendente' || u.status === 'pendente_aprovacao';
             var statusBadge = u.status === 'ativo' ? '<span class="badge badge-success">Ativo</span>'
-                            : u.status === 'pendente_aprovacao' ? '<span class="badge badge-warning">Pendente</span>'
+                            : ehPendente ? '<span class="badge badge-warning">Pendente</span>'
+                            : u.status === 'inativo' ? '<span class="badge badge-muted">Inativo</span>'
                             : '<span class="badge badge-muted">'+(u.status||'—')+'</span>';
             var papelBadge = '<span class="badge '+badgeClsPapel(u.papel||'')+'">'+escaparHtml(u.papel||'—')+'</span>';
-            var acoes = u.status === 'pendente_aprovacao'
+            var acoes = ehPendente
               ? '<button class="btn btn-primario btn-sm" id="btn-perm-apr-'+u.email.replace(/[^a-z0-9]/gi,'_')+'" onclick="AprovacaoReservaUI.aprovarAcesso('+JSON.stringify(u.email).replace(/"/g,"'")+',this)">Aprovar</button>'
-                +'<button class="btn btn-ghost btn-sm" id="btn-perm-rec-'+u.email.replace(/[^a-z0-9]/gi,'_')+'" onclick="AprovacaoReservaUI.recusarAcesso('+JSON.stringify(u.email).replace(/"/g,"'")+',this)" style="margin-left:4px;">Revogar</button>'
+                +'<button class="btn btn-ghost btn-sm" id="btn-perm-rec-'+u.email.replace(/[^a-z0-9]/gi,'_')+'" onclick="AprovacaoReservaUI.recusarAcesso('+JSON.stringify(u.email).replace(/"/g,"'")+',this)" style="margin-left:4px;">Recusar</button>'
               : '';
             return '<tr style="border-bottom:1px solid var(--border);">'
               +'<td style="padding:8px 12px;">'+escaparHtml(u.nome||u.email)+'<br><span style="font-size:11px;color:var(--muted);">'+escaparHtml(u.email)+'</span></td>'
@@ -16108,43 +16119,42 @@ var AprovacaoReservaUI = (function() {
           }).join('')
         +'</tbody></table></div>';
       var bPerm = document.getElementById('badge-aprov-permissoes');
-      var pendentes = usuarios.filter(function(u){ return u.status === 'pendente_aprovacao'; }).length;
+      var pendentes = usuarios.filter(function(u){ return u.status === 'pendente' || u.status === 'pendente_aprovacao'; }).length;
       if (bPerm) { bPerm.textContent = pendentes; bPerm.classList.toggle('oculto', pendentes === 0); }
     }, function(e) { el.innerHTML = '<p class="error-text">Erro: '+escaparHtml((e&&e.message)||String(e))+'</p>'; });
   }
 
-  function _atualizarBadge(countReservas, countAcessos, countCarros) {
+  function _sincBadgeSidebar() {
+    var total = _cntReservas + _cntAcessos + _cntCarros;
     var badge = document.getElementById('badgeSolicitacoes');
-    if (!badge) return;
-    var total = (countReservas || 0) + (countAcessos || 0) + (countCarros || 0);
-    badge.textContent = total;
-    badge.classList.toggle('oculto', total === 0);
+    if (badge) { badge.textContent = total; badge.classList.toggle('oculto', total === 0); }
+  }
+
+  function _atualizarBadge(countReservas, countAcessos, countCarros) {
+    _atualizarBadgeReservas(countReservas);
+    _atualizarBadgeAcessos(countAcessos);
+    _atualizarBadgeCarros(countCarros);
   }
 
   function _atualizarBadgeReservas(count) {
+    _cntReservas = count || 0;
     var b = document.getElementById('badge-aprov-reservas');
-    if (!b) return;
-    b.textContent = count;
-    b.classList.toggle('oculto', count === 0);
+    if (b) { b.textContent = _cntReservas; b.classList.toggle('oculto', _cntReservas === 0); }
+    _sincBadgeSidebar();
   }
 
   function _atualizarBadgeAcessos(count) {
+    _cntAcessos = count || 0;
     var b = document.getElementById('badge-aprov-acessos');
-    if (!b) return;
-    b.textContent = count;
-    b.style.display = count > 0 ? 'inline-block' : 'none';
-    var bSidebar = document.getElementById('badgeSolicitacoes');
-    if (bSidebar) {
-      var atual = parseInt(bSidebar.textContent, 10) || 0;
-      _atualizarBadge(atual, count, 0);
-    }
+    if (b) { b.textContent = _cntAcessos; b.classList.toggle('oculto', _cntAcessos === 0); }
+    _sincBadgeSidebar();
   }
 
   function _atualizarBadgeCarros(count) {
+    _cntCarros = count || 0;
     var b = document.getElementById('badge-aprov-carros');
-    if (!b) return;
-    b.textContent = count;
-    b.classList.toggle('oculto', count === 0);
+    if (b) { b.textContent = _cntCarros; b.classList.toggle('oculto', _cntCarros === 0); }
+    _sincBadgeSidebar();
   }
 
   function atualizarBadge() {
@@ -20206,6 +20216,7 @@ var InfraConfigMapaUI = (function() {
           _atualizarInputsInline();
         } else if (drag.type === 'resize') {
           _resizeInline(e, e.ctrlKey);
+          if (_modoEdicao && _modoEdicao.cfg) _showDimHud(_modoEdicao.cfg.w || 80, _modoEdicao.cfg.h || 60, e.clientX, e.clientY);
         } else if (drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
           var curAngle = Math.atan2(svgP2.y - cfg.cy, svgP2.x - cfg.cx) * 180 / Math.PI;
@@ -20223,6 +20234,7 @@ var InfraConfigMapaUI = (function() {
 
     document.addEventListener('mouseup', function() {
       if (_modoEdicao && _modoEdicao.drag) {
+        _hideDimHud();
         var tipo = _modoEdicao.drag.type;
         // Resize e rotate precisam re-renderizar os handles com novas dimensões
         if (tipo === 'resize' || tipo === 'rotate') _atualizarHandles();
@@ -20242,6 +20254,28 @@ var InfraConfigMapaUI = (function() {
       e.preventDefault();
       zoom(e.deltaY < 0 ? 1 : -1);
     }, { passive: false });
+  }
+
+  function _showDimHud(wPx, hPx, clientX, clientY) {
+    if (!_escalaInfra || !_escalaInfra.pixPorM) return;
+    var ppm = _escalaInfra.pixPorM;
+    var txt = (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
+    var hud = document.getElementById('_dim-hud');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = '_dim-hud';
+      hud.style.cssText = 'position:fixed;pointer-events:none;z-index:99999;background:rgba(15,23,42,.85);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;letter-spacing:.02em;';
+      document.body.appendChild(hud);
+    }
+    hud.textContent = txt;
+    hud.style.left = (clientX + 14) + 'px';
+    hud.style.top  = (clientY - 28) + 'px';
+    hud.style.display = 'block';
+  }
+
+  function _hideDimHud() {
+    var hud = document.getElementById('_dim-hud');
+    if (hud) hud.style.display = 'none';
   }
 
   // ── API pública ──────────────────────────────────────────
@@ -20289,7 +20323,8 @@ var InfraConfigMapaUI = (function() {
     _modalNivelRemover:            _modalNivelRemover,
     _modalNivelEdTerr:             _modalNivelEdTerr,
     _modalNivelEdPlanta:           _modalNivelEdPlanta,
-    _onNivelEdicaoChange:          _onNivelEdicaoChange
+    _onNivelEdicaoChange:          _onNivelEdicaoChange,
+    getEscala: function() { return _escalaInfra ? JSON.parse(JSON.stringify(_escalaInfra)) : null; }
   };
 })();
 

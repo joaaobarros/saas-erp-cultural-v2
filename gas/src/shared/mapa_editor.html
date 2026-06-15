@@ -14,6 +14,7 @@ var MapaEditorUI = (function() {
   // ── Estado ───────────────────────────────────────────────
   var _cb        = null;
   var _cfg       = null;   // { forma, cx, cy, w, h, r, rotacao, pontos? }
+  var _escala    = null;
   var _cfgOrig   = null;
   var _espacos   = [];
   var _espacoId  = null;
@@ -193,11 +194,12 @@ var MapaEditorUI = (function() {
   }
 
   // ── Abrir / Fechar ───────────────────────────────────────
-  function abrir(espacoId, espacoNome, mapaConfig, espacos, callback) {
+  function abrir(espacoId, espacoNome, mapaConfig, espacos, callback, escala) {
     _espacoId  = espacoId;
     _nomEspaco = espacoNome || 'Espaço';
     _espacos   = espacos || [];
     _cb        = callback;
+    _escala    = escala || null;
     _cfg       = mapaConfig ? JSON.parse(JSON.stringify(mapaConfig)) : null;
     _cfgOrig   = _cfg ? JSON.parse(JSON.stringify(_cfg)) : null;
     _drag      = null;
@@ -211,6 +213,7 @@ var MapaEditorUI = (function() {
   }
 
   function fechar() {
+    _hideDimHud();
     if (_edKbHandler) { document.removeEventListener('keydown', _edKbHandler); _edKbHandler = null; }
     var el = document.getElementById('mapa-editor-overlay');
     if (el) el.parentNode.removeChild(el);
@@ -744,6 +747,9 @@ var MapaEditorUI = (function() {
 
         } else if (_drag.type === 'resize') {
           _resize(_localPt(e), e);
+          if (_escala && _escala.pixPorM && _cfg) {
+            _showDimHud(_cfg.w || 80, _cfg.h || 60, e.clientX, e.clientY);
+          }
 
         } else if (_drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
@@ -766,6 +772,7 @@ var MapaEditorUI = (function() {
     });
 
     document.addEventListener('mouseup', function() {
+      _hideDimHud();
       if (_drag && (_drag.type === 'resize' || _drag.type === 'rotate')) _renderShape();
       if (_drag) wrap.style.cursor = 'grab';
       _drag = null; _edDragPan = null;
@@ -888,6 +895,28 @@ var MapaEditorUI = (function() {
     _cfg.cx = _drag.origCX + dxLocal * Math.cos(θ) - dyLocal * Math.sin(θ);
     _cfg.cy = _drag.origCY + dxLocal * Math.sin(θ) + dyLocal * Math.cos(θ);
     _atualizarInputs();
+  }
+
+  function _showDimHud(wPx, hPx, clientX, clientY) {
+    if (!_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var txt = (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
+    var hud = document.getElementById('_dim-hud');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = '_dim-hud';
+      hud.style.cssText = 'position:fixed;pointer-events:none;z-index:99999;background:rgba(15,23,42,.85);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;letter-spacing:.02em;';
+      document.body.appendChild(hud);
+    }
+    hud.textContent = txt;
+    hud.style.left = (clientX + 14) + 'px';
+    hud.style.top  = (clientY - 28) + 'px';
+    hud.style.display = 'block';
+  }
+
+  function _hideDimHud() {
+    var hud = document.getElementById('_dim-hud');
+    if (hud) hud.style.display = 'none';
   }
 
   // ── API pública ─────────────────────────────────────────

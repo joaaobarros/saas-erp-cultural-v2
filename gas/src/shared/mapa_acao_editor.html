@@ -1827,6 +1827,7 @@ var MapaAcaoEditorUI = (function() {
           }
         }
       });
+      _showDimHud(b.w * scX, b.h * scY, e.clientX, e.clientY);
       _renderElementos();
       return;
     }
@@ -1867,6 +1868,7 @@ var MapaAcaoEditorUI = (function() {
       if (c_.forma === 'circle') {
         var dist_ = Math.sqrt(Math.pow(pt.x-(c_.cx||0),2) + Math.pow(pt.y-(c_.cy||0),2));
         c_.r = Math.max(10, dist_);
+        _showDimHud(c_.r * 2, c_.r * 2, e.clientX, e.clientY);
       } else {
         var nW = _drag.origW, nH = _drag.origH;
         if (h_==='e'||h_==='ne'||h_==='se')  nW = Math.max(20, _drag.origW + dx_*2);
@@ -1878,6 +1880,7 @@ var MapaAcaoEditorUI = (function() {
           c_.pts = _drag.origPts.map(function(p_){return{x:p_.x*sx_,y:p_.y*sy_};});
         }
         c_.w = nW; c_.h = nH;
+        _showDimHud(c_.w, c_.h, e.clientX, e.clientY);
       }
     } else if (_drag.type === 'rotate') {
       el.mapaConfig = el.mapaConfig || {};
@@ -1898,6 +1901,7 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _onMouseUp() {
+    _hideDimHud();
     _drag = null;
     _pan  = null;
     var wrap = document.getElementById('mae-canvas-wrap');
@@ -2680,6 +2684,7 @@ var MapaAcaoEditorUI = (function() {
   }
 
   function _voltar() {
+    _hideDimHud();
     document.removeEventListener('fullscreenchange', _onFullscreenChange);
     document.removeEventListener('webkitfullscreenchange', _onFullscreenChange);
     document.removeEventListener('mousemove', _onMouseMove);
@@ -2692,6 +2697,28 @@ var MapaAcaoEditorUI = (function() {
   function _setStatus(msg) {
     var el = document.getElementById('mae-status-txt');
     if (el) { el.textContent = msg; setTimeout(function() { if (el.textContent === msg) el.textContent = ''; }, 3000); }
+  }
+
+  function _showDimHud(wPx, hPx, clientX, clientY) {
+    if (!_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var txt = (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
+    var hud = document.getElementById('_dim-hud');
+    if (!hud) {
+      hud = document.createElement('div');
+      hud.id = '_dim-hud';
+      hud.style.cssText = 'position:fixed;pointer-events:none;z-index:99999;background:rgba(15,23,42,.85);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;letter-spacing:.02em;';
+      document.body.appendChild(hud);
+    }
+    hud.textContent = txt;
+    hud.style.left = (clientX + 14) + 'px';
+    hud.style.top  = (clientY - 28) + 'px';
+    hud.style.display = 'block';
+  }
+
+  function _hideDimHud() {
+    var hud = document.getElementById('_dim-hud');
+    if (hud) hud.style.display = 'none';
   }
 
   // ── API pública ──────────────────────────────────────────

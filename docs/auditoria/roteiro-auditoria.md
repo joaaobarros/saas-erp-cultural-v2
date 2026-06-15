@@ -470,7 +470,36 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 71 (2026-06-14) → SESSÃO 72
+## HANDOFF ATUAL — SESSÃO 72 (2026-06-14) → SESSÃO 73
+
+### Estado atual: ~264 bugs registrados · Deploy @921 (GAS)
+
+### O que foi feito nesta sessão (s72)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @921 | Feat — HUD de dimensões em tempo real nos editores de mapa | `mapa_acao_editor.html`: `_showDimHud`/`_hideDimHud`; chamados em `_onMouseMove` durante `resize` (rect/polígono + círculo) e `multi-resize` (bbox do grupo); `_hideDimHud` em `_onMouseUp` e `_voltar`. `mapa_editor.html`: novo parâmetro `escala` em `abrir()`; `_showDimHud` após resize na mousemove; `_hideDimHud` em `fechar()` e `mouseup`. `index.html / InfraConfigMapaUI`: `_showDimHud` após `_resizeInline`; `_hideDimHud` em mouseup; `getEscala()` exposto no return; `EspacosUI._editarMapa` passa `InfraConfigMapaUI.getEscala()` ao abrir `MapaEditorUI`. HUD: `position:fixed`, `pointer-events:none`, fundo escuro semitransparente, texto branco 11px, z-index 99999. Não aparece sem escala configurada; some no mouseup. |
+
+### Checklist de auditoria — s72
+```
+[x] prompt()/confirm()/alert() — zero; sem modais novos
+[x] GAS.* namespace — sem novos controllers; mudança é só frontend
+[x] CSS — sem classes novas; HUD usa cssText inline
+[x] IDs de DOM — _dim-hud (único, reutilizado entre editores que nunca estão abertos ao mesmo tempo)
+[x] FsmGuardian — sem transições de status
+[x] Modais — sem novos modais
+[x] BtnGuard — sem novos botões assíncronos
+[x] Datas — sem datas novas
+```
+
+### Pendentes / próxima ação
+- Testar HUD: Infraestrutura → Config → Mapa → editar espaço → arrastar alça de resize → verificar badge `Xm × Ym` aparece.
+- Testar em Ações → Mapa → editor de evento → redimensionar elemento → HUD aparece; soltar mouse → some.
+- Confirmar que sem escala configurada o HUD não aparece.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 71 (2026-06-14) → SESSÃO 72
 
 ### Estado atual: ~264 bugs registrados · Deploy @888 (GAS)
 
