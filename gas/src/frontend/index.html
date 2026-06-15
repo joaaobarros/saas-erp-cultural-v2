@@ -7147,7 +7147,7 @@ select.form-control { cursor: pointer; }
         </div>
         <!-- Modal Quadro -->
         <div id="qdro-modal" class="modal-overlay oculto" onclick="if(event.target===this)QuadrosUI.fecharForm()">
-          <div class="modal-box" style="max-width:520px">
+          <div class="modal-box" style="max-width:540px">
             <div class="modal-header">
               <h2 id="qdro-modal-titulo">Novo Quadro</h2>
               <button class="modal-close" onclick="QuadrosUI.fecharForm()" data-bg-skip="1">✕</button>
@@ -7156,6 +7156,11 @@ select.form-control { cursor: pointer; }
               <div class="form-group"><label>Título *</label><input type="text" id="qdro-titulo" class="form-control" required></div>
               <div class="form-group"><label>Descrição</label><textarea id="qdro-descricao" class="form-control" rows="2"></textarea></div>
               <div class="form-group"><label>Ação Vinculada</label><select id="qdro-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+              <div class="form-group"><label>Reunião Vinculada</label><select id="qdro-reuniao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+              <div class="form-group">
+                <label>Colaboradores <span style="font-weight:400;color:var(--muted)">(nomes ou e-mails, separados por vírgula)</span></label>
+                <input type="text" id="qdro-colaboradores" class="form-control" placeholder="Ex: João Silva, maria@org.br">
+              </div>
             </div>
             <div class="modal-footer">
               <button class="btn btn-secondary" onclick="QuadrosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
@@ -7164,19 +7169,20 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
         </div>
-        <!-- Editor TLDraw overlay -->
+        <!-- Editor canvas overlay (tela cheia) -->
         <div id="qdro-editor-overlay" class="oculto" style="position:fixed;inset:0;background:var(--surface);z-index:1500;display:flex;flex-direction:column;">
-          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
             <button class="btn btn-secondary btn-sm" onclick="QuadrosUI.fecharEditor()" data-bg-skip="1">
               <span class="ms ms-sm">arrow_back</span> Voltar
             </button>
-            <h3 id="qdro-editor-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;">Quadro</h3>
-            <button id="qdro-editor-salvar-btn" class="btn btn-primary btn-sm"
+            <h3 id="qdro-editor-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Quadro</h3>
+            <div id="qdro-editor-colabs" style="display:flex;gap:3px;align-items:center;flex-shrink:0;"></div>
+            <button id="qdro-editor-salvar-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;"
               onclick="BtnGuard.wrap('qdro-editor-salvar-btn','Salvando…',QuadrosUI.salvarSnapshot)">
               <span class="ms ms-sm">save</span> Salvar
             </button>
           </div>
-          <div id="qdro-editor-container" style="flex:1;"></div>
+          <div id="qdro-editor-container" style="flex:1;min-height:0;"></div>
         </div>
       </div><!-- /view-quadros -->
 
@@ -8839,39 +8845,28 @@ select.form-control { cursor: pointer; }
             </div>
           </div>
 
-          <!-- Card: Períodos Aquisitivos / Concessivos -->
+          <!-- Card unificado: Períodos + Férias -->
           <div class="card">
             <div class="card-header">
-              <div class="card-titulo"><span class="ms">calendar_clock</span> Períodos Aquisitivos e Concessivos</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <select id="rh-per-colab" class="form-input" style="width:auto;min-width:200px;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarPeriodosFerias();RhUI.carregarFerias()">
+              <div class="card-titulo"><span class="ms">beach_access</span> Férias por Período</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="rh-per-colab" class="form-input" style="width:auto;min-width:200px;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarFeriasUnificado()">
                   <option value="">Todos os colaboradores</option>
                 </select>
-                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarPeriodosFerias();RhUI.carregarFerias()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
-              </div>
-            </div>
-            <div id="rh-per-lista" style="padding:12px 20px;">
-              <p class="muted-text">Selecione um colaborador para visualizar os períodos.</p>
-            </div>
-          </div>
-
-          <!-- Card: Férias -->
-          <div class="card" style="margin-top:16px;">
-            <div class="card-header">
-              <div class="card-titulo"><span class="ms">beach_access</span> Férias</div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <select id="rh-fer-filtro" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarFerias()">
+                <select id="rh-fer-filtro" class="form-input" style="width:auto;padding:6px 10px;font-size:13px;" onchange="RhUI.carregarFeriasUnificado()">
                   <option value="">Todas</option>
                   <option value="pendente">Pendentes</option>
                   <option value="aprovado">Aprovadas</option>
                   <option value="recusado">Recusadas</option>
                   <option value="concluido">Concluídas</option>
                 </select>
-                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarFerias()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
+                <button class="btn btn-ghost btn-sm" onclick="RhUI.carregarFeriasUnificado()" data-bg-skip="1"><span class="ms ms-sm">refresh</span></button>
                 <button class="btn btn-primario btn-sm" id="rh-btn-solicitar-ferias" onclick="RhUI.abrirFormFerias()" data-bg-skip="1"><span class="ms ms-sm">add</span> Solicitar</button>
               </div>
             </div>
-            <div id="rh-fer-lista"></div>
+            <div id="rh-ferias-unificado">
+              <p class="muted-text" style="padding:14px 20px;">Selecione um colaborador para ver os períodos aquisitivos, ou deixe em branco para listar todas as férias.</p>
+            </div>
           </div>
         </div>
 
@@ -36300,7 +36295,7 @@ var RhUI = (function() {
     if (tab==='avaliacoes')  carregarAvaliacoes();
     if (tab==='escalas')     carregarEscalas();
     if (tab==='documentos')  { carregarDocumentos(); _popularSelectColaboradores('rh-doc-filtro-colab'); }
-    if (tab==='ferias')      { carregarFerias(); _popularSelectColaboradores('rh-per-colab'); }
+    if (tab==='ferias')      { carregarFeriasUnificado(); _popularSelectColaboradores('rh-per-colab'); }
     if (tab==='indicadores') { carregarIndicadores(); carregarTurnover12m(); _inicializarCalendarioPonto(); }
     if (tab==='folha')       { carregarDashboardFolha(); }
     if (tab==='rescisao')    { setTab('folha'); setSubAbaFolha('rescisao', document.getElementById('rh-folha-btn-rescisao')); return; }
@@ -36828,58 +36823,113 @@ var RhUI = (function() {
       if (!r || !r.ok || !r.data) { el.innerHTML = _empty('Erro ao carregar férias.'); return; }
       var d = r.data;
       if (d.aviso) { el.innerHTML = _empty(d.aviso); return; }
-      var periodos = (d.periodos || []).slice().reverse();
+      var periodos = (d.periodos || []).slice().reverse(); // mais recente primeiro
       if (!periodos.length) { el.innerHTML = _empty('Nenhum período aquisitivo calculado.'); return; }
-      var _stLabel = { em_aquisicao: 'Em aquisição', em_concessao: 'Em concessão', vencido: 'Vencido!', gozado: 'Gozado' };
-      var _stCor   = { em_aquisicao: '#64748b', em_concessao: '#f59e0b', vencido: '#ef4444', gozado: '#22c55e' };
-      var visiveis = periodos.filter(function(p, i) {
-        if (i < 3) return true;
-        return p.status !== 'gozado';
-      }).slice(0, 5);
-      el.innerHTML = visiveis.map(function(p) {
-        var cor = _stCor[p.status] || '#888';
-        var lbl = _stLabel[p.status] || p.status;
-        var barraHtml;
+
+      var _stCfg = {
+        em_aquisicao: { label:'Em aquisição',        cor:'#475569', bg:'#f1f5f9', desc:'Colaborador ainda acumula direito às férias.' },
+        em_concessao: { label:'Disponível para gozo', cor:'#b45309', bg:'#fffbeb', desc:'Férias disponíveis — devem ser gozadas até o fim da janela concessiva.' },
+        vencido:      { label:'Prazo legal expirado', cor:'#b91c1c', bg:'#fff1f2', desc:'A janela para gozo encerrou. Dias pendentes serão pagos em dobro na rescisão (CLT art. 137).' },
+        gozado:       { label:'Férias integralmente gozadas', cor:'#15803d', bg:'#f0fdf4', desc:'' }
+      };
+      var _ferLabel = { concluido:'Realizada', aprovado:'Aprovada', pendente:'Pendente', cancelado:'Cancelada', recusado:'Recusada', pendente_ajuste:'Em ajuste' };
+      var _ferCor   = { concluido:'#15803d', aprovado:'#1d4ed8', pendente:'#b45309', cancelado:'#6b7280', recusado:'#b91c1c', pendente_ajuste:'#7c3aed' };
+
+      var MAX = 4;
+      var visiveis = periodos.slice(0, MAX);
+      var extras   = periodos.slice(MAX);
+
+      function _renderPer(p, idx) {
+        var cfg      = _stCfg[p.status] || { label: p.status, cor:'#888', bg:'#f9f9f9', desc:'' };
+        var hasFer   = p.ferias && p.ferias.length > 0;
+        var startOpen= hasFer; // abrir se tem férias registradas
+        var expId    = 'rh-dper-' + idx;
+        var chevId   = 'rh-dchev-' + idx;
+
+        // Barra de progresso
+        var barraHtml = '';
         if (p.status !== 'em_aquisicao') {
           var pct = Math.min(100, Math.round((p.diasGozados / p.diasDireito) * 100));
-          barraHtml = '<div style="margin:5px 0 3px;">' +
-            '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px;">' +
-              '<span>' + p.diasGozados + ' dias gozados</span><span>saldo: <strong>' + p.saldo + '</strong> dias</span>' +
+          var saldoColor = p.status === 'vencido' ? '#b91c1c' : (p.saldo > 0 ? cfg.cor : '#15803d');
+          barraHtml =
+            '<div style="display:flex;justify-content:space-between;font-size:12px;margin:6px 0 3px;">' +
+              '<span style="color:var(--text2);"><strong style="color:var(--text);font-size:13px;">' + p.diasGozados + '</strong> dias gozados</span>' +
+              '<span style="color:var(--text2);">saldo: <strong style="font-size:14px;color:' + saldoColor + ';">' + p.saldo + 'd</strong></span>' +
             '</div>' +
-            '<div style="background:var(--border);border-radius:4px;height:4px;">' +
-              '<div style="background:' + cor + ';width:' + pct + '%;height:4px;border-radius:4px;"></div>' +
-            '</div></div>';
-        } else {
-          barraHtml = '<div style="font-size:11px;color:var(--muted);margin-top:3px;">Direito adquirido em ' + _fmtData(p.concessivoInicio) + ' (30 dias)</div>';
-        }
-        var datesHtml = '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' +
-          'Aquis. ' + _fmtData(p.aquisitivoInicio) + ' → ' + _fmtData(p.aquisitivoFim) +
-          ' &nbsp;·&nbsp; Conc. ' + _fmtData(p.concessivoInicio) + ' → ' + _fmtData(p.concessivoFim) +
-        '</div>';
-        var feriasHtml = '';
-        if (p.ferias && p.ferias.length) {
-          feriasHtml = '<div style="margin-top:5px;">' + p.ferias.map(function(f) {
-            var nd = (f.inicio && f.fim) ? Math.round((new Date(f.fim) - new Date(f.inicio)) / 86400000) + 1 : '?';
-            var acordoHtml = '';
-            if (f.acordo) {
-              acordoHtml = ' <span style="font-size:10px;color:#8b5cf6;">' +
-                'negociado: ' + (f.acordo.diasEfetivosGozados || nd) + ' dias' +
-                (f.acordo.observacoes ? ' · ' + _esc(String(f.acordo.observacoes).slice(0, 40)) : '') +
-              '</span>';
-            }
-            return '<div style="padding:3px 0 3px 8px;border-left:2px solid var(--border);font-size:11px;margin-top:3px;">' +
-              _fmtData(f.inicio) + ' → ' + _fmtData(f.fim) + ' (' + nd + ' dias)' + acordoHtml + ' ' + _badge(f.status) +
+            '<div style="background:#e2e8f0;border-radius:6px;height:6px;overflow:hidden;">' +
+              '<div style="background:' + cfg.cor + ';width:' + pct + '%;height:6px;border-radius:6px;transition:width .4s;"></div>' +
             '</div>';
-          }).join('') + '</div>';
+          if (p.status === 'vencido' && p.saldo > 0) {
+            barraHtml += '<div style="margin-top:5px;font-size:11px;color:#b91c1c;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;">warning</span>' + p.saldo + ' dias não gozados — pagamento em dobro na rescisão</div>';
+          }
+        } else {
+          barraHtml = '<div style="margin-top:5px;font-size:12px;color:var(--text2);">Direito completo adquirido em <strong>' + _fmtData(p.concessivoInicio) + '</strong> (30 dias)</div>';
         }
-        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-            '<span style="font-size:12px;font-weight:700;">' + p.numero + 'º período</span>' +
-            '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + cor + '22;color:' + cor + ';">' + lbl + '</span>' +
-          '</div>' +
-          datesHtml + barraHtml + feriasHtml +
+
+        // Datas
+        var datesHtml =
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;">' +
+            '<div style="font-size:11px;color:var(--text2);"><span style="font-weight:600;text-transform:uppercase;font-size:10px;color:var(--muted);">Aquisição</span><br>' + _fmtData(p.aquisitivoInicio) + ' → ' + _fmtData(p.aquisitivoFim) + '</div>' +
+            '<div style="font-size:11px;color:var(--text2);"><span style="font-weight:600;text-transform:uppercase;font-size:10px;color:var(--muted);">Janela concessiva</span><br>' + _fmtData(p.concessivoInicio) + ' → ' + _fmtData(p.concessivoFim) + '</div>' +
+          '</div>';
+
+        // Nota explicativa do status
+        var descHtml = cfg.desc ? '<div style="margin-top:5px;font-size:11px;color:' + cfg.cor + ';opacity:.85;">' + cfg.desc + '</div>' : '';
+
+        // Registros de férias
+        var feriasHtml = '';
+        if (hasFer) {
+          feriasHtml = '<div style="margin-top:8px;border-top:1px dashed #cbd5e1;padding-top:6px;">' +
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;letter-spacing:.4px;">Férias registradas</div>' +
+            p.ferias.map(function(f) {
+              var nd = (f.inicio && f.fim) ? Math.round((new Date(f.fim) - new Date(f.inicio)) / 86400000) + 1 : '?';
+              var ferLbl = _ferLabel[f.status] || f.status;
+              var ferCor = _ferCor[f.status] || '#888';
+              var acordo = '';
+              if (f.acordo) {
+                acordo = '<span style="font-size:11px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 5px;border-radius:4px;margin-left:4px;">' +
+                  'negociado ' + (f.acordo.diasEfetivosGozados || nd) + 'd' +
+                  (f.acordo.observacoes ? ' · ' + _esc(String(f.acordo.observacoes).slice(0,35)) : '') +
+                '</span>';
+              }
+              return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;margin-bottom:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;">' +
+                '<span style="font-size:12px;font-weight:600;">' + _fmtData(f.inicio) + ' → ' + _fmtData(f.fim) + '</span>' +
+                '<span style="font-size:11px;color:var(--text2);">(' + nd + ' dias)</span>' +
+                acordo +
+                '<span style="margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + ferCor + '18;color:' + ferCor + ';border:1px solid ' + ferCor + '40;">' + ferLbl + '</span>' +
+              '</div>';
+            }).join('') +
+          '</div>';
+        } else if (p.status !== 'em_aquisicao') {
+          feriasHtml = '<div style="margin-top:7px;font-size:11px;color:var(--muted);font-style:italic;">Nenhuma férias registrada neste período.</div>';
+        }
+
+        var expandContent = '<div id="' + expId + '" style="display:' + (startOpen ? 'block' : 'none') + ';">' +
+          datesHtml + descHtml + barraHtml + feriasHtml +
         '</div>';
-      }).join('');
+
+        return '<div style="border-left:4px solid ' + cfg.cor + ';background:' + cfg.bg + ';border-radius:0 8px 8px 0;padding:8px 10px;margin-bottom:6px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="RhUI._detFerToggle(\'' + expId + '\',\'' + chevId + '\')">' +
+            '<span style="font-size:13px;font-weight:700;color:var(--text);">' + p.numero + 'º período</span>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;background:' + cfg.cor + ';color:#fff;">' + cfg.label + '</span>' +
+              '<span id="' + chevId + '" class="ms ms-sm" style="font-size:16px;color:' + cfg.cor + ';transition:transform .2s;transform:' + (startOpen ? 'rotate(90deg)' : '') + ';">chevron_right</span>' +
+            '</div>' +
+          '</div>' +
+          expandContent +
+        '</div>';
+      }
+
+      var html = visiveis.map(function(p, i){ return _renderPer(p, i); }).join('');
+      if (extras.length) {
+        html += '<div id="rh-det-fer-extras" style="display:none;">' +
+          extras.map(function(p, i){ return _renderPer(p, MAX + i); }).join('') +
+        '</div>';
+        html += '<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px;font-size:11px;" onclick="RhUI._detFerVerMais(this)" data-bg-skip="1">' +
+          '<span class="ms ms-sm">expand_more</span> Ver ' + extras.length + ' período(s) anterior(es)' +
+        '</button>';
+      }
+      el.innerHTML = html;
     }, function() {
       var el = document.getElementById('rh-det-ferias');
       if (el) el.innerHTML = _empty('Erro ao carregar.');
@@ -38499,55 +38549,222 @@ var RhUI = (function() {
     });
   }
 
-  // ─── FÉRIAS ─────────────────────────────────────────────────
-  function carregarFerias() {
-    var el=document.getElementById('rh-fer-lista');
-    if (!el) return;
-    el.innerHTML=_empty('Carregando…');
-    var status=(document.getElementById('rh-fer-filtro')||{}).value||null;
-    var colabId=(document.getElementById('rh-per-colab')||{}).value||null;
-    var _boot = App.getBoot && App.getBoot();
-    var _isSuperAdmin = _boot && _boot.usuarioPapel === 'superadmin';
-    GAS.rh.listarFerias(colabId,function(resp){
-      var lista=(resp&&resp.ok)?resp.data:[];
-      if (status) lista=lista.filter(function(f){ return f.status===status; });
-      lista.sort(function(a,b){ return (b.dataInicio||b.inicio||'').localeCompare(a.dataInicio||a.inicio||''); });
-      if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma solicitação de férias.'); return; }
-      el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
-        lista.map(function(f){
-          var acoes='';
-          var _fIniStr = _esc(f.dataInicio||f.inicio||'');
-          var _fFimStr = _esc(f.dataFim||f.fim||'');
-          var _hojeStr = new Date().toISOString().slice(0,10);
-          var _naoIniciou = !_fIniStr || _fIniStr > _hojeStr;
-          if (f.status==='pendente'){
-            acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-apr-fer-'+_esc(f.id)+'" onclick="RhUI.aprovarFerias(\''+_esc(f.id)+'\')">Aprovar</button>';
-            acoes+='<button class="btn btn-error btn-sm" style="margin-right:4px;" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
-            acoes+='<button class="btn btn-ghost btn-sm" style="margin-right:4px;" id="rh-btn-edit-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormEditarFerias(\''+_esc(f.id)+'\',\''+_fIniStr+'\',\''+_fFimStr+'\')"><span class="ms ms-sm">edit</span> Editar</button>';
-            if (_naoIniciou) acoes+='<button class="btn btn-ghost btn-sm" style="margin-right:4px;" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
-          }
-          if (f.status==='aprovado') {
-            var _fTot = f.totalDias || (_fIniStr&&_fFimStr ? Math.round((new Date(f.dataFim||f.fim)-new Date(f.dataInicio||f.inicio))/86400000)+1 : 0);
-            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\',\''+_fIniStr+'\',\''+_fFimStr+'\','+_fTot+')"><span class="ms ms-sm">handshake</span> Acordo</button>';
-            acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-conc-fer-'+_esc(f.id)+'" onclick="RhUI.concluirFerias(\''+_esc(f.id)+'\')"><span class="ms ms-sm">check_circle</span> Concluir</button>';
-            if (_naoIniciou) acoes+='<button class="btn btn-ghost btn-sm" style="margin-right:4px;" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
-          }
-          if (_isSuperAdmin) {
-            acoes+='<button class="btn btn-error btn-sm" id="rh-btn-del-fer-'+_esc(f.id)+'" onclick="RhUI.excluirFerias(\''+_esc(f.id)+'\')" title="Excluir permanentemente (superadmin)"><span class="ms ms-sm">delete_forever</span></button>';
-          }
-          var isAcordo = f.tipo==='nao_oficial';
-          var tipoBadge = isAcordo
-            ? '<span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;">Acordo</span>'
-            : '<span style="background:var(--surface2);color:var(--text2);font-size:10px;border-radius:4px;padding:2px 6px;">Oficial</span>';
-          var diasInfo = f.totalDias||'—';
-          if (isAcordo && f.diasGozados) diasInfo += ' <span style="font-size:10px;color:var(--text2);">('+f.diasGozados+'g)</span>';
-          return '<tr><td>'+_esc(f.nomeColaborador||f.idColaborador||'—')+'</td>'+
-            '<td>'+_fmtData(f.dataInicio||f.inicio)+'</td><td>'+_fmtData(f.dataFim||f.fim)+'</td>'+
-            '<td>'+diasInfo+'</td><td>'+tipoBadge+'</td><td>'+_badge(f.status||'')+'</td>'+
-            '<td>'+acoes+'</td></tr>';
-        }).join('')+'</tbody></table>';
-    },function(e){ el.innerHTML=_empty('Erro: '+(e.message||e)); });
+  // ─── FÉRIAS — helpers ────────────────────────────────────────
+  function _urgenciaFeriasInfo(p, hoje) {
+    if (!hoje) hoje = new Date().toISOString().slice(0,10);
+    if (p.saldo <= 0 || p.status === 'em_aquisicao' || p.status === 'gozado') return null;
+    if (p.status === 'vencido') return { label:'Prazo vencido — pago em dobro', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' };
+    var dias = Math.round((new Date(p.concessivoFim) - new Date(hoje)) / 86400000);
+    if (dias < 0)   return { label:'Prazo expirado', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' };
+    if (dias < 60)  return { label:'Crítico — ' + dias + 'd restantes', cor:'#c62828', bg:'#ffebee', ms:'error' };
+    if (dias < 90)  return { label:'Urgente — ' + dias + 'd restantes', cor:'#e65100', bg:'#fff3e0', ms:'warning' };
+    if (dias <= 180)return { label:'Atenção — ' + dias + 'd restantes', cor:'#f9a825', bg:'#fffde7', ms:'info' };
+    return null;
   }
+
+  function _acoesFeriasBtns(f, isSuperAdmin) {
+    var acoes = '';
+    var fid = _esc(f.id);
+    var ini = _esc(f.dataInicio||f.inicio||'');
+    var fim = _esc(f.dataFim||f.fim||'');
+    var hoje = new Date().toISOString().slice(0,10);
+    var naoIniciou = !ini || ini > hoje;
+    if (f.status === 'pendente') {
+      acoes += '<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-apr-fer-'+fid+'" onclick="RhUI.aprovarFerias(\''+fid+'\')">Aprovar</button>';
+      acoes += '<button class="btn btn-error btn-sm" style="margin-right:4px;" id="rh-btn-rec-fer-'+fid+'" onclick="RhUI.recusarFerias(\''+fid+'\')">Recusar</button>';
+      acoes += '<button class="btn btn-ghost btn-sm" style="margin-right:4px;" id="rh-btn-edit-fer-'+fid+'" onclick="RhUI.abrirFormEditarFerias(\''+fid+'\',\''+ini+'\',\''+fim+'\')"><span class="ms ms-sm">edit</span> Editar</button>';
+      if (naoIniciou) acoes += '<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+fid+'" onclick="RhUI.cancelarFerias(\''+fid+'\')">Cancelar</button>';
+    }
+    if (f.status === 'aprovado') {
+      var tot = f.totalDias || (ini&&fim ? Math.round((new Date(f.dataFim||f.fim)-new Date(f.dataInicio||f.inicio))/86400000)+1 : 0);
+      acoes += '<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+fid+'" onclick="RhUI.abrirFormAcordoFerias(\''+fid+'\',\''+ini+'\',\''+fim+'\','+tot+')"><span class="ms ms-sm">handshake</span> Acordo</button>';
+      acoes += '<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-conc-fer-'+fid+'" onclick="RhUI.concluirFerias(\''+fid+'\')"><span class="ms ms-sm">check_circle</span> Concluir</button>';
+      if (naoIniciou) acoes += '<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+fid+'" onclick="RhUI.cancelarFerias(\''+fid+'\')">Cancelar</button>';
+    }
+    if (isSuperAdmin) acoes += '<button class="btn btn-error btn-sm" id="rh-btn-del-fer-'+fid+'" onclick="RhUI.excluirFerias(\''+fid+'\')" title="Excluir (superadmin)"><span class="ms ms-sm">delete_forever</span></button>';
+    return acoes;
+  }
+
+  function _tipoBadgeFer(f) {
+    var isAcordo = f.tipo === 'nao_oficial';
+    return isAcordo
+      ? '<span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px;">Acordo</span>'
+      : '<span style="background:var(--surface2);color:var(--text2);font-size:10px;border-radius:4px;padding:2px 6px;">Oficial</span>';
+  }
+
+  function _acordoHtml(f) {
+    if (!f.acordo) return '—';
+    var txt = f.acordo.diasEfetivosGozados ? f.acordo.diasEfetivosGozados + 'd efetivos' : '';
+    if (f.acordo.observacoes) txt += (txt ? ' · ' : '') + _esc(String(f.acordo.observacoes).slice(0,45));
+    return '<span style="color:#8b5cf6;font-size:11px;">' + (txt||'Registrado') + '</span>';
+  }
+
+  function _togglePeriodoFerias(num) {
+    var row  = document.getElementById('rh-per-exp-' + num);
+    var chev = document.getElementById('rh-per-chev-' + num);
+    if (!row) return;
+    var open = row.style.display === 'table-row';
+    row.style.display = open ? 'none' : 'table-row';
+    if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+  }
+
+  function _detFerToggle(expId, chevId) {
+    var exp  = document.getElementById(expId);
+    var chev = document.getElementById(chevId);
+    if (!exp) return;
+    var open = exp.style.display !== 'none' && exp.style.display !== '';
+    exp.style.display  = open ? 'none' : 'block';
+    if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+  }
+
+  function _detFerVerMais(btn) {
+    var extras = document.getElementById('rh-det-fer-extras');
+    if (extras) extras.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+  }
+
+  // ─── FÉRIAS — tabela unificada (períodos + registros expansíveis) ──
+  function carregarFeriasUnificado() {
+    var el = document.getElementById('rh-ferias-unificado');
+    if (!el) return;
+    el.innerHTML = _empty('Carregando…');
+    var colabId      = (document.getElementById('rh-per-colab')||{}).value || '';
+    var statusFiltro = (document.getElementById('rh-fer-filtro')||{}).value || '';
+    var _boot        = App.getBoot && App.getBoot();
+    var _isAdmin     = _boot && (_boot.usuarioPapel === 'superadmin' || _boot.usuarioPapel === 'admin' || _boot.usuarioPapel === 'rh');
+    var _isSuperAdmin= _boot && _boot.usuarioPapel === 'superadmin';
+
+    // ── Modo "todos": lista plana ──
+    if (!colabId) {
+      GAS.rh.listarFerias(null, function(resp) {
+        var lista = (resp && resp.ok) ? (resp.data || []) : [];
+        if (statusFiltro) lista = lista.filter(function(f){ return f.status === statusFiltro; });
+        lista.sort(function(a,b){ return (b.dataInicio||b.inicio||'').localeCompare(a.dataInicio||a.inicio||''); });
+        if (!lista.length) { el.innerHTML = _empty('Nenhuma solicitação de férias.'); return; }
+        el.innerHTML = '<table class="tabela"><thead><tr>' +
+          '<th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Tipo</th><th>Acordo</th><th>Status</th><th>Ações</th>' +
+          '</tr></thead><tbody>' +
+          lista.map(function(f) {
+            var diasInfo = f.totalDias || '—';
+            if (f.tipo === 'nao_oficial' && f.diasGozados) diasInfo += ' <span style="font-size:10px;color:var(--text2);">('+f.diasGozados+'g)</span>';
+            return '<tr>' +
+              '<td>' + _esc(f.nomeColaborador||f.idColaborador||'—') + '</td>' +
+              '<td>' + _fmtData(f.dataInicio||f.inicio) + '</td>' +
+              '<td>' + _fmtData(f.dataFim||f.fim) + '</td>' +
+              '<td>' + diasInfo + '</td>' +
+              '<td>' + _tipoBadgeFer(f) + '</td>' +
+              '<td>' + _acordoHtml(f) + '</td>' +
+              '<td>' + _badge(f.status||'') + '</td>' +
+              '<td>' + _acoesFeriasBtns(f, _isSuperAdmin) + '</td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
+      }, function(e){ el.innerHTML = _empty('Erro: '+(e.message||e)); });
+      return;
+    }
+
+    // ── Modo "colaborador": períodos com expand ──
+    var _periodos = null, _ferias = null;
+
+    function _renderUnificado() {
+      if (_periodos === null || _ferias === null) return;
+      if (!_periodos || !_periodos.periodos) {
+        el.innerHTML = _empty((_periodos && _periodos.aviso) ? _periodos.aviso : 'Erro ao carregar períodos.');
+        return;
+      }
+      var feriasById = {};
+      _ferias.forEach(function(f){ feriasById[f.id] = f; });
+
+      var hoje = new Date().toISOString().slice(0,10);
+      var SL = { em_aquisicao:'Em aquisição', em_concessao:'Em concessão', gozado:'Gozado', vencido:'Vencido' };
+      var SC = { em_aquisicao:'badge-info', em_concessao:'badge-warning', gozado:'badge-success', vencido:'badge-error' };
+      var idS = JSON.stringify(colabId).replace(/"/g,"'");
+
+      var rows = '';
+      _periodos.periodos.slice().reverse().forEach(function(p) {
+        var cls    = SC[p.status] || 'badge-muted';
+        var lbl    = SL[p.status] || p.status;
+        var saldoStr = p.saldo > 0
+          ? '<strong style="color:var(--warning,#e65100)">' + p.saldo + 'd</strong>'
+          : '<strong style="color:var(--success,#2e7d32)">0d</strong>';
+        var urg    = _urgenciaFeriasInfo(p, hoje);
+        var urgStr = urg
+          ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:'+urg.cor+';background:'+urg.bg+';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:'+urg.cor+';">'+urg.ms+'</span>'+escaparHtml(urg.label)+'</span>'
+          : '<span style="font-size:11px;color:var(--muted);">—</span>';
+        var acaoBtn = (p.saldo > 0 && (p.status === 'em_concessao' || p.status === 'vencido'))
+          ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias('+idS+')" title="Solicitar '+p.saldo+'d do período '+p.numero+'"><span class="ms ms-sm">beach_access</span> Solicitar</button>'
+          : '';
+
+        // Férias do período, aplicando filtro de status se houver
+        var ferDoPeriodo = (p.ferias || []).map(function(pf){ return feriasById[pf.id] || pf; });
+        if (statusFiltro) ferDoPeriodo = ferDoPeriodo.filter(function(f){ return f.status === statusFiltro; });
+        var hasFer = ferDoPeriodo.length > 0;
+
+        var rowBg = (urg && urg.cor === '#7b1fa2') ? 'background:' + urg.bg + ';' : '';
+        var chevron = '<span id="rh-per-chev-'+p.numero+'" class="ms ms-sm" style="font-size:14px;transition:transform .2s;color:var(--muted);">' + (hasFer ? 'chevron_right' : 'remove') + '</span>';
+
+        rows += '<tr style="' + rowBg + (hasFer ? 'cursor:pointer;' : '') + '"' +
+          (hasFer ? ' onclick="RhUI._togglePeriodoFerias(' + p.numero + ')"' : '') + '>' +
+          '<td style="white-space:nowrap;">' + chevron + ' ' + p.numero + '</td>' +
+          '<td>' + _fmtData(p.aquisitivoInicio) + ' – ' + _fmtData(p.aquisitivoFim) + '</td>' +
+          '<td>' + _fmtData(p.concessivoInicio) + ' – ' + _fmtData(p.concessivoFim) + '</td>' +
+          '<td>' + p.diasDireito + 'd</td>' +
+          '<td>' + (p.diasGozados||0) + 'd</td>' +
+          '<td>' + saldoStr + '</td>' +
+          '<td><span class="badge ' + cls + '">' + lbl + '</span></td>' +
+          '<td>' + urgStr + '</td>' +
+          '<td>' + acaoBtn + '</td>' +
+        '</tr>';
+
+        // Linha expansível com as férias do período
+        if (hasFer) {
+          var subHead = '<thead><tr style="font-size:10px;text-transform:uppercase;color:var(--muted);">' +
+            '<th style="padding:5px 8px;">Início</th><th style="padding:5px 8px;">Fim</th>' +
+            '<th style="padding:5px 8px;">Dias</th><th style="padding:5px 8px;">Tipo</th>' +
+            '<th style="padding:5px 8px;">Acordo</th><th style="padding:5px 8px;">Status</th>' +
+            '<th style="padding:5px 8px;">Ações</th>' +
+          '</tr></thead>';
+          var subRows = ferDoPeriodo.map(function(f) {
+            var diasInfo = f.totalDias || '—';
+            if (f.tipo === 'nao_oficial' && f.diasGozados) diasInfo += ' <span style="font-size:10px;color:var(--text2);">('+f.diasGozados+'g)</span>';
+            return '<tr style="font-size:12px;">' +
+              '<td style="padding:5px 8px;">' + _fmtData(f.dataInicio||f.inicio) + '</td>' +
+              '<td style="padding:5px 8px;">' + _fmtData(f.dataFim||f.fim) + '</td>' +
+              '<td style="padding:5px 8px;">' + diasInfo + '</td>' +
+              '<td style="padding:5px 8px;">' + _tipoBadgeFer(f) + '</td>' +
+              '<td style="padding:5px 8px;">' + _acordoHtml(f) + '</td>' +
+              '<td style="padding:5px 8px;">' + _badge(f.status||'') + '</td>' +
+              '<td style="padding:5px 8px;">' + _acoesFeriasBtns(f, _isSuperAdmin) + '</td>' +
+            '</tr>';
+          }).join('');
+          rows += '<tr id="rh-per-exp-' + p.numero + '" style="display:none;">' +
+            '<td colspan="9" style="padding:0;background:var(--surface2);border-bottom:2px solid var(--border);">' +
+              '<div style="padding:4px 12px 10px;">' +
+                '<table style="width:100%;border-collapse:collapse;">' + subHead + '<tbody>' + subRows + '</tbody></table>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }
+      });
+
+      el.innerHTML = '<table class="tabela"><thead><tr>' +
+        '<th>#</th><th>Período Aquisitivo</th><th>Janela Concessiva</th>' +
+        '<th>Direito</th><th>Gozado</th><th>Saldo</th><th>Status</th><th>Urgência</th><th></th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+
+    GAS.rh.resumoFeriasColaborador(colabId, function(r) {
+      _periodos = (r && r.ok && r.data) ? r.data : false;
+      _renderUnificado();
+    }, function() { _periodos = false; _renderUnificado(); });
+
+    GAS.rh.listarFerias(colabId, function(r) {
+      _ferias = (r && r.ok) ? (r.data || []) : [];
+      _renderUnificado();
+    }, function() { _ferias = []; _renderUnificado(); });
+  }
+
+  function carregarFerias()         { carregarFeriasUnificado(); }
+  function carregarPeriodosFerias() { carregarFeriasUnificado(); }
 
   function excluirFerias(id) {
     _abrirModalConfirmar({
@@ -39825,6 +40042,10 @@ var RhUI = (function() {
     abrirFormAcordoFerias:abrirFormAcordoFerias, _acordoCalcDias:_acordoCalcDias,
     _acordoCalcSaldo:_acordoCalcSaldo, _confirmarAcordoFerias:_confirmarAcordoFerias,
     carregarPeriodosFerias:carregarPeriodosFerias,
+    carregarFeriasUnificado:carregarFeriasUnificado,
+    _togglePeriodoFerias:_togglePeriodoFerias,
+    _detFerToggle:_detFerToggle,
+    _detFerVerMais:_detFerVerMais,
     carregarAlertasFerias:carregarAlertasFerias,
     _ferSecToggleTipo:_ferSecToggleTipo, _ferSecCalcSaldo:_ferSecCalcSaldo, _enviarFeriasSec:_enviarFeriasSec,
     _evSecAtualizarCampos:_evSecAtualizarCampos, _salvarEventoSec:_salvarEventoSec,

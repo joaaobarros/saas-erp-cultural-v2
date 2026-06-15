@@ -1688,16 +1688,17 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ## HANDOFF ANTERIOR — SESSÃO 53 (2026-06-15) → SESSÃO 54
 
-### Estado: Deploy @942 · UX: painel colaborador — seção Férias com períodos aquisitivos/concessivos
+### Estado: Deploy @943 · UX: tabela unificada de férias + painel colaborador redesenhado
 
 ### O que foi feito nesta sessão (s53)
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| @942 | UX Férias painel | `_abrirDetalhesColab`: `GAS.rh.listarFerias` substituído por `GAS.rh.resumoFeriasColaborador`; renderização por período aquisitivo com badge status, datas aquis./concessivas, barra de progresso saldo, acordos negociados |
+| @943 | UX Férias unificada | Aba RH/Férias: dois cards fundidos em um; tabela de períodos com linhas expansíveis por chevron; registros de férias na sub-tabela; helpers `_urgenciaFeriasInfo`, `_acoesFeriasBtns`, `_tipoBadgeFer`, `_acordoHtml`, `_togglePeriodoFerias` |
+| @943 | UX Painel colaborador | Seção Férias com cards coloridos por status (borda esquerda), expand/collapse, max 4 + "Ver mais", terminologia clara (Prazo legal expirado / Disponível para gozo / Realizada), `_detFerToggle`, `_detFerVerMais` |
 
 ### Pendentes / próxima ação
-- Testar no browser: abrir painel de qualquer colaborador → seção Férias deve mostrar "Nº período · badge status · datas aquisitivas + concessivas · barra saldo · férias registradas"
+- Testar no browser: (1) Aba RH → Férias → selecionar colaborador → períodos com chevron; clicar no período → sub-tabela de férias; (2) Painel colaborador → Férias → cards coloridos por status, collapse/expand, "Ver mais"
 
 ---
 
