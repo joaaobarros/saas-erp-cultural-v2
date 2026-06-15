@@ -1602,7 +1602,34 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 53 (2026-06-14) → SESSÃO 54
+## HANDOFF ATUAL — SESSÃO 54 (2026-06-15) → SESSÃO 55
+
+### Estado: Deploy @941 · Feat: Férias — ordem invertida, dropdown compartilhado, exclusão superadmin
+
+### O que foi feito nesta sessão (s54)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @941 | Feat: Férias UX + exclusão superadmin | Tabelas do painel de Férias reordenadas: "Períodos Aquisitivos e Concessivos" sobe para topo, "Férias" desce para baixo. Dropdown `rh-per-colab` agora compartilhado — `onchange` dispara `carregarPeriodosFerias()` + `carregarFerias()`; `carregarFerias()` lê o colaborador selecionado e passa para `GAS.rh.listarFerias(colabId)`. Opção vazia agora é "Todos os colaboradores" (mostra todos sem filtro). Exclusão de registro: `excluirFerias` adicionado em `colaborador_repository.gs` (remove do JSON), `pessoas_engine.gs` (valida existência + auditoria `FERIAS_EXCLUIDA`) e `pessoas_controller.gs` (guarda exclusiva: `nivel !== 'superadmin'` lança erro). Frontend: botão `delete_forever` renderizado na linha apenas quando `usuarioPapel === 'superadmin'`; usa `_abrirModalConfirmar` (sem `confirm()` nativo); `GAS.rh.excluirFerias` e `RhUI.excluirFerias` expostos. |
+
+### Checklist de auditoria
+```
+[x] prompt()/confirm()/alert() — exclusão usa _abrirModalConfirmar; zero nativos
+[x] GAS.* namespace — GAS.rh.excluirFerias adicionado
+[x] FsmGuardian — não aplicável nesta alteração
+[x] Modais — usa _abrirModalConfirmar padrão do sistema
+[x] Datas — sem alterações de formato
+[x] BtnGuard — botão delete usa id válido (rh-btn-del-fer-{id})
+```
+
+### Pendentes / próxima ação
+- Testar no browser: RH → Férias → selecionar colaborador → ambas as tabelas filtram; selecionar "Todos os colaboradores" → ambas voltam ao geral
+- Testar exclusão como superadmin: botão delete_forever aparece → modal confirma → registro sumiu → Toast sucesso
+- Bugs auditoria pendentes: TAR-04, HUB-13, FIN-06
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 53 (2026-06-14) → SESSÃO 54
 
 ### Estado: Deploy @910 · Fix: FsmGuardian.validarTransicao inexistente → assertValida em 6 engines
 

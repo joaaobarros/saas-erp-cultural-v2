@@ -283,6 +283,13 @@ var ColaboradorRepository = (function () {
     return { id: dados.id, isNovo: isNovo };
   }
 
+  function excluirFerias(id) {
+    modifyJSON(_ARQUIVO_FERIAS, function(lista) {
+      return lista.filter(function(f) { return f.id !== id; });
+    });
+    return { ok: true };
+  }
+
   // ── Escalas ───────────────────────────────────────────────────────
 
   function listarEscalas(filtros) {
@@ -619,6 +626,7 @@ var ColaboradorRepository = (function () {
     listarFerias:         listarFerias,
     buscarFeriasPorId:    buscarFeriasPorId,
     salvarFerias:         salvarFerias,
+    excluirFerias:        excluirFerias,
 
     // Escalas
     listarEscalas:        listarEscalas,

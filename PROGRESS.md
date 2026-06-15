@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s75b)**: **Fix — Férias: período matching usando janela concessiva disjunta (elimina dupla contagem); alertasFeriasAtivos usa saldo real via resumoFeriasPorPeriodo; botão "Solicitar" na tabela de períodos para em_concessao/vencido com saldo > 0 — Deploy @940.**
+**Fase atual (s76)**: **Feat — Férias: inversão de ordem das tabelas (Períodos Aquisitivos primeiro), dropdown de colaborador compartilhado entre as duas tabelas, exclusão de registro de férias restrita a superadmin — Deploy @941.**
+
+**Fase anterior (s75b)**: **Fix — Férias: período matching usando janela concessiva disjunta (elimina dupla contagem); alertasFeriasAtivos usa saldo real via resumoFeriasPorPeriodo; botão "Solicitar" na tabela de períodos para em_concessao/vencido com saldo > 0 — Deploy @940.**
 
 **Fase anterior (s75)**: **Fix+Feat — Férias: bug crítico `hoje` undefined em `resumoFeriasPorPeriodo`, botão Concluir direto, edição de datas, cancelamento restrito, notificações por email, auto-conclusão por trigger — Deploy @938.** `pessoas_engine.gs`: corrigido `ReferenceError: hoje is not defined` em `resumoFeriasPorPeriodo` (causava falha em toda a seção de Períodos para colaboradores com férias aprovadas); adicionadas funções de email `_emailsRH/_enviarEmailFerias/_notificarRH*/_notificarColab*/_notificarMudanca*`; nova função `editarFerias` (valida status=pendente + início futuro); nova `autoConcluirFeriasVencidas` + `_listarOrgIds`. `event_handler_registry.gs`: `autoConcluirFeriasVencidas()` global + `criarTriggerAutoConcluirFerias()` (trigger diário 12h). `pessoas_controller.gs`: `ctrl_rh_editar_ferias`. `index.html`: lista ordenada mais recente primeiro; botões Concluir/Editar/Cancelar com restrições; GAS.rh.editarFerias; modal de edição de datas; fix setor com label legível na rescisão. **Pós-deploy: executar `criarTriggerAutoConcluirFerias()` uma vez no GAS Editor.**
 

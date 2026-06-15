@@ -616,6 +616,14 @@ var PessoasEngine = (function () {
     return { ok: true, id: id };
   }
 
+  function excluirFerias(id, emailOperador) {
+    var ferias = ColaboradorRepository.buscarFeriasPorId(id);
+    if (!ferias) throw new Error('Férias não encontradas: ' + id);
+    ColaboradorRepository.excluirFerias(id);
+    _audit('FERIAS_EXCLUIDA', { id: id, idColaborador: ferias.idColaborador || '', operador: emailOperador || '' });
+    return { ok: true, id: id };
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // ESCALAS
   // ──────────────────────────────────────────────────────────────────
@@ -1512,6 +1520,7 @@ var PessoasEngine = (function () {
     resumoFeriasPorPeriodo:        resumoFeriasPorPeriodo,
     registrarAcordoFerias:         registrarAcordoFerias,
     editarFerias:                  editarFerias,
+    excluirFerias:                 excluirFerias,
     autoConcluirFeriasVencidas:    autoConcluirFeriasVencidas,
 
     // Escalas

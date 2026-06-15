@@ -556,6 +556,17 @@ function ctrl_rh_editar_ferias(id, dados) {
   }, 'ctrl_rh_editar_ferias');
 }
 
+function ctrl_rh_excluir_ferias(id) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (nivel !== 'superadmin')
+      throw new Error('Apenas superadmin pode excluir registros de férias.');
+    if (!id) throw new Error('ID é obrigatório.');
+    return PessoasEngine.excluirFerias(id, ctx.email);
+  }, 'ctrl_rh_excluir_ferias');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // ESCALAS
 // ═══════════════════════════════════════════════════════════════════
