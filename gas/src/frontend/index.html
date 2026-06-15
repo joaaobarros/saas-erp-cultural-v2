@@ -16783,7 +16783,7 @@ var ReservasCarroUI = (function() {
         '</div>' +
         '<div style="flex:1;min-width:140px;">' +
           '<div style="font-size:13px;font-weight:500;" title="' + escaparHtml(rc.solicitante||'') + '">' + escaparHtml(rc.solicitanteNome || rc.solicitante || '—') + '</div>' +
-          (rc.solicitanteSetor ? '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.solicitanteSetor) + '</div>' : '') +
+          (rc.solicitanteSetor ? '<div style="font-size:11px;">' + _badgeSetor(rc.solicitanteSetor) + '</div>' : '') +
           '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + saida + ' <span style="color:var(--muted)">→</span> ' + chegada +
             (rota.mapaUrl ? ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" style="color:var(--primario);" title="Ver mapa"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">map</span></a>' : '') +
           '</div>' +
@@ -36234,9 +36234,10 @@ var PontoUI = (function() {
     }
 
     var mesNome = new Date(periodo.ano||new Date().getFullYear(), (periodo.mes||new Date().getMonth()+1)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    var mesNomeFiltro = setorFiltro ? mesNome + ' · ' + _badgeSetor(setorFiltro) : mesNome;
     var colsN = setorFiltro ? 8 : 9;
 
-    var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">'+mesNome+(setorFiltro?' · '+_esc(_labelSetor(setorFiltro)||setorFiltro):'')+'</h4>'+
+    var html = '<div><h4 style="margin:0 0 10px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;">'+mesNomeFiltro+'</h4>'+
       '<div class="stats-grid" style="margin-bottom:16px;">'+
       _metCard('Ativos', rsm.totalAtivos != null ? rsm.totalAtivos : '—', 'group')+
       _metCard('Cumpriram carga', (rsm.cumpriramCarga||0)+' ('+(rsm.pctCumprimento||0)+'%)', 'check_circle', (rsm.pctCumprimento||0)>=80?'sucesso':'alerta')+
@@ -36256,7 +36257,7 @@ var PontoUI = (function() {
       porSetor.forEach(function(s, i) {
         var bg = i%2===0?'':'background:var(--surface2,#fafafa);';
         html += '<tr style="'+bg+';cursor:pointer;" onclick="document.getElementById(\'ponto-metricas-setor\').value='+JSON.stringify(s.setor).replace(/"/g,"'")+';PontoUI.filtrarMetricasSetor();">'+
-          '<td style="padding:5px 8px;font-weight:500;">'+_esc(_labelSetor(s.setor)||s.setor)+'</td>'+
+          '<td style="padding:5px 8px;font-weight:500;">'+_badgeSetor(s.setor)+'</td>'+
           '<td style="text-align:center;padding:5px 8px;">'+s.total+'</td>'+
           '<td style="text-align:center;padding:5px 8px;color:'+_cor(s.pctCumprimento>=80)+';font-weight:600;">'+s.pctCumprimento+'%</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(s.totalMinutosHM)+'</td>'+
@@ -36297,7 +36298,7 @@ var PontoUI = (function() {
         html += '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--erro,#c62828);border-radius:8px;padding:12px 14px;">'+
           '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;">'+
             '<strong style="font-size:13px;">'+_esc(_nomeExib(p))+'</strong>'+
-            '<span style="font-size:11px;color:var(--text2);white-space:nowrap;">'+_esc(_labelSetor(p.setor)||p.setor)+'</span></div>'+
+            _badgeSetor(p.setor)+'</div>'+
           '<div style="display:flex;flex-direction:column;gap:6px;">'+linhas.join('')+'</div></div>';
       });
       html += '</div>';
@@ -36350,7 +36351,7 @@ var PontoUI = (function() {
         var semReg = (p.diasTrabalhados||0) === 0;
         html += '<tr style="'+bg+';cursor:pointer;" onclick="PontoUI._toggleDrilldown(\''+pid+'\',\''+_esc(p.id)+'\','+colsN+')">'+
           '<td style="padding:5px 8px;font-weight:500;"><span class="ms" style="font-size:11px;vertical-align:-2px;color:var(--text2);">expand_more</span> '+_esc(_nomeExib(p))+'</td>'+
-          (!setorFiltro?'<td style="padding:5px 8px;font-size:11px;color:var(--text2);">'+_esc(_labelSetor(p.setor)||p.setor)+'</td>':'')+
+          (!setorFiltro?'<td style="padding:5px 8px;">'+_badgeSetor(p.setor)+'</td>':'')+
           '<td style="text-align:center;padding:5px 8px;white-space:nowrap;">'+p.horasSemanais+'h/sem'+_badgeRegime(p)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;">'+_esc(p.metaMensal)+'</td>'+
           '<td style="text-align:right;padding:5px 8px;'+(semReg?'color:var(--text2);':'font-weight:600;')+'">'+_esc(p.realizado)+'</td>'+
@@ -36648,7 +36649,7 @@ var RhUI = (function() {
         return '<tr>'+
           '<td style="padding:6px 4px 6px 8px;">'+_avatarMini(c)+'</td>'+
           '<td>'+nomeExib+'<br><span style="font-size:10px;color:var(--muted)">'+_esc(c.emailInstitucional||c.email||'')+'</span></td>'+
-          '<td>'+_esc(_labelSetor(c.setor)||'—')+'</td>'+
+          '<td>'+_badgeSetor(c.setor)+'</td>'+
           '<td>'+_esc(c.cargo||'—')+'</td>'+
           '<td>'+_badge(c.vinculo||c.tipoVinculo||'')+'</td>'+
           '<td>'+_fmtData(c.dataAdmissao)+'</td>'+
@@ -37028,7 +37029,7 @@ var RhUI = (function() {
           '</div>' +
         '</div>' +
         '<div class="grid-3" style="margin-bottom:20px;">' +
-          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(_labelSetor(c.setor)||'—') + '</p></div>' +
+          '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Setor</p><div style="margin:4px 0 0;">' + _badgeSetor(c.setor) + '</div></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Cargo</p><p style="margin:4px 0 0;font-size:13px;">' + _esc(c.cargo||'—') + '</p></div>' +
           '<div style="background:var(--surface2);border-radius:8px;padding:10px;"><p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">Admissão</p><p style="margin:4px 0 0;font-size:13px;">' + _fmtData(c.dataAdmissao) + '</p></div>' +
         '</div>' +
@@ -38330,7 +38331,7 @@ var RhUI = (function() {
     if (ev.novaCargaHoraria)
       parts.push('Carga: ' + _esc(ev.cargaAnterior != null ? ev.cargaAnterior + 'h' : '—') + ' → <strong>' + _esc(ev.novaCargaHoraria) + 'h</strong>');
     if (ev.novoSetor)
-      parts.push('Setor: ' + _esc(_labelSetor(ev.setorAnterior) || '—') + ' → <strong>' + _esc(_labelSetor(ev.novoSetor)) + '</strong>');
+      parts.push('Setor: ' + _badgeSetor(ev.setorAnterior) + ' → ' + _badgeSetor(ev.novoSetor));
     if ((ev.tipo === 'admissao' || ev.tipoEvento === 'admissao') && ev.dataAdmissao)
       parts.push('Admissão: <strong>' + _esc(_fmtData(ev.dataAdmissao)) + '</strong>');
     if ((ev.tipo === 'advertencia' || ev.tipoEvento === 'advertencia')) {
@@ -39178,7 +39179,7 @@ var RhUI = (function() {
           : (a.diasParaVencer||0) + 'd restantes';
         html += '<tr>'
           + '<td>' + escaparHtml(a.nome) + '</td>'
-          + '<td>' + escaparHtml(a.setor||'—') + '</td>'
+          + '<td>' + _badgeSetor(a.setor) + '</td>'
           + '<td>Período ' + a.periodoConcNum + '</td>'
           + '<td><strong>' + a.saldo + 'd</strong></td>'
           + '<td>' + fmtDataPtBR(a.concessivoFim) + '<br><small style="color:var(--text2);">' + diasStr + '</small></td>'
@@ -39654,7 +39655,7 @@ var RhUI = (function() {
       info.innerHTML = 'Admissão: <strong>' + (admISO ? fmtDataPtBR(admISO) : '—') + '</strong>'
         + ' · <strong>' + meses + ' meses</strong>'
         + ' · Cargo: ' + escaparHtml(c.cargo || '—')
-        + ' · Setor: ' + escaparHtml(_labelSetor(c.setor) || c.setor || '—');
+        + ' · Setor: ' + _badgeSetor(c.setor);
       info.style.display = '';
     }
 
@@ -40008,7 +40009,7 @@ var RhUI = (function() {
         html += '<div style="padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;"><span class="ms ms-sm">people</span> Custo por Colaborador</div>';
         html += '<div style="overflow-x:auto;"><table class="tabela-dados"><thead><tr><th>Colaborador</th><th>Vínculo</th><th>Setor</th><th>Salário Bruto</th><th>Custo Total Est.</th><th>Multiplicador</th></tr></thead><tbody>';
         d.itens.slice(0, 15).forEach(function(it) {
-          html += '<tr><td>' + _esc(it.nome) + '</td><td>' + _esc(it.vinculo) + '</td><td>' + _esc(it.setor) + '</td><td>R$&nbsp;' + _fmtMoeda(it.salarioBruto) + '</td><td style="font-weight:700;">R$&nbsp;' + _fmtMoeda(it.custoTotal) + '</td><td>' + (it.multiplicador || 0).toFixed(2) + 'x</td></tr>';
+          html += '<tr><td>' + _esc(it.nome) + '</td><td>' + _esc(it.vinculo) + '</td><td>' + _badgeSetor(it.setor) + '</td><td>R$&nbsp;' + _fmtMoeda(it.salarioBruto) + '</td><td style="font-weight:700;">R$&nbsp;' + _fmtMoeda(it.custoTotal) + '</td><td>' + (it.multiplicador || 0).toFixed(2) + 'x</td></tr>';
         });
         html += '</tbody></table></div></div>';
       }
@@ -40418,7 +40419,7 @@ var BiDemograficoUI = (function () {
         var adm = r.dataAdmissao ? fmtDataPtBR(String(r.dataAdmissao).slice(0,10)) : '—';
         return '<tr style="background:' + bg + ';">' +
           '<td style="padding:6px 10px;font-size:13px;font-weight:500;">' + _esc(r.nomeDisplay || r.nome || '—') + '</td>' +
-          '<td style="padding:6px 10px;font-size:12px;color:var(--text2);">' + _esc(_setorLabel(r.setor) || '—') + '</td>' +
+          '<td style="padding:6px 10px;">' + _badgeSetor(r.setor, _setorLabel(r.setor)) + '</td>' +
           '<td style="padding:6px 10px;font-size:12px;color:var(--text2);">' + _esc((r.cargo || '—') + (r.tipoVinculo ? ' · ' + _biLabel(r.tipoVinculo) : '')) + '</td>' +
           '<td style="padding:6px 10px;font-size:12px;color:var(--text2);">' + adm + '</td>' +
           '</tr>';

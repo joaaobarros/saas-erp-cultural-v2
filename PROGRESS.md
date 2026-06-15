@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s83c)**: **UX — Férias por Período: substituída tabela por cards colapsáveis idênticos ao painel colaborador.** `carregarFeriasUnificado` (modo com colaborador): cada período agora renderizado como card com borda colorida por status (igual ao `_renderPer` do painel); header colapsável com badge + botão Solicitar; expand mostra grid datas aquisitivo/concessivo + barra de progresso + descrição + cards OFICIAL (azul) / ACORDO INTERNO (roxo) com botões de ação. Remoção de `carregarPeriodosFerias` antiga (função duplicada morta com SC/SL).
+**Fase atual (s83d)**: **UX — Setor como badge visual em Ponto, RH e BI Demográfico — Deploy @961.** `index.html`: todas as ocorrências de `_esc(_labelSetor(x.setor)||...)` substituídas por `_badgeSetor(x.setor)` nos módulos PontoUI (métricas por setor, header filtrado, cards de desvio, tabela de colaboradores), RhUI (tabela Equipe, painel colaborador, histórico de eventos, alertas de férias, calc rescisão, custo por colaborador) e BiDemograficoUI (drill-down de colaboradores). Também adicionada variável `mesNomeFiltro` para exibir badge do setor no título do relatório de ponto.
+
+**Fase anterior (s83c)**: **UX — Férias por Período: substituída tabela por cards colapsáveis idênticos ao painel colaborador.** `carregarFeriasUnificado` (modo com colaborador): cada período agora renderizado como card com borda colorida por status (igual ao `_renderPer` do painel); header colapsável com badge + botão Solicitar; expand mostra grid datas aquisitivo/concessivo + barra de progresso + descrição + cards OFICIAL (azul) / ACORDO INTERNO (roxo) com botões de ação. Remoção de `carregarPeriodosFerias` antiga (função duplicada morta com SC/SL).
 
 **Fase anterior (s83b)**: **Feat — UX Home: datas comemorativas com partículas/animações, nomeApelido no boot e aniversariantes com setorLabel (commit de sincronização — já estava no GAS).**
 

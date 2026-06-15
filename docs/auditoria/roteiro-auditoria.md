@@ -470,7 +470,19 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 83c (2026-06-15) → SESSÃO 84
+## HANDOFF ATUAL — SESSÃO 83d (2026-06-15) → SESSÃO 84
+
+### Estado atual: Setor como badge visual em Ponto/RH/BI · Deploy @961
+
+### O que foi feito nesta sessão (s83d)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @961 | UX — Setor como badge visual (PontoUI, RhUI, BiDemograficoUI) | Todas as ocorrências de `_labelSetor` substituídas por `_badgeSetor` em: PontoUI métricas/header/desvios/tabela; RhUI lista equipe/painel/histórico/alertas férias/rescisão/custo; BiDemograficoUI drill-down. Novo `mesNomeFiltro` inclui badge setor no título do relatório. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 83c (2026-06-15) → SESSÃO 84
 
 ### Estado atual: Férias por Período — cards colapsáveis · Deploy @960
 
