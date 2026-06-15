@@ -470,7 +470,22 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 82 (2026-06-15) → SESSÃO 83
+## HANDOFF ATUAL — SESSÃO 82b (2026-06-15) → SESSÃO 83
+
+### Estado atual: Fix Férias — período vencido com retorno acordado · Deploy @956
+
+### O que foi feito nesta sessão (s82b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @956 | Fix — Vencido com retorno acordado: saldo não incorre em pagamento em dobro | Painel colaborador `_renderPer`: `temAcordoRetorno = p.ferias.some(f.acordo.diasEfetivosGozados > 0)`; override de `cfg.desc` + cor do saldo (roxo em vez de vermelho); barra mostra "X dias de retorno acordados — sem incidência de dobro". `carregarFeriasUnificado` expand: `diasRetorno` para férias oficiais com retorno antecipado; `diasSemCoberta = saldo - diasAcordados`; alerta vermelho só se `diasSemCoberta > 0`; banner roxo se saldo inteiramente coberto por acordo. |
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 82 (2026-06-15) → SESSÃO 83
 
 ### Estado atual: Aniversariantes corrigido + Banner boas-vindas contextual · Deploy @955
 

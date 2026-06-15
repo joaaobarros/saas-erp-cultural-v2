@@ -8210,16 +8210,17 @@ select.form-control { cursor: pointer; }
       <div id="view-dashboard" class="view">
         <div class="mod-header">
           <div>
-            <h2 style="margin:0;font-size:20px;font-weight:700;">Dashboard Executivo</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Visão unificada — operacional · financeiro · estratégico</p>
+            <h2 style="margin:0;font-size:20px;font-weight:700;">BI — Central de Inteligência</h2>
+            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Demográfico</p>
           </div>
           <button class="btn btn-secundario btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
         </div>
 
         <div class="tab-bar" style="margin-bottom:16px;">
-          <button class="tab-btn tab-ativa" onclick="DashboardUI.setTab('operacional',this)" data-bg-skip="1"><span class="ms ms-sm">bolt</span> Operacional</button>
-          <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> Financeiro</button>
-          <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> Estratégico</button>
+          <button class="tab-btn tab-ativa" onclick="DashboardUI.setTab('operacional',this)" data-bg-skip="1"><span class="ms ms-sm">bolt</span> BI Operacional</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> BI Financeiro</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> BI Estratégico</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('demografico',this)" data-bg-skip="1"><span class="ms ms-sm">person_search</span> BI Demográfico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1"><span class="ms ms-sm">smart_toy</span> Insights IA</button>
         </div>
 
@@ -8232,6 +8233,8 @@ select.form-control { cursor: pointer; }
         <div id="dash-tab-estrategico" class="oculto">
           <div id="dash-est-content"><p class="muted-text">⏳ Carregando…</p></div>
         </div>
+        <div id="dash-tab-demografico" class="oculto"></div>
+
         <div id="dash-tab-insights" class="oculto">
           <div class="filter-bar" style="margin-bottom:12px;">
             <label class="form-label" style="text-transform:none;margin:0;">Tipo:</label>
@@ -9336,7 +9339,7 @@ select.form-control { cursor: pointer; }
       <!-- ═══════════════════════════════════════════════════════ -->
       <!-- BI DEMOGRÁFICO (Equipe + Beneficiários)                 -->
       <!-- ═══════════════════════════════════════════════════════ -->
-      <div id="view-bi-demografico" class="view">
+      <div id="view-bi-demografico" style="display:none">
 
         <!-- Cabeçalho -->
         <div class="view-header">
@@ -34756,6 +34759,7 @@ Router.registrar('escuta', 'Escuta Institucional', EscutaUI.aoAbrir);
 var DashboardUI = (function() {
   var _carregado = false;
   var _tabAtual  = 'operacional';
+  var _demMontado = false;
 
   function aoAbrir() {
     if (!_carregado) atualizar();
@@ -34766,12 +34770,13 @@ var DashboardUI = (function() {
     if (tab === 'operacional' || !_carregado) _carregarOperacional();
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
+    if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.atualizar(null); }
     _carregado = true;
   }
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['operacional','financeiro','estrategico','insights'].forEach(function(t) {
+    ['operacional','financeiro','estrategico','demografico','insights'].forEach(function(t) {
       var el = document.getElementById('dash-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -34780,6 +34785,18 @@ var DashboardUI = (function() {
     if (tab === 'operacional') _carregarOperacional();
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
+    if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.aoAbrir(); }
+  }
+
+  // Move o conteúdo de #view-bi-demografico para #dash-tab-demografico (primeira vez)
+  function _montarDemografico() {
+    if (_demMontado) return;
+    var src = document.getElementById('view-bi-demografico');
+    var dst = document.getElementById('dash-tab-demografico');
+    if (src && dst) {
+      while (src.firstChild) dst.appendChild(src.firstChild);
+      _demMontado = true;
+    }
   }
 
   function _carregarOperacional() {
@@ -34789,11 +34806,11 @@ var DashboardUI = (function() {
       if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar.</p>'; return; }
       var d = r.data;
       var cards = [];
-      if (d.tarefas) cards.push(_statCard('Tarefas Atrasadas', d.tarefas.atrasadas, d.tarefas.atrasadas>0?'var(--danger)':null, 'de ' + d.tarefas.total + ' total'));
-      if (d.espacos) cards.push(_statCard('Reservas Hoje', d.espacos.reservasHoje, null, d.espacos.reservasAtivas + ' em uso agora'));
-      if (d.balcao)  cards.push(_statCard('Balcão Aberto', d.balcao.abertas, d.balcao.atrasadas>0?'var(--warning)':null, d.balcao.atrasadas + ' com prazo vencido'));
-      if (d.alertas) cards.push(_statCard('Alertas Não Lidos', d.alertas.naoLidos, d.alertas.naoLidos>5?'var(--danger)':d.alertas.naoLidos>0?'var(--warning)':null, ''));
-      if (d.chaves)  cards.push(_statCard('Chaves Atrasadas', d.chaves.atrasadas, d.chaves.atrasadas>0?'var(--danger)':null, ''));
+      if (d.tarefas) cards.push(_statCard('Tarefas Atrasadas', d.tarefas.atrasadas, d.tarefas.atrasadas>0?'var(--danger)':null, 'de ' + d.tarefas.total + ' total', "Router.navegar('taskhub')"));
+      if (d.espacos) cards.push(_statCard('Reservas Hoje', d.espacos.reservasHoje, null, d.espacos.reservasAtivas + ' em uso agora', "Router.navegar('espacos')"));
+      if (d.balcao)  cards.push(_statCard('Balcão Aberto', d.balcao.abertas, d.balcao.atrasadas>0?'var(--warning)':null, d.balcao.atrasadas + ' com prazo vencido', "Router.navegar('balcao')"));
+      if (d.alertas) cards.push(_statCard('Alertas Não Lidos', d.alertas.naoLidos, d.alertas.naoLidos>5?'var(--danger)':d.alertas.naoLidos>0?'var(--warning)':null, '', "Router.navegar('home')"));
+      if (d.chaves)  cards.push(_statCard('Chaves Atrasadas', d.chaves.atrasadas, d.chaves.atrasadas>0?'var(--danger)':null, '', "Router.navegar('espacos')"));
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>' +
         '<p style="font-size:12px;color:var(--text2);">Atualizado em ' + new Date().toLocaleTimeString('pt-BR') + '</p>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel operacional.</p>'; });
@@ -34807,14 +34824,14 @@ var DashboardUI = (function() {
       var d = r.data;
       var cards = [];
       if (d.contratos) {
-        cards.push(_statCard('Contratos Ativos', d.contratos.ativos, null, 'de ' + d.contratos.total + ' total'));
+        cards.push(_statCard('Contratos Ativos', d.contratos.ativos, null, 'de ' + d.contratos.total + ' total', "Router.navegar('financeiro')"));
         var pct = d.contratos.pctExecucao||0;
         var cor = pct>90?'var(--success)':pct<30?'var(--danger)':'var(--warning)';
-        cards.push(_statCard('Execução Orçamentária', pct + '%', cor, 'R$ ' + _fmtMoeda(d.contratos.totalExecutado) + ' / ' + _fmtMoeda(d.contratos.totalPrevisto)));
+        cards.push(_statCard('Execução Orçamentária', pct + '%', cor, 'R$ ' + _fmtMoeda(d.contratos.totalExecutado) + ' / ' + _fmtMoeda(d.contratos.totalPrevisto), "Router.navegar('financeiro')"));
       }
-      if (d.remanejamentos) cards.push(_statCard('Remanejamentos Pendentes', d.remanejamentos.pendentes, d.remanejamentos.pendentes>0?'var(--warning)':null, ''));
-      if (d.aditivos)       cards.push(_statCard('Aditivos em Análise', d.aditivos.emAnalise, d.aditivos.emAnalise>0?'var(--warning)':null, ''));
-      if (d.fontes)         cards.push(_statCard('Fontes Ativas', d.fontes.ativas, null, 'R$ ' + _fmtMoeda(d.fontes.totalValor)));
+      if (d.remanejamentos) cards.push(_statCard('Remanejamentos Pendentes', d.remanejamentos.pendentes, d.remanejamentos.pendentes>0?'var(--warning)':null, '', "Router.navegar('financeiro')"));
+      if (d.aditivos)       cards.push(_statCard('Aditivos em Análise', d.aditivos.emAnalise, d.aditivos.emAnalise>0?'var(--warning)':null, '', "Router.navegar('financeiro')"));
+      if (d.fontes)         cards.push(_statCard('Fontes Ativas', d.fontes.ativas, null, 'R$ ' + _fmtMoeda(d.fontes.totalValor), "Router.navegar('financeiro')"));
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel financeiro.</p>'; });
   }
@@ -34829,22 +34846,22 @@ var DashboardUI = (function() {
       if (d.kpis) {
         var kpis = d.kpis;
         html += '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' +
-          _statCard('Ocupação Espaços', Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%', null, '') +
-          _statCard('Ações no Prazo', Math.round((kpis.taxaConclusaoPrazo||0)*100)+'%', null, '') +
-          _statCard('Exec. Orçamentária', Math.round((kpis.execucaoOrcamentaria||0)*100)+'%', null, '') +
-          _statCard('NPS Público', kpis.npsPublico != null ? kpis.npsPublico : 'N/A', null, '') +
+          _statCard('Ocupação Espaços', Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%', null, '', "Router.navegar('espacos')") +
+          _statCard('Ações no Prazo', Math.round((kpis.taxaConclusaoPrazo||0)*100)+'%', null, '', "Router.navegar('acoes')") +
+          _statCard('Exec. Orçamentária', Math.round((kpis.execucaoOrcamentaria||0)*100)+'%', null, '', "Router.navegar('financeiro')") +
+          _statCard('NPS Público', kpis.npsPublico != null ? kpis.npsPublico : 'N/A', null, '', "Router.navegar('escuta')") +
         '</div>';
       }
       if (d.riscos && d.riscos.length) {
-        html += '<h4 style="font-size:14px;margin:0 0 8px;color:var(--text2);">⚠️ RISCOS DO MÊS</h4>';
+        html += '<h4 style="font-size:14px;margin:0 0 8px;color:var(--text2);">RISCOS DO MÊS</h4>';
         html += d.riscos.slice(0,4).map(function(r) {
           var cor = r.severidade==='URGENTE'?'var(--danger)':r.severidade==='ATENÇÃO'?'var(--warning)':'var(--info)';
-          return '<div style="background:var(--surface);border-left:3px solid ' + cor + ';border-radius:4px;padding:8px 12px;margin-bottom:6px;font-size:13px;">' +
+          return '<div style="background:var(--surface);border-left:3px solid ' + cor + ';border-radius:4px;padding:8px 12px;margin-bottom:6px;font-size:13px;cursor:pointer;" onclick="Router.navegar(\'estrategia\')">' +
             '<span style="font-weight:600;color:' + cor + ';">' + (r.severidade||'') + '</span> · ' + _esc(r.descricao||r.titulo||'') + '</div>';
         }).join('');
       }
       if (d.clima) {
-        html += '<p style="font-size:13px;margin-top:12px;">🌡️ Última pesquisa de clima: <strong>' + (d.clima.mediaPonderada||'N/A') + '/5</strong> (confiança ' + (d.clima.indiceConfianca||0) + '%)</p>';
+        html += '<p style="font-size:13px;margin-top:12px;cursor:pointer;" onclick="Router.navegar(\'escuta\')">Última pesquisa de clima: <strong>' + (d.clima.mediaPonderada||'N/A') + '/5</strong> (confiança ' + (d.clima.indiceConfianca||0) + '%)</p>';
       }
       if (el) el.innerHTML = html || '<p class="muted-text">Carregando dados estratégicos…</p>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel estratégico.</p>'; });
@@ -34873,8 +34890,10 @@ var DashboardUI = (function() {
     }, function(e){ if(done) done(); if(el) el.innerHTML = '<p class="muted-text">Erro: ' + _esc((e&&e.message)||e) + '</p>'; });
   }
 
-  function _statCard(label, valor, cor, sub) {
-    return '<div class="stat-card" style="padding:14px 18px;min-width:140px;">' +
+  // onclick opcional torna o card clicável para navegação
+  function _statCard(label, valor, cor, sub, onclick) {
+    var click = onclick ? ' style="cursor:pointer;" onclick="' + onclick + '"' : '';
+    return '<div class="stat-card" style="padding:14px 18px;min-width:140px;"' + click + '>' +
       '<div class="stat-valor"' + (cor?' style="color:' + cor + ';"':'') + '>' + valor + '</div>' +
       '<div class="stat-label">' + label + '</div>' +
       (sub ? '<div style="font-size:11px;color:var(--text2);margin-top:2px;">' + sub + '</div>' : '') +
@@ -34890,7 +34909,7 @@ var DashboardUI = (function() {
 
   return { aoAbrir, atualizar, setTab, gerarInsights };
 })();
-Router.registrar('dashboard', 'Dashboard Executivo', DashboardUI.aoAbrir);
+Router.registrar('dashboard', 'BI — Central de Inteligência', DashboardUI.aoAbrir);
 
 // ─── Fase 11.4: PontoUI ─────────────────────────────────────────────────────
 var PontoUI = (function() {
@@ -36878,7 +36897,15 @@ var RhUI = (function() {
       var extras   = periodos.slice(MAX);
 
       function _renderPer(p, idx) {
-        var cfg      = _stCfg[p.status] || { label: p.status, cor:'#888', bg:'#f9f9f9', desc:'' };
+        // Período com retorno antecipado acordado: dias restantes NÃO incorrem em dobro
+        var temAcordoRetorno = p.ferias && p.ferias.some(function(f){
+          return f.acordo && (f.acordo.diasEfetivosGozados||0) > 0;
+        });
+        var cfg = _stCfg[p.status] || { label: p.status, cor:'#888', bg:'#f9f9f9', desc:'' };
+        if (p.status === 'vencido' && temAcordoRetorno && p.saldo > 0) {
+          cfg = { label: cfg.label, cor: cfg.cor, bg: cfg.bg,
+            desc: 'A janela para gozo encerrou. Os dias pendentes são de retorno acordado — não há incidência de pagamento em dobro.' };
+        }
         var hasFer   = p.ferias && p.ferias.length > 0;
         var startOpen= hasFer; // abrir se tem férias registradas
         var expId    = 'rh-dper-' + idx;
@@ -36888,7 +36915,9 @@ var RhUI = (function() {
         var barraHtml = '';
         if (p.status !== 'em_aquisicao') {
           var pct = Math.min(100, Math.round((p.diasGozados / p.diasDireito) * 100));
-          var saldoColor = p.status === 'vencido' ? '#b91c1c' : (p.saldo > 0 ? cfg.cor : '#15803d');
+          var saldoColor = p.status === 'vencido'
+            ? (temAcordoRetorno ? '#7c3aed' : '#b91c1c')
+            : (p.saldo > 0 ? cfg.cor : '#15803d');
           barraHtml =
             '<div style="display:flex;justify-content:space-between;font-size:12px;margin:6px 0 3px;">' +
               '<span style="color:var(--text2);"><strong style="color:var(--text);font-size:13px;">' + p.diasGozados + '</strong> dias gozados</span>' +
@@ -36898,7 +36927,11 @@ var RhUI = (function() {
               '<div style="background:' + cfg.cor + ';width:' + pct + '%;height:6px;border-radius:6px;transition:width .4s;"></div>' +
             '</div>';
           if (p.status === 'vencido' && p.saldo > 0) {
-            barraHtml += '<div style="margin-top:5px;font-size:11px;color:#b91c1c;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;">warning</span>' + p.saldo + ' dias não gozados — pagamento em dobro na rescisão</div>';
+            if (temAcordoRetorno) {
+              barraHtml += '<div style="margin-top:5px;font-size:11px;color:#7c3aed;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;color:#7c3aed;">handshake</span>' + p.saldo + ' dias de retorno acordados — sem incidência de pagamento em dobro</div>';
+            } else {
+              barraHtml += '<div style="margin-top:5px;font-size:11px;color:#b91c1c;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;">warning</span>' + p.saldo + ' dias não gozados — pagamento em dobro na rescisão</div>';
+            }
           }
         } else {
           barraHtml = '<div style="margin-top:5px;font-size:12px;color:var(--text2);">Direito completo adquirido em <strong>' + _fmtData(p.concessivoInicio) + '</strong> (30 dias)</div>';
@@ -38772,22 +38805,43 @@ var RhUI = (function() {
 
         // Linha expansível com as férias do período — cards OFICIAL vs ACORDO
         if (hasFer) {
-          var diasAcordados = ferDoPeriodo
+          // Acordos do tipo nao_oficial (período de férias negociado separadamente)
+          var diasNaoOficial = ferDoPeriodo
             .filter(function(f){ return f.tipo === 'nao_oficial'; })
             .reduce(function(s, f){ return s + (parseInt(f.totalDias)||0); }, 0);
+          // Acordos com retorno antecipado em férias oficiais (diasEfetivosGozados < totalDias)
+          var diasRetorno = ferDoPeriodo
+            .filter(function(f){ return f.tipo !== 'nao_oficial' && f.acordo && (f.acordo.diasEfetivosGozados||0) > 0; })
+            .reduce(function(s, f){
+              var total = parseInt(f.totalDias)||0;
+              var ef    = parseInt(f.acordo.diasEfetivosGozados)||total;
+              return s + Math.max(0, total - ef);
+            }, 0);
+          var diasAcordados    = diasNaoOficial + diasRetorno;
+          var diasSemCoberta   = Math.max(0, p.saldo - diasAcordados);
 
           var vencidoWarning = '';
           if (p.status === 'vencido' && p.saldo > 0) {
-            vencidoWarning =
-              '<div style="background:#fff3f3;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;">' +
-                '<div style="font-weight:700;color:#dc2626;font-size:12px;display:flex;align-items:center;gap:6px;">' +
-                  '<span class="ms ms-sm" style="font-size:15px;color:#dc2626;">warning</span>' +
-                  p.saldo + ' dias não cobertos — sujeitos a pagamento em dobro (CLT art. 137)' +
-                '</div>' +
-                (diasAcordados > 0
-                  ? '<div style="font-size:11px;color:#16a34a;margin-top:4px;">✓ ' + diasAcordados + ' dias cobertos por acordo(s) — não incidem pagamento em dobro</div>'
-                  : '') +
-              '</div>';
+            if (diasSemCoberta > 0) {
+              vencidoWarning =
+                '<div style="background:#fff3f3;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-bottom:10px;">' +
+                  '<div style="font-weight:700;color:#dc2626;font-size:12px;display:flex;align-items:center;gap:6px;">' +
+                    '<span class="ms ms-sm" style="font-size:15px;color:#dc2626;">warning</span>' +
+                    diasSemCoberta + ' dias não cobertos — sujeitos a pagamento em dobro (CLT art. 137)' +
+                  '</div>' +
+                  (diasAcordados > 0
+                    ? '<div style="font-size:11px;color:#16a34a;margin-top:4px;">✓ ' + diasAcordados + ' dias cobertos por acordo(s) — não incidem pagamento em dobro</div>'
+                    : '') +
+                '</div>';
+            } else if (diasAcordados > 0) {
+              vencidoWarning =
+                '<div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;margin-bottom:10px;">' +
+                  '<div style="font-weight:700;color:#7c3aed;font-size:12px;display:flex;align-items:center;gap:6px;">' +
+                    '<span class="ms ms-sm" style="font-size:15px;color:#7c3aed;">handshake</span>' +
+                    diasAcordados + ' dias de retorno acordados — sem incidência de pagamento em dobro' +
+                  '</div>' +
+                '</div>';
+            }
           }
 
           var ferCards = ferDoPeriodo.map(function(f) {
