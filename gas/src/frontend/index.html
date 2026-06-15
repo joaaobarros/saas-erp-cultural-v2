@@ -37826,13 +37826,15 @@ var RhUI = (function() {
       var periodos = resp.data.periodos;
       var totalDias = 0, totalDobro = 0, nVencidos = 0, nConcessao = 0;
       periodos.forEach(function(p) {
-        if ((p.saldo || 0) <= 0) return;
+        // Rescisão usa saldoOficial (datas do registro, sem acordos); fallback para saldo
+        var saldo = (p.saldoOficial != null ? p.saldoOficial : p.saldo) || 0;
+        if (saldo <= 0) return;
         if (p.status === 'vencido') {
-          totalDias  += p.saldo;
-          totalDobro += p.saldo;
+          totalDias  += saldo;
+          totalDobro += saldo;
           nVencidos++;
         } else if (p.status === 'em_concessao') {
-          totalDias += p.saldo;
+          totalDias += saldo;
           nConcessao++;
         }
       });
@@ -40544,7 +40546,7 @@ var EncargosUI = (function() {
   }
 
   var _pendAplicarAno = null;
-  function aplicarOficial() {
+  function aplicarOficial(done) {
     var ano = parseInt((document.getElementById('enc-sel-ano')||{}).value||new Date().getFullYear());
     _pendAplicarAno = ano;
     _abrirModalSimples(
@@ -40552,6 +40554,8 @@ var EncargosUI = (function() {
       '<p style="font-size:14px;color:var(--text);margin:0 0 16px;">Aplicar a tabela oficial de <strong>'+ano+'</strong>?<br>Campos editados manualmente <strong>NÃO</strong> serão alterados.</p>',
       'EncargosUI._confirmarAplicarOficial'
     );
+    // Libera o botão imediatamente — o botão "Confirmar" do modal assume o estado de carregamento
+    if (done) done();
   }
   function _confirmarAplicarOficial() {
     var ano = _pendAplicarAno; _pendAplicarAno = null;

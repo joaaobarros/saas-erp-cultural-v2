@@ -836,7 +836,7 @@ var PessoasEngine = (function () {
         var ref = f.dataInicio || f.inicio || '';
         return ref && ref >= p.aquisitivoInicio && ref <= p.concessivoFim;
       });
-      var gozados = 0;
+      var gozados = 0, gozadosOficiais = 0;
       do_periodo.forEach(function (f) {
         var statusF = String(f.status || '').toLowerCase().replace(/[^a-z]/g, '');
         var isConcluido = statusF === 'concluido';
@@ -846,16 +846,22 @@ var PessoasEngine = (function () {
           if (fimCheck && fimCheck <= hoje) isConcluido = true;
         }
         if (!isConcluido) return;
+        var ini = f.dataInicio || f.inicio;
+        var fim = f.dataFim || f.fim;
+        var diasOficiais = (ini && fim) ? Math.round((new Date(fim) - new Date(ini)) / 86400000) + 1 : 0;
+        // saldoOficial usa sempre as datas do registro (sem acordos) — base para rescisão
+        gozadosOficiais += diasOficiais;
+        // saldo padrão respeita diasEfetivosGozados do acordo quando presente
         if (f.acordo && f.acordo.diasEfetivosGozados) {
           gozados += Number(f.acordo.diasEfetivosGozados) || 0;
         } else {
-          var ini = f.dataInicio || f.inicio;
-          var fim = f.dataFim || f.fim;
-          if (ini && fim) gozados += Math.round((new Date(fim) - new Date(ini)) / 86400000) + 1;
+          gozados += diasOficiais;
         }
       });
       p.diasGozados = gozados;
       p.saldo = Math.max(0, p.diasDireito - gozados);
+      // saldoOficial: calculado sem considerar acordos — usado no cálculo de rescisão
+      p.saldoOficial = Math.max(0, p.diasDireito - gozadosOficiais);
       p.ferias = do_periodo.map(function (f) {
         return { id: f.id, inicio: f.dataInicio || f.inicio, fim: f.dataFim || f.fim, status: f.status, acordo: f.acordo || null };
       });
