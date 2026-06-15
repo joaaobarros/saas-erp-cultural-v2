@@ -472,12 +472,12 @@
 
 ## HANDOFF ATUAL — SESSÃO 84 (2026-06-15) → SESSÃO 85
 
-### Estado atual: Setor como badge em todo o sistema (34 pontos) · Deploy @963
+### Estado atual: Badge setor cobre 34 pontos — Deploy @962 (s83e já incluiu tudo)
 
 ### O que foi feito nesta sessão (s84)
 | Deploy | O que foi implementado |
 |---|---|
-| @963 | `index.html`: `_badgeSetor(id, labelOverride?)` global + `.badge-setor` CSS. 34 pontos de uso: Tarefas, Colaboradores, Contratos, Admin (tabela + pendentes + modal), Veículos (solicitanteSetor ×2), Almoxarifado (pendente/separada/finalizada), Demandas, Solicitações, Reservas, Ponto (por setor/risco CLT/individual/filtros), Equipe/RH (lista/detalhe/histórico/rescisão/escala férias/custo), BI Demográfico, Aniversariantes TaskHub+home. |
+| docs only | Correção de escopo: commit 211bc25 (s83e) já tinha todos os 34 `_badgeSetor` mas docs descreviam só "Admin + PontoUI individual". PROGRESS.md e roteiro-auditoria.md atualizados. Código GAS inalterado, deploy permanece @962. |
 
 ---
 

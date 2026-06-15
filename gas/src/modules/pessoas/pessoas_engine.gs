@@ -1449,16 +1449,40 @@ var PessoasEngine = (function () {
           urgencia = 'vencido';
           diasParaVencer = -Math.round((new Date(hoje) - new Date(p.concessivoFim)) / 86400000);
         } else if (p.status === 'em_concessao') {
-          // Tempo hábil: empregador deve avisar 30 dias antes; férias duram 30 dias.
-          // Portanto: se restam < 60 dias → crítico; 60-90 → urgente; 90-180 → atenção
+          // Empregador deve avisar 30 dias antes + férias duram 30 dias = mínimo 60 dias de aviso prévio.
+          // Usamos 70 dias como limiar crítico para garantir margem operacional.
           var msRestantes = new Date(p.concessivoFim) - new Date(hoje);
           diasParaVencer = Math.round(msRestantes / 86400000);
-          if (diasParaVencer < 60)       urgencia = 'critico';
+          if (diasParaVencer < 70)       urgencia = 'critico';
           else if (diasParaVencer < 90)  urgencia = 'urgente';
           else if (diasParaVencer <= 180) urgencia = 'atencao';
         }
 
         if (!urgencia) return;
+
+        // Verificar se o saldo restante provém de retorno antecipado acordado (já pago — sem incidência de dobro)
+        var saldoDeAcordo = 0, ultimoAcordoEm = null;
+        (p.ferias || []).forEach(function(fa) {
+          if (fa.acordo) {
+            var sp = Number(fa.acordo.saldoPosterior || 0);
+            if (sp > 0) {
+              saldoDeAcordo += sp;
+              var reg = fa.acordo.registradoEm;
+              if (reg && (!ultimoAcordoEm || reg > ultimoAcordoEm)) ultimoAcordoEm = reg;
+            }
+          }
+        });
+        if (urgencia === 'vencido' && saldoDeAcordo > 0 && saldoDeAcordo >= p.saldo)
+          urgencia = 'vencido_acordo';
+
+        // Prazo máximo de 1 ano a partir do registro do acordo para o gozo do saldo restante
+        var prazoUso1ano = null, diasAteUso = null;
+        if (ultimoAcordoEm) {
+          var _dAc = new Date(ultimoAcordoEm.slice(0, 10));
+          _dAc.setFullYear(_dAc.getFullYear() + 1);
+          prazoUso1ano = _dAc.getFullYear() + '-' + _pad(_dAc.getMonth()+1) + '-' + _pad(_dAc.getDate());
+          diasAteUso   = Math.round((_dAc - new Date(hoje)) / 86400000);
+        }
 
         alertas.push({
           colaboradorId:  c.id,
@@ -1471,6 +1495,9 @@ var PessoasEngine = (function () {
           concessivoFim:  p.concessivoFim,
           saldo:          p.saldo,
           diasParaVencer: diasParaVencer,
+          saldoDeAcordo:  saldoDeAcordo || 0,
+          prazoUso1ano:   prazoUso1ano  || null,
+          diasAteUso:     diasAteUso    || null,
           urgencia:       urgencia
         });
       });

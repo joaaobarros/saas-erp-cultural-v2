@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s84)**: **UX — Setor como badge em todo o sistema: 34 pontos de uso cobertos — Deploy @963.** `index.html`: função global `_badgeSetor(id, labelOverride?)` criada após `_labelSetor`; CSS `.badge-setor` (roxo índigo). Cobertura completa de todas as citações de setor na UI: Tarefas (agrupamento, info secundária), Colaboradores (pendente-meta, lista, detalhe, histórico de eventos), Contratos (memória de cálculo), Admin (tabela usuários, pendentes, modal aprovação), Veículos/Reservas (solicitanteSetor), Almoxarifado (solicitações pendente/separada/finalizada), Demandas (tabela custo), Solicitações (card-meta), Ponto (tabela por setor, risco CLT, individual), Equipe/RH (lista equipe, painel colaborador, histórico, rescisão, escala férias), BI Demográfico (drill-down equipe), Aniversariantes (card TaskHub + home).
+**Fase atual (s84)**: **Docs — Correção de escopo do s83e: badge setor já cobre 34 pontos (não apenas Admin+Ponto).** Commit 211bc25 (s83e) já incluiu a cobertura completa — Tarefas, Colaboradores, Contratos, Admin, Veículos, Almoxarifado, Demandas, Solicitações, Reservas, Ponto, Equipe/RH, BI Demográfico, Aniversariantes — mas o PROGRESS.md e roteiro-auditoria.md descreviam apenas "Admin aprovação + PontoUI individual". Esta sessão apenas corrige a documentação; código GAS inalterado, deploy permanece @962.
 
 **Fase anterior (s83e)**: **UX — Setor como badge em Admin (aprovação) e PontoUI individual — Deploy @962.** `IdentidadeAdmin`: modal aprovação de acesso exibe `setorDesejado` como `_badgeSetor`. `PontoUI`: cabeçalho "Individual" mostra badge do setor filtrado em vez de texto cru.
 

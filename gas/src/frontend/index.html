@@ -39026,9 +39026,14 @@ var RhUI = (function() {
 
         var _cIni = JSON.stringify(p.concessivoInicio).replace(/"/g,"'");
         var _cFim = JSON.stringify(p.concessivoFim).replace(/"/g,"'");
-        var acaoBtn = (p.saldo > 0 && (p.status === 'em_concessao' || p.status === 'vencido'))
-          ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="event.stopPropagation();RhUI.abrirFormFerias('+idS+','+p.numero+','+_cIni+','+_cFim+')" title="Solicitar '+p.saldo+'d"><span class="ms ms-sm">beach_access</span> Solicitar</button>'
-          : '';
+        var acaoBtn = '';
+        if (p.saldo > 0 && (p.status === 'em_concessao' || p.status === 'vencido')) {
+          if (temAcordoRet && p.status === 'vencido') {
+            acaoBtn = '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="event.stopPropagation();RhUI.abrirFormFerias('+idS+','+p.numero+',null,null,true)" title="Agendar saldo acordado: '+p.saldo+'d"><span class="ms ms-sm">handshake</span> Agendar</button>';
+          } else {
+            acaoBtn = '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="event.stopPropagation();RhUI.abrirFormFerias('+idS+','+p.numero+','+_cIni+','+_cFim+')" title="Solicitar '+p.saldo+'d"><span class="ms ms-sm">beach_access</span> Solicitar</button>';
+          }
+        }
 
         var saldoColor = p.status === 'vencido' ? (temAcordoRet ? '#7c3aed' : '#b91c1c') : (p.saldo > 0 ? cfg.cor : '#15803d');
         var pct = p.diasDireito > 0 ? Math.min(100, Math.round(((p.diasGozados||0)/p.diasDireito)*100)) : 0;
@@ -39042,7 +39047,7 @@ var RhUI = (function() {
             '<div style="background:#e2e8f0;border-radius:6px;height:6px;overflow:hidden;">' +
               '<div style="background:'+cfg.cor+';width:'+pct+'%;height:6px;border-radius:6px;transition:width .4s;"></div>' +
             '</div>';
-          if (p.status === 'vencido' && p.saldo > 0)
+          if (p.status === 'vencido' && p.saldo > 0 && !hasFer)
             barraHtml += temAcordoRet
               ? '<div style="margin-top:5px;font-size:11px;color:#7c3aed;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;color:#7c3aed;">handshake</span>'+p.saldo+' dias de retorno acordados — sem incidência de pagamento em dobro</div>'
               : '<div style="margin-top:5px;font-size:11px;color:#b91c1c;font-weight:600;display:flex;align-items:center;gap:4px;"><span class="ms ms-sm" style="font-size:13px;">warning</span>'+p.saldo+' dias não gozados — pagamento em dobro na rescisão</div>';
@@ -39113,7 +39118,48 @@ var RhUI = (function() {
           '</div>';
       });
 
-      el.innerHTML = cards || _empty('Nenhum período encontrado.');
+      // ── Cabeçalho de resumo ────────────────────────────────────
+      var _hojeSumario = new Date().toISOString().slice(0,10);
+      var _sumSaldo = 0, _nextDias = null, _nextPrazo = null, _nextPeriodo = null;
+      var _sumAcordo = 0, _prazo1ano = null, _dias1ano = null;
+      _periodos.periodos.forEach(function(ps) {
+        if (ps.saldo > 0 && ps.status !== 'em_aquisicao') _sumSaldo += ps.saldo;
+        if (ps.status === 'em_concessao' && ps.saldo > 0) {
+          var _d = Math.round((new Date(ps.concessivoFim) - new Date(_hojeSumario)) / 86400000);
+          if (_nextDias === null || _d < _nextDias) { _nextDias = _d; _nextPrazo = ps.concessivoFim; _nextPeriodo = ps.numero; }
+        }
+        // Saldo de acordos + prazo 1 ano
+        (ps.ferias || []).forEach(function(fa) {
+          if (fa.acordo && Number(fa.acordo.saldoPosterior || 0) > 0) {
+            _sumAcordo += Number(fa.acordo.saldoPosterior || 0);
+            var _reg = fa.acordo.registradoEm;
+            if (_reg) {
+              var _dAc1 = new Date(_reg.slice(0, 10));
+              _dAc1.setFullYear(_dAc1.getFullYear() + 1);
+              var _iso1 = _dAc1.getFullYear() + '-' + (_dAc1.getMonth()<9?'0':'') + (_dAc1.getMonth()+1) + '-' + (_dAc1.getDate()<10?'0':'') + _dAc1.getDate();
+              if (!_prazo1ano || _iso1 < _prazo1ano) { _prazo1ano = _iso1; _dias1ano = Math.round((_dAc1 - new Date(_hojeSumario)) / 86400000); }
+            }
+          }
+        });
+      });
+      var summaryParts = [];
+      if (_sumSaldo > 0)
+        summaryParts.push('<span><span class="ms ms-sm" style="vertical-align:middle;color:var(--color-primary);">beach_access</span> <strong>' + _sumSaldo + 'd</strong> de férias a tirar</span>');
+      if (_nextPrazo) {
+        var _nc = _nextDias < 70 ? '#dc2626' : _nextDias < 90 ? '#e65100' : '#b45309';
+        var _nm = _nextDias < 0
+          ? '<strong style="color:#dc2626;">Prazo expirado!</strong>'
+          : _nextDias < 70
+          ? '<strong style="color:#dc2626;">Confirmar imediatamente</strong> — prazo concessivo ' + _nextPeriodo + 'º período: ' + fmtDataPtBR(_nextPrazo) + ' (' + _nextDias + 'd)'
+          : 'Prazo para confirmar próximas férias: ' + fmtDataPtBR(_nextPrazo) + ' (<strong>' + _nextDias + 'd</strong>)';
+        summaryParts.push('<span style="color:' + _nc + ';">' + _nm + '</span>');
+      }
+      if (_sumAcordo > 0 && _prazo1ano)
+        summaryParts.push('<span style="color:#7c3aed;"><span class="ms ms-sm" style="vertical-align:middle;font-size:13px;">handshake</span> <strong>' + _sumAcordo + 'd</strong> acordados — usar até ' + fmtDataPtBR(_prazo1ano) + ' (' + (_dias1ano >= 0 ? _dias1ano + 'd' : 'vencido') + ')</span>');
+      var summaryHtml = summaryParts.length
+        ? '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">' + summaryParts.join('<span style="color:var(--border);">·</span>') + '</div>'
+        : '';
+      el.innerHTML = summaryHtml + (cards || _empty('Nenhum período encontrado.'));
     }
 
     GAS.rh.resumoFeriasColaborador(colabId, function(r) {
@@ -39161,30 +39207,44 @@ var RhUI = (function() {
         return;
       }
       var URGENCIA_CFG = {
-        vencido: { label:'Prazo vencido — pago em dobro', cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' },
-        critico: { label:'Crítico',                        cor:'#c62828', bg:'#ffebee', ms:'error' },
-        urgente: { label:'Urgente',                        cor:'#e65100', bg:'#fff3e0', ms:'warning' },
-        atencao: { label:'Atenção',                        cor:'#f9a825', bg:'#fffde7', ms:'info' }
+        vencido:        { label:'Prazo vencido — pago em dobro',  cor:'#7b1fa2', bg:'#f3e5f5', ms:'report' },
+        vencido_acordo: { label:'Prazo vencido — retorno acordado', cor:'#7c3aed', bg:'#f5f3ff', ms:'handshake' },
+        critico:        { label:'Crítico — confirmar agora',       cor:'#c62828', bg:'#ffebee', ms:'error' },
+        urgente:        { label:'Urgente',                          cor:'#e65100', bg:'#fff3e0', ms:'warning' },
+        atencao:        { label:'Atenção',                          cor:'#f9a825', bg:'#fffde7', ms:'info' }
       };
       var html = '<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">'
         + lista.length + ' colaborador(es) com férias a vencer ou já vencidas.</div>';
       html += '<table class="tabela" style="font-size:12px;"><thead><tr>'
         + '<th>Colaborador</th><th>Setor</th><th>Período</th>'
-        + '<th>Saldo</th><th>Prazo Concessivo</th><th>Urgência</th><th></th>'
+        + '<th>Saldo</th><th>Prazo / Deadline</th><th>Urgência</th><th></th>'
         + '</tr></thead><tbody>';
       lista.forEach(function(a) {
         var urg = URGENCIA_CFG[a.urgencia] || URGENCIA_CFG.atencao;
+        var isAcordo = a.urgencia === 'vencido_acordo';
+        var prazoLabel = isAcordo
+          ? (a.prazoUso1ano ? fmtDataPtBR(a.prazoUso1ano) : '—')
+          : fmtDataPtBR(a.concessivoFim);
         var diasStr = a.urgencia === 'vencido'
           ? 'Exp. há ' + Math.abs(a.diasParaVencer||0) + 'd'
+          : isAcordo
+          ? (a.diasAteUso != null
+              ? (a.diasAteUso > 0 ? a.diasAteUso + 'd para usar' : 'Prazo 1 ano expirado')
+              : 'Dias já pagos')
+          : a.urgencia === 'critico'
+          ? (a.diasParaVencer||0) + 'd — agendar imediatamente'
           : (a.diasParaVencer||0) + 'd restantes';
+        var agendarOnclick = isAcordo
+          ? 'RhUI.abrirFormFerias(' + JSON.stringify(a.colaboradorId).replace(/"/g,"'") + ',' + (a.periodoConcNum||'null') + ',null,null,true)'
+          : 'RhUI.abrirFormFerias(' + JSON.stringify(a.colaboradorId).replace(/"/g,"'") + ')';
         html += '<tr>'
           + '<td>' + escaparHtml(a.nome) + '</td>'
           + '<td>' + _badgeSetor(a.setor) + '</td>'
           + '<td>Período ' + a.periodoConcNum + '</td>'
           + '<td><strong>' + a.saldo + 'd</strong></td>'
-          + '<td>' + fmtDataPtBR(a.concessivoFim) + '<br><small style="color:var(--text2);">' + diasStr + '</small></td>'
+          + '<td>' + prazoLabel + '<br><small style="color:var(--text2);">' + diasStr + '</small></td>'
           + '<td><span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:' + urg.cor + ';background:' + urg.bg + ';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:' + urg.cor + ';">' + urg.ms + '</span>' + urg.label + '</span></td>'
-          + '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias(' + JSON.stringify(a.colaboradorId).replace(/"/g,"'") + ')">Agendar</button></td>'
+          + '<td><button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="' + agendarOnclick + '">' + (isAcordo ? '<span class="ms ms-sm">handshake</span> ' : '') + 'Agendar</button></td>'
           + '</tr>';
       });
       html += '</tbody></table>';
@@ -39197,26 +39257,37 @@ var RhUI = (function() {
 
   // abrirFormFerias(idColabPre, periodoNum, concIni, concFim)
   // periodoNum/concIni/concFim opcionais — passados quando vem de um botão "Solicitar" de um período específico
-  function abrirFormFerias(idColabPre, periodoNum, concIni, concFim) {
-    var temPeriodo = periodoNum != null && concIni && concFim;
-    var periodoBanner = temPeriodo
-      ? '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">' +
+  function abrirFormFerias(idColabPre, periodoNum, concIni, concFim, isAcordo) {
+    var temPeriodo = periodoNum != null;
+    var temDatas   = !isAcordo && concIni && concFim;
+    var periodoBanner = '';
+    if (temPeriodo && isAcordo) {
+      periodoBanner =
+        '<div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">' +
+          '<span class="ms ms-sm" style="color:#7c3aed;font-size:16px;margin-top:1px;">handshake</span>' +
+          '<div><div style="font-size:12px;font-weight:700;color:#5b21b6;">' + periodoNum + 'º período — Agendamento de Saldo Acordado</div>' +
+            '<div style="font-size:11px;color:#7c3aed;margin-top:2px;">Estes dias já foram pagos. Escolha qualquer data para o gozo — <strong>sem restrição de janela concessiva</strong> (prazo máximo de até 1 ano a partir do acordo).</div>' +
+          '</div>' +
+        '</div>';
+    } else if (temPeriodo && concIni && concFim) {
+      periodoBanner =
+        '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">' +
           '<span class="ms ms-sm" style="color:#1d4ed8;font-size:16px;margin-top:1px;">calendar_clock</span>' +
           '<div><div style="font-size:12px;font-weight:700;color:#1e3a8a;">' + periodoNum + 'º período aquisitivo</div>' +
             '<div style="font-size:11px;color:#1d4ed8;margin-top:2px;">Janela concessiva: <strong>' + _fmtData(concIni) + ' → ' + _fmtData(concFim) + '</strong> — datas de início e fim devem estar dentro desta janela.</div>' +
           '</div>' +
-        '</div>'
-      : '';
-    var minAttr = temPeriodo ? ' min="' + concIni + '"' : '';
-    var maxAttr = temPeriodo ? ' max="' + concFim + '"' : '';
+        '</div>';
+    }
+    var minAttr = temDatas ? ' min="' + concIni + '"' : '';
+    var maxAttr = temDatas ? ' max="' + concFim + '"' : '';
     var colabField = (idColabPre && temPeriodo)
       ? '<div style="display:none"><select id="rh-fer-colab-m"><option value="' + _esc(idColabPre) + '" selected></option></select></div>'
       : '<div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>';
     _abrirModalRh(
       '<div style="padding:20px;min-width:420px;">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">' +
-        '<span class="ms" style="color:var(--color-primary);font-size:20px;">beach_access</span>' +
-        '<h3 style="margin:0;font-size:15px;font-weight:700;">Solicitar Férias — Oficial</h3>' +
+        '<span class="ms" style="color:var(--color-primary);font-size:20px;">' + (isAcordo ? 'handshake' : 'beach_access') + '</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">Solicitar Férias — ' + (isAcordo ? 'Saldo Acordado' : 'Oficial') + '</h3>' +
       '</div>' +
       periodoBanner +
       colabField +
@@ -39228,7 +39299,7 @@ var RhUI = (function() {
           '<input id="rh-fer-fim-m" class="form-input" type="date"' + minAttr + maxAttr + ' oninput="RhUI._feriasCalcDias()"></div>' +
       '</div>' +
       '<div id="rh-fer-dias-info" style="font-size:12px;color:var(--text2);margin:-4px 0 10px;min-height:16px;"></div>' +
-      (temPeriodo
+      (!isAcordo && temPeriodo
         ? '<div style="background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#92400e;">' +
             '<span class="ms ms-sm" style="vertical-align:middle;">info</span> Para registrar um <strong>acordo interno</strong> (dias parcialmente gozados), use o botão <strong>Acordo</strong> após esta solicitação ser aprovada.' +
           '</div>'
