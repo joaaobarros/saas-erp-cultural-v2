@@ -434,6 +434,19 @@ function ctrl_contratos_reordenar_metas(idContrato, ordemIds) {
   }, 'ctrl_contratos_reordenar_metas');
 }
 
+function ctrl_contratos_reordenar_atividades(idContrato, idMeta, ordemIds) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxContratos();
+    var nivel = _nivelContratos(ctx.email);
+    if (_ESCRITA_CONTRATOS.indexOf(nivel) === -1)
+      throw new Error('Sem permissão para reordenar atividades.');
+    if (!idContrato || !idMeta) throw new Error('idContrato e idMeta são obrigatórios.');
+    if (!Array.isArray(ordemIds)) throw new Error('ordemIds deve ser um array.');
+    ContratosEngine.reordenarAtividades(idContrato, idMeta, ordemIds, ctx.email, ctx.orgId);
+    return { ok: true };
+  }, 'ctrl_contratos_reordenar_atividades');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════

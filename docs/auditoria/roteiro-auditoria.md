@@ -470,7 +470,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 84 (2026-06-15) → SESSÃO 85
+## HANDOFF ATUAL — SESSÃO 86 (2026-06-15) → SESSÃO 87
+
+### Estado atual: Financeiro/Contratos — DnD atividades + Setor na Rubrica + Barras orçamentárias — Deploy @972 (pendente clasp)
+
+### O que foi feito nesta sessão (s86)
+| Deploy | O que foi implementado |
+|---|---|
+| @972 | **Backend**: `reordenarAtividades` em `contratos_engine.gs`; `ctrl_contratos_reordenar_atividades` em `contratos_controller.gs`. **Frontend**: DnD de atividades dentro de metas; campo Setor migrado da memória de cálculo para o nível da rubrica (form + render + salvar); barras de progresso utilizado/disponível (OrcamentoGuard: totalComprometido+totalExecutado) em rubrica, atividade e meta; coluna Setor removida da tabela de memória de cálculo; nota "não-restritiva" no modal _verMemoria. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 84 (2026-06-15) → SESSÃO 85
 
 ### Estado atual: Badge setor cobre 34 pontos — Deploy @962 (s83e já incluiu tudo)
 

@@ -1460,6 +1460,26 @@ var ContratosEngine = (function () {
     return ContratoRepository.migrarSheetParaJson(orgId || _orgId());
   }
 
+  function reordenarAtividades(idContrato, idMeta, ordemIds, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    if (!idContrato || !idMeta || !Array.isArray(ordemIds))
+      throw new Error('idContrato, idMeta e ordemIds são obrigatórios.');
+    ContratoRepository.modificarContrato(orgId, idContrato, function(contrato) {
+      var meta = (contrato.metas || []).find(function(m) { return m.id === idMeta; });
+      if (!meta) return contrato;
+      var atvMap = {};
+      (meta.atividades || []).forEach(function(a) { atvMap[a.id] = a; });
+      meta.atividades = ordemIds.map(function(id) { return atvMap[id]; }).filter(Boolean);
+      (Object.keys(atvMap)).forEach(function(id) {
+        if (ordemIds.indexOf(id) === -1) meta.atividades.push(atvMap[id]);
+      });
+      return contrato;
+    });
+    AuditoriaService.registrar('REORDENAR_ATIVIDADES', 'financeiro',
+      { contrato: idContrato, meta: idMeta, ordem: ordemIds },
+      emailOperador || getEmailSessao(), orgId);
+  }
+
   function reordenarMetas(idContrato, ordemIds, emailOperador, orgId) {
     orgId = orgId || _orgId();
     if (!idContrato || !Array.isArray(ordemIds)) throw new Error('idContrato e ordemIds são obrigatórios.');
@@ -1543,8 +1563,9 @@ var ContratosEngine = (function () {
     obterVersao:          obterVersao,
     restaurarVersao:      restaurarVersao,
 
-    // Reordenação de Metas (drag and drop)
-    reordenarMetas: reordenarMetas,
+    // Reordenação (drag and drop)
+    reordenarMetas:       reordenarMetas,
+    reordenarAtividades:  reordenarAtividades,
 
     // Migração
     migrarSheetParaJson: migrarSheetParaJson
