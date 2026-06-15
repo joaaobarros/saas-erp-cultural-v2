@@ -1698,7 +1698,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 | @943 | UX Painel colaborador | Seção Férias com cards coloridos por status (borda esquerda), expand/collapse, max 4 + "Ver mais", terminologia clara (Prazo legal expirado / Disponível para gozo / Realizada), `_detFerToggle`, `_detFerVerMais` |
 
 ### Pendentes / próxima ação
-- Testar no browser: (1) Aba RH → Férias → selecionar colaborador → períodos com chevron; clicar no período → sub-tabela de férias; (2) Painel colaborador → Férias → cards coloridos por status, collapse/expand, "Ver mais"; (3) Botão "Solicitar" na row de período → form com banner de janela concessiva + datas restringidas; (4) Botão "Acordo" só aparece em férias aprovadas
+- Testar no browser: (1) Aba RH → Férias → selecionar colaborador → períodos com chevron; clicar no período → sub-tabela de férias; (2) Painel colaborador → Férias → cards coloridos por status, collapse/expand, "Ver mais"; (3) Botão "Solicitar" na row de período → form com banner de janela concessiva + datas restringidas; (4) Botão "Acordo" só aparece em férias aprovadas; (5) Quadros → criar/listar com reuniaoId e colaboradores
 
 ---
 

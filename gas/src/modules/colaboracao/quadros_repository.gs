@@ -21,13 +21,16 @@ var QuadrosRepository = (function() {
   function listar(orgId, filtros) {
     filtros = filtros || {};
     var lista = readJSON(_fileName(orgId)) || [];
-    if (filtros.acaoId) lista = lista.filter(function(q) { return q.acaoId === filtros.acaoId; });
+    if (filtros.acaoId)    lista = lista.filter(function(q) { return q.acaoId    === filtros.acaoId; });
+    if (filtros.reuniaoId) lista = lista.filter(function(q) { return q.reuniaoId === filtros.reuniaoId; });
     if (filtros.criadoPor) lista = lista.filter(function(q) { return q.criadoPor === filtros.criadoPor; });
     return lista.map(function(q) {
-      // Não retornar o snapshot completo na listagem — só metadados
       return { id: q.id, titulo: q.titulo, orgId: q.orgId, criadoPor: q.criadoPor,
-               acaoId: q.acaoId || null, criadoEm: q.criadoEm, atualizadoEm: q.atualizadoEm,
-               temSnapshot: !!(q.snapshotTldraw) };
+               acaoId: q.acaoId || null, reuniaoId: q.reuniaoId || null,
+               colaboradores: q.colaboradores || [],
+               atualizadoPor: q.atualizadoPor || null,
+               criadoEm: q.criadoEm, atualizadoEm: q.atualizadoEm,
+               temSnapshot: !!(q.snapshot) };
     });
   }
 
@@ -44,23 +47,27 @@ var QuadrosRepository = (function() {
       var idx = lista.findIndex(function(q) { return q.id === dados.id; });
       if (idx >= 0) {
         lista[idx] = Object.assign({}, lista[idx], {
-          titulo:         dados.titulo || lista[idx].titulo,
-          snapshotTldraw: dados.snapshotTldraw !== undefined ? dados.snapshotTldraw : lista[idx].snapshotTldraw,
-          acaoId:         dados.acaoId !== undefined ? dados.acaoId : lista[idx].acaoId,
-          atualizadoEm:   agora,
-          atualizadoPor:  emailUsuario
+          titulo:        dados.titulo        !== undefined ? dados.titulo        : lista[idx].titulo,
+          snapshot:      dados.snapshot      !== undefined ? dados.snapshot      : lista[idx].snapshot,
+          acaoId:        dados.acaoId        !== undefined ? dados.acaoId        : lista[idx].acaoId,
+          reuniaoId:     dados.reuniaoId     !== undefined ? dados.reuniaoId     : lista[idx].reuniaoId,
+          colaboradores: dados.colaboradores !== undefined ? dados.colaboradores : (lista[idx].colaboradores || []),
+          atualizadoEm:  agora,
+          atualizadoPor: emailUsuario
         });
         resultado = lista[idx];
       } else {
         var novo = {
-          id:             _gerarId(),
-          titulo:         dados.titulo || 'Quadro sem título',
-          orgId:          orgId,
-          criadoPor:      emailUsuario,
-          acaoId:         dados.acaoId || null,
-          snapshotTldraw: dados.snapshotTldraw || null,
-          criadoEm:       agora,
-          atualizadoEm:   agora
+          id:            _gerarId(),
+          titulo:        dados.titulo || 'Quadro sem título',
+          orgId:         orgId,
+          criadoPor:     emailUsuario,
+          acaoId:        dados.acaoId    || null,
+          reuniaoId:     dados.reuniaoId || null,
+          colaboradores: dados.colaboradores || [],
+          snapshot:      dados.snapshot  || null,
+          criadoEm:      agora,
+          atualizadoEm:  agora
         };
         lista.push(novo);
         resultado = novo;
