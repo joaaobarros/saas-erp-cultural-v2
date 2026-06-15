@@ -1899,6 +1899,36 @@ select.form-control { cursor: pointer; }
   /* ── Leaflet: isola contexto de empilhamento ──────────────────────────── */
   .leaflet-container { z-index: 0; isolation: isolate; }
 
+/* ── BulkBar — seleção múltipla ─────────────────────────────────────────── */
+.bulk-check { width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--color-primary); }
+.bulk-bar { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--color-primary);color:#fff;border-radius:40px;padding:10px 20px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);
+  transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:2000;white-space:nowrap; }
+.bulk-bar.visivel { transform:translateX(-50%) translateY(0); }
+.bulk-bar-count { font-weight:700;font-size:14px; }
+.bulk-bar-btn { background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:20px;
+  padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:background .15s; }
+.bulk-bar-btn:hover { background:rgba(255,255,255,.35); }
+.tf-card.selected,.bl-card.selected { outline:2px solid var(--color-primary);background:var(--bg); }
+/* ── Timeline de auditoria por entidade ─────────────────────────────────── */
+.timeline-item { display:flex;gap:12px;padding:8px 0;position:relative; }
+.timeline-line { position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--border); }
+.timeline-dot { width:10px;height:10px;border-radius:50%;background:var(--color-primary);flex-shrink:0;margin-top:5px;z-index:1;position:relative; }
+.timeline-msg { flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px; }
+/* ── Quadros & Sessões Interativas ──────────────────────────────────────── */
+.quadro-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .2s; }
+.quadro-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.10); }
+.qdro-thumb { width:100%;height:80px;background:var(--surface2);border-radius:8px;margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted); }
+.sess-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:8px; }
+.sess-badge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
+.sess-badge.ativa { background:#dcfce7;color:#166534; }
+.sess-badge.encerrada { background:var(--surface2);color:var(--muted); }
+.sess-badge.rascunho { background:#fef9c3;color:#854d0e; }
+/* ── Hub inline buttons ─────────────────────────────────────────────────── */
+.hub-inline-btn { font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-weight:600;white-space:nowrap;transition:background .15s,color .15s; }
+.hub-inline-btn:hover { background:var(--color-primary);color:#fff;border-color:var(--color-primary); }
+
   </style>
 </head>
 <body>
@@ -6163,6 +6193,17 @@ select.form-control { cursor: pointer; }
               <p class="muted-text" style="margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">TRANSIÇÕES DE STATUS</p>
               <div id="painel-fsm-acoes" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
             </div>
+            <!-- Histórico + Compartilhar -->
+            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <p class="muted-text" style="margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">HISTÓRICO DE ATIVIDADE</p>
+                <button class="btn btn-ghost btn-sm" id="aco-compartilhar-btn"
+                  onclick="BtnGuard.wrap('aco-compartilhar-btn','Compartilhando…',AcoesUI.compartilharRelatorio)">
+                  <span class="ms ms-sm">share</span> Compartilhar relatório
+                </button>
+              </div>
+              <div id="painel-aco-timeline"><p class="muted-text" style="font-size:12px;">Carregando histórico…</p></div>
+            </div>
           </div>
           <!-- Aba Tarefas -->
           <div id="painel-tab-tarefas" class="oculto">
@@ -6854,6 +6895,11 @@ select.form-control { cursor: pointer; }
                   onclick="BtnGuard.wrap('run-ata-aprovar-btn','Aprovando…',ReunioesUI.aprovarAta)">
                   <span class="ms ms-sm">verified</span> Aprovar Ata
                 </button>
+                <button type="button" class="btn btn-ghost btn-sm"
+                  id="run-ata-compartilhar-btn"
+                  onclick="BtnGuard.wrap('run-ata-compartilhar-btn','Compartilhando…',ReunioesUI.compartilharAta)">
+                  <span class="ms ms-sm">share</span> Compartilhar ↗
+                </button>
               </div>
             </div>
             <!-- Tab Encaminhamentos -->
@@ -7079,6 +7125,139 @@ select.form-control { cursor: pointer; }
         </div>
         <div id="balcao-lista" class="lista-container"><p class="muted-text">Carregando demandas…</p></div>
       </div><!-- /view-balcao -->
+
+      <!-- ── Quadros ───────────────────────────────────────────────────── -->
+      <div id="view-quadros" class="view">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Quadros</h1>
+            <p class="view-subtitle">Canvases colaborativos vinculados às ações</p>
+          </div>
+          <button id="btn-novo-quadro" class="btn btn-primary"
+            onclick="BtnGuard.wrap('btn-novo-quadro','Abrindo…',function(done){ QuadrosUI.abrirForm(null); done(); })">
+            <span class="ms">add</span> Novo Quadro
+          </button>
+        </div>
+        <div class="tab-bar" style="margin-bottom:14px;">
+          <button class="tab-btn ativa" onclick="QuadrosUI.setTab('todos',this)" data-bg-skip="1">Todos</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('vinculados',this)" data-bg-skip="1">Vinculados a Ação</button>
+        </div>
+        <div id="quadros-lista" class="lista-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+          <p class="muted-text">Carregando quadros…</p>
+        </div>
+        <!-- Modal Quadro -->
+        <div id="qdro-modal" class="modal-overlay oculto" onclick="if(event.target===this)QuadrosUI.fecharForm()">
+          <div class="modal-box" style="max-width:520px">
+            <div class="modal-header">
+              <h2 id="qdro-modal-titulo">Novo Quadro</h2>
+              <button class="modal-close" onclick="QuadrosUI.fecharForm()" data-bg-skip="1">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group"><label>Título *</label><input type="text" id="qdro-titulo" class="form-control" required></div>
+              <div class="form-group"><label>Descrição</label><textarea id="qdro-descricao" class="form-control" rows="2"></textarea></div>
+              <div class="form-group"><label>Ação Vinculada</label><select id="qdro-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="QuadrosUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button id="qdro-salvar-btn" class="btn btn-primary"
+                onclick="BtnGuard.wrap('qdro-salvar-btn','Salvando…',QuadrosUI.salvar)">Salvar</button>
+            </div>
+          </div>
+        </div>
+        <!-- Editor TLDraw overlay -->
+        <div id="qdro-editor-overlay" class="oculto" style="position:fixed;inset:0;background:var(--surface);z-index:1500;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);">
+            <button class="btn btn-secondary btn-sm" onclick="QuadrosUI.fecharEditor()" data-bg-skip="1">
+              <span class="ms ms-sm">arrow_back</span> Voltar
+            </button>
+            <h3 id="qdro-editor-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;">Quadro</h3>
+            <button id="qdro-editor-salvar-btn" class="btn btn-primary btn-sm"
+              onclick="BtnGuard.wrap('qdro-editor-salvar-btn','Salvando…',QuadrosUI.salvarSnapshot)">
+              <span class="ms ms-sm">save</span> Salvar
+            </button>
+          </div>
+          <div id="qdro-editor-container" style="flex:1;"></div>
+        </div>
+      </div><!-- /view-quadros -->
+
+      <!-- ── Sessões Interativas ────────────────────────────────────────── -->
+      <div id="view-sessoes" class="view">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Sessões Interativas</h1>
+            <p class="view-subtitle">Enquetes, Q&amp;A e votações ao vivo com participantes</p>
+          </div>
+          <button id="btn-nova-sessao" class="btn btn-primary"
+            onclick="BtnGuard.wrap('btn-nova-sessao','Abrindo…',function(done){ SessaoUI.abrirForm(); done(); })">
+            <span class="ms">add</span> Nova Sessão
+          </button>
+        </div>
+        <div id="sessoes-lista" class="lista-container"><p class="muted-text">Carregando sessões…</p></div>
+        <!-- Modal Nova Sessão -->
+        <div id="sess-modal" class="modal-overlay oculto" onclick="if(event.target===this)SessaoUI.fecharForm()">
+          <div class="modal-box" style="max-width:540px">
+            <div class="modal-header">
+              <h2>Nova Sessão Interativa</h2>
+              <button class="modal-close" onclick="SessaoUI.fecharForm()" data-bg-skip="1">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group"><label>Título *</label><input type="text" id="sess-titulo" class="form-control" required></div>
+              <div class="form-group"><label>Descrição</label><textarea id="sess-descricao" class="form-control" rows="2"></textarea></div>
+              <div class="form-group"><label>Ação Vinculada</label><select id="sess-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+              <div class="form-group">
+                <label>Atividades (uma por linha — ex.: "enquete: Gostou do evento?")</label>
+                <textarea id="sess-atividades" class="form-control" rows="4"
+                  placeholder="enquete: Gostou do evento?&#10;qa: Perguntas ao palestrante&#10;votacao: Escolha o próximo tema"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="SessaoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button id="sess-criar-btn" class="btn btn-primary"
+                onclick="BtnGuard.wrap('sess-criar-btn','Criando…',SessaoUI.criar)">Criar Sessão</button>
+            </div>
+          </div>
+        </div>
+        <!-- Painel host -->
+        <div id="sess-host-panel" class="oculto" style="position:fixed;inset:0;background:var(--bg);z-index:1500;overflow-y:auto;padding:24px;">
+          <div style="max-width:700px;margin:0 auto;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+              <button class="btn btn-secondary btn-sm" onclick="SessaoUI.fecharHost()" data-bg-skip="1">
+                <span class="ms ms-sm">arrow_back</span> Voltar
+              </button>
+              <h2 id="sess-host-titulo" style="margin:0;font-size:17px;font-weight:700;flex:1;">Sessão</h2>
+              <span id="sess-host-badge" class="sess-badge rascunho">Rascunho</span>
+              <button id="sess-host-ativar-btn" class="btn btn-primary btn-sm"
+                onclick="BtnGuard.wrap('sess-host-ativar-btn','Ativando…',SessaoUI.ativar)">
+                <span class="ms ms-sm">play_circle</span> Ativar
+              </button>
+              <button id="sess-host-avancar-btn" class="btn btn-secondary btn-sm oculto"
+                onclick="BtnGuard.wrap('sess-host-avancar-btn','Avançando…',SessaoUI.avancar)">
+                <span class="ms ms-sm">skip_next</span> Próxima Atividade
+              </button>
+              <button id="sess-host-encerrar-btn" class="btn btn-danger btn-sm oculto"
+                onclick="BtnGuard.wrap('sess-host-encerrar-btn','Encerrando…',SessaoUI.encerrar)">
+                <span class="ms ms-sm">stop_circle</span> Encerrar
+              </button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+                <p style="font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 8px;">QR Code de Acesso</p>
+                <div id="sess-host-qr" style="width:128px;height:128px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                  <span class="ms" style="font-size:40px;color:var(--muted);">qr_code_2</span>
+                </div>
+                <p id="sess-host-link" style="font-size:11px;color:var(--muted);margin:8px 0 0;word-break:break-all;"></p>
+              </div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+                <p style="font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 8px;">Atividade Atual</p>
+                <p id="sess-host-ativ-atual" style="font-size:14px;font-weight:600;margin:0 0 4px;">—</p>
+                <p id="sess-host-ativ-idx" style="font-size:12px;color:var(--muted);margin:0;">—</p>
+                <div id="sess-host-respostas" style="margin-top:12px;font-size:13px;"></div>
+              </div>
+            </div>
+            <div id="sess-host-resultados" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;"></div>
+          </div>
+        </div>
+      </div><!-- /view-sessoes -->
 
       <!-- Modal Balcão -->
       <div id="bl-modal" class="modal-overlay oculto" onclick="if(event.target===this)BalcaoUI.fecharForm()">
@@ -10366,6 +10545,34 @@ var GAS = {
   _err: function(e) { Toast.erro('Erro de comunicação: ' + (e.message || e)); }
 };
 
+// ── Extensões GAS: Bulk Tarefas ─────────────────────────────────────────────
+GAS.tarefas.bulkConcluir = function(ids,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_bulk_concluir(ids); };
+GAS.tarefas.bulkCancelar = function(ids,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_tarefas_bulk_cancelar(ids); };
+// ── Extensão GAS: Timeline de Auditoria ────────────────────────────────────
+GAS.auditoria.timeline = function(mod,id,lim,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_auditoria_timeline(mod,id,lim||20); };
+// ── Namespace GAS: Quadros ──────────────────────────────────────────────────
+GAS.quadros = {
+  listar:  function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_quadros_listar(f||{}); },
+  obter:   function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_quadros_obter(id); },
+  salvar:  function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_quadros_salvar(d); },
+  excluir: function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_quadros_excluir(id); }
+};
+// ── Namespace GAS: Sessão Interativa ────────────────────────────────────────
+GAS.sessao = {
+  listar:     function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_listar(f||{}); },
+  criar:      function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_criar(d); },
+  ativar:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_ativar(id); },
+  avancar:    function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_avancar(id); },
+  encerrar:   function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_encerrar(id); },
+  resultados: function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_resultados(id); }
+};
+// ── Namespace GAS: Document Sharing ────────────────────────────────────────
+GAS.docSharing = {
+  compartilhar:      function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_doc_compartilhar(d); },
+  listarPorEntidade: function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_doc_listar_por_entidade(id); },
+  revogar:           function(tok,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_doc_revogar(tok); }
+};
+
 // Inicializa navegação por setas em tab bars com overflow (ADM-07, ACO-09)
 function _initTabBarNav(bar) {
   if (!bar || bar.dataset.navInit) return;
@@ -10496,6 +10703,97 @@ function fmtDataPtBR(d) {
   if (!d) return '';
   var p = String(d).split('-');
   return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+}
+
+// ── BulkBar — multi-seleção com barra flutuante ──────────────
+var BulkBar = (function() {
+  var _containerId = null, _callbacks = [], _selecionados = [], _bar = null;
+
+  function _getBar() {
+    if (!_bar) {
+      _bar = document.createElement('div');
+      _bar.className = 'bulk-bar';
+      _bar.id = 'bulk-bar-global';
+      document.body.appendChild(_bar);
+    }
+    return _bar;
+  }
+
+  function init(containerId, acoes) {
+    _containerId = containerId;
+    _callbacks = acoes || [];
+    _selecionados = [];
+    _atualizar();
+  }
+
+  function toggle(id, checked) {
+    if (checked) {
+      if (_selecionados.indexOf(id) === -1) _selecionados.push(id);
+    } else {
+      _selecionados = _selecionados.filter(function(x) { return x !== id; });
+    }
+    var el = _containerId ? document.getElementById(_containerId) : null;
+    if (el) {
+      var cards = el.querySelectorAll('.tf-card[data-bulk-id],  .bl-card[data-bulk-id]');
+      Array.prototype.forEach.call(cards, function(c) {
+        if (c.getAttribute('data-bulk-id') === String(id)) c.classList.toggle('selected', checked);
+      });
+    }
+    _atualizar();
+  }
+
+  function _atualizar() {
+    var b = _getBar();
+    var n = _selecionados.length;
+    b.innerHTML = '<span class="bulk-bar-count">' + n + ' selecionado' + (n !== 1 ? 's' : '') + '</span>'
+      + _callbacks.map(function(a) {
+          return '<button class="bulk-bar-btn" onclick="BulkBar._exec(\'' + escaparHtml(a.id) + '\')">' + escaparHtml(a.label) + '</button>';
+        }).join('');
+    b.classList.toggle('visivel', n > 0);
+  }
+
+  function _exec(id) {
+    var ids = _selecionados.slice();
+    var acao = _callbacks.filter(function(a) { return a.id === id; })[0];
+    if (acao && acao.cb) acao.cb(ids);
+    _selecionados = [];
+    document.querySelectorAll('[data-bulk-check]').forEach(function(c) { c.checked = false; });
+    document.querySelectorAll('.tf-card.selected,.bl-card.selected').forEach(function(c) { c.classList.remove('selected'); });
+    _atualizar();
+  }
+
+  return { init: init, toggle: toggle, _exec: _exec };
+})();
+
+// ── Timeline de auditoria por entidade ───────────────────────
+function _renderTimeline(eventos, containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  if (!eventos || !eventos.length) {
+    el.innerHTML = '<p class="muted-text" style="font-size:12px;padding:8px 0;">Nenhum evento registrado ainda.</p>';
+    return;
+  }
+  el.innerHTML = '<div style="position:relative;padding-left:28px;">'
+    + eventos.map(function(ev, idx) {
+        var isLast = idx === eventos.length - 1;
+        var ts = '';
+        if (ev.criadoEm) {
+          try { ts = new Date(ev.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+          catch(e) { ts = String(ev.criadoEm).slice(0,16); }
+        }
+        return '<div class="timeline-item">'
+          + (!isLast ? '<div class="timeline-line"></div>' : '')
+          + '<div class="timeline-dot"></div>'
+          + '<div class="timeline-msg">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+              + '<span style="font-weight:600;">' + escaparHtml(ev.evento || ev.acao || '—') + '</span>'
+              + '<span style="color:var(--muted);font-size:11px;">' + ts + '</span>'
+            + '</div>'
+            + (ev.email ? '<div style="color:var(--muted);font-size:11px;">' + escaparHtml(ev.email) + '</div>' : '')
+          + '</div>'
+        + '</div>';
+      }).join('')
+    + '</div>';
 }
 
 // ── Permissão de escrita no módulo RH ────────────────────────
@@ -11089,12 +11387,16 @@ var TarefasUI = (function() {
       var descricao = t.descricao ? '<p style="font-size:12px;color:var(--muted);margin:0;line-height:1.5;">'+escaparHtml(t.descricao)+'</p>' : '';
       var detalheId = 'tf-det-' + sid;
 
-      return '<div class="tf-card" style="border-left:3px solid '+cor+';border-radius:0 8px 8px 0;background:var(--surface);margin-bottom:4px;overflow:hidden;">'
+      return '<div class="tf-card" data-bulk-id="'+sid+'" style="border-left:3px solid '+cor+';border-radius:0 8px 8px 0;background:var(--surface);margin-bottom:4px;overflow:hidden;">'
         // ── Cabeçalho clicável ──────────────────────────────────────────────
         + '<div class="tf-header" data-id="'+sid+'" onclick="TarefasUI.toggleDetalhe(\''+detalheId+'\')" '
             + 'style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;'
             + 'border-bottom:1px solid transparent;transition:background .15s;user-select:none;"'
             + 'onmouseenter="this.style.background=\'var(--bg)\'" onmouseleave="this.style.background=\'\'">'
+          + (ativo ? '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;flex-shrink:0;margin-right:-2px;">'
+              + '<input type="checkbox" class="bulk-check" data-bulk-check="1" data-id="'+sid+'"'
+              + ' onchange="BulkBar.toggle(\''+sid+'\',this.checked)">'
+              + '</label>' : '')
           + '<span class="ms ms-sm" style="color:'+cor+';flex-shrink:0;">'
             + (t.status==='concluida'?'check_circle':t.status==='cancelada'?'cancel':'radio_button_unchecked')+'</span>'
           + '<div style="flex:1;min-width:0;">'
@@ -11172,6 +11474,28 @@ var TarefasUI = (function() {
         });
       });
     });
+    // BulkBar — ações em lote para tarefas ativas
+    BulkBar.init('tarefas-lista', [
+      { id: 'bulk-concluir', label: 'Concluir selecionadas', cb: function(ids) {
+          GAS.tarefas.bulkConcluir(ids, function(r) {
+            Toast.sucesso((r && r.data && r.data.concluidas || ids.length) + ' tarefa(s) concluída(s).');
+            carregar();
+          }, function(e) { Toast.erro(e.message || e); });
+      }},
+      { id: 'bulk-cancelar', label: 'Cancelar selecionadas', cb: function(ids) {
+          _abrirModalConfirmar({
+            titulo: 'Cancelar tarefas', icone: 'cancel', corIcone: '#ef4444',
+            mensagem: 'Cancelar ' + ids.length + ' tarefa(s) selecionada(s)?',
+            labelConfirmar: 'Cancelar tarefas',
+            cb: function() {
+              GAS.tarefas.bulkCancelar(ids, function(r) {
+                Toast.sucesso((r && r.data && r.data.canceladas || ids.length) + ' tarefa(s) cancelada(s).');
+                carregar();
+              }, function(e) { Toast.erro(e.message || e); });
+            }
+          });
+      }}
+    ]);
   }
 
   function _confirmarExcluir() {
@@ -26840,6 +27164,10 @@ var AcoesUI = (function() {
     if (tabId === 'contratacoes_acao' && _painelAcao) {
       SolicitacoesUI.carregarParaAcao(_painelAcao.id);
     }
+    // Lazy-load timeline na aba Geral
+    if (tabId === 'geral' && _painelAcao) {
+      _carregarTimelineAcao(_painelAcao.id);
+    }
     // Atualizar botão ativo
     var painel = document.getElementById('acao-painel');
     if (painel) {
@@ -27334,6 +27662,39 @@ var AcoesUI = (function() {
     });
   }
 
+  function _carregarTimelineAcao(acaoId) {
+    var el = document.getElementById('painel-aco-timeline');
+    if (!el) return;
+    GAS.auditoria.timeline('acoes', acaoId, 15, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem histórico.</p>'; return; }
+      _renderTimeline(resp.data || [], 'painel-aco-timeline');
+    }, function() { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Erro ao carregar histórico.</p>'; });
+  }
+
+  function compartilharRelatorio(done) {
+    if (!_painelAcao) { done(); Toast.aviso('Abra o painel de uma ação primeiro.'); return; }
+    var dados = {
+      tipo:        'relatorio_acao',
+      entidadeId:  _painelAcao.id,
+      titulo:      'Relatório: ' + (_painelAcao.nome || _painelAcao.id),
+      conteudoHtml: '<h2>' + escaparHtml(_painelAcao.nome || '') + '</h2>'
+        + '<p>Status: ' + escaparHtml(_painelAcao.status || '') + '</p>'
+        + '<p>Responsável: ' + escaparHtml(_painelAcao.responsavel || '—') + '</p>'
+        + '<p>Período: ' + escaparHtml((_painelAcao.dataInicio || '').slice(0,10)) + ' → ' + escaparHtml((_painelAcao.dataFim || '').slice(0,10)) + '</p>'
+        + '<p>Descrição: ' + escaparHtml(_painelAcao.descricao || '') + '</p>'
+    };
+    GAS.docSharing.compartilhar(dados, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao compartilhar.'); return; }
+      var link = resp.data && resp.data.linkPublico;
+      if (link) {
+        _modalInput({ titulo: 'Link de Compartilhamento', label: 'Copie o link abaixo', valorPadrao: link }, function(){});
+      } else {
+        Toast.sucesso('Relatório compartilhado.');
+      }
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
   return {
     aoAbrir:               aoAbrir,
     carregar:              carregar,
@@ -27353,7 +27714,8 @@ var AcoesUI = (function() {
     _abrirModalFase:       _abrirModalFase,
     _salvarFase:           _salvarFase,
     _excluirFase:          _excluirFase,
-    getPainelAcao:         function() { return _painelAcao; }
+    getPainelAcao:         function() { return _painelAcao; },
+    compartilharRelatorio: compartilharRelatorio
   };
 
 })();
@@ -27873,6 +28235,8 @@ var App = (function() {
     { secao:'OPERACIONAL' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
     { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
+    { id:'quadros',     label:'Quadros',          icone:'dashboard_customize',      modulo:null },
+    { id:'sessoes',     label:'Sessões Interativas', icone:'group_work',           modulo:null },
     { secao:'MEMÓRIA' },
     { id:'memoria',     label:'Memória Institucional', icone:'collections_bookmark', modulo:null },
     { secao:'SISTEMA', superadmin:true },
@@ -28177,6 +28541,8 @@ var App = (function() {
             : id === 'memoria'         ? function(){ MemoriaUI.aoAbrir(); }
             : id === 'reservas-carro' ? function(){ ReservasCarroUI.aoAbrir(); }
             : id === 'manual'         ? function(){ ManualUI.aoAbrir(); }
+            : id === 'quadros'        ? function(){ QuadrosUI.aoAbrir(); }
+            : id === 'sessoes'        ? function(){ SessaoUI.aoAbrir(); }
             : null
           );
         })(item.id, item.label);
@@ -31597,10 +31963,32 @@ var ReunioesUI = (function() {
     }
   }
 
-  return { aoAbrir, carregar, setTab, _filtrar, abrirForm, fecharForm,
-           setModalTab, salvar, mudarStatus, salvarAta, submeterAta, aprovarAta,
-           adicionarEncaminhamento, concluirEnc, abrirDetalhe,
-           _addPauta, _addPresente, _addAusenteJust, _usarTemplateAta };
+  function compartilharAta(done) {
+    if (!_idAtual) { done(); Toast.aviso('Salve a reunião antes de compartilhar a ata.'); return; }
+    var texto = (document.getElementById('run-ata-texto') || {}).value || '';
+    if (!texto.trim()) { done(); Toast.aviso('Redigir a ata antes de compartilhar.'); return; }
+    var titulo = (document.getElementById('run-titulo') || {}).value || 'Ata de Reunião';
+    var conteudo = '<h2>' + escaparHtml(titulo) + '</h2><pre style="white-space:pre-wrap;font-size:14px;line-height:1.6;">' + escaparHtml(texto) + '</pre>';
+    GAS.docSharing.compartilhar({ tipo: 'ata_reuniao', entidadeId: _idAtual, titulo: 'Ata: ' + titulo, conteudoHtml: conteudo }, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao compartilhar ata.'); return; }
+      var link = resp.data && resp.data.linkPublico;
+      if (link) {
+        _modalInput({ titulo: 'Link da Ata Compartilhada', label: 'Copie o link para enviar aos participantes', valorPadrao: link }, function(){});
+      } else {
+        Toast.sucesso('Ata compartilhada com sucesso.');
+      }
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  return { aoAbrir: aoAbrir, carregar: carregar, setTab: setTab, _filtrar: _filtrar,
+           abrirForm: abrirForm, fecharForm: fecharForm, setModalTab: setModalTab,
+           salvar: salvar, mudarStatus: mudarStatus, salvarAta: salvarAta,
+           submeterAta: submeterAta, aprovarAta: aprovarAta, compartilharAta: compartilharAta,
+           adicionarEncaminhamento: adicionarEncaminhamento, concluirEnc: concluirEnc,
+           abrirDetalhe: abrirDetalhe,
+           _addPauta: _addPauta, _addPresente: _addPresente,
+           _addAusenteJust: _addAusenteJust, _usarTemplateAta: _usarTemplateAta };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 
@@ -31677,12 +32065,22 @@ var TaskHubUI = (function() {
       default:
         meta = escaparHtml(item.modulo || '') + ' · ' + prazoStr;
     }
-    return '<div class="th-item' + (item.vencido?' vencido':'') + '" onclick="TaskHubUI.abrirItem(\'' + escaparHtml(item.tipo) + '\',\'' + escaparHtml(item.id) + '\')">' +
+    var iid = JSON.stringify(item.id).replace(/"/g,"'");
+    var btnAcao = '';
+    if (item.tipo === 'tarefa' && item.status !== 'concluida' && item.status !== 'cancelada') {
+      btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._concluirTarefa(' + iid + ')" title="Concluir">Concluir</button>';
+    } else if (item.tipo === 'encaminhamento') {
+      btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._marcarEnc(' + iid + ')" title="Marcar como feito">Marcar feito</button>';
+    } else if (item.tipo === 'chave') {
+      btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._devolverChave(' + iid + ')" title="Devolver chave">Registrar devolução</button>';
+    }
+    return '<div class="th-item' + (item.vencido?' vencido':'') + '" onclick="TaskHubUI.abrirItem(\'' + escaparHtml(item.tipo) + '\',\'' + escaparHtml(item.id) + '\')" style="display:flex;align-items:center;">' +
       '<div class="th-item-tipo ' + escaparHtml(item.tipo) + '"><span class="ms" style="font-size:15px;">' + ico + '</span></div>' +
-      '<div class="th-item-corpo">' +
+      '<div class="th-item-corpo" style="flex:1;min-width:0;">' +
         '<div class="th-item-titulo">' + escaparHtml(item.titulo) + vencidoStr + '</div>' +
         '<div class="th-item-meta">' + meta + '</div>' +
       '</div>' +
+      (btnAcao ? '<div style="margin-left:8px;flex-shrink:0;">' + btnAcao + '</div>' : '') +
     '</div>';
   }
 
@@ -31788,7 +32186,42 @@ var TaskHubUI = (function() {
     try { var p=String(d).slice(0,10).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; } catch(_){ return d; }
   }
 
-  return { aoAbrir, carregar, setTab, abrirItem, carregarTime, carregarProdutividade, carregarAniversariantes, _solicitarDayoff, _executarDayoff };
+  function _concluirTarefa(id) {
+    GAS.tarefas.mudarStatus(id, 'concluida', '', function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao concluir tarefa.'); return; }
+      Toast.sucesso('Tarefa concluída!');
+      _carregado = false; carregar();
+    }, function(e) { Toast.erro(e.message || e); });
+  }
+
+  function _marcarEnc(id) {
+    GAS.reunioes.concluirEncaminhamento(id, function(r) {
+      if (!r || !r.ok) { Toast.erro('Erro ao marcar encaminhamento.'); return; }
+      Toast.sucesso('Encaminhamento marcado como feito.');
+      _carregado = false; carregar();
+    }, function(e) { Toast.erro(e.message || e); });
+  }
+
+  function _devolverChave(id) {
+    _abrirModalConfirmar({
+      titulo: 'Registrar Devolução', icone: 'key', corIcone: '#f59e0b',
+      mensagem: 'Confirmar devolução desta chave?',
+      labelConfirmar: 'Confirmar Devolução',
+      cb: function() {
+        GAS.espacos.devolverChave(id, function(r) {
+          if (!r || !r.ok) { Toast.erro('Erro ao registrar devolução.'); return; }
+          Toast.sucesso('Devolução registrada.');
+          _carregado = false; carregar();
+        }, function(e) { Toast.erro(e.message || e); });
+      }
+    });
+  }
+
+  return { aoAbrir: aoAbrir, carregar: carregar, setTab: setTab, abrirItem: abrirItem,
+           carregarTime: carregarTime, carregarProdutividade: carregarProdutividade,
+           carregarAniversariantes: carregarAniversariantes,
+           _solicitarDayoff: _solicitarDayoff, _executarDayoff: _executarDayoff,
+           _concluirTarefa: _concluirTarefa, _marcarEnc: _marcarEnc, _devolverChave: _devolverChave };
 })();
 Router.registrar('taskhub', 'Meu Centro', TaskHubUI.aoAbrir);
 
@@ -31865,7 +32298,10 @@ var BalcaoUI = (function() {
       var pct   = _calcSlaPct(d);
       var clSla = pct >= 80 ? 'vermelho' : pct >= 50 ? 'amarelo' : 'verde';
       var id    = JSON.stringify(d.id).replace(/"/g,"'");
-      return '<div class="bl-card" onclick="BalcaoUI.abrirDetalhe(' + id + ')">' +
+      return '<div class="bl-card" data-bulk-id="' + escaparHtml(d.id) + '" onclick="BalcaoUI.abrirDetalhe(' + id + ')">' +
+        '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;flex-shrink:0;margin-right:4px;">' +
+        '<input type="checkbox" class="bulk-check" data-bulk-check="1" data-id="' + escaparHtml(d.id) + '"' +
+        ' onchange="BulkBar.toggle(\'' + escaparHtml(d.id) + '\',this.checked)"></label>' +
         '<div class="bl-tipo-icon">' + ico + '</div>' +
         '<div style="flex:1;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;">' +
@@ -31879,6 +32315,7 @@ var BalcaoUI = (function() {
         '</div>' +
       '</div>';
     }).join('');
+    BulkBar.init('balcao-lista', []);
   }
 
   function _calcSlaPct(d) {
@@ -32070,6 +32507,403 @@ var BalcaoUI = (function() {
            setModalTab, salvar, enviarVersao, enviarComentario, toggleFormVersao, _atualizarSlaLabel };
 })();
 Router.registrar('balcao', 'Balcão', BalcaoUI.aoAbrir);
+
+// ════════════════════════════════════════════════════════════════════════════
+// QuadrosUI — Canvases colaborativos (TLDraw / fallback)
+// ════════════════════════════════════════════════════════════════════════════
+var QuadrosUI = (function() {
+  var _lista = [], _carregado = false, _tabAtual = 'todos';
+  var _idAtual = null, _editor = null;
+
+  function aoAbrir() { if (!_carregado) carregar(); }
+
+  function carregar() {
+    var el = document.getElementById('quadros-lista');
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.quadros.listar({}, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ao carregar quadros.</p>'; return; }
+      _lista = resp.data || [];
+      _carregado = true;
+      _renderLista();
+    }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
+  }
+
+  function setTab(tab, btn) {
+    _tabAtual = tab;
+    document.querySelectorAll('#view-quadros .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
+    if (btn) btn.classList.add('ativa');
+    _renderLista();
+  }
+
+  function _renderLista() {
+    var el = document.getElementById('quadros-lista');
+    var lista = _tabAtual === 'vinculados'
+      ? _lista.filter(function(q) { return q.acaoId; })
+      : _lista;
+    if (!lista.length) {
+      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:40px;">'
+        + '<span class="ms" style="font-size:40px;color:var(--muted)">dashboard_customize</span>'
+        + '<p style="font-size:13px;color:var(--muted);margin:8px 0 12px;">Nenhum quadro criado ainda.</p>'
+        + '<button class="btn btn-primary btn-sm" onclick="BtnGuard.wrap(\'btn-novo-quadro\',\'Abrindo…\',function(done){QuadrosUI.abrirForm(null);done();})"><span class="ms ms-sm">add</span> Novo Quadro</button>'
+        + '</div>';
+      return;
+    }
+    el.innerHTML = lista.map(function(q) {
+      var id = JSON.stringify(q.id).replace(/"/g,"'");
+      var thumb = q.thumbUrl
+        ? '<img src="' + escaparHtml(q.thumbUrl) + '" style="width:100%;height:100%;object-fit:cover;">'
+        : '<span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span>';
+      return '<div class="quadro-card" onclick="QuadrosUI.abrirEditor(' + id + ')">'
+        + '<div class="qdro-thumb">' + thumb + '</div>'
+        + '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + escaparHtml(q.titulo) + '</div>'
+        + (q.acaoId ? '<div style="font-size:11px;color:var(--muted);">Vinculado a ação</div>' : '')
+        + '<div style="display:flex;gap:6px;margin-top:10px;">'
+          + '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.abrirForm(' + id + ')" data-bg-skip="1">Editar</button>'
+          + '<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-error);" onclick="event.stopPropagation();QuadrosUI.excluir(' + id + ')" data-bg-skip="1">Excluir</button>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  function abrirForm(id) {
+    _idAtual = id || null;
+    document.getElementById('qdro-modal-titulo').textContent = id ? 'Editar Quadro' : 'Novo Quadro';
+    document.getElementById('qdro-titulo').value = '';
+    document.getElementById('qdro-descricao').value = '';
+    document.getElementById('qdro-acao-id').value = '';
+    if (id) {
+      var q = _lista.filter(function(x) { return x.id === id; })[0];
+      if (q) {
+        document.getElementById('qdro-titulo').value = q.titulo || '';
+        document.getElementById('qdro-descricao').value = q.descricao || '';
+        document.getElementById('qdro-acao-id').value = q.acaoId || '';
+      }
+    }
+    _carregarSelectAcoes();
+    document.getElementById('qdro-modal').classList.remove('oculto');
+  }
+
+  function fecharForm() { document.getElementById('qdro-modal').classList.add('oculto'); }
+
+  function salvar(done) {
+    var titulo = (document.getElementById('qdro-titulo') || {}).value || '';
+    if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
+    var dados = {
+      id:        _idAtual || undefined,
+      titulo:    titulo.trim(),
+      descricao: (document.getElementById('qdro-descricao') || {}).value || '',
+      acaoId:    (document.getElementById('qdro-acao-id') || {}).value || ''
+    };
+    GAS.quadros.salvar(dados, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao salvar quadro.'); return; }
+      Toast.sucesso(_idAtual ? 'Quadro atualizado.' : 'Quadro criado.');
+      fecharForm();
+      _carregado = false; carregar();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function excluir(id) {
+    _abrirModalConfirmar({
+      titulo: 'Excluir Quadro', icone: 'delete_forever', corIcone: '#ef4444',
+      mensagem: 'Excluir este quadro? O canvas será perdido permanentemente.',
+      labelConfirmar: 'Excluir',
+      cb: function() {
+        GAS.quadros.excluir(id, function(resp) {
+          if (!resp || !resp.ok) { Toast.erro('Erro ao excluir.'); return; }
+          Toast.sucesso('Quadro excluído.');
+          _carregado = false; carregar();
+        }, function(e) { Toast.erro(e.message || e); });
+      }
+    });
+  }
+
+  function abrirEditor(id) {
+    GAS.quadros.obter(id, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
+      var q = resp.data;
+      _idAtual = id;
+      document.getElementById('qdro-editor-titulo').textContent = q.titulo || 'Quadro';
+      document.getElementById('qdro-editor-overlay').classList.remove('oculto');
+      _iniciarEditor(q.snapshot || null);
+    }, function(e) { Toast.erro(e.message || e); });
+  }
+
+  function fecharEditor() {
+    document.getElementById('qdro-editor-overlay').classList.add('oculto');
+    if (_editor && _editor.dispose) { try { _editor.dispose(); } catch(e) {} }
+    _editor = null;
+    _idAtual = null;
+  }
+
+  function _iniciarEditor(snapshot) {
+    var container = document.getElementById('qdro-editor-container');
+    container.innerHTML = '';
+    if (typeof window.tldraw !== 'undefined' && window.tldraw.Tldraw) {
+      try {
+        // TLDraw UMD disponível
+        var root = document.createElement('div');
+        root.style.cssText = 'width:100%;height:100%;';
+        container.appendChild(root);
+        // Usa a API React UMD do TLDraw
+        var el = window.React.createElement(window.tldraw.Tldraw, {
+          snapshot: snapshot || undefined,
+          onMount: function(editor) { _editor = editor; }
+        });
+        window.ReactDOM.render(el, root);
+        return;
+      } catch(e) { }
+    }
+    // Fallback: aviso com link de abertura externa
+    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;color:var(--muted);">'
+      + '<span class="ms" style="font-size:56px;">edit_square</span>'
+      + '<p style="font-size:15px;font-weight:600;margin:0;">Canvas colaborativo</p>'
+      + '<p style="font-size:13px;text-align:center;max-width:320px;margin:0;">Integração TLDraw indisponível neste ambiente. O snapshot JSON está armazenado e pode ser recuperado externamente.</p>'
+      + (snapshot ? '<button class="btn btn-secondary" onclick="navigator.clipboard.writeText(JSON.stringify(' + JSON.stringify(snapshot) + ')).then(function(){Toast.sucesso(\'Snapshot copiado!\');})" data-bg-skip="1"><span class="ms ms-sm">content_copy</span> Copiar Snapshot JSON</button>' : '')
+      + '</div>';
+    _editor = null;
+  }
+
+  function salvarSnapshot(done) {
+    var snap = null;
+    if (_editor && _editor.store && _editor.store.getSnapshot) {
+      try { snap = _editor.store.getSnapshot(); } catch(e) {}
+    }
+    GAS.quadros.salvar({ id: _idAtual, snapshot: snap }, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao salvar snapshot.'); return; }
+      Toast.sucesso('Quadro salvo.');
+      _carregado = false;
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function _carregarSelectAcoes() {
+    var sel = document.getElementById('qdro-acao-id');
+    if (!sel) return;
+    GAS.acoes.listar({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      sel.innerHTML = '<option value="">— Nenhuma —</option>'
+        + lista.filter(function(a){ return a.status !== 'cancelada' && a.status !== 'concluida'; })
+            .map(function(a){ return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
+    }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+  }
+
+  return { aoAbrir: aoAbrir, carregar: carregar, setTab: setTab,
+           abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir,
+           abrirEditor: abrirEditor, fecharEditor: fecharEditor, salvarSnapshot: salvarSnapshot };
+})();
+Router.registrar('quadros', 'Quadros', QuadrosUI.aoAbrir);
+
+// ════════════════════════════════════════════════════════════════════════════
+// SessaoUI — Sessões Interativas ao vivo
+// ════════════════════════════════════════════════════════════════════════════
+var SessaoUI = (function() {
+  var _lista = [], _carregado = false, _idAtual = null, _pollTimer = null;
+
+  function aoAbrir() { if (!_carregado) carregar(); }
+
+  function carregar() {
+    var el = document.getElementById('sessoes-lista');
+    el.innerHTML = '<p class="muted-text">Carregando sessões…</p>';
+    GAS.sessao.listar({}, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<p class="error-text">Erro ao carregar sessões.</p>'; return; }
+      _lista = resp.data || [];
+      _carregado = true;
+      _renderLista();
+    }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
+  }
+
+  function _renderLista() {
+    var el = document.getElementById('sessoes-lista');
+    if (!_lista.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:40px;">'
+        + '<span class="ms" style="font-size:40px;color:var(--muted)">group_work</span>'
+        + '<p style="font-size:13px;color:var(--muted);margin:8px 0 12px;">Nenhuma sessão criada.</p>'
+        + '<button class="btn btn-primary btn-sm" onclick="BtnGuard.wrap(\'btn-nova-sessao\',\'Abrindo…\',function(done){SessaoUI.abrirForm();done();})"><span class="ms ms-sm">add</span> Nova Sessão</button>'
+        + '</div>';
+      return;
+    }
+    el.innerHTML = _lista.map(function(s) {
+      var id = JSON.stringify(s.id).replace(/"/g,"'");
+      var badgeCls = s.status === 'ativa' ? 'ativa' : s.status === 'encerrada' ? 'encerrada' : 'rascunho';
+      return '<div class="sess-card">'
+        + '<div style="flex:1;">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+            + '<span style="font-weight:600;font-size:14px;">' + escaparHtml(s.titulo) + '</span>'
+            + '<span class="sess-badge ' + badgeCls + '">' + escaparHtml(s.status || 'rascunho') + '</span>'
+          + '</div>'
+          + (s.descricao ? '<p style="font-size:12px;color:var(--muted);margin:0 0 6px;">' + escaparHtml(s.descricao) + '</p>' : '')
+          + '<div style="font-size:11px;color:var(--muted);">'
+            + (s.totalAtividades ? s.totalAtividades + ' atividade(s)' : 'Sem atividades')
+            + (s.totalRespostas ? ' · ' + s.totalRespostas + ' resposta(s)' : '')
+          + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+          + '<button class="btn btn-primary btn-sm" onclick="SessaoUI.abrirHost(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">open_in_new</span> Painel Host</button>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  function abrirForm() {
+    document.getElementById('sess-titulo').value = '';
+    document.getElementById('sess-descricao').value = '';
+    document.getElementById('sess-atividades').value = '';
+    _carregarSelectAcoesSess();
+    document.getElementById('sess-modal').classList.remove('oculto');
+  }
+
+  function fecharForm() { document.getElementById('sess-modal').classList.add('oculto'); }
+
+  function criar(done) {
+    var titulo = (document.getElementById('sess-titulo') || {}).value || '';
+    if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
+    var linhas = ((document.getElementById('sess-atividades') || {}).value || '').split('\n').filter(function(l){ return l.trim(); });
+    var atividades = linhas.map(function(l) {
+      var p = l.indexOf(':');
+      return p > 0 ? { tipo: l.slice(0,p).trim().toLowerCase(), texto: l.slice(p+1).trim() } : { tipo: 'enquete', texto: l.trim() };
+    });
+    var dados = {
+      titulo:     titulo.trim(),
+      descricao:  (document.getElementById('sess-descricao') || {}).value || '',
+      acaoId:     (document.getElementById('sess-acao-id') || {}).value || '',
+      atividades: atividades
+    };
+    GAS.sessao.criar(dados, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao criar sessão.'); return; }
+      Toast.sucesso('Sessão criada!');
+      fecharForm();
+      _carregado = false; carregar();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function abrirHost(id) {
+    _idAtual = id;
+    var s = _lista.filter(function(x){ return x.id === id; })[0] || {};
+    document.getElementById('sess-host-titulo').textContent = s.titulo || 'Sessão';
+    _atualizarHostBadge(s.status || 'rascunho');
+    document.getElementById('sess-host-link').textContent = '';
+    document.getElementById('sess-host-qr').innerHTML = '<span class="ms" style="font-size:40px;color:var(--muted);">qr_code_2</span>';
+    document.getElementById('sess-host-ativ-atual').textContent = '—';
+    document.getElementById('sess-host-ativ-idx').textContent = '';
+    document.getElementById('sess-host-respostas').innerHTML = '';
+    document.getElementById('sess-host-resultados').innerHTML = '';
+    document.getElementById('sess-host-panel').classList.remove('oculto');
+    _carregarResultados();
+  }
+
+  function fecharHost() {
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+    document.getElementById('sess-host-panel').classList.add('oculto');
+    _idAtual = null;
+  }
+
+  function _atualizarHostBadge(status) {
+    var badge = document.getElementById('sess-host-badge');
+    badge.className = 'sess-badge ' + (status === 'ativa' ? 'ativa' : status === 'encerrada' ? 'encerrada' : 'rascunho');
+    badge.textContent = status;
+    var ativar  = document.getElementById('sess-host-ativar-btn');
+    var avancar = document.getElementById('sess-host-avancar-btn');
+    var encerrar= document.getElementById('sess-host-encerrar-btn');
+    if (ativar)   ativar.classList.toggle('oculto', status !== 'rascunho');
+    if (avancar)  avancar.classList.toggle('oculto', status !== 'ativa');
+    if (encerrar) encerrar.classList.toggle('oculto', status !== 'ativa');
+  }
+
+  function ativar(done) {
+    GAS.sessao.ativar(_idAtual, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao ativar sessão.'); return; }
+      var d = resp.data || {};
+      Toast.sucesso('Sessão ativada!');
+      _atualizarHostBadge('ativa');
+      // Exibir QR code e link
+      if (d.linkParticipante) {
+        document.getElementById('sess-host-link').textContent = d.linkParticipante;
+        var qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=128x128&chl=' + encodeURIComponent(d.linkParticipante);
+        document.getElementById('sess-host-qr').innerHTML = '<img src="' + qrUrl + '" width="128" height="128" alt="QR Code">';
+      }
+      // Atualizar lista
+      _carregado = false;
+      // Iniciar poll de resultados a cada 2s
+      if (_pollTimer) clearInterval(_pollTimer);
+      _pollTimer = setInterval(function(){ if (_idAtual) _carregarResultados(); }, 2000);
+      _carregarResultados();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function avancar(done) {
+    GAS.sessao.avancar(_idAtual, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao avançar atividade.'); return; }
+      Toast.sucesso('Próxima atividade.');
+      _carregarResultados();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function encerrar(done) {
+    _abrirModalConfirmar({
+      titulo:'Encerrar Sessão', icone:'stop_circle', corIcone:'#ef4444',
+      mensagem:'Encerrar a sessão? Participantes não poderão mais responder.',
+      labelConfirmar:'Encerrar',
+      cb: function() {
+        GAS.sessao.encerrar(_idAtual, function(resp) {
+          done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao encerrar.'); return; }
+          Toast.sucesso('Sessão encerrada.');
+          if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+          _atualizarHostBadge('encerrada');
+          _carregarResultados();
+          _carregado = false; carregar();
+        }, function(e) { done(); Toast.erro(e.message || e); });
+      },
+      cbCancelar: function() { done(); }
+    });
+  }
+
+  function _carregarResultados() {
+    if (!_idAtual) return;
+    GAS.sessao.resultados(_idAtual, function(resp) {
+      if (!resp || !resp.ok) return;
+      var d = resp.data || {};
+      var ativAtual = d.atividadeAtual || {};
+      document.getElementById('sess-host-ativ-atual').textContent = ativAtual.texto || '—';
+      document.getElementById('sess-host-ativ-idx').textContent = d.indiceAtual != null
+        ? 'Atividade ' + (d.indiceAtual + 1) + ' de ' + (d.totalAtividades || '?')
+        : '';
+      // Respostas da atividade atual
+      var resps = d.respostasAtual || [];
+      document.getElementById('sess-host-respostas').innerHTML = resps.length
+        ? '<div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--muted);">RESPOSTAS (' + resps.length + ')</div>'
+            + resps.slice(0,5).map(function(r){ return '<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);">' + escaparHtml(String(r.valor||'')) + '</div>'; }).join('')
+            + (resps.length > 5 ? '<div style="font-size:11px;color:var(--muted);margin-top:4px;">+' + (resps.length - 5) + ' mais…</div>' : '')
+        : '<p style="font-size:12px;color:var(--muted);margin:0;">Aguardando respostas…</p>';
+      // Resultado global
+      var res = document.getElementById('sess-host-resultados');
+      if (d.status === 'encerrada' && d.resumo) {
+        res.innerHTML = '<p style="font-size:12px;font-weight:700;color:var(--muted);margin:0 0 8px;">RESUMO FINAL</p>'
+          + '<pre style="font-size:12px;white-space:pre-wrap;margin:0;">' + escaparHtml(JSON.stringify(d.resumo, null, 2)) + '</pre>';
+      }
+    });
+  }
+
+  function _carregarSelectAcoesSess() {
+    var sel = document.getElementById('sess-acao-id');
+    if (!sel) return;
+    GAS.acoes.listar({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      sel.innerHTML = '<option value="">— Nenhuma —</option>'
+        + lista.filter(function(a){ return a.status !== 'cancelada' && a.status !== 'concluida'; })
+            .map(function(a){ return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
+    }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+  }
+
+  return { aoAbrir: aoAbrir, carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm,
+           criar: criar, abrirHost: abrirHost, fecharHost: fecharHost,
+           ativar: ativar, avancar: avancar, encerrar: encerrar };
+})();
+Router.registrar('sessoes', 'Sessões Interativas', SessaoUI.aoAbrir);
 
 // ════════════════════════════════════════════════════════════════════════════
 // FASE 10 — AuditoriaVisualUI

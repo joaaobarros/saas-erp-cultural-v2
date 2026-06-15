@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= orgConfig.titulo ?> — Sessão Interativa</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f8fafc;min-height:100vh;display:flex;flex-direction:column;}
+.topo{background:#1e293b;padding:14px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #334155;}
+.topo-org{font-size:13px;font-weight:700;color:#94a3b8;}
+.topo-titulo{font-size:15px;font-weight:700;color:#f8fafc;}
+.area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;}
+.card{background:#1e293b;border-radius:16px;padding:28px 24px;width:100%;max-width:480px;text-align:center;}
+.icone{font-size:48px;margin-bottom:16px;}
+h2{font-size:20px;font-weight:700;margin-bottom:8px;}
+p{font-size:14px;color:#94a3b8;line-height:1.6;}
+.input{width:100%;padding:14px 16px;border-radius:10px;border:2px solid #334155;background:#0f172a;color:#f8fafc;font-size:16px;margin:12px 0;outline:none;text-align:center;letter-spacing:3px;text-transform:uppercase;}
+.input:focus{border-color:#3b82f6;}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;background:#3b82f6;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;transition:background .2s;}
+.btn:hover{background:#2563eb;}
+.btn:disabled{background:#334155;cursor:not-allowed;}
+.btn-secondary{background:transparent;border:2px solid #334155;color:#94a3b8;margin-top:8px;}
+.btn-secondary:hover{border-color:#64748b;background:#1e293b;}
+.opcao{width:100%;padding:14px 16px;border-radius:10px;border:2px solid #334155;background:#0f172a;color:#f8fafc;font-size:15px;font-weight:500;cursor:pointer;margin-bottom:10px;text-align:left;transition:all .2s;display:flex;align-items:center;gap:10px;}
+.opcao:hover{border-color:#3b82f6;background:#1e3a5f;}
+.opcao.selecionada{border-color:#3b82f6;background:#1e3a5f;}
+.opcao.correta{border-color:#10b981;background:#064e3b;}
+.opcao.errada{border-color:#ef4444;background:#450a0a;}
+.textarea{width:100%;padding:14px 16px;border-radius:10px;border:2px solid #334155;background:#0f172a;color:#f8fafc;font-size:15px;margin:12px 0;outline:none;resize:vertical;min-height:100px;}
+.textarea:focus{border-color:#3b82f6;}
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+.badge-azul{background:#1e3a5f;color:#60a5fa;}
+.badge-verde{background:#064e3b;color:#34d399;}
+.badge-cinza{background:#1e293b;color:#94a3b8;}
+.progress-bar{width:100%;height:6px;background:#334155;border-radius:3px;margin-bottom:16px;overflow:hidden;}
+.progress-fill{height:100%;background:#3b82f6;border-radius:3px;transition:width .4s;}
+.aguardando{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.dots{display:flex;gap:6px;margin-top:8px;}
+.dot{width:8px;height:8px;border-radius:50%;background:#334155;animation:pulse 1.4s infinite;}
+.dot:nth-child(2){animation-delay:.2s;}
+.dot:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{0%,100%{background:#334155;}50%{background:#3b82f6;}}
+.tag-tipo{font-size:11px;font-weight:700;text-transform:uppercase;color:#60a5fa;margin-bottom:8px;letter-spacing:1px;}
+.rodape{padding:16px;text-align:center;font-size:11px;color:#475569;}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div>
+    <div class="topo-org"><?= orgConfig.titulo ?></div>
+    <div class="topo-titulo" id="sessao-titulo">Sessão Interativa</div>
+  </div>
+</div>
+
+<div class="area">
+  <!-- TELA 1: Entrar na sessão -->
+  <div class="card" id="tela-entrar">
+    <div class="icone">🎯</div>
+    <h2>Participar da Sessão</h2>
+    <p>Digite o código de 6 caracteres exibido pelo apresentador</p>
+    <input class="input" id="inp-codigo" type="text" maxlength="6" placeholder="XXXXXX"
+           oninput="this.value=this.value.toUpperCase()" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input class="input" id="inp-nome" type="text" maxlength="40" placeholder="Seu nome ou apelido"
+           style="letter-spacing:normal;text-transform:none;" autocomplete="name">
+    <button class="btn" onclick="entrar()">Entrar na Sessão</button>
+    <p id="msg-erro" style="color:#f87171;margin-top:12px;display:none;"></p>
+  </div>
+
+  <!-- TELA 2: Aguardando início -->
+  <div class="card oculto" id="tela-aguardando">
+    <div class="aguardando">
+      <div class="icone">⏳</div>
+      <h2>Você entrou!</h2>
+      <p>Aguardando o apresentador iniciar a próxima atividade…</p>
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    </div>
+  </div>
+
+  <!-- TELA 3: Atividade -->
+  <div class="card oculto" id="tela-atividade">
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="tag-tipo" id="ativ-tipo-label">QUIZ</div>
+    <h2 id="ativ-pergunta" style="margin-bottom:20px;">Pergunta</h2>
+    <div id="ativ-opcoes"></div>
+    <p id="ativ-feedback" style="margin-top:12px;display:none;"></p>
+    <button class="btn" id="btn-enviar" onclick="enviarResposta()" style="display:none;">Enviar</button>
+  </div>
+
+  <!-- TELA 4: Sessão encerrada -->
+  <div class="card oculto" id="tela-encerrada">
+    <div class="icone">🎉</div>
+    <h2>Sessão encerrada</h2>
+    <p>Obrigado pela sua participação!</p>
+    <p id="total-respostas" style="margin-top:12px;font-size:13px;"></p>
+  </div>
+</div>
+
+<div class="rodape"><?= orgConfig.titulo ?> · Sessão Interativa</div>
+
+<script>
+var _sessaoId       = null;
+var _participanteId = 'P_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+var _participanteNome = '';
+var _atividadeAtual = -1;
+var _respondeu      = false;
+var _respostaEscolhida = null;
+var _pollInterval   = null;
+var _totalRespostas = 0;
+
+function $(id) { return document.getElementById(id); }
+function mostrar(id) { $(id).classList.remove('oculto'); }
+function ocultar(id) { $(id).classList.add('oculto'); }
+
+function entrar() {
+  var codigo = ($('inp-codigo').value||'').trim().toUpperCase();
+  var nome   = ($('inp-nome').value||'').trim();
+  if (!codigo || codigo.length < 4) { mostrarErro('Digite o código da sessão.'); return; }
+  if (!nome) { mostrarErro('Digite seu nome ou apelido.'); return; }
+  _participanteNome = nome;
+  $('msg-erro').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(resp) {
+      if (!resp || !resp.ok) { mostrarErro(resp&&resp.error?resp.error.message:'Sessão não encontrada.'); return; }
+      var d = resp.data;
+      _sessaoId = d.sessaoId;
+      $('sessao-titulo').textContent = d.titulo;
+      if (d.atividadeAtual >= 0 && d.atividade) {
+        renderAtividade(d.atividade, d.atividadeAtual, d.totalAtividades);
+      } else {
+        ocultar('tela-entrar');
+        mostrar('tela-aguardando');
+        iniciarPoll();
+      }
+    })
+    .withFailureHandler(function(e) { mostrarErro(e.message || 'Erro de conexão.'); })
+    .ctrl_sessao_publica_entrar(codigo, nome);
+}
+
+function mostrarErro(msg) {
+  var el = $('msg-erro');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function renderAtividade(atividade, idx, total) {
+  ocultar('tela-entrar');
+  ocultar('tela-aguardando');
+  mostrar('tela-atividade');
+  _atividadeAtual = idx;
+  _respondeu = false;
+  _respostaEscolhida = null;
+
+  var pct = total > 0 ? Math.round(((idx+1)/total)*100) : 100;
+  $('prog-fill').style.width = pct + '%';
+
+  var TIPOS = { quiz:'Quiz', enquete:'Enquete', nuvem:'Nuvem de Palavras', brainstorm:'Brainstorm', qa:'Perguntas & Respostas' };
+  $('ativ-tipo-label').textContent = TIPOS[atividade.tipo] || atividade.tipo;
+  $('ativ-pergunta').textContent = atividade.pergunta || atividade.titulo || '';
+
+  var opcoes = $('ativ-opcoes');
+  opcoes.innerHTML = '';
+  $('ativ-feedback').style.display = 'none';
+  $('btn-enviar').style.display = 'none';
+
+  if (atividade.tipo === 'quiz' || atividade.tipo === 'enquete') {
+    (atividade.opcoes||[]).forEach(function(op, i) {
+      var btn = document.createElement('button');
+      btn.className = 'opcao';
+      btn.textContent = op;
+      btn.onclick = function() {
+        if (_respondeu) return;
+        document.querySelectorAll('.opcao').forEach(function(b) { b.classList.remove('selecionada'); });
+        btn.classList.add('selecionada');
+        _respostaEscolhida = op;
+        $('btn-enviar').style.display = 'block';
+      };
+      opcoes.appendChild(btn);
+    });
+  } else if (atividade.tipo === 'nuvem' || atividade.tipo === 'brainstorm' || atividade.tipo === 'qa') {
+    var label = { nuvem:'Digite uma palavra:', brainstorm:'Sua ideia:', qa:'Sua pergunta:' }[atividade.tipo] || 'Resposta:';
+    opcoes.innerHTML = '<p style="font-size:13px;color:#94a3b8;margin-bottom:8px;text-align:left;">' + label + '</p>'
+      + '<textarea class="textarea" id="resp-texto" placeholder="Digite aqui…" maxlength="280"></textarea>';
+    $('btn-enviar').style.display = 'block';
+  }
+}
+
+function enviarResposta() {
+  if (_respondeu) return;
+  var resposta;
+  var tipo = ($('ativ-tipo-label').textContent || '').toLowerCase();
+  if (tipo === 'quiz' || tipo === 'enquete') {
+    resposta = _respostaEscolhida;
+    if (!resposta) { return; }
+  } else {
+    resposta = ($('resp-texto')||{value:''}).value.trim();
+    if (!resposta) return;
+  }
+
+  _respondeu = true;
+  $('btn-enviar').disabled = true;
+  $('btn-enviar').textContent = 'Enviando…';
+  _totalRespostas++;
+
+  google.script.run
+    .withSuccessHandler(function() {
+      $('btn-enviar').textContent = 'Enviado ✓';
+      var fb = $('ativ-feedback');
+      fb.textContent = 'Resposta enviada! Aguardando próxima atividade…';
+      fb.style.display = 'block';
+      fb.style.color = '#34d399';
+    })
+    .withFailureHandler(function(e) {
+      _respondeu = false;
+      $('btn-enviar').disabled = false;
+      $('btn-enviar').textContent = 'Tentar novamente';
+    })
+    .ctrl_sessao_publica_responder(_sessaoId, _atividadeAtual, _participanteId, _participanteNome, resposta);
+}
+
+function iniciarPoll() {
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(poll, 2500);
+}
+
+function poll() {
+  if (!_sessaoId) return;
+  google.script.run
+    .withSuccessHandler(function(resp) {
+      if (!resp || !resp.ok) return;
+      var d = resp.data;
+      if (d.status === 'encerrada') {
+        clearInterval(_pollInterval);
+        ocultar('tela-atividade');
+        ocultar('tela-aguardando');
+        mostrar('tela-encerrada');
+        $('total-respostas').textContent = 'Você respondeu ' + _totalRespostas + ' atividade' + (_totalRespostas !== 1 ? 's' : '') + '.';
+        return;
+      }
+      if (d.atividadeAtual !== _atividadeAtual && d.atividade) {
+        renderAtividade(d.atividade, d.atividadeAtual, d.totalAtividades);
+      }
+    })
+    .withFailureHandler(function(){})
+    .ctrl_sessao_publica_poll(_sessaoId);
+}
+
+// Inicializar com código da URL se disponível
+(function() {
+  var codigo = '<?= codigo ?>';
+  if (codigo) $('inp-codigo').value = codigo;
+})();
+</script>
+</body>
+</html>

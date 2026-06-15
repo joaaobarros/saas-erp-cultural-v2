@@ -206,6 +206,34 @@ function ctrl_tarefas_verificar_prazos() {
   }, 'ctrl_tarefas_verificar_prazos');
 }
 
+function ctrl_tarefas_bulk_concluir(ids) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctrlTarefasContexto();
+    if (!Array.isArray(ids) || !ids.length) throw new Error('Nenhum ID fornecido.');
+    var resultados = ids.map(function(id) {
+      try { TarefaEngine.mudarStatus(id, 'concluida', 'Concluída em lote.', ctx.email); return { id: id, ok: true }; }
+      catch(e) { return { id: id, ok: false, erro: e.message }; }
+    });
+    _invalidarCachesTarefas(ctx.orgId);
+    var ok = resultados.filter(function(r) { return r.ok; }).length;
+    return { total: ids.length, concluidas: ok, erros: resultados.filter(function(r) { return !r.ok; }) };
+  }, 'ctrl_tarefas_bulk_concluir');
+}
+
+function ctrl_tarefas_bulk_cancelar(ids) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctrlTarefasContexto();
+    if (!Array.isArray(ids) || !ids.length) throw new Error('Nenhum ID fornecido.');
+    var resultados = ids.map(function(id) {
+      try { TarefaEngine.mudarStatus(id, 'cancelada', 'Cancelada em lote.', ctx.email); return { id: id, ok: true }; }
+      catch(e) { return { id: id, ok: false, erro: e.message }; }
+    });
+    _invalidarCachesTarefas(ctx.orgId);
+    var ok = resultados.filter(function(r) { return r.ok; }).length;
+    return { total: ids.length, canceladas: ok, erros: resultados.filter(function(r) { return !r.ok; }) };
+  }, 'ctrl_tarefas_bulk_cancelar');
+}
+
 function ctrl_tarefas_migrar_sheet_para_json() {
   return GasResponse.wrap(function () {
     var ctx = _ctrlTarefasContexto();

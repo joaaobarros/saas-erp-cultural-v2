@@ -483,6 +483,14 @@ var MapaEditorUI = (function() {
         c.setAttribute('data-handle', h.id);
         g.appendChild(c);
       });
+      // Side labels for polygon named shapes
+      if (['tri', 'hex', 'trap', 'diamond', 'pent'].indexOf(_cfg.forma) !== -1) {
+        var pStr = _cfgPontos(_cfg);
+        var namedPts = pStr.split(' ').map(function(p) {
+          var xy = p.split(','); return { x: parseFloat(xy[0]), y: parseFloat(xy[1]) };
+        }).filter(function(p) { return !isNaN(p.x) && !isNaN(p.y); });
+        _renderSideLabels(g, namedPts);
+      }
     }
 
     // Handle de rotação (sempre presente)
@@ -506,10 +514,83 @@ var MapaEditorUI = (function() {
     _atualizarInputs();
   }
 
+  // ── Labels de lado (L1, L2…) clicáveis ──────────────────
+  function _renderSideLabels(g, pts) {
+    if (!pts || pts.length < 2 || !_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM, n = pts.length;
+    var cxC = 0, cyC = 0;
+    pts.forEach(function(p) { cxC += p.x; cyC += p.y; });
+    cxC /= n; cyC /= n;
+    for (var si = 0; si < n; si++) {
+      var sa = pts[si], sb = pts[(si + 1) % n];
+      var mx = (sa.x + sb.x) / 2, my = (sa.y + sb.y) / 2;
+      var ddx = sb.x - sa.x, ddy = sb.y - sa.y;
+      var segLen = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (segLen < 4) continue;
+      var distM = segLen / ppm;
+      var lbl = 'L' + (si + 1) + ': ' + distM.toFixed(2) + 'm';
+      // Perpendicular outward from centroid
+      var nx = -ddy / segLen, ny = ddx / segLen;
+      var d1 = (mx + nx - cxC) * (mx + nx - cxC) + (my + ny - cyC) * (my + ny - cyC);
+      var d2 = (mx - nx - cxC) * (mx - nx - cxC) + (my - ny - cyC) * (my - ny - cyC);
+      var ox = d1 > d2 ? nx : -nx, oy = d1 > d2 ? ny : -ny;
+      var lx = mx + ox * 22, ly = my + oy * 22;
+      var rw = Math.max(44, lbl.length * 5.5 + 8), rh = 15;
+      var bgR = document.createElementNS(_NS, 'rect');
+      bgR.setAttribute('x', (lx - rw / 2).toFixed(1)); bgR.setAttribute('y', (ly - rh / 2).toFixed(1));
+      bgR.setAttribute('width', rw.toFixed(1)); bgR.setAttribute('height', rh);
+      bgR.setAttribute('rx', '3'); bgR.setAttribute('fill', 'rgba(79,70,229,0.82)');
+      bgR.setAttribute('cursor', 'pointer'); bgR.setAttribute('data-side', si);
+      bgR.setAttribute('title', 'Clique para definir o comprimento de L' + (si + 1));
+      g.appendChild(bgR);
+      var t = document.createElementNS(_NS, 'text');
+      t.setAttribute('x', lx.toFixed(1)); t.setAttribute('y', (ly + 0.5).toFixed(1));
+      t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
+      t.setAttribute('font-size', '9'); t.setAttribute('font-weight', '700');
+      t.setAttribute('fill', '#fff'); t.setAttribute('pointer-events', 'none');
+      t.textContent = lbl;
+      g.appendChild(t);
+    }
+  }
+
+  function _editarLado(idx) {
+    if (!_cfg || !_escala || !_escala.pixPorM) return;
+    if (_cfg.forma !== 'poly_custom') _cfg = _toPolyCustom(_cfg);
+    _renderShape();
+    var pts = _cfg.pontos, n = pts.length;
+    if (idx >= n) return;
+    var a = pts[idx], b = pts[(idx + 1) % n];
+    var ddx = b.x - a.x, ddy = b.y - a.y;
+    var curPx = Math.sqrt(ddx * ddx + ddy * ddy);
+    var curM = curPx / _escala.pixPorM;
+    _modalInput({
+      titulo: 'Comprimento — Lado L' + (idx + 1),
+      label: 'Novo comprimento (metros)',
+      valorPadrao: curM.toFixed(2),
+      tipo: 'number',
+      obrigatorio: true
+    }, function(val) {
+      if (val === null) return;
+      var novoM = parseFloat(val);
+      if (isNaN(novoM) || novoM < 0.01) return;
+      var novoPx = novoM * _escala.pixPorM;
+      if (curPx < 0.001) return;
+      var ux = ddx / curPx, uy = ddy / curPx;
+      _cfg.pontos[(idx + 1) % n].x = parseFloat((a.x + ux * novoPx).toFixed(1));
+      _cfg.pontos[(idx + 1) % n].y = parseFloat((a.y + uy * novoPx).toFixed(1));
+      var bb = _bboxHW(_cfg);
+      _cfg.w = bb.hw * 2; _cfg.h = bb.hh * 2;
+      _renderShape();
+    });
+  }
+
   // ── Handles de vértices para poly_custom ─────────────────
   function _renderPolyCustomHandles(g) {
     if (!_cfg || !_cfg.pontos) return;
     var pts = _cfg.pontos, n = pts.length;
+
+    // Labels de lado (camada mais baixa — debaixo dos handles)
+    _renderSideLabels(g, pts);
 
     // Midpoints (inserir vértice)
     for (var i = 0; i < n; i++) {
@@ -691,9 +772,10 @@ var MapaEditorUI = (function() {
 
     _edSvg.addEventListener('mousedown', function(e) {
       if (!_cfg) return;
-      var handle  = e.target.getAttribute && e.target.getAttribute('data-handle');
-      var vtxAttr = e.target.getAttribute && e.target.getAttribute('data-vtx');
-      var segAttr = e.target.getAttribute && e.target.getAttribute('data-seg');
+      var handle   = e.target.getAttribute && e.target.getAttribute('data-handle');
+      var vtxAttr  = e.target.getAttribute && e.target.getAttribute('data-vtx');
+      var segAttr  = e.target.getAttribute && e.target.getAttribute('data-seg');
+      var sideAttr = e.target.getAttribute && e.target.getAttribute('data-side');
       var svgP = _svgPt(e);
 
       if (handle === 'rot') {
@@ -720,6 +802,10 @@ var MapaEditorUI = (function() {
       } else if (segAttr !== null && segAttr !== undefined && segAttr !== '') {
         e.stopPropagation(); e.preventDefault();
         _insertVertexOnSeg(parseInt(segAttr));
+
+      } else if (sideAttr !== null && sideAttr !== undefined && sideAttr !== '') {
+        e.stopPropagation(); e.preventDefault();
+        _editarLado(parseInt(sideAttr));
 
       } else if (e.target.closest && e.target.closest('#ed-shape-g')) {
         e.stopPropagation(); e.preventDefault();
@@ -762,6 +848,14 @@ var MapaEditorUI = (function() {
           _cfg.pontos[_drag.vtxIdx].x = parseFloat((_drag.origX + (lp3.x - _drag.startLX)).toFixed(1));
           _cfg.pontos[_drag.vtxIdx].y = parseFloat((_drag.origY + (lp3.y - _drag.startLY)).toFixed(1));
           _renderShape();
+          if (_escala && _escala.pixPorM) {
+            var ppmV = _escala.pixPorM, viV = _drag.vtxIdx;
+            var ptsV = _cfg.pontos, nV = ptsV.length;
+            var vPrev = ptsV[(viV - 1 + nV) % nV], vCurr = ptsV[viV], vNext = ptsV[(viV + 1) % nV];
+            var dPrev = Math.sqrt(Math.pow(vCurr.x - vPrev.x, 2) + Math.pow(vCurr.y - vPrev.y, 2)) / ppmV;
+            var dNext = Math.sqrt(Math.pow(vNext.x - vCurr.x, 2) + Math.pow(vNext.y - vCurr.y, 2)) / ppmV;
+            _showDimHudText('← ' + dPrev.toFixed(2) + 'm  → ' + dNext.toFixed(2) + 'm', e.clientX, e.clientY);
+          }
         }
 
       } else if (_edDragPan) {
@@ -897,10 +991,48 @@ var MapaEditorUI = (function() {
     _atualizarInputs();
   }
 
-  function _showDimHud(wPx, hPx, clientX, clientY) {
-    if (!_escala || !_escala.pixPorM) return;
-    var ppm = _escala.pixPorM;
-    var txt = (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
+  function _getSidesHudText(cfg, ppm) {
+    if (!cfg || !ppm) return '';
+    var hw = (cfg.w || 100) / 2, hh = (cfg.h || 80) / 2;
+    if (cfg.forma === 'rect' || cfg.forma === 'square') {
+      return '↔ ' + (hw * 2 / ppm).toFixed(2) + 'm  ↕ ' + (hh * 2 / ppm).toFixed(2) + 'm';
+    }
+    if (cfg.forma === 'circle') {
+      return '⌀ ' + ((cfg.r || Math.min(hw, hh)) * 2 / ppm).toFixed(2) + 'm';
+    }
+    if (cfg.forma === 'ellipse') {
+      return 'rx: ' + (hw / ppm).toFixed(2) + 'm  ry: ' + (hh / ppm).toFixed(2) + 'm';
+    }
+    // Polygon: compute actual side lengths
+    var pts;
+    if (cfg.forma === 'poly_custom' && cfg.pontos && cfg.pontos.length) {
+      pts = cfg.pontos;
+    } else {
+      var pStr = _cfgPontos(cfg);
+      pts = pStr.split(' ').map(function(p) {
+        var xy = p.split(','); return { x: parseFloat(xy[0]), y: parseFloat(xy[1]) };
+      }).filter(function(p) { return !isNaN(p.x) && !isNaN(p.y); });
+    }
+    if (!pts.length) return '';
+    var n = pts.length;
+    var dists = [];
+    for (var si = 0; si < n; si++) {
+      var sa = pts[si], sb = pts[(si + 1) % n];
+      var sdx = sb.x - sa.x, sdy = sb.y - sa.y;
+      dists.push(Math.sqrt(sdx * sdx + sdy * sdy) / ppm);
+    }
+    var allEq = dists.every(function(d) { return Math.abs(d - dists[0]) < 0.005; });
+    if (allEq) return n + '× ' + dists[0].toFixed(2) + 'm';
+    if (cfg.forma === 'tri') {
+      return 'Lat: ' + dists[0].toFixed(2) + 'm  Base: ' + dists[1].toFixed(2) + 'm';
+    }
+    if (cfg.forma === 'trap') {
+      return 'Sup: ' + dists[0].toFixed(2) + 'm  Inf: ' + dists[2].toFixed(2) + 'm  Lat: ' + dists[1].toFixed(2) + 'm';
+    }
+    return dists.map(function(d, i) { return 'L' + (i + 1) + ': ' + d.toFixed(2) + 'm'; }).join('  ');
+  }
+
+  function _showDimHudText(txt, clientX, clientY) {
     var hud = document.getElementById('_dim-hud');
     if (!hud) {
       hud = document.createElement('div');
@@ -912,6 +1044,11 @@ var MapaEditorUI = (function() {
     hud.style.left = (clientX + 14) + 'px';
     hud.style.top  = (clientY - 28) + 'px';
     hud.style.display = 'block';
+  }
+
+  function _showDimHud(wPx, hPx, clientX, clientY) {
+    if (!_escala || !_escala.pixPorM || !_cfg) return;
+    _showDimHudText(_getSidesHudText(_cfg, _escala.pixPorM), clientX, clientY);
   }
 
   function _hideDimHud() {

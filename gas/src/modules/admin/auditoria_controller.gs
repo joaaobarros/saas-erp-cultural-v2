@@ -12,6 +12,59 @@
  */
 
 /**
+ * Retorna timeline de eventos de auditoria para uma entidade específica.
+ * Usado pelo componente _renderTimeline no frontend (Twenty CRM pattern).
+ * @param {string} modulo — módulo de origem (ex: 'acoes', 'contratos')
+ * @param {string} entidadeId — ID da entidade
+ * @param {number} [limite] — máximo de eventos (default 50)
+ */
+function ctrl_auditoria_timeline(modulo, entidadeId, limite) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado.');
+    if (!entidadeId) throw new Error('entidadeId obrigatório.');
+
+    var eventos = AuditoriaStore.consultar({
+      entidadeId: String(entidadeId),
+      modulo:     modulo || undefined,
+      limite:     parseInt(limite) || 50
+    });
+
+    var ICONES = {
+      criar: 'add_circle', atualizar: 'edit', excluir: 'delete', concluir: 'check_circle',
+      cancelar: 'cancel', aprovar: 'thumb_up', recusar: 'thumb_down', status: 'swap_horiz',
+      comentar: 'chat_bubble', vincular: 'link', anexar: 'attach_file'
+    };
+    var CORES = {
+      CRITICO: '#ef4444', OPERACIONAL: '#3b82f6', sucesso: '#10b981', falha: '#ef4444'
+    };
+
+    var timeline = eventos.map(function(ev) {
+      var icone = ICONES[ev.acao] || 'history';
+      var cor   = ev.resultado === 'falha' ? CORES.falha
+                : ev.categoria === 'CRITICO' ? CORES.CRITICO
+                : CORES.OPERACIONAL;
+      return {
+        id:        ev.id,
+        timestamp: ev.timestamp,
+        tipo:      ev.tipo,
+        acao:      ev.acao,
+        modulo:    ev.modulo,
+        usuario:   ev.usuario,
+        mensagem:  ev.mensagem,
+        resultado: ev.resultado,
+        categoria: ev.categoria,
+        icone:     icone,
+        cor:       cor
+      };
+    });
+
+    return { timeline: timeline, total: timeline.length };
+  }, 'ctrl_auditoria_timeline');
+}
+
+/**
  * Lista log de auditoria com filtros.
  */
 function ctrl_auditoria_listar(params) {

@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @920+ (pendente novo deploy) · Fix: saldoOficial para rescisão sem acordos + botão "Aplicar tabela" desbloqueado
+> Deploy atual: @927+ (pendente) · Feat: 7 features open source — BulkBar, Timeline, TaskHub inline, Quadros/TLDraw, Sessões Interativas, DocSharing
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

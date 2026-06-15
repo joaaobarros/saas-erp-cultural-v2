@@ -35,14 +35,15 @@ var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
     'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
-    'Contratados', 'AgentesCulturais', 'Voluntarios', 'Orgs'
+    'Contratados', 'AgentesCulturais', 'Voluntarios', 'Orgs',
+    'DocumentosCompartilhados'
   ],
   ESTOQUE: [
     'ItensEstoque', 'SaldoEstoque', 'MovimentacoesEstoque'
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
-    'Acervo', 'Parcerias', 'Estrategia'
+    'Acervo', 'Parcerias', 'Estrategia', 'Quadros'
   ],
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
@@ -66,7 +67,7 @@ var SCHEMA_ABAS = {
   RELATORIOS: ['CODIP', 'RelGerencial', 'Exportacoes'],
   REUNIOES:   ['Reunioes', 'Encaminhamentos', 'Atas'],
   COMUNICACAO:['Demandas', 'Entregas', 'Versoes', 'AgendaRECE'],
-  PUBLICO:    ['Inscricoes', 'Presencas', 'Pesquisas', 'Certificados'],
+  PUBLICO:    ['Inscricoes', 'Presencas', 'Pesquisas', 'Certificados', 'SessoesInterativas', 'RespostasSessao'],
   ESCUTA:       ['Pesquisas', 'Respostas', 'Indicadores'],
   // Hub multi-tenant: lista de instituições + seus Sheet IDs
   INSTITUICOES: ['Instituicoes', 'SheetIds']
@@ -315,6 +316,30 @@ function inicializarSistema() {
       typeof SolicitacaoMaterialRepository.prepararIndice === 'function') {
     try { SolicitacaoMaterialRepository.prepararIndice(); } catch(e) {
       Logger.warn('setup', 'inicializarSistema', 'SolicitacaoMaterialRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Colaboração — Quadros (TLDraw canvas)
+  if (typeof QuadrosRepository !== 'undefined' &&
+      typeof QuadrosRepository.prepararIndice === 'function') {
+    try { QuadrosRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'QuadrosRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Interatividade — Sessões Interativas
+  if (typeof SessaoInterativaRepository !== 'undefined' &&
+      typeof SessaoInterativaRepository.prepararIndice === 'function') {
+    try { SessaoInterativaRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'SessaoInterativaRepository.prepararIndice: ' + e.message);
+    }
+  }
+
+  // Colaboração — Document Sharing (Papermark pattern)
+  if (typeof DocumentSharingService !== 'undefined' &&
+      typeof DocumentSharingService.prepararIndice === 'function') {
+    try { DocumentSharingService.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'DocumentSharingService.prepararIndice: ' + e.message);
     }
   }
 

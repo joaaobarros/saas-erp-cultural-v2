@@ -49,6 +49,12 @@ function doGet(e) {
       case 'processo':
         return _renderPortalPublico('processo', e);
 
+      case 'sessao':
+        return _renderSessaoParticipante(e);
+
+      case 'doc':
+        return _renderDocumentoCompartilhado(e);
+
       case 'wizard_setup':
         return _renderWizardSetup(e);
 
@@ -208,6 +214,76 @@ function _renderPublicConfig() {
   return ContentService
     .createTextOutput(JSON.stringify(cfg))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── Sessão Interativa — Participante ────────────────────────────────────────
+
+function _renderSessaoParticipante(e) {
+  var params = e ? e.parameter || {} : {};
+  var codigo = params.codigo || '';
+  var org    = getOrgConfig();
+  var template = HtmlService.createTemplateFromFile('portal/portal_sessao_participante');
+  template.orgConfig = getPublicOrgConfig();
+  template.codigo    = codigo;
+  return template.evaluate()
+    .setTitle(org.titulo + ' — Sessão Interativa')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// ─── Document Sharing — Visualização pública ─────────────────────────────────
+
+function _renderDocumentoCompartilhado(e) {
+  var params = e ? e.parameter || {} : {};
+  var token  = params.token || '';
+  var org    = getOrgConfig();
+
+  if (!token) return _render404();
+
+  try {
+    var doc = DocumentSharingService.acessar(org.orgId, token,
+      (e && e.parameter && e.parameter.ip) || '');
+    if (!doc)              return _render404();
+    if (doc.expirado)      return HtmlService.createHtmlOutput(
+      '<html><body style="font-family:sans-serif;padding:40px;max-width:600px;margin:auto">' +
+      '<h2>Link expirado</h2><p>Este link de compartilhamento não é mais válido.</p>' +
+      '<p style="color:#888">— ' + org.titulo + '</p></body></html>').setTitle('Link expirado');
+
+    return HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html lang="pt-BR"><head>' +
+      '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>' + _escHtml(doc.titulo) + ' — ' + _escHtml(org.titulo) + '</title>' +
+      '<style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px 16px;color:#1e293b;}' +
+      '.doc-header{border-bottom:2px solid #e2e8f0;padding-bottom:16px;margin-bottom:24px;}' +
+      '.doc-org{font-size:12px;color:#94a3b8;margin-bottom:4px;}' +
+      '.doc-titulo{font-size:22px;font-weight:700;margin:0;}' +
+      '.doc-meta{font-size:12px;color:#64748b;margin-top:8px;}' +
+      '.doc-body{line-height:1.7;font-size:15px;}' +
+      '.doc-footer{margin-top:40px;padding-top:16px;border-top:1px solid #e2e8f0;' +
+      'font-size:11px;color:#94a3b8;text-align:center;}</style>' +
+      '</head><body>' +
+      '<div class="doc-header">' +
+      '<div class="doc-org">' + _escHtml(org.titulo) + '</div>' +
+      '<h1 class="doc-titulo">' + _escHtml(doc.titulo) + '</h1>' +
+      '<div class="doc-meta">Compartilhado em ' + _fmtData(doc.criadoEm) + ' · Tipo: ' + _escHtml(doc.tipo) + '</div>' +
+      '</div>' +
+      '<div class="doc-body">' + (doc.conteudoHtml || '<p>Conteúdo não disponível.</p>') + '</div>' +
+      '<div class="doc-footer">Documento gerado por ' + _escHtml(org.titulo) + ' · Este link é de uso exclusivo do destinatário.</div>' +
+      '</body></html>'
+    ).setTitle(doc.titulo + ' — ' + org.titulo);
+
+  } catch(err) {
+    Logger.error('router', '_renderDocumentoCompartilhado', err.message);
+    return _renderErro('Erro ao carregar documento.');
+  }
+}
+
+function _escHtml(v) {
+  return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _fmtData(iso) {
+  try { var p=String(iso).slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; } catch(_){ return iso; }
 }
 
 // ─── Erros ────────────────────────────────────────────────────────────────────
