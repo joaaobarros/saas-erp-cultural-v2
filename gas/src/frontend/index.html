@@ -19787,7 +19787,8 @@ var InfraConfigMapaUI = (function() {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.70);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;';
     var sorted  = _niveis.slice().sort(function(a,b){ return a.nivel - b.nivel; });
     var rows    = sorted.map(function(n, i) {
-      return '<tr id="cfg-nivel-row-' + i + '" style="border-bottom:1px solid var(--border);">' +
+      return '<tr id="cfg-nivel-row-' + i + '" draggable="true" style="border-bottom:1px solid var(--border);cursor:default;">' +
+        '<td style="padding:4px 6px;color:var(--muted,#94a3b8);font-size:20px;cursor:grab;user-select:none;text-align:center;" title="Arrastar para reordenar">⠿</td>' +
         '<td style="padding:6px 8px;font-size:12px;width:40px;"><input type="number" value="' + n.nivel + '" ' +
           'id="cfgn-num-' + i + '" style="width:48px;padding:3px;font-size:11px;border:1px solid var(--border);border-radius:4px;" ' +
           'onchange="InfraConfigMapaUI._modalNivelNumChange(' + i + ')"></td>' +
@@ -19829,6 +19830,7 @@ var InfraConfigMapaUI = (function() {
           '<div style="overflow-x:auto;">' +
             '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
               '<thead><tr style="background:var(--surface2);font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);">' +
+                '<th style="padding:6px 4px;width:24px;"></th>' +
                 '<th style="padding:6px 8px;text-align:left;">Nº</th>' +
                 '<th style="padding:6px 4px;text-align:left;">Label</th>' +
                 '<th style="padding:6px 4px;text-align:center;">Terreno</th>' +
@@ -19855,6 +19857,7 @@ var InfraConfigMapaUI = (function() {
     document.body.appendChild(overlay);
     // armazenar dados editáveis temporariamente
     overlay._niveisEdit = sorted.map(function(n){ return JSON.parse(JSON.stringify(n)); });
+    _initNiveisDragDrop(overlay);
   }
 
   function _modalNivelNumChange(i) {
@@ -19898,8 +19901,11 @@ var InfraConfigMapaUI = (function() {
     if (!tbody) return;
     var i = el2._niveisEdit.length - 1;
     var tr = document.createElement('tr');
+    tr.id = 'cfg-nivel-row-' + i;
+    tr.setAttribute('draggable', 'true');
     tr.style.borderBottom = '1px solid var(--border)';
     tr.innerHTML =
+      '<td style="padding:4px 6px;color:var(--muted,#94a3b8);font-size:20px;cursor:grab;user-select:none;text-align:center;" title="Arrastar para reordenar">⠿</td>' +
       '<td style="padding:6px 8px;font-size:12px;width:40px;"><input type="number" value="' + novo.nivel + '" ' +
         'id="cfgn-num-' + i + '" style="width:48px;padding:3px;font-size:11px;border:1px solid var(--border);border-radius:4px;" ' +
         'onchange="InfraConfigMapaUI._modalNivelNumChange(' + i + ')"></td>' +
@@ -19932,6 +19938,92 @@ var InfraConfigMapaUI = (function() {
     _niveis = saved;
     var el2 = document.getElementById('cfg-modal-niveis-overlay');
     if (el2) el2._niveisEdit = el._niveisEdit;
+  }
+
+  function _initNiveisDragDrop(overlay) {
+    var tbody = document.getElementById('cfg-niveis-tbody');
+    if (!tbody || tbody._dragInited) return;
+    tbody._dragInited = true;
+    var dragSrc = null;
+
+    function _sincronizarInputs() {
+      (overlay._niveisEdit || []).forEach(function(n, i) {
+        var numEl   = document.getElementById('cfgn-num-' + i);
+        var labelEl = document.getElementById('cfgn-label-' + i);
+        if (numEl)   n.nivel = parseInt(numEl.value, 10) || 0;
+        if (labelEl) n.label = labelEl.value.trim() || 'Nível ' + n.nivel;
+      });
+    }
+
+    function _rowHtml(n, i, total) {
+      var dT = n.usarTerrenoBase !== false, dP = n.usarPlantaBase !== false;
+      return '<tr id="cfg-nivel-row-' + i + '" draggable="true" style="border-bottom:1px solid var(--border);cursor:default;">' +
+        '<td style="padding:4px 6px;color:var(--muted,#94a3b8);font-size:20px;cursor:grab;user-select:none;text-align:center;" title="Arrastar para reordenar">⠿</td>' +
+        '<td style="padding:6px 8px;font-size:12px;width:40px;"><input type="number" value="' + n.nivel + '" id="cfgn-num-' + i + '" style="width:48px;padding:3px;font-size:11px;border:1px solid var(--border);border-radius:4px;" onchange="InfraConfigMapaUI._modalNivelNumChange(' + i + ')"></td>' +
+        '<td style="padding:6px 4px;"><input type="text" value="' + escaparHtml(n.label) + '" id="cfgn-label-' + i + '" style="width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;" placeholder="Ex: Térreo"></td>' +
+        '<td style="padding:6px 4px;font-size:11px;text-align:center;"><label title="Usar mesmo terreno base"><input type="checkbox" id="cfgn-tb-' + i + '" ' + (dT ? 'checked' : '') + ' onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'tb\')"> Terreno base</label></td>' +
+        '<td style="padding:6px 4px;font-size:11px;text-align:center;"><label title="Usar mesma planta base"><input type="checkbox" id="cfgn-pb-' + i + '" ' + (dP ? 'checked' : '') + ' onchange="InfraConfigMapaUI._modalNivelToggle(' + i + ',\'pb\')"> Planta base</label></td>' +
+        '<td style="padding:6px 4px;text-align:center;">' +
+          '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdTerr(' + i + ')" ' + (dT ? 'disabled ' : '') + 'style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);' + (dT ? 'opacity:.4;' : 'cursor:pointer;') + '" id="cfgn-btn-terr-' + i + '">Terreno</button>' +
+          ' <button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelEdPlanta(' + i + ')" ' + (dP ? 'disabled ' : '') + 'style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);' + (dP ? 'opacity:.4;' : 'cursor:pointer;') + '" id="cfgn-btn-planta-' + i + '">Planta</button>' +
+        '</td>' +
+        '<td style="padding:6px 4px;text-align:center;">' +
+          (total > 1 ? '<button data-bg-skip="1" onclick="InfraConfigMapaUI._modalNivelRemover(' + i + ')" style="color:#ef4444;font-size:10px;padding:2px 6px;border:1px solid #fca5a5;border-radius:4px;background:none;cursor:pointer;">✕</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }
+
+    function _reRenderTbody() {
+      var list = overlay._niveisEdit || [];
+      tbody.innerHTML = list.map(function(n, i) { return _rowHtml(n, i, list.length); }).join('');
+    }
+
+    tbody.addEventListener('dragstart', function(e) {
+      var row = e.target.closest ? e.target.closest('tr') : null;
+      if (!row || !tbody.contains(row)) return;
+      dragSrc = row;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(function() { if (dragSrc) dragSrc.style.opacity = '0.35'; }, 0);
+    });
+
+    tbody.addEventListener('dragend', function() {
+      if (dragSrc) dragSrc.style.opacity = '';
+      dragSrc = null;
+      tbody.querySelectorAll('tr').forEach(function(r) { r.style.background = ''; });
+    });
+
+    tbody.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      var row = e.target.closest ? e.target.closest('tr') : null;
+      if (!row || !tbody.contains(row)) return;
+      e.dataTransfer.dropEffect = 'move';
+      tbody.querySelectorAll('tr').forEach(function(r) { r.style.background = ''; });
+      if (row !== dragSrc) row.style.background = 'rgba(79,70,229,.08)';
+    });
+
+    tbody.addEventListener('dragleave', function(e) {
+      var row = e.target.closest ? e.target.closest('tr') : null;
+      if (row) row.style.background = '';
+    });
+
+    tbody.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var row = e.target.closest ? e.target.closest('tr') : null;
+      if (!row || !tbody.contains(row) || !dragSrc || row === dragSrc) {
+        if (row) row.style.background = '';
+        return;
+      }
+      var allRows = Array.from(tbody.querySelectorAll('tr'));
+      var fromIdx = allRows.indexOf(dragSrc);
+      var toIdx   = allRows.indexOf(row);
+      row.style.background = '';
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+      _sincronizarInputs();
+      var list = overlay._niveisEdit || [];
+      var moved = list.splice(fromIdx, 1)[0];
+      if (moved !== undefined) list.splice(toIdx, 0, moved);
+      _reRenderTbody();
+    });
   }
 
   function _modalNivelEdTerr(i) {
