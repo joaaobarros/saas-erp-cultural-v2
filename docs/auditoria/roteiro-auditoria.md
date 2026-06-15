@@ -470,7 +470,22 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 83 (2026-06-15) → SESSÃO 84
+## HANDOFF ATUAL — SESSÃO 83b (2026-06-15) → SESSÃO 84
+
+### Estado atual: Sincronização git — UX Home comemorativa + nomeApelido
+
+### O que foi feito nesta sessão (s83b — sync)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| já deployado | Sync — UX Home comemorativa + nomeApelido | `boot_service.gs`: `usuarioNomeApelido` e `usuarioDN` no bootstrap. `taskhub_controller.gs`: aniversariantes retorna `nomeApelido` + `setorLabel`; `contexto_pessoal` usa nomeApelido na saudação. `index.html`: `_DATAS_COMEMORATIVAS` (10 datas: Ano Novo, Abolição CE, Fortaleza, Namorados, Ceará, Independência, Crianças, Finados, Natal, Réveillon); animações temáticas `_lancarParticulas(tipo)` (neve, fogos, corações, estrelas, ouro, verde_amarelo); `_lancarConfetes()` no aniversário; banner contextual usa `nomeApelido` para personalização. |
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 83 (2026-06-15) → SESSÃO 84
 
 ### Estado atual: BI unificado — Dashboard como Central de Inteligência · Deploy @959
 

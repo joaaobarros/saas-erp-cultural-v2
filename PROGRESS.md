@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s83)**: **Feat — BI unificado: Dashboard vira Central de Inteligência com sub-abas BI Operacional/Financeiro/Estratégico/Demográfico; cards clicáveis navegam para módulos relevantes; BI Demográfico com drill-down interativo por gênero, raça, faixa etária, setor, cargo e tempo de atuação — Deploy @959.**
+**Fase atual (s83b)**: **Feat — UX Home: datas comemorativas com partículas/animações, nomeApelido no boot e aniversariantes com setorLabel (commit de sincronização — já estava no GAS).**
+
+**Fase anterior (s83)**: **Feat — BI unificado: Dashboard vira Central de Inteligência com sub-abas BI Operacional/Financeiro/Estratégico/Demográfico; cards clicáveis navegam para módulos relevantes; BI Demográfico com drill-down interativo por gênero, raça, faixa etária, setor, cargo e tempo de atuação — Deploy @959.**
 
 **Fase anterior (s82b)**: **Fix — Férias: vencido com retorno acordado não incorre em pagamento em dobro — Deploy @956.** Painel colaborador (`_renderPer`): detecta `f.acordo.diasEfetivosGozados > 0`; neste caso saldo exibido em roxo "dias de retorno acordados — sem incidência de dobro"; `cfg.desc` e cor ajustados. `carregarFeriasUnificado` expand: calcula `diasRetorno` para férias oficiais com acordo de retorno; alerta vermelho só aparece se `diasSemCoberta > 0`; quando saldo inteiramente coberto por acordo exibe banner roxo (handshake).
 

@@ -290,6 +290,16 @@ function ctrl_taskhub_aniversariantes() {
     var todos;
     try { todos = ColaboradorRepository.listar(orgId, {}); } catch(e) { todos = []; }
 
+    var todosSetores = [];
+    try { todosSetores = SistemaConfigService.getSetores(); } catch(e) {}
+    function _labelSetor(id) {
+      for (var si = 0; si < todosSetores.length; si++) {
+        var s = todosSetores[si];
+        if (s.id === id) return s.label || s.nome || id;
+      }
+      return id || '';
+    }
+
     var resultado = todos
       .filter(function(c) {
         if (!c.dataNascimento || c.status === 'desligado') return false;
@@ -313,16 +323,19 @@ function ctrl_taskhub_aniversariantes() {
         if (nascHojeAno < hoje0) nascHojeAno = new Date(hoje.getFullYear() + 1, mes - 1, dia);
         var ehHoje = (mes === hoje.getMonth() + 1 && dia === hoje.getDate());
         var idade  = nascHojeAno.getFullYear() - parseInt(partes[0], 10);
+        var setorId = c.setor || '';
         return {
-          id:      c.id,
-          nome:    c.nome || '',
-          email:   c.emailInstitucional || c.emailPessoal || '',
-          setor:   c.setor || '',
-          data:    String(c.dataNascimento).slice(0, 10),
-          dia:     dia,
-          mes:     mes,
-          idade:   idade,
-          ehHoje:  ehHoje
+          id:          c.id,
+          nome:        c.nome || '',
+          nomeApelido: (c.nomeApelido || '').trim(),
+          email:       c.emailInstitucional || c.emailPessoal || '',
+          setor:       setorId,
+          setorLabel:  _labelSetor(setorId),
+          data:        String(c.dataNascimento).slice(0, 10),
+          dia:         dia,
+          mes:         mes,
+          idade:       idade,
+          ehHoje:      ehHoje
         };
       })
       .sort(function(a, b) {
@@ -361,7 +374,10 @@ function ctrl_taskhub_contexto_pessoal() {
     try { c = PessoasEngine.buscarPorEmail(email); } catch(e) {}
     if (!c) return { tipo: 'padrao', nome: email.split('@')[0] };
 
-    var nome = c.nome || c.nomeApelido || email.split('@')[0];
+    // nomeApelido é "Como deseja ser chamado"; nome é o nome completo
+    var nomeApelido = (c.nomeApelido || '').trim();
+    var nomeCompleto = c.nome || email.split('@')[0];
+    var nome = nomeApelido || nomeCompleto;
 
     // 1. Aniversário hoje?
     if (c.dataNascimento) {
@@ -370,7 +386,7 @@ function ctrl_taskhub_contexto_pessoal() {
       var diaN   = parseInt(dn[2], 10);
       var anoN   = parseInt(dn[0], 10);
       if (mesN === hoje.getMonth() + 1 && diaN === hoje.getDate()) {
-        return { tipo: 'aniversario', nome: nome, idade: hoje.getFullYear() - anoN };
+        return { tipo: 'aniversario', nome: nome, nomeCompleto: nomeCompleto, idade: hoje.getFullYear() - anoN };
       }
     }
 

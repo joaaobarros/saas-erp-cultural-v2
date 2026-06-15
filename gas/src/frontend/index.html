@@ -28602,51 +28602,254 @@ var App = (function() {
     }
   }
 
+  // ── Datas comemorativas ────────────────────────────────────────────────
+  var _DATAS_COMEMORATIVAS = [
+    { mes:1,  dia:1,  tipo:'ano_novo',    label:'Feliz Ano Novo!',                        sub:'Que 2026 seja repleto de realizações!',  icone:'🎆', cls:'dc-ano-novo',   particulas:'fogos'    },
+    { mes:3,  dia:17, tipo:'abolicao_ce', label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.',icone:'✊','cls':'dc-abolicao',  particulas:'ouro'     },
+    { mes:3,  dia:25, tipo:'fortaleza',   label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726 — ' + (new Date().getFullYear()-1726) + ' anos de história.', icone:'🦀', cls:'dc-fortaleza',  particulas:'estrelas' },
+    { mes:6,  dia:12, tipo:'namorados',   label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',  icone:'💛', cls:'dc-namorados',  particulas:'coracoes' },
+    { mes:7,  dia:23, tipo:'ceara',       label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824 — ' + (new Date().getFullYear()-1824) + ' anos.', icone:'☀️', cls:'dc-ceara',      particulas:'ouro'     },
+    { mes:9,  dia:7,  tipo:'independ',    label:'Independência do Brasil!',               sub:'7 de Setembro de 1822 — ' + (new Date().getFullYear()-1822) + ' anos de independência.', icone:'🇧🇷', cls:'dc-independ',   particulas:'verde_amarelo' },
+    { mes:10, dia:12, tipo:'criancas',    label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.', icone:'⭐', cls:'dc-criancas',   particulas:'estrelas' },
+    { mes:11, dia:2,  tipo:'finados',     label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',        icone:'🕯️', cls:'dc-finados',    particulas:null       },
+    { mes:12, dia:25, tipo:'natal',       label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.', icone:'🎄', cls:'dc-natal',      particulas:'neve'     },
+    { mes:12, dia:31, tipo:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo',   particulas:'fogos'    }
+  ];
+
+  function _detectarDataComemorativa() {
+    var h = new Date(); var m = h.getMonth()+1; var d = h.getDate();
+    for (var i=0;i<_DATAS_COMEMORATIVAS.length;i++) {
+      var dc = _DATAS_COMEMORATIVAS[i];
+      if (dc.mes===m && dc.dia===d) return dc;
+    }
+    return null;
+  }
+
+  function _renderDataComemorativa(dc) {
+    var el = document.getElementById('home-data-comemorativa');
+    if (!el || !dc) return;
+    el.innerHTML = '<div class="dc-strip ' + dc.cls + '">' +
+      '<span class="dc-strip-icone">' + dc.icone + '</span>' +
+      '<div class="dc-strip-texto">' + escaparHtml(dc.label) +
+        '<div class="dc-strip-sub">' + escaparHtml(dc.sub||'') + '</div>' +
+      '</div></div>';
+    if (dc.particulas) _lancarParticulas(dc.particulas);
+  }
+
+  // ── Confetes (aniversário) ──────────────────────────────────────────────
+  function _lancarConfetes() {
+    var cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+    document.body.appendChild(cv);
+    cv.width = window.innerWidth; cv.height = window.innerHeight;
+    var ctx = cv.getContext('2d');
+    var cores = ['#7c3aed','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#06b6d4','#f97316'];
+    var pts = [];
+    for (var i=0;i<180;i++) {
+      pts.push({ x:Math.random()*cv.width, y:-20-Math.random()*200,
+        vx:(Math.random()-.5)*5, vy:3+Math.random()*4,
+        sz:5+Math.random()*7, cor:cores[Math.floor(Math.random()*cores.length)],
+        rot:Math.random()*Math.PI*2, vrot:(Math.random()-.5)*.18,
+        forma:Math.random()>.4?'rect':'circ' });
+    }
+    var fr=0, MAX=240;
+    function animar() {
+      ctx.clearRect(0,0,cv.width,cv.height);
+      pts.forEach(function(p) {
+        p.x+=p.vx; p.y+=p.vy; p.rot+=p.vrot; p.vy*=.999;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+        ctx.fillStyle=p.cor; ctx.globalAlpha=Math.max(0,1-fr/MAX);
+        if (p.forma==='rect') ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);
+        else { ctx.beginPath(); ctx.arc(0,0,p.sz/2,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      });
+      fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+    }
+    requestAnimationFrame(animar);
+  }
+
+  // ── Partículas temáticas ─────────────────────────────────────────────────
+  function _lancarParticulas(tipo) {
+    if (!tipo) return;
+    var cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998;';
+    document.body.appendChild(cv);
+    cv.width=window.innerWidth; cv.height=window.innerHeight;
+    var ctx=cv.getContext('2d'); var fr=0; var pts=[];
+    var MAX=220;
+
+    if (tipo==='neve') {
+      for(var i=0;i<80;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,
+        vx:(Math.random()-.5)*1.2,vy:.8+Math.random()*1.5,sz:2+Math.random()*4,op:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx;p.y+=p.vy;
+          ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle='rgba(255,255,255,'+Math.max(0,(1-fr/MAX))*(p.op)+')';ctx.fill(); });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='fogos') {
+      var explosoes=[];
+      function novaExplosao() {
+        var cx=cv.width*.1+Math.random()*cv.width*.8, cy=cv.height*.05+Math.random()*cv.height*.35;
+        var cor=['#f59e0b','#ef4444','#3b82f6','#10b981','#8b5cf6','#f97316'][Math.floor(Math.random()*6)];
+        for(var k=0;k<30;k++) {
+          var ang=Math.random()*Math.PI*2,spd=2+Math.random()*5;
+          explosoes.push({x:cx,y:cy,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-1,cor:cor,life:1});
+        }
+      }
+      for(var n=0;n<5;n++) novaExplosao();
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        if(fr%40===0&&fr<MAX-60) novaExplosao();
+        explosoes=explosoes.filter(function(p){return p.life>0;});
+        explosoes.forEach(function(p){
+          p.x+=p.vx;p.y+=p.vy;p.vy+=.08;p.life-=.015;
+          ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);
+          ctx.fillStyle=p.cor.replace(')',','+Math.max(0,p.life)+')').replace('rgb','rgba');
+          ctx.fillStyle=p.cor; ctx.globalAlpha=Math.max(0,p.life); ctx.fill(); ctx.globalAlpha=1;
+        });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='coracoes') {
+      for(var i=0;i<40;i++) pts.push({x:Math.random()*cv.width,y:cv.height+20,
+        vx:(Math.random()-.5)*2,vy:-(1+Math.random()*2),sz:14+Math.random()*14,op:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx;p.y+=p.vy;
+          ctx.save();ctx.translate(p.x,p.y);
+          ctx.font=p.sz+'px serif';ctx.globalAlpha=Math.max(0,1-fr/MAX);
+          ctx.fillText('❤️',0,0);ctx.restore(); });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='estrelas') {
+      var coresSt=['#f59e0b','#fbbf24','#fde68a','#ffffff'];
+      for(var i=0;i<60;i++) pts.push({x:Math.random()*cv.width,y:Math.random()*cv.height,
+        vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,sz:3+Math.random()*5,
+        cor:coresSt[Math.floor(Math.random()*coresSt.length)],life:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx;p.y+=p.vy;p.life-=.004;
+          ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,p.life);ctx.fill();ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='verde_amarelo') {
+      var coresVA=['#22c55e','#facc15','#15803d','#ca8a04','#bbf7d0'];
+      for(var i=0;i<100;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*100,
+        vx:(Math.random()-.5)*3,vy:2+Math.random()*3,
+        sz:5+Math.random()*6,cor:coresVA[Math.floor(Math.random()*coresVA.length)],
+        rot:Math.random()*Math.PI*2,vrot:(Math.random()-.5)*.15});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,1-fr/MAX);
+          ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);ctx.restore(); });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='ouro') {
+      var coresOuro=['#f59e0b','#d97706','#fbbf24','#fde68a'];
+      for(var i=0;i<60;i++) pts.push({x:Math.random()*cv.width,y:cv.height*.3+Math.random()*cv.height*.4,
+        vx:(Math.random()-.5)*3,vy:-(1+Math.random()*3),
+        sz:3+Math.random()*5,cor:coresOuro[Math.floor(Math.random()*coresOuro.length)],life:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.life-=.005;
+          ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,p.life);ctx.fill();ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else {
+      cv.remove(); return;
+    }
+    requestAnimationFrame(animar);
+  }
+
+  // ── Aplicar banner contextual ────────────────────────────────────────────
+  function _aplicarBannerContexto(ctx) {
+    var banner = document.getElementById('home-banner');
+    var ico    = banner && banner.querySelector('.banner-icone');
+    if (!banner || ctx.tipo === 'padrao') return;
+    banner.classList.remove('banner-aniversario','banner-boas-vindas','banner-retorno');
+    if (ctx.tipo === 'aniversario') {
+      banner.classList.add('banner-aniversario');
+      document.getElementById('home-titulo').textContent    = 'Feliz Aniversário, ' + ctx.nome + '!';
+      document.getElementById('home-subtitulo').textContent = ctx.idade
+        ? 'Parabéns pelos ' + ctx.idade + ' anos! Que seu dia seja incrível.'
+        : 'Parabéns! Que seu dia seja incrível.';
+      if (ico) ico.textContent = '🎂';
+      _lancarConfetes();
+    } else if (ctx.tipo === 'primeiro_acesso') {
+      banner.classList.add('banner-boas-vindas');
+      document.getElementById('home-titulo').textContent    = 'Bem-vindo(a) à equipe, ' + ctx.nome + '!';
+      document.getElementById('home-subtitulo').textContent = 'Que sua jornada conosco seja incrível. Explore o sistema e conte com a gente!';
+      if (ico) ico.textContent = '👋';
+    } else if (ctx.tipo === 'retorno_ferias') {
+      banner.classList.add('banner-retorno');
+      document.getElementById('home-titulo').textContent    = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
+      document.getElementById('home-subtitulo').textContent = 'Esperamos que suas férias tenham sido incríveis. É ótimo ter você de volta!';
+      if (ico) ico.textContent = '🌴';
+    } else if (ctx.tipo === 'retorno_afastamento') {
+      banner.classList.add('banner-retorno');
+      document.getElementById('home-titulo').textContent    = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
+      document.getElementById('home-subtitulo').textContent = 'Que bom ter você de volta. Se precisar de algo, a equipe está por aqui.';
+      if (ico) ico.textContent = '💙';
+    }
+  }
+
   function _renderizarHome() {
-    var email = _boot.usuarioEmail || '';
+    var email        = _boot.usuarioEmail || '';
+    var nomeApelido  = (_boot.usuarioNomeApelido || '').trim();
     var nomeCompleto = _boot.usuarioNome || '';
     var partesNome   = nomeCompleto ? nomeCompleto.trim().split(/\s+/) : [];
-    var nomeBreve    = partesNome.length ? partesNome[0] : email.split('@')[0];
-    var hora  = new Date().getHours();
+    var primeiroNome = partesNome.length ? partesNome[0] : email.split('@')[0];
+    // Saudação: prefere apelido; sem apelido usa primeiro nome
+    var nomeGreeting = nomeApelido || primeiroNome;
+    var hora = new Date().getHours();
     var saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
 
-    document.getElementById('home-titulo').textContent = saudacao + ', ' + nomeBreve + '!';
+    document.getElementById('home-titulo').textContent = saudacao + ', ' + nomeGreeting + '!';
     var nomeExib = _boot.orgConfig.nomeInstituicao || _boot.orgConfig.nome;
     document.getElementById('home-subtitulo').textContent =
       nomeExib + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
-    // Banner contextual — personaliza conforme evento do dia do usuário
+    // ── Detectar aniversário imediatamente a partir do boot (sem espera async)
+    var _bannerPersonalizado = false;
+    var usuarioDN = _boot.usuarioDN || '';
+    if (usuarioDN) {
+      var dnP = usuarioDN.slice(0,10).split('-');
+      if (dnP.length === 3) {
+        var hj = new Date();
+        if (parseInt(dnP[1],10) === hj.getMonth()+1 && parseInt(dnP[2],10) === hj.getDate()) {
+          var nomeAniv  = nomeApelido || nomeCompleto;
+          var idadeAniv = hj.getFullYear() - parseInt(dnP[0],10);
+          _aplicarBannerContexto({ tipo:'aniversario', nome:nomeAniv, idade:idadeAniv });
+          _bannerPersonalizado = true;
+        }
+      }
+    }
+
+    // ── Async: detecta retorno de férias/afastamento e primeiro acesso
     GAS.taskhub.contextoPessoal(function(resp) {
       if (!resp || !resp.ok || !resp.data) return;
-      var ctx    = resp.data;
-      var banner = document.getElementById('home-banner');
-      var ico    = banner && banner.querySelector('.banner-icone');
-      if (!banner || ctx.tipo === 'padrao') return;
-      banner.classList.remove('banner-aniversario', 'banner-boas-vindas', 'banner-retorno');
-      if (ctx.tipo === 'aniversario') {
-        banner.classList.add('banner-aniversario');
-        document.getElementById('home-titulo').textContent = 'Feliz Aniversário, ' + ctx.nome + '!';
-        document.getElementById('home-subtitulo').textContent = ctx.idade
-          ? 'Parabéns pelos ' + ctx.idade + ' anos! Que seu dia seja incrível.'
-          : 'Parabéns! Que seu dia seja incrível.';
-        if (ico) ico.textContent = '🎂';
-      } else if (ctx.tipo === 'primeiro_acesso') {
-        banner.classList.add('banner-boas-vindas');
-        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) à equipe, ' + ctx.nome + '!';
-        document.getElementById('home-subtitulo').textContent = 'Que sua jornada conosco seja incrível. Explore o sistema e conte com a gente!';
-        if (ico) ico.textContent = '👋';
-      } else if (ctx.tipo === 'retorno_ferias') {
-        banner.classList.add('banner-retorno');
-        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
-        document.getElementById('home-subtitulo').textContent = 'Esperamos que suas férias tenham sido incríveis. É ótimo ter você de volta!';
-        if (ico) ico.textContent = '🌴';
-      } else if (ctx.tipo === 'retorno_afastamento') {
-        banner.classList.add('banner-retorno');
-        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
-        document.getElementById('home-subtitulo').textContent = 'Que bom ter você de volta. Se precisar de algo, a equipe está por aqui.';
-        if (ico) ico.textContent = '💙';
+      var ctx = resp.data;
+      // Aniversário já foi tratado via boot — evitar sobrescrita
+      if (ctx.tipo !== 'padrao' && ctx.tipo !== 'aniversario') {
+        _aplicarBannerContexto(ctx);
+        _bannerPersonalizado = true;
       }
     });
+
+    // ── Data comemorativa: exibe após 30s se banner foi personalizado; imediato se não
+    var dc = _detectarDataComemorativa();
+    if (dc) {
+      if (_bannerPersonalizado) {
+        setTimeout(function() { _renderDataComemorativa(dc); }, 30000);
+      } else {
+        _renderDataComemorativa(dc);
+      }
+    }
 
     var papel  = _boot.usuarioPapel || 'colaborador';
     var ativos = (_boot.modulosAtivos || []).map(function(m) { return String(m).toUpperCase(); });
@@ -28745,20 +28948,22 @@ var App = (function() {
       if (!resp || !resp.ok || !resp.data || !resp.data.total) { el.innerHTML = ''; return; }
       var lista = resp.data.aniversariantes || [];
       var meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      el.innerHTML = '<div class="card" style="margin-bottom:24px;">' +
+      el.innerHTML = '<div class="card" style="margin-bottom:16px;">' +
         '<div class="card-titulo" style="margin-bottom:14px;">' +
           '<span class="ms">cake</span> Aniversariantes da Semana' +
         '</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
         lista.map(function(p) {
-          var diaStr = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+          var diaStr  = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+          var nomeMostra = (p.nomeApelido || p.nome || '').trim() || p.nome;
+          var setorExib  = p.setorLabel || p.setor || '';
           return '<div style="display:flex;align-items:center;gap:8px;background:' +
             (p.ehHoje ? 'var(--color-accent)' : 'var(--surface2)') + ';' +
             'color:' + (p.ehHoje ? '#fff' : 'inherit') + ';border-radius:8px;padding:8px 12px;min-width:160px;">' +
             '<span class="ms" style="font-size:20px;">' + (p.ehHoje ? 'celebration' : 'cake') + '</span>' +
             '<div>' +
-              '<div style="font-weight:600;font-size:13px;">' + escaparHtml(p.nome) + '</div>' +
-              '<div style="font-size:11px;opacity:.8;">' + diaStr + (p.setor ? ' · ' + escaparHtml(p.setor) : '') + '</div>' +
+              '<div style="font-weight:600;font-size:13px;">' + escaparHtml(nomeMostra) + '</div>' +
+              '<div style="font-size:11px;opacity:.8;">' + diaStr + (setorExib ? ' · ' + escaparHtml(setorExib) : '') + '</div>' +
             '</div></div>';
         }).join('') +
         '</div></div>';
@@ -32164,7 +32369,9 @@ var TaskHubUI = (function() {
         + '<span class="ms ms-sm" style="vertical-align:-2px;color:var(--color-accent);">cake</span> ANIVERSARIANTES (' + lista.length + ')</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0;">'
         + lista.map(function(p) {
-            var diaStr = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+            var diaStr     = String(p.dia).padStart(2,'0') + '/' + meses[p.mes - 1];
+            var nomeMostra = (p.nomeApelido || p.nome || '').trim() || p.nome;
+            var setorExib  = p.setorLabel || p.setor || '—';
             var ehHoje = p.ehHoje;
             var souEu = meuEmail && p.email && p.email.toLowerCase() === meuEmail.toLowerCase();
             var btnDayoff = souEu && ehHoje
@@ -32174,8 +32381,8 @@ var TaskHubUI = (function() {
               + 'color:' + (ehHoje ? '#fff' : 'inherit') + ';border-radius:8px;padding:8px 12px;min-width:160px;">'
               + '<div style="display:flex;align-items:center;gap:8px;">'
               + '<span class="ms" style="font-size:20px;">' + (ehHoje ? 'celebration' : 'cake') + '</span>'
-              + '<div><div style="font-weight:600;font-size:13px;">' + escaparHtml(p.nome) + '</div>'
-              + '<div style="font-size:11px;opacity:.8;">' + diaStr + ' · ' + escaparHtml(p.setor || '—') + (p.idade ? ' · ' + p.idade + ' anos' : '') + '</div></div>'
+              + '<div><div style="font-weight:600;font-size:13px;">' + escaparHtml(nomeMostra) + '</div>'
+              + '<div style="font-size:11px;opacity:.8;">' + diaStr + ' · ' + escaparHtml(setorExib) + (p.idade ? ' · ' + p.idade + ' anos' : '') + '</div></div>'
               + '</div>'
               + btnDayoff
               + '</div>';

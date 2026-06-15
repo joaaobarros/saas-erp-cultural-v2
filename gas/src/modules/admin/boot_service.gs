@@ -137,6 +137,8 @@ var BootService = (function () {
       orgConfig:          orgConfig,
       usuarioEmail:       email,
       usuarioNome:        (colab && (colab.nomeApelido || colab.nome)) || (acesso && acesso.registro && acesso.registro.nome) || '',
+      usuarioNomeApelido: (colab && colab.nomeApelido) || '',
+      usuarioDN:          (colab && colab.dataNascimento) ? String(colab.dataNascimento).slice(0, 10) : '',
       usuarioPapel:       usuarioPapel,
       usuarioSetor:       (colab && colab.setor) || (acesso && acesso.registro && acesso.registro.setor) || '',
       usuarioCargo:       (colab && colab.cargo) || '',
