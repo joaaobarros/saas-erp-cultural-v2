@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s83e)**: **UX — Setor como badge em Admin (aprovação) e PontoUI individual — Deploy @962.** `IdentidadeAdmin`: modal aprovação de acesso exibe `setorDesejado` como `_badgeSetor`. `PontoUI`: cabeçalho "Individual" mostra badge do setor filtrado em vez de texto cru.
+**Fase atual (s84)**: **UX — Setor como badge em todo o sistema: 34 pontos de uso cobertos — Deploy @963.** `index.html`: função global `_badgeSetor(id, labelOverride?)` criada após `_labelSetor`; CSS `.badge-setor` (roxo índigo). Cobertura completa de todas as citações de setor na UI: Tarefas (agrupamento, info secundária), Colaboradores (pendente-meta, lista, detalhe, histórico de eventos), Contratos (memória de cálculo), Admin (tabela usuários, pendentes, modal aprovação), Veículos/Reservas (solicitanteSetor), Almoxarifado (solicitações pendente/separada/finalizada), Demandas (tabela custo), Solicitações (card-meta), Ponto (tabela por setor, risco CLT, individual), Equipe/RH (lista equipe, painel colaborador, histórico, rescisão, escala férias), BI Demográfico (drill-down equipe), Aniversariantes (card TaskHub + home).
+
+**Fase anterior (s83e)**: **UX — Setor como badge em Admin (aprovação) e PontoUI individual — Deploy @962.** `IdentidadeAdmin`: modal aprovação de acesso exibe `setorDesejado` como `_badgeSetor`. `PontoUI`: cabeçalho "Individual" mostra badge do setor filtrado em vez de texto cru.
 
 **Fase anterior (s83d)**: **UX — Setor como badge visual em Ponto, RH e BI Demográfico — Deploy @961.** `index.html`: todas as ocorrências de `_esc(_labelSetor(x.setor)||...)` substituídas por `_badgeSetor(x.setor)` nos módulos PontoUI (métricas por setor, header filtrado, cards de desvio, tabela de colaboradores), RhUI (tabela Equipe, painel colaborador, histórico de eventos, alertas de férias, calc rescisão, custo por colaborador) e BiDemograficoUI (drill-down de colaboradores). Também adicionada variável `mesNomeFiltro` para exibir badge do setor no título do relatório de ponto.
 

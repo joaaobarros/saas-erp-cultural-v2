@@ -470,7 +470,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 83e (2026-06-15) → SESSÃO 84
+## HANDOFF ATUAL — SESSÃO 84 (2026-06-15) → SESSÃO 85
+
+### Estado atual: Setor como badge em todo o sistema (34 pontos) · Deploy @963
+
+### O que foi feito nesta sessão (s84)
+| Deploy | O que foi implementado |
+|---|---|
+| @963 | `index.html`: `_badgeSetor(id, labelOverride?)` global + `.badge-setor` CSS. 34 pontos de uso: Tarefas, Colaboradores, Contratos, Admin (tabela + pendentes + modal), Veículos (solicitanteSetor ×2), Almoxarifado (pendente/separada/finalizada), Demandas, Solicitações, Reservas, Ponto (por setor/risco CLT/individual/filtros), Equipe/RH (lista/detalhe/histórico/rescisão/escala férias/custo), BI Demográfico, Aniversariantes TaskHub+home. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 83e (2026-06-15) → SESSÃO 84
 
 ### Estado atual: Badge setor em Admin aprovação + PontoUI individual · Deploy @962
 
