@@ -284,8 +284,8 @@ function ctrl_taskhub_aniversariantes() {
 
     var orgId  = getOrgConfig().orgId;
     var hoje   = new Date();
-    var mesAtual = hoje.getMonth() + 1;
-    var diaHoje  = hoje.getDate();
+    // Compara a partir da meia-noite de hoje para não excluir aniversariantes do dia atual
+    var hoje0  = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
 
     var todos;
     try { todos = ColaboradorRepository.listar(orgId, {}); } catch(e) { todos = []; }
@@ -297,13 +297,11 @@ function ctrl_taskhub_aniversariantes() {
         if (partes.length < 3) return false;
         var mesNasc = parseInt(partes[1], 10);
         var diaNasc = parseInt(partes[2], 10);
-        // Inclui: mesmo mês, ou próximos 7 dias (pode cruzar mês)
         var nascHojeAno = new Date(hoje.getFullYear(), mesNasc - 1, diaNasc);
-        var diff = nascHojeAno - hoje;
-        // Se já passou no ano (diff < -86400000 * 1), tenta ano seguinte
-        if (diff < -86400000) {
+        var diff = nascHojeAno - hoje0;
+        if (diff < 0) {
           nascHojeAno = new Date(hoje.getFullYear() + 1, mesNasc - 1, diaNasc);
-          diff = nascHojeAno - hoje;
+          diff = nascHojeAno - hoje0;
         }
         return diff >= 0 && diff <= 7 * 86400000;
       })
@@ -312,8 +310,8 @@ function ctrl_taskhub_aniversariantes() {
         var dia = parseInt(partes[2], 10);
         var mes = parseInt(partes[1], 10);
         var nascHojeAno = new Date(hoje.getFullYear(), mes - 1, dia);
-        if (nascHojeAno < hoje) nascHojeAno = new Date(hoje.getFullYear() + 1, mes - 1, dia);
-        var ehHoje = nascHojeAno.toDateString() === hoje.toDateString();
+        if (nascHojeAno < hoje0) nascHojeAno = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+        var ehHoje = (mes === hoje.getMonth() + 1 && dia === hoje.getDate());
         var idade  = nascHojeAno.getFullYear() - parseInt(partes[0], 10);
         return {
           id:      c.id,
@@ -330,11 +328,83 @@ function ctrl_taskhub_aniversariantes() {
       .sort(function(a, b) {
         var dA = new Date(hoje.getFullYear(), a.mes - 1, a.dia);
         var dB = new Date(hoje.getFullYear(), b.mes - 1, b.dia);
-        if (dA < hoje) dA = new Date(hoje.getFullYear() + 1, a.mes - 1, a.dia);
-        if (dB < hoje) dB = new Date(hoje.getFullYear() + 1, b.mes - 1, b.dia);
+        if (dA < hoje0) dA = new Date(hoje.getFullYear() + 1, a.mes - 1, a.dia);
+        if (dB < hoje0) dB = new Date(hoje.getFullYear() + 1, b.mes - 1, b.dia);
         return dA - dB;
       });
 
     return { aniversariantes: resultado, total: resultado.length };
   }, 'ctrl_taskhub_aniversariantes');
+}
+
+/**
+ * Contexto pessoal do usuário logado para personalizar o banner da home.
+ * Retorna o tipo de boas-vindas: aniversario | primeiro_acesso | retorno_ferias |
+ * retorno_afastamento | padrao.
+ */
+function ctrl_taskhub_contexto_pessoal() {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+
+    var orgId = getOrgConfig().orgId;
+    var hoje  = new Date();
+    var _p    = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var hojeISO   = hoje.getFullYear() + '-' + _p(hoje.getMonth() + 1) + '-' + _p(hoje.getDate());
+    var ontemDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
+    var ontemISO  = ontemDate.getFullYear() + '-' + _p(ontemDate.getMonth() + 1) + '-' + _p(ontemDate.getDate());
+    var semanaAtrasDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 7);
+    var semanaAtrasISO  = semanaAtrasDate.getFullYear() + '-' + _p(semanaAtrasDate.getMonth() + 1) + '-' + _p(semanaAtrasDate.getDate());
+
+    var c = null;
+    try { c = PessoasEngine.buscarPorEmail(email); } catch(e) {}
+    if (!c) return { tipo: 'padrao', nome: email.split('@')[0] };
+
+    var nome = c.nome || c.nomeApelido || email.split('@')[0];
+
+    // 1. Aniversário hoje?
+    if (c.dataNascimento) {
+      var dn     = String(c.dataNascimento).slice(0, 10).split('-');
+      var mesN   = parseInt(dn[1], 10);
+      var diaN   = parseInt(dn[2], 10);
+      var anoN   = parseInt(dn[0], 10);
+      if (mesN === hoje.getMonth() + 1 && diaN === hoje.getDate()) {
+        return { tipo: 'aniversario', nome: nome, idade: hoje.getFullYear() - anoN };
+      }
+    }
+
+    // 2. Primeiro acesso — admitido (ou cadastrado) nos últimos 7 dias?
+    var refData = (c.dataAdmissao ? String(c.dataAdmissao).slice(0, 10) : null)
+               || (c.criadoEm    ? String(c.criadoEm).slice(0, 10)    : null);
+    if (refData && refData >= semanaAtrasISO && refData <= hojeISO) {
+      return { tipo: 'primeiro_acesso', nome: nome, dataAdmissao: refData };
+    }
+
+    // 3. Retorno de férias — férias aprovadas/concluídas com fim ontem ou hoje?
+    try {
+      var todasFerias = ColaboradorRepository.listarFerias({ orgId: orgId, idColaborador: c.id });
+      for (var i = 0; i < todasFerias.length; i++) {
+        var f   = todasFerias[i];
+        var fim = String(f.dataFim || f.fim || '').slice(0, 10);
+        if ((f.status === 'aprovado' || f.status === 'concluido') && fim >= ontemISO && fim <= hojeISO) {
+          return { tipo: 'retorno_ferias', nome: nome, fim: fim };
+        }
+      }
+    } catch(e) {}
+
+    // 4. Retorno de afastamento — afastamento encerrado com dataFim ontem ou hoje?
+    try {
+      var todosAfa = ColaboradorRepository.listarAfastamentos({ orgId: orgId, idColaborador: c.id });
+      for (var j = 0; j < todosAfa.length; j++) {
+        var a      = todosAfa[j];
+        var afaFim = String(a.dataFim || '').slice(0, 10);
+        if ((a.status === 'encerrado' || a.status === 'concluido') && afaFim >= ontemISO && afaFim <= hojeISO) {
+          return { tipo: 'retorno_afastamento', nome: nome, tipoAfastamento: a.tipo || '', fim: afaFim };
+        }
+      }
+    } catch(e) {}
+
+    return { tipo: 'padrao', nome: nome };
+  }, 'ctrl_taskhub_contexto_pessoal');
 }

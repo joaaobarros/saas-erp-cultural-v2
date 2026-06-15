@@ -470,7 +470,37 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 81 (2026-06-15) → SESSÃO 82
+## HANDOFF ATUAL — SESSÃO 82 (2026-06-15) → SESSÃO 83
+
+### Estado atual: Aniversariantes corrigido + Banner boas-vindas contextual · Deploy @955
+
+### O que foi feito nesta sessão (s82)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @955 | Fix — Aniversariantes: bug diff data | `ctrl_taskhub_aniversariantes`: comparação de diff usa `hoje0` (meia-noite); `ehHoje` via comparação dia/mês direta. Aniversariantes do dia eram excluídos por `diff < 0`. |
+| @955 | Feat — ctrl_taskhub_contexto_pessoal | Nova função backend detecta: aniversário hoje, primeiro acesso (admissão/cadastro ≤ 7 dias), retorno de férias (dataFim ontem ou hoje), retorno de afastamento (dataFim ontem ou hoje). |
+| @955 | Feat — Banner home personalizado | `_renderizarHome` chama `contextoPessoal` e aplica classe + ícone + texto específico. Admin: `_renderHomeAdmin` agora também exibe aniversariantes. CSS: 3 variantes de gradiente. |
+
+### Checklist de auditoria — s82
+```
+[x] prompt()/confirm()/alert() — nenhum novo
+[x] GAS.* namespace — GAS.taskhub.contextoPessoal adicionado corretamente
+[x] CSS — .banner-aniversario/.banner-boas-vindas/.banner-retorno definidos no :root
+[x] IDs de DOM — não alterados
+[x] FsmGuardian — não tocado
+[x] Modais — não tocado
+[x] BtnGuard — não tocado
+[x] Datas — comparações ISO no backend; sem datas ISO visíveis ao usuário
+```
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+- (Pendente s74) Executar `fase_colaboracao_provisionar()` no GAS Editor se planilha COLABORACAO ainda não existir.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 81 (2026-06-15) → SESSÃO 82
 
 ### Estado atual: UX Férias refinado · Deploy @950
 

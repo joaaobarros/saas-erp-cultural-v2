@@ -437,6 +437,9 @@ body {
 .banner-texto h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .banner-texto p  { font-size: 13.5px; opacity: .78; }
 .banner-icone    { font-size: 56px; opacity: .65; z-index: 1; position: relative; }
+#home-banner.banner-aniversario   { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); }
+#home-banner.banner-boas-vindas   { background: linear-gradient(135deg, #059669 0%, #0284c7 100%); }
+#home-banner.banner-retorno       { background: linear-gradient(135deg, #0891b2 0%, #0369a1 100%); }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    QUICK ACTIONS
@@ -10388,7 +10391,8 @@ var GAS = {
     minhaCaixa:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_minha_caixa(p||{}); },
     meuTime:          function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_meu_time(p||{}); },
     produtividade:    function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_produtividade(p||{}); },
-    aniversariantes:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_aniversariantes(); }
+    aniversariantes:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_aniversariantes(); },
+    contextoPessoal:  function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_taskhub_contexto_pessoal(); }
   },
   auditoria: {
     listar:           function(f,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_auditoria_listar(f||{}); },
@@ -28579,6 +28583,39 @@ var App = (function() {
     document.getElementById('home-subtitulo').textContent =
       nomeExib + ' — ' + new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
 
+    // Banner contextual — personaliza conforme evento do dia do usuário
+    GAS.taskhub.contextoPessoal(function(resp) {
+      if (!resp || !resp.ok || !resp.data) return;
+      var ctx    = resp.data;
+      var banner = document.getElementById('home-banner');
+      var ico    = banner && banner.querySelector('.banner-icone');
+      if (!banner || ctx.tipo === 'padrao') return;
+      banner.classList.remove('banner-aniversario', 'banner-boas-vindas', 'banner-retorno');
+      if (ctx.tipo === 'aniversario') {
+        banner.classList.add('banner-aniversario');
+        document.getElementById('home-titulo').textContent = 'Feliz Aniversário, ' + ctx.nome + '!';
+        document.getElementById('home-subtitulo').textContent = ctx.idade
+          ? 'Parabéns pelos ' + ctx.idade + ' anos! Que seu dia seja incrível.'
+          : 'Parabéns! Que seu dia seja incrível.';
+        if (ico) ico.textContent = '🎂';
+      } else if (ctx.tipo === 'primeiro_acesso') {
+        banner.classList.add('banner-boas-vindas');
+        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) à equipe, ' + ctx.nome + '!';
+        document.getElementById('home-subtitulo').textContent = 'Que sua jornada conosco seja incrível. Explore o sistema e conte com a gente!';
+        if (ico) ico.textContent = '👋';
+      } else if (ctx.tipo === 'retorno_ferias') {
+        banner.classList.add('banner-retorno');
+        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
+        document.getElementById('home-subtitulo').textContent = 'Esperamos que suas férias tenham sido incríveis. É ótimo ter você de volta!';
+        if (ico) ico.textContent = '🌴';
+      } else if (ctx.tipo === 'retorno_afastamento') {
+        banner.classList.add('banner-retorno');
+        document.getElementById('home-titulo').textContent = 'Bem-vindo(a) de volta, ' + ctx.nome + '!';
+        document.getElementById('home-subtitulo').textContent = 'Que bom ter você de volta. Se precisar de algo, a equipe está por aqui.';
+        if (ico) ico.textContent = '💙';
+      }
+    });
+
     var papel  = _boot.usuarioPapel || 'colaborador';
     var ativos = (_boot.modulosAtivos || []).map(function(m) { return String(m).toUpperCase(); });
 
@@ -28612,6 +28649,7 @@ var App = (function() {
       { label:'Relatórios',     icone:'bar_chart',       modulo:'RELATORIOS', view:'relatorios' }
     ].filter(function(q) { return ativos.indexOf(q.modulo) !== -1; });
     _renderHomeQuickActions(qas);
+    _renderHomeAniversariantes();
   }
 
   function _renderHomeContextual(papel, ativos) {
