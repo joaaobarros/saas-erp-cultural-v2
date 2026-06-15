@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @927+ (pendente) · Feat: 7 features open source — BulkBar, Timeline, TaskHub inline, Quadros/TLDraw, Sessões Interativas, DocSharing
+> Deploy atual: @930+ (pendente) · Feat: Quadros — editor canvas nativo HTML5, zero CDN externo
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---

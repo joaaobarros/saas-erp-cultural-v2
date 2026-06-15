@@ -32636,32 +32636,275 @@ var QuadrosUI = (function() {
     _idAtual = null;
   }
 
+  // ── Editor de canvas nativo (HTML5 Canvas, zero dependências externas) ──
+  var _cvState = null; // estado do editor ativo
+
   function _iniciarEditor(snapshot) {
     var container = document.getElementById('qdro-editor-container');
     container.innerHTML = '';
-    if (typeof window.tldraw !== 'undefined' && window.tldraw.Tldraw) {
-      try {
-        // TLDraw UMD disponível
-        var root = document.createElement('div');
-        root.style.cssText = 'width:100%;height:100%;';
-        container.appendChild(root);
-        // Usa a API React UMD do TLDraw
-        var el = window.React.createElement(window.tldraw.Tldraw, {
-          snapshot: snapshot || undefined,
-          onMount: function(editor) { _editor = editor; }
-        });
-        window.ReactDOM.render(el, root);
-        return;
-      } catch(e) { }
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+
+    // ── Estado ───────────────────────────────────────────────────────────────
+    _cvState = {
+      shapes:    (snapshot && snapshot.shapes) ? JSON.parse(JSON.stringify(snapshot.shapes)) : [],
+      tool:      'pencil',
+      color:     '#1e293b',
+      lineWidth: 2,
+      drawing:   false,
+      cur:       null,   // forma em construção
+      sx: 0, sy: 0       // ponto de início do drag
+    };
+
+    // ── Barra de ferramentas ─────────────────────────────────────────────────
+    var tb = document.createElement('div');
+    tb.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 14px;'
+      + 'border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;flex-shrink:0;';
+
+    var TOOLS = [
+      { id:'pencil',  ico:'draw',         label:'Lápis'     },
+      { id:'rect',    ico:'rectangle',    label:'Retângulo' },
+      { id:'circle',  ico:'circle',       label:'Círculo'   },
+      { id:'text',    ico:'text_fields',  label:'Texto'     },
+      { id:'eraser',  ico:'ink_eraser',   label:'Borracha'  }
+    ];
+    TOOLS.forEach(function(t) {
+      var b = document.createElement('button');
+      b.id = 'qdro-tool-' + t.id;
+      b.className = 'btn btn-secondary btn-sm';
+      b.setAttribute('data-bg-skip', '1');
+      b.title = t.label;
+      b.innerHTML = '<span class="ms ms-sm">' + t.ico + '</span> ' + t.label;
+      b.style.cssText = t.id === 'pencil' ? 'background:var(--color-primary);color:#fff;' : '';
+      b.onclick = function() { QuadrosUI._setTool(t.id); };
+      tb.appendChild(b);
+    });
+
+    // Separador
+    var sep = document.createElement('div');
+    sep.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 4px;';
+    tb.appendChild(sep);
+
+    // Cor
+    var lblCor = document.createElement('span');
+    lblCor.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);';
+    lblCor.textContent = 'Cor';
+    tb.appendChild(lblCor);
+    var inpCor = document.createElement('input');
+    inpCor.type = 'color'; inpCor.id = 'qdro-color'; inpCor.value = '#1e293b';
+    inpCor.style.cssText = 'width:30px;height:28px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:var(--surface);';
+    inpCor.onchange = function() { _cvState.color = this.value; };
+    tb.appendChild(inpCor);
+
+    // Espessura
+    var lblEsp = document.createElement('span');
+    lblEsp.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);';
+    lblEsp.textContent = 'Espessura';
+    tb.appendChild(lblEsp);
+    var inpEsp = document.createElement('input');
+    inpEsp.type = 'range'; inpEsp.id = 'qdro-width';
+    inpEsp.min = 1; inpEsp.max = 24; inpEsp.value = 2;
+    inpEsp.style.cssText = 'width:72px;accent-color:var(--color-primary);';
+    inpEsp.oninput = function() { _cvState.lineWidth = parseInt(this.value); };
+    tb.appendChild(inpEsp);
+
+    // Ações direita
+    var right = document.createElement('div');
+    right.style.cssText = 'margin-left:auto;display:flex;gap:6px;';
+    function _mkBtn(ico, label, fn) {
+      var b = document.createElement('button');
+      b.className = 'btn btn-secondary btn-sm';
+      b.setAttribute('data-bg-skip', '1');
+      b.innerHTML = '<span class="ms ms-sm">' + ico + '</span>' + (label ? ' ' + label : '');
+      b.onclick = fn;
+      return b;
     }
-    // Fallback: aviso com link de abertura externa
-    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;color:var(--muted);">'
-      + '<span class="ms" style="font-size:56px;">edit_square</span>'
-      + '<p style="font-size:15px;font-weight:600;margin:0;">Canvas colaborativo</p>'
-      + '<p style="font-size:13px;text-align:center;max-width:320px;margin:0;">Integração TLDraw indisponível neste ambiente. O snapshot JSON está armazenado e pode ser recuperado externamente.</p>'
-      + (snapshot ? '<button class="btn btn-secondary" onclick="navigator.clipboard.writeText(JSON.stringify(' + JSON.stringify(snapshot) + ')).then(function(){Toast.sucesso(\'Snapshot copiado!\');})" data-bg-skip="1"><span class="ms ms-sm">content_copy</span> Copiar Snapshot JSON</button>' : '')
-      + '</div>';
-    _editor = null;
+    right.appendChild(_mkBtn('undo', 'Desfazer', function() { QuadrosUI._undo(); }));
+    right.appendChild(_mkBtn('delete_sweep', 'Limpar', function() { QuadrosUI._clearCanvas(); }));
+    tb.appendChild(right);
+    container.appendChild(tb);
+
+    // ── Área do canvas ────────────────────────────────────────────────────────
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#fff;';
+    var cv = document.createElement('canvas');
+    cv.id = 'qdro-canvas';
+    cv.style.cssText = 'display:block;cursor:crosshair;touch-action:none;';
+    wrap.appendChild(cv);
+    container.appendChild(wrap);
+
+    // ── Redimensionar canvas ao tamanho do wrapper ────────────────────────────
+    function _resize() {
+      var w = wrap.clientWidth  || 800;
+      var h = wrap.clientHeight || 560;
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      _redraw();
+    }
+
+    // ── Renderização ──────────────────────────────────────────────────────────
+    function _redraw() {
+      var ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      _cvState.shapes.forEach(function(s) { _drawShape(ctx, s); });
+      if (_cvState.cur) _drawShape(ctx, _cvState.cur);
+    }
+
+    function _drawShape(ctx, s) {
+      ctx.save();
+      ctx.strokeStyle = s.color || '#1e293b';
+      ctx.fillStyle   = s.color || '#1e293b';
+      ctx.lineWidth   = s.lw   || 2;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if (s.t === 'pencil' && s.pts && s.pts.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        for (var i = 1; i < s.pts.length; i++) {
+          // curva suave
+          var mid = { x: (s.pts[i-1].x + s.pts[i].x) / 2, y: (s.pts[i-1].y + s.pts[i].y) / 2 };
+          ctx.quadraticCurveTo(s.pts[i-1].x, s.pts[i-1].y, mid.x, mid.y);
+        }
+        ctx.lineTo(s.pts[s.pts.length-1].x, s.pts[s.pts.length-1].y);
+        ctx.stroke();
+      } else if (s.t === 'rect') {
+        ctx.strokeRect(s.x, s.y, s.w, s.h);
+      } else if (s.t === 'circle') {
+        ctx.beginPath();
+        ctx.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else if (s.t === 'text' && s.txt) {
+        var fs = Math.max(12, (s.lw || 2) * 5 + 10);
+        ctx.font = fs + 'px Inter, system-ui, sans-serif';
+        ctx.fillText(s.txt, s.x, s.y);
+      }
+      ctx.restore();
+    }
+
+    // ── Posição relativa ao canvas ────────────────────────────────────────────
+    function _pos(e) {
+      var r = cv.getBoundingClientRect();
+      var src = e.touches ? e.touches[0] : e;
+      return { x: src.clientX - r.left, y: src.clientY - r.top };
+    }
+
+    // ── Eventos de mouse / toque ──────────────────────────────────────────────
+    function _onDown(e) {
+      e.preventDefault();
+      var p = _pos(e);
+      _cvState.color     = (document.getElementById('qdro-color') || { value: '#1e293b' }).value;
+      _cvState.lineWidth = parseInt((document.getElementById('qdro-width') || { value: 2 }).value);
+      _cvState.sx = p.x; _cvState.sy = p.y;
+      _cvState.drawing = true;
+
+      if (_cvState.tool === 'text') {
+        _cvState.drawing = false;
+        _modalInput({ titulo: 'Inserir Texto', label: 'Texto', obrigatorio: true }, function(txt) {
+          if (!txt) return;
+          _cvState.shapes.push({ t:'text', color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, txt:txt });
+          _redraw();
+        });
+        return;
+      }
+      if (_cvState.tool === 'eraser') {
+        _cvState.drawing = false;
+        _cvState.shapes = _cvState.shapes.filter(function(s) {
+          if (s.t === 'pencil') return !s.pts.some(function(pt) { return Math.hypot(pt.x - p.x, pt.y - p.y) < 16; });
+          var x2 = s.x + (s.w || 0), y2 = s.y + (s.h || 0);
+          var cx = s.x + (s.w || 0) / 2, cy = s.y + (s.h || 0) / 2;
+          return !(Math.hypot(cx - p.x, cy - p.y) < Math.max(Math.abs(s.w || 16), Math.abs(s.h || 16)) / 2 + 16
+                   || (s.t === 'text' && Math.hypot(s.x - p.x, s.y - p.y) < 24));
+        });
+        _redraw();
+        return;
+      }
+      if (_cvState.tool === 'pencil') {
+        _cvState.cur = { t:'pencil', color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
+      } else {
+        _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, w:0, h:0 };
+      }
+    }
+
+    function _onMove(e) {
+      if (!_cvState.drawing || !_cvState.cur) return;
+      e.preventDefault();
+      var p = _pos(e);
+      if (_cvState.tool === 'pencil') {
+        _cvState.cur.pts.push({ x:p.x, y:p.y });
+      } else {
+        _cvState.cur.w = p.x - _cvState.sx;
+        _cvState.cur.h = p.y - _cvState.sy;
+      }
+      _redraw();
+    }
+
+    function _onUp() {
+      if (_cvState.drawing && _cvState.cur) {
+        if (_cvState.tool !== 'pencil' || _cvState.cur.pts.length > 1) {
+          _cvState.shapes.push(_cvState.cur);
+        }
+        _cvState.cur = null;
+      }
+      _cvState.drawing = false;
+      _redraw();
+    }
+
+    cv.addEventListener('mousedown',  _onDown);
+    cv.addEventListener('mousemove',  _onMove);
+    cv.addEventListener('mouseup',    _onUp);
+    cv.addEventListener('mouseleave', _onUp);
+    cv.addEventListener('touchstart', _onDown, { passive: false });
+    cv.addEventListener('touchmove',  _onMove, { passive: false });
+    cv.addEventListener('touchend',   _onUp);
+
+    // ── Expor editor ao salvar ────────────────────────────────────────────────
+    _editor = {
+      store: {
+        getSnapshot: function() {
+          return { shapes: _cvState.shapes, version: 1 };
+        }
+      },
+      _redraw: _redraw
+    };
+
+    // Resize inicial + ao redimensionar janela
+    var _ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(function() { _resize(); })
+      : null;
+    if (_ro) _ro.observe(wrap);
+    else window.addEventListener('resize', _resize);
+    setTimeout(_resize, 30);
+  }
+
+  // ── Funções chamadas pelos botões da toolbar ───────────────────────────────
+  function _setTool(tool) {
+    if (!_cvState) return;
+    _cvState.tool = tool;
+    var TOOLS = ['pencil','rect','circle','text','eraser'];
+    TOOLS.forEach(function(t) {
+      var b = document.getElementById('qdro-tool-' + t);
+      if (!b) return;
+      b.style.background = t === tool ? 'var(--color-primary)' : '';
+      b.style.color      = t === tool ? '#fff' : '';
+    });
+    var cv = document.getElementById('qdro-canvas');
+    if (cv) cv.style.cursor = tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair';
+  }
+
+  function _undo() {
+    if (!_cvState || !_cvState.shapes.length) return;
+    _cvState.shapes.pop();
+    if (_editor && _editor._redraw) _editor._redraw();
+  }
+
+  function _clearCanvas() {
+    if (!_cvState) return;
+    _abrirModalConfirmar({
+      titulo: 'Limpar Canvas', icone: 'delete_sweep', corIcone: '#ef4444',
+      mensagem: 'Apagar todos os elementos do quadro?',
+      labelConfirmar: 'Limpar',
+      cb: function() {
+        _cvState.shapes = [];
+        if (_editor && _editor._redraw) _editor._redraw();
+      }
+    });
   }
 
   function salvarSnapshot(done) {
@@ -32690,7 +32933,8 @@ var QuadrosUI = (function() {
 
   return { aoAbrir: aoAbrir, carregar: carregar, setTab: setTab,
            abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir,
-           abrirEditor: abrirEditor, fecharEditor: fecharEditor, salvarSnapshot: salvarSnapshot };
+           abrirEditor: abrirEditor, fecharEditor: fecharEditor, salvarSnapshot: salvarSnapshot,
+           _setTool: _setTool, _undo: _undo, _clearCanvas: _clearCanvas };
 })();
 Router.registrar('quadros', 'Quadros', QuadrosUI.aoAbrir);
 
@@ -36516,7 +36760,7 @@ var RhUI = (function() {
           var _rb = function(v) { return 'R$ ' + _fmtMoeda(v); };
           return '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-              '<h4 style="margin:0;font-size:13px;font-weight:700;">Benefícios (custo empresa)</h4>' +
+              '<h4 style="margin:0;font-size:13px;font-weight:700;">Benefícios</h4>' +
             '</div>' +
             (hasBen
               ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;">' +
