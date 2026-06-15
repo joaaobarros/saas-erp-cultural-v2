@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: pendente (s74) · Infra: planilha COLABORACAO dedicada para TLDraw/DocSharing
+> Deploy atual: pendente (s75) · Férias: bugs, notificações por email, edição/cancelamento com restrições
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -470,7 +470,45 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 74 (2026-06-15) → SESSÃO 75
+## HANDOFF ATUAL — SESSÃO 75 (2026-06-15) → SESSÃO 76
+
+### Estado atual: bugs de férias corrigidos · Deploy pendente (s75)
+
+### O que foi feito nesta sessão (s75)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | Fix — Bug crítico `hoje` undefined em `resumoFeriasPorPeriodo` | `pessoas_engine.gs`: variável `hoje` não estava definida na função `resumoFeriasPorPeriodo` — causava `ReferenceError` para qualquer colaborador com férias `aprovado`, derrubando toda a seção "Períodos Aquisitivos e Concessivos". Corrigido declarando `hoje` localmente. |
+| pendente | Fix — Lista de férias ordenada da mais recente para a mais antiga | `index.html/carregarFerias`: `.sort()` por `dataInicio` desc antes de renderizar. |
+| pendente | Feat — Botão "Concluir" direto para férias aprovadas (sem obrigar Acordo) | `index.html`: botão Concluir em férias `aprovado`; handlers `concluirFerias` + `_confirmarConcluirFerias` no módulo RhUI. |
+| pendente | Fix — Setor exibido com label legível na calculadora de rescisão | `index.html/_aoSelecionarColabRescisao`: `_labelSetor(c.setor)` em vez de slug cru. |
+| pendente | Feat — Auto-conclusão de férias 12h após fim do período | `event_handler_registry.gs`: `autoConcluirFeriasVencidas()` + `criarTriggerAutoConcluirFerias()`. `pessoas_engine.gs`: `autoConcluirFeriasVencidas()` + `_listarOrgIds()`. Trigger diário 12:00. |
+| pendente | Feat — Notificações por email no fluxo de férias | `pessoas_engine.gs`: helpers `_emailsRH`, `_enviarEmailFerias`, `_notificarRHFeriasSolicitadas`, `_notificarColaboradorFeriasAprovadas`, `_notificarMudancaFerias`. Chamados em: `solicitarFerias` (→ RH), `aprovarFerias` (→ colaborador), `cancelarFerias` (→ ambos), `editarFerias` (→ ambos). |
+| pendente | Feat — Edição de datas de férias pendentes | `pessoas_engine.gs/editarFerias`: valida status=pendente + início futuro, atualiza datas, notifica. `pessoas_controller.gs/ctrl_rh_editar_ferias`. `index.html`: GAS binding, botão Editar para pendentes, modal `abrirFormEditarFerias` + `_enviarEdicaoFerias`. |
+| pendente | Feat — Cancelamento restrito a férias não iniciadas | `pessoas_engine.gs/cancelarFerias`: bloqueia se `dataInicio ≤ hoje`. Frontend: botão Cancelar visível para `pendente` e `aprovado` apenas se `dataInicio > hoje`. |
+
+### Checklist de auditoria — s75
+```
+[x] prompt()/confirm()/alert() — nenhum; _abrirModalConfirmarRh + Toast usados
+[x] GAS.* namespace — GAS.rh.editarFerias adicionado + GAS.rh.concluirFerias já existia
+[x] CSS — sem novas classes; modal usa var(--surface) e var(--surface2) padrão
+[x] IDs de DOM — rh-fer-edit-ini/fim/obs novos, únicos no modal dinâmico
+[x] FsmGuardian — cancelarFerias usa _transitarFerias com FSM
+[x] Modais — abrirFormEditarFerias usa _abrirModalRh com background padrão
+[x] BtnGuard — rh-btn-salvar-edit-fer e rh-btn-conf-conc-fer protegidos
+[x] Datas — _fmtDataEmail(iso) em emails; fmtDataPtBR no frontend
+[x] Pós-deploy: executar criarTriggerAutoConcluirFerias() uma vez no GAS Editor
+```
+
+### Pendentes / próxima ação
+- **Pós-deploy obrigatório**: executar `criarTriggerAutoConcluirFerias()` no GAS Editor → verificar trigger criado.
+- (Pendente s74) Executar `fase_colaboracao_provisionar()` no GAS Editor se planilha COLABORACAO ainda não existir.
+- (Pendente s73) Testar drag-and-drop de níveis no mapa.
+- (Pendente) Sobrepor mapas: botão "Sobrepor referência" em `MapaAcaoEditorUI`.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 74 (2026-06-15) → SESSÃO 75
 
 ### Estado atual: ~264 bugs registrados · Deploy pendente (s74)
 
@@ -478,28 +516,11 @@
 
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
-| pendente | Infra — Planilha COLABORACAO dedicada para TLDraw/DocSharing | `setup.gs`: `PROP_SHEETS.COLABORACAO='SHEET_ID_COLABORACAO'`; `SCHEMA_ABAS.COLABORACAO=['Quadros','DocumentosCompartilhados']`; `'Quadros'` removido de ACOES; `'DocumentosCompartilhados'` removido de MASTER; função `fase_colaboracao_provisionar()` cria planilha, prepara abas e migra índices com dedup por id/token. `quadros_repository.gs`: 3× SHEET_ID_ACOES → SHEET_ID_COLABORACAO. `document_sharing_service.gs`: 3× SHEET_ID_MASTER → SHEET_ID_COLABORACAO. Drive JSON canônico intacto. |
-
-### Checklist de auditoria — s74
-```
-[x] prompt()/confirm()/alert() — nenhum; mudança é só backend
-[x] GAS.* namespace — sem novos controllers
-[x] CSS — sem alterações frontend
-[x] IDs de DOM — sem alterações frontend
-[x] FsmGuardian — sem transições de status
-[x] Modais — sem novos modais
-[x] BtnGuard — sem novos botões assíncronos
-[x] Datas — sem datas novas
-[x] PROP_SHEETS e SCHEMA_ABAS sincronizados (COLABORACAO em ambos)
-[x] Drive JSON canônico intacto (Quadros e DocumentosCompartilhados)
-```
+| concluído | Infra — Planilha COLABORACAO dedicada para TLDraw/DocSharing | `setup.gs`: `PROP_SHEETS.COLABORACAO='SHEET_ID_COLABORACAO'`; `SCHEMA_ABAS.COLABORACAO=['Quadros','DocumentosCompartilhados']`; `'Quadros'` removido de ACOES; `'DocumentosCompartilhados'` removido de MASTER; função `fase_colaboracao_provisionar()` cria planilha, prepara abas e migra índices com dedup por id/token. `quadros_repository.gs`: 3× SHEET_ID_ACOES → SHEET_ID_COLABORACAO. `document_sharing_service.gs`: 3× SHEET_ID_MASTER → SHEET_ID_COLABORACAO. Drive JSON canônico intacto. |
 
 ### Pendentes / próxima ação
 - **Pós-deploy obrigatório**: executar `fase_colaboracao_provisionar()` uma vez no GAS Editor → verificar `{ok:true, quadrosMigrados:N, documentosMigrados:N}`.
 - Confirmar que SHEET_ID_COLABORACAO está em PropertiesService (Admin → PropertiesService do GAS Editor).
-- (Pendente s73) Testar drag-and-drop de níveis no mapa.
-- (Pendente) Sobrepor mapas: botão "Sobrepor referência" em `MapaAcaoEditorUI`.
-- (Pendente) Clipboard cross-map: promover `_clipboard` para nível de módulo.
 
 ---
 
