@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s76)**: **Feat — Férias: inversão de ordem das tabelas (Períodos Aquisitivos primeiro), dropdown de colaborador compartilhado entre as duas tabelas, exclusão de registro de férias restrita a superadmin — Deploy @941.**
+**Fase atual (s77)**: **UX — Painel do colaborador: seção Férias agora exibe períodos aquisitivos/concessivos + saldo + acordos negociados — Deploy @942.** `index.html / _abrirDetalhesColab`: substituído `GAS.rh.listarFerias` (lista plana) por `GAS.rh.resumoFeriasColaborador` (resumo por período). Cada período mostra: nº do período, badge de status (em aquisição/em concessão/vencido/gozado), datas aquisitivas + concessivas, barra de progresso com dias gozados/saldo, e registros de férias com acordos negociados em roxo.
+
+**Fase anterior (s76)**: **Feat — Férias: inversão de ordem das tabelas (Períodos Aquisitivos primeiro), dropdown de colaborador compartilhado entre as duas tabelas, exclusão de registro de férias restrita a superadmin — Deploy @941.**
 
 **Fase anterior (s75b)**: **Fix — Férias: período matching usando janela concessiva disjunta (elimina dupla contagem); alertasFeriasAtivos usa saldo real via resumoFeriasPorPeriodo; botão "Solicitar" na tabela de períodos para em_concessao/vencido com saldo > 0 — Deploy @940.**
 

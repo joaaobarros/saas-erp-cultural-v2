@@ -36822,17 +36822,63 @@ var RhUI = (function() {
       var el = document.getElementById('rh-det-eventos');
       if (el) el.innerHTML = _empty('Erro ao carregar.');
     });
-    GAS.rh.listarFerias(c.id, function(r) {
+    GAS.rh.resumoFeriasColaborador(c.id, function(r) {
       var el = document.getElementById('rh-det-ferias');
       if (!el) return;
-      var lista = (r&&r.ok&&Array.isArray(r.data)) ? r.data : [];
-      if (!lista.length) { el.innerHTML = _empty('Nenhuma férias registrada.'); return; }
-      lista.sort(function(a,b){ return (b.dataInicio||b.inicio||'').localeCompare(a.dataInicio||a.inicio||''); });
-      el.innerHTML = lista.slice(0,4).map(function(f) {
-        var _nd = f.totalDias || (f.dataInicio&&f.dataFim ? Math.round((new Date(f.dataFim)-new Date(f.dataInicio))/86400000)+1 : (f.inicio&&f.fim ? Math.round((new Date(f.fim)-new Date(f.inicio))/86400000)+1 : '?'));
-        return '<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="font-size:12px;">' + _fmtData(f.dataInicio||f.inicio) + ' → ' + _fmtData(f.dataFim||f.fim) + ' (' + _nd + ' dias)</span>' +
-          _badge(f.status||'pendente') + '</div>';
+      if (!r || !r.ok || !r.data) { el.innerHTML = _empty('Erro ao carregar férias.'); return; }
+      var d = r.data;
+      if (d.aviso) { el.innerHTML = _empty(d.aviso); return; }
+      var periodos = (d.periodos || []).slice().reverse();
+      if (!periodos.length) { el.innerHTML = _empty('Nenhum período aquisitivo calculado.'); return; }
+      var _stLabel = { em_aquisicao: 'Em aquisição', em_concessao: 'Em concessão', vencido: 'Vencido!', gozado: 'Gozado' };
+      var _stCor   = { em_aquisicao: '#64748b', em_concessao: '#f59e0b', vencido: '#ef4444', gozado: '#22c55e' };
+      var visiveis = periodos.filter(function(p, i) {
+        if (i < 3) return true;
+        return p.status !== 'gozado';
+      }).slice(0, 5);
+      el.innerHTML = visiveis.map(function(p) {
+        var cor = _stCor[p.status] || '#888';
+        var lbl = _stLabel[p.status] || p.status;
+        var barraHtml;
+        if (p.status !== 'em_aquisicao') {
+          var pct = Math.min(100, Math.round((p.diasGozados / p.diasDireito) * 100));
+          barraHtml = '<div style="margin:5px 0 3px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:2px;">' +
+              '<span>' + p.diasGozados + ' dias gozados</span><span>saldo: <strong>' + p.saldo + '</strong> dias</span>' +
+            '</div>' +
+            '<div style="background:var(--border);border-radius:4px;height:4px;">' +
+              '<div style="background:' + cor + ';width:' + pct + '%;height:4px;border-radius:4px;"></div>' +
+            '</div></div>';
+        } else {
+          barraHtml = '<div style="font-size:11px;color:var(--muted);margin-top:3px;">Direito adquirido em ' + _fmtData(p.concessivoInicio) + ' (30 dias)</div>';
+        }
+        var datesHtml = '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' +
+          'Aquis. ' + _fmtData(p.aquisitivoInicio) + ' → ' + _fmtData(p.aquisitivoFim) +
+          ' &nbsp;·&nbsp; Conc. ' + _fmtData(p.concessivoInicio) + ' → ' + _fmtData(p.concessivoFim) +
+        '</div>';
+        var feriasHtml = '';
+        if (p.ferias && p.ferias.length) {
+          feriasHtml = '<div style="margin-top:5px;">' + p.ferias.map(function(f) {
+            var nd = (f.inicio && f.fim) ? Math.round((new Date(f.fim) - new Date(f.inicio)) / 86400000) + 1 : '?';
+            var acordoHtml = '';
+            if (f.acordo) {
+              acordoHtml = ' <span style="font-size:10px;color:#8b5cf6;">' +
+                'negociado: ' + (f.acordo.diasEfetivosGozados || nd) + ' dias' +
+                (f.acordo.observacoes ? ' · ' + _esc(String(f.acordo.observacoes).slice(0, 40)) : '') +
+              '</span>';
+            }
+            return '<div style="padding:3px 0 3px 8px;border-left:2px solid var(--border);font-size:11px;margin-top:3px;">' +
+              _fmtData(f.inicio) + ' → ' + _fmtData(f.fim) + ' (' + nd + ' dias)' + acordoHtml + ' ' + _badge(f.status) +
+            '</div>';
+          }).join('') + '</div>';
+        }
+        return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<span style="font-size:12px;font-weight:700;">' + p.numero + 'º período</span>' +
+            '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:' + cor + '22;color:' + cor + ';">' + lbl + '</span>' +
+          '</div>' +
+          datesHtml + barraHtml + feriasHtml +
+        '</div>';
       }).join('');
     }, function() {
       var el = document.getElementById('rh-det-ferias');

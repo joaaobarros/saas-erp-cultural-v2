@@ -1686,6 +1686,21 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ANTERIOR — SESSÃO 53 (2026-06-15) → SESSÃO 54
+
+### Estado: Deploy @942 · UX: painel colaborador — seção Férias com períodos aquisitivos/concessivos
+
+### O que foi feito nesta sessão (s53)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @942 | UX Férias painel | `_abrirDetalhesColab`: `GAS.rh.listarFerias` substituído por `GAS.rh.resumoFeriasColaborador`; renderização por período aquisitivo com badge status, datas aquis./concessivas, barra de progresso saldo, acordos negociados |
+
+### Pendentes / próxima ação
+- Testar no browser: abrir painel de qualquer colaborador → seção Férias deve mostrar "Nº período · badge status · datas aquisitivas + concessivas · barra saldo · férias registradas"
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 52b (2026-06-14) → SESSÃO 52c
 
 ### Estado: Deploy @902 · Fix: aviso férias vencidas + ícones MS
