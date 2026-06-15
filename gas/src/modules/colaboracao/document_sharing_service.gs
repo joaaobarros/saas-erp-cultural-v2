@@ -5,7 +5,7 @@
  *
  * Gera token único por documento. Endpoint público serve o conteúdo sem autenticação.
  * Log de visualização registrado em documentos_compartilhados_{orgId}.json.
- * Índice: MASTER.DocumentosCompartilhados.
+ * Índice: COLABORACAO.DocumentosCompartilhados (Sheet dedicada — separada de MASTER).
  *
  * Tipos suportados: 'ata_reuniao' | 'relatorio_acao' | 'contrato'
  *
@@ -110,7 +110,7 @@ var DocumentSharingService = (function() {
   function _indexar(orgId, doc) {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_MASTER');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('DocumentosCompartilhados');
@@ -123,7 +123,7 @@ var DocumentSharingService = (function() {
   function _atualizarIndice(orgId, token, totalAcessos) {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_MASTER');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('DocumentosCompartilhados');
@@ -138,7 +138,7 @@ var DocumentSharingService = (function() {
   function prepararIndice() {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_MASTER');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('DocumentosCompartilhados');

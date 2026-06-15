@@ -173,6 +173,108 @@ var PessoasEngine = (function () {
   }
 
   // ──────────────────────────────────────────────────────────────────
+  // NOTIFICAÇÕES DE FÉRIAS
+  // ──────────────────────────────────────────────────────────────────
+
+  function _appUrl() {
+    try { return ScriptApp.getService().getUrl() || ''; } catch(_) { return ''; }
+  }
+
+  function _orgNome() {
+    try { return (getOrgConfig().nome || 'Sistema'); } catch(_) { return 'Sistema'; }
+  }
+
+  function _emailColaboradorFerias(colab) {
+    return (colab && (colab.emailInstitucional || colab.emailPessoal)) || '';
+  }
+
+  function _emailsRH() {
+    try {
+      return AcessoService.listarUsuarios()
+        .filter(function(u) {
+          return u.status === 'ativo' &&
+            (u.papel === 'rh' || u.papel === 'admin' || u.papel === 'superadmin');
+        })
+        .map(function(u) { return u.email; })
+        .filter(Boolean);
+    } catch(_) { return []; }
+  }
+
+  function _fmtDataEmail(iso) {
+    if (!iso) return '—';
+    var p = String(iso).slice(0, 10).split('-');
+    return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+  }
+
+  function _enviarEmailFerias(destinatarios, assunto, corpo) {
+    [].concat(destinatarios || []).forEach(function(email) {
+      if (!email || !String(email).includes('@')) return;
+      try { GmailApp.sendEmail(email, assunto, corpo); } catch(e) {
+        Logger.warn('pessoas_engine', '_enviarEmailFerias', email + ': ' + e.message);
+      }
+    });
+  }
+
+  function _notificarRHFeriasSolicitadas(ferias, colab) {
+    try {
+      var rhs = _emailsRH();
+      if (!rhs.length) return;
+      var org  = _orgNome();
+      var nome = colab.nome || colab.nomeApelido || ferias.idColaborador;
+      var ini  = _fmtDataEmail(ferias.dataInicio || ferias.inicio);
+      var fim  = _fmtDataEmail(ferias.dataFim || ferias.fim);
+      _enviarEmailFerias(rhs,
+        '[' + org + '] Nova solicitação de férias — ' + nome,
+        'Nova solicitação de férias recebida.\n\n' +
+        'Colaborador: ' + nome + '\n' +
+        'Período: ' + ini + ' a ' + fim + '\n' +
+        'Total de dias: ' + (ferias.totalDias || '—') + '\n' +
+        (ferias.tipo === 'nao_oficial' ? 'Tipo: Acordo interno\n' : '') +
+        (ferias.observacoes ? 'Observações: ' + ferias.observacoes + '\n' : '') +
+        '\nAcesse o sistema para aprovar ou recusar:\n' + _appUrl() + '\n\n— ' + org
+      );
+    } catch(e) { Logger.warn('pessoas_engine', '_notificarRHFeriasSolicitadas', e.message); }
+  }
+
+  function _notificarColaboradorFeriasAprovadas(ferias, colab) {
+    try {
+      var email = _emailColaboradorFerias(colab);
+      if (!email) return;
+      var org  = _orgNome();
+      var nome = colab.nome || colab.nomeApelido || '';
+      var ini  = _fmtDataEmail(ferias.dataInicio || ferias.inicio);
+      var fim  = _fmtDataEmail(ferias.dataFim || ferias.fim);
+      _enviarEmailFerias(email,
+        '[' + org + '] Suas férias foram aprovadas!',
+        'Olá' + (nome ? ', ' + nome : '') + '!\n\n' +
+        'Suas férias foram aprovadas.\n\n' +
+        'Período aprovado: ' + ini + ' a ' + fim + '\n' +
+        'Total de dias: ' + (ferias.totalDias || '—') + '\n\n' +
+        'Caso tenha dúvidas, entre em contato com o RH.\n\n— ' + org
+      );
+    } catch(e) { Logger.warn('pessoas_engine', '_notificarColaboradorFeriasAprovadas', e.message); }
+  }
+
+  function _notificarMudancaFerias(ferias, colab, acao, operador) {
+    try {
+      var org      = _orgNome();
+      var nome     = colab.nome || colab.nomeApelido || ferias.idColaborador;
+      var emailC   = _emailColaboradorFerias(colab);
+      var rhs      = _emailsRH();
+      var ini      = _fmtDataEmail(ferias.dataInicio || ferias.inicio);
+      var fim      = _fmtDataEmail(ferias.dataFim || ferias.fim);
+      var labelAcao = { cancelado: 'canceladas', editado: 'com datas alteradas' }[acao] || acao;
+      var assunto  = '[' + org + '] Férias ' + labelAcao + ' — ' + nome;
+      var corpo    = 'As férias de ' + nome + ' foram ' + labelAcao + '.\n\n' +
+        'Período: ' + ini + ' a ' + fim + '\n' +
+        'Alterado por: ' + (operador || 'sistema') + '\n\n' +
+        'Acesse o sistema para mais detalhes:\n' + _appUrl() + '\n\n— ' + org;
+      if (emailC) _enviarEmailFerias(emailC, assunto, corpo);
+      _enviarEmailFerias(rhs, assunto, corpo);
+    } catch(e) { Logger.warn('pessoas_engine', '_notificarMudancaFerias', e.message); }
+  }
+
+  // ──────────────────────────────────────────────────────────────────
   // COLABORADORES
   // ──────────────────────────────────────────────────────────────────
 
@@ -390,6 +492,8 @@ var PessoasEngine = (function () {
     _audit('FERIAS_SOLICITADA', {
       id: r.id, idColaborador: dados.idColaborador, solicitante: emailSolicitante || ''
     });
+    // Notificar RH sobre nova solicitação
+    try { _notificarRHFeriasSolicitadas(dados, c); } catch(_) {}
     return r.id;
   }
 
@@ -405,6 +509,11 @@ var PessoasEngine = (function () {
         mudarStatus(ferias.idColaborador, STATUS_COLABORADOR.FERIAS, emailOperador, ferias.orgId);
       } catch (_) { /* já em férias ou status inválido; logar mas não bloquear */ }
     }
+    // Notificar colaborador da aprovação
+    try {
+      var cAprov = ColaboradorRepository.buscarPorId(ferias.orgId, ferias.idColaborador);
+      if (cAprov) _notificarColaboradorFeriasAprovadas(ferias, cAprov);
+    } catch(_) {}
     return { ok: true, id: id };
   }
 
@@ -444,18 +553,66 @@ var PessoasEngine = (function () {
   function cancelarFerias(id, motivo, emailOperador) {
     var ferias = ColaboradorRepository.buscarFeriasPorId(id);
     if (!ferias) throw new Error('Férias não encontradas: ' + id);
+    // Restrição: só pode cancelar se o período ainda não iniciou
+    var _now3 = new Date();
+    var _p3 = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var hojeC = _now3.getFullYear() + '-' + _p3(_now3.getMonth() + 1) + '-' + _p3(_now3.getDate());
+    var iniC = ferias.dataInicio || ferias.inicio || '';
+    if (iniC && iniC <= hojeC)
+      throw new Error('Não é possível cancelar férias cujo período já iniciou (' + _fmtDataEmail(iniC) + '). Contate o RH para uma solução.');
     var statusAtual = ferias.status;
     _transitarFerias(ferias, STATUS_FERIAS.CANCELADO, emailOperador, { observacao: motivo });
 
     // Se estiver em status 'ferias', retornar para 'ativo'
     if (statusAtual === 'aprovado') {
       try {
-        var c = ColaboradorRepository.buscarPorId(ferias.orgId, ferias.idColaborador);
-        if (c && c.status === 'ferias') {
+        var cCanc = ColaboradorRepository.buscarPorId(ferias.orgId, ferias.idColaborador);
+        if (cCanc && cCanc.status === 'ferias') {
           mudarStatus(ferias.idColaborador, STATUS_COLABORADOR.ATIVO, emailOperador, ferias.orgId);
         }
       } catch (_) {}
     }
+    // Notificar colaborador e RH do cancelamento
+    try {
+      var cNotif = ColaboradorRepository.buscarPorId(ferias.orgId, ferias.idColaborador);
+      if (cNotif) _notificarMudancaFerias(ferias, cNotif, 'cancelado', emailOperador);
+    } catch(_) {}
+    return { ok: true, id: id };
+  }
+
+  function editarFerias(id, novasDatas, emailOperador, orgId) {
+    orgId = orgId || _orgId();
+    var ferias = ColaboradorRepository.buscarFeriasPorId(id);
+    if (!ferias) throw new Error('Férias não encontradas: ' + id);
+    if (ferias.status !== STATUS_FERIAS.PENDENTE)
+      throw new Error('Só é possível editar datas de férias com status "pendente". Status atual: ' + ferias.status + '.');
+    // Restrição: só pode editar se o período ainda não iniciou
+    var _now4 = new Date();
+    var _p4 = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var hojeE = _now4.getFullYear() + '-' + _p4(_now4.getMonth() + 1) + '-' + _p4(_now4.getDate());
+    var iniE = ferias.dataInicio || ferias.inicio || '';
+    if (iniE && iniE <= hojeE)
+      throw new Error('Não é possível editar férias cujo período já iniciou (' + _fmtDataEmail(iniE) + ').');
+    var novaIni = novasDatas.dataInicio || novasDatas.inicio || '';
+    var novaFim = novasDatas.dataFim    || novasDatas.fim    || '';
+    if (!novaIni || !novaFim) throw new Error('Datas de início e fim são obrigatórias.');
+    if (new Date(novaFim) <= new Date(novaIni))
+      throw new Error('Data de fim deve ser posterior à data de início.');
+    ferias.dataInicio   = novaIni;
+    ferias.inicio       = novaIni;
+    ferias.dataFim      = novaFim;
+    ferias.fim          = novaFim;
+    ferias.totalDias    = Math.round((new Date(novaFim) - new Date(novaIni)) / 86400000) + 1;
+    if (novasDatas.observacoes != null) ferias.observacoes = novasDatas.observacoes;
+    ferias.atualizadoEm = new Date().toISOString();
+    ferias.editadoPor   = emailOperador || '';
+    ColaboradorRepository.salvarFerias(ferias);
+    _audit('FERIAS_EDITADA', { id: id, idColaborador: ferias.idColaborador, ini: novaIni, fim: novaFim, operador: emailOperador });
+    // Notificar colaborador e RH das novas datas
+    try {
+      var cEdit = ColaboradorRepository.buscarPorId(ferias.orgId || orgId, ferias.idColaborador);
+      if (cEdit) _notificarMudancaFerias(ferias, cEdit, 'editado', emailOperador);
+    } catch(_) {}
     return { ok: true, id: id };
   }
 
@@ -830,6 +987,9 @@ var PessoasEngine = (function () {
     if (!c.dataAdmissao) return { idColaborador: idColaborador, nome: '', dataAdmissao: null, periodos: [], aviso: 'Data de admissão não registrada.' };
     var periodos = calcularPeriodosAquisitivos(c.dataAdmissao);
     var todas = ColaboradorRepository.listarFerias({ orgId: orgId, idColaborador: idColaborador });
+    var _now2 = new Date();
+    var _pad2 = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var hoje = _now2.getFullYear() + '-' + _pad2(_now2.getMonth() + 1) + '-' + _pad2(_now2.getDate());
     periodos.forEach(function (p) {
       var do_periodo = todas.filter(function (f) {
         if (f.periodoAquisitivoNum === p.numero) return true;
@@ -908,6 +1068,51 @@ var PessoasEngine = (function () {
     } catch (_) {}
     _audit('FERIAS_ACORDO_REGISTRADO', { id: ferias.id, idColaborador: ferias.idColaborador, diasGozados: gozados, saldo: saldo, operador: emailOperador });
     return { ok: true, id: id, saldo: saldo };
+  }
+
+  /**
+   * Conclui automaticamente férias aprovadas cujo dataFim já passou há mais de 12h.
+   * Chamado pelo trigger diário ao meio-dia; compara dataFim < ontem (pois o trigger roda 12h depois).
+   */
+  function autoConcluirFeriasVencidas() {
+    var orgIds = _listarOrgIds();
+    var _pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var ontem = (function() {
+      var d = new Date(); d.setDate(d.getDate() - 1);
+      return d.getFullYear() + '-' + _pad(d.getMonth() + 1) + '-' + _pad(d.getDate());
+    })();
+    var concluidas = 0, erros = 0;
+    orgIds.forEach(function(orgId) {
+      try {
+        var aprovadas = ColaboradorRepository.listarFerias({ orgId: orgId, status: STATUS_FERIAS.APROVADO });
+        aprovadas.forEach(function(f) {
+          var fim = f.dataFim || f.fim || '';
+          if (!fim || fim > ontem) return;
+          try {
+            concluirFerias(f.id, { observacao: 'Conclusão automática — período encerrado em ' + fim }, 'sistema');
+            concluidas++;
+          } catch (e) {
+            erros++;
+            Logger.warn('pessoas_engine', 'autoConcluirFeriasVencidas', 'id=' + f.id + ' erro=' + e.message);
+          }
+        });
+      } catch (e) {
+        Logger.error('pessoas_engine', 'autoConcluirFeriasVencidas', 'orgId=' + orgId + ' ' + e.message);
+      }
+    });
+    return { concluidas: concluidas, erros: erros };
+  }
+
+  function _listarOrgIds() {
+    try {
+      var cfg = getOrgConfig ? getOrgConfig() : null;
+      if (cfg && cfg.orgId) return [cfg.orgId];
+    } catch (_) {}
+    // fallback: deduplica orgIds do próprio arquivo de férias
+    var todas = ColaboradorRepository.listarFerias({}) || [];
+    var ids = {}, out = [];
+    todas.forEach(function(f) { if (f.orgId && !ids[f.orgId]) { ids[f.orgId] = 1; out.push(f.orgId); } });
+    return out;
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -1297,6 +1502,8 @@ var PessoasEngine = (function () {
     calcularPeriodosAquisitivos:   calcularPeriodosAquisitivos,
     resumoFeriasPorPeriodo:        resumoFeriasPorPeriodo,
     registrarAcordoFerias:         registrarAcordoFerias,
+    editarFerias:                  editarFerias,
+    autoConcluirFeriasVencidas:    autoConcluirFeriasVencidas,
 
     // Escalas
     listarEscalas:      listarEscalas,

@@ -5,7 +5,7 @@
  *
  * Cada quadro armazena o snapshot JSON do tldraw editor.
  * Fonte canônica: quadros_{orgId}.json no Drive.
- * Índice: ACOES.Quadros (Sheet).
+ * Índice: COLABORACAO.Quadros (Sheet dedicada — separada de ACOES).
  *
  * @depends DataLayer.gs, setup.gs
  */
@@ -82,7 +82,7 @@ var QuadrosRepository = (function() {
   function _atualizarIndice(orgId, quadro) {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_ACOES');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('Quadros');
@@ -103,7 +103,7 @@ var QuadrosRepository = (function() {
   function _removerDoIndice(orgId, id) {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_ACOES');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('Quadros');
@@ -118,7 +118,7 @@ var QuadrosRepository = (function() {
   function prepararIndice() {
     try {
       var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_ACOES');
+      var sheetId = props.getProperty('SHEET_ID_COLABORACAO');
       if (!sheetId) return;
       var ss  = SpreadsheetApp.openById(sheetId);
       var aba = ss.getSheetByName('Quadros');

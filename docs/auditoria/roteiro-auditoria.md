@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: @930+ (pendente) · Feat: Quadros — editor canvas nativo HTML5, zero CDN externo
+> Deploy atual: pendente (s74) · Infra: planilha COLABORACAO dedicada para TLDraw/DocSharing
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -470,7 +470,40 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 73 (2026-06-14) → SESSÃO 74
+## HANDOFF ATUAL — SESSÃO 74 (2026-06-15) → SESSÃO 75
+
+### Estado atual: ~264 bugs registrados · Deploy pendente (s74)
+
+### O que foi feito nesta sessão (s74)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | Infra — Planilha COLABORACAO dedicada para TLDraw/DocSharing | `setup.gs`: `PROP_SHEETS.COLABORACAO='SHEET_ID_COLABORACAO'`; `SCHEMA_ABAS.COLABORACAO=['Quadros','DocumentosCompartilhados']`; `'Quadros'` removido de ACOES; `'DocumentosCompartilhados'` removido de MASTER; função `fase_colaboracao_provisionar()` cria planilha, prepara abas e migra índices com dedup por id/token. `quadros_repository.gs`: 3× SHEET_ID_ACOES → SHEET_ID_COLABORACAO. `document_sharing_service.gs`: 3× SHEET_ID_MASTER → SHEET_ID_COLABORACAO. Drive JSON canônico intacto. |
+
+### Checklist de auditoria — s74
+```
+[x] prompt()/confirm()/alert() — nenhum; mudança é só backend
+[x] GAS.* namespace — sem novos controllers
+[x] CSS — sem alterações frontend
+[x] IDs de DOM — sem alterações frontend
+[x] FsmGuardian — sem transições de status
+[x] Modais — sem novos modais
+[x] BtnGuard — sem novos botões assíncronos
+[x] Datas — sem datas novas
+[x] PROP_SHEETS e SCHEMA_ABAS sincronizados (COLABORACAO em ambos)
+[x] Drive JSON canônico intacto (Quadros e DocumentosCompartilhados)
+```
+
+### Pendentes / próxima ação
+- **Pós-deploy obrigatório**: executar `fase_colaboracao_provisionar()` uma vez no GAS Editor → verificar `{ok:true, quadrosMigrados:N, documentosMigrados:N}`.
+- Confirmar que SHEET_ID_COLABORACAO está em PropertiesService (Admin → PropertiesService do GAS Editor).
+- (Pendente s73) Testar drag-and-drop de níveis no mapa.
+- (Pendente) Sobrepor mapas: botão "Sobrepor referência" em `MapaAcaoEditorUI`.
+- (Pendente) Clipboard cross-map: promover `_clipboard` para nível de módulo.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 73 (2026-06-14) → SESSÃO 74
 
 ### Estado atual: ~264 bugs registrados · Deploy @926 (GAS)
 

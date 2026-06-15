@@ -9951,6 +9951,7 @@ var GAS = {
     resumoFeriasColaborador:  function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_resumo_ferias_colaborador(id); },
     alertasFerias:            function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_alertas_ferias(); },
     registrarAcordoFerias:    function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_registrar_acordo_ferias(id,d||{}); },
+    editarFerias:             function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_editar_ferias(id,d||{}); },
     // ── F16.3 — Dashboard RH ──
     dashboardFolha:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_folha(p||{}); },
     dashboardPonto:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_rh_dashboard_ponto(p||{}); },
@@ -38458,20 +38459,26 @@ var RhUI = (function() {
     GAS.rh.listarFerias(null,function(resp){
       var lista=(resp&&resp.ok)?resp.data:[];
       if (status) lista=lista.filter(function(f){ return f.status===status; });
+      lista.sort(function(a,b){ return (b.dataInicio||b.inicio||'').localeCompare(a.dataInicio||a.inicio||''); });
       if (!lista||!lista.length){ el.innerHTML=_empty('Nenhuma solicitação de férias.'); return; }
       el.innerHTML='<table class="tabela"><thead><tr><th>Colaborador</th><th>Início</th><th>Fim</th><th>Dias</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+
         lista.map(function(f){
           var acoes='';
+          var _fIniStr = _esc(f.dataInicio||f.inicio||'');
+          var _fFimStr = _esc(f.dataFim||f.fim||'');
+          var _hojeStr = new Date().toISOString().slice(0,10);
+          var _naoIniciou = !_fIniStr || _fIniStr > _hojeStr;
           if (f.status==='pendente'){
             acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-apr-fer-'+_esc(f.id)+'" onclick="RhUI.aprovarFerias(\''+_esc(f.id)+'\')">Aprovar</button>';
-            acoes+='<button class="btn btn-error btn-sm" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
+            acoes+='<button class="btn btn-error btn-sm" style="margin-right:4px;" id="rh-btn-rec-fer-'+_esc(f.id)+'" onclick="RhUI.recusarFerias(\''+_esc(f.id)+'\')">Recusar</button>';
+            acoes+='<button class="btn btn-ghost btn-sm" style="margin-right:4px;" id="rh-btn-edit-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormEditarFerias(\''+_esc(f.id)+'\',\''+_fIniStr+'\',\''+_fFimStr+'\')"><span class="ms ms-sm">edit</span> Editar</button>';
+            if (_naoIniciou) acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
           }
           if (f.status==='aprovado') {
-            var _fIni = _esc(f.dataInicio||f.inicio||'');
-            var _fFim = _esc(f.dataFim||f.fim||'');
-            var _fTot = f.totalDias || (_fIni&&_fFim ? Math.round((new Date(f.dataFim||f.fim)-new Date(f.dataInicio||f.inicio))/86400000)+1 : 0);
-            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\',\''+_fIni+'\',\''+_fFim+'\','+_fTot+')"><span class="ms ms-sm">handshake</span> Acordo</button>';
-            acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
+            var _fTot = f.totalDias || (_fIniStr&&_fFimStr ? Math.round((new Date(f.dataFim||f.fim)-new Date(f.dataInicio||f.inicio))/86400000)+1 : 0);
+            acoes+='<button class="btn btn-primario btn-sm" style="margin-right:4px;" id="rh-btn-acr-fer-'+_esc(f.id)+'" onclick="RhUI.abrirFormAcordoFerias(\''+_esc(f.id)+'\',\''+_fIniStr+'\',\''+_fFimStr+'\','+_fTot+')"><span class="ms ms-sm">handshake</span> Acordo</button>';
+            acoes+='<button class="btn btn-success btn-sm" style="margin-right:4px;" id="rh-btn-conc-fer-'+_esc(f.id)+'" onclick="RhUI.concluirFerias(\''+_esc(f.id)+'\')"><span class="ms ms-sm">check_circle</span> Concluir</button>';
+            if (_naoIniciou) acoes+='<button class="btn btn-ghost btn-sm" id="rh-btn-can-fer-'+_esc(f.id)+'" onclick="RhUI.cancelarFerias(\''+_esc(f.id)+'\')">Cancelar</button>';
           }
           var isAcordo = f.tipo==='nao_oficial';
           var tipoBadge = isAcordo
@@ -38624,6 +38631,41 @@ var RhUI = (function() {
     if (idColabPre) { var sf = document.getElementById('rh-fer-colab-m'); if (sf) sf.value = idColabPre; }
   }
 
+  function abrirFormEditarFerias(id, inicioAtual, fimAtual) {
+    _abrirModalRh('<div style="padding:20px;min-width:380px;">'+
+      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;"><span class="ms ms-sm" style="vertical-align:middle;">edit</span> Editar Datas das Férias</h3>'+
+      '<div style="background:var(--surface2);border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--text2);">'+
+        '<span class="ms ms-sm" style="vertical-align:middle;">info</span> Somente férias pendentes com início futuro podem ser editadas.'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+        '<div class="form-group"><label class="form-label">Novo Início *</label>'+
+          '<input id="rh-fer-edit-ini" class="form-input" type="date" value="'+(inicioAtual||'')+'"></div>'+
+        '<div class="form-group"><label class="form-label">Novo Fim *</label>'+
+          '<input id="rh-fer-edit-fim" class="form-input" type="date" value="'+(fimAtual||'')+'"></div>'+
+      '</div>'+
+      '<div class="form-group"><label class="form-label">Observações</label>'+
+        '<textarea id="rh-fer-edit-obs" class="form-input" rows="2"></textarea></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px;">'+
+        '<button id="rh-btn-salvar-edit-fer" class="btn btn-primario" onclick="RhUI._enviarEdicaoFerias(\''+_esc(id)+'\')"><span class="ms ms-sm">save</span> Salvar</button>'+
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
+      '</div></div>');
+  }
+
+  function _enviarEdicaoFerias(id) {
+    var ini = (document.getElementById('rh-fer-edit-ini')||{}).value||'';
+    var fim = (document.getElementById('rh-fer-edit-fim')||{}).value||'';
+    var obs = (document.getElementById('rh-fer-edit-obs')||{}).value||'';
+    if (!ini||!fim) { Toast.aviso('Informe início e fim.'); return; }
+    if (fim < ini) { Toast.aviso('Data de fim deve ser posterior ao início.'); return; }
+    BtnGuard.wrap('rh-btn-salvar-edit-fer','Salvando…',function(done){
+      GAS.rh.editarFerias(id,{dataInicio:ini,dataFim:fim,observacoes:obs||undefined},function(resp){
+        done(); _fecharModalRh();
+        if (!resp||!resp.ok){ Toast.erro((resp&&resp.error)?resp.error.message:'Erro ao salvar.'); return; }
+        Toast.sucesso('Datas atualizadas. E-mail enviado ao colaborador e ao RH.'); carregarFerias();
+      },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
   function _feriasToggleTipo() {
     var tipo = (document.getElementById('rh-fer-tipo-m')||{}).value||'oficial';
     var bloco = document.getElementById('rh-fer-nao-oficial-bloco');
@@ -38720,6 +38762,25 @@ var RhUI = (function() {
         if (!resp||!resp.ok){ Toast.erro('Erro.'); return; }
         Toast.sucesso('Férias canceladas.'); carregarFerias();
       },function(e){ done(); Toast.erro(e.message||e); });
+    });
+  }
+
+  // ─── CONCLUIR FÉRIAS (sem acordo) ───────────────────────────
+  function concluirFerias(id) {
+    _abrirModalConfirmarRh({
+      titulo: 'Concluir Férias',
+      mensagem: 'Confirmar conclusão das férias? O colaborador voltará ao status <strong>Ativo</strong>.<br><small style="color:var(--text2);">Use "Acordo" se apenas parte dos dias foram gozados.</small>',
+      icone: 'check_circle', corIcone: '#10b981', labelConfirmar: 'Concluir',
+      idBtn: 'rh-btn-conf-conc-fer', onConfirm: 'RhUI._confirmarConcluirFerias(\'' + id + '\')'
+    });
+  }
+  function _confirmarConcluirFerias(id) {
+    BtnGuard.wrap('rh-btn-conf-conc-fer', 'Concluindo…', function(done) {
+      GAS.rh.concluirFerias(id, {}, function(resp) {
+        done(); _fecharModalRh();
+        if (!resp || !resp.ok) { Toast.erro('Erro ao concluir.'); return; }
+        Toast.sucesso('Férias concluídas.'); carregarFerias();
+      }, function(e) { done(); Toast.erro(e.message || e); });
     });
   }
 
@@ -38990,7 +39051,7 @@ var RhUI = (function() {
       info.innerHTML = 'Admissão: <strong>' + (admISO ? fmtDataPtBR(admISO) : '—') + '</strong>'
         + ' · <strong>' + meses + ' meses</strong>'
         + ' · Cargo: ' + escaparHtml(c.cargo || '—')
-        + ' · Setor: ' + escaparHtml(c.setor || '—');
+        + ' · Setor: ' + escaparHtml(_labelSetor(c.setor) || c.setor || '—');
       info.style.display = '';
     }
 
@@ -39683,6 +39744,8 @@ var RhUI = (function() {
     aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
     recusarFerias:recusarFerias, _confirmarRecusarFerias:_confirmarRecusarFerias,
     cancelarFerias:cancelarFerias, _confirmarCancelarFerias:_confirmarCancelarFerias,
+    concluirFerias:concluirFerias, _confirmarConcluirFerias:_confirmarConcluirFerias,
+    abrirFormEditarFerias:abrirFormEditarFerias, _enviarEdicaoFerias:_enviarEdicaoFerias,
     abrirFormAcordoFerias:abrirFormAcordoFerias, _acordoCalcDias:_acordoCalcDias,
     _acordoCalcSaldo:_acordoCalcSaldo, _confirmarAcordoFerias:_confirmarAcordoFerias,
     carregarPeriodosFerias:carregarPeriodosFerias,

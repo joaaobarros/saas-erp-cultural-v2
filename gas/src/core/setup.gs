@@ -26,6 +26,8 @@ var PROP_SHEETS = {
   PUBLICO:       'SHEET_ID_PUBLICO',
   ESCUTA:        'SHEET_ID_ESCUTA',
   ESTOQUE:       'SHEET_ID_ESTOQUE',
+  // Colaboração: Quadros TLDraw + DocumentosCompartilhados (ciclo de vida próprio)
+  COLABORACAO:   'SHEET_ID_COLABORACAO',
   // Registro central de instituições (multi-tenant hub)
   INSTITUICOES:  'SHEET_ID_INSTITUICOES'
 };
@@ -35,16 +37,16 @@ var SCHEMA_ABAS = {
   MASTER: [
     'Configuracoes', 'Itens', 'Listas', 'PreferenciasUsuarios',
     'EventLog', 'Auditoria', 'AuditoriaFsm', 'AlertasLog', 'LogAcessos',
-    'Contratados', 'AgentesCulturais', 'Voluntarios', 'Orgs',
-    'DocumentosCompartilhados'
+    'Contratados', 'AgentesCulturais', 'Voluntarios', 'Orgs'
   ],
   ESTOQUE: [
     'ItensEstoque', 'SaldoEstoque', 'MovimentacoesEstoque'
   ],
   ACOES: [
     'Acoes', 'Habilitacoes', 'AcoesRecursos', 'HabDiaria', 'Indicadores', 'Metas',
-    'Acervo', 'Parcerias', 'Estrategia', 'Quadros'
+    'Acervo', 'Parcerias', 'Estrategia'
   ],
+  COLABORACAO: ['Quadros', 'DocumentosCompartilhados'],
   ESPACOS: [
     'Reservas', 'ReservasItens', 'EmprestimosItens', 'Chaves', 'Protocolos',
     'Ativos', 'MovimentacoesAtivos', 'Manutencoes', 'UsoAtivos', 'BaixasAtivos',
@@ -1585,5 +1587,115 @@ function setup_depositos_iniciais() {
   Logger.info('setup', 'setup_depositos_iniciais',
     'Depósitos: ' + criados + ' criados, ' + jaExistiam + ' já existiam.');
   return { criados: criados, ja_existiam: jaExistiam };
+}
+
+// ─── Colaboração — planilha dedicada ──────────────────────────────────────────
+
+/**
+ * Provisiona a planilha COLABORACAO e migra índices existentes.
+ *
+ * Deve ser executado UMA VEZ após o deploy em instalações existentes.
+ * Em novas instalações, inicializarSistema() cria a planilha automaticamente.
+ *
+ * O que faz:
+ *   1. Cria planilha COLABORACAO (registra SHEET_ID_COLABORACAO em PropertiesService)
+ *   2. Prepara abas Quadros e DocumentosCompartilhados via seus respectivos repositórios
+ *   3. Copia linhas de índice de ACOES.Quadros → COLABORACAO.Quadros
+ *   4. Copia linhas de índice de MASTER.DocumentosCompartilhados → COLABORACAO.DocumentosCompartilhados
+ *
+ * Os arquivos Drive JSON permanecem intactos — nenhum dado canônico é perdido.
+ */
+function fase_colaboracao_provisionar() {
+  var props = PropertiesService.getScriptProperties();
+  var org   = getOrgConfig();
+
+  // 1. Criar a planilha COLABORACAO se ainda não existir
+  if (!props.getProperty('SHEET_ID_COLABORACAO')) {
+    var ss = SpreadsheetApp.create(org.nome + '_COLABORACAO');
+    props.setProperty('SHEET_ID_COLABORACAO', ss.getId());
+    Logger.info('setup', 'fase_colaboracao_provisionar', 'Planilha COLABORACAO criada: ' + ss.getId());
+  } else {
+    Logger.info('setup', 'fase_colaboracao_provisionar', 'Planilha COLABORACAO já existe, reutilizando.');
+  }
+
+  // 2. Preparar abas (cabeçalhos) nas novas abas — repositórios já apontam para COLABORACAO
+  if (typeof QuadrosRepository !== 'undefined' &&
+      typeof QuadrosRepository.prepararIndice === 'function') {
+    try { QuadrosRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'fase_colaboracao_provisionar', 'QuadrosRepository.prepararIndice: ' + e.message);
+    }
+  }
+  if (typeof DocumentSharingService !== 'undefined' &&
+      typeof DocumentSharingService.prepararIndice === 'function') {
+    try { DocumentSharingService.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'fase_colaboracao_provisionar', 'DocumentSharingService.prepararIndice: ' + e.message);
+    }
+  }
+
+  // 3. Migrar linhas de índice das planilhas antigas para COLABORACAO
+  var qRes = _migrarIndiceQuadros(props);
+  var dRes = _migrarIndiceDocumentos(props);
+
+  var resultado = { ok: true, quadrosMigrados: qRes, documentosMigrados: dRes };
+  Logger.info('setup', 'fase_colaboracao_provisionar', JSON.stringify(resultado));
+  return resultado;
+}
+
+function _migrarIndiceQuadros(props) {
+  try {
+    var origemId  = props.getProperty('SHEET_ID_ACOES');
+    var destinoId = props.getProperty('SHEET_ID_COLABORACAO');
+    if (!origemId || !destinoId) return 0;
+    var ssOrigem   = SpreadsheetApp.openById(origemId);
+    var ssDestino  = SpreadsheetApp.openById(destinoId);
+    var abaOrigem  = ssOrigem.getSheetByName('Quadros');
+    var abaDestino = ssDestino.getSheetByName('Quadros');
+    if (!abaOrigem || !abaDestino) return 0;
+    var dados = abaOrigem.getDataRange().getValues();
+    if (dados.length <= 1) return 0; // apenas cabeçalho — nada a migrar
+    var linhasDestino = abaDestino.getDataRange().getValues();
+    var idsExistentes = linhasDestino.slice(1).map(function(r) { return r[0]; });
+    var novos = 0;
+    for (var i = 1; i < dados.length; i++) {
+      if (idsExistentes.indexOf(dados[i][0]) < 0) {
+        abaDestino.appendRow(dados[i]);
+        novos++;
+      }
+    }
+    Logger.info('setup', '_migrarIndiceQuadros', novos + ' quadros migrados.');
+    return novos;
+  } catch(e) {
+    Logger.warn('setup', '_migrarIndiceQuadros', e.message);
+    return 0;
+  }
+}
+
+function _migrarIndiceDocumentos(props) {
+  try {
+    var origemId  = props.getProperty('SHEET_ID_MASTER');
+    var destinoId = props.getProperty('SHEET_ID_COLABORACAO');
+    if (!origemId || !destinoId) return 0;
+    var ssOrigem   = SpreadsheetApp.openById(origemId);
+    var ssDestino  = SpreadsheetApp.openById(destinoId);
+    var abaOrigem  = ssOrigem.getSheetByName('DocumentosCompartilhados');
+    var abaDestino = ssDestino.getSheetByName('DocumentosCompartilhados');
+    if (!abaOrigem || !abaDestino) return 0;
+    var dados = abaOrigem.getDataRange().getValues();
+    if (dados.length <= 1) return 0; // apenas cabeçalho — nada a migrar
+    var linhasDestino = abaDestino.getDataRange().getValues();
+    var tokensExistentes = linhasDestino.slice(1).map(function(r) { return r[0]; });
+    var novos = 0;
+    for (var i = 1; i < dados.length; i++) {
+      if (tokensExistentes.indexOf(dados[i][0]) < 0) {
+        abaDestino.appendRow(dados[i]);
+        novos++;
+      }
+    }
+    Logger.info('setup', '_migrarIndiceDocumentos', novos + ' documentos migrados.');
+    return novos;
+  } catch(e) {
+    Logger.warn('setup', '_migrarIndiceDocumentos', e.message);
+    return 0;
+  }
 }
 

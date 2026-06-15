@@ -362,3 +362,34 @@ function criarTriggerEventosPendentes() {
     .create();
   Logger.info('event_handler_registry', 'criarTriggerEventosPendentes', 'Trigger de 30 min criado.');
 }
+
+/**
+ * Conclui automaticamente férias aprovadas cujo período encerrou há mais de 12h.
+ * Chamado diariamente ao meio-dia pelo trigger instalado em criarTriggerAutoConcluirFerias().
+ */
+function autoConcluirFeriasVencidas() {
+  try {
+    var result = PessoasEngine.autoConcluirFeriasVencidas();
+    Logger.info('event_handler_registry', 'autoConcluirFeriasVencidas', JSON.stringify(result));
+  } catch(e) {
+    Logger.error('event_handler_registry', 'autoConcluirFeriasVencidas', e.message);
+  }
+}
+
+/**
+ * Instala o trigger diário (12:00) de auto-conclusão de férias.
+ * Executar uma vez no GAS Editor após o deploy.
+ */
+function criarTriggerAutoConcluirFerias() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'autoConcluirFeriasVencidas') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('autoConcluirFeriasVencidas')
+    .timeBased()
+    .everyDays(1)
+    .atHour(12)
+    .create();
+  Logger.info('event_handler_registry', 'criarTriggerAutoConcluirFerias', 'Trigger diário de auto-conclusão de férias criado (12:00).');
+}

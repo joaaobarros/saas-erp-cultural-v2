@@ -538,6 +538,24 @@ function ctrl_rh_registrar_acordo_ferias(id, dados) {
   }, 'ctrl_rh_registrar_acordo_ferias');
 }
 
+function ctrl_rh_editar_ferias(id, dados) {
+  return GasResponse.wrap(function () {
+    var ctx   = _ctxPessoas();
+    var nivel = _ctxPessoasNivel(ctx.email);
+    if (!id) throw new Error('ID é obrigatório.');
+    // RH/admin/superadmin: pode editar qualquer; colaborador: só as próprias
+    if (_NIVEL_LEITURA_AMPLA.indexOf(nivel) === -1) {
+      var ferias = PessoasEngine.listarFerias({ orgId: ctx.orgId });
+      var propria = ferias.find(function(f) { return f.id === id; });
+      if (!propria) throw new Error('Férias não encontradas.');
+      var idProprio = _idColaboradorPorEmail(ctx.email, ctx.orgId);
+      if (!idProprio || propria.idColaborador !== idProprio)
+        throw new Error('Acesso negado: você só pode editar suas próprias férias.');
+    }
+    return PessoasEngine.editarFerias(id, dados || {}, ctx.email, ctx.orgId);
+  }, 'ctrl_rh_editar_ferias');
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // ESCALAS
 // ═══════════════════════════════════════════════════════════════════
