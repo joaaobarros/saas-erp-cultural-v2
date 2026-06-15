@@ -38690,8 +38690,10 @@ var RhUI = (function() {
         var urgStr = urg
           ? '<span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;color:'+urg.cor+';background:'+urg.bg+';display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm" style="font-size:13px;color:'+urg.cor+';">'+urg.ms+'</span>'+escaparHtml(urg.label)+'</span>'
           : '<span style="font-size:11px;color:var(--muted);">—</span>';
+        var _cIni = JSON.stringify(p.concessivoInicio).replace(/"/g,"'");
+        var _cFim = JSON.stringify(p.concessivoFim).replace(/"/g,"'");
         var acaoBtn = (p.saldo > 0 && (p.status === 'em_concessao' || p.status === 'vencido'))
-          ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias('+idS+')" title="Solicitar '+p.saldo+'d do período '+p.numero+'"><span class="ms ms-sm">beach_access</span> Solicitar</button>'
+          ? '<button class="btn btn-ghost btn-sm" data-bg-skip="1" onclick="RhUI.abrirFormFerias('+idS+','+p.numero+','+_cIni+','+_cFim+')" title="Solicitar '+p.saldo+'d do período '+p.numero+'"><span class="ms ms-sm">beach_access</span> Solicitar</button>'
           : '';
 
         // Férias do período, aplicando filtro de status se houver
@@ -38891,36 +38893,55 @@ var RhUI = (function() {
     });
   }
 
-  function abrirFormFerias(idColabPre) {
-    _abrirModalRh('<div style="padding:20px;min-width:400px;">'+
-      '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Solicitar Férias</h3>'+
-      '<div class="form-group"><label class="form-label">Colaborador *</label>'+
-        '<select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-        '<div class="form-group"><label class="form-label">Início *</label>'+
-          '<input id="rh-fer-inicio-m" class="form-input" type="date" oninput="RhUI._feriasCalcSaldo()"></div>'+
-        '<div class="form-group"><label class="form-label">Fim *</label>'+
-          '<input id="rh-fer-fim-m" class="form-input" type="date" oninput="RhUI._feriasCalcSaldo()"></div>'+
-      '</div>'+
-      '<div class="form-group"><label class="form-label">Tipo</label>'+
-        '<select id="rh-fer-tipo-m" class="form-input select-sm" onchange="RhUI._feriasToggleTipo()">'+
-          '<option value="oficial">Oficial</option>'+
-          '<option value="nao_oficial">Não Oficial (Acordo Interno)</option>'+
-        '</select></div>'+
-      '<div id="rh-fer-nao-oficial-bloco" style="display:none;background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">'+
-        '<div style="font-size:11px;font-weight:700;color:var(--warning,#e65100);margin-bottom:8px;">Acordo interno — período não formalizado integralmente</div>'+
-        '<div class="form-group"><label class="form-label">Dias realmente gozados no período</label>'+
-          '<input id="rh-fer-dias-gozados-m" class="form-input" type="number" min="1" placeholder="Ex: 10" oninput="RhUI._feriasCalcSaldo()"></div>'+
-        '<div id="rh-fer-saldo-info" style="font-size:12px;color:var(--text2);margin-top:4px;">Saldo para uso posterior: —</div>'+
-      '</div>'+
-      '<div class="form-group"><label class="form-label">Observações</label>'+
-        '<textarea id="rh-fer-obs-m" class="form-input" rows="2"></textarea></div>'+
-      '<div style="display:flex;gap:8px;margin-top:12px;">'+
-        '<button id="rh-btn-enviar-ferias-m" class="btn btn-primario" onclick="RhUI._enviarFerias()"><span class="ms ms-sm">send</span> Solicitar</button>'+
-        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>'+
-      '</div></div>');
-    _popularSelectColaboradores('rh-fer-colab-m');
-    if (idColabPre) { var sf = document.getElementById('rh-fer-colab-m'); if (sf) sf.value = idColabPre; }
+  // abrirFormFerias(idColabPre, periodoNum, concIni, concFim)
+  // periodoNum/concIni/concFim opcionais — passados quando vem de um botão "Solicitar" de um período específico
+  function abrirFormFerias(idColabPre, periodoNum, concIni, concFim) {
+    var temPeriodo = periodoNum != null && concIni && concFim;
+    var periodoBanner = temPeriodo
+      ? '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px;">' +
+          '<span class="ms ms-sm" style="color:#1d4ed8;font-size:16px;margin-top:1px;">calendar_clock</span>' +
+          '<div><div style="font-size:12px;font-weight:700;color:#1e3a8a;">' + periodoNum + 'º período aquisitivo</div>' +
+            '<div style="font-size:11px;color:#1d4ed8;margin-top:2px;">Janela concessiva: <strong>' + _fmtData(concIni) + ' → ' + _fmtData(concFim) + '</strong> — datas de início e fim devem estar dentro desta janela.</div>' +
+          '</div>' +
+        '</div>'
+      : '';
+    var minAttr = temPeriodo ? ' min="' + concIni + '"' : '';
+    var maxAttr = temPeriodo ? ' max="' + concFim + '"' : '';
+    var colabField = (idColabPre && temPeriodo)
+      ? '<div style="display:none"><select id="rh-fer-colab-m"><option value="' + _esc(idColabPre) + '" selected></option></select></div>'
+      : '<div class="form-group"><label class="form-label">Colaborador *</label><select id="rh-fer-colab-m" class="form-input"><option value="">Selecione…</option></select></div>';
+    _abrirModalRh(
+      '<div style="padding:20px;min-width:420px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">' +
+        '<span class="ms" style="color:var(--color-primary);font-size:20px;">beach_access</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">Solicitar Férias — Oficial</h3>' +
+      '</div>' +
+      periodoBanner +
+      colabField +
+      '<input type="hidden" id="rh-fer-periodo-num-m" value="' + (periodoNum != null ? periodoNum : '') + '">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div class="form-group"><label class="form-label">Início *</label>' +
+          '<input id="rh-fer-inicio-m" class="form-input" type="date"' + minAttr + maxAttr + ' oninput="RhUI._feriasCalcDias()"></div>' +
+        '<div class="form-group"><label class="form-label">Fim *</label>' +
+          '<input id="rh-fer-fim-m" class="form-input" type="date"' + minAttr + maxAttr + ' oninput="RhUI._feriasCalcDias()"></div>' +
+      '</div>' +
+      '<div id="rh-fer-dias-info" style="font-size:12px;color:var(--text2);margin:-4px 0 10px;min-height:16px;"></div>' +
+      (temPeriodo
+        ? '<div style="background:#fefce8;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#92400e;">' +
+            '<span class="ms ms-sm" style="vertical-align:middle;">info</span> Para registrar um <strong>acordo interno</strong> (dias parcialmente gozados), use o botão <strong>Acordo</strong> após esta solicitação ser aprovada.' +
+          '</div>'
+        : '') +
+      '<div class="form-group"><label class="form-label">Observações</label>' +
+        '<textarea id="rh-fer-obs-m" class="form-input" rows="2" placeholder="Opcional…"></textarea></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button id="rh-btn-enviar-ferias-m" class="btn btn-primario" onclick="RhUI._enviarFerias()"><span class="ms ms-sm">send</span> Solicitar</button>' +
+        '<button class="btn btn-ghost" onclick="RhUI._fecharModalRh()" data-bg-skip="1">Cancelar</button>' +
+      '</div></div>'
+    );
+    if (!idColabPre || !temPeriodo) {
+      _popularSelectColaboradores('rh-fer-colab-m');
+      if (idColabPre) { var sf = document.getElementById('rh-fer-colab-m'); if (sf) sf.value = String(idColabPre); }
+    }
   }
 
   function abrirFormEditarFerias(id, inicioAtual, fimAtual) {
@@ -38958,39 +38979,28 @@ var RhUI = (function() {
     });
   }
 
-  function _feriasToggleTipo() {
-    var tipo = (document.getElementById('rh-fer-tipo-m')||{}).value||'oficial';
-    var bloco = document.getElementById('rh-fer-nao-oficial-bloco');
-    if (bloco) bloco.style.display = tipo==='nao_oficial' ? '' : 'none';
-  }
-
-  function _feriasCalcSaldo() {
-    var inicio  = (document.getElementById('rh-fer-inicio-m')||{}).value||'';
-    var fim     = (document.getElementById('rh-fer-fim-m')||{}).value||'';
-    var gozados = parseInt((document.getElementById('rh-fer-dias-gozados-m')||{}).value||'0')||0;
-    var el = document.getElementById('rh-fer-saldo-info');
+  function _feriasCalcDias() {
+    var inicio = (document.getElementById('rh-fer-inicio-m')||{}).value||'';
+    var fim    = (document.getElementById('rh-fer-fim-m')||{}).value||'';
+    var el     = document.getElementById('rh-fer-dias-info');
     if (!el) return;
-    if (!inicio||!fim) { el.textContent='Saldo para uso posterior: —'; return; }
-    var total = Math.round((new Date(fim)-new Date(inicio))/(1000*60*60*24))+1;
-    var saldo = total - gozados;
-    el.textContent = 'Total: '+total+' dias · Gozados: '+gozados+' · Saldo: '+Math.max(0,saldo)+' dias';
-    el.style.color = saldo < 0 ? 'var(--danger,#c62828)' : 'var(--text2)';
+    if (!inicio||!fim||fim < inicio) { el.textContent = ''; return; }
+    var dias = Math.round((new Date(fim)-new Date(inicio))/(86400000))+1;
+    el.innerHTML = '<span style="color:var(--color-primary);font-weight:600;">' + dias + ' dias</span> selecionados';
   }
 
   function _enviarFerias() {
     var idColab  = (document.getElementById('rh-fer-colab-m')||{}).value||'';
     var inicio   = (document.getElementById('rh-fer-inicio-m')||{}).value||'';
     var fim      = (document.getElementById('rh-fer-fim-m')||{}).value||'';
-    var tipo     = (document.getElementById('rh-fer-tipo-m')||{}).value||'oficial';
-    var obs      = (document.getElementById('rh-fer-obs-m')||{}).value||'';
+    var obs      = ((document.getElementById('rh-fer-obs-m')||{}).value||'').trim();
+    var perNum   = (document.getElementById('rh-fer-periodo-num-m')||{}).value||'';
     if (!idColab){ Toast.aviso('Selecione o colaborador.'); return; }
     if (!inicio||!fim){ Toast.aviso('Informe o período.'); return; }
-    var dados = { idColaborador:idColab, dataInicio:inicio, dataFim:fim, observacoes:obs, tipo:tipo };
-    if (tipo==='nao_oficial') {
-      var goz = parseInt((document.getElementById('rh-fer-dias-gozados-m')||{}).value||'0')||0;
-      if (!goz){ Toast.aviso('Informe os dias realmente gozados.'); return; }
-      dados.diasGozados = goz;
-    }
+    if (fim < inicio){ Toast.aviso('Data de fim deve ser posterior ao início.'); return; }
+    var dados = { idColaborador:idColab, dataInicio:inicio, dataFim:fim, tipo:'oficial' };
+    if (obs)    dados.observacoes = obs;
+    if (perNum) dados.periodoAquisitivoNum = parseInt(perNum);
     BtnGuard.wrap('rh-btn-enviar-ferias-m','Solicitando…',function(done){
       GAS.rh.solicitarFerias(dados,function(resp){
         done();
@@ -40033,7 +40043,7 @@ var RhUI = (function() {
     salvarEscala:salvarEscala, excluirEscala:excluirEscala, _confirmarExcluirEscala:_confirmarExcluirEscala,
     carregarDocumentos:carregarDocumentos, abrirFormDocumento:abrirFormDocumento, _salvarDocumento:_salvarDocumento, excluirDocumento:excluirDocumento,
     carregarFerias:carregarFerias, excluirFerias:excluirFerias, abrirFormFerias:abrirFormFerias, _enviarFerias:_enviarFerias,
-    _feriasToggleTipo:_feriasToggleTipo, _feriasCalcSaldo:_feriasCalcSaldo,
+    _feriasCalcDias:_feriasCalcDias,
     aprovarFerias:aprovarFerias, _confirmarAprovarFerias:_confirmarAprovarFerias,
     recusarFerias:recusarFerias, _confirmarRecusarFerias:_confirmarRecusarFerias,
     cancelarFerias:cancelarFerias, _confirmarCancelarFerias:_confirmarCancelarFerias,
