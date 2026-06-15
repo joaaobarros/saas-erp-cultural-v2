@@ -470,7 +470,22 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 83b (2026-06-15) → SESSÃO 84
+## HANDOFF ATUAL — SESSÃO 83c (2026-06-15) → SESSÃO 84
+
+### Estado atual: Férias por Período — cards colapsáveis · Deploy @960
+
+### O que foi feito nesta sessão (s83c)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @960 | UX — Férias por Período: substituída tabela por cards colapsáveis | `carregarFeriasUnificado` modo colaborador: cada período agora é um card colorido colapsável igual ao painel do colaborador. Header: nº período + badge + Solicitar. Expand: grid datas, desc status, barra gozados/saldo, cards OFICIAL (azul) e ACORDO INTERNO (roxo) com botões de ação. Vencido+acordo→banner roxo; Vencido+sem cobertura→banner vermelho CLT art.137. Removida função `carregarPeriodosFerias` duplicada (morta, usava SC/SL obsoletos). |
+
+### Pendentes / próxima ação
+- (Pendente s75) Executar `criarTriggerAutoConcluirFerias()` no GAS Editor se ainda não executado.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 83b (2026-06-15) → SESSÃO 84
 
 ### Estado atual: Sincronização git — UX Home comemorativa + nomeApelido
 

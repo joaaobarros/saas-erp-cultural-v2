@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s83b)**: **Feat — UX Home: datas comemorativas com partículas/animações, nomeApelido no boot e aniversariantes com setorLabel (commit de sincronização — já estava no GAS).**
+**Fase atual (s83c)**: **UX — Férias por Período: substituída tabela por cards colapsáveis idênticos ao painel colaborador.** `carregarFeriasUnificado` (modo com colaborador): cada período agora renderizado como card com borda colorida por status (igual ao `_renderPer` do painel); header colapsável com badge + botão Solicitar; expand mostra grid datas aquisitivo/concessivo + barra de progresso + descrição + cards OFICIAL (azul) / ACORDO INTERNO (roxo) com botões de ação. Remoção de `carregarPeriodosFerias` antiga (função duplicada morta com SC/SL).
+
+**Fase anterior (s83b)**: **Feat — UX Home: datas comemorativas com partículas/animações, nomeApelido no boot e aniversariantes com setorLabel (commit de sincronização — já estava no GAS).**
 
 **Fase anterior (s83)**: **Feat — BI unificado: Dashboard vira Central de Inteligência com sub-abas BI Operacional/Financeiro/Estratégico/Demográfico; cards clicáveis navegam para módulos relevantes; BI Demográfico com drill-down interativo por gênero, raça, faixa etária, setor, cargo e tempo de atuação — Deploy @959.**
 
