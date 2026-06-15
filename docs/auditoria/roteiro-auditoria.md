@@ -470,7 +470,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 83d (2026-06-15) → SESSÃO 84
+## HANDOFF ATUAL — SESSÃO 83e (2026-06-15) → SESSÃO 84
+
+### Estado atual: Badge setor em Admin aprovação + PontoUI individual · Deploy @962
+
+### O que foi feito nesta sessão (s83e)
+| Deploy | O que foi implementado |
+|---|---|
+| @962 | `IdentidadeAdmin` modal aprovação: `setorDesejado` como `_badgeSetor`. `PontoUI` header "Individual": badge do setor filtrado. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 83d (2026-06-15) → SESSÃO 84
 
 ### Estado atual: Setor como badge visual em Ponto/RH/BI · Deploy @961
 
