@@ -462,6 +462,11 @@ body {
 .dc-natal       { background: linear-gradient(135deg, #14532d 0%, #dc2626 100%); }
 .dc-strip .dc-strip-icone { animation: dc-pulse-icon 2s ease-in-out infinite; display: inline-block; }
 .dc-custom       { background: linear-gradient(135deg, #312e81 0%, #6d28d9 100%); }
+.dc-consciencia  { background: linear-gradient(135deg, #1c1917 0%, #92400e 100%); }
+.dc-africa       { background: linear-gradient(135deg, #451a03 0%, #b45309 100%); }
+.dc-indigena     { background: linear-gradient(135deg, #14532d 0%, #854d0e 100%); }
+.dc-mulheres     { background: linear-gradient(135deg, #4a044e 0%, #a21caf 100%); }
+.dc-arco-iris    { background: linear-gradient(135deg, #be123c 0%, #ea580c 25%, #ca8a04 50%, #16a34a 75%, #2563eb 100%); }
 
 /* Pulsing FAB (botão flutuante de atenção) */
 .fab-pulse { animation: fabPulseGlow 2.4s ease-in-out infinite; }
@@ -16774,6 +16779,7 @@ var DatasComemorativasAdmin = (function() {
     { id:'',             label:'Nenhum'        },
     { id:'fogos',        label:'Fogos de artifício' },
     { id:'neve',         label:'Neve'          },
+    { id:'papai_noel',   label:'Papai Noel no trenó + neve' },
     { id:'coracoes',     label:'Corações'      },
     { id:'estrelas',     label:'Estrelas'      },
     { id:'ouro',         label:'Ouro (partículas douradas)' },
@@ -16781,7 +16787,7 @@ var DatasComemorativasAdmin = (function() {
   ];
 
   var _MOTION_CLS = {
-    fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
+    fogos:'dc-ano-novo', neve:'dc-natal', papai_noel:'dc-natal', coracoes:'dc-namorados',
     estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ'
   };
 
@@ -29885,21 +29891,31 @@ var App = (function() {
 
   // ── Datas comemorativas ────────────────────────────────────────────────
   var _DATAS_COMEMORATIVAS = [
-    { mes:1,  dia:1,  tipo:'ano_novo',    label:'Feliz Ano Novo!',                        sub:'Que 2026 seja repleto de realizações!',  icone:'🎆', cls:'dc-ano-novo',   particulas:'fogos'    },
-    { mes:3,  dia:17, tipo:'abolicao_ce', label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.',icone:'✊','cls':'dc-abolicao',  particulas:'ouro'     },
-    { mes:3,  dia:25, tipo:'fortaleza',   label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726 — ' + (new Date().getFullYear()-1726) + ' anos de história.', icone:'🦀', cls:'dc-fortaleza',  particulas:'estrelas' },
-    { mes:6,  dia:12, tipo:'namorados',   label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',  icone:'💛', cls:'dc-namorados',  particulas:'coracoes' },
-    { mes:7,  dia:23, tipo:'ceara',       label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824 — ' + (new Date().getFullYear()-1824) + ' anos.', icone:'☀️', cls:'dc-ceara',      particulas:'ouro'     },
-    { mes:9,  dia:7,  tipo:'independ',    label:'Independência do Brasil!',               sub:'7 de Setembro de 1822 — ' + (new Date().getFullYear()-1822) + ' anos de independência.', icone:'🇧🇷', cls:'dc-independ',   particulas:'verde_amarelo' },
-    { mes:10, dia:12, tipo:'criancas',    label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.', icone:'⭐', cls:'dc-criancas',   particulas:'estrelas' },
-    { mes:11, dia:2,  tipo:'finados',     label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',        icone:'🕯️', cls:'dc-finados',    particulas:null       },
-    { mes:12, dia:25, tipo:'natal',       label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.', icone:'🎄', cls:'dc-natal',      particulas:'neve'     },
-    { mes:12, dia:31, tipo:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo',   particulas:'fogos'    }
+    { mes:1,  dia:1,  id:'ano_novo',    label:'Feliz Ano Novo!',                        sub:'Que este ano seja repleto de realizações!',    icone:'🎆', cls:'dc-ano-novo',    motion:'fogos'        },
+    { mes:3,  dia:8,  id:'mulheres',    label:'Dia Internacional das Mulheres',         sub:'Pela igualdade, liberdade e direitos das mulheres.', icone:'💜', cls:'dc-mulheres',  motion:'estrelas'     },
+    { mes:3,  dia:17, id:'abolicao_ce', label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.', icone:'✊', cls:'dc-abolicao',  motion:'ouro'         },
+    { mes:3,  dia:25, id:'fortaleza',   label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726 — ' + (new Date().getFullYear()-1726) + ' anos de história.', icone:'🦀', cls:'dc-fortaleza',  motion:'estrelas'    },
+    { mes:4,  dia:19, id:'indigenas_br',label:'Dia dos Povos Indígenas',                sub:'Resistência, cultura e direitos dos povos originários.', icone:'🪶', cls:'dc-indigena',  motion:'estrelas'    },
+    { mes:5,  dia:13, id:'abolicao_br', label:'Abolição da Escravatura no Brasil',      sub:'Lei Áurea, 1888 — uma conquista que ainda exige reparação.', icone:'✊', cls:'dc-abolicao',  motion:'ouro'        },
+    { mes:5,  dia:25, id:'africa',      label:'Dia da África',                          sub:'Celebrando as culturas, histórias e lutas do continente.', icone:'🌍', cls:'dc-africa',    motion:'ouro'         },
+    { mes:6,  dia:12, id:'namorados',   label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',  icone:'💛', cls:'dc-namorados',   motion:'coracoes'     },
+    { mes:6,  dia:28, id:'lgbtqia',     label:'Dia Internacional do Orgulho LGBTQIA+', sub:'Amor, identidade e o direito de ser quem se é.', icone:'🏳️‍🌈', cls:'dc-arco-iris', motion:'fogos'        },
+    { mes:7,  dia:23, id:'ceara',       label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824 — ' + (new Date().getFullYear()-1824) + ' anos.', icone:'☀️', cls:'dc-ceara', motion:'ouro'         },
+    { mes:8,  dia:9,  id:'indigenas_onu',label:'Dia Internacional dos Povos Indígenas', sub:'ONU — saberes, línguas e territórios dos povos nativos.', icone:'🌿', cls:'dc-indigena',  motion:'estrelas'    },
+    { mes:9,  dia:7,  id:'independ',    label:'Independência do Brasil!',               sub:'7 de Setembro de 1822 — ' + (new Date().getFullYear()-1822) + ' anos.', icone:'🇧🇷', cls:'dc-independ', motion:'verde_amarelo' },
+    { mes:10, dia:12, id:'criancas',    label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.', icone:'⭐', cls:'dc-criancas', motion:'estrelas'    },
+    { mes:11, dia:2,  id:'finados',     label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',        icone:'🕯️', cls:'dc-finados',    motion:null            },
+    { mes:11, dia:20, id:'consciencia', label:'Dia da Consciência Negra',               sub:'Zumbi dos Palmares e a luta permanente pelo povo negro.', icone:'✊', cls:'dc-consciencia', motion:'ouro'        },
+    { mes:11, dia:25, id:'violencia_m', label:'Dia pela Eliminação da Violência contra as Mulheres', sub:'Nenhuma forma de violência é aceitável.', icone:'💜', cls:'dc-mulheres', motion:null            },
+    { mes:12, dia:10, id:'dir_humanos', label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', cls:'dc-criancas', motion:'estrelas'    },
+    { mes:12, dia:25, id:'natal',       label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.', icone:'🎄', cls:'dc-natal',  motion:'papai_noel'  },
+    { mes:12, dia:31, id:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo', motion:'fogos'         }
   ];
 
   var _DC_MOTION_CLS = {
     fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
-    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ'
+    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ',
+    papai_noel:'dc-natal'
   };
 
   function _detectarDataComemorativa() {
@@ -30047,6 +30063,33 @@ var App = (function() {
         pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.life-=.005;
           ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
           ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,p.life);ctx.fill();ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='papai_noel') {
+      // ── Neve de fundo ────────────────────────────────────────────────────
+      for(var i=0;i<70;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,
+        vx:(Math.random()-.5)*1.2,vy:.8+Math.random()*1.5,sz:2+Math.random()*4,op:1});
+      // ── Papai Noel atravessa a tela da direita para a esquerda ────────────
+      var _pnDiv = document.createElement('div');
+      var _pnTop = 20 + Math.random() * Math.min(cv.height * 0.28, 130);
+      _pnDiv.style.cssText = 'position:fixed;top:' + _pnTop + 'px;left:' + (cv.width + 60) + 'px;' +
+        'font-size:46px;pointer-events:none;z-index:10000;white-space:nowrap;line-height:1;';
+      _pnDiv.textContent = '🦌🦌🦌🎅🛷';
+      document.body.appendChild(_pnDiv);
+      var _pnFr = 0; var _pnDur = 320; var _pnDist = cv.width + 400;
+      (function _animarPN() {
+        var x = (cv.width + 60) - _pnDist * (_pnFr / _pnDur);
+        var bob = Math.sin(_pnFr * 0.14) * 9;
+        _pnDiv.style.left = x + 'px';
+        _pnDiv.style.top  = (_pnTop + bob) + 'px';
+        _pnFr++;
+        if (_pnFr < _pnDur) requestAnimationFrame(_animarPN); else _pnDiv.remove();
+      })();
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy;
+          ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle='rgba(255,255,255,'+Math.max(0,(1-fr/MAX))*(p.op)+')'; ctx.fill(); });
         fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
       }
     } else {
