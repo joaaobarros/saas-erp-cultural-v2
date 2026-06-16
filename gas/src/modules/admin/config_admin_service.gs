@@ -645,7 +645,12 @@ var ConfigAdminService = (function () {
     salvarTerreno:               salvarTerreno,
     // Níveis do mapa
     lerNiveisMapa:               lerNiveisMapa,
-    salvarNiveisMapa:            salvarNiveisMapa
+    salvarNiveisMapa:            salvarNiveisMapa,
+    // Datas comemorativas
+    getDatasComemorativas:       getDatasComemorativas,
+    listarDatasComemorativas:    listarDatasComemorativas,
+    salvarDataComemorativa:      salvarDataComemorativa,
+    excluirDataComemorativa:     excluirDataComemorativa
   };
 
   // ─── Terreno do Mapa ─────────────────────────────────────────────────────
@@ -735,6 +740,105 @@ var ConfigAdminService = (function () {
       numNiveis:  params.niveis.length
     });
     return { numNiveis: params.niveis.length };
+  }
+
+  // ─── Datas Comemorativas ─────────────────────────────────────────────────
+
+  var _DATAS_COMEMORATIVAS_DEFAULT = [
+    { id:'ano_novo',    mes:1,  dia:1,  label:'Feliz Ano Novo!',                        sub:'Que este ano seja repleto de realizações!',                 icone:'🎆', motion:'fogos'        },
+    { id:'abolicao_ce', mes:3,  dia:17, label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.',        icone:'✊',  motion:'ouro'         },
+    { id:'fortaleza',   mes:3,  dia:25, label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726.',                                          icone:'🦀', motion:'estrelas'     },
+    { id:'namorados',   mes:6,  dia:12, label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',              icone:'💛', motion:'coracoes'     },
+    { id:'ceara',       mes:7,  dia:23, label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824.',                             icone:'☀️', motion:'ouro'         },
+    { id:'independ',    mes:9,  dia:7,  label:'Independência do Brasil!',               sub:'7 de Setembro de 1822.',                                    icone:'🇧🇷', motion:'verde_amarelo' },
+    { id:'criancas',    mes:10, dia:12, label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.', icone:'⭐', motion:'estrelas'     },
+    { id:'finados',     mes:11, dia:2,  label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',                    icone:'🕯️', motion:null           },
+    { id:'natal',       mes:12, dia:25, label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.',      icone:'🎄', motion:'neve'         },
+    { id:'reveillon',   mes:12, dia:31, label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!',          icone:'🎊', motion:'fogos'        }
+  ];
+
+  function _lerDatasComemorativasJSON() {
+    try {
+      var lista = readJSON('datas_comemorativas.json');
+      if (Array.isArray(lista) && lista.length > 0) return lista;
+    } catch(e) {
+      Logger.warn('config_admin_service', '_lerDatasComemorativasJSON', e.message);
+    }
+    return null;
+  }
+
+  /** Leitura pública — não requer admin. Retorna apenas datas ativas. */
+  function getDatasComemorativas() {
+    var lista = _lerDatasComemorativasJSON();
+    if (!lista) return _DATAS_COMEMORATIVAS_DEFAULT;
+    return lista.filter(function(d) { return d.ativo !== false; });
+  }
+
+  /** Lista todas as datas (inclusive inativas) para o painel admin. */
+  function listarDatasComemorativas() {
+    _assertAdmin();
+    var lista = _lerDatasComemorativasJSON();
+    if (!lista) return _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return Object.assign({}, d); });
+    return lista;
+  }
+
+  /**
+   * Cria ou atualiza uma data comemorativa.
+   * @param {{ id?, mes, dia, label, sub?, icone?, motion? }} dados
+   */
+  function salvarDataComemorativa(dados) {
+    _assertAdmin();
+    if (!dados || !dados.label || !dados.mes || !dados.dia) {
+      throw new Error('Campos obrigatórios: label, mes, dia.');
+    }
+    var email = getEmailSessao();
+    var id    = dados.id || gerarId('dc');
+
+    modifyJSON('datas_comemorativas.json', function(lista) {
+      if (!Array.isArray(lista) || lista.length === 0) {
+        lista = _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return Object.assign({}, d); });
+      }
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) { if (lista[i].id === id) { idx = i; break; } }
+      var registro = {
+        id:           id,
+        mes:          Number(dados.mes),
+        dia:          Number(dados.dia),
+        label:        String(dados.label).trim(),
+        sub:          dados.sub          ? String(dados.sub).trim()   : '',
+        icone:        dados.icone        ? String(dados.icone).trim() : '',
+        motion:       dados.motion       || null,
+        ativo:        true,
+        atualizadoEm: agora()
+      };
+      if (idx >= 0) lista[idx] = registro; else lista.push(registro);
+      return lista;
+    });
+
+    AuditoriaService.registrar('DATA_COMEMORATIVA_SALVA', 'config_org',
+      { id: id, usuario: email, label: dados.label });
+    return id;
+  }
+
+  /** Remove (soft-delete) uma data comemorativa. */
+  function excluirDataComemorativa(id) {
+    _assertAdmin();
+    var email = getEmailSessao();
+
+    modifyJSON('datas_comemorativas.json', function(lista) {
+      if (!Array.isArray(lista) || lista.length === 0) {
+        lista = _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return Object.assign({}, d); });
+      }
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) { if (lista[i].id === id) { idx = i; break; } }
+      if (idx < 0) throw new Error('Data comemorativa não encontrada: ' + id);
+      lista[idx].ativo        = false;
+      lista[idx].atualizadoEm = agora();
+      return lista;
+    });
+
+    AuditoriaService.registrar('DATA_COMEMORATIVA_EXCLUIDA', 'config_org', { id: id, usuario: email });
+    return true;
   }
 
 })();

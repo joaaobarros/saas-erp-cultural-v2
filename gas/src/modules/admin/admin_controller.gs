@@ -663,3 +663,31 @@ function ctrl_orgs_atualizarPlano(orgId, plano) {
     return OrgRegistryService.atualizarPlano(orgId, plano);
   }, 'ctrl_orgs_atualizarPlano');
 }
+
+// ── Datas Comemorativas ───────────────────────────────────────────────────────
+
+/** Leitura pública — retorna datas ativas para a home page. */
+function ctrl_home_datasComemorativas() {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.getDatasComemorativas();
+  }, 'ctrl_home_datasComemorativas');
+}
+
+/** Lista todas (inclusive inativas) para o painel admin. */
+function ctrl_admin_listarDatasComemorativas() {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.listarDatasComemorativas();
+  }, 'ctrl_admin_listarDatasComemorativas');
+}
+
+function ctrl_admin_salvarDataComemorativa(dados) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.salvarDataComemorativa(dados);
+  }, 'ctrl_admin_salvarDataComemorativa');
+}
+
+function ctrl_admin_excluirDataComemorativa(id) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.excluirDataComemorativa(id);
+  }, 'ctrl_admin_excluirDataComemorativa');
+}

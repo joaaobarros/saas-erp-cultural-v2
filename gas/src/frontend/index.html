@@ -461,6 +461,7 @@ body {
 .dc-finados     { background: linear-gradient(135deg, #1f2937 0%, #374151 100%); }
 .dc-natal       { background: linear-gradient(135deg, #14532d 0%, #dc2626 100%); }
 .dc-strip .dc-strip-icone { animation: dc-pulse-icon 2s ease-in-out infinite; display: inline-block; }
+.dc-custom       { background: linear-gradient(135deg, #312e81 0%, #6d28d9 100%); }
 
 /* Pulsing FAB (botão flutuante de atenção) */
 .fab-pulse { animation: fabPulseGlow 2.4s ease-in-out infinite; }
@@ -2144,6 +2145,7 @@ select.form-control { cursor: pointer; }
               <button class="tab-btn" data-tab="identidade"     onclick="AdminCadastrosUI.abrirTab('identidade')"><span class="ms ms-sm">palette</span> Identidade Visual</button>
               <button class="tab-btn" data-tab="dados"          onclick="AdminCadastrosUI.abrirTab('dados')">Banco de Dados</button>
               <button class="tab-btn" data-tab="ferramentas"   onclick="AdminCadastrosUI.abrirTab('ferramentas')"><span class="ms ms-sm">theater_comedy</span> Ferramentas</button>
+              <button class="tab-btn" data-tab="datas"         onclick="AdminCadastrosUI.abrirTab('datas')"><span class="ms ms-sm">celebration</span> Datas Comemorativas</button>
             </div>
             <!-- Tab: Espaços -->
             <div id="admin-tab-espacos" class="admin-tab-content">
@@ -2365,6 +2367,19 @@ select.form-control { cursor: pointer; }
                 </button>
               </div>
             </div><!-- /admin-tab-ferramentas -->
+
+            <!-- Tab: Datas Comemorativas -->
+            <div id="admin-tab-datas" class="admin-tab-content oculto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <p style="font-size:13px;color:var(--muted);margin:0;">
+                  Configure as datas comemorativas exibidas na home page com animações e ícones personalizados.
+                </p>
+                <button class="btn btn-primario btn-sm" onclick="DatasComemorativasAdmin.abrirModal(null)">
+                  <span class="ms ms-sm">add</span> Nova Data
+                </button>
+              </div>
+              <div id="lista-admin-datas"><p class="muted-text">Carregando…</p></div>
+            </div><!-- /admin-tab-datas -->
 
           </div><!-- /card cadastros -->
 
@@ -10152,7 +10167,14 @@ var GAS = {
     obterInfoBancoDados:    function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_obterInfoBancoDados(); },
     // Manutenção de espaço
     alternarManutencao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarManutencaoEspaco({espacoId:id}); },
-    alternarReserva:        function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarReservaEspaco(id); }
+    alternarReserva:        function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarReservaEspaco(id); },
+    // Datas Comemorativas
+    listarDatasComemorativas: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarDatasComemorativas(); },
+    salvarDataComemorativa:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarDataComemorativa(d); },
+    excluirDataComemorativa:  function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirDataComemorativa(id); }
+  },
+  home: {
+    datasComemorativas: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_home_datasComemorativas(); }
   },
   // Painel de Orgs — Fase 9 (superadmin)
   orgs: {
@@ -15428,6 +15450,7 @@ var AdminCadastrosUI = (function() {
         if (elFerr) elFerr.innerHTML = '<p class="muted-text" style="padding:24px;">Esta aba está disponível apenas para Admin e SuperAdmin.</p>';
       }
     }
+    if (tab === 'datas') DatasComemorativasAdmin.carregar();
   }
 
   function _carregarProvisionamento() {
@@ -16675,6 +16698,297 @@ var AdminCadastrosUI = (function() {
   };
 })();
 
+
+// ═══════════════════════════════════════════════════════════
+// DATAS COMEMORATIVAS ADMIN
+// ═══════════════════════════════════════════════════════════
+var DatasComemorativasAdmin = (function() {
+
+  var _MESES = ['', 'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  var _MOTIONS = [
+    { id:'',             label:'Nenhum'        },
+    { id:'fogos',        label:'Fogos de artifício' },
+    { id:'neve',         label:'Neve'          },
+    { id:'coracoes',     label:'Corações'      },
+    { id:'estrelas',     label:'Estrelas'      },
+    { id:'ouro',         label:'Ouro (partículas douradas)' },
+    { id:'verde_amarelo',label:'Verde e Amarelo' }
+  ];
+
+  var _MOTION_CLS = {
+    fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
+    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ'
+  };
+
+  function _clsParaMotion(motion) {
+    return _MOTION_CLS[motion] || 'dc-finados';
+  }
+
+  // ── Carregar lista ────────────────────────────────────────
+  function carregar() {
+    var el = document.getElementById('lista-admin-datas');
+    if (!el) return;
+    el.innerHTML = '<p class="muted-text">Carregando…</p>';
+    GAS.admin.listarDatasComemorativas(function(r) {
+      var lista = r && r.ok ? (r.data || []) : [];
+      _renderLista(el, lista);
+    }, function(e) {
+      el.innerHTML = '<p style="color:#ef4444;">Erro ao carregar: ' + escaparHtml(e.message) + '</p>';
+    });
+  }
+
+  function _renderLista(el, lista) {
+    if (!lista.length) {
+      el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);">' +
+        '<span class="ms" style="font-size:40px;display:block;">event</span>' +
+        '<p style="margin-top:8px;font-size:14px;">Nenhuma data cadastrada.</p></div>';
+      return;
+    }
+
+    // Agrupar por mês
+    var porMes = {};
+    lista.forEach(function(dc) {
+      var m = dc.mes;
+      if (!porMes[m]) porMes[m] = [];
+      porMes[m].push(dc);
+    });
+
+    var html = '';
+    Object.keys(porMes).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(m) {
+      html += '<div style="margin-bottom:20px;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;' +
+          'color:var(--muted);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);">' +
+          _MESES[Number(m)] + '</div>';
+      porMes[m].sort(function(a,b){return a.dia-b.dia;}).forEach(function(dc) {
+        var inativo = dc.ativo === false;
+        var cls     = _clsParaMotion(dc.motion);
+        var motionLabel = '';
+        for (var i=0; i<_MOTIONS.length; i++) { if (_MOTIONS[i].id === (dc.motion||'')) { motionLabel = _MOTIONS[i].label; break; } }
+        html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;' +
+          'border:1px solid var(--border);margin-bottom:6px;background:' + (inativo ? '#fafafa' : 'var(--surface)') + ';' +
+          (inativo ? 'opacity:.55;' : '') + '">' +
+          // Mini-preview strip
+          '<div class="dc-strip ' + cls + '" style="width:44px;height:44px;border-radius:8px;flex-shrink:0;' +
+            'display:flex;align-items:center;justify-content:center;font-size:22px;padding:0;">' +
+            '<span style="animation:none;">' + (dc.icone || '📅') + '</span>' +
+          '</div>' +
+          // Info
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+              '<span style="font-size:13px;font-weight:600;">' + escaparHtml(dc.label) + '</span>' +
+              (inativo ? '<span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:10px;">inativo</span>' : '') +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:1px;">' +
+              'Dia ' + dc.dia + ' de ' + _MESES[dc.mes] +
+              (dc.sub ? ' — ' + escaparHtml(dc.sub) : '') +
+            '</div>' +
+            (motionLabel ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' +
+              '<span class="ms" style="font-size:12px;vertical-align:middle;">auto_awesome</span> ' + motionLabel + '</div>' : '') +
+          '</div>' +
+          // Ações
+          '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+            '<button class="btn btn-ghost btn-sm" title="Editar" ' +
+              'onclick="DatasComemorativasAdmin.abrirModal(' + JSON.stringify(dc).replace(/"/g,"'") + ')">' +
+              '<span class="ms ms-sm">edit</span>' +
+            '</button>' +
+            (inativo
+              ? '<button class="btn btn-ghost btn-sm" title="Restaurar" ' +
+                  'onclick="DatasComemorativasAdmin.restaurar(' + JSON.stringify(dc.id).replace(/"/g,"'") + ')">' +
+                  '<span class="ms ms-sm">restore</span></button>'
+              : '<button class="btn btn-ghost btn-sm" style="color:#ef4444;" title="Excluir" ' +
+                  'onclick="DatasComemorativasAdmin.excluir(' + JSON.stringify(dc.id).replace(/"/g,"'") + ')">' +
+                  '<span class="ms ms-sm">delete</span></button>') +
+          '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+    });
+
+    el.innerHTML = html;
+  }
+
+  // ── Modal criar/editar ────────────────────────────────────
+  function abrirModal(dc) {
+    dc = dc || {};
+    var isEdicao = !!dc.id;
+    var motionOpts = _MOTIONS.map(function(m) {
+      return '<option value="' + m.id + '"' + ((dc.motion||'') === m.id ? ' selected' : '') + '>' + m.label + '</option>';
+    }).join('');
+
+    var mesesOpts = _MESES.slice(1).map(function(nome, i) {
+      var v = i + 1;
+      return '<option value="' + v + '"' + (dc.mes === v ? ' selected' : '') + '>' + ('0'+v).slice(-2) + ' — ' + nome + '</option>';
+    }).join('');
+
+    var diasOpts = '';
+    for (var d=1; d<=31; d++) {
+      diasOpts += '<option value="' + d + '"' + (dc.dia === d ? ' selected' : '') + '>' + ('0'+d).slice(-2) + '</option>';
+    }
+
+    var html =
+      '<div style="background:var(--surface);border-radius:14px;overflow:hidden;min-width:420px;max-width:520px;">' +
+        '<div style="background:linear-gradient(135deg,rgba(79,70,229,.06),var(--surface));' +
+          'border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:10px;">' +
+          '<span class="ms" style="color:var(--color-primary);font-size:20px;">celebration</span>' +
+          '<strong style="font-size:15px;flex:1;">' + (isEdicao ? 'Editar Data Comemorativa' : 'Nova Data Comemorativa') + '</strong>' +
+          '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" ' +
+            'style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;">&#x2715;</button>' +
+        '</div>' +
+        '<div style="padding:20px;display:flex;flex-direction:column;gap:14px;">' +
+          // Label
+          '<div class="form-group">' +
+            '<label class="form-label">Título <span style="color:#ef4444;">*</span></label>' +
+            '<input id="dc-label" class="form-input" type="text" placeholder="Ex: Dia da Mulher" ' +
+              'value="' + escaparHtml(dc.label||'') + '" maxlength="80">' +
+          '</div>' +
+          // Subtítulo
+          '<div class="form-group">' +
+            '<label class="form-label">Subtítulo</label>' +
+            '<input id="dc-sub" class="form-input" type="text" placeholder="Breve mensagem ou contexto histórico" ' +
+              'value="' + escaparHtml(dc.sub||'') + '" maxlength="140">' +
+          '</div>' +
+          // Ícone + data em linha
+          '<div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:10px;">' +
+            '<div class="form-group">' +
+              '<label class="form-label">Ícone (emoji)</label>' +
+              '<input id="dc-icone" class="form-input" type="text" placeholder="🎉" ' +
+                'value="' + escaparHtml(dc.icone||'') + '" maxlength="10" style="text-align:center;font-size:22px;">' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label class="form-label">Mês <span style="color:#ef4444;">*</span></label>' +
+              '<select id="dc-mes" class="form-input"><option value="">Selecione</option>' + mesesOpts + '</select>' +
+            '</div>' +
+            '<div class="form-group">' +
+              '<label class="form-label">Dia <span style="color:#ef4444;">*</span></label>' +
+              '<select id="dc-dia" class="form-input"><option value="">Selecione</option>' + diasOpts + '</select>' +
+            '</div>' +
+          '</div>' +
+          // Motion
+          '<div class="form-group">' +
+            '<label class="form-label">Animação (motion)</label>' +
+            '<select id="dc-motion" class="form-input">' + motionOpts + '</select>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' +
+              'Efeito visual exibido na home page quando esta data é detectada.' +
+            '</div>' +
+          '</div>' +
+          // Preview
+          '<div>' +
+            '<label class="form-label" style="margin-bottom:6px;">Preview</label>' +
+            '<div id="dc-preview" style="border-radius:8px;overflow:hidden;">' +
+              _previewHtml(dc) +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '<button id="dc-btn-salvar" class="btn btn-primario" onclick="DatasComemorativasAdmin.salvar(' + JSON.stringify(dc.id||'').replace(/"/g,"'") + ')">' +
+            '<span class="ms ms-sm">save</span> ' + (isEdicao ? 'Salvar alterações' : 'Criar') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    _abrirModalSimples(html);
+    var box = document.querySelector('.modal-simples .modal-box-animar');
+    if (box) box.style.maxWidth = '540px';
+
+    // Preview ao vivo
+    ['dc-label','dc-sub','dc-icone','dc-motion'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', _atualizarPreview);
+    });
+  }
+
+  function _previewHtml(dc) {
+    var cls = _clsParaMotion(dc && dc.motion);
+    var icone = (dc && dc.icone) || '📅';
+    var label = (dc && dc.label) || 'Título da data';
+    var sub   = (dc && dc.sub)   || 'Subtítulo descritivo';
+    return '<div class="dc-strip ' + cls + '" style="border-radius:8px;margin:0;">' +
+      '<span class="dc-strip-icone" style="animation:none;">' + icone + '</span>' +
+      '<div class="dc-strip-texto">' + escaparHtml(label) +
+        '<div class="dc-strip-sub">' + escaparHtml(sub) + '</div>' +
+      '</div></div>';
+  }
+
+  function _atualizarPreview() {
+    var el = document.getElementById('dc-preview');
+    if (!el) return;
+    el.innerHTML = _previewHtml({
+      icone:  (document.getElementById('dc-icone')  || {}).value || '📅',
+      label:  (document.getElementById('dc-label')  || {}).value || 'Título',
+      sub:    (document.getElementById('dc-sub')    || {}).value || '',
+      motion: (document.getElementById('dc-motion') || {}).value || ''
+    });
+  }
+
+  // ── Salvar ────────────────────────────────────────────────
+  function salvar(idExistente) {
+    var label  = (document.getElementById('dc-label')  || {}).value || '';
+    var sub    = (document.getElementById('dc-sub')    || {}).value || '';
+    var icone  = (document.getElementById('dc-icone')  || {}).value || '';
+    var mes    = parseInt((document.getElementById('dc-mes')    || {}).value, 10);
+    var dia    = parseInt((document.getElementById('dc-dia')    || {}).value, 10);
+    var motion = (document.getElementById('dc-motion') || {}).value || null;
+
+    label = label.trim();
+    if (!label)       { Toast.erro('Título é obrigatório.');  return; }
+    if (!mes || !dia) { Toast.erro('Mês e Dia são obrigatórios.'); return; }
+
+    var dados = { label:label, sub:sub.trim(), icone:icone.trim(),
+      mes:mes, dia:dia, motion:motion||null };
+    if (idExistente) dados.id = idExistente;
+
+    var btn = document.getElementById('dc-btn-salvar');
+    BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
+      GAS.admin.salvarDataComemorativa(dados, function(r) {
+        liberar();
+        if (!r || !r.ok) { Toast.erro((r && r.error) || 'Erro ao salvar.'); return; }
+        var modal = document.querySelector('.modal-simples');
+        if (modal) modal.remove();
+        Toast.sucesso('Data comemorativa salva com sucesso!');
+        carregar();
+      }, function(e) { liberar(); Toast.erro(e.message || 'Erro ao salvar.'); });
+    });
+  }
+
+  // ── Excluir ───────────────────────────────────────────────
+  function excluir(id) {
+    _abrirModalConfirmar({
+      titulo:'Excluir Data Comemorativa', icone:'delete_forever', corIcone:'#ef4444',
+      mensagem:'Excluir esta data? Ela deixará de aparecer na home page.',
+      labelConfirmar:'Excluir',
+      cb: function() {
+        GAS.admin.excluirDataComemorativa(id, function(r) {
+          if (!r || !r.ok) { Toast.erro((r && r.error) || 'Erro ao excluir.'); return; }
+          Toast.sucesso('Data removida.');
+          carregar();
+        }, function(e) { Toast.erro(e.message || 'Erro ao excluir.'); });
+      }
+    });
+  }
+
+  // ── Restaurar (reativar) ──────────────────────────────────
+  function restaurar(id) {
+    GAS.admin.listarDatasComemorativas(function(r) {
+      var lista = r && r.ok ? (r.data || []) : [];
+      var dc = null;
+      for (var i=0; i<lista.length; i++) { if (lista[i].id === id) { dc = lista[i]; break; } }
+      if (!dc) { Toast.erro('Data não encontrada.'); return; }
+      // Salvar com ativo:true aproveitando a função salvar que já seta ativo=true
+      var dados = Object.assign({}, dc, { ativo: true });
+      GAS.admin.salvarDataComemorativa(dados, function(r2) {
+        if (!r2 || !r2.ok) { Toast.erro((r2 && r2.error) || 'Erro ao restaurar.'); return; }
+        Toast.sucesso('Data restaurada!');
+        carregar();
+      }, function(e) { Toast.erro(e.message || 'Erro ao restaurar.'); });
+    });
+  }
+
+  return { carregar:carregar, abrirModal:abrirModal, salvar:salvar, excluir:excluir, restaurar:restaurar };
+
+})();
 
 // ═══════════════════════════════════════════════════════════
 // BANCO DE DADOS UI
@@ -29520,6 +29834,11 @@ var App = (function() {
     { mes:12, dia:31, tipo:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo',   particulas:'fogos'    }
   ];
 
+  var _DC_MOTION_CLS = {
+    fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
+    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ'
+  };
+
   function _detectarDataComemorativa() {
     var h = new Date(); var m = h.getMonth()+1; var d = h.getDate();
     for (var i=0;i<_DATAS_COMEMORATIVAS.length;i++) {
@@ -29532,12 +29851,15 @@ var App = (function() {
   function _renderDataComemorativa(dc) {
     var el = document.getElementById('home-data-comemorativa');
     if (!el || !dc) return;
-    el.innerHTML = '<div class="dc-strip ' + dc.cls + '">' +
-      '<span class="dc-strip-icone">' + dc.icone + '</span>' +
+    // Suporta formato legado (cls+particulas) e formato servidor (motion)
+    var cls       = dc.cls || _DC_MOTION_CLS[dc.motion] || 'dc-finados';
+    var particulas = dc.particulas || dc.motion || null;
+    el.innerHTML = '<div class="dc-strip ' + cls + '">' +
+      '<span class="dc-strip-icone">' + (dc.icone || '📅') + '</span>' +
       '<div class="dc-strip-texto">' + escaparHtml(dc.label) +
         '<div class="dc-strip-sub">' + escaparHtml(dc.sub||'') + '</div>' +
       '</div></div>';
-    if (dc.particulas) _lancarParticulas(dc.particulas);
+    if (particulas) _lancarParticulas(particulas);
   }
 
   // ── Confetes (aniversário) ──────────────────────────────────────────────
@@ -29745,7 +30067,7 @@ var App = (function() {
       }
     });
 
-    // ── Data comemorativa: exibe após 30s se banner foi personalizado; imediato se não
+    // ── Data comemorativa — renderiza com lista local (fallback) e atualiza do servidor
     var dc = _detectarDataComemorativa();
     if (dc) {
       if (_bannerPersonalizado) {
@@ -29754,6 +30076,19 @@ var App = (function() {
         _renderDataComemorativa(dc);
       }
     }
+    // Carrega lista do servidor (pode ter datas customizadas); re-renderiza se hoje mudar
+    GAS.home.datasComemorativas(function(r) {
+      if (!r || !r.ok || !Array.isArray(r.data)) return;
+      _DATAS_COMEMORATIVAS = r.data;
+      var dcSrv = _detectarDataComemorativa();
+      if (dcSrv && (!dc || dcSrv.id !== (dc.id || dc.tipo))) {
+        if (_bannerPersonalizado) {
+          setTimeout(function() { _renderDataComemorativa(dcSrv); }, 30000);
+        } else {
+          _renderDataComemorativa(dcSrv);
+        }
+      }
+    });
 
     var papel  = _boot.usuarioPapel || 'colaborador';
     var ativos = (_boot.modulosAtivos || []).map(function(m) { return String(m).toUpperCase(); });

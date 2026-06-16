@@ -471,7 +471,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 87 (2026-06-15) → SESSÃO 88
+## HANDOFF ATUAL — SESSÃO 90 (2026-06-16) → SESSÃO 91
+
+### Estado atual: Datas Comemorativas — painel admin com CRUD, motions e home dinâmica — Deploy @980
+
+### O que foi feito nesta sessão (s90)
+| Deploy | O que foi implementado |
+|---|---|
+| @980 | **Backend**: `_DATAS_COMEMORATIVAS_DEFAULT` (10 datas pré-populadas) em `config_admin_service.gs`; funções `getDatasComemorativas` (público), `listarDatasComemorativas` (admin), `salvarDataComemorativa`, `excluirDataComemorativa` com seed automático do JSON `datas_comemorativas.json`; retorno IIFE atualizado. `admin_controller.gs`: 4 novos controllers (`ctrl_home_datasComemorativas`, `ctrl_admin_listar/salvar/excluirDataComemorativa`). **Frontend**: tab "Datas Comemorativas" em Administração; `DatasComemorativasAdmin` IIFE — lista agrupada por mês, mini-preview strip colorido, modal com preview ao vivo, seletor de motion, emoji, restauração de inativas; `GAS.admin.*DataComemorativa` + `GAS.home.datasComemorativas`; `_DC_MOTION_CLS` mapeia motion→CSS; home carrega do servidor assincronamente; CSS `dc-custom`. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 87 (2026-06-15) → SESSÃO 88
 
 ### Estado atual: Financeiro/Contratos/Execução — hierarquia orçamentária com agrupamentos + filtros — Deploy @973 (pendente clasp)
 
