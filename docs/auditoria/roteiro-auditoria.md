@@ -471,7 +471,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 99 (2026-06-16) → SESSÃO 100
+## HANDOFF ATUAL — SESSÃO 100 (2026-06-16) → SESSÃO 101
+
+### Estado atual: UX — Pulse FAB: ring de sonar + escala com ritmo — Deploy @1006
+
+### O que foi feito nesta sessão (s100)
+| Deploy | O que foi implementado |
+|---|---|
+| @1006 | **Frontend only** (`index.html`): `@keyframes fabPulseGlow` — ring sonar via `box-shadow` spread 0px→22px com cor primária fading `.65→0`; escala pico 1.11 em 18%; pausa de descanso 68%–100%; duração 2.4s→3.5s. `@keyframes dc-pulse-icon` — `translateY(-2px)` adicionado no pico para ícone "flutuar". |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 99 (2026-06-16) → SESSÃO 100
 
 ### Estado atual: Fix badge setor — paleta expandida + atribuição sequencial — Deploy @1005
 

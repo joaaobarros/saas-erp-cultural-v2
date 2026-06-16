@@ -39,7 +39,9 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s99)**: **Fix — Badge de setor: cores únicas por setor (paleta 14 cores, atribuição sequencial, bug idx=0 corrigido) — Deploy @1005.**
+**Fase atual (s100)**: **UX — Pulse FAB: animação ring de sonar (box-shadow spread 0→22px), escala 1.11 com pico em 18%, pausa de descanso 68%–100%, duração 3.5s; ícone dc-strip com translateY(-2px) no pico — Deploy @1006.**
+
+**Fase anterior (s99)**: **Fix — Badge de setor: cores únicas por setor (paleta 14 cores, atribuição sequencial, bug idx=0 corrigido) — Deploy @1005.**
 
 **Fase anterior (s98)**: **UX — Reserva de Veículo: botões ▲/▼ para reordenar paradas + campo "Pausa (min)" por parada (somado ao tempo estimado) — Deploy @1004.**
 
