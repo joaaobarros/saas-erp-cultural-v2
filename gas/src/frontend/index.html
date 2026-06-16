@@ -11180,18 +11180,19 @@ var _SETOR_PALETA = [
   {bg:'#ede9fe',cor:'#5b21b6'},{bg:'#dbeafe',cor:'#1e40af'},{bg:'#dcfce7',cor:'#15803d'},
   {bg:'#fef9c3',cor:'#854d0e'},{bg:'#ffe4e6',cor:'#9f1239'},{bg:'#e0f2fe',cor:'#0369a1'},
   {bg:'#fce7f3',cor:'#9d174d'},{bg:'#d1fae5',cor:'#065f46'},{bg:'#fff7ed',cor:'#9a3412'},
-  {bg:'#f3e8ff',cor:'#6b21a8'}
+  {bg:'#f3e8ff',cor:'#6b21a8'},{bg:'#fef3c7',cor:'#92400e'},{bg:'#ecfdf5',cor:'#047857'},
+  {bg:'#fdf4ff',cor:'#86198f'},{bg:'#e0e7ff',cor:'#3730a3'}
 ];
 var _setorCorIdx = {};
+var _setorCorNext = 0;
 function _badgeSetor(id, labelOverride) {
   var label = labelOverride || _labelSetor(id) || id;
   if (!label) return '<span class="muted-text">—</span>';
-  if (!_setorCorIdx[id]) {
-    var idx = 0;
-    for (var i = 0; i < (id||'').length; i++) idx = (idx * 31 + (id.charCodeAt(i))) % _SETOR_PALETA.length;
-    _setorCorIdx[id] = idx;
+  if (_setorCorIdx[id] === undefined) {
+    _setorCorIdx[id] = _setorCorNext % _SETOR_PALETA.length;
+    _setorCorNext++;
   }
-  var p = _SETOR_PALETA[_setorCorIdx[id]||0];
+  var p = _SETOR_PALETA[_setorCorIdx[id]];
   return '<span class="badge badge-setor" style="background:'+p.bg+';color:'+p.cor+';">' + escaparHtml(label) + '</span>';
 }
 

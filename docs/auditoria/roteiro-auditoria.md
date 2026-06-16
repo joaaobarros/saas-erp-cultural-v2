@@ -471,7 +471,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 91 (2026-06-16) → SESSÃO 92
+## HANDOFF ATUAL — SESSÃO 99 (2026-06-16) → SESSÃO 100
+
+### Estado atual: Fix badge setor — paleta expandida + atribuição sequencial — Deploy @1005
+
+### O que foi feito nesta sessão (s99)
+| Deploy | O que foi implementado |
+|---|---|
+| @1005 | **Frontend only** (`index.html`): `_SETOR_PALETA` expandida de 10 → 14 cores; atribuição sequencial (`_setorCorNext++`) em vez de hash — garante cores únicas para ≤ 14 setores na mesma view; bug `!_setorCorIdx[id]` quando hash era 0 (falsy) corrigido para `=== undefined`. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 91 (2026-06-16) → SESSÃO 92
 
 ### Estado atual: Reserva de Veículo — Editar Rota aprimorado com mapa, paradas e TSP — Deploy @988 (pendente)
 
