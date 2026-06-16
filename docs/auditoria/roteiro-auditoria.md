@@ -1801,7 +1801,22 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 55b (2026-06-16) → SESSÃO 56
+## HANDOFF ATUAL — SESSÃO 56 (2026-06-16) → SESSÃO 57
+
+### Estado: Deploy @993 · Fix: Datas Comemorativas sempre mostra todas as pré-cadastradas + toggle on/off
+
+### O que foi feito nesta sessão (s94b)
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @993 | s94b Datas Comemorativas merge+toggle | `_mergeComDefaults`: defaults sempre aparecem no admin; toggle `toggle_on`/`toggle_off` substitui excluir/restaurar; `toggleDataComemorativa` no backend. |
+
+### Pendentes / próxima ação
+- Testar: Admin → Datas Comemorativas → lista deve mostrar todas as 35 datas pré-cadastradas; clicar toggle desativa/ativa
+- Bugs auditoria pendentes: TAR-04, HUB-13, FIN-06
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 55b (2026-06-16) → SESSÃO 56
 
 ### Estado: Deploy @979 · Fix: tooltip bairros sem rótulo epicentro (s89b)
 

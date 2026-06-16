@@ -3849,6 +3849,7 @@ select.form-control { cursor: pointer; }
                   <option value="Ativo" selected>Ativos</option>
                   <option value="Suspenso">Suspensos</option>
                   <option value="Encerrado">Encerrados</option>
+                  <option value="Cancelado">Cancelados</option>
                 </select>
                 <button class="btn btn-ghost btn-sm" id="btn-contratos-recarregar" onclick="ContratosUI.carregar()">
                   <span class="ms ms-sm">refresh</span> Atualizar
@@ -13271,10 +13272,11 @@ var ContratosDetailUI = (function() {
     if (cbUber) cbUber.checked = !!(r.flags && r.flags.voucher_uber);
     _renderMemTabela();
     _popularCatalogo();
-    // Selecionar item do catálogo se possível
+    // Preferir match por catalogoItemId (evita trocar nome quando há código duplicado no catálogo)
     var sel = document.getElementById('cd-rub-catalogo');
     if (sel) {
-      var found = _catalogo.find(function(i) { return i.codigo === r.codigoSeplag || i.nome === r.nome; });
+      var found = (r.catalogoItemId && _catalogo.find(function(i){ return i.id === r.catalogoItemId; }))
+               || _catalogo.find(function(i){ return i.codigo && i.codigo === r.codigoSeplag; });
       if (found) sel.value = found.id; else sel.value = '';
     }
     var form = document.getElementById('cd-rub-form');
@@ -13369,16 +13371,17 @@ var ContratosDetailUI = (function() {
     var _cbUber  = document.getElementById('cd-rub-flag-voucher-uber');
     var _selSetor = document.getElementById('cd-rub-setor');
     var dados = {
-      id:           rubId,
-      nome:         item.nome,
-      codigoSeplag: item.codigo || '',
-      itemAnexoIX:  item.itemAnexo || '',
-      categoria:    document.getElementById('cd-rub-categoria').value || 'custeio',
-      setor:        (_selSetor && _selSetor.value) || '',
-      qtdMeses:     parseInt(document.getElementById('cd-rub-meses').value,10)||12,
-      valorTotal:   total,
-      memoriaCalculo: mem,
-      flags:        { voucher_uber: !!(_cbUber && _cbUber.checked) }
+      id:              rubId,
+      catalogoItemId:  selId,
+      nome:            item.nome,
+      codigoSeplag:    item.codigo || '',
+      itemAnexoIX:     item.itemAnexo || '',
+      categoria:       document.getElementById('cd-rub-categoria').value || 'custeio',
+      setor:           (_selSetor && _selSetor.value) || '',
+      qtdMeses:        parseInt(document.getElementById('cd-rub-meses').value,10)||12,
+      valorTotal:      total,
+      memoriaCalculo:  mem,
+      flags:           { voucher_uber: !!(_cbUber && _cbUber.checked) }
     };
     if (!dados.id) delete dados.id;
     BtnGuard.wrap('btn-cd-rub-salvar', 'Salvando…', function(done) {
