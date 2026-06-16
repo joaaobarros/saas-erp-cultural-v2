@@ -280,7 +280,11 @@ var EscalaCarroEngine = (function() {
         totalMtrs += (legs[i].distance && legs[i].distance.value)  ? legs[i].distance.value  : 0;
       }
 
-      var minutos = Math.ceil(totalSeg / 60) + BUFFER_MIN;
+      var minutosViagem = Math.ceil(totalSeg / 60);
+      var minutosPausa  = paradas.reduce(function(acc, p) {
+        return acc + (parseInt((p && p.tempoParadaMin) || 0, 10) || 0);
+      }, 0);
+      var minutos = minutosViagem + BUFFER_MIN + minutosPausa;
       var km      = Math.round(totalMtrs / 100) / 10;
 
       // Calcula hora de chegada sugerida
@@ -293,7 +297,8 @@ var EscalaCarroEngine = (function() {
       var destinoResolvido = legs[legs.length - 1].end_address       || '';
 
       return { minutos: minutos, km: km, horaChegadaSugerida: horaChegadaSugerida,
-               origemResolvida: origemResolvida, destinoResolvido: destinoResolvido };
+               origemResolvida: origemResolvida, destinoResolvido: destinoResolvido,
+               minutosViagem: minutosViagem, minutosPausa: minutosPausa };
     } catch(e) {
       Logger.warn('escala_carro_engine', 'calcularTempoRota', e.message);
       throw new Error('Não foi possível calcular a rota: ' + e.message);

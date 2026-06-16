@@ -17528,7 +17528,7 @@ var ReservasCarroUI = (function() {
   var _mapaPickerMarker = null;
   var _mapaPickerEnd    = '';
   var _passInternosData = []; // [{email, nome}] selecionados no form
-  var _paradasData      = []; // [{local, lat, lng, mapaUrl}]
+  var _paradasData      = []; // [{local, lat, lng, mapaUrl, tempoParadaMin}]
   var _veiculosData     = [];
   var _mapaContexto     = 'form'; // 'form' | 'det-chegada' | 'det-parada'
   var _editRotaId       = null;
@@ -17637,16 +17637,29 @@ var ReservasCarroUI = (function() {
     div.setAttribute('data-parada-idx', String(idx));
     div.style.cssText = 'margin-bottom:8px;';
     div.innerHTML =
-      '<div style="display:flex;gap:8px;align-items:center;">' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
         '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;font-size:14px;">radio_button_unchecked</span>' +
         '<input type="text" class="form-control carro-parada-input" placeholder="Local da parada ' + (idx + 1) + '…" style="flex:1;"' +
           ' oninput="ReservasCarroUI._onParadaInput(' + idx + ',this)">' +
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirMapaPickerParada(' + idx + ')" data-bg-skip="1" title="Selecionar no mapa" style="padding:0 10px;">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI.abrirMapaPickerParada(' + idx + ')" data-bg-skip="1" title="Selecionar no mapa" style="padding:0 8px;">' +
           '<span class="ms ms-sm">place</span>' +
         '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._removerParada(' + idx + ')" data-bg-skip="1" style="padding:0 6px;color:var(--muted);" title="Remover">' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._moverParada(' + idx + ',-1)" data-bg-skip="1" title="Mover para cima" style="padding:0 5px;color:var(--muted);">' +
+          '<span class="ms ms-sm" style="font-size:14px;">arrow_upward</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._moverParada(' + idx + ',1)" data-bg-skip="1" title="Mover para baixo" style="padding:0 5px;color:var(--muted);">' +
+          '<span class="ms ms-sm" style="font-size:14px;">arrow_downward</span>' +
+        '</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._removerParada(' + idx + ')" data-bg-skip="1" style="padding:0 5px;color:var(--muted);" title="Remover">' +
           '<span class="ms ms-sm">close</span>' +
         '</button>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;margin-left:24px;">' +
+        '<span class="ms ms-sm" style="color:var(--muted);font-size:13px;">timer</span>' +
+        '<input type="number" min="0" max="480" step="5" class="form-control carro-parada-pausa" placeholder="0"' +
+          ' style="width:60px;font-size:12px;padding:4px 6px;" title="Tempo de permanência nesta parada (minutos)"' +
+          ' oninput="ReservasCarroUI._onParadaPausaInput(' + idx + ',this)">' +
+        '<span style="font-size:11px;color:var(--muted);">min de pausa (opcional)</span>' +
       '</div>' +
       '<div id="carro-parada-preview-' + idx + '" style="display:none;margin-top:6px;margin-left:24px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">' +
         '<iframe id="carro-parada-iframe-' + idx + '" style="width:100%;height:120px;border:none;display:block;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>' +
@@ -17659,7 +17672,7 @@ var ReservasCarroUI = (function() {
     var container = document.getElementById('carro-paradas-lista');
     if (!container) return;
     var idx = _paradasData.length;
-    _paradasData.push({ local: '', lat: null, lng: null, mapaUrl: '' });
+    _paradasData.push({ local: '', lat: null, lng: null, mapaUrl: '', tempoParadaMin: 0 });
     var div = _criarBlocoParada(container, idx);
     div.querySelector('input').focus();
   }
@@ -17681,22 +17694,21 @@ var ReservasCarroUI = (function() {
     _debounceCalcRota();
   }
 
-  function _removerParada(idx) {
-    _paradasData.splice(idx, 1);
+  function _reconstruirParadasUI(lista) {
     var container = document.getElementById('carro-paradas-lista');
     if (!container) return;
-    var snapshot = _paradasData.slice();
     container.innerHTML = '';
     _paradasData = [];
-    snapshot.forEach(function(p) {
+    lista.forEach(function(p) {
       var newIdx = _paradasData.length;
       _paradasData.push(p);
       _criarBlocoParada(container, newIdx);
-      var blocos = container.querySelectorAll('.carro-parada-bloco');
-      var bloco  = blocos[newIdx];
+      var bloco = container.querySelectorAll('.carro-parada-bloco')[newIdx];
       if (!bloco) return;
       var inp = bloco.querySelector('.carro-parada-input');
       if (inp) inp.value = p.local || '';
+      var inpPausa = bloco.querySelector('.carro-parada-pausa');
+      if (inpPausa && p.tempoParadaMin) inpPausa.value = String(p.tempoParadaMin);
       if (p.local) {
         var pPreview = document.getElementById('carro-parada-preview-' + newIdx);
         var iframe   = document.getElementById('carro-parada-iframe-' + newIdx);
@@ -17706,7 +17718,29 @@ var ReservasCarroUI = (function() {
         }
       }
     });
+  }
+
+  function _removerParada(idx) {
+    _paradasData.splice(idx, 1);
+    _reconstruirParadasUI(_paradasData.slice());
     debouncePreviewMapa();
+  }
+
+  function _moverParada(idx, dir) {
+    var novoIdx = idx + dir;
+    if (novoIdx < 0 || novoIdx >= _paradasData.length) return;
+    var snapshot = _paradasData.slice();
+    var tmp = snapshot[idx];
+    snapshot[idx] = snapshot[novoIdx];
+    snapshot[novoIdx] = tmp;
+    _reconstruirParadasUI(snapshot);
+    debouncePreviewMapa();
+  }
+
+  function _onParadaPausaInput(idx, inp) {
+    if (_paradasData[idx] === undefined) return;
+    _paradasData[idx].tempoParadaMin = parseInt(inp.value, 10) || 0;
+    _debounceCalcRota();
   }
 
   function _getParadas() {
@@ -18167,8 +18201,9 @@ var ReservasCarroUI = (function() {
       var paradas = Array.isArray(rota.paradas) ? rota.paradas.filter(Boolean) : [];
       var pontos = [{ local: rota.localSaida || '—', icone: 'trip_origin', cor: 'var(--primario)' }];
       paradas.forEach(function(p) {
-        var localP = (typeof p === 'object' && p !== null) ? (p.local || '—') : String(p || '');
-        pontos.push({ local: localP, icone: 'radio_button_unchecked', cor: 'var(--muted)' });
+        var localP  = (typeof p === 'object' && p !== null) ? (p.local || '—') : String(p || '');
+        var pausaP  = (typeof p === 'object' && p !== null && p.tempoParadaMin > 0) ? ' · ' + p.tempoParadaMin + ' min de pausa' : '';
+        pontos.push({ local: localP + pausaP, icone: 'radio_button_unchecked', cor: 'var(--muted)' });
       });
       pontos.push({ local: rota.localChegada || '—', icone: 'place', cor: '#ef4444' });
       elRotaParadas.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px;">'
@@ -18653,7 +18688,7 @@ var ReservasCarroUI = (function() {
     var elDetalhe = document.getElementById('carro-tempo-est-detalhe');
     var btn       = document.getElementById('btn-carro-calc-rota');
     if (elEst) elEst.textContent = 'Calculando…';
-    var paradasLocais = _paradasData.filter(function(p){ return p.local; }).map(function(p){ return { local: p.local }; });
+    var paradasLocais = _paradasData.filter(function(p){ return p.local; }).map(function(p){ return { local: p.local, tempoParadaMin: p.tempoParadaMin || 0 }; });
     BtnGuard.wrap(btn, 'Calculando…', function(liberar) {
       GAS.reservasCarro.tempoRota({ origem: saida, destino: chegada, paradas: paradasLocais, data: data, hora: hora }, function(r) {
         liberar();
@@ -18663,10 +18698,12 @@ var ReservasCarroUI = (function() {
           _distanciaKm         = r.data.km                  || 0;
           if (elEst) elEst.textContent = _horaChegadaEstimada || '—';
           if (elDetalhe) {
-            var txt = '';
-            if (_tempoEstimadoMin) txt += _tempoEstimadoMin + ' min';
-            if (_distanciaKm)      txt += (txt ? ' · ' : '') + _distanciaKm.toFixed(1) + ' km';
-            if (txt) txt += ' (+ 5 min de buffer)';
+            var viaMin   = r.data.minutosViagem || 0;
+            var pausaMin = r.data.minutosPausa  || 0;
+            var txt = viaMin ? viaMin + ' min de viagem' : '';
+            if (_distanciaKm) txt += (txt ? ' · ' : '') + _distanciaKm.toFixed(1) + ' km';
+            if (pausaMin > 0) txt += ' + ' + pausaMin + ' min de pausa';
+            txt += (txt ? ' ' : '') + '(+ 5 min de buffer)';
             elDetalhe.textContent = txt;
           }
           // Atualiza campos com endereço geocodificado para evitar ambiguidade no servidor
@@ -19319,7 +19356,9 @@ var ReservasCarroUI = (function() {
     _removerPassInterno:   _removerPassInterno,
     _adicionarParada:      _adicionarParada,
     _onParadaInput:        _onParadaInput,
+    _onParadaPausaInput:   _onParadaPausaInput,
     _removerParada:        _removerParada,
+    _moverParada:          _moverParada,
     abrirMapaPickerParada: abrirMapaPickerParada,
     // Cálculo de rota e disponibilidade
     calcularRota:              calcularRota,

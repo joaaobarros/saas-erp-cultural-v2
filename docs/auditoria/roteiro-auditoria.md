@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s97 @999 (Contratos: ordenamento rubricas+pessoal) · s96+s97 @1003 · s95 @994
+> Deploy atual: s98 @1004 (Reserva Veículo: paradas reordenáveis + pausa por parada) · s97 @1003 · s96 @997 · s95 @994
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
