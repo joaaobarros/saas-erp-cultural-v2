@@ -33688,12 +33688,14 @@ var BalcaoUI = (function() {
 Router.registrar('balcao', 'Balcão', BalcaoUI.aoAbrir);
 
 // ════════════════════════════════════════════════════════════════════════════
-// QuadrosUI — Canvases colaborativos (TLDraw / fallback)
+// QuadrosUI — Canvas infinito: seleção, pan, zoom, imagens, documentos
 // ════════════════════════════════════════════════════════════════════════════
 var QuadrosUI = (function() {
   var _lista = [], _carregado = false, _tabAtual = 'todos';
-  var _idAtual = null, _editor = null;
+  var _idAtual = null, _editor = null, _cvState = null;
+  var _keyListeners = [], _winListeners = [];
 
+  // ── Lista ─────────────────────────────────────────────────────────────────
   function aoAbrir() { if (!_carregado) carregar(); }
 
   function carregar() {
@@ -33717,7 +33719,7 @@ var QuadrosUI = (function() {
   function _renderLista() {
     var el = document.getElementById('quadros-lista');
     var lista = _tabAtual === 'vinculados'
-      ? _lista.filter(function(q) { return q.acaoId; })
+      ? _lista.filter(function(q) { return q.acaoId || q.reuniaoId; })
       : _lista;
     if (!lista.length) {
       el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:40px;">'
@@ -33729,69 +33731,79 @@ var QuadrosUI = (function() {
     }
     el.innerHTML = lista.map(function(q) {
       var id = JSON.stringify(q.id).replace(/"/g,"'");
-      var thumb = q.thumbUrl
-        ? '<img src="' + escaparHtml(q.thumbUrl) + '" style="width:100%;height:100%;object-fit:cover;">'
-        : '<span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span>';
+      var colabs = (q.colaboradores || []).slice(0,4).map(function(c) {
+        return '<span title="' + escaparHtml(c) + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:8px;font-weight:700;margin-right:-3px;">' + escaparHtml((c||'?')[0].toUpperCase()) + '</span>';
+      }).join('');
+      var tags = '';
+      if (q.acaoId)    tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;margin-right:3px;">Ação</span>';
+      if (q.reuniaoId) tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;">Reunião</span>';
       return '<div class="quadro-card" onclick="QuadrosUI.abrirEditor(' + id + ')">'
-        + '<div class="qdro-thumb">' + thumb + '</div>'
+        + '<div class="qdro-thumb"><span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span></div>'
         + '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + escaparHtml(q.titulo) + '</div>'
-        + (q.acaoId ? '<div style="font-size:11px;color:var(--muted);">Vinculado a ação</div>' : '')
-        + '<div style="display:flex;gap:6px;margin-top:10px;">'
-          + '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.abrirForm(' + id + ')" data-bg-skip="1">Editar</button>'
+        + (tags ? '<div style="margin-bottom:5px;">' + tags + '</div>' : '')
+        + (colabs ? '<div style="display:flex;align-items:center;gap:2px;margin-bottom:6px;">' + colabs + '</div>' : '')
+        + (q.atualizadoPor ? '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Editado por ' + escaparHtml(q.atualizadoPor) + '</div>' : '')
+        + '<div style="display:flex;gap:6px;margin-top:auto;">'
+          + '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.abrirForm(' + id + ')" data-bg-skip="1">Configurar</button>'
           + '<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-error);" onclick="event.stopPropagation();QuadrosUI.excluir(' + id + ')" data-bg-skip="1">Excluir</button>'
         + '</div>'
       + '</div>';
     }).join('');
   }
 
+  // ── Form ──────────────────────────────────────────────────────────────────
   function abrirForm(id) {
     _idAtual = id || null;
-    document.getElementById('qdro-modal-titulo').textContent = id ? 'Editar Quadro' : 'Novo Quadro';
-    document.getElementById('qdro-titulo').value = '';
-    document.getElementById('qdro-descricao').value = '';
-    document.getElementById('qdro-acao-id').value = '';
+    document.getElementById('qdro-modal-titulo').textContent = id ? 'Configurar Quadro' : 'Novo Quadro';
+    ['qdro-titulo','qdro-descricao','qdro-acao-id','qdro-reuniao-id','qdro-colaboradores'].forEach(function(eid) {
+      var el = document.getElementById(eid); if (el) el.value = '';
+    });
     if (id) {
-      var q = _lista.filter(function(x) { return x.id === id; })[0];
+      var q = _lista.filter(function(x){ return x.id === id; })[0];
       if (q) {
-        document.getElementById('qdro-titulo').value = q.titulo || '';
-        document.getElementById('qdro-descricao').value = q.descricao || '';
-        document.getElementById('qdro-acao-id').value = q.acaoId || '';
+        document.getElementById('qdro-titulo').value        = q.titulo          || '';
+        document.getElementById('qdro-descricao').value     = q.descricao       || '';
+        document.getElementById('qdro-acao-id').value       = q.acaoId          || '';
+        document.getElementById('qdro-reuniao-id').value    = q.reuniaoId       || '';
+        document.getElementById('qdro-colaboradores').value = (q.colaboradores || []).join(', ');
       }
     }
     _carregarSelectAcoes();
+    _carregarSelectReunioes();
     document.getElementById('qdro-modal').classList.remove('oculto');
   }
 
   function fecharForm() { document.getElementById('qdro-modal').classList.add('oculto'); }
 
   function salvar(done) {
-    var titulo = (document.getElementById('qdro-titulo') || {}).value || '';
+    var titulo = (document.getElementById('qdro-titulo')||{}).value || '';
     if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
-    var dados = {
-      id:        _idAtual || undefined,
-      titulo:    titulo.trim(),
-      descricao: (document.getElementById('qdro-descricao') || {}).value || '',
-      acaoId:    (document.getElementById('qdro-acao-id') || {}).value || ''
-    };
-    GAS.quadros.salvar(dados, function(resp) {
+    var colabRaw = (document.getElementById('qdro-colaboradores')||{}).value || '';
+    var colabs = colabRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    GAS.quadros.salvar({
+      id:            _idAtual || undefined,
+      titulo:        titulo.trim(),
+      descricao:     (document.getElementById('qdro-descricao')||{}).value    || '',
+      acaoId:        (document.getElementById('qdro-acao-id')||{}).value       || '',
+      reuniaoId:     (document.getElementById('qdro-reuniao-id')||{}).value    || '',
+      colaboradores: colabs
+    }, function(resp) {
       done();
       if (!resp || !resp.ok) { Toast.erro('Erro ao salvar quadro.'); return; }
       Toast.sucesso(_idAtual ? 'Quadro atualizado.' : 'Quadro criado.');
-      fecharForm();
-      _carregado = false; carregar();
+      fecharForm(); _carregado = false; carregar();
     }, function(e) { done(); Toast.erro(e.message || e); });
   }
 
   function excluir(id) {
     _abrirModalConfirmar({
-      titulo: 'Excluir Quadro', icone: 'delete_forever', corIcone: '#ef4444',
-      mensagem: 'Excluir este quadro? O canvas será perdido permanentemente.',
-      labelConfirmar: 'Excluir',
+      titulo:'Excluir Quadro', icone:'delete_forever', corIcone:'#ef4444',
+      mensagem:'Excluir este quadro? O canvas será perdido permanentemente.',
+      labelConfirmar:'Excluir',
       cb: function() {
         GAS.quadros.excluir(id, function(resp) {
           if (!resp || !resp.ok) { Toast.erro('Erro ao excluir.'); return; }
-          Toast.sucesso('Quadro excluído.');
-          _carregado = false; carregar();
+          Toast.sucesso('Quadro excluído.'); _carregado = false; carregar();
         }, function(e) { Toast.erro(e.message || e); });
       }
     });
@@ -33803,319 +33815,614 @@ var QuadrosUI = (function() {
       var q = resp.data;
       _idAtual = id;
       document.getElementById('qdro-editor-titulo').textContent = q.titulo || 'Quadro';
+      var colabEl = document.getElementById('qdro-editor-colabs');
+      if (colabEl) colabEl.innerHTML = (q.colaboradores || []).map(function(c) {
+        return '<span title="' + escaparHtml(c) + '" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:9px;font-weight:700;">' + escaparHtml((c||'?')[0].toUpperCase()) + '</span>';
+      }).join('');
       document.getElementById('qdro-editor-overlay').classList.remove('oculto');
       _iniciarEditor(q.snapshot || null);
     }, function(e) { Toast.erro(e.message || e); });
   }
 
   function fecharEditor() {
+    _limparEventosGlobais();
     document.getElementById('qdro-editor-overlay').classList.add('oculto');
-    if (_editor && _editor.dispose) { try { _editor.dispose(); } catch(e) {} }
-    _editor = null;
-    _idAtual = null;
+    _editor = null; _cvState = null; _idAtual = null;
   }
 
-  // ── Editor de canvas nativo (HTML5 Canvas, zero dependências externas) ──
-  var _cvState = null; // estado do editor ativo
+  // ── Cleanup de listeners globais ──────────────────────────────────────────
+  function _limparEventosGlobais() {
+    _keyListeners.forEach(function(o){ document.removeEventListener(o.t, o.fn); });
+    _winListeners.forEach(function(o){ window.removeEventListener(o.t, o.fn); });
+    _keyListeners = []; _winListeners = [];
+  }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Engine de canvas infinito
+  // ══════════════════════════════════════════════════════════════════════════
   function _iniciarEditor(snapshot) {
+    _limparEventosGlobais();
     var container = document.getElementById('qdro-editor-container');
     container.innerHTML = '';
     container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
 
-    // ── Estado ───────────────────────────────────────────────────────────────
+    // ── Estado ──────────────────────────────────────────────────────────────
     _cvState = {
-      shapes:    (snapshot && snapshot.shapes) ? JSON.parse(JSON.stringify(snapshot.shapes)) : [],
-      tool:      'pencil',
-      color:     '#1e293b',
-      lineWidth: 2,
-      drawing:   false,
-      cur:       null,   // forma em construção
-      sx: 0, sy: 0       // ponto de início do drag
+      shapes:   (snapshot && snapshot.shapes) ? JSON.parse(JSON.stringify(snapshot.shapes)) : [],
+      tool: 'select', color: '#1e293b', lineWidth: 2,
+      panX: 0, panY: 0, zoom: 1,
+      drawing: false, cur: null, startWx: 0, startWy: 0,
+      selIdx: -1, dragMode: null, dragBase: null, dragMouse: null,
+      isPanning: false, panStart: null, spaceDown: false,
+      isErasing: false,
+      imgCache: {},
+      lastDocClick: 0, lastDocClickIdx: -1
     };
 
-    // ── Barra de ferramentas ─────────────────────────────────────────────────
+    // ── Toolbar ──────────────────────────────────────────────────────────────
     var tb = document.createElement('div');
-    tb.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 14px;'
-      + 'border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;flex-shrink:0;';
+    tb.style.cssText = 'display:flex;align-items:center;gap:5px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;flex-shrink:0;';
+
+    function _sep() {
+      var s = document.createElement('div');
+      s.style.cssText = 'width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0;';
+      return s;
+    }
+    function _mkBtn(ico, lbl, fn, id) {
+      var b = document.createElement('button');
+      b.className = 'btn btn-secondary btn-sm'; b.setAttribute('data-bg-skip','1');
+      if (id) b.id = id; b.title = lbl;
+      b.innerHTML = '<span class="ms ms-sm">' + ico + '</span>' + (lbl ? ' ' + lbl : '');
+      b.onclick = fn; return b;
+    }
 
     var TOOLS = [
-      { id:'pencil',  ico:'draw',         label:'Lápis'     },
-      { id:'rect',    ico:'rectangle',    label:'Retângulo' },
-      { id:'circle',  ico:'circle',       label:'Círculo'   },
-      { id:'text',    ico:'text_fields',  label:'Texto'     },
-      { id:'eraser',  ico:'ink_eraser',   label:'Borracha'  }
+      {id:'select', ico:'near_me',       lbl:'Selecionar'},
+      {id:'pencil', ico:'draw',          lbl:'Lápis'},
+      {id:'line',   ico:'remove',        lbl:'Linha'},
+      {id:'arrow',  ico:'trending_flat', lbl:'Seta'},
+      {id:'rect',   ico:'rectangle',     lbl:'Retângulo'},
+      {id:'circle', ico:'circle',        lbl:'Círculo'},
+      {id:'text',   ico:'text_fields',   lbl:'Texto'},
+      {id:'eraser', ico:'ink_eraser',    lbl:'Borracha'}
     ];
     TOOLS.forEach(function(t) {
       var b = document.createElement('button');
-      b.id = 'qdro-tool-' + t.id;
-      b.className = 'btn btn-secondary btn-sm';
-      b.setAttribute('data-bg-skip', '1');
-      b.title = t.label;
-      b.innerHTML = '<span class="ms ms-sm">' + t.ico + '</span> ' + t.label;
-      b.style.cssText = t.id === 'pencil' ? 'background:var(--color-primary);color:#fff;' : '';
-      b.onclick = function() { QuadrosUI._setTool(t.id); };
+      b.id = 'qdro-tool-' + t.id; b.className = 'btn btn-secondary btn-sm';
+      b.setAttribute('data-bg-skip','1'); b.title = t.lbl;
+      b.innerHTML = '<span class="ms ms-sm">' + t.ico + '</span> ' + t.lbl;
+      b.style.cssText = t.id === 'select' ? 'background:var(--color-primary);color:#fff;' : '';
+      b.onclick = function() { _setTool(t.id); };
       tb.appendChild(b);
     });
+    tb.appendChild(_sep());
 
-    // Separador
-    var sep = document.createElement('div');
-    sep.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 4px;';
-    tb.appendChild(sep);
+    // Cor + Espessura
+    var lblC = document.createElement('span'); lblC.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);'; lblC.textContent = 'Cor'; tb.appendChild(lblC);
+    var inpC = document.createElement('input'); inpC.type = 'color'; inpC.id = 'qdro-color'; inpC.value = '#1e293b';
+    inpC.style.cssText = 'width:28px;height:26px;border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:1px;background:var(--surface);';
+    inpC.onchange = function() { _cvState.color = this.value; }; tb.appendChild(inpC);
+    var lblE = document.createElement('span'); lblE.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);'; lblE.textContent = 'Esp.'; tb.appendChild(lblE);
+    var inpE = document.createElement('input'); inpE.type = 'range'; inpE.id = 'qdro-width'; inpE.min = 1; inpE.max = 24; inpE.value = 2;
+    inpE.style.cssText = 'width:64px;accent-color:var(--color-primary);';
+    inpE.oninput = function() { _cvState.lineWidth = parseInt(this.value); }; tb.appendChild(inpE);
+    tb.appendChild(_sep());
 
-    // Cor
-    var lblCor = document.createElement('span');
-    lblCor.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);';
-    lblCor.textContent = 'Cor';
-    tb.appendChild(lblCor);
-    var inpCor = document.createElement('input');
-    inpCor.type = 'color'; inpCor.id = 'qdro-color'; inpCor.value = '#1e293b';
-    inpCor.style.cssText = 'width:30px;height:28px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:var(--surface);';
-    inpCor.onchange = function() { _cvState.color = this.value; };
-    tb.appendChild(inpCor);
+    // Imagem e Arquivo
+    var inputImg = document.createElement('input'); inputImg.type = 'file'; inputImg.accept = 'image/*'; inputImg.style.display = 'none';
+    inputImg.onchange = function() { if (this.files[0]) _insertImage(this.files[0]); this.value = ''; };
+    container.appendChild(inputImg);
+    var inputDoc = document.createElement('input'); inputDoc.type = 'file';
+    inputDoc.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv'; inputDoc.style.display = 'none';
+    inputDoc.onchange = function() { if (this.files[0]) _insertDoc(this.files[0]); this.value = ''; };
+    container.appendChild(inputDoc);
+    tb.appendChild(_mkBtn('image', 'Imagem', function() { inputImg.click(); }));
+    tb.appendChild(_mkBtn('attach_file', 'Arquivo', function() { inputDoc.click(); }));
+    tb.appendChild(_sep());
 
-    // Espessura
-    var lblEsp = document.createElement('span');
-    lblEsp.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);';
-    lblEsp.textContent = 'Espessura';
-    tb.appendChild(lblEsp);
-    var inpEsp = document.createElement('input');
-    inpEsp.type = 'range'; inpEsp.id = 'qdro-width';
-    inpEsp.min = 1; inpEsp.max = 24; inpEsp.value = 2;
-    inpEsp.style.cssText = 'width:72px;accent-color:var(--color-primary);';
-    inpEsp.oninput = function() { _cvState.lineWidth = parseInt(this.value); };
-    tb.appendChild(inpEsp);
+    // Zoom
+    tb.appendChild(_mkBtn('zoom_in', '', function() { _doZoom(1.2); }));
+    var lblZ = document.createElement('span'); lblZ.id = 'qdro-zoom-label';
+    lblZ.style.cssText = 'font-size:11px;color:var(--muted);min-width:34px;text-align:center;'; lblZ.textContent = '100%'; tb.appendChild(lblZ);
+    tb.appendChild(_mkBtn('zoom_out', '', function() { _doZoom(0.8); }));
+    tb.appendChild(_mkBtn('fit_screen', 'Ajustar', function() { _resetView(); }));
+    tb.appendChild(_sep());
 
-    // Ações direita
-    var right = document.createElement('div');
-    right.style.cssText = 'margin-left:auto;display:flex;gap:6px;';
-    function _mkBtn(ico, label, fn) {
-      var b = document.createElement('button');
-      b.className = 'btn btn-secondary btn-sm';
-      b.setAttribute('data-bg-skip', '1');
-      b.innerHTML = '<span class="ms ms-sm">' + ico + '</span>' + (label ? ' ' + label : '');
-      b.onclick = fn;
-      return b;
-    }
-    right.appendChild(_mkBtn('undo', 'Desfazer', function() { QuadrosUI._undo(); }));
-    right.appendChild(_mkBtn('delete_sweep', 'Limpar', function() { QuadrosUI._clearCanvas(); }));
+    // Desfazer + Limpar
+    var right = document.createElement('div'); right.style.cssText = 'margin-left:auto;display:flex;gap:5px;';
+    right.appendChild(_mkBtn('undo', 'Desfazer', function() { _undo(); }));
+    right.appendChild(_mkBtn('delete_sweep', 'Limpar', function() { _clearCanvas(); }));
     tb.appendChild(right);
     container.appendChild(tb);
 
-    // ── Área do canvas ────────────────────────────────────────────────────────
+    // ── Canvas ───────────────────────────────────────────────────────────────
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#fff;';
+    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#f8f9fb;min-height:0;';
     var cv = document.createElement('canvas');
-    cv.id = 'qdro-canvas';
-    cv.style.cssText = 'display:block;cursor:crosshair;touch-action:none;';
+    cv.id = 'qdro-canvas'; cv.tabIndex = 0;
+    cv.style.cssText = 'display:block;cursor:default;touch-action:none;outline:none;';
     wrap.appendChild(cv);
+    var hint = document.createElement('div');
+    hint.style.cssText = 'position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--muted);pointer-events:none;line-height:1.5;text-align:right;';
+    hint.innerHTML = 'Espaço+arrastar = mover &nbsp;·&nbsp; Scroll = zoom<br>Del = apagar selecionado &nbsp;·&nbsp; Duplo clique em arquivo = baixar';
+    wrap.appendChild(hint);
     container.appendChild(wrap);
 
-    // ── Redimensionar canvas ao tamanho do wrapper ────────────────────────────
+    // ── Resize ───────────────────────────────────────────────────────────────
     function _resize() {
-      var w = wrap.clientWidth  || 800;
-      var h = wrap.clientHeight || 560;
-      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-      _redraw();
+      cv.width = wrap.clientWidth || 800; cv.height = wrap.clientHeight || 560; _redraw();
     }
 
-    // ── Renderização ──────────────────────────────────────────────────────────
+    // ── Grid pontilhado ──────────────────────────────────────────────────────
+    function _drawGrid(ctx) {
+      var sp = Math.round(24 * _cvState.zoom); if (sp < 8) return;
+      var ox = ((_cvState.panX % sp) + sp) % sp, oy = ((_cvState.panY % sp) + sp) % sp;
+      ctx.fillStyle = 'rgba(0,0,0,0.07)';
+      for (var x = ox; x < cv.width; x += sp)
+        for (var y = oy; y < cv.height; y += sp)
+          ctx.fillRect(x - 1, y - 1, 2, 2);
+    }
+
+    // ── Caixa delimitadora (world coords) ────────────────────────────────────
+    function _bbox(s) {
+      if (s.t === 'pencil' && s.pts && s.pts.length > 0) {
+        var xs = s.pts.map(function(p) { return p.x; }), ys = s.pts.map(function(p) { return p.y; });
+        var x1 = Math.min.apply(null, xs), y1 = Math.min.apply(null, ys);
+        return { x: x1, y: y1, w: Math.max.apply(null, xs) - x1 || 1, h: Math.max.apply(null, ys) - y1 || 1 };
+      }
+      if (s.t === 'text') {
+        var fs = Math.max(12, (s.lw || 2) * 5 + 10);
+        return { x: s.x, y: s.y - fs, w: s.txtW || Math.max(60, (s.txt || '').length * fs * 0.6), h: fs + 4 };
+      }
+      if (s.t === 'line' || s.t === 'arrow')
+        return { x: Math.min(s.x, s.x2), y: Math.min(s.y, s.y2), w: Math.abs(s.x2 - s.x) || 1, h: Math.abs(s.y2 - s.y) || 1 };
+      return { x: Math.min(s.x, s.x + (s.w || 0)), y: Math.min(s.y, s.y + (s.h || 0)), w: Math.abs(s.w || 1), h: Math.abs(s.h || 1) };
+    }
+
+    // ── Handles de seleção ────────────────────────────────────────────────────
+    function _handles(s) {
+      if (s.t === 'line' || s.t === 'arrow') return [{ id:'p1', x:s.x, y:s.y }, { id:'p2', x:s.x2, y:s.y2 }];
+      var bb = _bbox(s);
+      return [{ id:'tl', x:bb.x, y:bb.y }, { id:'tr', x:bb.x+bb.w, y:bb.y },
+              { id:'bl', x:bb.x, y:bb.y+bb.h }, { id:'br', x:bb.x+bb.w, y:bb.y+bb.h }];
+    }
+
+    // ── Renderização ─────────────────────────────────────────────────────────
     function _redraw() {
       var ctx = cv.getContext('2d');
       ctx.clearRect(0, 0, cv.width, cv.height);
-      _cvState.shapes.forEach(function(s) { _drawShape(ctx, s); });
+      _drawGrid(ctx);
+      ctx.save();
+      ctx.setTransform(_cvState.zoom, 0, 0, _cvState.zoom, _cvState.panX, _cvState.panY);
+      _cvState.shapes.forEach(function(s, i) {
+        _drawShape(ctx, s);
+        if (i === _cvState.selIdx) _drawSel(ctx, s);
+      });
       if (_cvState.cur) _drawShape(ctx, _cvState.cur);
+      ctx.restore();
     }
 
     function _drawShape(ctx, s) {
       ctx.save();
-      ctx.strokeStyle = s.color || '#1e293b';
-      ctx.fillStyle   = s.color || '#1e293b';
-      ctx.lineWidth   = s.lw   || 2;
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = s.color || '#1e293b'; ctx.fillStyle = s.color || '#1e293b';
+      ctx.lineWidth = s.lw || 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (s.t === 'pencil' && s.pts && s.pts.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        ctx.beginPath(); ctx.moveTo(s.pts[0].x, s.pts[0].y);
         for (var i = 1; i < s.pts.length; i++) {
-          // curva suave
-          var mid = { x: (s.pts[i-1].x + s.pts[i].x) / 2, y: (s.pts[i-1].y + s.pts[i].y) / 2 };
-          ctx.quadraticCurveTo(s.pts[i-1].x, s.pts[i-1].y, mid.x, mid.y);
+          var m = { x: (s.pts[i-1].x + s.pts[i].x) / 2, y: (s.pts[i-1].y + s.pts[i].y) / 2 };
+          ctx.quadraticCurveTo(s.pts[i-1].x, s.pts[i-1].y, m.x, m.y);
         }
-        ctx.lineTo(s.pts[s.pts.length-1].x, s.pts[s.pts.length-1].y);
-        ctx.stroke();
+        ctx.lineTo(s.pts[s.pts.length-1].x, s.pts[s.pts.length-1].y); ctx.stroke();
       } else if (s.t === 'rect') {
         ctx.strokeRect(s.x, s.y, s.w, s.h);
       } else if (s.t === 'circle') {
         ctx.beginPath();
-        ctx.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, 0, 2 * Math.PI);
+        ctx.ellipse(s.x + s.w/2, s.y + s.h/2, Math.max(1, Math.abs(s.w/2)), Math.max(1, Math.abs(s.h/2)), 0, 0, 2*Math.PI);
         ctx.stroke();
       } else if (s.t === 'text' && s.txt) {
         var fs = Math.max(12, (s.lw || 2) * 5 + 10);
-        ctx.font = fs + 'px Inter, system-ui, sans-serif';
+        ctx.font = 'bold ' + fs + 'px Inter,system-ui,sans-serif';
+        s.txtW = ctx.measureText(s.txt).width;
         ctx.fillText(s.txt, s.x, s.y);
+      } else if (s.t === 'line') {
+        ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      } else if (s.t === 'arrow') {
+        ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+        var ang = Math.atan2(s.y2 - s.y, s.x2 - s.x), hl = Math.max(12, (s.lw || 2) * 5);
+        ctx.beginPath();
+        ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2 - hl*Math.cos(ang - Math.PI/6), s.y2 - hl*Math.sin(ang - Math.PI/6));
+        ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2 - hl*Math.cos(ang + Math.PI/6), s.y2 - hl*Math.sin(ang + Math.PI/6));
+        ctx.stroke();
+      } else if (s.t === 'image') {
+        var img = _getImg(s);
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, s.x, s.y, s.w || 200, s.h || 150);
+        } else {
+          ctx.fillStyle = '#e2e8f0'; ctx.fillRect(s.x, s.y, s.w || 200, s.h || 150);
+          ctx.fillStyle = '#94a3b8'; ctx.font = '11px Inter,sans-serif';
+          ctx.fillText('Carregando imagem…', s.x + 8, s.y + 18);
+        }
+      } else if (s.t === 'doc') {
+        var W = s.w || 160, H = s.h || 110;
+        ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+        ctx.fillRect(s.x, s.y, W, H); ctx.strokeRect(s.x, s.y, W, H);
+        // Ícone de documento
+        var ix = s.x + W/2 - 14, iy = s.y + 12, iw = 28, ih = 36, co = 8;
+        ctx.fillStyle = '#dbeafe'; ctx.fillRect(ix, iy, iw, ih);
+        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1; ctx.strokeRect(ix, iy, iw, ih);
+        ctx.fillStyle = '#3b82f6';
+        ctx.beginPath(); ctx.moveTo(ix + iw - co, iy); ctx.lineTo(ix + iw - co, iy + co); ctx.lineTo(ix + iw, iy + co); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1;
+        [iy + 14, iy + 20, iy + 26].forEach(function(ly) {
+          ctx.beginPath(); ctx.moveTo(ix + 4, ly); ctx.lineTo(ix + iw - 4, ly); ctx.stroke();
+        });
+        // Nome do arquivo
+        ctx.fillStyle = '#374151'; ctx.font = 'bold 10px Inter,sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText((s.name || 'Arquivo').slice(0, 20), s.x + 5, s.y + H - 22);
+        ctx.fillStyle = '#94a3b8'; ctx.font = '9px Inter,sans-serif';
+        ctx.fillText('duplo clique = baixar', s.x + 5, s.y + H - 9);
       }
       ctx.restore();
     }
 
-    // ── Posição relativa ao canvas ────────────────────────────────────────────
-    function _pos(e) {
-      var r = cv.getBoundingClientRect();
-      var src = e.touches ? e.touches[0] : e;
-      return { x: src.clientX - r.left, y: src.clientY - r.top };
+    function _drawSel(ctx, s) {
+      var bb = _bbox(s), pad = 6 / _cvState.zoom, hs = 8 / _cvState.zoom;
+      ctx.save();
+      ctx.strokeStyle = '#6366f1'; ctx.fillStyle = '#fff'; ctx.lineWidth = 1.5 / _cvState.zoom;
+      ctx.setLineDash([4 / _cvState.zoom, 3 / _cvState.zoom]);
+      ctx.strokeRect(bb.x - pad, bb.y - pad, bb.w + pad*2, bb.h + pad*2);
+      ctx.setLineDash([]);
+      _handles(s).forEach(function(h) {
+        ctx.fillStyle = '#fff'; ctx.fillRect(h.x - hs/2, h.y - hs/2, hs, hs);
+        ctx.strokeRect(h.x - hs/2, h.y - hs/2, hs, hs);
+      });
+      ctx.restore();
     }
 
-    // ── Eventos de mouse / toque ──────────────────────────────────────────────
-    function _onDown(e) {
-      e.preventDefault();
-      var p = _pos(e);
-      _cvState.color     = (document.getElementById('qdro-color') || { value: '#1e293b' }).value;
-      _cvState.lineWidth = parseInt((document.getElementById('qdro-width') || { value: 2 }).value);
-      _cvState.sx = p.x; _cvState.sy = p.y;
-      _cvState.drawing = true;
+    // ── Cache de imagens ──────────────────────────────────────────────────────
+    function _getImg(s) {
+      var key = s.id || (s.data || '').slice(0, 40);
+      if (!_cvState.imgCache[key]) {
+        var img = new Image(); img.onload = function() { _redraw(); }; img.src = s.data;
+        _cvState.imgCache[key] = img;
+      }
+      return _cvState.imgCache[key];
+    }
 
+    // ── Hit detection ─────────────────────────────────────────────────────────
+    function _hit(s, wx, wy) {
+      var T = Math.max(6, 8 / _cvState.zoom);
+      if (s.t === 'pencil') return s.pts && s.pts.some(function(p) { return Math.hypot(p.x - wx, p.y - wy) < T + 4; });
+      if (s.t === 'line' || s.t === 'arrow') {
+        var dx = s.x2 - s.x, dy = s.y2 - s.y, l2 = dx*dx + dy*dy;
+        if (l2 < 1) return Math.hypot(wx - s.x, wy - s.y) < T;
+        var t = Math.max(0, Math.min(1, ((wx - s.x)*dx + (wy - s.y)*dy) / l2));
+        return Math.hypot(wx - (s.x + t*dx), wy - (s.y + t*dy)) < T;
+      }
+      var bb = _bbox(s);
+      return wx >= bb.x - T && wx <= bb.x + bb.w + T && wy >= bb.y - T && wy <= bb.y + bb.h + T;
+    }
+
+    function _handleHit(s, wx, wy) {
+      var hs = 8 / _cvState.zoom, found = null;
+      _handles(s).forEach(function(h) { if (!found && Math.abs(wx - h.x) < hs && Math.abs(wy - h.y) < hs) found = h.id; });
+      return found;
+    }
+
+    // ── Mover + Redimensionar ─────────────────────────────────────────────────
+    function _moveShape(s, dwx, dwy) {
+      if (s.t === 'pencil') { s.pts = s.pts.map(function(p) { return { x: p.x + dwx, y: p.y + dwy }; }); }
+      else if (s.t === 'line' || s.t === 'arrow') { s.x += dwx; s.y += dwy; s.x2 += dwx; s.y2 += dwy; }
+      else { s.x += dwx; s.y += dwy; }
+    }
+
+    function _resizeShape(s, hid, wx, wy) {
+      var b = _cvState.dragBase; if (!b) return;
+      if (s.t === 'line' || s.t === 'arrow') { if (hid === 'p1') { s.x = wx; s.y = wy; } else { s.x2 = wx; s.y2 = wy; } return; }
+      var x1 = Math.min(b.x, b.x + b.w), y1 = Math.min(b.y, b.y + b.h),
+          x2 = Math.max(b.x, b.x + b.w), y2 = Math.max(b.y, b.y + b.h);
+      if (hid === 'tl')      { s.x = wx; s.y = wy; s.w = x2 - wx; s.h = y2 - wy; }
+      else if (hid === 'tr') { s.y = wy; s.x = x1; s.w = wx - x1; s.h = y2 - wy; }
+      else if (hid === 'bl') { s.x = wx; s.y = y1; s.w = x2 - wx; s.h = wy - y1; }
+      else if (hid === 'br') { s.x = x1; s.y = y1; s.w = wx - x1; s.h = wy - y1; }
+    }
+
+    // ── Coords mundo ─────────────────────────────────────────────────────────
+    function _wpos(e) {
+      var r = cv.getBoundingClientRect(), src = e.touches ? e.touches[0] : e;
+      var sx = src.clientX - r.left, sy = src.clientY - r.top;
+      return { x: (sx - _cvState.panX) / _cvState.zoom, y: (sy - _cvState.panY) / _cvState.zoom, sx: sx, sy: sy };
+    }
+
+    function _updCursor() {
+      if (_cvState.spaceDown || _cvState.isPanning) { cv.style.cursor = _cvState.isPanning ? 'grabbing' : 'grab'; return; }
+      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair', text:'text', eraser:'cell' };
+      cv.style.cursor = C[_cvState.tool] || 'default';
+    }
+
+    // ── Zoom ──────────────────────────────────────────────────────────────────
+    function _doZoom(f, mx, my) {
+      mx = mx !== undefined ? mx : cv.width/2; my = my !== undefined ? my : cv.height/2;
+      var nz = Math.max(0.05, Math.min(16, _cvState.zoom * f));
+      _cvState.panX = mx - (mx - _cvState.panX) * (nz / _cvState.zoom);
+      _cvState.panY = my - (my - _cvState.panY) * (nz / _cvState.zoom);
+      _cvState.zoom = nz; _updZoomLabel(); _redraw();
+    }
+    function _updZoomLabel() { var l = document.getElementById('qdro-zoom-label'); if (l) l.textContent = Math.round(_cvState.zoom * 100) + '%'; }
+    function _resetView() { _cvState.panX = 0; _cvState.panY = 0; _cvState.zoom = 1; _updZoomLabel(); _redraw(); }
+
+    // ── Inserir Imagem ────────────────────────────────────────────────────────
+    function _insertImage(file) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          var MAX = 1200, w = img.width, h = img.height;
+          if (w > MAX || h > MAX) { var ratio = Math.min(MAX/w, MAX/h); w = Math.round(w*ratio); h = Math.round(h*ratio); }
+          var tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+          tmp.getContext('2d').drawImage(img, 0, 0, w, h);
+          var dataUrl = tmp.toDataURL('image/jpeg', 0.72);
+          var cx = (cv.width/2 - _cvState.panX) / _cvState.zoom, cy = (cv.height/2 - _cvState.panY) / _cvState.zoom;
+          var sw = Math.min(300, w), sh = Math.round(sw * h / w);
+          var sid = 'img_' + Date.now();
+          _cvState.shapes.push({ t:'image', id:sid, data:dataUrl, x:cx - sw/2, y:cy - sh/2, w:sw, h:sh });
+          var ci = new Image(); ci.src = dataUrl; _cvState.imgCache[sid] = ci;
+          _setTool('select'); _cvState.selIdx = _cvState.shapes.length - 1; _redraw();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── Inserir Documento ─────────────────────────────────────────────────────
+    function _insertDoc(file) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var cx = (cv.width/2 - _cvState.panX) / _cvState.zoom, cy = (cv.height/2 - _cvState.panY) / _cvState.zoom;
+        _cvState.shapes.push({ t:'doc', id:'doc_'+Date.now(), data:ev.target.result, name:file.name, mime:file.type, size:file.size, x:cx - 80, y:cy - 55, w:160, h:110 });
+        _setTool('select'); _cvState.selIdx = _cvState.shapes.length - 1; _redraw();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── Borracha brush ────────────────────────────────────────────────────────
+    function _eraseAt(wx, wy) {
+      var R = Math.max(10, _cvState.lineWidth * 3) / _cvState.zoom;
+      var before = _cvState.shapes.length;
+      _cvState.shapes = _cvState.shapes.filter(function(s) {
+        if (s.t === 'pencil') {
+          s.pts = s.pts.filter(function(p) { return Math.hypot(p.x - wx, p.y - wy) > R; });
+          return s.pts.length > 1;
+        }
+        var bb = _bbox(s);
+        return Math.hypot(bb.x + bb.w/2 - wx, bb.y + bb.h/2 - wy) > R * 2;
+      });
+      if (_cvState.selIdx >= _cvState.shapes.length) _cvState.selIdx = -1;
+      if (_cvState.shapes.length !== before) _redraw();
+    }
+
+    // ── Handlers de mouse/toque ────────────────────────────────────────────────
+    function _onDown(e) {
+      if (e.button === 2) return;
+      e.preventDefault();
+      var p = _wpos(e); var src = e.touches ? e.touches[0] : e;
+      _cvState.color = (document.getElementById('qdro-color') || { value:'#1e293b' }).value;
+      _cvState.lineWidth = parseInt((document.getElementById('qdro-width') || { value:2 }).value);
+
+      if (_cvState.spaceDown || e.button === 1) {
+        _cvState.isPanning = true;
+        _cvState.panStart = { mx:src.clientX, my:src.clientY, px:_cvState.panX, py:_cvState.panY };
+        cv.style.cursor = 'grabbing'; return;
+      }
+      if (_cvState.tool === 'eraser') { _cvState.isErasing = true; _eraseAt(p.x, p.y); return; }
+
+      if (_cvState.tool === 'select') {
+        // Duplo clique em doc para download
+        if (_cvState.selIdx >= 0) {
+          var sh = _cvState.shapes[_cvState.selIdx];
+          if (sh && sh.t === 'doc' && _hit(sh, p.x, p.y)) {
+            var now = Date.now();
+            if (now - _cvState.lastDocClick < 450 && _cvState.lastDocClickIdx === _cvState.selIdx) {
+              var a = document.createElement('a'); a.href = sh.data; a.download = sh.name || 'arquivo'; a.click();
+              _cvState.lastDocClick = 0; return;
+            }
+            _cvState.lastDocClick = now; _cvState.lastDocClickIdx = _cvState.selIdx;
+          }
+          // Handle de resize
+          var hid = _handleHit(sh, p.x, p.y);
+          if (hid) { _cvState.dragMode = hid; _cvState.dragBase = JSON.parse(JSON.stringify(sh)); _cvState.dragMouse = { wx:p.x, wy:p.y }; return; }
+        }
+        // Hit em shapes (de trás para frente)
+        var hit = -1;
+        for (var i = _cvState.shapes.length - 1; i >= 0; i--) { if (_hit(_cvState.shapes[i], p.x, p.y)) { hit = i; break; } }
+        if (hit >= 0) {
+          _cvState.selIdx = hit; _cvState.dragMode = 'move';
+          _cvState.dragBase = JSON.parse(JSON.stringify(_cvState.shapes[hit]));
+          _cvState.dragMouse = { wx:p.x, wy:p.y };
+        } else { _cvState.selIdx = -1; _cvState.dragMode = null; }
+        _redraw(); return;
+      }
       if (_cvState.tool === 'text') {
-        _cvState.drawing = false;
-        _modalInput({ titulo: 'Inserir Texto', label: 'Texto', obrigatorio: true }, function(txt) {
+        _modalInput({ titulo:'Inserir Texto', label:'Texto', obrigatorio:true }, function(txt) {
           if (!txt) return;
           _cvState.shapes.push({ t:'text', color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, txt:txt });
           _redraw();
-        });
-        return;
+        }); return;
       }
-      if (_cvState.tool === 'eraser') {
-        _cvState.drawing = false;
-        _cvState.shapes = _cvState.shapes.filter(function(s) {
-          if (s.t === 'pencil') return !s.pts.some(function(pt) { return Math.hypot(pt.x - p.x, pt.y - p.y) < 16; });
-          var x2 = s.x + (s.w || 0), y2 = s.y + (s.h || 0);
-          var cx = s.x + (s.w || 0) / 2, cy = s.y + (s.h || 0) / 2;
-          return !(Math.hypot(cx - p.x, cy - p.y) < Math.max(Math.abs(s.w || 16), Math.abs(s.h || 16)) / 2 + 16
-                   || (s.t === 'text' && Math.hypot(s.x - p.x, s.y - p.y) < 24));
-        });
-        _redraw();
-        return;
-      }
-      if (_cvState.tool === 'pencil') {
-        _cvState.cur = { t:'pencil', color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
-      } else {
-        _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, w:0, h:0 };
-      }
+      _cvState.drawing = true; _cvState.startWx = p.x; _cvState.startWy = p.y;
+      if (_cvState.tool === 'pencil') _cvState.cur = { t:'pencil', color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
+      else if (_cvState.tool === 'line' || _cvState.tool === 'arrow') _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, x2:p.x, y2:p.y };
+      else _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, w:0, h:0 };
     }
 
     function _onMove(e) {
+      var p = _wpos(e); var src = e.touches ? e.touches[0] : e;
+      if (_cvState.isPanning && _cvState.panStart) {
+        _cvState.panX = _cvState.panStart.px + (src.clientX - _cvState.panStart.mx);
+        _cvState.panY = _cvState.panStart.py + (src.clientY - _cvState.panStart.my);
+        _updZoomLabel(); _redraw(); return;
+      }
+      if (_cvState.isErasing) { e.preventDefault(); _eraseAt(p.x, p.y); return; }
+      if (_cvState.tool === 'select' && _cvState.dragMode && _cvState.selIdx >= 0) {
+        e.preventDefault();
+        var s = _cvState.shapes[_cvState.selIdx];
+        Object.assign(s, JSON.parse(JSON.stringify(_cvState.dragBase)));
+        if (_cvState.dragMode === 'move') _moveShape(s, p.x - _cvState.dragMouse.wx, p.y - _cvState.dragMouse.wy);
+        else _resizeShape(s, _cvState.dragMode, p.x, p.y);
+        _redraw(); return;
+      }
       if (!_cvState.drawing || !_cvState.cur) return;
       e.preventDefault();
-      var p = _pos(e);
-      if (_cvState.tool === 'pencil') {
-        _cvState.cur.pts.push({ x:p.x, y:p.y });
-      } else {
-        _cvState.cur.w = p.x - _cvState.sx;
-        _cvState.cur.h = p.y - _cvState.sy;
-      }
+      if (_cvState.tool === 'pencil') _cvState.cur.pts.push({ x:p.x, y:p.y });
+      else if (_cvState.tool === 'line' || _cvState.tool === 'arrow') { _cvState.cur.x2 = p.x; _cvState.cur.y2 = p.y; }
+      else { _cvState.cur.w = p.x - _cvState.startWx; _cvState.cur.h = p.y - _cvState.startWy; }
       _redraw();
     }
 
     function _onUp() {
+      if (_cvState.isPanning) { _cvState.isPanning = false; _updCursor(); }
+      if (_cvState.isErasing) { _cvState.isErasing = false; }
+      if (_cvState.dragMode)  { _cvState.dragMode = null; }
       if (_cvState.drawing && _cvState.cur) {
-        if (_cvState.tool !== 'pencil' || _cvState.cur.pts.length > 1) {
-          _cvState.shapes.push(_cvState.cur);
-        }
+        var ok = (_cvState.tool === 'pencil' && _cvState.cur.pts && _cvState.cur.pts.length > 1)
+          || (_cvState.tool === 'line' || _cvState.tool === 'arrow')
+          || ((_cvState.tool === 'rect' || _cvState.tool === 'circle') && (Math.abs(_cvState.cur.w) > 3 || Math.abs(_cvState.cur.h) > 3));
+        if (ok) _cvState.shapes.push(_cvState.cur);
         _cvState.cur = null;
       }
-      _cvState.drawing = false;
-      _redraw();
+      _cvState.drawing = false; _redraw();
     }
+
+    // Cursor hover para select tool
+    cv.addEventListener('mousemove', function(e) {
+      if (_cvState.tool !== 'select' || _cvState.drawing || _cvState.isPanning || _cvState.dragMode || _cvState.spaceDown) return;
+      var p = _wpos(e);
+      if (_cvState.selIdx >= 0) {
+        var sh = _cvState.shapes[_cvState.selIdx]; if (!sh) return;
+        var hid = _handleHit(sh, p.x, p.y);
+        if (hid) { var RC = { tl:'nw-resize', tr:'ne-resize', bl:'sw-resize', br:'se-resize', p1:'crosshair', p2:'crosshair' }; cv.style.cursor = RC[hid] || 'pointer'; return; }
+        if (_hit(sh, p.x, p.y)) { cv.style.cursor = 'move'; return; }
+      }
+      for (var i = _cvState.shapes.length - 1; i >= 0; i--) { if (_hit(_cvState.shapes[i], p.x, p.y)) { cv.style.cursor = 'pointer'; return; } }
+      cv.style.cursor = 'default';
+    });
 
     cv.addEventListener('mousedown',  _onDown);
     cv.addEventListener('mousemove',  _onMove);
     cv.addEventListener('mouseup',    _onUp);
     cv.addEventListener('mouseleave', _onUp);
-    cv.addEventListener('touchstart', _onDown, { passive: false });
-    cv.addEventListener('touchmove',  _onMove, { passive: false });
+    cv.addEventListener('touchstart', _onDown, { passive:false });
+    cv.addEventListener('touchmove',  _onMove, { passive:false });
     cv.addEventListener('touchend',   _onUp);
+    cv.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    cv.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      var r = cv.getBoundingClientRect();
+      _doZoom(e.deltaY > 0 ? 0.9 : 1.1, e.clientX - r.left, e.clientY - r.top);
+    }, { passive:false });
 
-    // ── Expor editor ao salvar ────────────────────────────────────────────────
-    _editor = {
-      store: {
-        getSnapshot: function() {
-          return { shapes: _cvState.shapes, version: 1 };
-        }
-      },
-      _redraw: _redraw
-    };
+    // ── Teclado ───────────────────────────────────────────────────────────────
+    function _onKeyDown(e) {
+      if (document.getElementById('qdro-editor-overlay').classList.contains('oculto')) return;
+      if (e.key === ' ') {
+        var tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault(); _cvState.spaceDown = true; _updCursor();
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && _cvState.selIdx >= 0) {
+        var tag2 = document.activeElement && document.activeElement.tagName;
+        if (tag2 === 'INPUT' || tag2 === 'TEXTAREA') return;
+        e.preventDefault(); _cvState.shapes.splice(_cvState.selIdx, 1); _cvState.selIdx = -1; _redraw();
+      }
+      if (e.key === 'Escape') { _cvState.selIdx = -1; _redraw(); }
+    }
+    function _onKeyUp(e) { if (e.key === ' ') { _cvState.spaceDown = false; _updCursor(); } }
+    document.addEventListener('keydown', _onKeyDown);
+    document.addEventListener('keyup', _onKeyUp);
+    _keyListeners = [{ t:'keydown', fn:_onKeyDown }, { t:'keyup', fn:_onKeyUp }];
 
-    // Resize inicial + ao redimensionar janela
-    var _ro = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(function() { _resize(); })
-      : null;
+    // ── Expor editor ──────────────────────────────────────────────────────────
+    _editor = { store: { getSnapshot: function() { return { shapes: _cvState.shapes, version: 2 }; } }, _redraw: _redraw };
+
+    var _ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(function() { _resize(); }) : null;
     if (_ro) _ro.observe(wrap);
-    else window.addEventListener('resize', _resize);
+    else {
+      var _rfn = function() { _resize(); };
+      window.addEventListener('resize', _rfn);
+      _winListeners = [{ t:'resize', fn:_rfn }];
+    }
     setTimeout(_resize, 30);
-  }
+  } // fim _iniciarEditor
 
-  // ── Funções chamadas pelos botões da toolbar ───────────────────────────────
+  // ── API pública do toolbar ─────────────────────────────────────────────────
   function _setTool(tool) {
-    if (!_cvState) return;
-    _cvState.tool = tool;
-    var TOOLS = ['pencil','rect','circle','text','eraser'];
-    TOOLS.forEach(function(t) {
-      var b = document.getElementById('qdro-tool-' + t);
-      if (!b) return;
+    if (!_cvState) return; _cvState.tool = tool; _cvState.selIdx = -1;
+    var ALL = ['select','pencil','line','arrow','rect','circle','text','eraser'];
+    ALL.forEach(function(t) {
+      var b = document.getElementById('qdro-tool-' + t); if (!b) return;
       b.style.background = t === tool ? 'var(--color-primary)' : '';
       b.style.color      = t === tool ? '#fff' : '';
     });
-    var cv = document.getElementById('qdro-canvas');
-    if (cv) cv.style.cursor = tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair';
+    var cvel = document.getElementById('qdro-canvas');
+    if (cvel) {
+      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair', text:'text', eraser:'cell' };
+      cvel.style.cursor = C[tool] || 'default';
+    }
+    if (_editor && _editor._redraw) _editor._redraw();
   }
 
   function _undo() {
     if (!_cvState || !_cvState.shapes.length) return;
-    _cvState.shapes.pop();
+    _cvState.shapes.pop(); _cvState.selIdx = -1;
     if (_editor && _editor._redraw) _editor._redraw();
   }
 
   function _clearCanvas() {
     if (!_cvState) return;
-    _abrirModalConfirmar({
-      titulo: 'Limpar Canvas', icone: 'delete_sweep', corIcone: '#ef4444',
-      mensagem: 'Apagar todos os elementos do quadro?',
-      labelConfirmar: 'Limpar',
-      cb: function() {
-        _cvState.shapes = [];
-        if (_editor && _editor._redraw) _editor._redraw();
-      }
+    _abrirModalConfirmar({ titulo:'Limpar Canvas', icone:'delete_sweep', corIcone:'#ef4444',
+      mensagem:'Apagar todos os elementos do quadro?', labelConfirmar:'Limpar',
+      cb: function() { _cvState.shapes = []; _cvState.selIdx = -1; if (_editor && _editor._redraw) _editor._redraw(); }
     });
   }
 
   function salvarSnapshot(done) {
     var snap = null;
-    if (_editor && _editor.store && _editor.store.getSnapshot) {
-      try { snap = _editor.store.getSnapshot(); } catch(e) {}
-    }
-    GAS.quadros.salvar({ id: _idAtual, snapshot: snap }, function(resp) {
+    if (_editor && _editor.store && _editor.store.getSnapshot) { try { snap = _editor.store.getSnapshot(); } catch(e) {} }
+    GAS.quadros.salvar({ id:_idAtual, snapshot:snap }, function(resp) {
       done();
       if (!resp || !resp.ok) { Toast.erro('Erro ao salvar snapshot.'); return; }
-      Toast.sucesso('Quadro salvo.');
-      _carregado = false;
+      Toast.sucesso('Quadro salvo.'); _carregado = false;
     }, function(e) { done(); Toast.erro(e.message || e); });
   }
 
+  // ── Selects auxiliares ────────────────────────────────────────────────────
   function _carregarSelectAcoes() {
-    var sel = document.getElementById('qdro-acao-id');
-    if (!sel) return;
+    var sel = document.getElementById('qdro-acao-id'); if (!sel) return;
     GAS.acoes.listar({}, function(resp) {
       var lista = (resp && resp.ok) ? resp.data : [];
       sel.innerHTML = '<option value="">— Nenhuma —</option>'
-        + lista.filter(function(a){ return a.status !== 'cancelada' && a.status !== 'concluida'; })
-            .map(function(a){ return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
-    }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+        + lista.filter(function(a) { return a.status !== 'cancelada' && a.status !== 'concluida'; })
+            .map(function(a) { return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.nome || a.id) + '</option>'; }).join('');
+    }, function() { sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
   }
 
-  return { aoAbrir: aoAbrir, carregar: carregar, setTab: setTab,
-           abrirForm: abrirForm, fecharForm: fecharForm, salvar: salvar, excluir: excluir,
-           abrirEditor: abrirEditor, fecharEditor: fecharEditor, salvarSnapshot: salvarSnapshot,
-           _setTool: _setTool, _undo: _undo, _clearCanvas: _clearCanvas };
+  function _carregarSelectReunioes() {
+    var sel = document.getElementById('qdro-reuniao-id'); if (!sel) return;
+    GAS.reunioes.listar({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      sel.innerHTML = '<option value="">— Nenhuma —</option>'
+        + lista.filter(function(r) { return r.status !== 'cancelada'; })
+            .map(function(r) { return '<option value="' + escaparHtml(r.id) + '">' + escaparHtml(r.titulo || r.id) + '</option>'; }).join('');
+    }, function() { sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
+  }
+
+  return { aoAbrir:aoAbrir, carregar:carregar, setTab:setTab,
+           abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, excluir:excluir,
+           abrirEditor:abrirEditor, fecharEditor:fecharEditor, salvarSnapshot:salvarSnapshot,
+           _setTool:_setTool, _undo:_undo, _clearCanvas:_clearCanvas };
 })();
 Router.registrar('quadros', 'Quadros', QuadrosUI.aoAbrir);
+
 
 // ════════════════════════════════════════════════════════════════════════════
 // SessaoUI — Sessões Interativas ao vivo
@@ -42308,21 +42615,22 @@ var BiDemograficoUI = (function () {
   function _renderRestricoes(regs) {
     var el = document.getElementById('bi-dem-restricoes');
     if (!el) return;
-    // Contagem por tipo e lista de nomes
+    // tipos[lbl] = [{nome, obs}]  obs = texto livre para "Outro"
     var tipos   = {};
     var comRest = [];
     regs.forEach(function(r) {
       var rests = Array.isArray(r.restricoesAlimentares) ? r.restricoesAlimentares : [];
-      var outro = r.restricoesOutro ? 'Outro: ' + r.restricoesOutro : null;
-      if (rests.length || outro) comRest.push(r);
+      var outroTxt = r.restricoesOutro || null;
+      if (rests.length || outroTxt) comRest.push(r);
       rests.forEach(function(t) {
         var lbl = _biLabel(t) || t;
         if (!tipos[lbl]) tipos[lbl] = [];
-        tipos[lbl].push(r.nomeDisplay || '?');
+        tipos[lbl].push({ nome: r.nomeDisplay || '?', obs: (t === 'outro' ? outroTxt : null) });
       });
-      if (outro) {
-        if (!tipos[outro]) tipos[outro] = [];
-        tipos[outro].push(r.nomeDisplay || '?');
+      // restricoesOutro sem checkbox "outro" marcado
+      if (!rests.length && outroTxt) {
+        if (!tipos['Outro']) tipos['Outro'] = [];
+        tipos['Outro'].push({ nome: r.nomeDisplay || '?', obs: outroTxt });
       }
     });
     if (!comRest.length) {
@@ -42330,17 +42638,35 @@ var BiDemograficoUI = (function () {
       return;
     }
     var tiposOrdenados = Object.keys(tipos).sort(function(a,b){ return tipos[b].length - tipos[a].length; });
-    var html = '<div style="margin-bottom:10px;font-size:13px;color:var(--text);">' +
-      '<strong>'+comRest.length+'</strong> pessoa'+(comRest.length!==1?'s':'')+' com alguma restrição alimentar ('+
-      Math.round(comRest.length/regs.length*100)+'% da equipe filtrada)</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">';
-    tiposOrdenados.forEach(function(t) {
-      var nomes = tipos[t];
-      html += '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;">' +
-        '<div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px;">'+_esc(t)+
-        ' <span style="font-weight:400;font-size:12px;color:var(--text2);">('+nomes.length+')</span></div>' +
-        '<div style="font-size:11px;color:var(--text2);">'+nomes.map(function(n){return _esc(n);}).join(', ')+'</div>' +
-        '</div>';
+    var _ICONE_REST = {
+      'Vegetariano':'eco','Vegano':'grass','Sem Glúten':'no_meals','Sem Lactose':'no_drinks',
+      'Halal':'cruelty_free','Kosher':'star_of_life','Outro':'help_outline'
+    };
+    var html = '<div style="margin-bottom:12px;font-size:13px;color:var(--text);">' +
+      '<strong>'+comRest.length+'</strong> pessoa'+(comRest.length!==1?'s':'')+
+      ' com alguma restrição alimentar <span style="color:var(--text2);">('+
+      Math.round(comRest.length/regs.length*100)+'% da equipe filtrada)</span></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">';
+    tiposOrdenados.forEach(function(t, idx) {
+      var pessoas = tipos[t];
+      var listId  = 'bi-rest-list-' + idx;
+      var icone   = _ICONE_REST[t] || 'restaurant';
+      html += '<div style="background:var(--surface2);border-radius:10px;overflow:hidden;border:1px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;user-select:none;"' +
+          ' onclick="var l=document.getElementById(\''+listId+'\');var ic=this.querySelector(\'.rest-chev\');if(l){l.style.display=l.style.display===\'none\'?\'block\':\'none\';ic.textContent=l.style.display===\'none\'?\'expand_more\':\'expand_less\';}">' +
+          '<span class="ms ms-sm" style="color:var(--primary);flex-shrink:0;">'+icone+'</span>' +
+          '<span style="font-weight:600;font-size:13px;color:var(--text);flex:1;">'+_esc(t)+'</span>' +
+          '<span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;flex-shrink:0;">'+pessoas.length+'</span>' +
+          '<span class="ms ms-sm rest-chev" style="color:var(--text3);font-size:16px;">expand_more</span>' +
+        '</div>' +
+        '<div id="'+listId+'" style="display:none;border-top:1px solid var(--border);padding:6px 12px 10px;">';
+      pessoas.forEach(function(p) {
+        html += '<div style="padding:5px 0;border-bottom:1px solid var(--surface);font-size:12px;">' +
+          '<div style="color:var(--text);font-weight:500;">'+_esc(p.nome)+'</div>' +
+          (p.obs ? '<div style="color:var(--text2);font-size:11px;margin-top:2px;">Obs: '+_esc(p.obs)+'</div>' : '') +
+          '</div>';
+      });
+      html += '</div></div>';
     });
     html += '</div>';
     el.innerHTML = html;
@@ -42357,24 +42683,45 @@ var BiDemograficoUI = (function () {
     var total  = regs.length;
     if (!total) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Sem dados</p>'; return; }
     var pct = Math.round(pais.length / total * 100);
-    // Total de filhos informados
+    // Separa por gênero
+    var somentePais = pais.filter(function(r){ return String(r.genero||'').toLowerCase().indexOf('homem') !== -1; });
+    var somenteMaes = pais.filter(function(r){ return String(r.genero||'').toLowerCase().indexOf('mulher') !== -1; });
+    var outrosGens  = pais.filter(function(r){
+      var g = String(r.genero||'').toLowerCase();
+      return g.indexOf('homem') === -1 && g.indexOf('mulher') === -1;
+    });
     var totalFilhos = 0;
     pais.forEach(function(r){ if (r.numFilhos) totalFilhos += Number(r.numFilhos) || 0; });
-    var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+    var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' +
       '<div style="font-size:28px;font-weight:700;color:#059669;">'+pais.length+'</div>' +
-      '<div style="font-size:12px;color:var(--text2);">pai'+(pais.length!==1?'s/mães':'/mãe')+' na equipe<br>' +
-      '<span style="color:var(--text3);">'+pct+'% · '+totalFilhos+' filho'+(totalFilhos!==1?'s':'')+'/ dependente'+(totalFilhos!==1?'s':'')+' declarado'+(totalFilhos!==1?'s':'')+'</span></div>' +
+      '<div style="font-size:12px;color:var(--text2);">pais/mães na equipe<br>' +
+      '<span style="color:var(--text3);">'+pct+'% · '+totalFilhos+' filho'+(totalFilhos!==1?'s':'')+'/dep. declarado'+(totalFilhos!==1?'s':'')+'</span></div>' +
       '</div>';
     if (pais.length) {
-      html += '<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;">Lista</div>' +
-        '<div style="font-size:12px;color:var(--text);line-height:1.8;">';
-      pais.forEach(function(r) {
-        var nf = r.numFilhos ? ' ('+r.numFilhos+' filho'+(r.numFilhos!==1?'s':'')+'/' +'dep.)' : '';
-        html += _esc(r.nomeDisplay || '?') + nf + ' &nbsp;';
-      });
+      function _listaPessoas(lista) {
+        return lista.map(function(r){
+          var nf = r.numFilhos ? ' <span style="color:var(--text3);">('+r.numFilhos+' filho'+(r.numFilhos!==1?'s':'')+')</span>' : '';
+          return '<div style="font-size:11px;color:var(--text);padding:2px 0;">'+_esc(r.nomeDisplay||'?')+nf+'</div>';
+        }).join('');
+      }
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+      html += '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid #2563eb;">' +
+        '<div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Pais</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;">'+somentePais.length+'</div>' +
+        (somentePais.length ? _listaPessoas(somentePais) : '<div style="font-size:11px;color:var(--text3);">—</div>') +
+        '</div>';
+      html += '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;border-left:3px solid #db2777;">' +
+        '<div style="font-size:10px;font-weight:700;color:#db2777;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Mães</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;">'+somenteMaes.length+'</div>' +
+        (somenteMaes.length ? _listaPessoas(somenteMaes) : '<div style="font-size:11px;color:var(--text3);">—</div>') +
+        '</div>';
       html += '</div>';
+      if (outrosGens.length) {
+        html += '<div style="margin-bottom:6px;font-size:11px;color:var(--text2);">' +
+          '<strong>Outro gênero:</strong> '+outrosGens.map(function(r){return _esc(r.nomeDisplay||'?');}).join(', ')+'</div>';
+      }
     }
-    html += '<p style="font-size:10px;color:var(--text3);margin-top:8px;">'+naoSao+' declararam não ser pai/mãe · '+nInf+' não informaram</p>';
+    html += '<p style="font-size:10px;color:var(--text3);margin-top:4px;">'+naoSao+' declararam não ser pai/mãe · '+nInf+' não informaram</p>';
     el.innerHTML = html;
   }
 
@@ -42439,6 +42786,9 @@ var BiDemograficoUI = (function () {
 
   // Cache de polígonos de bairros do Nominatim (memória, não persiste entre sessões)
   var _bairroGeoCache = {};
+
+  // Bairros do epicentro do projeto CCBJ (Grande Bom Jardim, Fortaleza/CE)
+  var _EPICENTRO = ['bom jardim','canindezinho','siqueira','granja lisboa','granja portugal'];
 
   // Busca sequencial com rate-limit 1 req/s; onDone() chamado ao finalizar
   function _fetchBairrosSequencial(bairros, onDone) {
@@ -42572,15 +42922,16 @@ var BiDemograficoUI = (function () {
     });
     if (!pontos.length) { Toast.aviso('Nenhum ponto geocodificado para os filtros atuais.'); return; }
     if (typeof L.heatLayer !== 'undefined') {
+      // radius/minOpacity altos para garantir visibilidade mesmo com pontos esparsos
       _heatLayer = L.heatLayer(pontos, {
-        radius:25, blur:20, maxZoom:16, max:maxN,
-        gradient:{0.2:'#4ade80',0.5:'#facc15',0.8:'#f97316',1.0:'#ef4444'}
+        radius:45, blur:18, maxZoom:18, max:maxN, minOpacity:0.55,
+        gradient:{0.0:'#fde68a',0.3:'#fb923c',0.6:'#ef4444',1.0:'#7f1d1d'}
       }).addTo(_mapa);
     } else {
       pontos.forEach(function(p) {
         var m = L.circleMarker([p[0],p[1]], {
-          radius: Math.max(6, Math.min(22, p[2]*2)),
-          color:'#1a73e8', fillColor:'#1a73e8', fillOpacity:.5, weight:1
+          radius: Math.max(10, Math.min(28, 10 + p[2]*3)),
+          color:'#ef4444', fillColor:'#ef4444', fillOpacity:.7, weight:1.5
         }).addTo(_mapa);
         m._biDemMarker = true;
       });
@@ -42601,17 +42952,41 @@ var BiDemograficoUI = (function () {
     if (!pontos.length) { Toast.aviso('Nenhum bairro geocodificado para os filtros atuais.'); return; }
     var maxN = pontos[0].count;
 
+    function _ehEpicentro(nome) {
+      var n = String(nome||'').toLowerCase().trim();
+      for (var i = 0; i < _EPICENTRO.length; i++) {
+        if (n === _EPICENTRO[i] || n.indexOf(_EPICENTRO[i]) !== -1) return true;
+      }
+      return false;
+    }
+
+    // Paleta fria (intensidade = azul escuro → azul claro); epicentro = dourado
+    function _corBairro(pct, epicentro) {
+      if (epicentro) return '#f59e0b'; // âmbar/dourado — epicentro CCBJ
+      if (pct > 0.7) return '#1e40af';
+      if (pct > 0.4) return '#2563eb';
+      if (pct > 0.2) return '#60a5fa';
+      return '#bfdbfe';
+    }
+
+    function _tooltipBairro(p, epicentro) {
+      return '<strong>' + _esc(p.nome) + '</strong>' +
+        (epicentro ? ' <span style="color:#f59e0b;font-size:10px;">★ epicentro</span>' : '') +
+        (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
+        '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+    }
+
     // Desenha círculos imediatamente (feedback rápido)
     function _desenharCirculo(p) {
-      var pct    = p.count / maxN;
-      var radius = Math.max(10, Math.min(34, 10 + pct * 24));
-      var fill   = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f97316' : pct > 0.2 ? '#facc15' : '#22c55e';
-      var tip    = '<strong>' + _esc(p.nome) + '</strong>' +
-                   (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
-                   '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+      var pct      = p.count / maxN;
+      var epi      = _ehEpicentro(p.nome);
+      var radius   = epi ? Math.max(14, Math.min(40, 14 + pct * 26)) : Math.max(10, Math.min(34, 10 + pct * 24));
+      var fill     = _corBairro(pct, epi);
+      var border   = epi ? '#92400e' : '#fff';
+      var weight   = epi ? 3 : 2;
       var m = L.circleMarker([p.lat, p.lng], {
-        radius:radius, color:'#fff', weight:2, fillColor:fill, fillOpacity:0.82
-      }).bindTooltip(tip, {permanent:false, direction:'top'}).addTo(_mapa);
+        radius:radius, color:border, weight:weight, fillColor:fill, fillOpacity:0.85
+      }).bindTooltip(_tooltipBairro(p, epi), {permanent:false, direction:'top'}).addTo(_mapa);
       m._biDemMarker = true;
       return m;
     }
@@ -42622,13 +42997,11 @@ var BiDemograficoUI = (function () {
       if (!geom) return;
       try {
         var pct  = p.count / maxN;
-        var fill = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f97316' : pct > 0.2 ? '#facc15' : '#22c55e';
-        var tip  = '<strong>' + _esc(p.nome) + '</strong>' +
-                   (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
-                   '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+        var epi  = _ehEpicentro(p.nome);
+        var fill = _corBairro(pct, epi);
         var layer = L.geoJSON({ type:'Feature', geometry: geom }, {
-          style: { color:'#fff', weight:2, fillColor:fill, fillOpacity:0.65 }
-        }).bindTooltip(tip, {permanent:false, direction:'top'}).addTo(_mapa);
+          style: { color: epi ? '#92400e' : '#fff', weight: epi ? 2.5 : 1.5, fillColor:fill, fillOpacity:0.65 }
+        }).bindTooltip(_tooltipBairro(p, epi), {permanent:false, direction:'top'}).addTo(_mapa);
         layer._biDemMarker = true;
         if (circulo && _mapa.hasLayer(circulo)) _mapa.removeLayer(circulo);
       } catch(e) {}

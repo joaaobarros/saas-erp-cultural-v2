@@ -1779,7 +1779,37 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 54 (2026-06-15) → SESSÃO 55
+## HANDOFF ATUAL — SESSÃO 55 (2026-06-16) → SESSÃO 56
+
+### Estado: Deploy @963 · UX: BI Demográfico — mapa calor visível, bairros frios, epicentro, pais/mães por gênero, restrições expandíveis
+
+### O que foi feito nesta sessão (s85)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @963 | UX BI Demográfico — 5 melhorias visuais | `_renderCalor`: `radius:45`, `minOpacity:0.55`, gradiente começa em `0.0` (pontos sempre visíveis mesmo com endereços esparsos). `_renderBairros`: paleta fria (azul `#1e40af→#bfdbfe`) substitui cores quentes; constante `_EPICENTRO` — bairros Bom Jardim, Canindezinho, Siqueira, Granja Lisboa, Granja Portugal recebem cor âmbar `#f59e0b` com tooltip "★ epicentro" e borda `#92400e`. `_renderFamilias`: dois cards lado a lado "Pais" (bordas azuis) / "Mães" (bordas rosas) usando `r.genero.includes('homem'/'mulher')`; "Outro gênero" listado separadamente. `_renderRestricoes`: cards expandíveis por tipo com ícone Material, badge de contagem, lista de pessoas por tipo com campo "Obs:" quando `restricoesOutro` preenchido. |
+
+### Checklist de auditoria
+```
+[x] prompt()/confirm()/alert() — nenhum nativo introduzido
+[x] GAS.* namespace — sem novos ctrl_*; apenas front-end
+[x] CSS — sem classes novas sem definição (styles inline)
+[x] FsmGuardian — não aplicável (renderização de UI apenas)
+[x] Modais — não alterados
+[x] Datas — sem alterações de formato
+[x] BtnGuard — botões do mapa já usavam BtnGuard; sem novos botões
+```
+
+### Pendentes / próxima ação
+- Testar no browser: BI Demográfico → Carregar Mapa → mapa de calor mostra pontos visíveis mesmo com poucos registros
+- Mapa Bairros → bairros do Grande Bom Jardim aparecem em âmbar/dourado, demais em azul
+- Painel Pais/Mães → mostra dois cards distintos com listas
+- Restrições → cada tipo expande ao clicar; lista nomes + observações
+- Bugs auditoria pendentes: TAR-04, HUB-13, FIN-06
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 54 (2026-06-15) → SESSÃO 55
 
 ### Estado: Deploy @941 · Feat: Férias — ordem invertida, dropdown compartilhado, exclusão superadmin
 
