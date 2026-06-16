@@ -448,6 +448,39 @@ function ctrl_contratos_reordenar_atividades(idContrato, idMeta, ordemIds) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// VÍNCULO AÇÃO → INDICADOR
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Retorna lista simplificada de contratos → metas → indicadores RESULTADOS
+ * para popular os selects em cascata no formulário de Ação.
+ */
+function ctrl_contratos_para_vinculo() {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratos();
+    if (_LEITURA_CONTRATOS.indexOf(_nivelContratos(ctx.email)) === -1)
+      throw new Error('Sem permissão para listar contratos.');
+    return ContratosEngine.listarParaVinculo(ctx.orgId);
+  }, 'ctrl_contratos_para_vinculo');
+}
+
+/**
+ * Recomputa manualmente o `realizado` de um indicador a partir das Ações vinculadas.
+ * Usar após corrigir dados de ações sem precisar de deploy.
+ */
+function ctrl_contratos_recalcular_realizado(idContrato, idMeta, idIndicador) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxContratos();
+    if (_ESCRITA_CONTRATOS.indexOf(_nivelContratos(ctx.email)) === -1)
+      throw new Error('Sem permissão.');
+    if (!idContrato || !idMeta || !idIndicador)
+      throw new Error('idContrato, idMeta e idIndicador são obrigatórios.');
+    var ok = ContratosEngine.recalcularRealizadoDeAcoes(idContrato, idMeta, idIndicador, ctx.orgId);
+    return { ok: ok };
+  }, 'ctrl_contratos_recalcular_realizado');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MANUTENÇÃO / MIGRAÇÃO — executar manualmente no GAS Editor
 // ═══════════════════════════════════════════════════════════════
 

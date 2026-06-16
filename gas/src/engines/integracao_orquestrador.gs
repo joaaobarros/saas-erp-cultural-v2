@@ -83,6 +83,22 @@ var IntegracaoOrquestrador = (function () {
       } catch (eAlerta) {
         Logger.warn('integracao_orquestrador', 'onAcaoConcluida:alerta', eAlerta.message);
       }
+      // Recalcular realizado do indicador vinculado (best-effort)
+      try {
+        if (typeof AcaoRepository !== 'undefined' && typeof ContratosEngine !== 'undefined') {
+          var acaoConcluida = AcaoRepository.buscarPorId(orgId, acaoId);
+          if (acaoConcluida && acaoConcluida.vinculo && acaoConcluida.vinculo.indicadorId) {
+            ContratosEngine.recalcularRealizadoDeAcoes(
+              acaoConcluida.vinculo.contratoId,
+              acaoConcluida.vinculo.metaId,
+              acaoConcluida.vinculo.indicadorId,
+              orgId
+            );
+          }
+        }
+      } catch (eInd) {
+        Logger.warn('integracao_orquestrador', 'onAcaoConcluida:indicador', eInd.message);
+      }
     } catch (e) {
       Logger.warn('integracao_orquestrador', 'onAcaoConcluida', e.message);
     }

@@ -255,6 +255,7 @@
 
 | Deploy | Fase | Resumo |
 |---|---|---|
+| pendente | s88 — Indicadores+Ações | `contratos_engine`: `_gerarTrimestres` soma realizado; `recalcularRealizadoDeAcoes`; `listarParaVinculo`. `contratos_controller`: `ctrl_contratos_para_vinculo` + `ctrl_contratos_recalcular_realizado`. `acao_engine`: campos `vinculo{}` + `quantitativoRealizado`; `_recalcularVinculo` nos fluxos salvar/cancelar. `integracao_orquestrador`: `onAcaoConcluida` recalcula indicador. `index.html`: campos mensais 62px; badges % coloridos; grade com trimestres em DOM real-time; checkbox vinculação Ação→Indicador com cascata; `_recalcularInd` + funções _vinculo expostos nos returns dos IIFEs. |
 | pendente | RH+ENC | (1) `resumoFeriasPorPeriodo`: `saldoOficial` calculado sem acordos (usa datas oficiais); rescisão usa `p.saldoOficial`. (2) `EncargosUI.aplicarOficial(done)`: `done()` chamado após abrir modal — desbloqueia botão "Aplicar tabela oficial" |
 | @638 | CAR-09+CAR-10 | CAR-09: passageiros internos (select+tags) / externos (texto); backend passageirosInternos/Externos. CAR-10: paradas dinâmicas no form; rota.paradas[]; modal Saída→Paradas→Chegada com ícones dinâmicos |
 | @637 | CAR-08+FIN-12 | CAR-08: linha "Setor Solicitante" no modal carro-det-overlay. FIN-12: histórico com diff modal + restauração de versão (backup automático antes de restaurar) |

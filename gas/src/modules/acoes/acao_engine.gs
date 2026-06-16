@@ -88,6 +88,7 @@ var AcaoEngine = (function () {
         var existente = AcaoRepository.buscarPorId(orgId, dados.id);
         if (!existente) throw new Error('Ação não encontrada: ' + dados.id);
 
+        var vinculoAnterior = existente.vinculo || null;
         var atualizado = _merge(existente, dados);
         atualizado.atualizadoEm = agora;
         atualizado.versao       = (existente.versao || 1) + 1;
@@ -99,6 +100,7 @@ var AcaoEngine = (function () {
           entidade: 'acao', entidadeId: atualizado.id,
           usuario: emailUsuario, orgId: orgId, origem: 'acao_engine'
         });
+        _recalcularVinculo(atualizado.vinculo || null, vinculoAnterior, orgId);
 
         return { ok: true, id: atualizado.id };
 
@@ -106,27 +108,29 @@ var AcaoEngine = (function () {
         // ─── Criar ────────────────────────────────────────────────────────
         var id   = 'acao_' + new Date().getTime() + '_' + Math.random().toString(36).slice(2, 6);
         var nova = {
-          id:                  id,
-          orgId:               orgId,
-          nome:                (dados.nome || '').trim(),
-          tipo:                dados.tipo || TIPOS.OUTRO,
-          descricao:           (dados.descricao || '').trim(),
-          descricaoPublica:    (dados.descricaoPublica || '').trim(),
-          visibilidadePublica: !!dados.visibilidadePublica,
-          status:              ESTADOS.PLANEJADA,
-          responsavel:         (dados.responsavel || emailUsuario || '').trim(),
-          setor:               (dados.setor || '').trim(),
-          equipe:              dados.equipe || [],
-          dataInicio:          dados.dataInicio || '',
-          dataFim:             dados.dataFim    || '',
-          publicoPrevisto:     parseInt(dados.publicoPrevisto || 0, 10),
-          metaExecucao:        dados.metaExecucao || null,
-          riderTecnico:        dados.riderTecnico || [],
-          fases:               dados.fases || [],
-          criadoEm:            agora,
-          atualizadoEm:        agora,
-          criadoPor:           emailUsuario || '',
-          versao:              1
+          id:                    id,
+          orgId:                 orgId,
+          nome:                  (dados.nome || '').trim(),
+          tipo:                  dados.tipo || TIPOS.OUTRO,
+          descricao:             (dados.descricao || '').trim(),
+          descricaoPublica:      (dados.descricaoPublica || '').trim(),
+          visibilidadePublica:   !!dados.visibilidadePublica,
+          status:                ESTADOS.PLANEJADA,
+          responsavel:           (dados.responsavel || emailUsuario || '').trim(),
+          setor:                 (dados.setor || '').trim(),
+          equipe:                dados.equipe || [],
+          dataInicio:            dados.dataInicio || '',
+          dataFim:               dados.dataFim    || '',
+          publicoPrevisto:       parseInt(dados.publicoPrevisto || 0, 10),
+          metaExecucao:          dados.metaExecucao || null,
+          vinculo:               dados.vinculo || null,
+          quantitativoRealizado: Number(dados.quantitativoRealizado) || 0,
+          riderTecnico:          dados.riderTecnico || [],
+          fases:                 dados.fases || [],
+          criadoEm:              agora,
+          atualizadoEm:          agora,
+          criadoPor:             emailUsuario || '',
+          versao:                1
         };
 
         AcaoRepository.salvar(orgId, nova);
@@ -137,6 +141,9 @@ var AcaoEngine = (function () {
           usuario: emailUsuario, orgId: orgId, origem: 'acao_engine',
           contexto: { nome: nova.nome, tipo: nova.tipo }
         });
+        if (nova.vinculo && nova.vinculo.indicadorId) {
+          _recalcularVinculo(nova.vinculo, null, orgId);
+        }
 
         return { ok: true, id: id };
       }
@@ -194,13 +201,17 @@ var AcaoEngine = (function () {
         contexto: { statusAnterior: JSON.parse(snapshot).status, novoStatus: novoStatus, motivo: motivo || '' }
       });
 
-      // Integração: ao concluir → disparar evento para relatórios
+      // Integração: ao concluir → disparar evento para relatórios + recalcular indicador
       if (novoStatus === ESTADOS.CONCLUIDA) {
         try { IntegracaoOrquestrador.onAcaoConcluida(id, orgId, emailUsuario); } catch(_) {}
       }
       // Integração: ao iniciar execução → ativar linhas de orçamento
       if (novoStatus === ESTADOS.EM_EXECUCAO) {
         try { IntegracaoOrquestrador.onAcaoIniciada(id, orgId, emailUsuario); } catch(_) {}
+      }
+      // Ao cancelar: ação sai do cálculo → recalcular indicador vinculado
+      if (novoStatus === ESTADOS.CANCELADA && acao.vinculo && acao.vinculo.indicadorId) {
+        try { ContratosEngine.recalcularRealizadoDeAcoes(acao.vinculo.contratoId, acao.vinculo.metaId, acao.vinculo.indicadorId, orgId); } catch(_) {}
       }
 
       return { ok: true };
@@ -303,6 +314,22 @@ var AcaoEngine = (function () {
 
   // ─── Helpers internos ────────────────────────────────────────────────────
 
+  function _recalcularVinculo(vinculoNovo, vinculoAnterior, orgId) {
+    try {
+      if (typeof ContratosEngine === 'undefined') return;
+      if (vinculoNovo && vinculoNovo.indicadorId) {
+        ContratosEngine.recalcularRealizadoDeAcoes(vinculoNovo.contratoId, vinculoNovo.metaId, vinculoNovo.indicadorId, orgId);
+      }
+      // Se o vínculo mudou, recalcular o indicador anterior também (para zerar sua contribuição)
+      if (vinculoAnterior && vinculoAnterior.indicadorId &&
+          (!vinculoNovo || vinculoAnterior.indicadorId !== vinculoNovo.indicadorId)) {
+        ContratosEngine.recalcularRealizadoDeAcoes(vinculoAnterior.contratoId, vinculoAnterior.metaId, vinculoAnterior.indicadorId, orgId);
+      }
+    } catch(e) {
+      Logger.warn('acao_engine', '_recalcularVinculo', e.message);
+    }
+  }
+
   function _validar(dados) {
     if (!dados) throw new Error('Dados obrigatórios.');
     if (!dados.nome || !String(dados.nome).trim()) throw new Error('Nome da ação é obrigatório.');
@@ -318,13 +345,15 @@ var AcaoEngine = (function () {
     var campos = [
       'nome', 'tipo', 'descricao', 'descricaoPublica', 'visibilidadePublica',
       'responsavel', 'setor', 'equipe', 'dataInicio', 'dataFim',
-      'publicoPrevisto', 'metaExecucao', 'riderTecnico', 'fases'
+      'publicoPrevisto', 'metaExecucao', 'quantitativoRealizado', 'riderTecnico', 'fases'
     ];
     campos.forEach(function(c) {
       if (novos[c] !== undefined && novos[c] !== null) {
         existente[c] = novos[c];
       }
     });
+    // vinculo aceita null explícito para remover o vínculo
+    if (novos.vinculo !== undefined) existente.vinculo = novos.vinculo || null;
     return existente;
   }
 

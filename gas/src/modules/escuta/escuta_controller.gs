@@ -249,8 +249,9 @@ function ctrl_escuta_dados(params) {
  */
 function ctrl_escuta_pulse_obter(params) {
   return GasResponse.wrap(function() {
+    params = params || {};
     var ctx = _ctxEscuta();
-    return EscutaPulseEngine.obterPerguntaPulse(ctx.orgId, ctx.email);
+    return EscutaPulseEngine.obterPerguntaPulse(ctx.orgId, ctx.email, { soConsulta: !!params.soConsulta });
   }, 'ctrl_escuta_pulse_obter');
 }
 
@@ -496,6 +497,18 @@ function ctrl_escuta_banco_perguntas(params) {
 }
 
 /**
+ * Registra evento de interação UX com o widget pulse (abertura / fechamento).
+ * params: { tipo: 'abertura'|'fechamento', perguntaId, dimensao }
+ */
+function ctrl_escuta_pulse_evento(params) {
+  return GasResponse.wrap(function() {
+    params = params || {};
+    var ctx = _ctxEscuta();
+    return EscutaPulseEngine.registrarEventoPulse(ctx.orgId, params);
+  }, 'ctrl_escuta_pulse_evento');
+}
+
+/**
  * Monitoramento operacional do sistema pulse (RH+).
  * Cruza pulse_impressoes.json × pulse_respostas.json para responder:
  *   - Quantas vezes cada pergunta foi exibida vs. respondida
@@ -513,22 +526,28 @@ function ctrl_escuta_pulse_monitoramento(params) {
     var periodo = params.periodo ||
       (agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0'));
 
-    var impressoes = EscutaRepository.listarPulseImpressoes(ctx.orgId, periodo);
-    var respostas  = EscutaRepository.listarPulseRespostas(ctx.orgId, periodo);
-    var catalogo   = EscutaPulseEngine.obterCatalogoPerguntas(ctx.orgId);
+    var eventos   = EscutaRepository.listarPulseImpressoes(ctx.orgId, periodo);
+    var respostas = EscutaRepository.listarPulseRespostas(ctx.orgId, periodo);
+    var catalogo  = EscutaPulseEngine.obterCatalogoPerguntas(ctx.orgId);
 
-    // Agrega por pergunta (contadores + soma de notas para calcular média qualitativa)
+    // Separa eventos por tipo (registros antigos sem tipo contam como apresentacao)
+    var apresentacoes = eventos.filter(function(e) { return !e.tipo || e.tipo === 'apresentacao'; });
+    var aberturas     = eventos.filter(function(e) { return e.tipo === 'abertura'; });
+    var fechamentos   = eventos.filter(function(e) { return e.tipo === 'fechamento'; });
+
+    // ── Agrega por pergunta ──────────────────────────────────────────────────
     var porId = {};
     catalogo.forEach(function(p) {
       porId[p.id] = {
         id: p.id, dimensao: p.dimensao, texto: p.texto,
-        impressoes: 0, respostas: 0, ultimaUsadaEm: null, taxaEngajamento: null,
+        apresentacoes: 0, aberturas: 0, fechamentos: 0,
+        respostas: 0, ultimaUsadaEm: null,
         _somaNotas: 0, _contNotas: 0, distribuicao: [0,0,0,0,0]
       };
     });
-    impressoes.forEach(function(i) {
-      if (porId[i.perguntaId]) porId[i.perguntaId].impressoes++;
-    });
+    apresentacoes.forEach(function(e) { if (porId[e.perguntaId]) porId[e.perguntaId].apresentacoes++; });
+    aberturas.forEach(function(e)     { if (porId[e.perguntaId]) porId[e.perguntaId].aberturas++;     });
+    fechamentos.forEach(function(e)   { if (porId[e.perguntaId]) porId[e.perguntaId].fechamentos++;   });
     respostas.forEach(function(r) {
       if (!porId[r.perguntaId]) return;
       porId[r.perguntaId].respostas++;
@@ -544,61 +563,61 @@ function ctrl_escuta_pulse_monitoramento(params) {
 
     var porPergunta = Object.keys(porId).map(function(id) {
       var p = porId[id];
-      p.taxaEngajamento = p.impressoes > 0 ? parseFloat((p.respostas / p.impressoes).toFixed(3)) : null;
-      p.mediaNota = p._contNotas > 0 ? Math.round((p._somaNotas / p._contNotas) * 10) / 10 : null;
+      p.taxaAbertura  = p.apresentacoes > 0 ? parseFloat((p.aberturas  / p.apresentacoes).toFixed(3)) : null;
+      p.taxaResposta  = p.aberturas     > 0 ? parseFloat((p.respostas  / p.aberturas    ).toFixed(3)) : null;
+      p.taxaEngajamento = p.apresentacoes > 0 ? parseFloat((p.respostas / p.apresentacoes).toFixed(3)) : null;
+      p.ignorados     = Math.max(0, p.apresentacoes - p.aberturas);
+      p.mediaNota     = p._contNotas > 0 ? Math.round((p._somaNotas / p._contNotas) * 10) / 10 : null;
       delete p._somaNotas; delete p._contNotas;
       return p;
-    }).sort(function(a, b) { return b.impressoes - a.impressoes; });
+    }).sort(function(a, b) { return b.apresentacoes - a.apresentacoes; });
 
-    // Indicadores de clima por dimensão (mesmo algoritmo do Painel Pulse)
+    // ── Totais globais ───────────────────────────────────────────────────────
+    var totApres = apresentacoes.length;
+    var totAbr   = aberturas.length;
+    var totFech  = fechamentos.length;
+    var totResp  = respostas.length;
+
+    // ── Indicadores de clima ─────────────────────────────────────────────────
     var dashPulse = EscutaPulseEngine.obterDashboardPulse(ctx.orgId, periodo);
     var indicadores = dashPulse.ok ? dashPulse.indicadores : null;
     var bloqueado   = dashPulse.ok ? dashPulse.bloqueado : false;
     var confianca   = dashPulse.ok ? dashPulse.confianca : null;
 
-    var semResposta = porPergunta.filter(function(p) {
-      return p.impressoes > 0 && p.respostas === 0;
-    });
-
-    // Pulse é sempre anônimo — contamos participantes por colaboradorId mas
-    // nunca expomos nomes de quem não respondeu (apenas a contagem)
-    // Normaliza para lowercase para evitar mismatch de case entre login e cadastro
+    // ── Colaboradores sem atividade ──────────────────────────────────────────
     var idsComAtividade = {};
     respostas.forEach(function(r) {
       if (r.colaboradorId) idsComAtividade[String(r.colaboradorId).toLowerCase().trim()] = true;
     });
-
-    var totalAtivos        = 0;
-    var totalSemAtividade  = 0;
+    var totalAtivos = 0, totalSemAtividade = 0;
     try {
-      // AcessoService é a fonte canônica de usuários ativos; o colaboradorId nas
-      // respostas pulse é o email da sessão, que coincide com u.email aqui.
       var colaboradores = AcessoService.listarUsuarios()
         .filter(function(u) { return u.status === 'ativo'; });
-      totalAtivos       = colaboradores.length;
-      totalSemAtividade = colaboradores
-        .filter(function(u) {
-          var email = String(u.email || '').toLowerCase().trim();
-          return !email || !idsComAtividade[email];
-        }).length;
+      totalAtivos = colaboradores.length;
+      totalSemAtividade = colaboradores.filter(function(u) {
+        var email = String(u.email || '').toLowerCase().trim();
+        return !email || !idsComAtividade[email];
+      }).length;
     } catch(e) { /* não crítico */ }
 
     return {
-      periodo:         periodo,
-      totalImpressoes: impressoes.length,
-      totalRespostas:  respostas.length,
-      taxaGeral:       impressoes.length > 0
-        ? parseFloat((respostas.length / impressoes.length).toFixed(3)) : null,
-      porPergunta:     porPergunta,
-      semResposta:     semResposta,
-      indicadores:     bloqueado ? null : indicadores,
-      confianca:       confianca,
-      bloqueado:       bloqueado,
+      periodo:          periodo,
+      apresentacoes:    totApres,
+      aberturas:        totAbr,
+      fechamentos:      totFech,
+      respondidos:      totResp,
+      ignorados:        Math.max(0, totApres - totAbr),
+      taxaAbertura:     totApres > 0 ? parseFloat((totAbr  / totApres).toFixed(3)) : null,
+      taxaResposta:     totAbr   > 0 ? parseFloat((totResp / totAbr  ).toFixed(3)) : null,
+      taxaEngajamento:  totApres > 0 ? parseFloat((totResp / totApres).toFixed(3)) : null,
+      porPergunta:      porPergunta,
+      indicadores:      bloqueado ? null : indicadores,
+      confianca:        confianca,
+      bloqueado:        bloqueado,
       colaboradores: {
-        total:           totalAtivos,
-        comAtividade:    Object.keys(idsComAtividade).length,
-        semAtividade:    totalSemAtividade
-        // nomes omitidos intencionalmente: Pulse é anônimo por design
+        total:        totalAtivos,
+        comAtividade: Object.keys(idsComAtividade).length,
+        semAtividade: totalSemAtividade
       }
     };
   }, 'ctrl_escuta_pulse_monitoramento');

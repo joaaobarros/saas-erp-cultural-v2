@@ -222,7 +222,8 @@ var EscutaPulseEngine = (function() {
    * @param {string} colaboradorId — email ou ID do colaborador
    * @returns {{ ok, pergunta|null, motivo, turno, progresso }}
    */
-  function obterPerguntaPulse(orgId, colaboradorId) {
+  function obterPerguntaPulse(orgId, colaboradorId, opts) {
+    opts = opts || {};
     try {
       if (!_momentoPropicio()) {
         return { ok: true, pergunta: null, motivo: 'momento_impropicio' };
@@ -283,22 +284,28 @@ var EscutaPulseEngine = (function() {
         coberturaD[r.dimensao] = (coberturaD[r.dimensao] || 0) + 1;
       });
 
-      // Ordena por menor cobertura da dimensão (fairness entre dimensões)
+      // Ordena por menor cobertura da dimensão; aleatoriza dentro do mesmo nível
+      // para garantir que todas as perguntas de uma dimensão sejam servidas ao longo do tempo
       candidatas.sort(function(a, b) {
-        return (coberturaD[a.dimensao] || 0) - (coberturaD[b.dimensao] || 0);
+        var diff = (coberturaD[a.dimensao] || 0) - (coberturaD[b.dimensao] || 0);
+        return diff !== 0 ? diff : Math.random() - 0.5;
       });
 
       var pergunta = candidatas[0];
 
-      // Registra impressão (sem PII — sem colaboradorId)
-      try {
-        EscutaRepository.salvarPulseImpressao(orgId, {
-          perguntaId: pergunta.id,
-          dimensao:   pergunta.dimensao,
-          turno:      _turnoAtual().nome,
-          periodo:    periodo
-        });
-      } catch(e) { /* não crítico */ }
+      // Registra apresentação apenas quando a pergunta é NOVA (FAB passa de oculto → visível).
+      // soConsulta=true = polling com FAB já visível — sem nova apresentação.
+      if (!opts.soConsulta) {
+        try {
+          EscutaRepository.salvarPulseImpressao(orgId, {
+            tipo:       'apresentacao',
+            perguntaId: pergunta.id,
+            dimensao:   pergunta.dimensao,
+            turno:      _turnoAtual().nome,
+            periodo:    periodo
+          });
+        } catch(e) { /* não crítico */ }
+      }
 
       return {
         ok:       true,
@@ -609,12 +616,36 @@ var EscutaPulseEngine = (function() {
     });
   }
 
+  // ─── Registro de eventos UX (abertura / fechamento) ────────────────────────
+
+  /**
+   * Registra um evento de interação do usuário com o widget pulse.
+   * @param {string} orgId
+   * @param {{ tipo: 'abertura'|'fechamento', perguntaId, dimensao }} dados
+   */
+  function registrarEventoPulse(orgId, dados) {
+    var tipos = ['abertura', 'fechamento'];
+    if (!dados || tipos.indexOf(dados.tipo) < 0 || !dados.perguntaId) return { ok: true };
+    var periodo = _periodoAtual();
+    try {
+      EscutaRepository.salvarPulseImpressao(orgId, {
+        tipo:       dados.tipo,
+        perguntaId: dados.perguntaId,
+        dimensao:   dados.dimensao || '',
+        turno:      _turnoAtual().nome,
+        periodo:    periodo
+      });
+    } catch(e) { /* não crítico */ }
+    return { ok: true };
+  }
+
   // ─── API pública ─────────────────────────────────────────────────────────────
 
   return {
     obterPerguntaPulse:   obterPerguntaPulse,
     registrarRespostaPulse: registrarRespostaPulse,
     obterDashboardPulse:  obterDashboardPulse,
-    obterCatalogoPerguntas: obterCatalogoPerguntas
+    obterCatalogoPerguntas: obterCatalogoPerguntas,
+    registrarEventoPulse:   registrarEventoPulse
   };
 })();

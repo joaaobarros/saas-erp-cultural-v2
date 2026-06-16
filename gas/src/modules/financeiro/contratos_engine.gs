@@ -1191,6 +1191,71 @@ var ContratosEngine = (function () {
     } catch (_) {}
   }
 
+  /**
+   * Recomputa `realizado` de cada mês do indicador a partir das Ações vinculadas.
+   * Chamado pelo AcaoEngine (salvar/cancelar) e pelo IntegracaoOrquestrador (concluída).
+   *
+   * Cada Ação com vinculo.indicadorId === idIndicador (não cancelada) contribui com
+   * `quantitativoRealizado` no mês de `dataFim || dataInicio` (YYYY-MM).
+   * A recomputação é sempre total (não incremental) para garantir consistência.
+   */
+  function recalcularRealizadoDeAcoes(idContrato, idMeta, idIndicador, orgId) {
+    orgId = orgId || _orgId();
+    try {
+      var somaPorMes = {};
+      if (typeof AcaoRepository !== 'undefined') {
+        AcaoRepository.listar(orgId, {}).forEach(function(a) {
+          if (a.status === 'cancelada') return;
+          if (!a.vinculo) return;
+          if (a.vinculo.contratoId  !== idContrato)  return;
+          if (a.vinculo.metaId      !== idMeta)       return;
+          if (a.vinculo.indicadorId !== idIndicador)  return;
+          var dataRef = a.dataFim || a.dataInicio || '';
+          if (!dataRef) return;
+          var mes = String(dataRef).slice(0, 7);
+          somaPorMes[mes] = (somaPorMes[mes] || 0) + (Number(a.quantitativoRealizado) || 0);
+        });
+      }
+      ContratoRepository.modificarContrato(orgId, idContrato, function(contrato) {
+        (contrato.metas || []).forEach(function(meta) {
+          if (meta.id !== idMeta) return;
+          (meta.indicadores || []).forEach(function(ind) {
+            if (ind.id !== idIndicador) return;
+            (ind.meses || []).forEach(function(m) { m.realizado = somaPorMes[m.mes] || 0; });
+            ind.trimestres = _gerarTrimestres(ind.meses || []);
+          });
+        });
+        return contrato;
+      });
+      _audit('INDICADOR_REALIZADO_RECALCULADO', { idContrato: idContrato, idMeta: idMeta, idIndicador: idIndicador });
+      return true;
+    } catch(e) {
+      Logger.error('contratos_engine', 'recalcularRealizadoDeAcoes', e.message);
+      return false;
+    }
+  }
+
+  /**
+   * Lista contratos com metas e indicadores RESULTADOS para os selects em cascata
+   * do formulário de Ação (vínculo com indicador).
+   * Retorna apenas contratos que têm ao menos um indicador RESULTADOS.
+   */
+  function listarParaVinculo(orgId) {
+    orgId = orgId || _orgId();
+    var todos = ContratoRepository.listar(orgId, {});
+    return todos
+      .filter(function(c) { return c.status !== 'encerrado' && c.status !== 'cancelado'; })
+      .map(function(c) {
+        var metas = (c.metas || []).map(function(m) {
+          var inds = (m.indicadores || []).filter(function(i) { return i.tipoIndicador === 'RESULTADOS'; })
+            .map(function(i) { return { id: i.id, nome: i.nome || i.id, unidade: i.unidade || '' }; });
+          return { id: m.id, titulo: m.titulo || m.nome || m.id, indicadores: inds };
+        }).filter(function(m) { return m.indicadores.length > 0; });
+        return { id: c.id, nome: c.nome || c.numero || c.id, numero: c.numero || '', metas: metas };
+      })
+      .filter(function(c) { return c.metas.length > 0; });
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // INDICADORES GESTÃO (por Contrato)
   // ──────────────────────────────────────────────────────────────────
@@ -1541,8 +1606,10 @@ var ContratosEngine = (function () {
     calcularTotalRubrica:        calcularTotalRubrica,
 
     // Indicadores RESULTADOS
-    salvarIndicador:    salvarIndicador,
-    atualizarMetaMes:   atualizarMetaMes,
+    salvarIndicador:             salvarIndicador,
+    atualizarMetaMes:            atualizarMetaMes,
+    recalcularRealizadoDeAcoes:  recalcularRealizadoDeAcoes,
+    listarParaVinculo:           listarParaVinculo,
 
     // Indicadores GESTÃO
     salvarIndicadorGestao:  salvarIndicadorGestao,

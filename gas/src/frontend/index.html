@@ -6310,6 +6310,40 @@ select.form-control { cursor: pointer; }
                 <label class="form-label">Descrição Pública</label>
                 <textarea id="acao-descricao-pub" class="form-control" rows="2" placeholder="Texto exibido no portal público…"></textarea>
               </div>
+              <!-- Vínculo com Indicador de Contrato -->
+              <div class="form-group" style="grid-column:1/-1;margin-top:4px;">
+                <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="document.getElementById('acao-vinculo-check').click()">
+                  <input type="checkbox" id="acao-vinculo-check" style="width:16px;height:16px;cursor:pointer;" onclick="event.stopPropagation();AcoesUI._toggleVinculo(this.checked)">
+                  <label style="margin:0;font-weight:600;font-size:13px;cursor:pointer;">Vincular a indicador de contrato</label>
+                </div>
+                <div id="acao-vinculo-campos" style="display:none;margin-top:10px;background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border);">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                      <label class="form-label" style="font-size:12px;">Contrato *</label>
+                      <select id="acao-vinculo-contrato" class="form-control" style="font-size:13px;" onchange="AcoesUI._onVinculoContratoChange()">
+                        <option value="">Carregando…</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size:12px;">Meta *</label>
+                      <select id="acao-vinculo-meta" class="form-control" style="font-size:13px;" onchange="AcoesUI._onVinculoMetaChange()" disabled>
+                        <option value="">Selecione o contrato primeiro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size:12px;">Indicador *</label>
+                      <select id="acao-vinculo-indicador" class="form-control" style="font-size:13px;" disabled>
+                        <option value="">Selecione a meta primeiro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label" style="font-size:12px;">Qtd. p/ indicador</label>
+                      <input type="number" id="acao-vinculo-qtd" class="form-control" style="font-size:13px;" placeholder="Ex: 120" min="0">
+                      <span style="font-size:11px;color:var(--muted);">Padrão: público previsto</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div id="acao-form-erro" class="error-text oculto" style="margin-top:8px;"></div>
           </div>
@@ -10347,7 +10381,10 @@ var GAS = {
     // ── Histórico de versões ──
     historico:  function(cid,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_historico(cid); },
     versao:     function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_versao(cid,v); },
-    restaurar:  function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_restaurar_versao(cid,v); }
+    restaurar:  function(cid,v,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contrato_restaurar_versao(cid,v); },
+    // ── Vínculo Ação → Indicador ──
+    paraVinculo:         function(cb,err)              { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_para_vinculo(); },
+    recalcularRealizado: function(cid,mid,iid,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_contratos_recalcular_realizado(cid,mid,iid); }
   },
   catalogoSeplag: {
     listar:          function(cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_catalogo_listar(false); },
@@ -13643,6 +13680,7 @@ var ContratosDetailUI = (function() {
         +'<span style="font-size:12px;color:var(--muted);margin-left:8px;">'+escaparHtml(m.titulo||m.nome||'')+'</span></div>'
         +'<span class="badge badge-primary">Meta: '+metaTotal+' '+escaparHtml(ind.unidade||'')+'</span>'
         +'<span data-total-pct="1">'+(pctTotal !== null ? '<span class="ind-pct-badge '+pctCls+'" style="font-size:12px;">'+realTotal+'/'+metaTotal+' ('+pctTotal+'%)</span>' : '')+'</span>'
+        +'<button class="btn btn-ghost btn-sm" title="Recalcular realizado das Ações vinculadas" data-bg-skip="1" onclick="ContratosDetailUI._recalcularInd(\''+escaparHtml(m.id)+'\',\''+escaparHtml(ind.id)+'\')"><span class="ms ms-sm">sync</span></button>'
         +'</div>'
         +gradeHtml
         +'</div>';
@@ -13738,6 +13776,16 @@ var ContratosDetailUI = (function() {
       var tCls = tp === null ? '' : (tp >= 100 ? 'ind-pct-ok' : (tp >= 70 ? 'ind-pct-warn' : 'ind-pct-low'));
       tpEl.innerHTML = tp !== null ? '<span class="ind-pct-badge '+tCls+'" style="font-size:12px;">'+tR+'/'+tM+' ('+tp+'%)</span>' : '';
     }
+  }
+
+  function _recalcularInd(metaId, indId) {
+    GAS.contratos.recalcularRealizado(_cid, metaId, indId, function(r) {
+      if (!r || !r.ok) { Toast.aviso('Falha ao recalcular.'); return; }
+      Toast.sucesso('Realizado recalculado a partir das Ações vinculadas.');
+      GAS.contratos.obter(_cid, function(resp) {
+        if (resp && resp.ok) { _obj = resp.data; _renderIndicadoresR(); }
+      });
+    });
   }
 
   function _renderIndicadoresG() {
@@ -14296,6 +14344,7 @@ var ContratosDetailUI = (function() {
     fecharIndrModal: fecharIndrModal,
     salvarIndicadorR: salvarIndicadorR,
     _updMes: _updMes,
+    _recalcularInd: _recalcularInd,
     abrirIndgModal: abrirIndgModal,
     fecharIndgModal: fecharIndgModal,
     salvarIndicadorG: salvarIndicadorG,
@@ -27719,6 +27768,107 @@ var AcoesUI = (function() {
   }
 
   // ────────────────────────────────────────────────────────
+  // ── Vínculo com Indicador ────────────────────────────────────
+
+  var _vinculoContratos = [];
+
+  function _toggleVinculo(checked) {
+    var el = document.getElementById('acao-vinculo-campos');
+    if (!el) return;
+    el.style.display = checked ? '' : 'none';
+    if (checked && !_vinculoContratos.length) _carregarVinculoContratos(null);
+  }
+
+  function _carregarVinculoContratos(cb) {
+    GAS.contratos.paraVinculo(function(r) {
+      _vinculoContratos = (r && r.ok && r.data) ? r.data : [];
+      var sel = document.getElementById('acao-vinculo-contrato');
+      if (sel) {
+        sel.innerHTML = '<option value="">Selecionar contrato…</option>' +
+          _vinculoContratos.map(function(c) {
+            return '<option value="'+escaparHtml(c.id)+'">'+escaparHtml(c.nome||c.numero||c.id)+'</option>';
+          }).join('');
+      }
+      if (cb) cb();
+    }, function() {
+      var sel = document.getElementById('acao-vinculo-contrato');
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar contratos</option>';
+    });
+  }
+
+  function _onVinculoContratoChange() {
+    var cid    = (document.getElementById('acao-vinculo-contrato')||{}).value || '';
+    var selMeta = document.getElementById('acao-vinculo-meta');
+    var selInd  = document.getElementById('acao-vinculo-indicador');
+    if (!selMeta || !selInd) return;
+    selMeta.innerHTML = '<option value="">Selecionar meta…</option>';
+    selInd.innerHTML  = '<option value="">Selecionar meta primeiro</option>';
+    selMeta.disabled  = !cid;
+    selInd.disabled   = true;
+    if (!cid) return;
+    var c = null;
+    for (var i = 0; i < _vinculoContratos.length; i++) { if (_vinculoContratos[i].id === cid) { c = _vinculoContratos[i]; break; } }
+    if (!c) return;
+    (c.metas || []).forEach(function(m) {
+      var opt = document.createElement('option');
+      opt.value = m.id; opt.textContent = m.titulo || m.id;
+      selMeta.appendChild(opt);
+    });
+    selMeta.disabled = !(c.metas && c.metas.length);
+  }
+
+  function _onVinculoMetaChange() {
+    var cid   = (document.getElementById('acao-vinculo-contrato')||{}).value || '';
+    var mid   = (document.getElementById('acao-vinculo-meta')||{}).value || '';
+    var selInd = document.getElementById('acao-vinculo-indicador');
+    if (!selInd) return;
+    selInd.innerHTML = '<option value="">Selecionar indicador…</option>';
+    selInd.disabled  = true;
+    if (!cid || !mid) return;
+    var c = null;
+    for (var i = 0; i < _vinculoContratos.length; i++) { if (_vinculoContratos[i].id === cid) { c = _vinculoContratos[i]; break; } }
+    if (!c) return;
+    var m = null;
+    for (var j = 0; j < (c.metas||[]).length; j++) { if (c.metas[j].id === mid) { m = c.metas[j]; break; } }
+    if (!m) return;
+    (m.indicadores || []).forEach(function(ind) {
+      var opt = document.createElement('option');
+      opt.value = ind.id;
+      opt.textContent = ind.nome + (ind.unidade ? ' ('+ind.unidade+')' : '');
+      selInd.appendChild(opt);
+    });
+    selInd.disabled = !(m.indicadores && m.indicadores.length);
+  }
+
+  function _preencherVinculoForm(vinculo, qtd) {
+    var chk = document.getElementById('acao-vinculo-check');
+    var campos = document.getElementById('acao-vinculo-campos');
+    var hasVinculo = !!(vinculo && vinculo.indicadorId);
+    if (chk) chk.checked = hasVinculo;
+    if (campos) campos.style.display = hasVinculo ? '' : 'none';
+    var qtdEl = document.getElementById('acao-vinculo-qtd');
+    if (qtdEl) qtdEl.value = (qtd != null ? qtd : '');
+    if (!hasVinculo) return;
+    _carregarVinculoContratos(function() {
+      var selC = document.getElementById('acao-vinculo-contrato');
+      if (selC && vinculo.contratoId) {
+        selC.value = vinculo.contratoId;
+        _onVinculoContratoChange();
+        setTimeout(function() {
+          var selM = document.getElementById('acao-vinculo-meta');
+          if (selM && vinculo.metaId) {
+            selM.value = vinculo.metaId;
+            _onVinculoMetaChange();
+            setTimeout(function() {
+              var selI = document.getElementById('acao-vinculo-indicador');
+              if (selI && vinculo.indicadorId) selI.value = vinculo.indicadorId;
+            }, 50);
+          }
+        }, 50);
+      }
+    });
+  }
+
   // Formulário criar / editar
   // ────────────────────────────────────────────────────────
 
@@ -27752,6 +27902,20 @@ var AcoesUI = (function() {
         }).join('');
     }
 
+    // Vínculo com indicador
+    _preencherVinculoForm(
+      acao && acao.vinculo ? acao.vinculo : null,
+      acao ? acao.quantitativoRealizado : (acao ? acao.publicoPrevisto : null)
+    );
+    // Quando criando nova ação, pré-preenche qtd com público previsto ao digitar
+    var publEl = document.getElementById('acao-publico');
+    var qtdEl  = document.getElementById('acao-vinculo-qtd');
+    if (publEl && qtdEl && !acao) {
+      publEl.addEventListener('input', function() {
+        if (!qtdEl.value) qtdEl.placeholder = 'Ex: ' + (this.value || '0');
+      }, { once: true });
+    }
+
     var erroEl = document.getElementById('acao-form-erro');
     if (erroEl) erroEl.classList.add('oculto');
 
@@ -27772,23 +27936,44 @@ var AcoesUI = (function() {
     var erroEl = document.getElementById('acao-form-erro');
     if (erroEl) erroEl.classList.add('oculto');
 
+    // Coletar vínculo com indicador
+    var vinculoCheck = document.getElementById('acao-vinculo-check');
+    var vinculoCid   = document.getElementById('acao-vinculo-contrato');
+    var vinculoMid   = document.getElementById('acao-vinculo-meta');
+    var vinculoIid   = document.getElementById('acao-vinculo-indicador');
+    var vinculoQtd   = document.getElementById('acao-vinculo-qtd');
+    var vinculo = null;
+    var qtdRealizado = 0;
+    if (vinculoCheck && vinculoCheck.checked && vinculoCid && vinculoMid && vinculoIid &&
+        vinculoCid.value && vinculoMid.value && vinculoIid.value) {
+      vinculo = { contratoId: vinculoCid.value, metaId: vinculoMid.value, indicadorId: vinculoIid.value };
+      qtdRealizado = parseFloat((vinculoQtd && vinculoQtd.value) || 0) || 0;
+    }
+
     var dados = {
-      id:                  document.getElementById('acao-id').value.trim() || undefined,
-      nome:                document.getElementById('acao-nome').value.trim(),
-      tipo:                document.getElementById('acao-tipo').value,
-      responsavel:         document.getElementById('acao-responsavel').value.trim(),
-      setor:               document.getElementById('acao-setor').value,
-      dataInicio:          document.getElementById('acao-data-inicio').value,
-      dataFim:             document.getElementById('acao-data-fim').value,
-      publicoPrevisto:     parseInt(document.getElementById('acao-publico').value || 0, 10),
-      visibilidadePublica: document.getElementById('acao-visibilidade').checked,
-      descricao:           document.getElementById('acao-descricao').value.trim(),
-      descricaoPublica:    document.getElementById('acao-descricao-pub').value.trim()
+      id:                    document.getElementById('acao-id').value.trim() || undefined,
+      nome:                  document.getElementById('acao-nome').value.trim(),
+      tipo:                  document.getElementById('acao-tipo').value,
+      responsavel:           document.getElementById('acao-responsavel').value.trim(),
+      setor:                 document.getElementById('acao-setor').value,
+      dataInicio:            document.getElementById('acao-data-inicio').value,
+      dataFim:               document.getElementById('acao-data-fim').value,
+      publicoPrevisto:       parseInt(document.getElementById('acao-publico').value || 0, 10),
+      visibilidadePublica:   document.getElementById('acao-visibilidade').checked,
+      descricao:             document.getElementById('acao-descricao').value.trim(),
+      descricaoPublica:      document.getElementById('acao-descricao-pub').value.trim(),
+      vinculo:               vinculo,
+      quantitativoRealizado: qtdRealizado
     };
     if (!dados.id) delete dados.id;
 
     if (!dados.nome) {
       if (erroEl) { erroEl.textContent = 'Nome é obrigatório.'; erroEl.classList.remove('oculto'); }
+      BtnGuard.liberar('acao-salvar-btn');
+      return;
+    }
+    if (vinculoCheck && vinculoCheck.checked && (!vinculo || !vinculo.indicadorId)) {
+      if (erroEl) { erroEl.textContent = 'Selecione contrato, meta e indicador para vincular.'; erroEl.classList.remove('oculto'); }
       BtnGuard.liberar('acao-salvar-btn');
       return;
     }
@@ -28465,7 +28650,11 @@ var AcoesUI = (function() {
     _salvarFase:           _salvarFase,
     _excluirFase:          _excluirFase,
     getPainelAcao:         function() { return _painelAcao; },
-    compartilharRelatorio: compartilharRelatorio
+    compartilharRelatorio: compartilharRelatorio,
+    _toggleVinculo:           _toggleVinculo,
+    _onVinculoContratoChange: _onVinculoContratoChange,
+    _onVinculoMetaChange:     _onVinculoMetaChange,
+    _preencherVinculoForm:    _preencherVinculoForm
   };
 
 })();
