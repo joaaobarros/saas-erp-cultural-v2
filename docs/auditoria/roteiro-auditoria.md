@@ -1779,9 +1779,24 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 55 (2026-06-16) → SESSÃO 56
+## HANDOFF ATUAL — SESSÃO 55b (2026-06-16) → SESSÃO 56
 
-### Estado: Deploy @963 · UX: BI Demográfico — mapa calor visível, bairros frios, epicentro, pais/mães por gênero, restrições expandíveis
+### Estado: Deploy @979 · Fix: tooltip bairros sem rótulo epicentro (s89b)
+
+### O que foi feito nesta sessão (s89b)
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @979 | Fix tooltip epicentro | `_tooltipBairro`: parâmetro `epicentro` removido; linha `★ epicentro` excluída; duas chamadas `.bindTooltip` simplificadas. Diferenciação visual por cor âmbar permanece. |
+
+### Pendentes / próxima ação
+- Testar: Mapa Bairros → tooltip dos bairros do GBJ não exibe mais rótulo; cor âmbar permanece
+- Bugs auditoria pendentes: TAR-04, HUB-13, FIN-06
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 55 (2026-06-16) → SESSÃO 55b
+
+### Estado: Deploy @978 · UX: BI Demográfico — mapa calor visível, bairros frios, epicentro, pais/mães por gênero, restrições expandíveis
 
 ### O que foi feito nesta sessão (s85)
 

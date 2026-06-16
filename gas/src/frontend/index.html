@@ -42969,9 +42969,8 @@ var BiDemograficoUI = (function () {
       return '#bfdbfe';
     }
 
-    function _tooltipBairro(p, epicentro) {
+    function _tooltipBairro(p) {
       return '<strong>' + _esc(p.nome) + '</strong>' +
-        (epicentro ? ' <span style="color:#f59e0b;font-size:10px;">★ epicentro</span>' : '') +
         (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
         '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
     }
@@ -42986,7 +42985,7 @@ var BiDemograficoUI = (function () {
       var weight   = epi ? 3 : 2;
       var m = L.circleMarker([p.lat, p.lng], {
         radius:radius, color:border, weight:weight, fillColor:fill, fillOpacity:0.85
-      }).bindTooltip(_tooltipBairro(p, epi), {permanent:false, direction:'top'}).addTo(_mapa);
+      }).bindTooltip(_tooltipBairro(p), {permanent:false, direction:'top'}).addTo(_mapa);
       m._biDemMarker = true;
       return m;
     }
@@ -43001,7 +43000,7 @@ var BiDemograficoUI = (function () {
         var fill = _corBairro(pct, epi);
         var layer = L.geoJSON({ type:'Feature', geometry: geom }, {
           style: { color: epi ? '#92400e' : '#fff', weight: epi ? 2.5 : 1.5, fillColor:fill, fillOpacity:0.65 }
-        }).bindTooltip(_tooltipBairro(p, epi), {permanent:false, direction:'top'}).addTo(_mapa);
+        }).bindTooltip(_tooltipBairro(p), {permanent:false, direction:'top'}).addTo(_mapa);
         layer._biDemMarker = true;
         if (circulo && _mapa.hasLayer(circulo)) _mapa.removeLayer(circulo);
       } catch(e) {}
