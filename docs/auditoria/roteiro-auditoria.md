@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s94 @992 · s93 @991 (Datas bairros/CCBJ/cultura) · s92 @987
+> Deploy atual: s95 @994 (Contratos UX + canvas Quadros tela cheia) · s94 @992 · s93 @991
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
