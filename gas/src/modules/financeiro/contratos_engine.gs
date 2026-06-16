@@ -31,7 +31,8 @@
 var STATUS_CONTRATO = Object.freeze({
   ATIVO:     'Ativo',
   SUSPENSO:  'Suspenso',
-  ENCERRADO: 'Encerrado'
+  ENCERRADO: 'Encerrado',
+  CANCELADO: 'Cancelado'
 });
 
 var TIPO_META = Object.freeze({
@@ -75,9 +76,10 @@ function _getCodigoSeplagPessoal() {
 // ── FSM ───────────────────────────────────────────────────────────────
 
 var _TRANSICOES_CONTRATO = {
-  'Ativo':     ['Suspenso', 'Encerrado'],
-  'Suspenso':  ['Ativo', 'Encerrado'],
-  'Encerrado': []
+  'Ativo':     ['Suspenso', 'Encerrado', 'Cancelado'],
+  'Suspenso':  ['Ativo', 'Encerrado', 'Cancelado'],
+  'Encerrado': [],
+  'Cancelado': []
 };
 
 if (typeof FsmGuardian !== 'undefined') {
@@ -259,8 +261,8 @@ var ContratosEngine = (function () {
     orgId = orgId || _orgId();
     var c = ContratoRepository.buscarPorId(orgId, id);
     if (!c) throw new Error('Contrato não encontrado: ' + id);
-    if (c.status !== STATUS_CONTRATO.ENCERRADO)
-      throw new Error('Contrato deve estar ENCERRADO antes de ser excluído. Status atual: ' + c.status);
+    if (c.status !== STATUS_CONTRATO.ENCERRADO && c.status !== STATUS_CONTRATO.CANCELADO)
+      throw new Error('Contrato deve estar Encerrado ou Cancelado antes de ser excluído. Status atual: ' + c.status);
 
     var ok = ContratoRepository.excluir(orgId, id);
     _audit('CONTRATO_EXCLUIDO', { id: id, operador: emailOperador || '' });
@@ -320,6 +322,7 @@ var ContratosEngine = (function () {
       ativos:      totalAtivos,
       suspensos:   lista.filter(function (c) { return c.status === STATUS_CONTRATO.SUSPENSO; }).length,
       encerrados:  lista.filter(function (c) { return c.status === STATUS_CONTRATO.ENCERRADO; }).length,
+      cancelados:  lista.filter(function (c) { return c.status === STATUS_CONTRATO.CANCELADO; }).length,
       valorTotal:  valorTotal,
       valorAtivos: valorAtivos,
       porFonte:    porFonte,
@@ -1244,7 +1247,7 @@ var ContratosEngine = (function () {
     orgId = orgId || _orgId();
     var todos = ContratoRepository.listar(orgId, {});
     return todos
-      .filter(function(c) { return c.status !== 'encerrado' && c.status !== 'cancelado'; })
+      .filter(function(c) { return c.status !== STATUS_CONTRATO.ENCERRADO && c.status !== STATUS_CONTRATO.CANCELADO; })
       .map(function(c) {
         var metas = (c.metas || []).map(function(m) {
           var inds = (m.indicadores || []).filter(function(i) { return i.tipoIndicador === 'RESULTADOS'; })

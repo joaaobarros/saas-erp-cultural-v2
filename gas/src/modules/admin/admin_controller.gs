@@ -691,3 +691,9 @@ function ctrl_admin_excluirDataComemorativa(id) {
     return ConfigAdminService.excluirDataComemorativa(id);
   }, 'ctrl_admin_excluirDataComemorativa');
 }
+
+function ctrl_admin_toggleDataComemorativa(id, ativo) {
+  return GasResponse.wrap(function() {
+    return ConfigAdminService.toggleDataComemorativa(id, ativo);
+  }, 'ctrl_admin_toggleDataComemorativa');
+}

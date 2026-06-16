@@ -650,7 +650,8 @@ var ConfigAdminService = (function () {
     getDatasComemorativas:       getDatasComemorativas,
     listarDatasComemorativas:    listarDatasComemorativas,
     salvarDataComemorativa:      salvarDataComemorativa,
-    excluirDataComemorativa:     excluirDataComemorativa
+    excluirDataComemorativa:     excluirDataComemorativa,
+    toggleDataComemorativa:      toggleDataComemorativa
   };
 
   // ─── Terreno do Mapa ─────────────────────────────────────────────────────

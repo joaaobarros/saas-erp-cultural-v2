@@ -10243,9 +10243,10 @@ var GAS = {
     alternarManutencao:     function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarManutencaoEspaco({espacoId:id}); },
     alternarReserva:        function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_alternarReservaEspaco(id); },
     // Datas Comemorativas
-    listarDatasComemorativas: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarDatasComemorativas(); },
-    salvarDataComemorativa:   function(d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarDataComemorativa(d); },
-    excluirDataComemorativa:  function(id,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirDataComemorativa(id); }
+    listarDatasComemorativas: function(cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_listarDatasComemorativas(); },
+    salvarDataComemorativa:   function(d,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_salvarDataComemorativa(d); },
+    excluirDataComemorativa:  function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_excluirDataComemorativa(id); },
+    toggleDataComemorativa:   function(id,at,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_admin_toggleDataComemorativa(id,at); }
   },
   home: {
     datasComemorativas: function(cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_home_datasComemorativas(); }
@@ -12416,12 +12417,13 @@ var ContratosUI = (function() {
   var _meuNivel   = 'colaborador';
   var _podeEditar = false;
 
-  var _STATUS_LABEL = { Ativo:'Ativo', Suspenso:'Suspenso', Encerrado:'Encerrado' };
+  var _STATUS_LABEL = { Ativo:'Ativo', Suspenso:'Suspenso', Encerrado:'Encerrado', Cancelado:'Cancelado' };
 
   function _badgeStatus(s) {
     var cls = s === 'Ativo'     ? 'badge-success'
             : s === 'Suspenso'  ? 'badge-warning'
             : s === 'Encerrado' ? 'badge-muted'
+            : s === 'Cancelado' ? 'badge-cancelado'
             : 'badge-primary';
     return '<span class="badge '+cls+'">'+escaparHtml(_STATUS_LABEL[s]||s)+'</span>';
   }
@@ -12453,18 +12455,26 @@ var ContratosUI = (function() {
         +'<p style="font-size:13px;color:var(--muted)">Nenhum contrato encontrado.</p></div>';
       return;
     }
-    el.innerHTML = lista.map(function(c) {
+    var sorted = lista.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||'','pt'); });
+    el.innerHTML = sorted.map(function(c) {
       var btnEditar = _podeEditar
         ? '<button class="btn btn-ghost btn-sm btn-editar-contrato" data-id="'+escaparHtml(c.id)+'" title="Editar">'
           +'<span class="ms ms-sm">edit</span></button>'
         : '';
       var btnGerenciar = '<button class="btn btn-ghost btn-sm btn-gerenciar-contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" title="Metas, Rubricas, Indicadores"><span class="ms ms-sm">description</span></button>';
-      var st = (c.status||'Ativo').toLowerCase();
-      var btnSuspender = (_podeEditar && st === 'ativo')
-        ? '<button class="btn btn-ghost btn-sm" title="Suspender contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="suspender"><span class="ms ms-sm">pause_circle</span></button>'
+      var st = c.status || 'Ativo';
+      var stl = st.toLowerCase();
+      var btnSuspender = (_podeEditar && stl === 'ativo')
+        ? '<button class="btn btn-ghost btn-sm" title="Suspender" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="suspender"><span class="ms ms-sm">pause_circle</span></button>'
         : '';
-      var btnEncerrar = (_podeEditar && (st === 'ativo' || st === 'suspenso'))
-        ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" title="Encerrar contrato" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="encerrar"><span class="ms ms-sm">stop_circle</span></button>'
+      var btnEncerrar = (_podeEditar && (stl === 'ativo' || stl === 'suspenso'))
+        ? '<button class="btn btn-ghost btn-sm" style="color:#d97706;" title="Encerrar (conclusão normal)" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="encerrar"><span class="ms ms-sm">stop_circle</span></button>'
+        : '';
+      var btnCancelar = (_podeEditar && (stl === 'ativo' || stl === 'suspenso'))
+        ? '<button class="btn btn-ghost btn-sm" style="color:#dc2626;" title="Cancelar (rescisão/interrupção)" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'" data-acao="cancelar"><span class="ms ms-sm">cancel</span></button>'
+        : '';
+      var btnExcluir = (_podeEditar && (stl === 'encerrado' || stl === 'cancelado'))
+        ? '<button class="btn btn-ghost btn-sm btn-excluir-contrato" style="color:#dc2626;" title="Excluir permanentemente" data-id="'+escaparHtml(c.id)+'" data-nome="'+escaparHtml(c.nome||'')+'"><span class="ms ms-sm">delete_forever</span></button>'
         : '';
       var vigencia = c.vigenciaInicio && c.vigenciaFim
         ? fmtDataPtBR(c.vigenciaInicio)+' → '+fmtDataPtBR(c.vigenciaFim)
@@ -12477,12 +12487,14 @@ var ContratosUI = (function() {
         + ' · ' + _fmtMoeda(c.valorTotal)
         + ' · ' + vigencia
         +'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<div style="display:flex;align-items:center;gap:6px;">'
         + _badgeStatus(c.status||'Ativo')
         + btnEditar
         + btnGerenciar
         + btnSuspender
         + btnEncerrar
+        + btnCancelar
+        + btnExcluir
         +'</div></div>';
     }).join('');
     Array.prototype.slice.call(el.querySelectorAll('.btn-editar-contrato')).forEach(function(btn) {
@@ -12493,42 +12505,55 @@ var ContratosUI = (function() {
         ContratosDetailUI.abrir(this.getAttribute('data-id'), this.getAttribute('data-nome'));
       });
     });
-    Array.prototype.slice.call(el.querySelectorAll('[data-acao="suspender"],[data-acao="encerrar"]')).forEach(function(btn) {
+    Array.prototype.slice.call(el.querySelectorAll('[data-acao]')).forEach(function(btn) {
       btn.addEventListener('click', function() {
         abrirModalStatus(this.getAttribute('data-id'), this.getAttribute('data-nome'), this.getAttribute('data-acao'));
+      });
+    });
+    Array.prototype.slice.call(el.querySelectorAll('.btn-excluir-contrato')).forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var cid = this.getAttribute('data-id'), cnome = this.getAttribute('data-nome');
+        _abrirModalConfirmar({ titulo:'Excluir Contrato', icone:'delete_forever', corIcone:'#dc2626',
+          mensagem:'Excluir permanentemente "'+cnome+'"? Ação irreversível.',
+          labelConfirmar:'Excluir',
+          cb: function() {
+            GAS.contratos.excluir(cid, function(r) {
+              if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao excluir.'); return; }
+              Toast.sucesso('Contrato excluído.'); _carregado=false; carregar();
+            }, function(e) { Toast.erro(e.message||'Erro.'); });
+          }
+        });
       });
     });
   }
 
   function abrirModalStatus(id, nome, acao) {
-    var isEncerrar = acao === 'encerrar';
-    var titulo = isEncerrar ? 'Encerrar Contrato' : 'Suspender Contrato';
-    var descricao = isEncerrar
-      ? 'Esta operação encerrará permanentemente o contrato "' + (nome||id) + '". O motivo será registrado na auditoria.'
-      : 'O contrato "' + (nome||id) + '" será suspenso. Informe o motivo para registro.';
+    var _ACOES = {
+      suspender: { titulo:'Suspender Contrato',       desc:'O contrato será suspenso temporariamente. Informe o motivo.', label:'Suspender', cor:'#d97706', status:'Suspenso'   },
+      encerrar:  { titulo:'Encerrar Contrato',        desc:'Encerramento normal (conclusão do objeto). Irreversível.',    label:'Encerrar',  cor:'#d97706', status:'Encerrado'  },
+      cancelar:  { titulo:'Cancelar Contrato',        desc:'Rescisão ou interrupção do contrato. Irreversível.',          label:'Cancelar',  cor:'#dc2626', status:'Cancelado'  }
+    };
+    var cfg = _ACOES[acao] || _ACOES.suspender;
     var btnEl = document.getElementById('btn-mcs-confirmar');
-    document.getElementById('mcs-titulo').textContent     = titulo;
-    document.getElementById('mcs-descricao').textContent  = descricao;
-    document.getElementById('mcs-motivo').value           = '';
-    btnEl.textContent = isEncerrar ? 'Encerrar' : 'Suspender';
-    btnEl.style.background = isEncerrar ? 'var(--danger)' : 'var(--warning)';
-    btnEl.style.color      = '#fff';
-    btnEl.style.border     = 'none';
+    document.getElementById('mcs-titulo').textContent    = cfg.titulo;
+    document.getElementById('mcs-descricao').textContent = cfg.desc + '\n\n"' + (nome||id) + '"';
+    document.getElementById('mcs-motivo').value          = '';
+    btnEl.textContent          = cfg.label;
+    btnEl.style.background     = cfg.cor;
+    btnEl.style.color          = '#fff';
+    btnEl.style.border         = 'none';
     btnEl.onclick = function() {
       var motivo = (document.getElementById('mcs-motivo').value||'').trim();
       if (!motivo) { Toast.aviso('Informe o motivo antes de confirmar.'); return; }
-      var novoStatus = isEncerrar ? 'Encerrado' : 'Suspenso';
-      btnEl.disabled = true;
-      btnEl.textContent = 'Aguarde…';
-      GAS.contratos.mudarStatus(id, novoStatus, function(r) {
+      btnEl.disabled = true; btnEl.textContent = 'Aguarde…';
+      GAS.contratos.mudarStatus(id, cfg.status, function(r) {
         btnEl.disabled = false;
-        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao alterar status.'); btnEl.textContent = isEncerrar?'Encerrar':'Suspender'; return; }
-        Toast.sucesso('Contrato ' + (isEncerrar?'encerrado':'suspenso') + ' com sucesso.');
-        fecharModalStatus();
-        _carregado = false; carregar();
+        if (!r||!r.ok) { Toast.erro((r&&r.error&&r.error.message)||'Erro ao alterar status.'); btnEl.textContent = cfg.label; return; }
+        Toast.sucesso('Contrato ' + cfg.label.toLowerCase() + ' com sucesso.');
+        fecharModalStatus(); _carregado = false; carregar();
       }, function(e) {
         btnEl.disabled = false;
-        Toast.erro((e&&e.message)||'Erro.'); btnEl.textContent = isEncerrar?'Encerrar':'Suspender';
+        Toast.erro((e&&e.message)||'Erro.'); btnEl.textContent = cfg.label;
       });
     };
     document.getElementById('modal-contrato-status').style.display = 'flex';
@@ -16881,18 +16906,16 @@ var DatasComemorativasAdmin = (function() {
               '<span class="ms" style="font-size:12px;vertical-align:middle;">auto_awesome</span> ' + motionLabel + '</div>' : '') +
           '</div>' +
           // Ações
-          '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+          '<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">' +
+            '<button class="btn btn-ghost btn-sm" title="' + (inativo ? 'Ativar' : 'Desativar') + '" ' +
+              'style="color:' + (!inativo ? 'var(--color-primary)' : '#9ca3af') + ';padding:4px;" ' +
+              'onclick="DatasComemorativasAdmin.toggle(' + JSON.stringify(dc.id).replace(/"/g,"'") + ',' + !inativo + ',this)">' +
+              '<span class="ms" style="font-size:26px;line-height:1;">' + (!inativo ? 'toggle_on' : 'toggle_off') + '</span>' +
+            '</button>' +
             '<button class="btn btn-ghost btn-sm" title="Editar" ' +
               'onclick="DatasComemorativasAdmin.abrirModal(' + JSON.stringify(dc).replace(/"/g,"'") + ')">' +
               '<span class="ms ms-sm">edit</span>' +
             '</button>' +
-            (inativo
-              ? '<button class="btn btn-ghost btn-sm" title="Restaurar" ' +
-                  'onclick="DatasComemorativasAdmin.restaurar(' + JSON.stringify(dc.id).replace(/"/g,"'") + ')">' +
-                  '<span class="ms ms-sm">restore</span></button>'
-              : '<button class="btn btn-ghost btn-sm" style="color:#ef4444;" title="Excluir" ' +
-                  'onclick="DatasComemorativasAdmin.excluir(' + JSON.stringify(dc.id).replace(/"/g,"'") + ')">' +
-                  '<span class="ms ms-sm">delete</span></button>') +
           '</div>' +
         '</div>';
       });
@@ -17062,24 +17085,19 @@ var DatasComemorativasAdmin = (function() {
     });
   }
 
-  // ── Restaurar (reativar) ──────────────────────────────────
-  function restaurar(id) {
-    GAS.admin.listarDatasComemorativas(function(r) {
-      var lista = r && r.ok ? (r.data || []) : [];
-      var dc = null;
-      for (var i=0; i<lista.length; i++) { if (lista[i].id === id) { dc = lista[i]; break; } }
-      if (!dc) { Toast.erro('Data não encontrada.'); return; }
-      // Salvar com ativo:true aproveitando a função salvar que já seta ativo=true
-      var dados = Object.assign({}, dc, { ativo: true });
-      GAS.admin.salvarDataComemorativa(dados, function(r2) {
-        if (!r2 || !r2.ok) { Toast.erro((r2 && r2.error) || 'Erro ao restaurar.'); return; }
-        Toast.sucesso('Data restaurada!');
+  // ── Toggle ativo/inativo ──────────────────────────────────
+  function toggle(id, novoAtivo, btn) {
+    BtnGuard.wrap(btn, (novoAtivo ? 'Ativando…' : 'Desativando…'), function(liberar) {
+      GAS.admin.toggleDataComemorativa(id, novoAtivo, function(r) {
+        liberar();
+        if (!r || !r.ok) { Toast.erro((r && r.error) || 'Erro ao atualizar.'); return; }
+        Toast.sucesso(novoAtivo ? 'Data ativada!' : 'Data desativada.');
         carregar();
-      }, function(e) { Toast.erro(e.message || 'Erro ao restaurar.'); });
+      }, function(e) { liberar(); Toast.erro(e.message || 'Erro ao atualizar.'); });
     });
   }
 
-  return { carregar:carregar, abrirModal:abrirModal, salvar:salvar, excluir:excluir, restaurar:restaurar };
+  return { carregar:carregar, abrirModal:abrirModal, salvar:salvar, excluir:excluir, toggle:toggle };
 
 })();
 
