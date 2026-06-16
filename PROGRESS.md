@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s97)**: **UX/Fix — Financeiro/Contratos: melhorias UI (sessão 2026-06-16): ordenamento rubricas+pessoal — Deploy @999.** Complemento ao s95: rubricas ordenadas alfabeticamente em Plano de Trabalho; pessoal ordenado por cargo/nome. Todos os demais itens do s95 (Cancelado, cores setor, botão Cancelar/Excluir, feedback Execução, bug rubrica) já estavam no deploy @994 da sessão anterior.
+**Fase atual (s97)**: **UX/Fix — Financeiro/Contratos: melhorias UI (sessão 2026-06-16): ordenamento rubricas+pessoal — Deploy @1003.** Complemento ao s95: rubricas ordenadas alfabeticamente em Plano de Trabalho; pessoal ordenado por cargo/nome. Todos os demais itens do s95 (Cancelado, cores setor, botão Cancelar/Excluir, feedback Execução, bug rubrica) já estavam no deploy @994 da sessão anterior.
 
 **Fase anterior (s96)**: **UX/Fix — Reserva de Veículo: validação de capacidade de passageiros, cards clicáveis, indicador de lotação — Deploy @997.** Backend: `reserva_carro_engine.gs` — valida `qtdInt + qtdExt ≤ capacidade` (busca capacidade do veículo via `VeiculosRepository.buscarPorId`; default 4); `veiculos_repository.gs` — capacidade padrão ajustada de 5 para 4. Frontend (`index.html`): `_atualizarContadorPassageiros()` — atualiza `#carro-f-pass-limite` com aviso colorido de uso/limite ao mudar veículo ou digitar passageiros externos; cards da agenda clicáveis (`_verDetalhesAgenda`) com hover `var(--surface2)`; `event.stopPropagation()` em todos os botões de ação (Aprovar/Recusar/Concluir/Cancelar), link do mapa e coluna de badges para evitar disparo duplo.
 
