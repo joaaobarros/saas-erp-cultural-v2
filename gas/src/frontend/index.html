@@ -12862,7 +12862,7 @@ var ContratosDetailUI = (function() {
   }
 
   function _renderRubricas(m, a) {
-    var rubs = a.rubricas || [];
+    var rubs = (a.rubricas || []).slice().sort(function(x,y){ return (x.nome||'').localeCompare(y.nome||'','pt'); });
     if (!rubs.length) return '<p class="muted-text" style="font-size:12px;padding:4px 0 0 2px;">Sem itens. Clique em <span class="ms ms-sm">add</span> para adicionar.</p>';
     return rubs.map(function(r) {
       var catClass   = r.categoria === 'investimento' ? 'investimento' : 'custeio';
@@ -13446,6 +13446,7 @@ var ContratosDetailUI = (function() {
     var el = document.getElementById('cd-pes-lista');
     var todos = [];
     metas.forEach(function(m) { (m.pessoal||[]).forEach(function(p) { todos.push({p:p, m:m}); }); });
+    todos.sort(function(a,b){ return (a.p.cargo||a.p.nome||'').localeCompare(b.p.cargo||b.p.nome||'','pt'); });
 
     if (!todos.length) {
       el.innerHTML = '<p class="muted-text" style="padding:8px;">Nenhum item de pessoal. Clique em "+ Adicionar Pessoal".</p>';
@@ -34708,7 +34709,7 @@ var QuadrosUI = (function() {
     _limparEventosGlobais();
     var container = document.getElementById('qdro-editor-container');
     container.innerHTML = '';
-    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;';
 
     // ── Estado ──────────────────────────────────────────────────────────────
     _cvState = {

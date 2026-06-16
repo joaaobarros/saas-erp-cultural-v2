@@ -1961,6 +1961,25 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ATUAL — SESSÃO 53 (2026-06-16) → PRÓXIMA
+
+### Estado: Deploy @994 · UX/Fix — Financeiro/Contratos: CANCELADO na FSM, cores por setor, ordenamento, bug rubrica, feedback Execução
+
+### O que foi feito nesta sessão (s95)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @994 | Backend FSM | `STATUS_CONTRATO.CANCELADO`; Ativo/Suspenso→Cancelado; `excluir()` aceita Encerrado ou Cancelado; bug filtro lowercase corrigido |
+| @994 | UI Contratos | Botão Cancelar (vermelho) separado de Encerrar (âmbar); Excluir disponível só para terminais; `abrirModalStatus` unificado |
+| @994 | Badge setor | Paleta 10 cores por hash do id do setor; sem ícone apartment; `.exec-agrup.ativa` com cor primária |
+| @994 | Ordenamento | Lista contratos, rubricas PT e pessoal ordenados alfabeticamente |
+| @994 | Bug rubrica | `editarRub` usa `catalogoItemId` para match; `salvarRubrica` persiste `catalogoItemId` |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Suspender → Cancelar contrato; (2) Excluir aparece após Cancelar/Encerrar; (3) Badge setor com cores diferentes por setor; (4) Botões Meta/Atividade/Setor/Rubrica ficam destacados ao clicar; (5) Editar rubrica preserva nome
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 52b (2026-06-14) → SESSÃO 52c
 
 ### Estado: Deploy @902 · Fix: aviso férias vencidas + ícones MS
