@@ -2570,7 +2570,7 @@ select.form-control { cursor: pointer; }
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <div class="form-group" id="carro-veiculo-bloco" style="display:none;grid-column:1/-1;">
                 <label class="form-label">Veículo</label>
-                <select id="carro-f-veiculo" class="form-control"></select>
+                <select id="carro-f-veiculo" class="form-control" onchange="ReservasCarroUI._atualizarContadorPassageiros()"></select>
               </div>
               <div class="form-group">
                 <label class="form-label">Data da Viagem *</label>
@@ -2619,9 +2619,11 @@ select.form-control { cursor: pointer; }
             <!-- Passageiros Externos -->
             <div class="form-group">
               <label class="form-label">Passageiros Externos <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
-              <input id="carro-f-pass-externo" type="text" class="form-control" placeholder="Nomes separados por vírgula">
+              <input id="carro-f-pass-externo" type="text" class="form-control" placeholder="Nomes separados por vírgula" oninput="ReservasCarroUI._atualizarContadorPassageiros()">
               <span style="font-size:11px;color:var(--muted)">Visitantes, convidados e pessoas externas à organização.</span>
             </div>
+            <!-- Indicador de capacidade -->
+            <div id="carro-f-pass-limite" style="display:none;"></div>
 
             <div class="form-group">
               <label class="form-label">Vincular a uma Ação <span style="font-weight:400;color:var(--muted);">(opcional)</span></label>
@@ -2890,7 +2892,7 @@ select.form-control { cursor: pointer; }
               <div class="form-group"><label class="form-label">Nome *</label><input id="vei-nome" type="text" class="form-control" placeholder="Carro Institucional"></div>
               <div class="form-group"><label class="form-label">Placa</label><input id="vei-placa" type="text" class="form-control" placeholder="ABC-1234"></div>
               <div class="form-group"><label class="form-label">Modelo</label><input id="vei-modelo" type="text" class="form-control"></div>
-              <div class="form-group"><label class="form-label">Capacidade</label><input id="vei-capacidade" type="number" class="form-control" min="1" max="20" value="5"></div>
+              <div class="form-group"><label class="form-label">Capacidade (passageiros)</label><input id="vei-capacidade" type="number" class="form-control" min="1" max="20" value="4"></div>
             </div>
             <div style="display:flex;gap:8px;margin-top:4px;">
               <button class="btn btn-primario" id="btn-salvar-veiculo" onclick="ReservasCarroUI._salvarVeiculo(this)"><span class="ms ms-sm">save</span> Salvar</button>
@@ -17561,6 +17563,34 @@ var ReservasCarroUI = (function() {
     return escaparHtml(lista.join(', '));
   }
 
+  // ── Capacidade do veículo ──────────────────────────────────────────────────
+
+  function _getCapacidadeVeiculo() {
+    var sel = document.getElementById('carro-f-veiculo');
+    var vid = sel ? (sel.value || 'default') : 'default';
+    var vei = _veiculosData.filter(function(v) { return v.id === vid; })[0]
+           || _veiculosData[0];
+    return (vei && vei.capacidade) || 4;
+  }
+
+  function _atualizarContadorPassageiros() {
+    var el = document.getElementById('carro-f-pass-limite');
+    if (!el) return;
+    var capacidade = _getCapacidadeVeiculo();
+    var extRaw = (document.getElementById('carro-f-pass-externo') || {}).value || '';
+    var qtdExt = extRaw.split(',').filter(function(s) { return s.trim(); }).length;
+    var qtdInt = _passInternosData.length;
+    var total  = qtdInt + qtdExt;
+    var cor    = total > capacidade ? '#ef4444' : total === capacidade ? '#f59e0b' : 'var(--muted)';
+    el.style.display = '';
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:' + cor + ';margin-top:-4px;padding:4px 0;">' +
+        '<span class="ms ms-sm" style="font-size:14px;">' + (total > capacidade ? 'error' : 'people') + '</span>' +
+        total + ' / ' + capacidade + ' passageiros' +
+        (total > capacidade ? ' — <strong>limite excedido</strong>' : total === capacidade ? ' — limite atingido' : '') +
+      '</div>';
+  }
+
   // ── Passageiros internos (chip tags) ───────────────────────────────────────
 
   function _renderPassInternosTags() {
@@ -17572,11 +17602,20 @@ var ReservasCarroUI = (function() {
         + '<button type="button" onclick="ReservasCarroUI._removerPassInterno(' + i + ')" data-bg-skip="1" style="background:none;border:none;cursor:pointer;padding:0;color:var(--muted);line-height:1;font-size:14px;" title="Remover">×</button>'
         + '</span>';
     }).join('');
+    _atualizarContadorPassageiros();
   }
 
   function _adicionarPassInterno() {
     var sel = document.getElementById('carro-f-pass-sel');
     if (!sel || !sel.value) return;
+    var capacidade = _getCapacidadeVeiculo();
+    var extRaw = (document.getElementById('carro-f-pass-externo') || {}).value || '';
+    var qtdExt = extRaw.split(',').filter(function(s) { return s.trim(); }).length;
+    if (_passInternosData.length + qtdExt >= capacidade) {
+      Toast.aviso('Limite de ' + capacidade + ' passageiros atingido para este veículo.');
+      sel.value = '';
+      return;
+    }
     var email = sel.value;
     var nome  = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent.trim() : email;
     var jaAdicionado = _passInternosData.some(function(p) { return p.email === email; });
@@ -17718,19 +17757,19 @@ var ReservasCarroUI = (function() {
 
       var acoes = [];
       if (ehAprovador && isPendente) {
-        acoes.push('<button class="btn btn-primario btn-sm" id="btn-carro-apr-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.aprovar(' + sid + ',this)">Aprovar</button>');
-        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-rec-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.abrirModalRecusa(' + sid + ')">Recusar</button>');
+        acoes.push('<button class="btn btn-primario btn-sm" id="btn-carro-apr-' + escaparHtml(rc.id) + '" onclick="event.stopPropagation();ReservasCarroUI.aprovar(' + sid + ',this)">Aprovar</button>');
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-rec-' + escaparHtml(rc.id) + '" onclick="event.stopPropagation();ReservasCarroUI.abrirModalRecusa(' + sid + ')">Recusar</button>');
       }
       if (ehAprovador && isAprovada) {
-        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-con-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.concluir(' + sid + ',this)">Concluir</button>');
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-con-' + escaparHtml(rc.id) + '" onclick="event.stopPropagation();ReservasCarroUI.concluir(' + sid + ',this)">Concluir</button>');
       }
       if (isCancelavel) {
-        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-can-' + escaparHtml(rc.id) + '" onclick="ReservasCarroUI.cancelar(' + sid + ',this)" style="color:#ef4444;">Cancelar</button>');
+        acoes.push('<button class="btn btn-ghost btn-sm" id="btn-carro-can-' + escaparHtml(rc.id) + '" onclick="event.stopPropagation();ReservasCarroUI.cancelar(' + sid + ',this)" style="color:#ef4444;">Cancelar</button>');
       }
 
       var passHtml = _fmtPassageiros(rc.passageiros);
       var acaoHtml = (rc.acaoId && rc.acaoNome)
-        ? '<div style="font-size:11px;margin-top:2px;"><a href="#" onclick="event.preventDefault();AcoesUI.abrirPainel(' + JSON.stringify(rc.acaoId).replace(/"/g,"'") + ')" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">event</span> ' + escaparHtml(rc.acaoNome) + '</a></div>'
+        ? '<div style="font-size:11px;margin-top:2px;"><a href="#" onclick="event.preventDefault();event.stopPropagation();AcoesUI.abrirPainel(' + JSON.stringify(rc.acaoId).replace(/"/g,"'") + ')" style="color:var(--primario);text-decoration:none;"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">event</span> ' + escaparHtml(rc.acaoNome) + '</a></div>'
         : '';
       var motivoHtml = rc.motivoRecusa
         ? '<div style="font-size:11px;color:#ef4444;margin-top:2px;" title="' + escaparHtml(rc.motivoRecusa) + '">Recusa: ' + escaparHtml(rc.motivoRecusa.slice(0,50)) + (rc.motivoRecusa.length>50?'…':'') + '</div>'
@@ -17739,7 +17778,7 @@ var ReservasCarroUI = (function() {
         ? '<div style="font-size:11px;color:var(--muted);">Aprovado por: ' + escaparHtml(rc.aprovadorNome || rc.aprovador.replace(/@.*$/,'')) + '</div>'
         : '';
 
-      return '<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">' +
+      return '<div onclick="ReservasCarroUI._verDetalhesAgenda(' + sid + ')" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;cursor:pointer;" onmouseenter="this.style.background=\'var(--surface2)\'" onmouseleave="this.style.background=\'\'">' +
         '<div style="min-width:72px;flex-shrink:0;">' +
           '<div style="font-size:13px;font-weight:600;">' + escaparHtml(fmtDataPtBR(rc.data)||'—') + '</div>' +
           '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(rc.horaSaida||'—') + '–' + escaparHtml(rc.horaChegadaEstimada||rc.horaChegada||'—') + '</div>' +
@@ -17748,12 +17787,12 @@ var ReservasCarroUI = (function() {
           '<div style="font-size:13px;font-weight:500;" title="' + escaparHtml(rc.solicitante||'') + '">' + escaparHtml(rc.solicitanteNome || rc.solicitante || '—') + '</div>' +
           (rc.solicitanteSetor ? '<div style="font-size:11px;">' + _badgeSetor(rc.solicitanteSetor) + '</div>' : '') +
           '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + saida + ' <span style="color:var(--muted)">→</span> ' + chegada +
-            (rota.mapaUrl ? ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" style="color:var(--primario);" title="Ver mapa"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">map</span></a>' : '') +
+            (rota.mapaUrl ? ' <a href="' + escaparHtml(rota.mapaUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();" style="color:var(--primario);" title="Ver mapa"><span class="ms ms-sm" style="vertical-align:middle;font-size:12px;">map</span></a>' : '') +
           '</div>' +
           (passHtml !== '—' ? '<div style="font-size:11px;color:var(--muted);">Pass: ' + passHtml + '</div>' : '') +
           acaoHtml + aprovadorHtml + motivoHtml +
         '</div>' +
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">' +
+        '<div onclick="event.stopPropagation();" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">' +
           '<span class="badge ' + _badgeCls(rc.status) + '">' + escaparHtml(rc.status) + '</span>' +
           (rc.observacao ? '<span style="font-size:10px;color:var(--muted);max-width:120px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escaparHtml(rc.observacao) + '">' + escaparHtml(rc.observacao.slice(0,30)) + (rc.observacao.length>30?'…':'') + '</span>' : '') +
           (acoes.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">' + acoes.join('') + '</div>' : '') +
@@ -19275,6 +19314,7 @@ var ReservasCarroUI = (function() {
     cancelar:             cancelar,
     concluir:             concluir,
     // Passageiros internos / paradas
+    _atualizarContadorPassageiros: _atualizarContadorPassageiros,
     _adicionarPassInterno: _adicionarPassInterno,
     _removerPassInterno:   _removerPassInterno,
     _adicionarParada:      _adicionarParada,

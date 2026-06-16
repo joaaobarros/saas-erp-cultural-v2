@@ -23,7 +23,7 @@ var VeiculosRepository = (function() {
   function _serializarIndice(v) {
     return [
       v.id, v.orgId, v.nome || '', v.placa || '', v.modelo || '', v.cor || '',
-      v.capacidade || 5, v.motoristaPadrao || '',
+      v.capacidade || 4, v.motoristaPadrao || '',
       v.ativo ? 'SIM' : 'NÃO',
       v.criadoEm, v.atualizadoEm
     ];
@@ -76,7 +76,7 @@ var VeiculosRepository = (function() {
       placa:           '',
       modelo:          '',
       cor:             '',
-      capacidade:      5,
+      capacidade:      4,
       motoristaPadrao: ''
     }, orgId);
   }
@@ -91,7 +91,7 @@ var VeiculosRepository = (function() {
       placa:           dados.placa           || '',
       modelo:          dados.modelo          || '',
       cor:             dados.cor             || '',
-      capacidade:      dados.capacidade      || 5,
+      capacidade:      dados.capacidade      || 4,
       motoristaPadrao: dados.motoristaPadrao || '',
       ativo:           true,
       criadoEm:        agr,

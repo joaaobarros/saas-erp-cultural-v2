@@ -120,7 +120,18 @@ var ReservaCarroEngine = (function() {
       throw new Error('Hora de chegada deve ser posterior à hora de saída.');
 
     var veiculoId = dados.veiculoId || 'default';
-    VeiculosRepository.getDefault(orgId); // garante que veículo default existe
+    var veiculo   = VeiculosRepository.getDefault(orgId); // garante que veículo default existe
+    if (veiculoId !== 'default') veiculo = VeiculosRepository.buscarPorId(veiculoId, orgId) || veiculo;
+    var capacidade = (veiculo && veiculo.capacidade) || 4;
+
+    var qtdInt  = Array.isArray(dados.passageirosInternos) ? dados.passageirosInternos.length : 0;
+    var qtdExt  = Array.isArray(dados.passageirosExternos)
+      ? dados.passageirosExternos.filter(function(p) { return String(p).trim(); }).length : 0;
+    if (qtdInt + qtdExt > capacidade) {
+      throw new Error(
+        'Número de passageiros (' + (qtdInt + qtdExt) + ') excede a capacidade do veículo (' + capacidade + ').'
+      );
+    }
 
     var conflitoAprovado = _verificarConflito(
       dados.data, dados.horaSaida, horaChegada, veiculoId, orgId, null
