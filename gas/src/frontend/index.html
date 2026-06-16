@@ -17482,6 +17482,11 @@ var ReservasCarroUI = (function() {
   var _passInternosData = []; // [{email, nome}] selecionados no form
   var _paradasData      = []; // [{local, lat, lng, mapaUrl}]
   var _veiculosData     = [];
+  var _mapaContexto     = 'form'; // 'form' | 'det-chegada' | 'det-parada'
+  var _editRotaId       = null;
+  var _editRotaParadas  = []; // [{local, lat, lng, tempoParadaMin}] — paradas no painel de edição
+  var _editRotaChegada  = { local: '', lat: null, lng: null };
+  var _editRotaOrigem   = { local: '', lat: null, lng: null };
   var _podGerenciar     = false;
   var _escalaCache      = [];
   var _horaChegadaEstimada = '';
@@ -18181,6 +18186,7 @@ var ReservasCarroUI = (function() {
   // ── Seletor de local no mapa (Leaflet + OpenStreetMap) ─────────────────────
 
   function abrirMapaPicker(campo) {
+    _mapaContexto       = 'form';
     _mapaCampoAtual     = campo;
     _mapaCampoParadaIdx = null;
     _mapaPickerEnd      = '';
@@ -18203,6 +18209,7 @@ var ReservasCarroUI = (function() {
   }
 
   function abrirMapaPickerParada(idx) {
+    _mapaContexto       = 'form';
     _mapaCampoAtual     = 'parada';
     _mapaCampoParadaIdx = idx;
     _mapaPickerEnd      = '';
@@ -18230,12 +18237,40 @@ var ReservasCarroUI = (function() {
 
   function confirmarMapaPicker() {
     if (!_mapaPickerEnd) return;
+    var lat = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lat : null;
+    var lng = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lng : null;
+
+    // Contexto: painel de edição de rota — local de chegada
+    if (_mapaContexto === 'det-chegada') {
+      _editRotaChegada.local = _mapaPickerEnd;
+      _editRotaChegada.lat   = lat;
+      _editRotaChegada.lng   = lng;
+      var inpCh = document.getElementById('carro-det-edit-chegada-inp');
+      if (inpCh) inpCh.value = _mapaPickerEnd;
+      fecharMapaPicker();
+      return;
+    }
+
+    // Contexto: painel de edição de rota — parada intermediária
+    if (_mapaContexto === 'det-parada' && _mapaCampoParadaIdx !== null) {
+      var dIdx = _mapaCampoParadaIdx;
+      if (_editRotaParadas[dIdx]) {
+        _editRotaParadas[dIdx].local = _mapaPickerEnd;
+        _editRotaParadas[dIdx].lat   = lat;
+        _editRotaParadas[dIdx].lng   = lng;
+      }
+      _renderEditRotaParadas();
+      fecharMapaPicker();
+      return;
+    }
+
+    // Contexto: formulário de nova reserva — parada
     if (_mapaCampoAtual === 'parada' && _mapaCampoParadaIdx !== null) {
       var idx = _mapaCampoParadaIdx;
       if (_paradasData[idx]) {
         _paradasData[idx].local  = _mapaPickerEnd;
-        _paradasData[idx].lat    = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lat : null;
-        _paradasData[idx].lng    = _mapaPickerMarker ? _mapaPickerMarker.getLatLng().lng : null;
+        _paradasData[idx].lat    = lat;
+        _paradasData[idx].lng    = lng;
         _paradasData[idx].mapaUrl = 'https://www.google.com/maps/place/' + encodeURIComponent(_mapaPickerEnd);
       }
       var container = document.getElementById('carro-paradas-lista');
@@ -18669,54 +18704,287 @@ var ReservasCarroUI = (function() {
     if (el) el.value = hora;
   }
 
+  // ── Editar Rota — funções auxiliares ──────────────────────────────────────
+
+  function _editRotaAbrirMapaChegada() {
+    _mapaContexto       = 'det-chegada';
+    _mapaCampoParadaIdx = null;
+    _mapaPickerEnd      = '';
+    var overlay = document.getElementById('carro-mapa-picker-overlay');
+    if (!overlay) return;
+    var titulo = document.getElementById('carro-mapa-picker-titulo');
+    if (titulo) titulo.textContent = 'Selecionar local de chegada';
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = '— clique no mapa para selecionar —';
+    var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+    if (btnConf) { btnConf.disabled = true; btnConf.style.opacity = '.5'; btnConf.style.cursor = 'not-allowed'; }
+    var valorAtual = _editRotaChegada.local || '';
+    var elBusca = document.getElementById('carro-mapa-picker-busca');
+    if (elBusca) elBusca.value = valorAtual;
+    overlay.style.display = 'flex';
+    _iniciarLeaflet(function() { if (valorAtual) _buscarEnderecoMapa(valorAtual); });
+  }
+
+  function _editRotaAbrirMapaParada(idx) {
+    _mapaContexto       = 'det-parada';
+    _mapaCampoParadaIdx = idx;
+    _mapaPickerEnd      = '';
+    var overlay = document.getElementById('carro-mapa-picker-overlay');
+    if (!overlay) return;
+    var titulo = document.getElementById('carro-mapa-picker-titulo');
+    if (titulo) titulo.textContent = 'Selecionar parada ' + (idx + 1);
+    var elEnd = document.getElementById('carro-mapa-picker-endereco');
+    if (elEnd) elEnd.textContent = '— clique no mapa para selecionar —';
+    var btnConf = document.getElementById('btn-carro-mapa-confirmar');
+    if (btnConf) { btnConf.disabled = true; btnConf.style.opacity = '.5'; btnConf.style.cursor = 'not-allowed'; }
+    var valorAtual = (_editRotaParadas[idx] && _editRotaParadas[idx].local) || '';
+    var elBusca = document.getElementById('carro-mapa-picker-busca');
+    if (elBusca) elBusca.value = valorAtual;
+    overlay.style.display = 'flex';
+    _iniciarLeaflet(function() { if (valorAtual) _buscarEnderecoMapa(valorAtual); });
+  }
+
+  function _editRotaAdicionarParada() {
+    _editRotaParadas.push({ local: '', lat: null, lng: null, tempoParadaMin: 0 });
+    _renderEditRotaParadas();
+    var el = document.getElementById('carro-det-edit-paradas');
+    if (el) {
+      var inputs = el.querySelectorAll('input[type="text"]');
+      var last = inputs[inputs.length - 1];
+      if (last) last.focus();
+    }
+  }
+
+  function _editRotaRemoverParada(idx) {
+    _editRotaParadas.splice(idx, 1);
+    _renderEditRotaParadas();
+  }
+
+  function _editRotaOnChegadaInput(inp) {
+    _editRotaChegada.local = inp.value.trim();
+    _editRotaChegada.lat   = null;
+    _editRotaChegada.lng   = null;
+  }
+
+  function _editRotaOnParadaInput(idx, inp) {
+    if (!_editRotaParadas[idx]) return;
+    _editRotaParadas[idx].local = inp.value.trim();
+    _editRotaParadas[idx].lat   = null;
+    _editRotaParadas[idx].lng   = null;
+  }
+
+  function _editRotaOnTempoInput(idx, inp) {
+    if (!_editRotaParadas[idx]) return;
+    var v = parseInt(inp.value, 10);
+    _editRotaParadas[idx].tempoParadaMin = isNaN(v) ? 0 : Math.max(0, v);
+  }
+
+  function _renderEditRotaParadas() {
+    var el = document.getElementById('carro-det-edit-paradas');
+    if (!el) return;
+    if (!_editRotaParadas.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:6px 0;text-align:center;">Nenhuma parada. Clique em "+ Parada" para adicionar.</div>';
+      return;
+    }
+    el.innerHTML = _editRotaParadas.map(function(p, i) {
+      var sid = String(i);
+      return '<div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+          '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;font-size:15px;">radio_button_unchecked</span>' +
+          '<span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex:1;">Parada ' + (i + 1) + '</span>' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._editRotaRemoverParada(' + sid + ')" data-bg-skip="1" style="padding:0 6px;color:#ef4444;" title="Remover parada"><span class="ms ms-sm">close</span></button>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:8px;">' +
+          '<input type="text" class="form-control" placeholder="Local da parada…" value="' + escaparHtml(p.local || '') + '"' +
+            ' style="flex:1;font-size:13px;" oninput="ReservasCarroUI._editRotaOnParadaInput(' + sid + ',this)">' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._editRotaAbrirMapaParada(' + sid + ')" data-bg-skip="1" title="Selecionar no mapa" style="padding:0 10px;flex-shrink:0;">' +
+            '<span class="ms ms-sm">place</span>' +
+          '</button>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span class="ms ms-sm" style="color:var(--muted);font-size:16px;">schedule</span>' +
+          '<span style="font-size:12px;color:var(--muted);">Tempo de espera:</span>' +
+          '<input type="number" class="form-control" min="0" step="5" value="' + (p.tempoParadaMin || 0) + '"' +
+            ' style="width:72px;font-size:13px;padding:4px 8px;" oninput="ReservasCarroUI._editRotaOnTempoInput(' + sid + ',this)">' +
+          '<span style="font-size:12px;color:var(--muted);">min</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Nearest-neighbor TSP a partir da origem; geocodifica paradas sem coordenadas antes
+  function _editRotaRecalcular() {
+    var ativas = _editRotaParadas.filter(function(p) { return p.local; });
+    if (ativas.length < 2) {
+      Toast.aviso('Adicione pelo menos 2 paradas para otimizar a rota.');
+      return;
+    }
+    var semCoords = _editRotaParadas.some(function(p) { return p.local && (!p.lat || !p.lng); });
+    if (semCoords) {
+      _editRotaGeocodificarEOtimizar();
+    } else {
+      _editRotaOtimizarParadas();
+    }
+  }
+
+  function _editRotaGeocodificarEOtimizar() {
+    var btn = document.getElementById('btn-det-recalcular');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ms ms-sm">sync</span> Geocodificando…'; }
+
+    var indices = [];
+    _editRotaParadas.forEach(function(p, i) {
+      if (p.local && (!p.lat || !p.lng)) indices.push(i);
+    });
+
+    if (!indices.length) { _editRotaOtimizarParadas(); return; }
+
+    var concluidos = 0;
+    indices.forEach(function(idx) {
+      GAS.reservasCarro.geocode(_editRotaParadas[idx].local, function(r) {
+        if (r && r.ok && r.data) {
+          _editRotaParadas[idx].lat = r.data.lat;
+          _editRotaParadas[idx].lng = r.data.lng;
+        }
+        if (++concluidos === indices.length) _editRotaOtimizarParadas();
+      }, function() {
+        if (++concluidos === indices.length) _editRotaOtimizarParadas();
+      });
+    });
+  }
+
+  function _editRotaOtimizarParadas() {
+    var btn = document.getElementById('btn-det-recalcular');
+    function _resetBtn() {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span class="ms ms-sm">alt_route</span> Rota eficiente'; }
+    }
+    var ativas = _editRotaParadas.filter(function(p) { return p.local; });
+    if (ativas.length < 2) { _renderEditRotaParadas(); _resetBtn(); return; }
+
+    function _dist(a, b) {
+      if (!a.lat || !a.lng || !b.lat || !b.lng) return Infinity;
+      var dx = a.lat - b.lat, dy = a.lng - b.lng;
+      return dx * dx + dy * dy; // squared euclidean — sufficient for ordering
+    }
+
+    var restantes  = ativas.slice();
+    var ordenadas  = [];
+    var atual      = _editRotaOrigem;
+
+    while (restantes.length) {
+      var melhorIdx = 0;
+      var melhorD   = _dist(atual, restantes[0]);
+      for (var i = 1; i < restantes.length; i++) {
+        var d = _dist(atual, restantes[i]);
+        if (d < melhorD) { melhorD = d; melhorIdx = i; }
+      }
+      ordenadas.push(restantes[melhorIdx]);
+      atual = restantes[melhorIdx];
+      restantes.splice(melhorIdx, 1);
+    }
+
+    _editRotaParadas = ordenadas;
+    _renderEditRotaParadas();
+    Toast.sucesso('Paradas reordenadas pela rota mais eficiente!');
+    _resetBtn();
+  }
+
   // ── Editar Rota (aprovadores, no modal de detalhes) ────────────────────────
 
   function _abrirEditarRota(reserva) {
     var el = document.getElementById('carro-det-editar-rota');
     if (!el) return;
-    var rota    = reserva.rota || {};
-    var rid     = JSON.stringify(reserva.id).replace(/"/g, "'");
-    var paradas = Array.isArray(rota.paradas) ? rota.paradas : [];
-    var paradasHtml = paradas.map(function(p, i) {
-      var local = (typeof p === 'string') ? p : (p.local || '');
-      return '<div style="display:flex;gap:6px;margin-bottom:4px;">' +
-        '<input type="text" class="form-control carro-det-parada-inp" data-idx="' + i + '" value="' + escaparHtml(local) + '" style="flex:1;font-size:13px;">' +
-        '</div>';
-    }).join('');
+    var rota = reserva.rota || {};
+    var rid  = JSON.stringify(reserva.id).replace(/"/g, "'");
+
+    // Inicializar estado do painel
+    _editRotaId      = reserva.id;
+    _editRotaChegada = {
+      local: rota.localChegada || '',
+      lat:   rota.coordChegada ? rota.coordChegada.lat : null,
+      lng:   rota.coordChegada ? rota.coordChegada.lng : null
+    };
+    _editRotaOrigem = {
+      local: rota.localSaida || '',
+      lat:   rota.coordSaida ? rota.coordSaida.lat : null,
+      lng:   rota.coordSaida ? rota.coordSaida.lng : null
+    };
+    _editRotaParadas = (Array.isArray(rota.paradas) ? rota.paradas : []).map(function(p) {
+      if (typeof p === 'string') return { local: p, lat: null, lng: null, tempoParadaMin: 0 };
+      return { local: p.local || '', lat: p.lat || null, lng: p.lng || null, tempoParadaMin: p.tempoParadaMin || 0 };
+    }).filter(function(p) { return p.local; });
+
     el.style.display = '';
     el.innerHTML =
-      '<details style="margin-top:4px;">' +
+      '<details style="margin-top:4px;" open>' +
         '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.05em;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px;">' +
           '<span class="ms ms-sm" style="font-size:14px;">edit_location_alt</span> Editar Rota' +
         '</summary>' +
-        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">' +
+        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px;">' +
+
+          // Local de chegada
           '<div class="form-group" style="margin:0;">' +
             '<label class="form-label" style="font-size:11px;">Local de chegada</label>' +
-            '<input id="carro-det-edit-chegada" type="text" class="form-control" value="' + escaparHtml(rota.localChegada || '') + '" style="font-size:13px;">' +
+            '<div style="display:flex;gap:6px;">' +
+              '<input id="carro-det-edit-chegada-inp" type="text" class="form-control" value="' + escaparHtml(rota.localChegada || '') + '"' +
+                ' style="flex:1;font-size:13px;" oninput="ReservasCarroUI._editRotaOnChegadaInput(this)">' +
+              '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._editRotaAbrirMapaChegada()" data-bg-skip="1" title="Selecionar no mapa" style="padding:0 10px;flex-shrink:0;">' +
+                '<span class="ms ms-sm">place</span>' +
+              '</button>' +
+            '</div>' +
           '</div>' +
-          (paradas.length > 0 ?
-            '<div class="form-group" style="margin:0;">' +
-              '<label class="form-label" style="font-size:11px;">Paradas</label>' +
-              paradasHtml +
-            '</div>' : '') +
-          '<button class="btn btn-primario btn-sm" id="btn-carro-salvar-rota" onclick="ReservasCarroUI._confirmarEditarRota(' + rid + ')" data-bg-skip="1">' +
-            '<span class="ms ms-sm">save</span> Salvar alterações na rota' +
-          '</button>' +
+
+          // Paradas intermediárias
+          '<div class="form-group" style="margin:0;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+              '<label class="form-label" style="font-size:11px;margin:0;">Paradas intermediárias</label>' +
+              '<button type="button" class="btn btn-ghost btn-sm" onclick="ReservasCarroUI._editRotaAdicionarParada()" data-bg-skip="1" style="font-size:11px;padding:2px 10px;">' +
+                '<span class="ms ms-sm">add</span> Parada' +
+              '</button>' +
+            '</div>' +
+            '<div id="carro-det-edit-paradas"></div>' +
+          '</div>' +
+
+          // Botões de ação
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button type="button" class="btn btn-ghost btn-sm" id="btn-det-recalcular" onclick="ReservasCarroUI._editRotaRecalcular()" data-bg-skip="1" style="flex:1;min-width:130px;">' +
+              '<span class="ms ms-sm">alt_route</span> Rota eficiente' +
+            '</button>' +
+            '<button class="btn btn-primario btn-sm" id="btn-carro-salvar-rota" onclick="ReservasCarroUI._confirmarEditarRota(' + rid + ')" data-bg-skip="1" style="flex:1;min-width:130px;">' +
+              '<span class="ms ms-sm">save</span> Salvar rota' +
+            '</button>' +
+          '</div>' +
+
         '</div>' +
       '</details>';
+
+    _renderEditRotaParadas();
   }
 
   function _confirmarEditarRota(id) {
-    var novaChegada = (document.getElementById('carro-det-edit-chegada') || {}).value || '';
-    var paradasInputs = document.querySelectorAll('#carro-det-editar-rota .carro-det-parada-inp');
-    var paradas = [];
-    paradasInputs.forEach(function(inp) {
-      var v = inp.value.trim();
-      if (v) paradas.push({ local: v });
+    var inpCh = document.getElementById('carro-det-edit-chegada-inp');
+    var localChegada = inpCh ? inpCh.value.trim() : _editRotaChegada.local;
+    _editRotaChegada.local = localChegada;
+
+    var paradas = _editRotaParadas.filter(function(p) { return p.local; }).map(function(p) {
+      return {
+        local:          p.local,
+        lat:            p.lat  || null,
+        lng:            p.lng  || null,
+        tempoParadaMin: p.tempoParadaMin || 0
+      };
     });
+
+    var dadosRota = {
+      localChegada: localChegada,
+      coordChegada: (_editRotaChegada.lat && _editRotaChegada.lng)
+        ? { lat: _editRotaChegada.lat, lng: _editRotaChegada.lng }
+        : null,
+      paradas: paradas
+    };
+
     var btn = document.getElementById('btn-carro-salvar-rota');
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
-      GAS.reservasCarro.editarRota(id, { localChegada: novaChegada, paradas: paradas }, function(r) {
+      GAS.reservasCarro.editarRota(id, dadosRota, function(r) {
         liberar();
         if (r && r.ok) {
           Toast.sucesso('Rota atualizada!');
@@ -18973,7 +19241,15 @@ var ReservasCarroUI = (function() {
     _usarProximoHorario:       _usarProximoHorario,
     _atualizarDisponibilidade: _atualizarDisponibilidade,
     // Editar rota (aprovadores)
-    _confirmarEditarRota:  _confirmarEditarRota,
+    _confirmarEditarRota:      _confirmarEditarRota,
+    _editRotaAbrirMapaChegada: _editRotaAbrirMapaChegada,
+    _editRotaAbrirMapaParada:  _editRotaAbrirMapaParada,
+    _editRotaAdicionarParada:  _editRotaAdicionarParada,
+    _editRotaRemoverParada:    _editRotaRemoverParada,
+    _editRotaOnChegadaInput:   _editRotaOnChegadaInput,
+    _editRotaOnParadaInput:    _editRotaOnParadaInput,
+    _editRotaOnTempoInput:     _editRotaOnTempoInput,
+    _editRotaRecalcular:       _editRotaRecalcular,
     // Escala
     abrirModalEscala:      abrirModalEscala,
     fecharModalEscala:     fecharModalEscala,

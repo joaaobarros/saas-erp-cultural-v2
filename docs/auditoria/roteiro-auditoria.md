@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s92 pendente · s91 @982 (Vestuário) · s90 @980 (Datas Comemorativas)
+> Deploy atual: s93 @988 (pendente) · s92 @987 (Datas Comemorativas) · s91 @982 (Vestuário)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -471,7 +471,18 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 90 (2026-06-16) → SESSÃO 91
+## HANDOFF ATUAL — SESSÃO 91 (2026-06-16) → SESSÃO 92
+
+### Estado atual: Reserva de Veículo — Editar Rota aprimorado com mapa, paradas e TSP — Deploy @988 (pendente)
+
+### O que foi feito nesta sessão (s93)
+| Deploy | O que foi implementado |
+|---|---|
+| @988 | **Frontend only** (`index.html`): painel "Editar Rota" do modal de detalhes completamente reescrito para aprovadores em PENDENTE/APROVADA. (1) Local de chegada com botão picker de mapa Leaflet (contexto `det-chegada`). (2) Paradas intermediárias: lista dinâmica add/remove, picker de mapa por parada (contexto `det-parada`), campo "Tempo de espera (min)" step=5 por parada. (3) Botão "Rota eficiente": geocodifica paradas sem coord via `ctrl_carro_geocode`, reordena com nearest-neighbor TSP a partir da `localSaida`. (4) Botão "Salvar rota" envia `{localChegada, coordChegada, paradas:[{local,lat,lng,tempoParadaMin}]}`. Novas variáveis de estado: `_mapaContexto` ('form'/'det-chegada'/'det-parada'), `_editRotaParadas`, `_editRotaChegada`, `_editRotaOrigem`. `confirmarMapaPicker` estendido com desvio por contexto. `reserva_carro_repository.gs`: schema comment atualizado com `tempoParadaMin`. |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 90 (2026-06-16) → SESSÃO 91
 
 ### Estado atual: Datas Comemorativas — painel admin com CRUD, motions e home dinâmica — Deploy @980
 

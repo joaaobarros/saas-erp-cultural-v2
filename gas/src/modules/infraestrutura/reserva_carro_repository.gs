@@ -9,7 +9,7 @@
  *   - veiculoId: string ('default' para o veículo padrão)
  *   - rota.coordSaida:   { lat, lng }
  *   - rota.coordChegada: { lat, lng }
- *   - rota.paradas:      [{ local, lat, lng, mapaUrl }]  (enriquecido com mapa)
+  *   - rota.paradas:      [{ local, lat, lng, mapaUrl, tempoParadaMin }]
  *   - rota.tempoEstimadoMin: number
  *   - rota.distanciaKm:     number
  *   - horaChegadaEstimada:  'HH:MM' (calculada via Maps, substituiu o campo manual)
