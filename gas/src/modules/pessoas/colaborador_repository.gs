@@ -198,7 +198,8 @@ var ColaboradorRepository = (function () {
         var _CAMPOS_PROTEGIDOS = [
           'nomeApelido','pronomes','emailPessoal','dataNascimento','numRegistro','pis',
           'genero','sexualidade','racaCor','telefone','contatoEmergencia',
-          'tipoSanguineo','alergias','observacoesPessoais','restricoesAlimentares',
+          'tipoSanguineo','tamanhoVestiario','tamanhoCalca','tamanhoCalcado',
+          'alergias','observacoesPessoais','restricoesAlimentares',
           'restricoesOutro','endereco','funcoes','substituicoes','cpf',
           'salarioBruto','salario','fotoPerfil','beneficios',
           // históricos temporais — arrays de entradas {dados, dataInicio, dataFim}

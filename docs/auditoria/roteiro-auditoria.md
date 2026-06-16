@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: pendente (s75) · Férias: bugs, notificações por email, edição/cancelamento com restrições
+> Deploy atual: s91 pendente · s90 @980 (Datas Comemorativas) · s89b @979 (BI Demográfico fix)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
