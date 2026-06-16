@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s93 @988 · s92 @987 (Datas Comemorativas) · s91 @982 (Vestuário)
+> Deploy atual: s93 @991 · s92 @987 (Datas Comemorativas) · s91 @982 (Vestuário)
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
