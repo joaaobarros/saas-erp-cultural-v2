@@ -467,6 +467,10 @@ body {
 .dc-indigena     { background: linear-gradient(135deg, #14532d 0%, #854d0e 100%); }
 .dc-mulheres     { background: linear-gradient(135deg, #4a044e 0%, #a21caf 100%); }
 .dc-arco-iris    { background: linear-gradient(135deg, #be123c 0%, #ea580c 25%, #ca8a04 50%, #16a34a 75%, #2563eb 100%); }
+.dc-bairro       { background: linear-gradient(135deg, #14532d 0%, #65a30d 100%); }
+.dc-ccbj         { background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%); }
+.dc-cultura      { background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); }
+.dc-sao-joao     { background: linear-gradient(135deg, #713f12 0%, #ca8a04 100%); }
 
 /* Pulsing FAB (botão flutuante de atenção) */
 .fab-pulse { animation: fabPulseGlow 2.4s ease-in-out infinite; }
@@ -596,7 +600,9 @@ body {
 .badge-prio-alto    { background: #fef3c7; color: #92400e; }
 .badge-prio-medio   { background: #e0f2fe; color: #0369a1; }
 .badge-prio-baixo   { background: var(--surface2); color: var(--muted); }
-.badge-setor        { background: #ede9fe; color: #5b21b6; gap: 3px; }
+.badge-setor        { gap: 3px; }
+.exec-agrup.ativa   { background: var(--color-primary-lt); color: var(--color-primary); border-color: var(--color-primary); font-weight: 600; }
+.badge-cancelado    { background: #fee2e2; color: #991b1b; }
 .widget-saldo { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:6px; }
 .widget-saldo.alerta { border-color:#f87171;background:#fff1f2; }
 .widget-saldo-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em; }
@@ -11166,10 +11172,23 @@ function _labelSetor(id) {
   }
   return id;
 }
+var _SETOR_PALETA = [
+  {bg:'#ede9fe',cor:'#5b21b6'},{bg:'#dbeafe',cor:'#1e40af'},{bg:'#dcfce7',cor:'#15803d'},
+  {bg:'#fef9c3',cor:'#854d0e'},{bg:'#ffe4e6',cor:'#9f1239'},{bg:'#e0f2fe',cor:'#0369a1'},
+  {bg:'#fce7f3',cor:'#9d174d'},{bg:'#d1fae5',cor:'#065f46'},{bg:'#fff7ed',cor:'#9a3412'},
+  {bg:'#f3e8ff',cor:'#6b21a8'}
+];
+var _setorCorIdx = {};
 function _badgeSetor(id, labelOverride) {
   var label = labelOverride || _labelSetor(id) || id;
   if (!label) return '<span class="muted-text">—</span>';
-  return '<span class="badge badge-setor"><span class="ms ms-sm">apartment</span>' + escaparHtml(label) + '</span>';
+  if (!_setorCorIdx[id]) {
+    var idx = 0;
+    for (var i = 0; i < (id||'').length; i++) idx = (idx * 31 + (id.charCodeAt(i))) % _SETOR_PALETA.length;
+    _setorCorIdx[id] = idx;
+  }
+  var p = _SETOR_PALETA[_setorCorIdx[id]||0];
+  return '<span class="badge badge-setor" style="background:'+p.bg+';color:'+p.cor+';">' + escaparHtml(label) + '</span>';
 }
 
 // ── Utilitários de moeda (R$ 0,00) ──────────────────────────
@@ -16783,12 +16802,17 @@ var DatasComemorativasAdmin = (function() {
     { id:'coracoes',     label:'Corações'      },
     { id:'estrelas',     label:'Estrelas'      },
     { id:'ouro',         label:'Ouro (partículas douradas)' },
-    { id:'verde_amarelo',label:'Verde e Amarelo' }
+    { id:'verde_amarelo',label:'Verde e Amarelo' },
+    { id:'sao_joao',     label:'São João (confete amarelo/laranja)' },
+    { id:'bairro',       label:'Comunidade (confete terroso/verde)' },
+    { id:'ccbj_20anos',  label:'CCBJ Aniversário (roxo + badge)' },
+    { id:'cultura',      label:'Arte e Cultura (emojis + laranja)' }
   ];
 
   var _MOTION_CLS = {
     fogos:'dc-ano-novo', neve:'dc-natal', papai_noel:'dc-natal', coracoes:'dc-namorados',
-    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ'
+    estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ',
+    sao_joao:'dc-sao-joao', bairro:'dc-bairro', ccbj_20anos:'dc-ccbj', cultura:'dc-cultura'
   };
 
   function _clsParaMotion(motion) {
@@ -30185,13 +30209,32 @@ var App = (function() {
     { mes:11, dia:25, id:'violencia_m', label:'Dia pela Eliminação da Violência contra as Mulheres', sub:'Nenhuma forma de violência é aceitável.', icone:'💜', cls:'dc-mulheres', motion:null            },
     { mes:12, dia:10, id:'dir_humanos', label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', cls:'dc-criancas', motion:'estrelas'    },
     { mes:12, dia:25, id:'natal',       label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.', icone:'🎄', cls:'dc-natal',  motion:'papai_noel'  },
-    { mes:12, dia:31, id:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo', motion:'fogos'         }
+    { mes:12, dia:31, id:'reveillon',   label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!', icone:'🎊', cls:'dc-ano-novo', motion:'fogos'         },
+    // ── Bairros de Fortaleza ────────────────────────────────────────────────
+    { mes:3,  dia:24, id:'bom_jardim',  label:'Aniversário do Bom Jardim!',              sub:'Fundado em 1961 — ' + (new Date().getFullYear()-1961) + ' anos de comunidade e resistência.', icone:'🌿', cls:'dc-bairro',  motion:'bairro'       },
+    { mes:10, dia:4,  id:'canindezinho',label:'Aniversário do Canindezinho!',             sub:'Celebrando a comunidade do Canindezinho — padroeiro São Francisco de Assis.', icone:'⛪', cls:'dc-bairro',  motion:'bairro'       },
+    // ── CCBJ ───────────────────────────────────────────────────────────────
+    { mes:12, dia:19, id:'ccbj',        label:'Aniversário do CCBJ! ' + (new Date().getFullYear()-2006) + ' anos!', sub:'Centro Cultural Bom Jardim — inaugurado em 19 de dezembro de 2006. Arte, cultura e resistência no território!', icone:'🏛️', cls:'dc-ccbj', motion:'ccbj_20anos' },
+    // ── Arte e Cultura ──────────────────────────────────────────────────────
+    { mes:3,  dia:27, id:'teatro',      label:'Dia Mundial do Teatro',                   sub:'Celebrando a arte cênica que transforma vidas e territórios.', icone:'🎭', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:4,  dia:23, id:'livro',       label:'Dia Mundial do Livro e do Direito Autoral',sub:'A leitura que liberta — UNESCO, desde 1995.',                 icone:'📖', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:4,  dia:29, id:'danca',       label:'Dia Internacional da Dança',              sub:'O movimento que fala o que as palavras não alcançam.',         icone:'💃', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:5,  dia:18, id:'museus',      label:'Dia Internacional dos Museus',            sub:'ICOM — patrimônio, memória e acesso à cultura para todos.',    icone:'🏛️', cls:'dc-cultura', motion:'cultura'      },
+    { mes:6,  dia:13, id:'santo_antonio',label:'Dia de Santo Antônio — Festa Junina!',  sub:'O mês mais junino do Nordeste começa aqui!',                  icone:'🎉', cls:'dc-sao-joao', motion:'sao_joao'     },
+    { mes:6,  dia:24, id:'sao_joao',    label:'Feliz Festa de São João!',               sub:'Quadrilha, forró, fogueira e todo o coração do Nordeste!',     icone:'🎆', cls:'dc-sao-joao', motion:'sao_joao'     },
+    { mes:8,  dia:17, id:'patrimonio',  label:'Dia do Patrimônio Histórico e Cultural',  sub:'IPHAN — preservar é resistir ao apagamento da memória.',       icone:'🏰', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:8,  dia:22, id:'folclore',    label:'Dia do Folclore',                         sub:'A sabedoria popular que nasce do povo e volta para o povo.',   icone:'🎪', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:11, dia:5,  id:'cultura_br',  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:11, dia:22, id:'musica',      label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:12, dia:2,  id:'samba',       label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', cls:'dc-cultura',  motion:'cultura'      },
+    { mes:12, dia:13, id:'forro',       label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', cls:'dc-sao-joao', motion:'sao_joao'     }
   ];
 
   var _DC_MOTION_CLS = {
     fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
     estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ',
-    papai_noel:'dc-natal'
+    papai_noel:'dc-natal', sao_joao:'dc-sao-joao', bairro:'dc-bairro',
+    ccbj_20anos:'dc-ccbj', cultura:'dc-cultura'
   };
 
   function _detectarDataComemorativa() {
@@ -30366,6 +30409,89 @@ var App = (function() {
         pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy;
           ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
           ctx.fillStyle='rgba(255,255,255,'+Math.max(0,(1-fr/MAX))*(p.op)+')'; ctx.fill(); });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='sao_joao') {
+      var _sjCores = ['#fbbf24','#f59e0b','#ef4444','#dc2626','#fb923c','#f97316','#fde68a'];
+      for(var i=0;i<MAX;i++) pts.push({x:Math.random()*cv.width,y:cv.height+20,
+        vx:(Math.random()-.5)*3,vy:-2-Math.random()*3,
+        sz:3+Math.random()*5,cor:_sjCores[Math.floor(Math.random()*_sjCores.length)],life:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.life-=1/MAX;
+          ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle=p.cor; ctx.globalAlpha=Math.max(0,p.life); ctx.fill(); ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='bairro') {
+      var _bCores = ['#16a34a','#65a30d','#a16207','#92400e','#854d0e','#15803d','#84cc16'];
+      for(var i=0;i<MAX;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,
+        vx:(Math.random()-.5)*2,vy:1.5+Math.random()*2,
+        sz:4+Math.random()*6,cor:_bCores[Math.floor(Math.random()*_bCores.length)],
+        rot:Math.random()*Math.PI*2,life:1,rct:Math.random()>.5});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.rot+=.05; p.life-=.6/MAX;
+          ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.cor;
+          ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+          if(p.rct){ ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2); }
+          else{ ctx.beginPath(); ctx.arc(0,0,p.sz/2,0,Math.PI*2); ctx.fill(); }
+          ctx.restore(); ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='ccbj_20anos') {
+      var _ccCores = ['#7c3aed','#a855f7','#6d28d9','#4c1d95','#c4b5fd','#ddd6fe','#8b5cf6'];
+      for(var i=0;i<MAX;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,
+        vx:(Math.random()-.5)*2.5,vy:1.2+Math.random()*2.5,
+        sz:3+Math.random()*7,cor:_ccCores[Math.floor(Math.random()*_ccCores.length)],
+        rot:Math.random()*Math.PI*2,life:1});
+      var _ccBdg = document.createElement('div');
+      var _ccAnos = new Date().getFullYear()-2006;
+      _ccBdg.textContent = '🏛️ CCBJ · ' + _ccAnos + ' anos';
+      _ccBdg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+        'background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;' +
+        'font-size:clamp(20px,4vw,36px);font-weight:800;padding:18px 36px;border-radius:16px;' +
+        'box-shadow:0 8px 32px rgba(124,58,237,.6);pointer-events:none;z-index:10000;' +
+        'opacity:0;transition:opacity .5s;letter-spacing:1px;text-align:center;';
+      document.body.appendChild(_ccBdg);
+      setTimeout(function(){_ccBdg.style.opacity='1';},120);
+      setTimeout(function(){_ccBdg.style.opacity='0';setTimeout(function(){_ccBdg.remove();},500);},3400);
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.rot+=.06; p.life-=.5/MAX;
+          ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.cor;
+          ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+          ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);
+          ctx.restore(); ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='cultura') {
+      var _cultEmojis = ['🎭','🎨','🎵','📖','🎬','🎤','🎪','🥁'];
+      var _cultFloats = [];
+      for(var _ci=0;_ci<10;_ci++) {
+        (function(idx){
+          var el = document.createElement('div');
+          el.textContent = _cultEmojis[idx%_cultEmojis.length];
+          el.style.cssText = 'position:fixed;font-size:'+(24+Math.random()*18)+'px;' +
+            'left:'+(8+Math.random()*84)+'%;top:'+(8+Math.random()*72)+'%;' +
+            'pointer-events:none;z-index:9999;opacity:0;transition:opacity .4s;';
+          document.body.appendChild(el);
+          _cultFloats.push(el);
+          setTimeout(function(){el.style.opacity='1';},idx*110);
+        })(_ci);
+      }
+      setTimeout(function(){
+        _cultFloats.forEach(function(e){e.style.opacity='0';setTimeout(function(){e.remove();},400);});
+      },3000);
+      var _cultCores = ['#ea580c','#f59e0b','#ca8a04','#d97706','#c2410c','#fb923c'];
+      for(var i=0;i<MAX;i++) pts.push({x:Math.random()*cv.width,y:cv.height+20,
+        vx:(Math.random()-.5)*2.5,vy:-1.8-Math.random()*2.5,
+        sz:2+Math.random()*4,cor:_cultCores[Math.floor(Math.random()*_cultCores.length)],life:1});
+      function animar() {
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.life-=.8/MAX;
+          ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle=p.cor; ctx.globalAlpha=Math.max(0,p.life); ctx.fill(); ctx.globalAlpha=1; });
         fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
       }
     } else {

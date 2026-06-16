@@ -767,32 +767,70 @@ var ConfigAdminService = (function () {
     { id:'mulheres',     mes:3,  dia:8,  label:'Dia Internacional das Mulheres',         sub:'Pela igualdade, liberdade e direitos das mulheres.',            icone:'💜', motion:'estrelas',  cls:'dc-mulheres' },
     { id:'lgbtqia',      mes:6,  dia:28, label:'Dia Internacional do Orgulho LGBTQIA+', sub:'Amor, identidade e o direito de ser quem se é.',               icone:'🏳️‍🌈', motion:'fogos', cls:'dc-arco-iris'},
     { id:'violencia_m',  mes:11, dia:25, label:'Dia pela Eliminação da Violência contra as Mulheres', sub:'Nenhuma forma de violência é aceitável.',         icone:'💜', motion:null,         cls:'dc-mulheres' },
-    { id:'dir_humanos',  mes:12, dia:10, label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', motion:'estrelas' }
+    { id:'dir_humanos',  mes:12, dia:10, label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', motion:'estrelas' },
+    // ── Bairros de Fortaleza ─────────────────────────────────────────────────
+    { id:'bom_jardim',   mes:3,  dia:24, label:'Aniversário do Bom Jardim!',              sub:'Fundado em 1961 — comunidade, arte e resistência.',            icone:'🌿', motion:'bairro',       cls:'dc-bairro'   },
+    { id:'canindezinho', mes:10, dia:4,  label:'Aniversário do Canindezinho!',             sub:'Padroeiro São Francisco de Assis — celebrando a comunidade.', icone:'⛪', motion:'bairro',       cls:'dc-bairro'   },
+    // ── CCBJ ─────────────────────────────────────────────────────────────────
+    { id:'ccbj',         mes:12, dia:19, label:'Aniversário do CCBJ!',                    sub:'Centro Cultural Bom Jardim — inaugurado em 19 de dezembro de 2006. Arte, cultura e resistência no território!', icone:'🏛️', motion:'ccbj_20anos', cls:'dc-ccbj' },
+    // ── Arte e Cultura ───────────────────────────────────────────────────────
+    { id:'teatro',       mes:3,  dia:27, label:'Dia Mundial do Teatro',                   sub:'A arte cênica que transforma vidas e territórios.',            icone:'🎭', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'livro',        mes:4,  dia:23, label:'Dia Mundial do Livro e do Direito Autoral',sub:'A leitura que liberta — UNESCO, desde 1995.',                 icone:'📖', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'danca',        mes:4,  dia:29, label:'Dia Internacional da Dança',              sub:'O movimento que fala o que as palavras não alcançam.',         icone:'💃', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'museus',       mes:5,  dia:18, label:'Dia Internacional dos Museus',            sub:'Patrimônio, memória e acesso à cultura para todos.',           icone:'🏛️', motion:'cultura',      cls:'dc-cultura'  },
+    { id:'santo_antonio',mes:6,  dia:13, label:'Dia de Santo Antônio — Festa Junina!',   sub:'O mês mais junino do Nordeste começa aqui!',                  icone:'🎉', motion:'sao_joao',      cls:'dc-sao-joao' },
+    { id:'sao_joao',     mes:6,  dia:24, label:'Feliz Festa de São João!',               sub:'Quadrilha, forró, fogueira e todo o coração do Nordeste!',     icone:'🎆', motion:'sao_joao',      cls:'dc-sao-joao' },
+    { id:'patrimonio',   mes:8,  dia:17, label:'Dia do Patrimônio Histórico e Cultural',  sub:'IPHAN — preservar é resistir ao apagamento da memória.',       icone:'🏰', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'folclore',     mes:8,  dia:22, label:'Dia do Folclore',                         sub:'A sabedoria popular que nasce do povo e volta para o povo.',   icone:'🎪', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'cultura_br',   mes:11, dia:5,  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'musica',       mes:11, dia:22, label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'samba',        mes:12, dia:2,  label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'forro',        mes:12, dia:13, label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', motion:'sao_joao',      cls:'dc-sao-joao' }
   ];
 
   function _lerDatasComemorativasJSON() {
     try {
       var lista = readJSON('datas_comemorativas.json');
-      if (Array.isArray(lista) && lista.length > 0) return lista;
+      if (Array.isArray(lista)) return lista;
     } catch(e) {
       Logger.warn('config_admin_service', '_lerDatasComemorativasJSON', e.message);
     }
     return null;
   }
 
+  /**
+   * Merge das datas default com o estado salvo no JSON.
+   * Defaults sempre aparecem; o JSON sobrepõe campos editados e o flag `ativo`.
+   * Datas customizadas (não presentes nos defaults) são acrescentadas no final.
+   */
+  function _mergeComDefaults(jsonLista) {
+    var saved = {};
+    if (Array.isArray(jsonLista)) {
+      jsonLista.forEach(function(d) { saved[d.id] = d; });
+    }
+    var defaultIds = _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return d.id; });
+    var resultado = _DATAS_COMEMORATIVAS_DEFAULT.map(function(def) {
+      var s = saved[def.id];
+      return s ? Object.assign({}, def, s) : Object.assign({ ativo: true }, def);
+    });
+    if (Array.isArray(jsonLista)) {
+      jsonLista.forEach(function(d) {
+        if (defaultIds.indexOf(d.id) < 0) resultado.push(d);
+      });
+    }
+    return resultado;
+  }
+
   /** Leitura pública — não requer admin. Retorna apenas datas ativas. */
   function getDatasComemorativas() {
-    var lista = _lerDatasComemorativasJSON();
-    if (!lista) return _DATAS_COMEMORATIVAS_DEFAULT;
+    var lista = _mergeComDefaults(_lerDatasComemorativasJSON());
     return lista.filter(function(d) { return d.ativo !== false; });
   }
 
   /** Lista todas as datas (inclusive inativas) para o painel admin. */
   function listarDatasComemorativas() {
     _assertAdmin();
-    var lista = _lerDatasComemorativasJSON();
-    if (!lista) return _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return Object.assign({}, d); });
-    return lista;
+    return _mergeComDefaults(_lerDatasComemorativasJSON());
   }
 
   /**
@@ -833,24 +871,37 @@ var ConfigAdminService = (function () {
     return id;
   }
 
-  /** Remove (soft-delete) uma data comemorativa. */
+  /** Remove (soft-delete) uma data comemorativa. Mantido para compatibilidade. */
   function excluirDataComemorativa(id) {
+    return toggleDataComemorativa(id, false);
+  }
+
+  /** Ativa ou desativa uma data comemorativa sem alterar os outros campos. */
+  function toggleDataComemorativa(id, ativo) {
     _assertAdmin();
     var email = getEmailSessao();
 
     modifyJSON('datas_comemorativas.json', function(lista) {
-      if (!Array.isArray(lista) || lista.length === 0) {
-        lista = _DATAS_COMEMORATIVAS_DEFAULT.map(function(d) { return Object.assign({}, d); });
-      }
+      if (!Array.isArray(lista)) lista = [];
       var idx = -1;
       for (var i = 0; i < lista.length; i++) { if (lista[i].id === id) { idx = i; break; } }
-      if (idx < 0) throw new Error('Data comemorativa não encontrada: ' + id);
-      lista[idx].ativo        = false;
-      lista[idx].atualizadoEm = agora();
+      if (idx >= 0) {
+        lista[idx].ativo        = ativo;
+        lista[idx].atualizadoEm = agora();
+      } else {
+        var def = null;
+        for (var i = 0; i < _DATAS_COMEMORATIVAS_DEFAULT.length; i++) {
+          if (_DATAS_COMEMORATIVAS_DEFAULT[i].id === id) { def = _DATAS_COMEMORATIVAS_DEFAULT[i]; break; }
+        }
+        lista.push(Object.assign({}, def || { id: id }, { ativo: ativo, atualizadoEm: agora() }));
+      }
       return lista;
     });
 
-    AuditoriaService.registrar('DATA_COMEMORATIVA_EXCLUIDA', 'config_org', { id: id, usuario: email });
+    AuditoriaService.registrar(
+      ativo ? 'DATA_COMEMORATIVA_ATIVADA' : 'DATA_COMEMORATIVA_DESATIVADA',
+      'config_org', { id: id, usuario: email }
+    );
     return true;
   }
 
