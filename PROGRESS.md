@@ -39,7 +39,13 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s100)**: **UX — Pulse FAB: animação ring de sonar (box-shadow spread 0→22px), escala 1.11 com pico em 18%, pausa de descanso 68%–100%, duração 3.5s; ícone dc-strip com translateY(-2px) no pico — Deploy @1006.**
+**Fase atual (s101)**: **Fix — NaN% em todo o sistema: checks `!== null` → `!= null` em 8 pontos do frontend (Escuta: métricas globais, tabela por pergunta, scores de clima; Home KPIs: ocupação/prazo/satisfação/execução/agentes) — Deploy @1007.**
+
+**Causa raiz**: Apps Script omite propriedades com valor `null` na serialização → frontend recebe `undefined` → `undefined !== null` é `true` (strict) → `Math.round(undefined * 100)` = `NaN%`. Fix: usar igualdade solta `!= null` (cobre null E undefined).
+
+**Arquivos alterados**: `gas/src/frontend/index.html` — linhas 33147-33152 (KPIs Home), 36443-36448 (Escuta global), 36478+36492 (scores clima), 36517-36520 (tabela por pergunta), 36523 (mediaNota).
+
+**Fase anterior (s100)**: **UX — Pulse FAB: animação ring de sonar (box-shadow spread 0→22px), escala 1.11 com pico em 18%, pausa de descanso 68%–100%, duração 3.5s; ícone dc-strip com translateY(-2px) no pico — Deploy @1006.**
 
 **Fase anterior (s99)**: **Fix — Badge de setor: cores únicas por setor (paleta 14 cores, atribuição sequencial, bug idx=0 corrigido) — Deploy @1005.**
 
