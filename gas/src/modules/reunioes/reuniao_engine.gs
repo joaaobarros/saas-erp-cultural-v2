@@ -81,7 +81,7 @@ var ReuniaoEngine = (function () {
     var reuniao = ReuniaoRepository.buscarPorId(orgId, id);
     if (!reuniao) throw new Error('Reunião não encontrada: ' + id);
 
-    FsmGuardian.transitar('reuniao', reuniao.status, novoStatus, { id: id, email: email });
+    FsmGuardian.assertValida('reuniao', reuniao.status, novoStatus, id, email);
 
     reuniao.status = novoStatus;
     if (novoStatus === 'em_andamento' && !reuniao.inicioEm) reuniao.inicioEm = agora();
@@ -132,8 +132,7 @@ var ReuniaoEngine = (function () {
     if (!reuniao) throw new Error('Reunião não encontrada: ' + id);
     if (!reuniao.ata || !reuniao.ata.rascunho) throw new Error('Rascunho da ata não preenchido.');
 
-    FsmGuardian.transitar('reuniao_ata', reuniao.ata.statusAta || 'rascunho_ata', 'em_aprovacao',
-      { id: id, email: email });
+    FsmGuardian.assertValida('reuniao_ata', reuniao.ata.statusAta || 'rascunho_ata', 'em_aprovacao', id, email);
 
     reuniao.ata.statusAta      = 'em_aprovacao';
     reuniao.ata.submetidaEm    = agora();
@@ -159,8 +158,7 @@ var ReuniaoEngine = (function () {
     var reuniao = ReuniaoRepository.buscarPorId(orgId, id);
     if (!reuniao) throw new Error('Reunião não encontrada: ' + id);
 
-    FsmGuardian.transitar('reuniao_ata', reuniao.ata && reuniao.ata.statusAta, 'aprovada',
-      { id: id, email: email });
+    FsmGuardian.assertValida('reuniao_ata', reuniao.ata && reuniao.ata.statusAta, 'aprovada', id, email);
 
     reuniao.ata.statusAta   = 'aprovada';
     reuniao.ata.aprovadaEm  = agora();
@@ -168,6 +166,33 @@ var ReuniaoEngine = (function () {
 
     AuditoriaService.registrar('ATA_APROVADA', 'reunioes', { id: id, email: email });
     SystemEvents.emit('ATA_APROVADA', { reuniaoId: id, orgId: orgId }, email);
+    return ReuniaoRepository.salvar(orgId, reuniao, email);
+  }
+
+  // ─── Auto-salvamento ──────────────────────────────────────────────────────────
+
+  /**
+   * Auto-salvamento de rascunho (dados + pauta + presença + texto da ata).
+   * Diferente de salvarRascunhoAta(): não versiona a ata a cada chamada — é uma
+   * rede de segurança contra queda de energia/internet, não um checkpoint deliberado.
+   */
+  function autoSalvar(id, dados, email, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    var reuniao = ReuniaoRepository.buscarPorId(orgId, id);
+    if (!reuniao) throw new Error('Reunião não encontrada: ' + id);
+
+    var camposPermitidos = ['titulo','tipo','local','dataHora','duracao','pauta','presentes',
+                            'ausentesJustificados','acaoVinculadaId','convocadoPor'];
+    camposPermitidos.forEach(function(c) {
+      if (dados[c] !== undefined) reuniao[c] = dados[c];
+    });
+
+    if (dados.ataTexto !== undefined) {
+      if (!reuniao.ata) reuniao.ata = { rascunho: '', textoFinal: '', statusAta: 'rascunho_ata', versoes: [] };
+      if (reuniao.ata.statusAta !== 'aprovada') reuniao.ata.rascunho = dados.ataTexto;
+    }
+
+    reuniao.autoSalvoEm = agora();
     return ReuniaoRepository.salvar(orgId, reuniao, email);
   }
 
@@ -225,6 +250,7 @@ var ReuniaoEngine = (function () {
   return {
     criar:                      criar,
     atualizar:                  atualizar,
+    autoSalvar:                 autoSalvar,
     mudarStatus:                mudarStatus,
     salvarRascunhoAta:          salvarRascunhoAta,
     submeterAtaParaAprovacao:   submeterAtaParaAprovacao,

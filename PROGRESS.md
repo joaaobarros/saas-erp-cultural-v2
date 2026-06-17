@@ -39,7 +39,25 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s102)**: **Fix — "Meu Perfil": todo usuário aprovado (AcessoService status==='ativo') agora pode editar seu próprio perfil, mesmo sem ficha de colaborador pré-cadastrada — Deploy @1008.**
+**Fase atual (s103)**: **Fix — Reuniões: erro "FsmGuardian.transitar is not a function", botões presos em loading eterno, perda de dados ao adicionar encaminhamento; UX: abas Ata+Encaminhamentos mescladas; Feat: auto-salvamento contínuo — Deploy @1009.**
+
+**Causa raiz (3 bugs)**:
+1. `reuniao_engine.gs` chamava `FsmGuardian.transitar(...)` — método que nunca existiu no `FsmGuardian` (API real: `assertValida(dominio, estadoAtual, novoStatus, entidadeId, ator)`). Quebrava toda transição de status (Agendar/Iniciar/Encerrar) e submissão/aprovação de ata.
+2. `ReunioesUI.salvar/mudarStatus/salvarAta/submeterAta/aprovarAta/adicionarEncaminhamento/concluirEnc` (frontend) eram chamadas via `BtnGuard.wrap(id, label, fn)`, que invoca `fn(done)` e só libera o botão quando `done()` é chamado — nenhuma dessas funções aceitava ou chamava `done`, deixando os botões travados em "Salvando…"/"Adicionando…" para sempre após o primeiro uso.
+3. `ReunioesUI.salvar()` nunca enviava `pauta`/`presentes`/`ausentesJustificados` ao backend (só viviam no DOM); ao adicionar um encaminhamento, o fluxo recarregava a reunião do servidor (`abrirDetalhe`), que não tinha esses dados — pareciam "excluídos".
+
+**Fix**:
+- `reuniao_engine.gs` — as 3 chamadas `FsmGuardian.transitar` → `FsmGuardian.assertValida(dominio, estadoAtual, novoStatus, id, email)`.
+- `index.html` (`ReunioesUI`) — todas as 7 funções acima passam a aceitar `done` e chamá-lo em sucesso, erro e early-return de validação.
+- `adicionarEncaminhamento` agora re-renderiza a lista a partir de `r.data.encaminhamentos` (resposta do próprio `ctrl_reunioes_adicionar_encaminhamento`) em vez de recarregar a reunião inteira.
+- **Auto-salvamento**: nova `ReuniaoEngine.autoSalvar()` + `ctrl_reunioes_autosalvar` + `GAS.reunioes.autoSalvar` — debounce de 1.5s após qualquer edição em Dados/Pauta/Presença/Ata persiste no servidor (não versiona a ata a cada chamada, diferente do "Salvar Rascunho" manual); cria o rascunho automaticamente na primeira edição válida se a reunião ainda não existe; indicador "Salvo automaticamente às HH:MM:SS" no rodapé do modal. Mitiga perda de dados por queda de energia/internet.
+- **UX**: abas "Ata" e "Encaminhamentos" do modal mescladas em uma única aba "Ata & Encaminhamentos" — elimina a necessidade de alternar abas durante a reunião.
+
+**Arquivos alterados**: `gas/src/modules/reunioes/reuniao_engine.gs` (FsmGuardian + `autoSalvar`), `gas/src/modules/reunioes/reuniao_controller.gs` (`ctrl_reunioes_autosalvar`), `gas/src/frontend/index.html` (modal mesclado, `GAS.reunioes.autoSalvar`, todas as correções de `done()`, helpers `_lerPautaAtual`/`_lerPresentesAtual`/`_agendarAutoSalvar`).
+
+**Pendente — pedidos do usuário ainda não escopados nesta sessão** (aguardando confirmação de prioridade): integração com Google Calendar; participantes externos via autocomplete de e-mail (Contacts); abrir Quadros/Sessões Interativas vinculados sem saltar fora do modal de Reunião; aprovação coletiva de ata por participante (já listado como REU-09); compartilhamento de ata para agentes externos.
+
+**Fase anterior (s102)**: **Fix — "Meu Perfil": todo usuário aprovado (AcessoService status==='ativo') agora pode editar seu próprio perfil, mesmo sem ficha de colaborador pré-cadastrada — Deploy @1008.**
 
 **Causa raiz**: `ctrl_pessoas_meu_perfil_ler/salvar` exigiam `ColaboradorRepository.buscarPorEmail()` retornando registro existente; lançava `"Seu usuário não está vinculado a um colaborador no sistema."` para qualquer aprovado (voluntário, contratado, admin) sem ficha de RH pré-criada — só Funcionários cadastrados pelo RH conseguiam usar a tela.
 

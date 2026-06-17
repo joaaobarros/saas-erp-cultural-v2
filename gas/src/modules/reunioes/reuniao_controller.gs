@@ -101,6 +101,21 @@ function ctrl_reunioes_salvar(params) {
   }, 'ctrl_reunioes_salvar');
 }
 
+function ctrl_reunioes_autosalvar(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    _assertPapelReuniao(acesso.registro && acesso.registro.papel);
+
+    var id = params && params.id;
+    if (!id) throw new Error('ID obrigatório');
+    var resultado = ReuniaoEngine.autoSalvar(id, params, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
+  }, 'ctrl_reunioes_autosalvar');
+}
+
 function ctrl_reunioes_mudar_status(params) {
   return GasResponse.wrap(function() {
     var email  = getEmailSessao();

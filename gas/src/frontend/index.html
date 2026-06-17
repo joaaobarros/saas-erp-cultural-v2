@@ -7105,26 +7105,25 @@ select.form-control { cursor: pointer; }
               <button class="tab-btn ativa" onclick="ReunioesUI.setModalTab('dados',this)" type="button" data-bg-skip="1">Dados</button>
               <button class="tab-btn" onclick="ReunioesUI.setModalTab('pauta',this)" type="button" data-bg-skip="1">Pauta</button>
               <button class="tab-btn" onclick="ReunioesUI.setModalTab('presentes',this)" type="button" data-bg-skip="1">Presença</button>
-              <button class="tab-btn" onclick="ReunioesUI.setModalTab('ata',this)" type="button" data-bg-skip="1">Ata</button>
-              <button class="tab-btn" onclick="ReunioesUI.setModalTab('encaminhamentos',this)" type="button" data-bg-skip="1">Encaminhamentos</button>
+              <button class="tab-btn" onclick="ReunioesUI.setModalTab('ata',this)" type="button" data-bg-skip="1">Ata &amp; Encaminhamentos</button>
             </div>
             <!-- Tab Dados -->
             <div id="run-mtab-dados">
               <div class="form-grid">
-                <div class="form-group" style="grid-column:1/-1"><label>Título *</label><input type="text" id="run-titulo" class="form-control" required></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Título *</label><input type="text" id="run-titulo" class="form-control" required oninput="ReunioesUI._agendarAutoSalvar()"></div>
                 <div class="form-group"><label>Tipo</label>
-                  <select id="run-tipo" class="form-control">
+                  <select id="run-tipo" class="form-control" onchange="ReunioesUI._agendarAutoSalvar()">
                     <option value="ordinaria">Ordinária</option>
                     <option value="extraordinaria">Extraordinária</option>
                     <option value="comite">Comitê</option>
                     <option value="workshop">Workshop</option>
                   </select>
                 </div>
-                <div class="form-group"><label>Local</label><input type="text" id="run-local" class="form-control" placeholder="Sala / Online"></div>
-                <div class="form-group"><label>Data e Hora *</label><input type="datetime-local" id="run-data-hora" class="form-control" required></div>
-                <div class="form-group"><label>Duração (min)</label><input type="number" id="run-duracao" class="form-control" min="15" value="60"></div>
-                <div class="form-group" style="grid-column:1/-1"><label>Convocado por</label><select id="run-convocador" class="form-control"><option value="">— Selecionar —</option></select></div>
-                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (opcional)</label><select id="run-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+                <div class="form-group"><label>Local</label><input type="text" id="run-local" class="form-control" placeholder="Sala / Online" oninput="ReunioesUI._agendarAutoSalvar()"></div>
+                <div class="form-group"><label>Data e Hora *</label><input type="datetime-local" id="run-data-hora" class="form-control" required onchange="ReunioesUI._agendarAutoSalvar()"></div>
+                <div class="form-group"><label>Duração (min)</label><input type="number" id="run-duracao" class="form-control" min="15" value="60" oninput="ReunioesUI._agendarAutoSalvar()"></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Convocado por</label><select id="run-convocador" class="form-control" onchange="ReunioesUI._agendarAutoSalvar()"><option value="">— Selecionar —</option></select></div>
+                <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (opcional)</label><select id="run-acao-id" class="form-control" onchange="ReunioesUI._agendarAutoSalvar()"><option value="">— Nenhuma —</option></select></div>
               </div>
             </div>
             <!-- Tab Pauta -->
@@ -7146,7 +7145,7 @@ select.form-control { cursor: pointer; }
               </div>
               <div id="run-presentes-lista" style="font-size:13px;"></div>
             </div>
-            <!-- Tab Ata -->
+            <!-- Tab Ata & Encaminhamentos (integrados: nada de trocar de aba durante a reunião) -->
             <div id="run-mtab-ata" class="oculto">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div id="run-ata-status-info" style="font-size:12px;color:var(--muted);"></div>
@@ -7156,10 +7155,11 @@ select.form-control { cursor: pointer; }
                   <span class="ms ms-sm">article</span> Usar Template
                 </button>
               </div>
-              <textarea id="run-ata-texto" class="form-control" rows="12"
+              <textarea id="run-ata-texto" class="form-control" rows="10"
                 placeholder="Redigir ata da reunião… (ou clique em &quot;Usar Template&quot; para inserir a estrutura formal)"
-                style="width:100%;font-family:monospace;font-size:13px;resize:vertical;line-height:1.6;"></textarea>
-              <div style="display:flex;gap:8px;margin-top:8px;">
+                style="width:100%;font-family:monospace;font-size:13px;resize:vertical;line-height:1.6;"
+                oninput="ReunioesUI._agendarAutoSalvar()"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                 <button type="button" class="btn btn-secondary btn-sm"
                   id="run-ata-salvar-btn"
                   onclick="BtnGuard.wrap('run-ata-salvar-btn','Salvando…',ReunioesUI.salvarAta)">
@@ -7181,9 +7181,8 @@ select.form-control { cursor: pointer; }
                   <span class="ms ms-sm">share</span> Compartilhar ↗
                 </button>
               </div>
-            </div>
-            <!-- Tab Encaminhamentos -->
-            <div id="run-mtab-encaminhamentos" class="oculto">
+              <hr style="margin:16px 0;border-color:var(--border);">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Encaminhamentos</div>
               <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
                 <input type="text" id="run-enc-texto-input" class="form-control" placeholder="Texto do encaminhamento…" style="width:100%">
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -7201,6 +7200,7 @@ select.form-control { cursor: pointer; }
           </form>
           </div><!-- /modal-body -->
           <div class="modal-footer">
+            <span id="run-autosave-status" style="font-size:12px;color:var(--muted);margin-right:auto;"></span>
             <button type="button" class="btn btn-secondary" onclick="ReunioesUI.fecharForm()" data-bg-skip="1">Fechar</button>
             <button type="button" id="run-salvar-btn" class="btn btn-primary"
               onclick="BtnGuard.wrap('run-salvar-btn','Salvando…',ReunioesUI.salvar)">Salvar</button>
@@ -10735,6 +10735,7 @@ var GAS = {
     dashboard:                function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_dashboard(f||{}); },
     listarEncaminhamentos:    function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_listar_encaminhamentos(p||{}); },
     salvar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar(d); },
+    autoSalvar:               function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_autosalvar(d); },
     mudarStatus:              function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_mudar_status({id:id,status:s}); },
     salvarAta:                function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar_ata(d); },
     submeterAta:              function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_submeter_ata({id:id}); },
@@ -33766,9 +33767,9 @@ var ReunioesUI = (function() {
           '</div>' +
         '</div>' +
         '<div style="display:flex;flex-direction:column;gap:4px;">' +
-          (r.status === 'rascunho' ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-ag-'+r.id+'\',\'Agendando…\',function(){ReunioesUI.mudarStatus('+id+',\'agendada\');})" id="run-ag-'+r.id+'">Agendar</button>' : '') +
-          (r.status === 'agendada' ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-in-'+r.id+'\',\'Iniciando…\',function(){ReunioesUI.mudarStatus('+id+',\'em_andamento\');})" id="run-in-'+r.id+'">Iniciar</button>' : '') +
-          (r.status === 'em_andamento' ? '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-enc-'+r.id+'\',\'Encerrando…\',function(){ReunioesUI.mudarStatus('+id+',\'encerrada\');})" id="run-enc-'+r.id+'">Encerrar</button>' : '') +
+          (r.status === 'rascunho' ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-ag-'+r.id+'\',\'Agendando…\',function(done){ReunioesUI.mudarStatus('+id+',\'agendada\',done);})" id="run-ag-'+r.id+'">Agendar</button>' : '') +
+          (r.status === 'agendada' ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-in-'+r.id+'\',\'Iniciando…\',function(done){ReunioesUI.mudarStatus('+id+',\'em_andamento\',done);})" id="run-in-'+r.id+'">Iniciar</button>' : '') +
+          (r.status === 'em_andamento' ? '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-enc-'+r.id+'\',\'Encerrando…\',function(done){ReunioesUI.mudarStatus('+id+',\'encerrada\',done);})" id="run-enc-'+r.id+'">Encerrar</button>' : '') +
           '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ReunioesUI.abrirForm(' + id + ')">Editar</button>' +
         '</div>' +
       '</div>';
@@ -33803,7 +33804,7 @@ var ReunioesUI = (function() {
             '<div style="font-size:12px;color:var(--muted);">' + escaparHtml(e.reuniaoTitulo) + ' · Resp: ' + escaparHtml(e.responsavel || '—') + '</div>' +
           '</div>' +
           '<button class="btn btn-success btn-sm" ' +
-            'onclick="BtnGuard.wrap(\'enc-ok-'+eid+'\',\'Concluindo…\',function(){ReunioesUI.concluirEnc('+rid+','+eid+');})" ' +
+            'onclick="BtnGuard.wrap(\'enc-ok-'+eid+'\',\'Concluindo…\',function(done){ReunioesUI.concluirEnc('+rid+','+eid+',done);})" ' +
             'id="enc-ok-'+eid+'">✓ Concluir</button>' +
         '</div>';
       }).join('');
@@ -33867,15 +33868,15 @@ var ReunioesUI = (function() {
   }
 
   function setModalTab(tab, btn) {
-    ['dados','pauta','presentes','ata','encaminhamentos'].forEach(function(t) {
+    ['dados','pauta','presentes','ata'].forEach(function(t) {
       document.getElementById('run-mtab-' + t).classList.toggle('oculto', t !== tab);
     });
     document.querySelectorAll('#run-modal .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
     if (btn) btn.classList.add('ativa');
   }
 
-  function salvar() {
-    var dados = {
+  function _coletarDados() {
+    return {
       id:             _idAtual || undefined,
       titulo:         document.getElementById('run-titulo').value.trim(),
       tipo:           document.getElementById('run-tipo').value,
@@ -33883,70 +33884,93 @@ var ReunioesUI = (function() {
       duracao:        parseInt(document.getElementById('run-duracao').value) || 60,
       local:          document.getElementById('run-local').value.trim(),
       convocadoPor:   document.getElementById('run-convocador').value.trim(),
-      acaoVinculadaId: document.getElementById('run-acao-id').value.trim() || null
+      acaoVinculadaId: document.getElementById('run-acao-id').value.trim() || null,
+      pauta:          _lerPautaAtual(),
+      presentes:      _lerPresentesAtual().presentes,
+      ausentesJustificados: _lerPresentesAtual().ausentes
     };
-    if (!dados.titulo) { Toast.aviso('Título obrigatório.'); return; }
+  }
+
+  function salvar(done) {
+    done = done || function(){};
+    var dados = _coletarDados();
+    if (!dados.titulo) { Toast.aviso('Título obrigatório.'); done(); return; }
     GAS.reunioes.salvar(dados, function(resp) {
+      done();
       if (!resp || !resp.ok) { Toast.erro('Erro: ' + ((resp && resp.error && resp.error.message) || '')); return; }
+      _idAtual = resp.data.id;
       Toast.sucesso('Reunião salva com sucesso.');
       fecharForm();
       _carregado = false;
       carregar();
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function mudarStatus(id, novoStatus) {
+  function mudarStatus(id, novoStatus, done) {
+    done = done || function(){};
     GAS.reunioes.mudarStatus(id, novoStatus, function(resp) {
+      done();
       if (!resp || !resp.ok) { Toast.erro('Erro: ' + ((resp && resp.error && resp.error.message) || '')); return; }
       Toast.sucesso('Status alterado.');
       _carregado = false; carregar();
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function salvarAta() {
-    if (!_idAtual) return;
+  function salvarAta(done) {
+    done = done || function(){};
+    if (!_idAtual) { done(); return; }
     var texto = document.getElementById('run-ata-texto').value;
     GAS.reunioes.salvarAta({ id: _idAtual, textoRascunho: texto }, function(resp) {
+      done();
       Toast.mostrar(resp && resp.ok ? '💾 Rascunho salvo.' : '❌ Erro.', resp && resp.ok ? 'sucesso' : 'erro');
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function submeterAta() {
-    if (!_idAtual) return;
+  function submeterAta(done) {
+    done = done || function(){};
+    if (!_idAtual) { done(); return; }
     GAS.reunioes.submeterAta(_idAtual, function(resp) {
+      done();
       Toast.mostrar(resp && resp.ok ? '📤 Ata submetida para aprovação.' : '❌ Erro.', resp && resp.ok ? 'sucesso' : 'erro');
       if (resp && resp.ok) { fecharForm(); carregar(); }
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function aprovarAta() {
-    if (!_idAtual) return;
+  function aprovarAta(done) {
+    done = done || function(){};
+    if (!_idAtual) { done(); return; }
     GAS.reunioes.aprovarAta(_idAtual, function(resp) {
+      done();
       Toast.mostrar(resp && resp.ok ? '✅ Ata aprovada!' : '❌ Erro.', resp && resp.ok ? 'sucesso' : 'erro');
       if (resp && resp.ok) { fecharForm(); carregar(); }
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function adicionarEncaminhamento() {
-    if (!_idAtual) { Toast.aviso('Salve a reunião primeiro.'); return; }
+  function adicionarEncaminhamento(done) {
+    done = done || function(){};
+    if (!_idAtual) { done(); Toast.aviso('Salve a reunião primeiro.'); return; }
     var texto = document.getElementById('run-enc-texto-input').value.trim();
     var resp  = document.getElementById('run-enc-resp-input').value.trim();
     var prazo = document.getElementById('run-enc-prazo-input').value;
-    if (!texto || !resp) { Toast.aviso('Texto e responsável obrigatórios.'); return; }
+    if (!texto || !resp) { done(); Toast.aviso('Texto e responsável obrigatórios.'); return; }
     GAS.reunioes.adicionarEncaminhamento({ reuniaoId: _idAtual, texto: texto, responsavel: resp, prazo: prazo || null }, function(r) {
+      done();
+      if (!r || !r.ok) { Toast.erro('Erro ao adicionar encaminhamento.'); return; }
       Toast.sucesso('Encaminhamento adicionado.');
       document.getElementById('run-enc-texto-input').value = '';
       document.getElementById('run-enc-resp-input').value  = '';
       document.getElementById('run-enc-prazo-input').value = '';
-      abrirDetalhe(_idAtual);
-    }, function(e) { Toast.erro(e.message); });
+      _renderEncFormLista(r.data.encaminhamentos || []);
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function concluirEnc(reuniaoId, encId) {
+  function concluirEnc(reuniaoId, encId, done) {
+    done = done || function(){};
     GAS.reunioes.concluirEncaminhamento({ reuniaoId: reuniaoId, encId: encId }, function(r) {
+      done();
       Toast.sucesso('Encaminhamento concluído.');
       _carregarEncaminhamentos();
-    }, function(e) { Toast.erro(e.message); });
+    }, function(e) { done(); Toast.erro(e.message); });
   }
 
   function abrirDetalhe(id) { abrirForm(id); }
@@ -33966,49 +33990,63 @@ var ReunioesUI = (function() {
     var li = document.createElement('li');
     li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:13px;';
     li.innerHTML = '<span style="flex:1;">' + escaparHtml(texto) + '</span>' +
-      '<button type="button" onclick="var ul=this.closest(\'ul\');this.closest(\'li\').remove();var items=ul.querySelectorAll(\'li:not(#run-pauta-empty)\');var ep=document.getElementById(\'run-pauta-empty\');if(ep)ep.style.display=items.length?\'none\':\'\';" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
+      '<button type="button" onclick="var ul=this.closest(\'ul\');this.closest(\'li\').remove();var items=ul.querySelectorAll(\'li:not(#run-pauta-empty)\');var ep=document.getElementById(\'run-pauta-empty\');if(ep)ep.style.display=items.length?\'none\':\'\';ReunioesUI._agendarAutoSalvar();" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
     ul.appendChild(li);
   }
 
   function _addPresente() {
     var email = document.getElementById('run-presente-input').value.trim();
     if (!email) return;
-    var lista = document.getElementById('run-presentes-lista');
-    var div   = document.createElement('div');
-    div.style.cssText = 'padding:4px 0;font-size:13px;display:flex;gap:6px;align-items:center;';
-    div.innerHTML = '<span class="badge badge-success">✓ Presente</span> ' + escaparHtml(email) +
-      '<button type="button" onclick="this.closest(\'div\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;">✕</button>';
-    lista.appendChild(div);
+    _addPresenteItem(email, 'presente');
     document.getElementById('run-presente-input').value = '';
+    _agendarAutoSalvar();
   }
 
   function _addAusenteJust() {
     var email = document.getElementById('run-presente-input').value.trim();
     if (!email) return;
+    _addPresenteItem(email, 'ausente');
+    document.getElementById('run-presente-input').value = '';
+    _agendarAutoSalvar();
+  }
+
+  function _addPresenteItem(email, tipo) {
     var lista = document.getElementById('run-presentes-lista');
     var div   = document.createElement('div');
+    div.dataset.email = email;
+    div.dataset.tipo  = tipo;
     div.style.cssText = 'padding:4px 0;font-size:13px;display:flex;gap:6px;align-items:center;';
-    div.innerHTML = '<span class="badge badge-warning">Justif.</span> ' + escaparHtml(email) +
-      '<button type="button" onclick="this.closest(\'div\').remove()" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;">✕</button>';
+    div.innerHTML = (tipo === 'presente'
+        ? '<span class="badge badge-success">✓ Presente</span> '
+        : '<span class="badge badge-warning">Justif.</span> ') + escaparHtml(email) +
+      '<button type="button" onclick="this.closest(\'div\').remove();ReunioesUI._agendarAutoSalvar();" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12px;">✕</button>';
     lista.appendChild(div);
-    document.getElementById('run-presente-input').value = '';
   }
 
   function _renderPresentes(presentes, ausentesJust) {
     var lista = document.getElementById('run-presentes-lista');
     lista.innerHTML = '';
-    presentes.forEach(function(e) {
-      var div = document.createElement('div');
-      div.style.cssText = 'padding:4px 0;font-size:13px;display:flex;gap:6px;align-items:center;';
-      div.innerHTML = '<span class="badge badge-success">✓</span> ' + escaparHtml(e);
-      lista.appendChild(div);
+    (presentes || []).forEach(function(e) { _addPresenteItem(e, 'presente'); });
+    (ausentesJust || []).forEach(function(e) { _addPresenteItem(e, 'ausente'); });
+  }
+
+  function _lerPautaAtual() {
+    var itens = [];
+    document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
+      var span = li.querySelector('span');
+      var t = span ? span.textContent.trim() : '';
+      if (t) itens.push(t);
     });
-    (ausentesJust || []).forEach(function(e) {
-      var div = document.createElement('div');
-      div.style.cssText = 'padding:4px 0;font-size:13px;display:flex;gap:6px;align-items:center;';
-      div.innerHTML = '<span class="badge badge-warning">Justif.</span> ' + escaparHtml(e);
-      lista.appendChild(div);
+    return itens;
+  }
+
+  function _lerPresentesAtual() {
+    var presentes = [], ausentes = [];
+    document.querySelectorAll('#run-presentes-lista > div').forEach(function(div) {
+      if (!div.dataset.email) return;
+      (div.dataset.tipo === 'ausente' ? ausentes : presentes).push(div.dataset.email);
     });
+    return { presentes: presentes, ausentes: ausentes };
   }
 
   function _renderEncFormLista(encs) {
@@ -34032,6 +34070,52 @@ var ReunioesUI = (function() {
     document.getElementById('run-ata-status-info').textContent = '';
     document.getElementById('run-ata-aprovar-btn').classList.add('oculto');
     document.getElementById('run-duracao').value = '60';
+    if (_autoSalvarTimer) { clearTimeout(_autoSalvarTimer); _autoSalvarTimer = null; }
+    var statusEl = document.getElementById('run-autosave-status');
+    if (statusEl) statusEl.textContent = '';
+  }
+
+  // ─── Auto-salvamento ─────────────────────────────────────────────────────────
+  // Rede de segurança contra queda de energia/internet: salva sozinho ~1.5s
+  // após a última edição em qualquer campo de Dados, Pauta, Presença ou Ata.
+  var _autoSalvarTimer = null;
+
+  function _agendarAutoSalvar() {
+    if (document.getElementById('run-modal').classList.contains('oculto')) return;
+    if (_autoSalvarTimer) clearTimeout(_autoSalvarTimer);
+    _autoSalvarTimer = setTimeout(_executarAutoSalvar, 1500);
+  }
+
+  function _executarAutoSalvar() {
+    _autoSalvarTimer = null;
+    var statusEl = document.getElementById('run-autosave-status');
+    var dados = _coletarDados();
+    if (!dados.titulo || !dados.dataHora) return; // nada de válido para persistir ainda
+
+    if (!_idAtual) {
+      // Reunião ainda não existe no servidor: cria o rascunho para já ter onde auto-salvar.
+      GAS.reunioes.salvar(dados, function(resp) {
+        if (resp && resp.ok) {
+          _idAtual = resp.data.id;
+          _marcarAutoSalvo(statusEl);
+        }
+      }, function(){ /* sem internet — tentará de novo na próxima edição */ });
+      return;
+    }
+
+    dados.id       = _idAtual;
+    dados.ataTexto = document.getElementById('run-ata-texto').value;
+    if (statusEl) statusEl.textContent = 'Salvando…';
+    GAS.reunioes.autoSalvar(dados, function(resp) {
+      if (resp && resp.ok) _marcarAutoSalvo(statusEl);
+      else if (statusEl) statusEl.textContent = 'Falha ao salvar automaticamente.';
+    }, function(){ if (statusEl) statusEl.textContent = 'Sem conexão — tentando novamente em breve.'; });
+  }
+
+  function _marcarAutoSalvo(statusEl) {
+    if (!statusEl) return;
+    var hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    statusEl.textContent = 'Salvo automaticamente às ' + hora;
   }
 
   function _fmtDH(dt) {
@@ -34116,7 +34200,8 @@ var ReunioesUI = (function() {
            adicionarEncaminhamento: adicionarEncaminhamento, concluirEnc: concluirEnc,
            abrirDetalhe: abrirDetalhe,
            _addPauta: _addPauta, _addPresente: _addPresente,
-           _addAusenteJust: _addAusenteJust, _usarTemplateAta: _usarTemplateAta };
+           _addAusenteJust: _addAusenteJust, _usarTemplateAta: _usarTemplateAta,
+           _agendarAutoSalvar: _agendarAutoSalvar };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 
