@@ -116,14 +116,17 @@ function ctrl_tarefas_metricas() {
 }
 
 /**
- * Retorna lista + métricas em uma única chamada GAS.
- * As métricas são calculadas da mesma lista já lida — sem segunda leitura de JSON.
- * @param {Object} filtros — passado ao listarParaUsuario
+ * Retorna lista + métricas em uma única chamada GAS — sempre escopada
+ * estritamente ao usuário (responsável/criador/executor), mesmo para
+ * admin/superadmin/gestor. A visão ampla por papel/setor é exclusiva
+ * da aba "Gestão" (ctrl_tarefas_gestao) — "Minhas Tarefas" tem que
+ * significar minhas tarefas para todo mundo, sem exceção de papel.
+ * @param {Object} filtros — passado ao listarPessoal
  */
 function ctrl_tarefas_dashboard(filtros) {
   return GasResponse.wrap(function () {
     var ctx  = _ctrlTarefasContexto();
-    var lista = TarefaRepository.listarParaUsuario(ctx.orgId, ctx.email, ctx.papel, filtros || {}, ctx.setor);
+    var lista = TarefaRepository.listarPessoal(ctx.orgId, ctx.email, filtros || {});
     var now   = Date.now();
     var abertas = lista.filter(function(t) {
       return t.status !== 'concluida' && t.status !== 'cancelada';

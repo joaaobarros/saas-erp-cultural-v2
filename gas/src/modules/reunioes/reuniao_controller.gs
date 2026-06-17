@@ -82,6 +82,24 @@ function ctrl_reunioes_listar_encaminhamentos(params) {
   }, 'ctrl_reunioes_listar_encaminhamentos');
 }
 
+function ctrl_reunioes_listar_encaminhamentos_gestao(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    return ReuniaoEngine.listarEncaminhamentosGestao(params || {}, getOrgConfig().orgId);
+  }, 'ctrl_reunioes_listar_encaminhamentos_gestao');
+}
+
+function ctrl_reunioes_metricas_encaminhamentos(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    return ReuniaoEngine.metricasEncaminhamentos(getOrgConfig().orgId);
+  }, 'ctrl_reunioes_metricas_encaminhamentos');
+}
+
 // ─── Escrita ──────────────────────────────────────────────────────────────────
 
 function ctrl_reunioes_salvar(params) {
@@ -224,10 +242,27 @@ function ctrl_reunioes_concluir_encaminhamento(params) {
     var reuniaoId = params && params.reuniaoId;
     var encId     = params && params.encId;
     if (!reuniaoId || !encId) throw new Error('reuniaoId e encId obrigatórios');
-    var resultado = ReuniaoEngine.concluirEncaminhamento(reuniaoId, encId, email, getOrgConfig().orgId);
+    var resultado = ReuniaoEngine.concluirEncaminhamento(reuniaoId, encId, email, getOrgConfig().orgId, (params && params.observacao) || null);
     _invalidarCacheReunioes();
     return resultado;
   }, 'ctrl_reunioes_concluir_encaminhamento');
+}
+
+function ctrl_reunioes_observar_encaminhamento(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+
+    var reuniaoId = params && params.reuniaoId;
+    var encId     = params && params.encId;
+    var texto     = params && params.texto;
+    if (!reuniaoId || !encId) throw new Error('reuniaoId e encId obrigatórios');
+    if (!texto)    throw new Error('Texto da observação obrigatório');
+    var resultado = ReuniaoEngine.adicionarObservacaoEncaminhamento(reuniaoId, encId, texto, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
+  }, 'ctrl_reunioes_observar_encaminhamento');
 }
 
 function ctrl_reunioes_excluir(params) {

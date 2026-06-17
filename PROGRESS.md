@@ -39,7 +39,26 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s105)**: **Feat — Reservas de Espaço, Reservas de Veículo e Ações: vínculo MANUAL (opcional) com Google Calendar — Deploy @1019.**
+**Fase atual (s106)**: **Feat/Fix — Reuniões: pauta em acordeão, vínculo pauta↔encaminhamento, gestão de encaminhamentos/atas e correção do deploy `frontend/index` — Deploy @1022.**
+
+**Contexto**: sessão iniciada por Claude e finalizada por Codex após limite de sessão. O web app publicado exibia "Erro interno — Nenhum arquivo HTML com o nome frontend/index foi encontrado"; o template existe em `gas/src/frontend/index.html`, então o projeto foi reenviado via `clasp push` a partir de `gas/` e o deployment fixo `AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j` foi atualizado para `@1022`. `.clasp.json` da raiz também foi alinhado para `rootDir: ./gas/src`, reduzindo risco de push pelo diretório errado.
+
+**O que foi implementado/finalizado**:
+- `index.html / ReunioesUI` — pauta em cartões/acordeão com campos de discussão e decisão; encaminhamentos podem ser vinculados a um item de pauta; botão "Gerar Ata Completa" monta a ata a partir da pauta e dos encaminhamentos.
+- Nova aba "Atas" em Reuniões — lista cards de reuniões com ata, status visual e ação de compartilhar sem abrir o formulário completo; `compartilharAta` agora aceita `idOverride`.
+- Aba global "Encaminhamentos" — dashboard com total/pendentes/vencidos/concluídos, top responsáveis, filtros por texto/status/responsável, observações de acompanhamento e indicador de tarefa vinculada.
+- Fluxo "Concluir" de encaminhamento — abre modal para observação final opcional antes de concluir; `BtnGuard` só é acionado após confirmação e usa id sanitizado.
+- `reuniao_repository.gs`/`reuniao_engine.gs`/`reuniao_controller.gs` — endpoints de gestão (`listarEncaminhamentosGestao`, `metricasEncaminhamentos`) e observações em encaminhamentos; `concluirEncaminhamento` aceita observação.
+- Bugfix `_criarTarefasDeEncaminhamentos` — usa `TarefaEngine.criar(...)` com assinatura correta e grava `tarefaId` real em vez de `true`.
+- Bugfix TaskHub — botão "Marcar feito" de encaminhamento passa `{reuniaoId, encId}` corretamente, em vez de enviar apenas `encId`.
+- Bugfix Minhas Tarefas — `ctrl_tarefas_dashboard` usa `TarefaRepository.listarPessoal`, filtrando estritamente por responsável/criador/executor mesmo para admin/gestor/superadmin.
+
+**Verificação feita**:
+- `node` parseou o `<script>` principal de `gas/src/frontend/index.html` com sucesso (`scripts checked 1`).
+- `clasp push` concluiu com 181 arquivos.
+- Deployment fixo atualizado para versão `@1022` (confirmado por `clasp deployments --json`).
+
+**Fase anterior (s105)**: **Feat — Reservas de Espaço, Reservas de Veículo e Ações: vínculo MANUAL (opcional) com Google Calendar — Deploy @1019.**
 
 **Diferença em relação ao padrão de Reuniões (s104)**: em Reuniões o evento é criado automaticamente ao agendar. Aqui o usuário decide explicitamente (botão "Vincular ao Calendar" no detalhe/painel de cada registro) se quer vincular, e escolhe entre convidar **todos os envolvidos** cadastrados no registro ou **selecionar pessoas específicas** (checkboxes), podendo ainda **adicionar e-mails extras** (internos ou externos, texto livre — ver limitação abaixo).
 

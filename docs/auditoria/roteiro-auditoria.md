@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s102 @1008 (Fix Meu Perfil — autocriação de ficha para qualquer aprovado) · s101 @1007 · s100 @1006 · s99 @1005
+> Deploy atual: s106 @1022 (Reuniões: pauta/atas/encaminhamentos + fix deploy `frontend/index`) · s105 @1019 · s104 @1018 · s103 @1014
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -481,7 +481,27 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 102 (2026-06-17) → SESSÃO 105
+## HANDOFF ATUAL — SESSÃO 106 (2026-06-17)
+
+### Estado atual: Feat/Fix — Reuniões estruturadas + correção do web app — Deploy @1022
+
+### O que foi feito nesta sessão (s106)
+| Deploy | O que foi implementado |
+|---|---|
+| @1022 | Reuniões: pauta em acordeão com discussão/decisão, vínculo pauta↔encaminhamento, botão "Gerar Ata Completa", nova aba "Atas" com cards e compartilhamento direto. Encaminhamentos: dashboard global, filtros por texto/status/responsável, observações e conclusão com observação final opcional. Backend: `listarEncaminhamentosGestao`, `metricasEncaminhamentos`, `adicionarObservacaoEncaminhamento`. Bugfix: `_criarTarefasDeEncaminhamentos` usa `TarefaEngine.criar(...)` e grava `tarefaId` real; TaskHub passa `{reuniaoId, encId}` ao marcar encaminhamento; "Minhas Tarefas" filtra estritamente tarefas pessoais mesmo para admin/gestor/superadmin. Operação: corrigido erro publicado "Nenhum arquivo HTML com o nome frontend/index foi encontrado" com `clasp push` e atualização do deployment fixo para `@1022`; `.clasp.json` da raiz alinhado para `rootDir: ./gas/src`. |
+
+### Verificação feita
+- Parse sintático do `<script>` principal de `gas/src/frontend/index.html` via `node` passou (`scripts checked 1`).
+- `clasp push` concluiu com 181 arquivos.
+- `clasp deployments --json` confirmou o deployment fixo `AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j` em `versionNumber: 1022`.
+
+### Pendente para a próxima sessão
+- Smoke test no browser do módulo Reuniões: abrir lista, aba Encaminhamentos, concluir com observação, adicionar observação avulsa, abrir aba Atas e compartilhar uma ata.
+- Se o link antigo ainda mostrar erro, confirmar se o navegador está usando o deployment fixo atualizado ou o deployment avulso `@1020`.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 102 (2026-06-17) → SESSÃO 105
 
 > Nota: as sessões 103 (fix Reuniões + auto-salvamento, @1014) e 104 (Calendar em Reuniões + links/anexos, @1018) não tiveram este roteiro atualizado — ver `PROGRESS.md` para o detalhe dessas duas fases. Handoff retomado a partir desta sessão (105).
 

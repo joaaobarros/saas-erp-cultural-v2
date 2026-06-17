@@ -167,6 +167,17 @@ var TarefaRepository = (function () {
     return lista.filter(function (t) { return _pertenceAoUsuario(t, email); });
   }
 
+  /**
+   * Lista estritamente as tarefas pessoais do usuário (responsável, criador ou
+   * executor) — independentemente do papel. Usada por "Minhas Tarefas": mesmo
+   * admin/superadmin/gestor (que em listarParaUsuario veem tudo, para a visão
+   * de Gestão) devem ver aqui só o que é efetivamente deles.
+   */
+  function listarPessoal(orgId, email, filtros) {
+    var lista = listar(orgId, filtros);
+    return lista.filter(function (t) { return _pertenceAoUsuario(t, email); });
+  }
+
   function podeVisualizar(tarefa, email, papel, setorGestor) {
     papel = String(papel || '').toLowerCase();
     if (_NIVEIS_AMPLOS.indexOf(papel) !== -1) return true;
@@ -210,6 +221,7 @@ var TarefaRepository = (function () {
     excluir: excluir,
     indexar: _indexar,
     listarParaUsuario: listarParaUsuario,
+    listarPessoal: listarPessoal,
     podeVisualizar: podeVisualizar,
     listarAtrasadas: listarAtrasadas,
     protegerIndice: protegerIndice,

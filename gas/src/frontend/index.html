@@ -7074,6 +7074,7 @@ select.form-control { cursor: pointer; }
         <div class="tab-bar" style="margin-bottom:16px;">
           <button class="tab-btn ativa" onclick="ReunioesUI.setTab('lista',this)" data-bg-skip="1">Lista</button>
           <button class="tab-btn" onclick="ReunioesUI.setTab('encaminhamentos',this)" data-bg-skip="1">Encaminhamentos</button>
+          <button class="tab-btn" onclick="ReunioesUI.setTab('atas',this)" data-bg-skip="1">Atas</button>
         </div>
         <div id="run-tab-lista">
           <div class="toolbar" style="gap:8px;margin-bottom:12px;">
@@ -7093,8 +7094,30 @@ select.form-control { cursor: pointer; }
           <div id="run-lista" class="lista-container"><p class="muted-text">Carregando reuniões…</p></div>
         </div>
         <div id="run-tab-encaminhamentos" class="oculto">
-          <p class="muted-text" style="margin-bottom:12px;">Todos os encaminhamentos pendentes de reuniões (ordenados por prazo).</p>
+          <div class="stats-strip" id="run-enc-metricas" style="margin-bottom:12px;">
+            <div class="stat-card"><div class="stat-value" id="run-encg-total" style="color:var(--text)">—</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-value" id="run-encg-pendentes" style="color:var(--warning)">—</div><div class="stat-label">Pendentes</div></div>
+            <div class="stat-card"><div class="stat-value" id="run-encg-vencidos" style="color:var(--danger)">—</div><div class="stat-label">Vencidos</div></div>
+            <div class="stat-card"><div class="stat-value" id="run-encg-concluidos" style="color:var(--success)">—</div><div class="stat-label">Concluídos</div></div>
+          </div>
+          <div id="run-enc-top-resp" style="margin-bottom:12px;font-size:12px;color:var(--muted);"></div>
+          <div class="toolbar" style="gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <input type="text" id="run-enc-busca" class="input-busca" placeholder="Buscar por texto ou reunião…" oninput="ReunioesUI._filtrarEncaminhamentos()">
+            <select id="run-enc-filtro-status" class="select-sm" onchange="ReunioesUI._filtrarEncaminhamentos()">
+              <option value="">Todos os status</option>
+              <option value="pendente">Pendente</option>
+              <option value="concluido">Concluído</option>
+            </select>
+            <select id="run-enc-filtro-resp" class="select-sm" onchange="ReunioesUI._filtrarEncaminhamentos()"><option value="">Todos os responsáveis</option></select>
+            <button class="btn btn-secondary btn-sm" onclick="ReunioesUI._carregarEncaminhamentos()" data-bg-skip="1">
+              <span class="ms" style="font-size:16px">refresh</span>
+            </button>
+          </div>
           <div id="run-enc-lista"><p class="muted-text">Carregando encaminhamentos…</p></div>
+        </div>
+        <div id="run-tab-atas" class="oculto">
+          <p class="muted-text" style="margin-bottom:12px;">Atas de todas as reuniões — acompanhe o status e compartilhe sem precisar abrir o formulário completo.</p>
+          <div id="run-atas-lista" class="lista-container"><p class="muted-text">Carregando atas…</p></div>
         </div>
       </div><!-- /view-reunioes -->
 
@@ -7169,13 +7192,20 @@ select.form-control { cursor: pointer; }
             </div>
             <!-- Tab Ata & Encaminhamentos (integrados: nada de trocar de aba durante a reunião) -->
             <div id="run-mtab-ata" class="oculto">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
                 <div id="run-ata-status-info" style="font-size:12px;color:var(--muted);"></div>
-                <button type="button" class="btn btn-ghost btn-sm" data-bg-skip="1"
-                  title="Insere um template de ata formal com os blocos obrigatórios"
-                  onclick="ReunioesUI._usarTemplateAta()">
-                  <span class="ms ms-sm">article</span> Usar Template
-                </button>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="btn btn-ghost btn-sm" data-bg-skip="1"
+                    title="Insere um template de ata formal com os blocos obrigatórios"
+                    onclick="ReunioesUI._usarTemplateAta()">
+                    <span class="ms ms-sm">article</span> Usar Template
+                  </button>
+                  <button type="button" class="btn btn-primary btn-sm" data-bg-skip="1"
+                    title="Monta a ata a partir da Pauta (Discussão/Decisão) e dos Encaminhamentos registrados"
+                    onclick="ReunioesUI._gerarAtaCompleta()">
+                    <span class="ms ms-sm">auto_awesome</span> Gerar Ata Completa
+                  </button>
+                </div>
               </div>
               <textarea id="run-ata-texto" class="form-control" rows="10"
                 placeholder="Redigir ata da reunião… (ou clique em &quot;Usar Template&quot; para inserir a estrutura formal)"
@@ -7207,6 +7237,7 @@ select.form-control { cursor: pointer; }
               <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Encaminhamentos</div>
               <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
                 <input type="text" id="run-enc-texto-input" class="form-control" placeholder="Texto do encaminhamento…" style="width:100%">
+                <select id="run-enc-pauta-input" class="form-control" style="width:100%"><option value="">— Geral (não vinculado) —</option></select>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                   <select id="run-enc-resp-input" class="form-control" style="flex:1;min-width:150px"><option value="">— Responsável —</option></select>
                   <input type="date" id="run-enc-prazo-input" class="form-control" style="flex:0 0 140px;">
@@ -10760,6 +10791,9 @@ var GAS = {
     metricas:                 function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_metricas(); },
     dashboard:                function(f,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_dashboard(f||{}); },
     listarEncaminhamentos:    function(p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_listar_encaminhamentos(p||{}); },
+    listarEncaminhamentosGestao: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_listar_encaminhamentos_gestao(p||{}); },
+    metricasEncaminhamentos:  function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_metricas_encaminhamentos(); },
+    observarEncaminhamento:   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_observar_encaminhamento(d); },
     salvar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar(d); },
     autoSalvar:               function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_autosalvar(d); },
     mudarStatus:              function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_mudar_status({id:id,status:s}); },
@@ -34068,33 +34102,151 @@ var ReunioesUI = (function() {
     if (btn) btn.classList.add('ativa');
     document.getElementById('run-tab-lista').classList.toggle('oculto', tab !== 'lista');
     document.getElementById('run-tab-encaminhamentos').classList.toggle('oculto', tab !== 'encaminhamentos');
+    document.getElementById('run-tab-atas').classList.toggle('oculto', tab !== 'atas');
     if (tab === 'encaminhamentos') _carregarEncaminhamentos();
+    if (tab === 'atas') _renderAtas();
   }
+
+  var _STATUS_ATA_COR   = { rascunho_ata:'#94a3b8', em_aprovacao:'#f59e0b', aprovada:'#10b981' };
+  var _STATUS_ATA_LABEL = { rascunho_ata:'Rascunho', em_aprovacao:'Em Aprovação', aprovada:'Aprovada' };
+
+  function _renderAtas() {
+    var el = document.getElementById('run-atas-lista');
+    var comAta = _lista.filter(function(r) { return r.ata && (r.ata.rascunho || r.ata.textoFinal); });
+    if (!comAta.length) { el.innerHTML = '<p class="muted-text">Nenhuma ata registrada ainda.</p>'; return; }
+    el.innerHTML = comAta.map(function(r) {
+      var statusAta = (r.ata && r.ata.statusAta) || 'rascunho_ata';
+      var cor   = _STATUS_ATA_COR[statusAta]   || '#94a3b8';
+      var label = _STATUS_ATA_LABEL[statusAta] || statusAta;
+      var id    = JSON.stringify(r.id).replace(/"/g,"'");
+      return '<div class="run-card">' +
+        '<div class="run-tipo-dot" style="background:' + cor + '"></div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:600;font-size:14px;margin-bottom:2px;">' + escaparHtml(r.titulo) + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);">' +
+            (r.dataHora ? _fmtDH(r.dataHora) : 'Sem data') + ' · ' +
+            '<span style="color:' + cor + ';font-weight:600;">' + label + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;">' +
+          '<button class="btn btn-secondary btn-sm" onclick="ReunioesUI.abrirDetalhe(' + id + ')">Ver/Editar</button>' +
+          '<button class="btn btn-ghost btn-sm" id="ata-compartilhar-' + r.id + '" ' +
+            'onclick="BtnGuard.wrap(\'ata-compartilhar-' + r.id + '\',\'Compartilhando…\',function(done){ReunioesUI.compartilharAta(done,' + id + ');})">' +
+            '<span class="ms ms-sm">share</span> Compartilhar</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  var _encGestaoLista = [];
 
   function _carregarEncaminhamentos() {
     var el = document.getElementById('run-enc-lista');
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
-    GAS.reunioes.listarEncaminhamentos({}, function(resp) {
-      var lista = (resp && resp.ok && resp.data) || [];
-      if (!lista.length) { el.innerHTML = '<p class="muted-text">Nenhum encaminhamento pendente.</p>'; return; }
-      var hoje = new Date();
-      el.innerHTML = lista.map(function(e) {
-        var venc = e.vencido;
-        var prazoLabel = e.prazo ? _fmtData(e.prazo) : 'Sem prazo';
-        var rid  = JSON.stringify(e.reuniaoId).replace(/"/g,"'");
-        var eid  = JSON.stringify(e.encId).replace(/"/g,"'");
-        return '<div class="enc-row' + (venc?' vencido':'') + '">' +
-          '<span class="enc-prazo-chip ' + (venc?'vencido':'ok') + '">' + prazoLabel + '</span>' +
-          '<div style="flex:1;">' +
-            '<div style="font-size:13px;font-weight:500;">' + escaparHtml(e.texto) + '</div>' +
-            '<div style="font-size:12px;color:var(--muted);">' + escaparHtml(e.reuniaoTitulo) + ' · Resp: ' + escaparHtml(e.responsavel || '—') + '</div>' +
-          '</div>' +
-          '<button class="btn btn-success btn-sm" ' +
-            'onclick="BtnGuard.wrap(\'enc-ok-'+eid+'\',\'Concluindo…\',function(done){ReunioesUI.concluirEnc('+rid+','+eid+',done);})" ' +
-            'id="enc-ok-'+eid+'">✓ Concluir</button>' +
-        '</div>';
-      }).join('');
+    GAS.reunioes.metricasEncaminhamentos(function(resp) {
+      if (!resp || !resp.ok) return;
+      var m = resp.data || {};
+      document.getElementById('run-encg-total').textContent      = m.total;
+      document.getElementById('run-encg-pendentes').textContent  = m.pendentes;
+      document.getElementById('run-encg-vencidos').textContent   = m.vencidos;
+      document.getElementById('run-encg-concluidos').textContent = m.concluidos;
+      var topEl = document.getElementById('run-enc-top-resp');
+      if (topEl) {
+        topEl.innerHTML = (m.topResponsaveis || []).length
+          ? '<strong>Mais pendências:</strong> ' + m.topResponsaveis.map(function(t) {
+              return escaparHtml(t.responsavel) + ' (' + t.pendentes + ')';
+            }).join(' · ')
+          : '';
+      }
     }, function(){});
+    GAS.reunioes.listarEncaminhamentosGestao({}, function(resp) {
+      _encGestaoLista = (resp && resp.ok && resp.data) || [];
+      var selResp = document.getElementById('run-enc-filtro-resp');
+      if (selResp) {
+        var atual = selResp.value;
+        var responsaveis = _encGestaoLista.map(function(e) { return e.responsavel; })
+          .filter(function(r, i, arr) { return r && arr.indexOf(r) === i; }).sort();
+        selResp.innerHTML = '<option value="">Todos os responsáveis</option>' +
+          responsaveis.map(function(r) { return '<option value="' + escaparHtml(r) + '">' + escaparHtml(r) + '</option>'; }).join('');
+        selResp.value = atual || '';
+      }
+      _filtrarEncaminhamentos();
+    }, function(){ el.innerHTML = '<p class="error-text">Erro ao carregar encaminhamentos.</p>'; });
+  }
+
+  function _filtrarEncaminhamentos() {
+    var el     = document.getElementById('run-enc-lista');
+    var busca  = (document.getElementById('run-enc-busca')        || {}).value || '';
+    var status = (document.getElementById('run-enc-filtro-status')|| {}).value || '';
+    var resp   = (document.getElementById('run-enc-filtro-resp')  || {}).value || '';
+    var lista = _encGestaoLista.filter(function(e) {
+      if (status && e.status !== status) return false;
+      if (resp   && e.responsavel !== resp) return false;
+      if (busca) {
+        var b = busca.toLowerCase();
+        if (e.texto.toLowerCase().indexOf(b) === -1 && e.reuniaoTitulo.toLowerCase().indexOf(b) === -1) return false;
+      }
+      return true;
+    });
+    if (!lista.length) { el.innerHTML = '<p class="muted-text">Nenhum encaminhamento encontrado.</p>'; return; }
+    el.innerHTML = lista.map(function(e) {
+      var venc = e.vencido;
+      var prazoLabel = e.prazo ? _fmtData(e.prazo) : 'Sem prazo';
+      var rid  = JSON.stringify(e.reuniaoId).replace(/"/g,"'");
+      var eid  = JSON.stringify(e.encId).replace(/"/g,"'");
+      var btnConcluirId = _encBtnId(e.encId);
+      var concluido = e.status === 'concluido';
+      var ultimaObs = (e.observacoes && e.observacoes.length) ? e.observacoes[e.observacoes.length - 1] : null;
+      return '<div class="enc-row' + (venc?' vencido':'') + '">' +
+        '<span class="enc-prazo-chip ' + (venc?'vencido':'ok') + '">' + prazoLabel + '</span>' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:13px;font-weight:500;">' + escaparHtml(e.texto) + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);">' + escaparHtml(e.reuniaoTitulo) + ' · Resp: ' + escaparHtml(e.responsavel || '—') +
+            ' · ' + (concluido ? '<span style="color:var(--success);">Concluído</span>' : '<span style="color:var(--warning);">Pendente</span>') +
+            (e.tarefaId ? ' · <span class="ms ms-sm" title="Gerou tarefa de acompanhamento" style="color:var(--info);vertical-align:-3px;">task_alt</span>' : '') +
+          '</div>' +
+          (ultimaObs ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;"><em>Última obs.: ' + escaparHtml(ultimaObs.texto) + '</em></div>' : '') +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;">' +
+          (concluido ? '' :
+            '<button class="btn btn-success btn-sm" id="'+btnConcluirId+'" ' +
+              'onclick="ReunioesUI._iniciarConcluirEnc('+rid+','+eid+')">✓ Concluir</button>') +
+          '<button class="btn btn-ghost btn-sm" onclick="ReunioesUI._observarEnc('+rid+','+eid+')">+ Observação</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function _encBtnId(encId) {
+    return 'enc-ok-' + String(encId || '').replace(/[^A-Za-z0-9_-]/g, '_');
+  }
+
+  function _observarEnc(reuniaoId, encId) {
+    _modalInput({ titulo: 'Adicionar Observação', label: 'Observação de acompanhamento', obrigatorio: true }, function(texto) {
+      if (texto === null) return;
+      GAS.reunioes.observarEncaminhamento({ reuniaoId: reuniaoId, encId: encId, texto: texto }, function(r) {
+        if (!r || !r.ok) { Toast.erro('Erro ao registrar observação.'); return; }
+        Toast.sucesso('Observação registrada.');
+        _carregarEncaminhamentos();
+      }, function(e) { Toast.erro(e.message); });
+    });
+  }
+
+  function _iniciarConcluirEnc(reuniaoId, encId) {
+    _modalInput({
+      titulo: 'Concluir Encaminhamento',
+      label: 'Observação final (opcional)',
+      placeholder: 'Ex.: Resolvido em reunião, enviado por e-mail, entregue ao setor...',
+      labelConfirmar: 'Concluir',
+      icone: 'task_alt',
+      corIcone: 'var(--success)'
+    }, function(observacao) {
+      if (observacao === null) return;
+      var btnId = _encBtnId(encId);
+      BtnGuard.wrap(btnId, 'Concluindo...', function(done) {
+        concluirEnc(reuniaoId, encId, done, observacao);
+      });
+    });
   }
 
   function _filtrar() { _renderLista(); }
@@ -34131,8 +34283,14 @@ var ReunioesUI = (function() {
         document.getElementById('run-local').value       = r.local || '';
         _carregarSelectUsuariosHelper('run-convocador', r.convocadoPor || '', '— Selecionar —');
         _carregarSelectAcoesRun(r.acaoVinculadaId || '');
-        // Pauta
-        (r.pauta || []).forEach(function(p) { _addPautaItem(p); });
+        // Encaminhamentos (carregado antes da pauta para os badges de vínculo)
+        _encaminhamentosAtuais = r.encaminhamentos || [];
+        // Pauta — normaliza itens legados (string pura) para o formato estruturado
+        (r.pauta || []).forEach(function(p) {
+          var item = typeof p === 'string' ? { id: _gerarIdLocal('pt'), texto: p, discussao: '', decisao: '' } : p;
+          _addPautaItem(item);
+        });
+        _atualizarSelectPautaEncaminhamento();
         // Presentes
         _renderPresentes(r.presentes || [], r.ausentesJustificados || []);
         // Ata
@@ -34240,24 +34398,28 @@ var ReunioesUI = (function() {
   function adicionarEncaminhamento(done) {
     done = done || function(){};
     if (!_idAtual) { done(); Toast.aviso('Salve a reunião primeiro.'); return; }
-    var texto = document.getElementById('run-enc-texto-input').value.trim();
-    var resp  = document.getElementById('run-enc-resp-input').value.trim();
-    var prazo = document.getElementById('run-enc-prazo-input').value;
+    var texto   = document.getElementById('run-enc-texto-input').value.trim();
+    var resp    = document.getElementById('run-enc-resp-input').value.trim();
+    var prazo   = document.getElementById('run-enc-prazo-input').value;
+    var pautaId = (document.getElementById('run-enc-pauta-input') || {}).value || null;
     if (!texto || !resp) { done(); Toast.aviso('Texto e responsável obrigatórios.'); return; }
-    GAS.reunioes.adicionarEncaminhamento({ reuniaoId: _idAtual, texto: texto, responsavel: resp, prazo: prazo || null }, function(r) {
+    GAS.reunioes.adicionarEncaminhamento({ reuniaoId: _idAtual, texto: texto, responsavel: resp, prazo: prazo || null, pautaId: pautaId }, function(r) {
       done();
       if (!r || !r.ok) { Toast.erro('Erro ao adicionar encaminhamento.'); return; }
       Toast.sucesso('Encaminhamento adicionado.');
       document.getElementById('run-enc-texto-input').value = '';
       document.getElementById('run-enc-resp-input').value  = '';
       document.getElementById('run-enc-prazo-input').value = '';
-      _renderEncFormLista(r.data.encaminhamentos || []);
+      document.getElementById('run-enc-pauta-input').value = '';
+      _encaminhamentosAtuais = r.data.encaminhamentos || [];
+      _renderEncFormLista(_encaminhamentosAtuais);
+      if (pautaId) { _atualizarBadgePauta(pautaId); if (_pautaExpandidaId === pautaId) _renderEncaminhamentosDaPauta(pautaId); }
     }, function(e) { done(); Toast.erro(e.message); });
   }
 
-  function concluirEnc(reuniaoId, encId, done) {
+  function concluirEnc(reuniaoId, encId, done, observacao) {
     done = done || function(){};
-    GAS.reunioes.concluirEncaminhamento({ reuniaoId: reuniaoId, encId: encId }, function(r) {
+    GAS.reunioes.concluirEncaminhamento({ reuniaoId: reuniaoId, encId: encId, observacao: observacao || null }, function(r) {
       done();
       Toast.sucesso('Encaminhamento concluído.');
       _carregarEncaminhamentos();
@@ -34266,23 +34428,116 @@ var ReunioesUI = (function() {
 
   function abrirDetalhe(id) { abrirForm(id); }
 
+  var _pautaExpandidaId = null;
+  var _encaminhamentosAtuais = [];
+
+  function _gerarIdLocal(prefixo) {
+    return prefixo + '_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+  }
+
   function _addPauta() {
     var input = document.getElementById('run-pauta-input');
     var texto = input.value.trim();
     if (!texto) return;
-    _addPautaItem(texto);
+    _addPautaItem({ id: _gerarIdLocal('pt'), texto: texto, discussao: '', decisao: '' }, true);
     input.value = '';
+    _atualizarSelectPautaEncaminhamento();
+    _agendarAutoSalvar();
   }
 
-  function _addPautaItem(texto) {
-    var ul    = document.getElementById('run-pauta-lista');
+  function _addPautaItem(item, expandir) {
+    if (typeof item === 'string') item = { id: _gerarIdLocal('pt'), texto: item, discussao: '', decisao: '' };
+    var lista = document.getElementById('run-pauta-lista');
     var empty = document.getElementById('run-pauta-empty');
     if (empty) empty.style.display = 'none';
-    var li = document.createElement('li');
-    li.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;font-size:13px;';
-    li.innerHTML = '<span style="flex:1;">' + escaparHtml(texto) + '</span>' +
-      '<button type="button" onclick="var ul=this.closest(\'ul\');this.closest(\'li\').remove();var items=ul.querySelectorAll(\'li:not(#run-pauta-empty)\');var ep=document.getElementById(\'run-pauta-empty\');if(ep)ep.style.display=items.length?\'none\':\'\';ReunioesUI._agendarAutoSalvar();" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
-    ul.appendChild(li);
+
+    var card = document.createElement('div');
+    card.className = 'run-pauta-card';
+    card.dataset.pautaId = item.id;
+    card.dataset.texto   = item.texto;
+    card.style.cssText = 'border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;';
+    card.innerHTML =
+      '<div class="run-pauta-header" onclick="ReunioesUI._togglePautaCard(\'' + item.id + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;">' +
+        '<span class="ms ms-sm" style="color:var(--muted);">unfold_more</span>' +
+        '<span style="flex:1;font-weight:500;font-size:13px;">' + escaparHtml(item.texto) + '</span>' +
+        '<span id="pauta-badges-' + item.id + '" style="display:flex;gap:4px;"></span>' +
+        '<button type="button" onclick="event.stopPropagation();ReunioesUI._removerPauta(\'' + item.id + '\')" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>' +
+      '</div>' +
+      '<div id="pauta-body-' + item.id + '" class="run-pauta-body oculto" style="padding:10px;border-top:1px solid var(--border);">' +
+        '<label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px;">Discussão</label>' +
+        '<textarea class="form-control run-pauta-discussao" rows="2" oninput="ReunioesUI._agendarAutoSalvar();ReunioesUI._atualizarBadgePauta(\'' + item.id + '\')" style="margin-bottom:8px;font-size:13px;"></textarea>' +
+        '<label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px;">Decisão</label>' +
+        '<textarea class="form-control run-pauta-decisao" rows="2" oninput="ReunioesUI._agendarAutoSalvar();ReunioesUI._atualizarBadgePauta(\'' + item.id + '\')" style="margin-bottom:8px;font-size:13px;"></textarea>' +
+        '<div id="pauta-enc-' + item.id + '" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="ReunioesUI._salvarEProximaPauta(\'' + item.id + '\')" data-bg-skip="1">' +
+          '<span class="ms ms-sm">arrow_forward</span> Salvar e ir para a próxima pauta' +
+        '</button>' +
+      '</div>';
+    card.querySelector('.run-pauta-discussao').value = item.discussao || '';
+    card.querySelector('.run-pauta-decisao').value   = item.decisao  || '';
+    lista.appendChild(card);
+    _atualizarBadgePauta(item.id);
+    if (expandir) _togglePautaCard(item.id);
+  }
+
+  function _removerPauta(id) {
+    var card = document.querySelector('.run-pauta-card[data-pauta-id="' + id + '"]');
+    if (card) card.remove();
+    if (_pautaExpandidaId === id) _pautaExpandidaId = null;
+    var lista = document.getElementById('run-pauta-lista');
+    var ep = document.getElementById('run-pauta-empty');
+    if (ep) ep.style.display = lista.querySelectorAll('.run-pauta-card').length ? 'none' : '';
+    _atualizarSelectPautaEncaminhamento();
+    _agendarAutoSalvar();
+  }
+
+  function _togglePautaCard(id) {
+    var corpoAtual = document.getElementById('pauta-body-' + id);
+    if (!corpoAtual) return;
+    document.querySelectorAll('.run-pauta-body').forEach(function(b) { b.classList.add('oculto'); });
+    if (_pautaExpandidaId === id) { _pautaExpandidaId = null; return; }
+    corpoAtual.classList.remove('oculto');
+    _pautaExpandidaId = id;
+    _renderEncaminhamentosDaPauta(id);
+  }
+
+  function _salvarEProximaPauta(id) {
+    _agendarAutoSalvar();
+    var card = document.querySelector('.run-pauta-card[data-pauta-id="' + id + '"]');
+    var proximo = card && card.nextElementSibling;
+    if (proximo && proximo.classList.contains('run-pauta-card')) {
+      _togglePautaCard(proximo.dataset.pautaId);
+    } else {
+      document.querySelectorAll('.run-pauta-body').forEach(function(b) { b.classList.add('oculto'); });
+      _pautaExpandidaId = null;
+      var input = document.getElementById('run-pauta-input');
+      if (input) input.focus();
+    }
+  }
+
+  function _atualizarBadgePauta(id) {
+    var card = document.querySelector('.run-pauta-card[data-pauta-id="' + id + '"]');
+    var badges = document.getElementById('pauta-badges-' + id);
+    if (!card || !badges) return;
+    var discussao = (card.querySelector('.run-pauta-discussao') || {}).value || '';
+    var decisao   = (card.querySelector('.run-pauta-decisao')   || {}).value || '';
+    var nEnc = _encaminhamentosAtuais.filter(function(e) { return e.pautaId === id; }).length;
+    var html = '';
+    if (discussao.trim()) html += '<span class="ms ms-sm" title="Tem discussão registrada" style="color:var(--info);">forum</span>';
+    if (decisao.trim())   html += '<span class="ms ms-sm" title="Tem decisão registrada" style="color:var(--success);">gavel</span>';
+    if (nEnc > 0)         html += '<span style="font-size:11px;color:var(--muted);">' + nEnc + ' enc.</span>';
+    badges.innerHTML = html;
+  }
+
+  function _renderEncaminhamentosDaPauta(id) {
+    var el = document.getElementById('pauta-enc-' + id);
+    if (!el) return;
+    var ligados = _encaminhamentosAtuais.filter(function(e) { return e.pautaId === id; });
+    if (!ligados.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="font-weight:500;margin-bottom:2px;">Encaminhamentos vinculados:</div>' +
+      ligados.map(function(e) {
+        return '· ' + escaparHtml(e.texto) + ' (Resp: ' + escaparHtml(e.responsavel || '—') + ', ' + escaparHtml(e.status || 'pendente') + ')';
+      }).join('<br>');
   }
 
   function _addPresente() {
@@ -34323,10 +34578,13 @@ var ReunioesUI = (function() {
 
   function _lerPautaAtual() {
     var itens = [];
-    document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
-      var span = li.querySelector('span');
-      var t = span ? span.textContent.trim() : '';
-      if (t) itens.push(t);
+    document.querySelectorAll('#run-pauta-lista .run-pauta-card').forEach(function(card) {
+      itens.push({
+        id:        card.dataset.pautaId,
+        texto:     card.dataset.texto,
+        discussao: (card.querySelector('.run-pauta-discussao') || {}).value || '',
+        decisao:   (card.querySelector('.run-pauta-decisao')   || {}).value || ''
+      });
     });
     return itens;
   }
@@ -34428,18 +34686,39 @@ var ReunioesUI = (function() {
     var el = document.getElementById('run-enc-form-lista');
     if (!encs.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Nenhum encaminhamento.</p>'; return; }
     el.innerHTML = encs.map(function(e) {
+      var pautaCard = e.pautaId ? document.querySelector('.run-pauta-card[data-pauta-id="' + e.pautaId + '"]') : null;
+      var pautaBadge = pautaCard
+        ? '<span style="font-size:11px;color:var(--info);">📌 ' + escaparHtml(pautaCard.dataset.texto) + '</span>'
+        : '<span style="font-size:11px;color:var(--muted);">Geral</span>';
       return '<div style="padding:6px 0;border-bottom:1px solid var(--border);">' +
         '<div style="font-weight:500;">' + escaparHtml(e.texto) + '</div>' +
-        '<div style="font-size:12px;color:var(--muted);">Resp: ' + escaparHtml(e.responsavel || '—') + ' · Prazo: ' + _fmtData(e.prazo) + ' · ' + escaparHtml(e.status || 'pendente') + '</div>' +
+        '<div style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+          'Resp: ' + escaparHtml(e.responsavel || '—') + ' · Prazo: ' + _fmtData(e.prazo) + ' · ' + escaparHtml(e.status || 'pendente') + ' · ' + pautaBadge +
+        '</div>' +
       '</div>';
     }).join('');
+  }
+
+  function _atualizarSelectPautaEncaminhamento() {
+    var sel = document.getElementById('run-enc-pauta-input');
+    if (!sel) return;
+    var atual = sel.value;
+    var cards = document.querySelectorAll('#run-pauta-lista .run-pauta-card');
+    sel.innerHTML = '<option value="">— Geral (não vinculado) —</option>';
+    cards.forEach(function(card) {
+      var opt = document.createElement('option');
+      opt.value = card.dataset.pautaId;
+      opt.textContent = card.dataset.texto;
+      sel.appendChild(opt);
+    });
+    sel.value = atual || '';
   }
 
   function _resetForm() {
     ['run-titulo','run-local','run-convocador','run-acao-id','run-ata-texto','run-pauta-input','run-presente-input','run-link-input','run-anexo-input'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('run-pauta-lista').innerHTML     = '<li id="run-pauta-empty" style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</li>';
+    document.getElementById('run-pauta-lista').innerHTML     = '<p id="run-pauta-empty" class="muted-text" style="font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</p>';
     document.getElementById('run-presentes-lista').innerHTML = '';
     document.getElementById('run-enc-form-lista').innerHTML  = '';
     document.getElementById('run-links-lista').innerHTML     = '';
@@ -34448,6 +34727,9 @@ var ReunioesUI = (function() {
     document.getElementById('run-ata-status-info').textContent = '';
     document.getElementById('run-ata-aprovar-btn').classList.add('oculto');
     document.getElementById('run-duracao').value = '60';
+    _pautaExpandidaId = null;
+    _encaminhamentosAtuais = [];
+    _atualizarSelectPautaEncaminhamento();
     if (_autoSalvarTimer) { clearTimeout(_autoSalvarTimer); _autoSalvarTimer = null; }
     var statusEl = document.getElementById('run-autosave-status');
     if (statusEl) statusEl.textContent = '';
@@ -34514,11 +34796,7 @@ var ReunioesUI = (function() {
       var convocou = (document.getElementById('run-convocador') || {}).value || '___';
       var dtHora   = (document.getElementById('run-data-hora')  || {}).value || '';
       var dtFmt = dtHora ? dtHora.replace('T',' às ').replace(/(\\d{4})-(\\d{2})-(\\d{2})/,'$3/$2/$1') : '___';
-      var pautaItems = [];
-      document.querySelectorAll('#run-pauta-lista li:not(#run-pauta-empty)').forEach(function(li) {
-        var t = li.querySelector('span') ? li.querySelector('span').textContent : li.textContent;
-        if (t.trim()) pautaItems.push(t.trim());
-      });
+      var pautaItems = _lerPautaAtual().map(function(p) { return p.texto; });
       var deliberacoes = pautaItems.length
         ? pautaItems.map(function(p, i) {
             return 'Item ' + (i+1) + ' — ' + p + ':\n  Discussão: \n  Decisão: \n  Encaminhamentos: ';
@@ -34553,13 +34831,86 @@ var ReunioesUI = (function() {
     }
   }
 
-  function compartilharAta(done) {
-    if (!_idAtual) { done(); Toast.aviso('Salve a reunião antes de compartilhar a ata.'); return; }
-    var texto = (document.getElementById('run-ata-texto') || {}).value || '';
+  /**
+   * Monta o texto final da ata a partir da Pauta (Discussão/Decisão por item)
+   * e dos Encaminhamentos (vinculados a cada item + gerais). Pode ser clicado
+   * de novo a qualquer momento para "atualizar" com encaminhamentos novos —
+   * sempre pede confirmação antes de sobrescrever texto já existente.
+   */
+  function _gerarAtaCompleta() {
+    var el = document.getElementById('run-ata-texto');
+    if (!el) return;
+    function _doGerar() {
+      var titulo   = (document.getElementById('run-titulo')     || {}).value || '___';
+      var local    = (document.getElementById('run-local')      || {}).value || '___';
+      var convocou = (document.getElementById('run-convocador') || {}).value || '___';
+      var dtHora   = (document.getElementById('run-data-hora')  || {}).value || '';
+      var dtFmt = dtHora ? dtHora.replace('T',' às ').replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1') : '___';
+      var presentesInfo = _lerPresentesAtual();
+      var pautaItens = _lerPautaAtual();
+      var encs = _encaminhamentosAtuais || [];
+
+      function _fmtEnc(e) {
+        return '  • ' + e.texto + ' | Responsável: ' + (e.responsavel || '—') + ' | Prazo: ' + _fmtData(e.prazo) + ' | ' + (e.status || 'pendente');
+      }
+
+      var blocoPauta = pautaItens.length
+        ? pautaItens.map(function(p, i) {
+            var ligados = encs.filter(function(e) { return e.pautaId === p.id; });
+            return 'Item ' + (i+1) + ' — ' + p.texto + ':\n' +
+              '  Discussão: ' + (p.discussao || '—') + '\n' +
+              '  Decisão: '   + (p.decisao   || '—') + '\n' +
+              '  Encaminhamentos:' + (ligados.length ? '\n' + ligados.map(_fmtEnc).join('\n') : ' —');
+          }).join('\n\n')
+        : 'Nenhum item de pauta registrado.';
+
+      var gerais = encs.filter(function(e) { return !e.pautaId; });
+
+      el.value =
+        '1. ABERTURA\n' +
+        'Reunião: ' + titulo + '\n' +
+        'Data e Hora: ' + dtFmt + '\n' +
+        'Local: ' + local + '\n' +
+        'Convocado por: ' + convocou + '\n\n' +
+        '2. PARTICIPANTES\n' +
+        'Presentes: ' + (presentesInfo.presentes.join(', ') || '—') + '\n' +
+        'Ausentes justificados: ' + (presentesInfo.ausentes.join(', ') || '—') + '\n\n' +
+        '3. PAUTA, DISCUSSÃO, DECISÃO E ENCAMINHAMENTOS\n' +
+        blocoPauta + '\n\n' +
+        '4. ENCAMINHAMENTOS GERAIS\n' +
+        (gerais.length ? gerais.map(_fmtEnc).join('\n') : 'Nenhum.') + '\n\n' +
+        '5. ENCERRAMENTO\n' +
+        'Hora de encerramento: \n' +
+        'Próxima reunião: (se definida)\n';
+      el.focus();
+    }
+    if (el.value.trim()) {
+      _abrirModalConfirmar({titulo:'Gerar Ata Completa',icone:'article',corIcone:'#6366f1',
+        mensagem:'Substituir o texto atual pela ata gerada a partir da Pauta e dos Encaminhamentos? O conteúdo atual será perdido.',
+        labelConfirmar:'Gerar', cb: _doGerar});
+    } else {
+      _doGerar();
+    }
+  }
+
+  function compartilharAta(done, idOverride) {
+    var id, titulo, texto;
+    if (idOverride) {
+      // Chamado de fora do modal (card da aba "Atas") — lê de _lista, já carregada.
+      var r = _lista.find(function(x) { return x.id === idOverride; });
+      if (!r) { done(); Toast.erro('Reunião não encontrada.'); return; }
+      id     = r.id;
+      titulo = r.titulo || 'Ata de Reunião';
+      texto  = (r.ata && (r.ata.textoFinal || r.ata.rascunho)) || '';
+    } else {
+      id     = _idAtual;
+      titulo = (document.getElementById('run-titulo') || {}).value || 'Ata de Reunião';
+      texto  = (document.getElementById('run-ata-texto') || {}).value || '';
+    }
+    if (!id) { done(); Toast.aviso('Salve a reunião antes de compartilhar a ata.'); return; }
     if (!texto.trim()) { done(); Toast.aviso('Redigir a ata antes de compartilhar.'); return; }
-    var titulo = (document.getElementById('run-titulo') || {}).value || 'Ata de Reunião';
     var conteudo = '<h2>' + escaparHtml(titulo) + '</h2><pre style="white-space:pre-wrap;font-size:14px;line-height:1.6;">' + escaparHtml(texto) + '</pre>';
-    GAS.docSharing.compartilhar({ tipo: 'ata_reuniao', entidadeId: _idAtual, titulo: 'Ata: ' + titulo, conteudoHtml: conteudo }, function(resp) {
+    GAS.docSharing.compartilhar({ tipo: 'ata_reuniao', entidadeId: id, titulo: 'Ata: ' + titulo, conteudoHtml: conteudo }, function(resp) {
       done();
       if (!resp || !resp.ok) { Toast.erro('Erro ao compartilhar ata.'); return; }
       var link = resp.data && resp.data.linkPublico;
@@ -34579,8 +34930,13 @@ var ReunioesUI = (function() {
            abrirDetalhe: abrirDetalhe,
            _addPauta: _addPauta, _addPresente: _addPresente,
            _addAusenteJust: _addAusenteJust, _usarTemplateAta: _usarTemplateAta,
+           _gerarAtaCompleta: _gerarAtaCompleta,
+           _iniciarConcluirEnc: _iniciarConcluirEnc, _observarEnc: _observarEnc,
+           _filtrarEncaminhamentos: _filtrarEncaminhamentos, _carregarEncaminhamentos: _carregarEncaminhamentos,
            _agendarAutoSalvar: _agendarAutoSalvar,
-           _addLink: _addLink, _addAnexo: _addAnexo };
+           _addLink: _addLink, _addAnexo: _addAnexo,
+           _togglePautaCard: _togglePautaCard, _salvarEProximaPauta: _salvarEProximaPauta,
+           _removerPauta: _removerPauta, _atualizarBadgePauta: _atualizarBadgePauta };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 
@@ -34662,7 +35018,8 @@ var TaskHubUI = (function() {
     if (item.tipo === 'tarefa' && item.status !== 'concluida' && item.status !== 'cancelada') {
       btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._concluirTarefa(' + iid + ')" title="Concluir">Concluir</button>';
     } else if (item.tipo === 'encaminhamento') {
-      btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._marcarEnc(' + iid + ')" title="Marcar como feito">Marcar feito</button>';
+      var iidReuniao = JSON.stringify(item.reuniaoId).replace(/"/g,"'");
+      btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._marcarEnc(' + iidReuniao + ',' + iid + ')" title="Marcar como feito">Marcar feito</button>';
     } else if (item.tipo === 'chave') {
       btnAcao = '<button class="hub-inline-btn" onclick="event.stopPropagation();TaskHubUI._devolverChave(' + iid + ')" title="Devolver chave">Registrar devolução</button>';
     }
@@ -34788,8 +35145,8 @@ var TaskHubUI = (function() {
     }, function(e) { Toast.erro(e.message || e); });
   }
 
-  function _marcarEnc(id) {
-    GAS.reunioes.concluirEncaminhamento(id, function(r) {
+  function _marcarEnc(reuniaoId, encId) {
+    GAS.reunioes.concluirEncaminhamento({ reuniaoId: reuniaoId, encId: encId }, function(r) {
       if (!r || !r.ok) { Toast.erro('Erro ao marcar encaminhamento.'); return; }
       Toast.sucesso('Encaminhamento marcado como feito.');
       _carregado = false; carregar();
@@ -45962,4 +46319,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-

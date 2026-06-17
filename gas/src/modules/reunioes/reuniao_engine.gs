@@ -240,10 +240,29 @@ var ReuniaoEngine = (function () {
     return atualizada;
   }
 
-  function concluirEncaminhamento(reuniaoId, encId, email, orgId) {
+  function concluirEncaminhamento(reuniaoId, encId, email, orgId, observacao) {
     orgId = orgId || getOrgConfig().orgId;
+    if (observacao) {
+      ReuniaoRepository.adicionarObservacaoEncaminhamento(orgId, reuniaoId, encId, observacao, email);
+    }
     return ReuniaoRepository.atualizarEncaminhamento(orgId, reuniaoId, encId,
       { status: 'concluido' }, email);
+  }
+
+  function adicionarObservacaoEncaminhamento(reuniaoId, encId, texto, email, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    if (!texto) throw new Error('Texto da observação obrigatório');
+    return ReuniaoRepository.adicionarObservacaoEncaminhamento(orgId, reuniaoId, encId, texto, email);
+  }
+
+  function listarEncaminhamentosGestao(filtros, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    return ReuniaoRepository.listarEncaminhamentosGestao(orgId, filtros);
+  }
+
+  function metricasEncaminhamentos(orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    return ReuniaoRepository.metricasEncaminhamentos(orgId);
   }
 
   // ─── Anexos ───────────────────────────────────────────────────────────────────
@@ -328,18 +347,20 @@ var ReuniaoEngine = (function () {
   function _criarTarefasDeEncaminhamentos(orgId, reuniao, email) {
     if (typeof TarefaEngine === 'undefined') return;
     (reuniao.encaminhamentos || []).forEach(function(enc) {
-      if (enc.status === 'pendente' && enc.responsavel && enc.texto) {
+      if (enc.status === 'pendente' && enc.responsavel && enc.texto && !enc.tarefaId) {
         try {
-          TarefaEngine.criarAutomatica({
-            titulo:       '[Encaminhamento] ' + enc.texto,
-            responsavel:  enc.responsavel,
-            prazo:        enc.prazo || null,
-            prioridade:   'media',
-            origemTipo:   'reuniao',
-            origemId:     reuniao.id,
-            orgId:        orgId
+          var tarefa = TarefaEngine.criar({
+            titulo:      '[Encaminhamento] ' + enc.texto,
+            descricao:   'Encaminhamento da reunião "' + reuniao.titulo + '".',
+            responsavel: enc.responsavel,
+            prioridade:  'media',
+            modulo:      'reunioes',
+            tipo:        'encaminhamento',
+            origem:      'reuniao',
+            origemId:    reuniao.id,
+            prazo:       enc.prazo || ''
           }, email);
-          enc.tarefaId = true; // marca que foi criada
+          enc.tarefaId = tarefa.id; // referência real à tarefa criada (antes gravava só `true`)
         } catch(e) { Logger.warn('reuniao_engine', '_criarTarefas', e.message); }
       }
     });
@@ -355,6 +376,9 @@ var ReuniaoEngine = (function () {
     aprovarAta:                 aprovarAta,
     adicionarEncaminhamento:    adicionarEncaminhamento,
     concluirEncaminhamento:     concluirEncaminhamento,
+    adicionarObservacaoEncaminhamento: adicionarObservacaoEncaminhamento,
+    listarEncaminhamentosGestao: listarEncaminhamentosGestao,
+    metricasEncaminhamentos:    metricasEncaminhamentos,
     uploadAnexo:                uploadAnexo
   };
 

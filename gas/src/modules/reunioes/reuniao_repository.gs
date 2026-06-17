@@ -14,7 +14,8 @@
  *   presentes[], ausentesJustificados[], ausentesNaoJustificados[],
  *   status (rascunho|agendada|em_andamento|encerrada|cancelada),
  *   ata { rascunho, textoFinal, aprovadaEm, aprovadaPor, versoes[] },
- *   encaminhamentos[{ id, texto, responsavel, prazo, status, concluidoEm, pautaId }]
+ *   encaminhamentos[{ id, texto, responsavel, prazo, status, concluidoEm, pautaId,
+ *     tarefaId (id da Tarefa criada ao encerrar a reunião), observacoes[{data,autor,texto}] }]
  *     (pautaId null = encaminhamento geral, não vinculado a um item específico),
  *   links[{ label, url }], anexos[{ nome, url, mimeType }],
  *   acaoVinculadaId, googleEventId (sincronizado ao Calendar a partir de "agendada"),
@@ -158,6 +159,100 @@ var ReuniaoRepository = (function () {
     });
   }
 
+  /**
+   * Lista encaminhamentos para a tela de gestão — aceita filtros e, ao contrário
+   * de listarEncaminhamentosPendentes(), inclui também os já concluídos quando
+   * filtros.status não restringe a 'pendente'.
+   * @param {Object} filtros — { status?, responsavel?, reuniaoId?, busca? }
+   */
+  function listarEncaminhamentosGestao(orgId, filtros) {
+    orgId = _orgIdPadrao(orgId);
+    filtros = filtros || {};
+    var lista = _base.listar(orgId, {});
+    var hoje  = new Date();
+    var resultado = [];
+    lista.forEach(function(r) {
+      (r.encaminhamentos || []).forEach(function(e) {
+        var status = e.status || 'pendente';
+        if (filtros.status && status !== filtros.status) return;
+        if (filtros.responsavel && e.responsavel !== filtros.responsavel) return;
+        if (filtros.reuniaoId && r.id !== filtros.reuniaoId) return;
+        if (filtros.busca && r.titulo.toLowerCase().indexOf(String(filtros.busca).toLowerCase()) === -1 &&
+            e.texto.toLowerCase().indexOf(String(filtros.busca).toLowerCase()) === -1) return;
+        resultado.push({
+          encId:         e.id,
+          texto:         e.texto,
+          responsavel:   e.responsavel,
+          prazo:         e.prazo,
+          vencido:       e.prazo ? (new Date(e.prazo) < hoje && status !== 'concluido') : false,
+          reuniaoId:     r.id,
+          reuniaoTitulo: r.titulo,
+          reuniaoData:   r.dataHora,
+          status:        status,
+          pautaId:       e.pautaId || null,
+          tarefaId:      e.tarefaId || null,
+          observacoes:   e.observacoes || [],
+          concluidoEm:   e.concluidoEm || null
+        });
+      });
+    });
+    return resultado.sort(function(a, b) {
+      if (a.vencido !== b.vencido) return a.vencido ? -1 : 1;
+      if (!a.prazo) return 1;
+      if (!b.prazo) return -1;
+      return new Date(a.prazo) - new Date(b.prazo);
+    });
+  }
+
+  /**
+   * Métricas agregadas de encaminhamentos para o painel de gestão.
+   */
+  function metricasEncaminhamentos(orgId) {
+    orgId = _orgIdPadrao(orgId);
+    var lista = _base.listar(orgId, {});
+    var hoje  = new Date();
+    var todos = [];
+    lista.forEach(function(r) {
+      (r.encaminhamentos || []).forEach(function(e) { todos.push(e); });
+    });
+    var pendentes  = todos.filter(function(e) { return (e.status || 'pendente') !== 'concluido'; });
+    var concluidos = todos.filter(function(e) { return e.status === 'concluido'; });
+    var vencidos   = pendentes.filter(function(e) { return e.prazo && new Date(e.prazo) < hoje; });
+
+    var porResponsavel = {};
+    pendentes.forEach(function(e) {
+      var r = e.responsavel || '— sem responsável —';
+      porResponsavel[r] = (porResponsavel[r] || 0) + 1;
+    });
+    var topResponsaveis = Object.keys(porResponsavel)
+      .map(function(r) { return { responsavel: r, pendentes: porResponsavel[r] }; })
+      .sort(function(a, b) { return b.pendentes - a.pendentes; })
+      .slice(0, 8);
+
+    return {
+      total:           todos.length,
+      pendentes:       pendentes.length,
+      concluidos:      concluidos.length,
+      vencidos:        vencidos.length,
+      topResponsaveis: topResponsaveis
+    };
+  }
+
+  function adicionarObservacaoEncaminhamento(orgId, reuniaoId, encId, texto, email) {
+    orgId = _orgIdPadrao(orgId);
+    var reuniao = _base.buscarPorId(orgId, reuniaoId);
+    if (!reuniao) throw new Error('Reunião não encontrada: ' + reuniaoId);
+    var enc = (reuniao.encaminhamentos || []).find(function(e) { return e.id === encId; });
+    if (!enc) throw new Error('Encaminhamento não encontrado: ' + encId);
+
+    enc.observacoes = enc.observacoes || [];
+    enc.observacoes.push({ data: agora(), autor: email || '', texto: texto });
+    reuniao.atualizadoEm = agora();
+    reuniao.versao = (reuniao.versao || 1) + 1;
+    _base.salvar(orgId, reuniao);
+    return reuniao;
+  }
+
   // ─── ESCRITA ──────────────────────────────────────────────────────────────
 
   function proximoId(orgId) {
@@ -232,6 +327,9 @@ var ReuniaoRepository = (function () {
     buscarPorId:                 buscarPorId,
     metricas:                    metricas,
     listarEncaminhamentosPendentes: listarEncaminhamentosPendentes,
+    listarEncaminhamentosGestao: listarEncaminhamentosGestao,
+    metricasEncaminhamentos:     metricasEncaminhamentos,
+    adicionarObservacaoEncaminhamento: adicionarObservacaoEncaminhamento,
     proximoId:                   proximoId,
     salvar:                      salvar,
     atualizarEncaminhamento:     atualizarEncaminhamento,
