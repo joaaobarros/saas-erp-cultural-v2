@@ -119,6 +119,22 @@ function ctrl_reunioes_salvar(params) {
   }, 'ctrl_reunioes_salvar');
 }
 
+function ctrl_reunioes_criar_lote(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    _assertPapelReuniao(acesso.registro && acesso.registro.papel);
+
+    params = params || {};
+    var dados = params.dados || {};
+    var datas = params.datas || [];
+    var resultado = ReuniaoEngine.criarLote(dados, datas, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
+  }, 'ctrl_reunioes_criar_lote');
+}
+
 function ctrl_reunioes_autosalvar(params) {
   return GasResponse.wrap(function() {
     var email  = getEmailSessao();
@@ -263,6 +279,36 @@ function ctrl_reunioes_observar_encaminhamento(params) {
     _invalidarCacheReunioes();
     return resultado;
   }, 'ctrl_reunioes_observar_encaminhamento');
+}
+
+function ctrl_reunioes_vincular_calendar(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    _assertPapelReuniao(acesso.registro && acesso.registro.papel);
+
+    var id = params && params.id;
+    if (!id) throw new Error('ID obrigatório');
+    var resultado = ReuniaoEngine.vincularCalendar(id, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
+  }, 'ctrl_reunioes_vincular_calendar');
+}
+
+function ctrl_reunioes_desvincular_calendar(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    _assertPapelReuniao(acesso.registro && acesso.registro.papel);
+
+    var id = params && params.id;
+    if (!id) throw new Error('ID obrigatório');
+    var resultado = ReuniaoEngine.desvincularCalendar(id, email, getOrgConfig().orgId);
+    _invalidarCacheReunioes();
+    return resultado;
+  }, 'ctrl_reunioes_desvincular_calendar');
 }
 
 function ctrl_reunioes_excluir(params) {

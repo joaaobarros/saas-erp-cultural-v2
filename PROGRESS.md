@@ -39,7 +39,21 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s106)**: **Feat/Fix — Reuniões: pauta em acordeão, vínculo pauta↔encaminhamento, gestão de encaminhamentos/atas e correção do deploy `frontend/index` — Deploy @1022.**
+**Fase atual (s107)**: **Feat — Reuniões: ciclo/lote, Calendar explícito e tarefas imediatas para encaminhamentos — Deploy @1023.**
+
+**O que foi implementado agora**:
+- `ReunioesUI` — botão **Criar Ciclo** no topo do módulo; modal permite gerar reuniões em lote por período + dias da semana e/ou datas avulsas, com título base, horário, duração, local, convocador e pautas iniciais.
+- `reuniao_controller.gs`/`reuniao_engine.gs` — novo `ctrl_reunioes_criar_lote` + `ReuniaoEngine.criarLote`, com limite de 60 reuniões por lote e bloqueio de datas duplicadas.
+- `ReunioesUI` — vínculo com Google Calendar ficou explícito nos cards e no modal de reunião: botão **Calendar** / **Vincular ao Calendar** e ação **Desvincular** quando já houver `googleEventId`.
+- `reuniao_controller.gs`/`reuniao_engine.gs` — novos endpoints `ctrl_reunioes_vincular_calendar` e `ctrl_reunioes_desvincular_calendar`, reutilizando o fluxo de convite já existente em Reuniões.
+- Encaminhamentos agora criam/vinculam tarefa imediatamente ao serem adicionados (`enc.tarefaId = tarefa.id`), não apenas quando a reunião é encerrada. O fluxo de encerramento permanece como rede de segurança para encaminhamentos antigos sem `tarefaId`.
+
+**Nota de descoberta UI — Calendar em outros módulos**:
+- Reservas de Espaço: botão fica no modal de **Detalhes da Reserva**.
+- Reservas de Veículo: botão fica no modal de **Detalhes da Reserva de Veículo**.
+- Ações: botão fica no **painel da Ação**.
+
+**Fase anterior (s106)**: **Feat/Fix — Reuniões: pauta em acordeão, vínculo pauta↔encaminhamento, gestão de encaminhamentos/atas e correção do deploy `frontend/index` — Deploy @1022.**
 
 **Contexto**: sessão iniciada por Claude e finalizada por Codex após limite de sessão. O web app publicado exibia "Erro interno — Nenhum arquivo HTML com o nome frontend/index foi encontrado"; o template existe em `gas/src/frontend/index.html`, então o projeto foi reenviado via `clasp push` a partir de `gas/` e o deployment fixo `AKfycbzVKQ8fEMBZquOytumFLsb3dIx3DuIZh1cFYe4ywFCoMUXSFewuhZCpy-V8fjLkbe_j` foi atualizado para `@1022`. `.clasp.json` da raiz também foi alinhado para `rootDir: ./gas/src`, reduzindo risco de push pelo diretório errado.
 

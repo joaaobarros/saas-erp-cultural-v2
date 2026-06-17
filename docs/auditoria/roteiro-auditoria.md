@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s106 @1022 (Reuniões: pauta/atas/encaminhamentos + fix deploy `frontend/index`) · s105 @1019 · s104 @1018 · s103 @1014
+> Deploy atual: s107 @1023 (Reuniões: ciclo/lote + Calendar explícito + tarefas imediatas) · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -481,7 +481,28 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 106 (2026-06-17)
+## HANDOFF ATUAL — SESSÃO 107 (2026-06-17)
+
+### Estado atual: Feat — Reuniões com ciclo/lote, Calendar explícito e tarefas imediatas — Deploy @1023
+
+### O que foi feito nesta sessão (s107)
+| Deploy | O que foi implementado |
+|---|---|
+| @1023 | Reuniões: botão "Criar Ciclo" com modal de lote por período+dias da semana e/ou datas avulsas; backend `ctrl_reunioes_criar_lote`/`ReuniaoEngine.criarLote` com limite 60 e bloqueio de duplicadas. Calendar em Reuniões ficou explícito nos cards e no modal: "Calendar"/"Vincular ao Calendar" e "Desvincular"; backend `ctrl_reunioes_vincular_calendar`/`desvincular_calendar`. Encaminhamentos agora criam tarefa imediatamente ao serem adicionados e gravam `tarefaId` real; encerramento continua como rede de segurança para encaminhamentos legados. |
+
+### Nota de descoberta UI — Calendar em outros módulos
+- Reservas de Espaço: botão no modal de Detalhes da Reserva.
+- Reservas de Veículo: botão no modal de Detalhes da Reserva de Veículo.
+- Ações: botão no painel da Ação.
+
+### Pendente para smoke test
+- Criar ciclo pequeno com 2 datas; verificar cards gerados.
+- Vincular/desvincular Calendar em uma reunião.
+- Adicionar encaminhamento e confirmar surgimento da tarefa no Meu Centro/Minhas Tarefas.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 106 (2026-06-17)
 
 ### Estado atual: Feat/Fix — Reuniões estruturadas + correção do web app — Deploy @1022
 

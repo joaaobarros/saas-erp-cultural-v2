@@ -7053,10 +7053,16 @@ select.form-control { cursor: pointer; }
             <h1 class="view-title">Reuniões</h1>
             <p class="view-subtitle">Atas, encaminhamentos e deliberações institucionais</p>
           </div>
-          <button id="btn-nova-reuniao" class="btn btn-primary"
-            onclick="BtnGuard.wrap('btn-nova-reuniao','Abrindo…',function(done){ ReunioesUI.abrirForm(null); done(); })">
-            <span class="ms">add</span> Nova Reunião
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+            <button id="btn-ciclo-reuniao" class="btn btn-secondary"
+              onclick="ReunioesUI.abrirModalCiclo()" data-bg-skip="1">
+              <span class="ms">event_repeat</span> Criar Ciclo
+            </button>
+            <button id="btn-nova-reuniao" class="btn btn-primary"
+              onclick="BtnGuard.wrap('btn-nova-reuniao','Abrindo…',function(done){ ReunioesUI.abrirForm(null); done(); })">
+              <span class="ms">add</span> Nova Reunião
+            </button>
+          </div>
         </div>
         <div id="reunioes-stats" class="stats-strip">
           <div class="stat-card"><div class="stat-value" id="run-total">—</div><div class="stat-label">Total</div></div>
@@ -7169,6 +7175,10 @@ select.form-control { cursor: pointer; }
                 <span id="run-anexo-status" style="font-size:12px;color:var(--muted);"></span>
               </div>
               <div id="run-anexos-lista" style="font-size:13px;"></div>
+
+              <hr style="margin:16px 0;border-color:var(--border);">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Google Calendar</div>
+              <div id="run-calendar-bloco" style="font-size:13px;color:var(--muted);">Salve a reunião para vincular ao Calendar.</div>
             </div>
             <!-- Tab Pauta -->
             <div id="run-mtab-pauta" class="oculto">
@@ -10795,6 +10805,7 @@ var GAS = {
     metricasEncaminhamentos:  function(cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_metricas_encaminhamentos(); },
     observarEncaminhamento:   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_observar_encaminhamento(d); },
     salvar:                   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar(d); },
+    criarLote:                function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_criar_lote(d); },
     autoSalvar:               function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_autosalvar(d); },
     mudarStatus:              function(id,s,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_mudar_status({id:id,status:s}); },
     salvarAta:                function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_salvar_ata(d); },
@@ -10803,6 +10814,8 @@ var GAS = {
     adicionarEncaminhamento:  function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_adicionar_encaminhamento(d); },
     uploadAnexo:              function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_upload_anexo(d); },
     concluirEncaminhamento:   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_concluir_encaminhamento(d); },
+    vincularCalendar:         function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_vincular_calendar({id:id}); },
+    desvincularCalendar:      function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_desvincular_calendar({id:id}); },
     excluir:                  function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_excluir({id:id}); }
   },
   balcao: {
@@ -34025,7 +34038,7 @@ function _carregarSelectUsuariosHelper(selectId, valorAtual, placeholder) {
 // FASE 10 — ReunioesUI
 // ════════════════════════════════════════════════════════════════════════════
 var ReunioesUI = (function() {
-  var _lista = [], _carregado = false, _idAtual = null, _tab = 'lista';
+  var _lista = [], _carregado = false, _idAtual = null, _tab = 'lista', _reuniaoAtual = null;
   var _STATUS_COLOR = { rascunho:'#94a3b8', agendada:'#3b82f6', em_andamento:'#f59e0b', encerrada:'#10b981', cancelada:'#ef4444' };
   var _STATUS_LABEL = { rascunho:'Rascunho', agendada:'Agendada', em_andamento:'Em Andamento', encerrada:'Encerrada', cancelada:'Cancelada' };
 
@@ -34088,6 +34101,8 @@ var ReunioesUI = (function() {
         '</div>' +
         '<div style="display:flex;flex-direction:column;gap:4px;">' +
           (r.status === 'rascunho' ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-ag-'+r.id+'\',\'Agendando…\',function(done){ReunioesUI.mudarStatus('+id+',\'agendada\',done);})" id="run-ag-'+r.id+'">Agendar</button>' : '') +
+          (!r.googleEventId && r.status !== 'cancelada' ? '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-cal-'+r.id+'\',\'Vinculando…\',function(done){ReunioesUI.vincularCalendar('+id+',done);})" id="run-cal-'+r.id+'"><span class="ms ms-sm">event</span> Calendar</button>' : '') +
+          (r.googleEventId ? '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();ReunioesUI.confirmarDesvincularCalendar('+id+')" data-bg-skip="1"><span class="ms ms-sm">event_busy</span> Desvincular</button>' : '') +
           (r.status === 'agendada' ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-in-'+r.id+'\',\'Iniciando…\',function(done){ReunioesUI.mudarStatus('+id+',\'em_andamento\',done);})" id="run-in-'+r.id+'">Iniciar</button>' : '') +
           (r.status === 'em_andamento' ? '<button class="btn btn-success btn-sm" onclick="event.stopPropagation();BtnGuard.wrap(\'run-enc-'+r.id+'\',\'Encerrando…\',function(done){ReunioesUI.mudarStatus('+id+',\'encerrada\',done);})" id="run-enc-'+r.id+'">Encerrar</button>' : '') +
           '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ReunioesUI.abrirForm(' + id + ')">Editar</button>' +
@@ -34266,6 +34281,7 @@ var ReunioesUI = (function() {
 
   function abrirForm(id) {
     _idAtual = id || null;
+    _reuniaoAtual = null;
     document.getElementById('run-modal-titulo').textContent = id ? 'Editar Reunião' : 'Nova Reunião';
     _resetForm();
     _carregarSelectAcoesRun('');
@@ -34276,6 +34292,7 @@ var ReunioesUI = (function() {
       GAS.reunioes.obter(id, function(resp) {
         if (!resp || !resp.ok) return;
         var r = resp.data;
+        _reuniaoAtual = r;
         document.getElementById('run-titulo').value      = r.titulo || '';
         document.getElementById('run-tipo').value        = r.tipo || 'ordinaria';
         document.getElementById('run-data-hora').value   = r.dataHora ? r.dataHora.slice(0,16) : '';
@@ -34303,7 +34320,10 @@ var ReunioesUI = (function() {
         // Links e anexos
         _renderLinks(r.links || []);
         _renderAnexos(r.anexos || []);
+        _renderCalendarReuniao(r);
       }, function(){});
+    } else {
+      _renderCalendarReuniao(null);
     }
     document.getElementById('run-modal').classList.remove('oculto');
     setModalTab('dados', document.querySelector('#run-modal .tab-bar .tab-btn'));
@@ -34311,6 +34331,7 @@ var ReunioesUI = (function() {
 
   function fecharForm() {
     _idAtual = null;
+    _reuniaoAtual = null;
     document.getElementById('run-modal').classList.add('oculto');
   }
 
@@ -34426,7 +34447,154 @@ var ReunioesUI = (function() {
     }, function(e) { done(); Toast.erro(e.message); });
   }
 
+  function _renderCalendarReuniao(r) {
+    var el = document.getElementById('run-calendar-bloco');
+    if (!el) return;
+    if (!r || !r.id) {
+      el.innerHTML = '<span class="muted-text">Salve a reunião para habilitar o vínculo com o Calendar.</span>';
+      return;
+    }
+    var id = JSON.stringify(r.id).replace(/"/g, "'");
+    if (r.googleEventId) {
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<span style="background:#059669;color:#fff;border-radius:99px;padding:3px 10px;font-weight:600;">📅 Vinculado ao Calendar</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="ReunioesUI.confirmarDesvincularCalendar(' + id + ')" data-bg-skip="1">' +
+          '<span class="ms ms-sm">event_busy</span> Desvincular</button>' +
+      '</div>';
+    } else {
+      el.innerHTML = '<button type="button" id="run-vincular-cal-btn" class="btn btn-secondary btn-sm" ' +
+        'onclick="BtnGuard.wrap(\'run-vincular-cal-btn\',\'Vinculando…\',function(done){ReunioesUI.vincularCalendar(' + id + ',done);})">' +
+        '<span class="ms ms-sm">event</span> Vincular ao Calendar</button>' +
+        '<p class="muted-text" style="font-size:12px;margin:6px 0 0;">Usa convocador, presentes e ausentes justificados como convidados.</p>';
+    }
+  }
+
+  function vincularCalendar(id, done) {
+    done = done || function(){};
+    GAS.reunioes.vincularCalendar(id, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao vincular ao Calendar.'); return; }
+      Toast.sucesso('Reunião vinculada ao Calendar.');
+      _reuniaoAtual = resp.data;
+      _renderCalendarReuniao(resp.data);
+      _carregado = false;
+      carregar();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  function confirmarDesvincularCalendar(id) {
+    _abrirModalConfirmar({
+      titulo: 'Desvincular do Calendar',
+      icone: 'event_busy',
+      corIcone: '#ef4444',
+      mensagem: 'Remover o evento desta reunião no Google Calendar? Os convidados deixarão de receber atualizações.',
+      labelConfirmar: 'Desvincular',
+      cb: function() {
+        GAS.reunioes.desvincularCalendar(id, function(resp) {
+          if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao desvincular do Calendar.'); return; }
+          Toast.sucesso('Vínculo com o Calendar removido.');
+          _reuniaoAtual = resp.data;
+          _renderCalendarReuniao(resp.data);
+          _carregado = false;
+          carregar();
+        }, function(e) { Toast.erro(e.message || e); });
+      }
+    });
+  }
+
   function abrirDetalhe(id) { abrirForm(id); }
+
+  function abrirModalCiclo() {
+    var html = '<div style="border-radius:17px;overflow:hidden;">' +
+      '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">' +
+        '<span class="ms" style="color:var(--color-primary);">event_repeat</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">Criar Ciclo de Reuniões</h3>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);"><span class="ms">close</span></button>' +
+      '</div>' +
+      '<div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Título base *</label><input id="run-lote-titulo" class="form-control" placeholder="Ex.: Reunião semanal de produção"></div>' +
+        '<div class="form-group"><label>Tipo</label><select id="run-lote-tipo" class="form-control"><option value="ordinaria">Ordinária</option><option value="extraordinaria">Extraordinária</option><option value="comite">Comitê</option><option value="workshop">Workshop</option></select></div>' +
+        '<div class="form-group"><label>Hora</label><input type="time" id="run-lote-hora" class="form-control" value="09:00"></div>' +
+        '<div class="form-group"><label>Duração (min)</label><input type="number" id="run-lote-duracao" class="form-control" min="15" value="60"></div>' +
+        '<div class="form-group"><label>Início</label><input type="date" id="run-lote-inicio" class="form-control"></div>' +
+        '<div class="form-group"><label>Fim</label><input type="date" id="run-lote-fim" class="form-control"></div>' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Local</label><input id="run-lote-local" class="form-control" placeholder="Sala / Online"></div>' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Convocado por</label><select id="run-lote-convocador" class="form-control"><option value="">— Selecionar —</option></select></div>' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Dias da semana</label><div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+          [['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex'],['6','Sáb'],['0','Dom']].map(function(d){ return '<label class="lote-dia-label"><input type="checkbox" class="run-lote-dia" value="'+d[0]+'"><span class="lote-dia-chip">'+d[1]+'</span></label>'; }).join('') +
+        '</div></div>' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Datas avulsas opcionais</label><textarea id="run-lote-datas" class="form-control" rows="3" placeholder="Uma data por linha, ex.: 2026-07-10"></textarea></div>' +
+        '<div class="form-group" style="grid-column:1/-1;"><label>Pautas iniciais opcionais</label><textarea id="run-lote-pautas" class="form-control" rows="3" placeholder="Uma pauta por linha"></textarea></div>' +
+        '<div id="run-lote-preview" class="muted-text" style="grid-column:1/-1;font-size:12px;">Informe período e dias para calcular o ciclo.</div>' +
+        '<div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;">' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '<button class="btn btn-primary" id="run-lote-criar-btn" onclick="BtnGuard.wrap(\'run-lote-criar-btn\',\'Criando…\',ReunioesUI.criarCiclo)">Criar reuniões</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+    _abrirModalSimples(html);
+    _carregarSelectUsuariosHelper('run-lote-convocador', (App.getBoot && App.getBoot() && App.getBoot().usuarioEmail) || '', '— Selecionar —');
+    ['run-lote-inicio','run-lote-fim','run-lote-datas'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', _previewCiclo);
+    });
+    document.querySelectorAll('.run-lote-dia').forEach(function(el) { el.addEventListener('change', _previewCiclo); });
+  }
+
+  function _datasCiclo() {
+    var datas = {};
+    var inicio = (document.getElementById('run-lote-inicio') || {}).value || '';
+    var fim    = (document.getElementById('run-lote-fim') || {}).value || '';
+    var dias = Array.prototype.slice.call(document.querySelectorAll('.run-lote-dia:checked')).map(function(el) { return parseInt(el.value, 10); });
+    if (inicio && fim && dias.length) {
+      var d = new Date(inicio + 'T00:00:00');
+      var limite = new Date(fim + 'T00:00:00');
+      while (d <= limite) {
+        if (dias.indexOf(d.getDay()) !== -1) datas[d.toISOString().slice(0,10)] = true;
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    var avulsas = ((document.getElementById('run-lote-datas') || {}).value || '').split(/\s+/);
+    avulsas.forEach(function(x) { if (/^\d{4}-\d{2}-\d{2}$/.test(x)) datas[x] = true; });
+    return Object.keys(datas).sort();
+  }
+
+  function _previewCiclo() {
+    var el = document.getElementById('run-lote-preview');
+    if (!el) return;
+    var datas = _datasCiclo();
+    el.textContent = datas.length ? (datas.length + ' reunião(ões): ' + datas.slice(0, 8).map(_fmtData).join(', ') + (datas.length > 8 ? '…' : '')) : 'Nenhuma data calculada ainda.';
+  }
+
+  function criarCiclo(done) {
+    done = done || function(){};
+    var titulo = ((document.getElementById('run-lote-titulo') || {}).value || '').trim();
+    var datas = _datasCiclo();
+    if (!titulo) { done(); Toast.aviso('Título base obrigatório.'); return; }
+    if (!datas.length) { done(); Toast.aviso('Selecione ao menos uma data para o ciclo.'); return; }
+    var pautas = ((document.getElementById('run-lote-pautas') || {}).value || '').split(/\n+/)
+      .map(function(x) { return x.trim(); }).filter(Boolean)
+      .map(function(texto) { return { id: _gerarIdLocal('pt'), texto: texto, discussao: '', decisao: '' }; });
+    var dados = {
+      titulo: titulo,
+      tipo: (document.getElementById('run-lote-tipo') || {}).value || 'ordinaria',
+      hora: (document.getElementById('run-lote-hora') || {}).value || '09:00',
+      duracao: parseInt((document.getElementById('run-lote-duracao') || {}).value, 10) || 60,
+      local: ((document.getElementById('run-lote-local') || {}).value || '').trim(),
+      convocadoPor: ((document.getElementById('run-lote-convocador') || {}).value || '').trim(),
+      pauta: pautas,
+      presentes: [],
+      ausentesJustificados: []
+    };
+    GAS.reunioes.criarLote({ dados: dados, datas: datas }, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro((resp && resp.error && resp.error.message) || 'Erro ao criar ciclo.'); return; }
+      document.querySelectorAll('.modal-simples').forEach(function(m) { m.remove(); });
+      Toast.sucesso((resp.data || []).length + ' reunião(ões) criadas.');
+      _carregado = false;
+      carregar();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
 
   var _pautaExpandidaId = null;
   var _encaminhamentosAtuais = [];
@@ -34730,6 +34898,7 @@ var ReunioesUI = (function() {
     _pautaExpandidaId = null;
     _encaminhamentosAtuais = [];
     _atualizarSelectPautaEncaminhamento();
+    _renderCalendarReuniao(null);
     if (_autoSalvarTimer) { clearTimeout(_autoSalvarTimer); _autoSalvarTimer = null; }
     var statusEl = document.getElementById('run-autosave-status');
     if (statusEl) statusEl.textContent = '';
@@ -34926,6 +35095,8 @@ var ReunioesUI = (function() {
            abrirForm: abrirForm, fecharForm: fecharForm, setModalTab: setModalTab,
            salvar: salvar, mudarStatus: mudarStatus, salvarAta: salvarAta,
            submeterAta: submeterAta, aprovarAta: aprovarAta, compartilharAta: compartilharAta,
+           abrirModalCiclo: abrirModalCiclo, criarCiclo: criarCiclo,
+           vincularCalendar: vincularCalendar, confirmarDesvincularCalendar: confirmarDesvincularCalendar,
            adicionarEncaminhamento: adicionarEncaminhamento, concluirEnc: concluirEnc,
            abrirDetalhe: abrirDetalhe,
            _addPauta: _addPauta, _addPresente: _addPresente,
