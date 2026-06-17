@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s104)**: **Feat — Reuniões: integração com Google Calendar (convite automático ao agendar) + links e anexos (upload Drive) — Deploy @PENDENTE.**
+**Fase atual (s104)**: **Feat — Reuniões: integração com Google Calendar (convite automático ao agendar) + links e anexos (upload Drive) — Deploy @1018.**
 
 **Decisão de arquitetura — Calendar**: o webapp roda com `executeAs: USER_DEPLOYING` (`appsscript.json`), ou seja, todo `CalendarApp` opera sempre na conta que publicou o deploy, não na do usuário logado. Por isso o evento é criado num calendário único (o da conta de deploy) e todos os participantes (convocador + presentes + ausentes justificados) são adicionados como **guests** — recebem convite por e-mail e podem aceitar/adicionar à própria agenda normalmente. Não há suporte a "agenda pessoal de cada convocador" sem domain-wide delegation (fora de escopo).
 
