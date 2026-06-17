@@ -39,7 +39,22 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s107)**: **Feat — Reuniões: ciclo/lote, Calendar explícito e tarefas imediatas para encaminhamentos — Deploy @1023.**
+**Fase atual (s108)**: **Fix — Pessoas/RH: vínculo Usuário ↔ Colaborador ↔ Meu Perfil + labels de setor — Deploy @1024.**
+
+**O que foi implementado agora**:
+- `index.html` — `_badgeSetor` sem ícone e com atribuição de cores sem repetição por estouro da paleta fixa; fallback HSL para setores acima da paleta base.
+- `RhUI.aoAbrir` — carregamento resiliente: falha em métricas/encargos não bloqueia a aba Equipe; erro de listagem aparece visível em vez de loading eterno.
+- `RhUI.editarColab` — busca a ficha completa via `GAS.pessoas.obter(id)` antes de abrir o form, evitando salvar payload parcial da tabela.
+- `RhUI._sincronizarSetorComUsuario` — corrigido uso de `_usuarios` fora do escopo; agora usa `_usuariosAtivos` do próprio módulo.
+- `AcessoService.aprovarAcesso` — ao aprovar primeiro acesso, cria/atualiza ficha RH vinculada pelo e-mail com nome completo informado pelo usuário e setor aprovado/desejado.
+- `ctrl_acesso_editarPapel` — edição em Usuários/Permissões sincroniza com `colaboradores.json` e cria ficha mínima quando ainda não existir.
+- `ctrl_pessoas_salvar` — salvar Form colaborador atualiza `usuarios_acesso.json` por e-mail institucional: nome, nomeApelido e setor.
+- `ctrl_pessoas_meu_perfil_salvar` — Meu Perfil sincroniza `nomeApelido` de volta para o usuário vinculado, mantendo a tríade Usuário ↔ Colaborador ↔ Meu Perfil.
+
+**Verificação feita**:
+- `git diff --check` sem erros nos arquivos alterados.
+
+**Fase anterior (s107)**: **Feat — Reuniões: ciclo/lote, Calendar explícito e tarefas imediatas para encaminhamentos — Deploy @1023.**
 
 **O que foi implementado agora**:
 - `ReunioesUI` — botão **Criar Ciclo** no topo do módulo; modal permite gerar reuniões em lote por período + dias da semana e/ou datas avulsas, com título base, horário, duração, local, convocador e pautas iniciais.

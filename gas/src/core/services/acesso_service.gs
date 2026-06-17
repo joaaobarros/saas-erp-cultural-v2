@@ -167,6 +167,10 @@ var AcessoService = (function () {
         return { ok: true, mensagem: 'Seu acesso já está ativo.' };
       }
       if (existente && existente.status === 'pendente') {
+        existente.nome = nome;
+        existente.setorDesejado = String(dados.setorDesejado || existente.setorDesejado || '').trim();
+        existente.atualizadoEm = new Date().toISOString();
+        _salvarRegistros(registros);
         return { ok: true, mensagem: 'Sua solicitação já está em análise. Aguarde a aprovação.' };
       }
       if (existente && existente.status === 'inativo') {
@@ -266,6 +270,36 @@ var AcessoService = (function () {
 
       _salvarRegistros(registros);
       _invalidarCacheEmail(emailAlvo);
+      try {
+        if (typeof ColaboradorRepository !== 'undefined') {
+          var orgId = getOrgConfig().orgId;
+          var reg = registros[idx];
+          var colab = ColaboradorRepository.buscarPorEmail(orgId, emailAlvo);
+          var setorFinal = reg.setor || reg.setorDesejado || '';
+          if (colab) {
+            if (reg.nome) colab.nome = reg.nome;
+            colab.emailInstitucional = emailAlvo;
+            if (setorFinal) colab.setor = setorFinal;
+            if (!colab.status) colab.status = 'ativo';
+            if (colab.ativo === undefined) colab.ativo = colab.status !== 'desligado' && colab.status !== 'inativo';
+            ColaboradorRepository.salvar(orgId, colab);
+          } else {
+            ColaboradorRepository.salvar(orgId, {
+              orgId: orgId,
+              nome: reg.nome || emailAlvo,
+              emailInstitucional: emailAlvo,
+              setor: setorFinal,
+              cargo: '',
+              tipoVinculo: '',
+              status: 'ativo',
+              ativo: true,
+              origem: 'primeiro_acesso'
+            });
+          }
+        }
+      } catch(_syncErr) {
+        Logger.warn('acesso_service', 'aprovarAcesso.sync_colaborador', _syncErr.message);
+      }
 
       // Notificar usuário aprovado
       _notificarAprovado(registros[idx]);
@@ -592,9 +626,40 @@ function ctrl_acesso_editarPapel(params) {
         })[0];
         if (_colab && _colab.setor !== (params.setor || '')) {
           _colab.setor = params.setor || '';
-          ColaboradorRepository.atualizar(_orgCfg.orgId, _colab.id, _colab);
+          ColaboradorRepository.salvar(_orgCfg.orgId, _colab);
         }
       } catch(_e) {}
+    }
+
+    if ((params.setor !== undefined || params.nome !== undefined) && typeof ColaboradorRepository !== 'undefined') {
+      try {
+        var _orgCfg2 = getOrgConfig();
+        var _emailLower2 = (params.email || '').toLowerCase();
+        var _usrAtual2 = AcessoService.listarUsuarios().filter(function(u){
+          return String(u.email || '').toLowerCase() === _emailLower2;
+        })[0] || {};
+        var _colab2 = ColaboradorRepository.buscarPorEmail(_orgCfg2.orgId, params.email);
+        if (_colab2) {
+          if (params.nome !== undefined) _colab2.nome = params.nome || _colab2.nome;
+          if (params.setor !== undefined) _colab2.setor = params.setor || '';
+          _colab2.emailInstitucional = params.email;
+          ColaboradorRepository.salvar(_orgCfg2.orgId, _colab2);
+        } else {
+          ColaboradorRepository.salvar(_orgCfg2.orgId, {
+            orgId: _orgCfg2.orgId,
+            nome: params.nome || _usrAtual2.nome || params.email,
+            emailInstitucional: params.email,
+            setor: params.setor !== undefined ? (params.setor || '') : (_usrAtual2.setor || _usrAtual2.setorDesejado || ''),
+            cargo: '',
+            tipoVinculo: '',
+            status: 'ativo',
+            ativo: true,
+            origem: 'usuarios_permissoes'
+          });
+        }
+      } catch(_syncUsuarioRh) {
+        Logger.warn('acesso_service', 'editarPapel.sync_colaborador', _syncUsuarioRh.message);
+      }
     }
 
     AuditoriaService.registrar('USUARIO_PAPEL_EDITADO', 'acesso',

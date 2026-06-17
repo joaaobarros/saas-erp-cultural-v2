@@ -315,9 +315,11 @@ function ctrl_pessoas_salvar(dados) {
           if (!Array.isArray(lista)) return lista;
           var usr = lista.find(function(u){ return (u.email||'').toLowerCase() === emailInst; });
           if (!usr) return lista;
-          if (dados.setor !== undefined) usr.setor = dados.setor || usr.setor;
-          if (dados.nome  && !usr.nome)  usr.nome  = dados.nome;
+          if (dados.setor !== undefined) usr.setor = dados.setor || '';
+          if (dados.nome) usr.nome = dados.nome;
+          if (dados.nomeApelido !== undefined) usr.nomeApelido = dados.nomeApelido || '';
           usr.atualizadoEm = new Date().toISOString();
+          usr.atualizadoPor = ctx.email;
           return lista;
         });
         try { BootService.limparCache(emailInst); } catch(_e) {}
@@ -1011,6 +1013,21 @@ function ctrl_pessoas_meu_perfil_salvar(dados) {
     if (sexualidadeDem) _registrarDemografia(eu, 'sexualidade', sexualidadeDem, sexualidadeDem.dataInicio);
 
     ColaboradorRepository.salvar(ctx.orgId, eu);
+    if (dados.nomeApelido !== undefined) {
+      try {
+        modifyJSON('usuarios_acesso.json', function(lista) {
+          if (!Array.isArray(lista)) return lista;
+          var emailLower = String(ctx.email || '').toLowerCase();
+          var usr = lista.find(function(u){ return String(u.email || '').toLowerCase() === emailLower; });
+          if (!usr) return lista;
+          usr.nomeApelido = dados.nomeApelido || '';
+          usr.atualizadoEm = new Date().toISOString();
+          usr.atualizadoPor = ctx.email;
+          return lista;
+        });
+        try { AcessoService.invalidarCacheVerificar(ctx.email); } catch(_e) {}
+      } catch(_e2) { Logger.warn('ctrl_pessoas_meu_perfil_salvar', 'sync_usuario', _e2.message); }
+    }
     AuditoriaService.registrar('PERFIL_ATUALIZADO', 'perfil', { id: eu.id, operador: ctx.email });
     try { BootService.limparCache(ctx.email); } catch(_) {}
     return { ok: true, colaborador: eu };

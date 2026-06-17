@@ -606,7 +606,7 @@ body {
 .badge-prio-alto    { background: #fef3c7; color: #92400e; }
 .badge-prio-medio   { background: #e0f2fe; color: #0369a1; }
 .badge-prio-baixo   { background: var(--surface2); color: var(--muted); }
-.badge-setor        { gap: 3px; }
+.badge-setor        { gap: 0; }
 .exec-agrup.ativa   { background: var(--color-primary-lt); color: var(--color-primary); border-color: var(--color-primary); font-weight: 600; }
 .badge-cancelado    { background: #fee2e2; color: #991b1b; }
 .widget-saldo { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:6px; }
@@ -11367,14 +11367,20 @@ var _SETOR_PALETA = [
 ];
 var _setorCorIdx = {};
 var _setorCorNext = 0;
+function _corSetorPorIndice(idx) {
+  if (idx < _SETOR_PALETA.length) return _SETOR_PALETA[idx];
+  var hue = Math.round(((idx - _SETOR_PALETA.length) * 137.508) % 360);
+  return { bg: 'hsl(' + hue + ' 78% 94%)', cor: 'hsl(' + hue + ' 68% 30%)' };
+}
 function _badgeSetor(id, labelOverride) {
   var label = labelOverride || _labelSetor(id) || id;
   if (!label) return '<span class="muted-text">—</span>';
-  if (_setorCorIdx[id] === undefined) {
-    _setorCorIdx[id] = _setorCorNext % _SETOR_PALETA.length;
+  var key = String(id || label);
+  if (_setorCorIdx[key] === undefined) {
+    _setorCorIdx[key] = _setorCorNext;
     _setorCorNext++;
   }
-  var p = _SETOR_PALETA[_setorCorIdx[id]];
+  var p = _corSetorPorIndice(_setorCorIdx[key]);
   return '<span class="badge badge-setor" style="background:'+p.bg+';color:'+p.cor+';">' + escaparHtml(label) + '</span>';
 }
 
@@ -39739,16 +39745,20 @@ var RhUI = (function() {
   // ── Inicialização ────────────────────────────────────────────
   function aoAbrir() {
     if (!_carregado) {
-      _carregarMetricas();
+      try { _carregarMetricas(); } catch(e) { console.warn('[RhUI] Falha ao carregar metricas:', e); }
       _popularAnoSelect();
       _carregado = true;
-      GAS.encargos.listar(function(resp) {
-        try {
-          var al = ((resp||{}).data||{}).doc||{};
-          var v = ((al.aliquotas||{}).descontoPlanoSaudePerc||{}).valor;
-          if (v != null) _descPSPercCache = Number(v);
-        } catch(_) {}
-      }, function(){});
+      try {
+        GAS.encargos.listar(function(resp) {
+          try {
+            var al = ((resp||{}).data||{}).doc||{};
+            var v = ((al.aliquotas||{}).descontoPlanoSaudePerc||{}).valor;
+            if (v != null) _descPSPercCache = Number(v);
+          } catch(_) {}
+        }, function(){});
+      } catch(e) {
+        console.warn('[RhUI] Falha ao pre-carregar encargos:', e);
+      }
     }
     // Oculta botões de escrita para quem não é rh/superadmin
     var escreve = _podeEscreverRh();
@@ -39759,7 +39769,13 @@ var RhUI = (function() {
       var el = document.getElementById(id);
       if (el) el.style.display = escreve ? '' : 'none';
     });
-    setTab(_abaAtiva); // setTab carrega os dados da aba ativa (equipe → carregarEquipe, etc.)
+    try {
+      setTab(_abaAtiva); // setTab carrega os dados da aba ativa
+    } catch(e) {
+      console.error('[RhUI] Falha ao abrir aba', _abaAtiva, e);
+      var el = document.getElementById('rh-eq-lista');
+      if (el) el.innerHTML = _empty('Erro ao abrir Pessoas / RH: ' + (e && e.message ? e.message : e));
+    }
   }
 
   function _carregarMetricas() {
@@ -39897,7 +39913,11 @@ var RhUI = (function() {
     var filtros  = status ? {status:status} : {incluirDesligado:true};
     GAS.pessoas.listar(filtros, function(resp) {
       try {
-        var lista = (resp&&resp.ok&&Array.isArray(resp.data)) ? resp.data : [];
+        if (!resp || !resp.ok) {
+          el.innerHTML = _empty('Erro ao carregar colaboradores: ' + ((resp && resp.error && resp.error.message) || 'resposta invalida.'));
+          return;
+        }
+        var lista = Array.isArray(resp.data) ? resp.data : [];
         // Ordenar por setor + nome
         lista.sort(function(a,b) {
           var sa = (a.setor||'zzz').localeCompare(b.setor||'zzz','pt-BR');
@@ -40221,7 +40241,14 @@ var RhUI = (function() {
 
   function editarColab(id) {
     var c = _colaboradores.find(function(x){ return x.id===id; });
-    if (c) abrirFormColab(c);
+    if (!c) return;
+    GAS.pessoas.obter(id, function(resp) {
+      if (resp && resp.ok && resp.data) abrirFormColab(resp.data);
+      else abrirFormColab(c);
+    }, function() {
+      Toast.aviso('Nao foi possivel carregar a ficha completa. Abrindo dados da lista.');
+      abrirFormColab(c);
+    });
   }
 
   function verColab(id) {
@@ -40809,8 +40836,8 @@ var RhUI = (function() {
    * portanto, esta função apenas garante que a visualização seja atualizada.
    */
   function _sincronizarSetorComUsuario(email, setor, callback) {
-    // Encontrar o usuário em _usuarios para obter seu papel e outros dados
-    var usr = _usuarios.find(function(u){ return u.email === email; });
+    // Encontrar o usuário vinculado para preservar papel e outros dados.
+    var usr = _usuariosAtivos.find(function(u){ return u.email === email; });
     if (!usr) {
       // Usuário ainda não foi aprovado ou vinculado - isso é normal
       // A sincronização será feita automaticamente pelo backend mesmo assim

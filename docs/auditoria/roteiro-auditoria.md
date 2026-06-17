@@ -4,6 +4,12 @@
 
 ---
 
+### Estado atual: s108 @1024 — Pessoas/RH vínculo 3 vias + labels setor
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1024 | s108 | `index.html`: `_badgeSetor` sem ícone e sem repetição por estouro de paleta; `RhUI.aoAbrir` resiliente; lista de colaboradores mostra erro visível; edição busca ficha completa via `GAS.pessoas.obter`; sync front usa `_usuariosAtivos`. `acesso_service.gs`: aprovação de primeiro acesso cria/atualiza ficha RH pelo e-mail com nome completo e setor; Usuários/Permissões sincroniza/cria ficha RH. `pessoas_controller.gs`: Form colaborador sincroniza usuário por e-mail; Meu Perfil sincroniza `nomeApelido`. |
+
 ## REGRAS DE ENCERRAMENTO DE FASE
 
 > **Git ANTES do deploy.** Nunca deploar código sem commit.
