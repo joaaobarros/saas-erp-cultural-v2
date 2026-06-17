@@ -7125,6 +7125,20 @@ select.form-control { cursor: pointer; }
                 <div class="form-group" style="grid-column:1/-1"><label>Convocado por</label><select id="run-convocador" class="form-control" onchange="ReunioesUI._agendarAutoSalvar()"><option value="">— Selecionar —</option></select></div>
                 <div class="form-group" style="grid-column:1/-1"><label>Ação vinculada (opcional)</label><select id="run-acao-id" class="form-control" onchange="ReunioesUI._agendarAutoSalvar()"><option value="">— Nenhuma —</option></select></div>
               </div>
+              <hr style="margin:16px 0;border-color:var(--border);">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Links</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <input type="url" id="run-link-input" class="form-control" placeholder="https://…" style="flex:1">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="ReunioesUI._addLink()" data-bg-skip="1">+ Adicionar</button>
+              </div>
+              <div id="run-links-lista" style="font-size:13px;margin-bottom:16px;"></div>
+
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Anexos</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+                <input type="file" id="run-anexo-input" style="flex:1" onchange="ReunioesUI._addAnexo(this)">
+                <span id="run-anexo-status" style="font-size:12px;color:var(--muted);"></span>
+              </div>
+              <div id="run-anexos-lista" style="font-size:13px;"></div>
             </div>
             <!-- Tab Pauta -->
             <div id="run-mtab-pauta" class="oculto">
@@ -10741,6 +10755,7 @@ var GAS = {
     submeterAta:              function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_submeter_ata({id:id}); },
     aprovarAta:               function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_aprovar_ata({id:id}); },
     adicionarEncaminhamento:  function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_adicionar_encaminhamento(d); },
+    uploadAnexo:              function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_upload_anexo(d); },
     concluirEncaminhamento:   function(d,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_concluir_encaminhamento(d); },
     excluir:                  function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reunioes_excluir({id:id}); }
   },
@@ -33764,6 +33779,7 @@ var ReunioesUI = (function() {
             (r.dataHora ? _fmtDH(r.dataHora) : 'Sem data') + ' · ' + escaparHtml(r.local || '—') + ' · ' +
             '<span style="color:' + cor + ';font-weight:600;">' + label + '</span>' +
             (nEnc > 0 ? ' · ' + nEnc + ' encaminhamento(s)' : '') +
+            (r.googleEventId ? ' · <span class="ms ms-sm" title="Sincronizada com o Google Calendar" style="vertical-align:-3px;color:var(--info)">event_available</span>' : '') +
           '</div>' +
         '</div>' +
         '<div style="display:flex;flex-direction:column;gap:4px;">' +
@@ -33856,6 +33872,9 @@ var ReunioesUI = (function() {
         document.getElementById('run-ata-aprovar-btn').classList.toggle('oculto', statusAta !== 'em_aprovacao');
         // Encaminhamentos
         _renderEncFormLista(r.encaminhamentos || []);
+        // Links e anexos
+        _renderLinks(r.links || []);
+        _renderAnexos(r.anexos || []);
       }, function(){});
     }
     document.getElementById('run-modal').classList.remove('oculto');
@@ -33887,7 +33906,9 @@ var ReunioesUI = (function() {
       acaoVinculadaId: document.getElementById('run-acao-id').value.trim() || null,
       pauta:          _lerPautaAtual(),
       presentes:      _lerPresentesAtual().presentes,
-      ausentesJustificados: _lerPresentesAtual().ausentes
+      ausentesJustificados: _lerPresentesAtual().ausentes,
+      links:          _lerLinksAtual(),
+      anexos:         _lerAnexosAtual()
     };
   }
 
@@ -34049,6 +34070,90 @@ var ReunioesUI = (function() {
     return { presentes: presentes, ausentes: ausentes };
   }
 
+  function _addLink() {
+    var input = document.getElementById('run-link-input');
+    var url = input.value.trim();
+    if (!url) return;
+    _addLinkItem(url);
+    input.value = '';
+    _agendarAutoSalvar();
+  }
+
+  function _addLinkItem(url) {
+    var lista = document.getElementById('run-links-lista');
+    var div = document.createElement('div');
+    div.dataset.url = url;
+    div.style.cssText = 'padding:4px 0;display:flex;gap:6px;align-items:center;';
+    div.innerHTML = '<span class="ms ms-sm">link</span> <a href="' + escaparHtml(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(url) + '</a>' +
+      '<button type="button" onclick="this.closest(\'div\').remove();ReunioesUI._agendarAutoSalvar();" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
+    lista.appendChild(div);
+  }
+
+  function _renderLinks(links) {
+    var lista = document.getElementById('run-links-lista');
+    lista.innerHTML = '';
+    (links || []).forEach(function(l) { _addLinkItem(l.url || l); });
+  }
+
+  function _lerLinksAtual() {
+    var links = [];
+    document.querySelectorAll('#run-links-lista > div').forEach(function(div) {
+      if (div.dataset.url) links.push({ label: div.dataset.url, url: div.dataset.url });
+    });
+    return links;
+  }
+
+  function _addAnexo(input) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      Toast.aviso('Arquivo maior que 8MB. Use um arquivo menor ou compartilhe por link.');
+      input.value = '';
+      return;
+    }
+    var statusEl = document.getElementById('run-anexo-status');
+    if (statusEl) statusEl.textContent = 'Enviando…';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var base64 = e.target.result.split(',')[1];
+      GAS.reunioes.uploadAnexo({ base64: base64, mimeType: file.type, nomeArquivo: file.name }, function(resp) {
+        input.value = '';
+        if (statusEl) statusEl.textContent = '';
+        if (!resp || !resp.ok) { Toast.erro('Erro ao enviar anexo.'); return; }
+        _addAnexoItem(resp.data);
+        _agendarAutoSalvar();
+      }, function(e) { input.value = ''; if (statusEl) statusEl.textContent = ''; Toast.erro(e.message); });
+    };
+    reader.onerror = function() { if (statusEl) statusEl.textContent = ''; Toast.erro('Não foi possível ler o arquivo.'); input.value = ''; };
+    reader.readAsDataURL(file);
+  }
+
+  function _addAnexoItem(anexo) {
+    var lista = document.getElementById('run-anexos-lista');
+    var div = document.createElement('div');
+    div.dataset.nome = anexo.nome || '';
+    div.dataset.url  = anexo.url  || '';
+    div.dataset.mimeType = anexo.mimeType || '';
+    div.style.cssText = 'padding:4px 0;display:flex;gap:6px;align-items:center;';
+    div.innerHTML = '<span class="ms ms-sm">attach_file</span> <a href="' + escaparHtml(anexo.url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(anexo.nome || anexo.url) + '</a>' +
+      '<button type="button" onclick="this.closest(\'div\').remove();ReunioesUI._agendarAutoSalvar();" data-bg-skip="1" style="background:none;border:none;cursor:pointer;color:var(--muted);">✕</button>';
+    lista.appendChild(div);
+  }
+
+  function _renderAnexos(anexos) {
+    var lista = document.getElementById('run-anexos-lista');
+    lista.innerHTML = '';
+    (anexos || []).forEach(function(a) { _addAnexoItem(a); });
+  }
+
+  function _lerAnexosAtual() {
+    var anexos = [];
+    document.querySelectorAll('#run-anexos-lista > div').forEach(function(div) {
+      if (div.dataset.url) anexos.push({ nome: div.dataset.nome, url: div.dataset.url, mimeType: div.dataset.mimeType });
+    });
+    return anexos;
+  }
+
   function _renderEncFormLista(encs) {
     var el = document.getElementById('run-enc-form-lista');
     if (!encs.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Nenhum encaminhamento.</p>'; return; }
@@ -34061,12 +34166,15 @@ var ReunioesUI = (function() {
   }
 
   function _resetForm() {
-    ['run-titulo','run-local','run-convocador','run-acao-id','run-ata-texto','run-pauta-input','run-presente-input'].forEach(function(id) {
+    ['run-titulo','run-local','run-convocador','run-acao-id','run-ata-texto','run-pauta-input','run-presente-input','run-link-input','run-anexo-input'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('run-pauta-lista').innerHTML     = '<li id="run-pauta-empty" style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</li>';
     document.getElementById('run-presentes-lista').innerHTML = '';
     document.getElementById('run-enc-form-lista').innerHTML  = '';
+    document.getElementById('run-links-lista').innerHTML     = '';
+    document.getElementById('run-anexos-lista').innerHTML    = '';
+    document.getElementById('run-anexo-status').textContent  = '';
     document.getElementById('run-ata-status-info').textContent = '';
     document.getElementById('run-ata-aprovar-btn').classList.add('oculto');
     document.getElementById('run-duracao').value = '60';
@@ -34201,7 +34309,8 @@ var ReunioesUI = (function() {
            abrirDetalhe: abrirDetalhe,
            _addPauta: _addPauta, _addPresente: _addPresente,
            _addAusenteJust: _addAusenteJust, _usarTemplateAta: _usarTemplateAta,
-           _agendarAutoSalvar: _agendarAutoSalvar };
+           _agendarAutoSalvar: _agendarAutoSalvar,
+           _addLink: _addLink, _addAnexo: _addAnexo };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 

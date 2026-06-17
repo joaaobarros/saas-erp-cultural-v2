@@ -201,6 +201,19 @@ function ctrl_reunioes_adicionar_encaminhamento(params) {
   }, 'ctrl_reunioes_adicionar_encaminhamento');
 }
 
+function ctrl_reunioes_upload_anexo(params) {
+  return GasResponse.wrap(function() {
+    var email  = getEmailSessao();
+    var acesso = AcessoService.verificar(email);
+    if (!acesso || acesso.status !== 'ativo') throw new Error('Acesso negado');
+    _assertPapelReuniao(acesso.registro && acesso.registro.papel);
+
+    var base64 = params && params.base64;
+    if (!base64) throw new Error('Arquivo obrigatório');
+    return ReuniaoEngine.uploadAnexo(base64, params.mimeType, params.nomeArquivo);
+  }, 'ctrl_reunioes_upload_anexo');
+}
+
 function ctrl_reunioes_concluir_encaminhamento(params) {
   return GasResponse.wrap(function() {
     var email  = getEmailSessao();

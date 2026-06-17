@@ -7,7 +7,8 @@
  * Ata:           rascunho_ata → em_aprovacao → aprovada (imutável após aprovação)
  *
  * @depends reuniao_repository.gs, fsm_guardian.gs, sistema_events.gs,
- *          tarefa_engine.gs, notification_engine.gs, auditoria_service.gs
+ *          tarefa_engine.gs, notification_engine.gs, auditoria_service.gs,
+ *          CalendarApp (scope calendar em appsscript.json)
  */
 
 var ReuniaoEngine = (function () {
@@ -48,6 +49,8 @@ var ReuniaoEngine = (function () {
     dados.encaminhamentos = [];
     dados.presentes  = dados.presentes || [];
     dados.pauta      = dados.pauta || [];
+    dados.links      = dados.links  || [];
+    dados.anexos     = dados.anexos || [];
 
     var reuniao = ReuniaoRepository.salvar(orgId, dados, email);
     AuditoriaService.registrar('REUNIAO_CRIADA', 'reunioes', { id: reuniao.id, titulo: reuniao.titulo, email: email });
@@ -66,10 +69,14 @@ var ReuniaoEngine = (function () {
     // Mesclar campos permitidos
     var camposPermitidos = ['titulo','tipo','local','dataHora','duracao','pauta','presentes',
                             'ausentesJustificados','ausentesNaoJustificados','acaoVinculadaId',
-                            'convocadoPor','encaminhamentos'];
+                            'convocadoPor','encaminhamentos','links','anexos'];
     camposPermitidos.forEach(function(c) {
       if (dados[c] !== undefined) reuniao[c] = dados[c];
     });
+
+    if (reuniao.googleEventId && ['agendada','em_andamento'].includes(reuniao.status)) {
+      _atualizarEventoCalendar(reuniao);
+    }
 
     var atualizada = ReuniaoRepository.salvar(orgId, reuniao, email);
     AuditoriaService.registrar('REUNIAO_ATUALIZADA', 'reunioes', { id: id, email: email });
@@ -87,6 +94,16 @@ var ReuniaoEngine = (function () {
     if (novoStatus === 'em_andamento' && !reuniao.inicioEm) reuniao.inicioEm = agora();
     if (novoStatus === 'encerrada'   && !reuniao.encerradaEm) reuniao.encerradaEm = agora();
     if (novoStatus === 'cancelada')   reuniao.canceladaEm = agora();
+
+    // Ao agendar: cria o convite no Google Calendar (se ainda não existir)
+    if (novoStatus === 'agendada' && !reuniao.googleEventId) {
+      _criarEventoCalendar(reuniao);
+    }
+    // Ao cancelar: remove o convite do Calendar
+    if (novoStatus === 'cancelada' && reuniao.googleEventId) {
+      _excluirEventoCalendar(reuniao);
+      reuniao.googleEventId = null;
+    }
 
     // Ao encerrar: transformar encaminhamentos pendentes em tarefas automáticas
     if (novoStatus === 'encerrada') {
@@ -182,7 +199,7 @@ var ReuniaoEngine = (function () {
     if (!reuniao) throw new Error('Reunião não encontrada: ' + id);
 
     var camposPermitidos = ['titulo','tipo','local','dataHora','duracao','pauta','presentes',
-                            'ausentesJustificados','acaoVinculadaId','convocadoPor'];
+                            'ausentesJustificados','acaoVinculadaId','convocadoPor','links','anexos'];
     camposPermitidos.forEach(function(c) {
       if (dados[c] !== undefined) reuniao[c] = dados[c];
     });
@@ -190,6 +207,10 @@ var ReuniaoEngine = (function () {
     if (dados.ataTexto !== undefined) {
       if (!reuniao.ata) reuniao.ata = { rascunho: '', textoFinal: '', statusAta: 'rascunho_ata', versoes: [] };
       if (reuniao.ata.statusAta !== 'aprovada') reuniao.ata.rascunho = dados.ataTexto;
+    }
+
+    if (reuniao.googleEventId && ['agendada','em_andamento'].includes(reuniao.status)) {
+      _atualizarEventoCalendar(reuniao);
     }
 
     reuniao.autoSalvoEm = agora();
@@ -225,6 +246,83 @@ var ReuniaoEngine = (function () {
       { status: 'concluido' }, email);
   }
 
+  // ─── Anexos ───────────────────────────────────────────────────────────────────
+
+  var _PASTA_ANEXOS = 'CCBJ_Reunioes_Anexos';
+  var _TAMANHO_MAX_ANEXO = 8 * 1024 * 1024; // 8MB (limite prático de google.script.run)
+
+  /**
+   * Faz upload de um anexo (qualquer tipo de arquivo) para o Google Drive.
+   * @returns {{nome:string, url:string, mimeType:string}}
+   */
+  function uploadAnexo(base64, mimeType, nomeArquivo) {
+    var bytes = Utilities.base64Decode(base64);
+    if (bytes.length > _TAMANHO_MAX_ANEXO) {
+      throw new Error('Arquivo maior que 8MB. Use um arquivo menor ou compartilhe por link.');
+    }
+    var pasta   = _obterOuCriarPastaAnexos();
+    var blob    = Utilities.newBlob(bytes, mimeType || 'application/octet-stream', nomeArquivo || ('anexo_' + Date.now()));
+    var arquivo = pasta.createFile(blob);
+    arquivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { nome: nomeArquivo || arquivo.getName(), url: arquivo.getUrl(), mimeType: mimeType || '' };
+  }
+
+  function _obterOuCriarPastaAnexos() {
+    var pastas = DriveApp.getFoldersByName(_PASTA_ANEXOS);
+    if (pastas.hasNext()) return pastas.next();
+    return DriveApp.createFolder(_PASTA_ANEXOS);
+  }
+
+  // ─── Google Calendar ──────────────────────────────────────────────────────────
+  // Convite hospedado no calendário da conta que publicou o app (executeAs: USER_DEPLOYING);
+  // convocador e participantes são adicionados como guests e recebem convite por e-mail.
+
+  function _listarConvidados(reuniao) {
+    var emails = [];
+    if (reuniao.convocadoPor && reuniao.convocadoPor.includes('@')) emails.push(reuniao.convocadoPor);
+    (reuniao.presentes || []).forEach(function(e) { if (e && e.includes('@')) emails.push(e); });
+    (reuniao.ausentesJustificados || []).forEach(function(e) { if (e && e.includes('@')) emails.push(e); });
+    return emails.filter(function(e, i, arr) { return arr.indexOf(e) === i; });
+  }
+
+  function _criarEventoCalendar(reuniao) {
+    try {
+      if (!reuniao.dataHora) return;
+      var inicio = new Date(reuniao.dataHora);
+      var fim    = new Date(inicio.getTime() + (reuniao.duracao || 60) * 60000);
+      var evento = CalendarApp.getDefaultCalendar().createEvent(reuniao.titulo, inicio, fim, {
+        location:    reuniao.local || '',
+        description: 'Reunião CCBJ — gerida pelo sistema. ID: ' + reuniao.id,
+        guests:      _listarConvidados(reuniao).join(','),
+        sendInvites: true
+      });
+      reuniao.googleEventId = evento.getId();
+      Logger.info('reuniao_engine', '_criarEventoCalendar', 'Evento criado: ' + reuniao.googleEventId);
+    } catch(e) { Logger.warn('reuniao_engine', '_criarEventoCalendar', e.message); }
+  }
+
+  function _atualizarEventoCalendar(reuniao) {
+    try {
+      var evento = CalendarApp.getDefaultCalendar().getEventById(reuniao.googleEventId);
+      if (!evento) { _criarEventoCalendar(reuniao); return; }
+      var inicio = new Date(reuniao.dataHora);
+      var fim    = new Date(inicio.getTime() + (reuniao.duracao || 60) * 60000);
+      evento.setTitle(reuniao.titulo);
+      evento.setTime(inicio, fim);
+      evento.setLocation(reuniao.local || '');
+      var atuais     = evento.getGuestList().map(function(g) { return g.getEmail(); });
+      var desejados  = _listarConvidados(reuniao);
+      desejados.forEach(function(e) { if (atuais.indexOf(e) === -1) evento.addGuest(e); });
+    } catch(e) { Logger.warn('reuniao_engine', '_atualizarEventoCalendar', e.message); }
+  }
+
+  function _excluirEventoCalendar(reuniao) {
+    try {
+      var evento = CalendarApp.getDefaultCalendar().getEventById(reuniao.googleEventId);
+      if (evento) evento.deleteEvent();
+    } catch(e) { Logger.warn('reuniao_engine', '_excluirEventoCalendar', e.message); }
+  }
+
   // ─── Privados ─────────────────────────────────────────────────────────────────
 
   function _criarTarefasDeEncaminhamentos(orgId, reuniao, email) {
@@ -256,7 +354,8 @@ var ReuniaoEngine = (function () {
     submeterAtaParaAprovacao:   submeterAtaParaAprovacao,
     aprovarAta:                 aprovarAta,
     adicionarEncaminhamento:    adicionarEncaminhamento,
-    concluirEncaminhamento:     concluirEncaminhamento
+    concluirEncaminhamento:     concluirEncaminhamento,
+    uploadAnexo:                uploadAnexo
   };
 
 })();

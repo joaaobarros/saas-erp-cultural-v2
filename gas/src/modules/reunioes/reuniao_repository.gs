@@ -13,7 +13,9 @@
  *   status (rascunho|agendada|em_andamento|encerrada|cancelada),
  *   ata { rascunho, textoFinal, aprovadaEm, aprovadaPor, versoes[] },
  *   encaminhamentos[{ id, texto, responsavel, prazo, status, concluidoEm }],
- *   acaoVinculadaId, criadoEm, atualizadoEm, criadoPor, versao
+ *   links[{ label, url }], anexos[{ nome, url, mimeType }],
+ *   acaoVinculadaId, googleEventId (sincronizado ao Calendar a partir de "agendada"),
+ *   criadoEm, atualizadoEm, criadoPor, versao
  *
  * @depends core/data_layer.gs, core/services/data_gateway.gs, core/utils.gs
  */

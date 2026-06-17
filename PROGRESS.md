@@ -39,7 +39,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s103)**: **Fix — Reuniões: erro "FsmGuardian.transitar is not a function", botões presos em loading eterno, perda de dados ao adicionar encaminhamento; UX: abas Ata+Encaminhamentos mescladas; Feat: auto-salvamento contínuo — Deploy @1014.**
+**Fase atual (s104)**: **Feat — Reuniões: integração com Google Calendar (convite automático ao agendar) + links e anexos (upload Drive) — Deploy @PENDENTE.**
+
+**Decisão de arquitetura — Calendar**: o webapp roda com `executeAs: USER_DEPLOYING` (`appsscript.json`), ou seja, todo `CalendarApp` opera sempre na conta que publicou o deploy, não na do usuário logado. Por isso o evento é criado num calendário único (o da conta de deploy) e todos os participantes (convocador + presentes + ausentes justificados) são adicionados como **guests** — recebem convite por e-mail e podem aceitar/adicionar à própria agenda normalmente. Não há suporte a "agenda pessoal de cada convocador" sem domain-wide delegation (fora de escopo).
+
+**O que foi implementado**:
+- `reuniao_engine.gs` — `_criarEventoCalendar`/`_atualizarEventoCalendar`/`_excluirEventoCalendar` (mesmo padrão de `rece_engine.gs`, try/catch não-bloqueante + `Logger.warn`); evento criado ao transitar para "agendada", atualizado em `atualizar()`/`autoSalvar()` enquanto "agendada"/"em_andamento", excluído ao cancelar. Campo `googleEventId` persistido na reunião.
+- `appsscript.json` — escopo `https://www.googleapis.com/auth/calendar` adicionado. **Ação manual pendente**: o responsável pelo deploy precisa reautorizar o app (abrir o editor do Apps Script e executar qualquer função, ou acessar o webapp e disparar a 1ª sincronização) — `clasp` não automatiza consentimento OAuth.
+- `index.html` — ícone `event_available` no card da lista quando `r.googleEventId` existe.
+- **Links e anexos**: nova seção na aba "Dados" do modal — `links[]` (URL livre) e `anexos[]` (upload para Drive via `ReuniaoEngine.uploadAnexo`, pasta `CCBJ_Reunioes_Anexos`, limite 8MB, mesmo padrão base64→Drive de `rece_engine.gs/uploadImagem`). Persistidos via `salvar`/`autoSalvar`.
+
+**Pendente — pedidos do usuário ainda não escopados** (aguardando priorização): participantes externos via autocomplete de e-mail (Contacts/People API); abrir Quadros/Sessões Interativas vinculados sem saltar fora do modal de Reunião; aprovação coletiva de ata por participante (REU-09); compartilhamento de ata para agentes externos.
+
+**Fase anterior (s103)**: **Fix — Reuniões: erro "FsmGuardian.transitar is not a function", botões presos em loading eterno, perda de dados ao adicionar encaminhamento; UX: abas Ata+Encaminhamentos mescladas; Feat: auto-salvamento contínuo — Deploy @1014.**
 
 **Causa raiz (3 bugs)**:
 1. `reuniao_engine.gs` chamava `FsmGuardian.transitar(...)` — método que nunca existiu no `FsmGuardian` (API real: `assertValida(dominio, estadoAtual, novoStatus, entidadeId, ator)`). Quebrava toda transição de status (Agendar/Iniciar/Encerrar) e submissão/aprovação de ata.
