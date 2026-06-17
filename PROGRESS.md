@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s103)**: **Fix — Reuniões: erro "FsmGuardian.transitar is not a function", botões presos em loading eterno, perda de dados ao adicionar encaminhamento; UX: abas Ata+Encaminhamentos mescladas; Feat: auto-salvamento contínuo — Deploy @1009.**
+**Fase atual (s103)**: **Fix — Reuniões: erro "FsmGuardian.transitar is not a function", botões presos em loading eterno, perda de dados ao adicionar encaminhamento; UX: abas Ata+Encaminhamentos mescladas; Feat: auto-salvamento contínuo — Deploy @1014.**
 
 **Causa raiz (3 bugs)**:
 1. `reuniao_engine.gs` chamava `FsmGuardian.transitar(...)` — método que nunca existiu no `FsmGuardian` (API real: `assertValida(dominio, estadoAtual, novoStatus, entidadeId, ator)`). Quebrava toda transição de status (Agendar/Iniciar/Encerrar) e submissão/aprovação de ata.
