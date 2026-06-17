@@ -39,7 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s101)**: **Fix — NaN% em todo o sistema: checks `!== null` → `!= null` em 8 pontos do frontend (Escuta: métricas globais, tabela por pergunta, scores de clima; Home KPIs: ocupação/prazo/satisfação/execução/agentes) — Deploy @1007.**
+**Fase atual (s102)**: **Fix — "Meu Perfil": todo usuário aprovado (AcessoService status==='ativo') agora pode editar seu próprio perfil, mesmo sem ficha de colaborador pré-cadastrada — Deploy @1008.**
+
+**Causa raiz**: `ctrl_pessoas_meu_perfil_ler/salvar` exigiam `ColaboradorRepository.buscarPorEmail()` retornando registro existente; lançava `"Seu usuário não está vinculado a um colaborador no sistema."` para qualquer aprovado (voluntário, contratado, admin) sem ficha de RH pré-criada — só Funcionários cadastrados pelo RH conseguiam usar a tela.
+
+**Fix**: nova `_obterOuCriarColaboradorMeuPerfil(ctx)` em `pessoas_controller.gs` — se não existir ficha, cria uma mínima na hora (`nome`/`setor` herdados de `usuarios_acesso.json`, `cargo`/`tipoVinculo` em branco para RH completar depois) via `ColaboradorRepository.salvar()` + `AuditoriaService.registrar('COLABORADOR_AUTO_CRIADO', ...)`. `ctrl_pessoas_meu_perfil_ler()` e `ctrl_pessoas_meu_perfil_salvar()` passam a usar esse helper em vez de lançar erro.
+
+**Arquivo alterado**: `gas/src/modules/pessoas/pessoas_controller.gs` — linhas 951-991.
+
+**Fase anterior (s101)**: **Fix — NaN% em todo o sistema: checks `!== null` → `!= null` em 8 pontos do frontend (Escuta: métricas globais, tabela por pergunta, scores de clima; Home KPIs: ocupação/prazo/satisfação/execução/agentes) — Deploy @1007.**
 
 **Causa raiz**: Apps Script omite propriedades com valor `null` na serialização → frontend recebe `undefined` → `undefined !== null` é `true` (strict) → `Math.round(undefined * 100)` = `NaN%`. Fix: usar igualdade solta `!= null` (cobre null E undefined).
 

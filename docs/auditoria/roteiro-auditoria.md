@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s101 @1007 (Fix NaN% sistema — null strict → loose) · s100 @1006 · s99 @1005 · s98 @1004
+> Deploy atual: s102 @1008 (Fix Meu Perfil — autocriação de ficha para qualquer aprovado) · s101 @1007 · s100 @1006 · s99 @1005
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -471,7 +471,21 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 100 (2026-06-16) → SESSÃO 101
+## HANDOFF ATUAL — SESSÃO 102 (2026-06-17) → SESSÃO 103
+
+### Estado atual: Fix Meu Perfil — autocriação de ficha de colaborador para qualquer usuário aprovado — Deploy @1008
+
+### O que foi feito nesta sessão (s102)
+| Deploy | O que foi implementado |
+|---|---|
+| @1008 | **Backend only** (`pessoas_controller.gs`): `ctrl_pessoas_meu_perfil_ler/salvar` exigiam ficha pré-existente em `ColaboradorRepository` — voluntários/contratados/admins aprovados (`AcessoService` status `'ativo'`) sem ficha de RH caíam em erro ao abrir "Meu Perfil". Nova `_obterOuCriarColaboradorMeuPerfil(ctx)` cria ficha mínima na hora (nome/setor herdados de `usuarios_acesso.json`; cargo/tipoVinculo em branco para RH completar) quando não existir, registrando `AuditoriaService('COLABORADOR_AUTO_CRIADO', ...)`. |
+
+### Pendente para a próxima sessão
+- Testar manualmente no browser logando como usuário sem ficha de colaborador prévia (ex.: voluntário recém-aprovado) e confirmar que "Meu Perfil" abre e salva sem erro.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 100 (2026-06-16) → SESSÃO 101
 
 ### Estado atual: UX — Pulse FAB: ring de sonar + escala com ritmo — Deploy @1006
 

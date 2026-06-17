@@ -948,10 +948,39 @@ var _PERFIL_CAMPOS_EDITAVEIS = [
   // genero, sexualidade, racaCor → campo plano + histórico auto-gerado via _registrarDemografia
 ];
 
+/**
+ * Retorna a ficha de colaborador do usuário logado, criando uma ficha mínima
+ * na hora se ainda não existir. Qualquer usuário aprovado (AcessoService
+ * status==='ativo') deve poder editar seu próprio perfil — independente do
+ * papel (colaborador, voluntário, contratado, admin etc.), pois nem todo
+ * papel tem uma ficha de RH completa criada de antemão. RH/gestor completa
+ * depois os dados profissionais (cargo, tipoVinculo, admissão).
+ */
+function _obterOuCriarColaboradorMeuPerfil(ctx) {
+  var eu = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
+  if (eu) return eu;
+
+  var acesso   = AcessoService.verificar(ctx.email);
+  var registro = acesso && acesso.registro;
+  ColaboradorRepository.salvar(ctx.orgId, {
+    orgId:              ctx.orgId,
+    nome:               (registro && registro.nome) || ctx.email,
+    emailInstitucional: ctx.email,
+    setor:              (registro && registro.setor) || '',
+    cargo:              '',
+    tipoVinculo:        '',
+    status:             'ativo',
+    ativo:              true,
+    origem:             'auto_criado_meu_perfil'
+  });
+  AuditoriaService.registrar('COLABORADOR_AUTO_CRIADO', 'perfil', { email: ctx.email, papel: ctx.papel });
+  return ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
+}
+
 function ctrl_pessoas_meu_perfil_ler() {
   return GasResponse.wrap(function () {
     var ctx = _ctxPessoas();
-    var eu  = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
+    var eu  = _obterOuCriarColaboradorMeuPerfil(ctx);
     return { encontrado: !!eu, colaborador: eu };
   }, 'ctrl_pessoas_meu_perfil_ler');
 }
@@ -959,8 +988,7 @@ function ctrl_pessoas_meu_perfil_ler() {
 function ctrl_pessoas_meu_perfil_salvar(dados) {
   return GasResponse.wrap(function () {
     var ctx = _ctxPessoas();
-    var eu  = ColaboradorRepository.buscarPorEmail(ctx.orgId, ctx.email);
-    if (!eu) throw new Error('Seu usuário não está vinculado a um colaborador no sistema.');
+    var eu  = _obterOuCriarColaboradorMeuPerfil(ctx);
 
     // Extrair objetos demográficos antes de aplicar campos planos
     var _dHoje         = new Date().toISOString().slice(0, 10);
