@@ -154,6 +154,33 @@ function ctrl_carro_dados(filtros) {
   }, 'ctrl_carro_dados');
 }
 
+/**
+ * Vincula uma reserva de veículo a um novo evento no Google Calendar.
+ * @param {string} id
+ * @param {Object} opcoes — { modo: 'todos'|'especificos', selecionados?: string[], extras?: string[] }
+ */
+function ctrl_carro_vincular_calendar(id, opcoes) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxCarro();
+    var r = ReservaCarroEngine.vincularCalendar(id, opcoes || {}, ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
+  }, 'ctrl_carro_vincular_calendar');
+}
+
+/**
+ * Remove o vínculo de uma reserva de veículo com o Google Calendar.
+ * @param {string} id
+ */
+function ctrl_carro_desvincular_calendar(id) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxCarro();
+    var r = ReservaCarroEngine.desvincularCalendar(id, ctx.email);
+    _invalidarCachesCarros(ctx.orgId);
+    return r;
+  }, 'ctrl_carro_desvincular_calendar');
+}
+
 function ctrl_carro_geocode(endereco) {
   return GasResponse.wrap(function() {
     if (!endereco) throw new Error('Endereço não informado.');

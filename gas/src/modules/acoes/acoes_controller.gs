@@ -213,6 +213,47 @@ function ctrl_acoes_excluir_fase(dados) {
   }, 'ctrl_acoes_excluir_fase');
 }
 
+// ─── Google Calendar (vínculo manual) ──────────────────────────────────────
+
+/**
+ * Vincula uma Ação a um novo evento (dia-todo) no Google Calendar.
+ * @param {Object} dados — { id*, opcoes?: { modo, selecionados?, extras? } }
+ */
+function ctrl_acoes_vincular_calendar(dados) {
+  return GasResponse.wrap(function() {
+    dados = dados || {};
+    if (!dados.id) throw new Error('ID obrigatório.');
+    var email = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = AcaoEngine.vincularCalendar(dados.id, dados.opcoes || {}, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao vincular ação ao Calendar.');
+
+    _invalidarCache();
+    return resultado;
+  }, 'ctrl_acoes_vincular_calendar');
+}
+
+/**
+ * Remove o vínculo de uma Ação com o Google Calendar.
+ * @param {string} id
+ */
+function ctrl_acoes_desvincular_calendar(id) {
+  return GasResponse.wrap(function() {
+    if (!id) throw new Error('ID obrigatório.');
+    var email = getEmailSessao();
+    _assertPodeEscrever(email);
+
+    var orgId     = getOrgConfig().orgId;
+    var resultado = AcaoEngine.desvincularCalendar(id, email, orgId);
+    if (!resultado.ok) throw new Error(resultado.erro || 'Erro ao desvincular ação do Calendar.');
+
+    _invalidarCache();
+    return resultado;
+  }, 'ctrl_acoes_desvincular_calendar');
+}
+
 // ─── RBAC helpers ─────────────────────────────────────────────────────────
 
 function _assertPodeEscrever(email) {

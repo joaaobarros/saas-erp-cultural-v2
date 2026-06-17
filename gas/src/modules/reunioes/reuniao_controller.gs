@@ -194,7 +194,8 @@ function ctrl_reunioes_adicionar_encaminhamento(params) {
     var resultado = ReuniaoEngine.adicionarEncaminhamento(id, {
       texto:       params.texto,
       responsavel: params.responsavel,
-      prazo:       params.prazo || null
+      prazo:       params.prazo || null,
+      pautaId:     params.pautaId || null
     }, email, getOrgConfig().orgId);
     _invalidarCacheReunioes();
     return resultado;

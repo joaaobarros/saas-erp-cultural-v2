@@ -374,6 +374,7 @@
 | ESP-28 | Infraestrutura — Pós-evento | Sem formulário de pós-evento ao "Concluir" | 🔴 |
 | ESP-28b | Infraestrutura — Pós-evento | Edição posterior e histórico de alterações ausentes | 🔴 |
 | ESP-29 | Infraestrutura — Horário Local | UX validação visual dinâmica conforme espaço selecionado | 🟡 |
+| ~~ESP-30~~ | Infraestrutura — Reserva | ✅ IMPLEMENTADO @1019 — vínculo manual (opcional) com Google Calendar: botão "Vincular ao Calendar" no detalhe da reserva; usuário escolhe convidar todos os envolvidos (`responsavel`/`coResponsavel`/`criadoPor`) ou selecionar específicos + e-mails extras; sincroniza ao editar, remove ao cancelar. | — |
 | ~~ADM-01~~ | Admin | ✅ CORRIGIDO @861 — `_carregarPendentes()` recebe error callback; DOM atualizado com mensagem de erro em vez de "⏳ Carregando…" eterno | — |
 | ADM-02 | Admin | Permissões por módulo sem granularidade por funcionalidade | 🔴 |
 | ADM-03 | Admin | Campo Setor no modal "Editar usuário" | 🟡 |
@@ -400,6 +401,7 @@
 | ACO-24 | Ações × Alertas | Sem alertas automáticos no ciclo de vida da ação | 🔴 |
 | ACO-25 | Ações — Painel | Sem aba "Comunicação" (9ª aba: RECE + Balcão contextualizados) | 🔴 |
 | ACO-26 | Ações — Painel | Regra arquitetural violada: sub-abas navegam para fora das Ações | 🔴 |
+| ~~ACO-27~~ | Ações — Painel | ✅ IMPLEMENTADO @1019 — vínculo manual (opcional) com Google Calendar (evento de dia-todo `dataInicio`→`dataFim`): botão na aba Geral; convida todos os envolvidos (`responsavel`/`equipe`) ou específicos + e-mails extras; remove o evento ao cancelar a ação. | — |
 | RECE-01 | RECE | Sem botão "Publicar no RECE" no painel da Ação | 🔴 |
 | RECE-02 | RECE | Sem `acaoId` no modelo do evento RECE | 🔴 |
 | RECE-03 | RECE | Campos específicos ausentes (categorias, artista, público-alvo, etc.) | 🔴 |
@@ -462,6 +464,7 @@
 | CAR-12 | Veículo — Feature | Motorista configurável — não implementado | 🔴 |
 | CAR-13 | Veículo | Sem suporte a solicitação de voucher Uber | 🔴 |
 | CAR-14 | Veículo — Feature | Frota configurável — não implementado | 🔴 |
+| ~~CAR-15~~ | Veículo | ✅ IMPLEMENTADO @1019 — vínculo manual (opcional) com Google Calendar: botão no detalhe da reserva; convida todos os envolvidos (`solicitante`/`passageiros`/`passageirosInternos`) ou específicos + e-mails extras; remove o evento ao cancelar. | — |
 | ~~HUB-01~~ | Meu Centro | ✅ VERIFICADO @641 — aba Produtividade já tinha MetricsToggle.wrap(); abas Meu Dia/Meu Time não têm stats panel | — |
 | ~~HUB-02~~ | Meu Centro | ✅ VERIFICADO @641 — estado vazio usa Material Symbol `celebration`, não emoji literal; sem emoji unicode no HTML | — |
 | ~~HUB-03~~ | Meu Centro | ✅ CORRIGIDO @656 — bug crítico: `readJSON('solicitacoes_reserva.json')` substituído por `SolicitacaoReservaRepository.listarPorStatus('pendente', orgId)` (entidade usa Sheet, não JSON). `.includes()` → `.indexOf()` (ES5). | — |
@@ -478,7 +481,27 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 102 (2026-06-17) → SESSÃO 103
+## HANDOFF ATUAL — SESSÃO 102 (2026-06-17) → SESSÃO 105
+
+> Nota: as sessões 103 (fix Reuniões + auto-salvamento, @1014) e 104 (Calendar em Reuniões + links/anexos, @1018) não tiveram este roteiro atualizado — ver `PROGRESS.md` para o detalhe dessas duas fases. Handoff retomado a partir desta sessão (105).
+
+### Estado atual: Feat — vínculo MANUAL (opcional) com Google Calendar em Reservas de Espaço, Reservas de Veículo e Ações — Deploy @1019
+
+### O que foi feito nesta sessão (s105)
+| Deploy | O que foi implementado |
+|---|---|
+| @1019 | Novo `shared/calendar_service.gs` (genérico, suporta evento de dia-todo). `ReservaEngine`/`ReservaCarroEngine`/`AcaoEngine` ganham `vincularCalendar`/`desvincularCalendar` — acionados manualmente pelo usuário via botão no detalhe/painel (nunca automático). Usuário escolhe convidar todos os envolvidos cadastrados ou pessoas específicas (checkboxes), podendo adicionar e-mails extras em texto livre. Evento removido automaticamente ao cancelar o registro; sincronizado (Espaço) ao editar data/horário/sala enquanto vinculado. `index.html`: modal global `_abrirModalVincularCalendar()` + botões nos 3 módulos. |
+
+### Limitação técnica assumida nesta sessão
+`executeAs: USER_DEPLOYING` (mesma restrição já documentada em Reuniões/s104): toda integração de Calendar opera na conta de deploy, não na do usuário logado. Por isso não há autosugestão via Google Contacts para "outras pessoas" — apenas e-mail digitado livremente.
+
+### Pendente para a próxima sessão
+- Executar `fase2_reservas_prepararIndice()` no GAS Editor uma vez (acrescenta colunas `GoogleEventId`/`CalendarConvidados` à aba `ESPACOS.Reservas` já existente).
+- Testar manualmente no browser: vincular uma reserva de espaço, uma de veículo e uma ação ao Calendar (modo "todos" e modo "específicos" + e-mail extra), confirmar convite recebido, editar a reserva vinculada e confirmar que o evento é atualizado, cancelar e confirmar que o evento é removido.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 102 (2026-06-17) → SESSÃO 103
 
 ### Estado atual: Fix Meu Perfil — autocriação de ficha de colaborador para qualquer usuário aprovado — Deploy @1008
 

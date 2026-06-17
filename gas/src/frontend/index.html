@@ -2782,6 +2782,8 @@ select.form-control { cursor: pointer; }
                 <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">Aprovado por</div>
                 <div id="carro-det-aprov" style="font-size:12px;color:var(--muted);"></div>
               </div>
+              <!-- Vínculo com Google Calendar -->
+              <div id="carro-det-calendar-bloco"></div>
               <!-- Editar Rota (aprovadores) -->
               <div id="carro-det-editar-rota" style="display:none;border-top:1px solid var(--border);padding-top:12px;"></div>
             </div>
@@ -6473,6 +6475,11 @@ select.form-control { cursor: pointer; }
               <p class="muted-text" style="margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">TRANSIÇÕES DE STATUS</p>
               <div id="painel-fsm-acoes" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
             </div>
+            <!-- Vínculo com Google Calendar -->
+            <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+              <p class="muted-text" style="margin-bottom:8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">GOOGLE CALENDAR</p>
+              <div id="painel-acao-calendar"></div>
+            </div>
             <!-- Histórico + Compartilhar -->
             <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -7142,13 +7149,14 @@ select.form-control { cursor: pointer; }
             </div>
             <!-- Tab Pauta -->
             <div id="run-mtab-pauta" class="oculto">
+              <p class="muted-text" style="margin-bottom:8px;font-size:12px;">Clique num item para registrar Discussão/Decisão. Pode adicionar itens não previstos a qualquer momento.</p>
               <div style="margin-bottom:8px;display:flex;gap:8px;">
                 <input type="text" id="run-pauta-input" class="form-control" placeholder="Item da pauta…" style="flex:1">
                 <button type="button" class="btn btn-secondary btn-sm" onclick="ReunioesUI._addPauta()" data-bg-skip="1">+ Adicionar</button>
               </div>
-              <ul id="run-pauta-lista" style="list-style:none;padding:0;margin:0;">
-                <li id="run-pauta-empty" style="color:var(--muted);font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</li>
-              </ul>
+              <div id="run-pauta-lista">
+                <p id="run-pauta-empty" class="muted-text" style="font-size:12px;padding:8px 0;">Nenhum item de pauta adicionado.</p>
+              </div>
             </div>
             <!-- Tab Presença -->
             <div id="run-mtab-presentes" class="oculto">
@@ -10573,7 +10581,9 @@ var GAS = {
     cancelarBloqueios:       function(ids,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_cancelar_bloqueios(ids); },
     disponibilidadeItens:    function(p,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_disponibilidadeItens(p||{}); },
     registrarPosEvento:      function(id,d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_registrarPosEvento(id,d||{}); },
-    concluirAtrasadas:       function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir_atrasadas(); }
+    concluirAtrasadas:       function(cb,err)        { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_concluir_atrasadas(); },
+    vincularCalendar:        function(id,op,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_vincular_calendar(id,op||{}); },
+    desvincularCalendar:     function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_reservas_desvincular_calendar(id); }
   },
   chaves: {
     listar:          function(f,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_chaves_listar(f||{}); },
@@ -10638,6 +10648,8 @@ var GAS = {
     painel:      function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_painel(id); },
     salvarFase:  function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_salvar_fase(d); },
     excluirFase: function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_excluir_fase(d); },
+    vincularCalendar:    function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_vincular_calendar(d); },
+    desvincularCalendar: function(id,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_acoes_desvincular_calendar(id); },
     mapaAcao: {
       listar:         function(acaoId,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_listar(acaoId); },
       obter:          function(id,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_mapa_acao_obter(id); },
@@ -10916,7 +10928,9 @@ var GAS = {
     listarEscalas:   function(f,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_listar_escalas(f||{}); },
     salvarEscala:    function(d,cb,err)       { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_salvar_escala(d); },
     atualizarEscala: function(id,p,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_atualizar_escala(id,p); },
-    removerEscala:   function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_remover_escala(id); }
+    removerEscala:   function(id,cb,err)      { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_remover_escala(id); },
+    vincularCalendar:    function(id,op,cb,err){ google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_vincular_calendar(id,op||{}); },
+    desvincularCalendar: function(id,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_carro_desvincular_calendar(id); }
   },
   simulacao: {
     ativar:   function(d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_simulacao_ativar(d); },
@@ -11081,6 +11095,105 @@ function _confirmarModalInput(fid) {
   var m = document.querySelector('.modal-simples'); if (m) m.remove();
   var cb = _modalInputCb; _modalInputCb = null; _modalInputObrig = false;
   if (cb) cb(val);
+}
+
+// ── Modal de vínculo manual ao Google Calendar (usado por Reservas de
+//    Espaço, Reservas de Veículo e Ações) ────────────────────────────────
+var _vincCalExtras = [];
+var _vincCalOnConfirm = null;
+
+/**
+ * Abre o modal de vínculo ao Calendar.
+ * @param {Object} opts — { envolvidos: [{email,label}], onConfirm: function(opcoes) }
+ *   opcoes passada ao onConfirm: { modo:'todos'|'especificos', selecionados:string[], extras:string[] }
+ */
+function _abrirModalVincularCalendar(opts) {
+  _vincCalExtras = [];
+  _vincCalOnConfirm = (opts && opts.onConfirm) || null;
+  var envolvidos = (opts && opts.envolvidos) || [];
+
+  var checkboxesHtml = envolvidos.length
+    ? envolvidos.map(function (p) {
+        return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;">' +
+          '<input type="checkbox" class="vinc-cal-env" value="' + escaparHtml(p.email) + '" checked> ' +
+          escaparHtml(p.label || p.email) +
+        '</label>';
+      }).join('')
+    : '<p style="font-size:12px;color:var(--muted);margin:0;">Nenhum envolvido cadastrado.</p>';
+
+  var html =
+    '<div style="border-radius:17px;overflow:hidden;">' +
+      '<div style="background:linear-gradient(135deg,rgba(var(--color-primary-rgb,76,29,149),.05) 0%,var(--surface) 60%);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:12px;">' +
+        '<span class="ms" style="color:var(--color-primary);font-size:22px;">event</span>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.015em;">Vincular ao Google Calendar</h3>' +
+        '<button onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1" style="margin-left:auto;width:30px;height:30px;border-radius:50%;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:18px;">close</span></button>' +
+      '</div>' +
+      '<div style="padding:16px 20px;">' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:6px;"><input type="radio" name="vinc-cal-modo" value="todos" checked onchange="_vincCalToggleModo(this)"> Convidar todos os envolvidos</label>' +
+          '<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="radio" name="vinc-cal-modo" value="especificos" onchange="_vincCalToggleModo(this)"> Selecionar pessoas específicas</label>' +
+        '</div>' +
+        '<div id="vinc-cal-envolvidos" class="oculto" style="margin:0 0 12px;padding:8px 12px;background:rgba(0,0,0,.03);border-radius:8px;max-height:160px;overflow-y:auto;">' +
+          checkboxesHtml +
+        '</div>' +
+        '<div style="font-weight:600;font-size:13px;margin-bottom:6px;">Adicionar outras pessoas (opcional)</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+          '<input type="email" id="vinc-cal-extra-input" class="form-control" placeholder="email@dominio.com" style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_vincCalAddExtra();}">' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="_vincCalAddExtra()" data-bg-skip="1">+ Adicionar</button>' +
+        '</div>' +
+        '<div id="vinc-cal-extras-lista" style="font-size:13px;margin-bottom:8px;"></div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-primario" onclick="_vincCalConfirmar()" data-bg-skip="1">Vincular</button>' +
+          '<button class="btn btn-ghost" onclick="this.closest(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  _abrirModalSimples(html);
+}
+
+function _vincCalToggleModo(radio) {
+  var div = document.getElementById('vinc-cal-envolvidos');
+  if (div) div.classList.toggle('oculto', radio.value !== 'especificos');
+}
+
+function _vincCalAddExtra() {
+  var input = document.getElementById('vinc-cal-extra-input');
+  var email = input ? input.value.trim().toLowerCase() : '';
+  if (!email) return;
+  if (email.indexOf('@') === -1) { Toast.aviso('Informe um e-mail válido.'); return; }
+  if (_vincCalExtras.indexOf(email) !== -1) { Toast.aviso('Este e-mail já foi adicionado.'); return; }
+  _vincCalExtras.push(email);
+  input.value = '';
+  _vincCalRenderExtras();
+}
+
+function _vincCalRemoverExtra(email) {
+  _vincCalExtras = _vincCalExtras.filter(function (e) { return e !== email; });
+  _vincCalRenderExtras();
+}
+
+function _vincCalRenderExtras() {
+  var div = document.getElementById('vinc-cal-extras-lista');
+  if (!div) return;
+  div.innerHTML = _vincCalExtras.map(function (e) {
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,0,0,.05);border-radius:999px;padding:3px 10px;margin:0 4px 4px 0;">' +
+      escaparHtml(e) +
+      '<span class="ms ms-sm" style="cursor:pointer;font-size:14px;" onclick="_vincCalRemoverExtra(' + JSON.stringify(e).replace(/"/g, "'") + ')">close</span>' +
+    '</span>';
+  }).join('');
+}
+
+function _vincCalConfirmar() {
+  var modoEl = document.querySelector('input[name="vinc-cal-modo"]:checked');
+  var modo = modoEl ? modoEl.value : 'todos';
+  var selecionados = [];
+  if (modo === 'especificos') {
+    document.querySelectorAll('.vinc-cal-env:checked').forEach(function (cb) { selecionados.push(cb.value); });
+  }
+  var opcoes = { modo: modo, selecionados: selecionados, extras: _vincCalExtras.slice() };
+  var m = document.querySelector('.modal-simples'); if (m) m.remove();
+  var cb = _vincCalOnConfirm; _vincCalOnConfirm = null;
+  if (cb) cb(opcoes);
 }
 
 // ── Utilitário de data (YYYY-MM-DD → DD/MM/YYYY) ────────────
@@ -18285,6 +18398,59 @@ var ReservasCarroUI = (function() {
       }
     }
 
+    // Vínculo com Google Calendar
+    var elCal = document.getElementById('carro-det-calendar-bloco');
+    if (elCal) {
+      elCal.innerHTML = r.googleEventId
+        ? '<div style="display:flex;align-items:center;gap:8px;font-size:12px;">'
+            + '<span style="background:#059669;color:#fff;border-radius:99px;padding:3px 10px;font-weight:600;">📅 Vinculado ao Calendar</span>'
+            + '<button id="carro-det-desvincular-cal" class="btn btn-ghost btn-sm">Desvincular</button>'
+          + '</div>'
+        : '<button id="carro-det-vincular-cal" class="btn btn-secondary btn-sm"><span class="ms ms-sm">event</span> Vincular ao Calendar</button>';
+
+      var bVincCalC = document.getElementById('carro-det-vincular-cal');
+      if (bVincCalC) bVincCalC.onclick = function() {
+        var envolvidos = [];
+        if (r.solicitante) envolvidos.push({ email: r.solicitante, label: 'Solicitante — ' + r.solicitante });
+        passInt.forEach(function(p) {
+          var email = typeof p === 'object' ? (p.email||'') : p;
+          if (email && email.indexOf('@') !== -1 && !envolvidos.some(function(e){return e.email===email;})) {
+            envolvidos.push({ email: email, label: 'Passageiro — ' + email });
+          }
+        });
+        _abrirModalVincularCalendar({
+          envolvidos: envolvidos,
+          onConfirm: function(opcoes) {
+            BtnGuard.wrap(bVincCalC, 'Vinculando…', function(done) {
+              GAS.reservasCarro.vincularCalendar(id, opcoes, function(resp) {
+                done();
+                if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao vincular ao Calendar.'); return; }
+                Toast.sucesso('Reserva vinculada ao Calendar.'); _fecharDetalhes(); carregar();
+              }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+            });
+          }
+        });
+      };
+
+      var bDesvincCalC = document.getElementById('carro-det-desvincular-cal');
+      if (bDesvincCalC) bDesvincCalC.onclick = function() {
+        _abrirModalConfirmar({
+          titulo: 'Desvincular do Calendar', icone: 'event_busy', corIcone: '#ef4444',
+          mensagem: 'Remover o evento desta reserva no Google Calendar? Os convidados deixarão de receber atualizações.',
+          labelConfirmar: 'Desvincular',
+          cb: function() {
+            BtnGuard.wrap(bDesvincCalC, 'Desvinculando…', function(done) {
+              GAS.reservasCarro.desvincularCalendar(id, function(resp) {
+                done();
+                if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao desvincular do Calendar.'); return; }
+                Toast.sucesso('Vínculo com o Calendar removido.'); _fecharDetalhes(); carregar();
+              }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+            });
+          }
+        });
+      };
+    }
+
     // Botões de ação
     var elAcoes = document.getElementById('carro-det-acoes');
     if (elAcoes) {
@@ -23295,6 +23461,13 @@ var ReservasUI = (function() {
     }
     btnsHtml += '<button id="det-fechar" class="btn btn-ghost" data-bg-skip="1">Fechar</button>';
 
+    var calendarHtml = r.googleEventId
+      ? '<div style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px;">'
+          + '<span style="background:#059669;color:#fff;border-radius:99px;padding:3px 10px;font-weight:600;">📅 Vinculado ao Calendar</span>'
+          + '<button id="det-desvincular-cal" class="btn btn-ghost btn-sm">Desvincular</button>'
+        + '</div>'
+      : '<div style="margin:10px 0;"><button id="det-vincular-cal" class="btn btn-secondary btn-sm"><span class="ms ms-sm">event</span> Vincular ao Calendar</button></div>';
+
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.70);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML =
@@ -23314,6 +23487,7 @@ var ReservasUI = (function() {
       + _linha('Setor', _nomeSetor(r.setor))
       + _linha('Co-responsável', r.coResponsavel)
       + _linha('Observações', r.observacoes)
+      + calendarHtml
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">' + btnsHtml + '</div>'
       + '</div>';
     document.body.appendChild(overlay);
@@ -23364,6 +23538,47 @@ var ReservasUI = (function() {
     });
     var bCanc = overlay.querySelector('#det-cancelar');
     if (bCanc) bCanc.addEventListener('click', function() { overlay.remove(); _cancelar(id); });
+
+    var bVincCal = overlay.querySelector('#det-vincular-cal');
+    if (bVincCal) bVincCal.addEventListener('click', function() {
+      var envolvidos = [];
+      [['responsavel','Responsável'],['coResponsavel','Co-responsável'],['criadoPor','Criado por']].forEach(function(p) {
+        var email = r[p[0]];
+        if (email && email.indexOf('@') !== -1 && !envolvidos.some(function(e){return e.email===email;})) {
+          envolvidos.push({ email: email, label: p[1] + ' — ' + email });
+        }
+      });
+      _abrirModalVincularCalendar({
+        envolvidos: envolvidos,
+        onConfirm: function(opcoes) {
+          BtnGuard.wrap(bVincCal, 'Vinculando…', function(done) {
+            GAS.reservas.vincularCalendar(id, opcoes, function(resp) {
+              done(); overlay.remove();
+              if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao vincular ao Calendar.'); return; }
+              Toast.sucesso('Reserva vinculada ao Calendar.'); carregar();
+            }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+          });
+        }
+      });
+    });
+
+    var bDesvincCal = overlay.querySelector('#det-desvincular-cal');
+    if (bDesvincCal) bDesvincCal.addEventListener('click', function() {
+      _abrirModalConfirmar({
+        titulo: 'Desvincular do Calendar', icone: 'event_busy', corIcone: '#ef4444',
+        mensagem: 'Remover o evento desta reserva no Google Calendar? Os convidados deixarão de receber atualizações.',
+        labelConfirmar: 'Desvincular',
+        cb: function() {
+          BtnGuard.wrap(bDesvincCal, 'Desvinculando…', function(done) {
+            GAS.reservas.desvincularCalendar(id, function(resp) {
+              done(); overlay.remove();
+              if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao desvincular do Calendar.'); return; }
+              Toast.sucesso('Vínculo com o Calendar removido.'); carregar();
+            }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+          });
+        }
+      });
+    });
   }
 
   // ── Itens volantes — estado ──────────────────────────
@@ -28860,6 +29075,61 @@ var AcoesUI = (function() {
             escaparHtml(t.label)+'</button>';
         }).join('');
       }
+    }
+
+    // Vínculo com Google Calendar
+    var elCalAcao = el('painel-acao-calendar');
+    if (elCalAcao) {
+      elCalAcao.innerHTML = acao.googleEventId
+        ? '<div style="display:flex;align-items:center;gap:8px;font-size:12px;">'
+            + '<span style="background:#059669;color:#fff;border-radius:99px;padding:3px 10px;font-weight:600;">📅 Vinculado ao Calendar</span>'
+            + '<button id="painel-acao-desvincular-cal" class="btn btn-ghost btn-sm">Desvincular</button>'
+          + '</div>'
+        : '<button id="painel-acao-vincular-cal" class="btn btn-secondary btn-sm"><span class="ms ms-sm">event</span> Vincular ao Calendar</button>';
+
+      var bVincCalA = el('painel-acao-vincular-cal');
+      if (bVincCalA) bVincCalA.onclick = function() {
+        var envolvidos = [];
+        if (acao.responsavel) envolvidos.push({ email: acao.responsavel, label: 'Responsável — ' + acao.responsavel });
+        (acao.equipe || []).forEach(function(p) {
+          var email = typeof p === 'string' ? p : (p && p.email);
+          if (email && email.indexOf('@') !== -1 && !envolvidos.some(function(e){return e.email===email;})) {
+            envolvidos.push({ email: email, label: 'Equipe — ' + email });
+          }
+        });
+        _abrirModalVincularCalendar({
+          envolvidos: envolvidos,
+          onConfirm: function(opcoes) {
+            BtnGuard.wrap(bVincCalA, 'Vinculando…', function(done) {
+              GAS.acoes.vincularCalendar({ id: acao.id, opcoes: opcoes }, function(resp) {
+                done();
+                if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao vincular ao Calendar.'); return; }
+                Toast.sucesso('Ação vinculada ao Calendar.');
+                GAS.acoes.obter(acao.id, function(r2) { if (r2&&r2.ok) _mostrarPainel(r2.data); });
+              }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+            });
+          }
+        });
+      };
+
+      var bDesvincCalA = el('painel-acao-desvincular-cal');
+      if (bDesvincCalA) bDesvincCalA.onclick = function() {
+        _abrirModalConfirmar({
+          titulo: 'Desvincular do Calendar', icone: 'event_busy', corIcone: '#ef4444',
+          mensagem: 'Remover o evento desta ação no Google Calendar? Os convidados deixarão de receber atualizações.',
+          labelConfirmar: 'Desvincular',
+          cb: function() {
+            BtnGuard.wrap(bDesvincCalA, 'Desvinculando…', function(done) {
+              GAS.acoes.desvincularCalendar(acao.id, function(resp) {
+                done();
+                if (!resp||!resp.ok) { Toast.erro((resp&&resp.error&&resp.error.message)||'Erro ao desvincular do Calendar.'); return; }
+                Toast.sucesso('Vínculo com o Calendar removido.');
+                GAS.acoes.obter(acao.id, function(r2) { if (r2&&r2.ok) _mostrarPainel(r2.data); });
+              }, function(err) { done(); Toast.erro('Erro: '+(err.message||err)); });
+            });
+          }
+        });
+      };
     }
 
     // Abrir painel

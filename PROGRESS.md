@@ -39,7 +39,22 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s104)**: **Feat — Reuniões: integração com Google Calendar (convite automático ao agendar) + links e anexos (upload Drive) — Deploy @1018.**
+**Fase atual (s105)**: **Feat — Reservas de Espaço, Reservas de Veículo e Ações: vínculo MANUAL (opcional) com Google Calendar — Deploy @1019.**
+
+**Diferença em relação ao padrão de Reuniões (s104)**: em Reuniões o evento é criado automaticamente ao agendar. Aqui o usuário decide explicitamente (botão "Vincular ao Calendar" no detalhe/painel de cada registro) se quer vincular, e escolhe entre convidar **todos os envolvidos** cadastrados no registro ou **selecionar pessoas específicas** (checkboxes), podendo ainda **adicionar e-mails extras** (internos ou externos, texto livre — ver limitação abaixo).
+
+**Limitação técnica conhecida (mesma de Reuniões)**: `executeAs: USER_DEPLOYING` faz todo `CalendarApp` operar na conta de deploy, não na do usuário logado. Por isso **não foi implementada autosugestão via Google Contacts** (traria os contatos da conta de deploy, não do solicitante) — a adição de "outras pessoas" é por e-mail digitado livremente (mesmo padrão já usado em "Presença" de Reuniões).
+
+**O que foi implementado**:
+- `shared/calendar_service.gs` (novo) — `CalendarService.criarEvento/atualizarEvento/excluirEvento`, genérico, com suporte a evento de dia-todo (`diaTodo:true`, usado por Ações). Reuniões **não foi alterado** — continua com sua própria implementação interna, evitando risco de regressão num fluxo já testado.
+- **Reservas de Espaço** (`reserva_repository.gs`/`reserva_engine.gs`/`reservas_controller.gs`) — campos `googleEventId`/`calendarConvidados` (novas colunas em `ESPACOS.Reservas`); `ReservaEngine.vincularCalendar/desvincularCalendar`; sincroniza horário/local ao editar a reserva já vinculada; remove o evento ao cancelar. Envolvidos candidatos: `responsavel`, `coResponsavel`, `criadoPor`.
+- **Reservas de Veículo** (`reserva_carro_repository.gs`/`reserva_carro_engine.gs`/`reserva_carro_controller.gs`) — mesmos campos (JSON canônico `reservas_carro.json`); remove o evento ao cancelar. Envolvidos candidatos: `solicitante`, `passageiros`, `passageirosInternos`.
+- **Ações** (`acao_engine.gs`/`acoes_controller.gs`) — evento de **dia-todo** (`dataInicio`→`dataFim`, já que Ação não tem horário); remove o evento ao cancelar. Envolvidos candidatos: `responsavel`, `equipe`.
+- `index.html` — modal global reutilizável `_abrirModalVincularCalendar()` (radio "todos"/"específicos" + checkboxes + input de e-mail extra); botão "Vincular ao Calendar"/"📅 Vinculado — Desvincular" no detalhe de Reservas de Espaço (`ReservasUI._abrirDetalheReserva`), no detalhe de Reservas de Veículo (`ReservasCarroUI._verDetalhesAgenda`) e no painel de Ações (`AcoesUI._mostrarPainel`).
+
+**Ação manual pendente pós-deploy**: executar `fase2_reservas_prepararIndice()` no GAS Editor uma vez, para acrescentar as colunas `GoogleEventId`/`CalendarConvidados` à aba `ESPACOS.Reservas` já existente (o índice de Carro e o de Ações não precisam de ação manual — Carro é só visibilidade tabular e Ações não indexa esses campos na Sheet).
+
+**Fase anterior (s104)**: **Feat — Reuniões: integração com Google Calendar (convite automático ao agendar) + links e anexos (upload Drive) — Deploy @1018.**
 
 **Decisão de arquitetura — Calendar**: o webapp roda com `executeAs: USER_DEPLOYING` (`appsscript.json`), ou seja, todo `CalendarApp` opera sempre na conta que publicou o deploy, não na do usuário logado. Por isso o evento é criado num calendário único (o da conta de deploy) e todos os participantes (convocador + presentes + ausentes justificados) são adicionados como **guests** — recebem convite por e-mail e podem aceitar/adicionar à própria agenda normalmente. Não há suporte a "agenda pessoal de cada convocador" sem domain-wide delegation (fora de escopo).
 

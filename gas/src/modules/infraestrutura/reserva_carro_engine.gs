@@ -15,7 +15,8 @@
  *          modules/infraestrutura/veiculos_repository.gs,
  *          core/services/auditoria_service.gs,
  *          core/services/acesso_service.gs,
- *          core/events_constants.gs
+ *          core/events_constants.gs,
+ *          shared/calendar_service.gs (CalendarService)
  */
 
 var ReservaCarroEngine = (function() {
@@ -305,10 +306,15 @@ var ReservaCarroEngine = (function() {
 
     FsmGuardian.assertValida('reservas_carro', rc.status, STATUS.CANCELADA, id, email);
 
-    var atualizado = ReservaCarroRepository.atualizar(id, {
-      status:       STATUS.CANCELADA,
-      motivoRecusa: motivo || ''
-    }, orgId);
+    var patch = { status: STATUS.CANCELADA, motivoRecusa: motivo || '' };
+    if (rc.googleEventId) {
+      try { CalendarService.excluirEvento(rc.googleEventId); }
+      catch (e) { Logger.warn('reserva_carro_engine', 'cancelar', 'Calendar: ' + e.message); }
+      patch.googleEventId      = '';
+      patch.calendarConvidados = [];
+    }
+
+    var atualizado = ReservaCarroRepository.atualizar(id, patch, orgId);
 
     AuditoriaService.registrar('RESERVA_CARRO_CANCELADA', 'reservas_carro', {
       entidadeId: id, orgId: orgId, usuario: email
@@ -362,6 +368,96 @@ var ReservaCarroEngine = (function() {
     return atualizado;
   }
 
+  // ── Google Calendar — vínculo manual ─────────────────────────────────
+  // Vínculo opcional, acionado pelo usuário (nunca automático).
+
+  function _envolvidosCalendar(rc) {
+    var envolvidos = [];
+    if (rc.solicitante && String(rc.solicitante).indexOf('@') !== -1) envolvidos.push(rc.solicitante);
+    (rc.passageiros || []).forEach(function (p) { if (p && String(p).indexOf('@') !== -1) envolvidos.push(p); });
+    (rc.passageirosInternos || []).forEach(function (p) { if (p && String(p).indexOf('@') !== -1) envolvidos.push(p); });
+    return envolvidos.filter(function (e, i, arr) { return arr.indexOf(e) === i; });
+  }
+
+  function _resolverConvidadosCalendar(rc, opcoes) {
+    opcoes = opcoes || {};
+    var envolvidos = _envolvidosCalendar(rc);
+    var base = opcoes.modo === 'especificos'
+      ? envolvidos.filter(function (e) { return (opcoes.selecionados || []).indexOf(e) !== -1; })
+      : envolvidos;
+    var extras = (opcoes.extras || []).filter(function (e) { return e && String(e).indexOf('@') !== -1; });
+    return base.concat(extras);
+  }
+
+  /**
+   * Vincula uma reserva de veículo a um novo evento no Calendar.
+   * @param {string} id
+   * @param {Object} opcoes — { modo, selecionados?, extras? }
+   * @param {string} email
+   */
+  function vincularCalendar(id, opcoes, email) {
+    var orgId = _getOrgId();
+    var rc = ReservaCarroRepository.buscarPorId(id, orgId);
+    if (!rc) throw new Error('Reserva não encontrada: ' + id);
+    if (rc.solicitante !== email && !_podAprovarCarro(email)) {
+      throw new Error('Sem permissão para vincular esta reserva ao Calendar.');
+    }
+    if (rc.googleEventId) throw new Error('Esta reserva já está vinculada ao Calendar.');
+
+    var horaChegada = rc.horaChegadaEstimada || rc.horaChegada;
+    if (!rc.data || !rc.horaSaida || !horaChegada) {
+      throw new Error('Reserva sem data/horário definidos — não é possível vincular ao Calendar.');
+    }
+
+    var rota = rc.rota || {};
+    var convidados = _resolverConvidadosCalendar(rc, opcoes);
+    var resultado = CalendarService.criarEvento({
+      titulo:     'Reserva de veículo — ' + (rota.localChegada || rc.acaoNome || id),
+      local:      rota.localSaida || '',
+      descricao:  'Reserva de veículo institucional — gerida pelo sistema CCBJ. ID: ' + rc.id,
+      inicio:     new Date(rc.data + 'T' + rc.horaSaida + ':00'),
+      fim:        new Date(rc.data + 'T' + horaChegada + ':00'),
+      convidados: convidados
+    });
+
+    var atualizado = ReservaCarroRepository.atualizar(id, {
+      googleEventId:      resultado.eventoId,
+      calendarConvidados: resultado.convidados
+    }, orgId);
+
+    AuditoriaService.registrar('RESERVA_CARRO_CALENDAR_VINCULADA', 'reservas_carro', {
+      entidadeId: id, orgId: orgId, usuario: email, convidados: resultado.convidados
+    });
+    return atualizado;
+  }
+
+  /**
+   * Remove o vínculo de uma reserva de veículo com o Calendar.
+   * @param {string} id
+   * @param {string} email
+   */
+  function desvincularCalendar(id, email) {
+    var orgId = _getOrgId();
+    var rc = ReservaCarroRepository.buscarPorId(id, orgId);
+    if (!rc) throw new Error('Reserva não encontrada: ' + id);
+    if (rc.solicitante !== email && !_podAprovarCarro(email)) {
+      throw new Error('Sem permissão para desvincular esta reserva do Calendar.');
+    }
+    if (!rc.googleEventId) throw new Error('Esta reserva não está vinculada ao Calendar.');
+
+    try { CalendarService.excluirEvento(rc.googleEventId); }
+    catch (e) { Logger.warn('reserva_carro_engine', 'desvincularCalendar', e.message); }
+
+    var atualizado = ReservaCarroRepository.atualizar(id, {
+      googleEventId: '', calendarConvidados: []
+    }, orgId);
+
+    AuditoriaService.registrar('RESERVA_CARRO_CALENDAR_DESVINCULADA', 'reservas_carro', {
+      entidadeId: id, orgId: orgId, usuario: email
+    });
+    return atualizado;
+  }
+
   function obterMetricas(email) {
     var orgId = _getOrgId();
     var lista = _podAprovarCarro(email)
@@ -387,6 +483,8 @@ var ReservaCarroEngine = (function() {
     cancelar:      cancelar,
     concluir:      concluir,
     editarRota:    editarRota,
+    vincularCalendar:    vincularCalendar,
+    desvincularCalendar: desvincularCalendar,
     obterMetricas: obterMetricas
   };
 

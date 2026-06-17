@@ -475,6 +475,53 @@ function ctrl_reservas_concluir(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// VÍNCULO COM GOOGLE CALENDAR (manual, opcional)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Vincula uma reserva a um novo evento no Google Calendar.
+ * Colaborador só vincula reservas próprias; gestão vincula qualquer uma.
+ *
+ * @param {string} id
+ * @param {Object} opcoes — { modo: 'todos'|'especificos', selecionados?: string[], extras?: string[] }
+ */
+function ctrl_reservas_vincular_calendar(id, opcoes) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    if (!id) throw new Error('ID da reserva é obrigatório.');
+    var nivel = _nivelReservas(ctx.email);
+    if (nivel === 'colaborador') {
+      var propria = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId)
+        .filter(function (r) { return r.id === id; })[0];
+      if (!propria) throw new Error('Sem permissão para vincular esta reserva ao Calendar.');
+    }
+    var r = ReservaEngine.vincularCalendar(id, opcoes || {}, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
+  }, 'ctrl_reservas_vincular_calendar');
+}
+
+/**
+ * Remove o vínculo de uma reserva com o Google Calendar.
+ * @param {string} id
+ */
+function ctrl_reservas_desvincular_calendar(id) {
+  return GasResponse.wrap(function () {
+    var ctx = _ctxReservas();
+    if (!id) throw new Error('ID da reserva é obrigatório.');
+    var nivel = _nivelReservas(ctx.email);
+    if (nivel === 'colaborador') {
+      var propria = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId)
+        .filter(function (r) { return r.id === id; })[0];
+      if (!propria) throw new Error('Sem permissão para desvincular esta reserva do Calendar.');
+    }
+    var r = ReservaEngine.desvincularCalendar(id, ctx.email, ctx.orgId);
+    _invalidarCachesReservas(ctx.orgId);
+    return r;
+  }, 'ctrl_reservas_desvincular_calendar');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // BLOQUEIO CCBJ FECHADO
 // ═══════════════════════════════════════════════════════════════
 

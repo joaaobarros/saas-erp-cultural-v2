@@ -29,7 +29,7 @@ var ReservaCarroRepository = (function() {
     'LocalSaida', 'LocalChegada', 'Paradas', 'MapaUrl',
     'TempoEstimadoMin', 'DistanciaKm',
     'Status', 'Aprovador', 'Observacao',
-    'DataSolicitacao', 'CriadoEm'
+    'DataSolicitacao', 'CriadoEm', 'GoogleEventId'
   ];
 
   function _serializarIndice(rc) {
@@ -47,7 +47,7 @@ var ReservaCarroRepository = (function() {
       rota.tempoEstimadoMin || '',
       rota.distanciaKm      || '',
       rc.status, rc.aprovador || '', rc.observacao || '',
-      rc.dataSolicitacao, rc.criadoEm
+      rc.dataSolicitacao, rc.criadoEm, rc.googleEventId || ''
     ];
   }
 
@@ -139,7 +139,9 @@ var ReservaCarroRepository = (function() {
       dataAprovacao:   '',
       dataSolicitacao: agr,
       criadoEm:        agr,
-      atualizadoEm:    agr
+      atualizadoEm:    agr,
+      googleEventId:       '',
+      calendarConvidados:  []
     };
 
     modifyJSON(_ARQUIVO, function(lista) {

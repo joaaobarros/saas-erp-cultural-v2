@@ -13,7 +13,8 @@
  * REGRA: toda transição de status passa por FsmGuardian.assertValida().
  *
  * @depends acao_repository.gs, fsm_guardian.gs, auditoria_service.gs,
- *          event_bus_backend.gs, events_constants.gs, utils.gs
+ *          event_bus_backend.gs, events_constants.gs, utils.gs,
+ *          shared/calendar_service.gs (CalendarService)
  */
 
 var AcaoEngine = (function () {
@@ -127,6 +128,8 @@ var AcaoEngine = (function () {
           quantitativoRealizado: Number(dados.quantitativoRealizado) || 0,
           riderTecnico:          dados.riderTecnico || [],
           fases:                 dados.fases || [],
+          googleEventId:         '',
+          calendarConvidados:    [],
           criadoEm:              agora,
           atualizadoEm:          agora,
           criadoPor:             emailUsuario || '',
@@ -186,6 +189,12 @@ var AcaoEngine = (function () {
       if (novoStatus === ESTADOS.CONCLUIDA && encerramento) {
         encerramento.registradoEm = new Date().toISOString();
         acao.encerramento = encerramento;
+      }
+      // Ao cancelar: remove o vínculo com o Calendar (se houver)
+      if (novoStatus === ESTADOS.CANCELADA && acao.googleEventId) {
+        try { CalendarService.excluirEvento(acao.googleEventId); } catch(_) {}
+        acao.googleEventId      = '';
+        acao.calendarConvidados = [];
       }
 
       AcaoRepository.salvar(orgId, acao);
@@ -357,6 +366,106 @@ var AcaoEngine = (function () {
     return existente;
   }
 
+  // ─── Google Calendar — vínculo manual ──────────────────────────────────────
+  // Vínculo opcional, acionado pelo usuário (nunca automático). Como Ação tem
+  // apenas dataInicio/dataFim (sem horário), o evento é criado como dia-todo.
+
+  function _envolvidosCalendar(acao) {
+    var envolvidos = [];
+    if (acao.responsavel && String(acao.responsavel).indexOf('@') !== -1) envolvidos.push(acao.responsavel);
+    (acao.equipe || []).forEach(function(p) {
+      var email = typeof p === 'string' ? p : (p && p.email);
+      if (email && String(email).indexOf('@') !== -1) envolvidos.push(email);
+    });
+    return envolvidos.filter(function(e, i, arr) { return arr.indexOf(e) === i; });
+  }
+
+  function _resolverConvidadosCalendar(acao, opcoes) {
+    opcoes = opcoes || {};
+    var envolvidos = _envolvidosCalendar(acao);
+    var base = opcoes.modo === 'especificos'
+      ? envolvidos.filter(function(e) { return (opcoes.selecionados || []).indexOf(e) !== -1; })
+      : envolvidos;
+    var extras = (opcoes.extras || []).filter(function(e) { return e && String(e).indexOf('@') !== -1; });
+    return base.concat(extras);
+  }
+
+  /**
+   * Vincula uma Ação a um novo evento (dia-todo) no Calendar.
+   * @param {string} id
+   * @param {Object} opcoes — { modo, selecionados?, extras? }
+   * @param {string} emailUsuario
+   * @param {string} [orgId]
+   * @returns {{ ok: boolean, erro?: string }}
+   */
+  function vincularCalendar(id, opcoes, emailUsuario, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      var acao = AcaoRepository.buscarPorId(orgId, id);
+      if (!acao) throw new Error('Ação não encontrada: ' + id);
+      if (acao.googleEventId) throw new Error('Esta ação já está vinculada ao Calendar.');
+      if (!acao.dataInicio) throw new Error('Ação sem data de início — não é possível vincular ao Calendar.');
+
+      var inicio = new Date(acao.dataInicio + 'T00:00:00');
+      var fimRef = acao.dataFim && acao.dataFim >= acao.dataInicio ? acao.dataFim : acao.dataInicio;
+      var fim    = new Date(fimRef + 'T00:00:00');
+      fim.setDate(fim.getDate() + 1); // fim é exclusivo em evento de dia-todo
+
+      var convidados = _resolverConvidadosCalendar(acao, opcoes);
+      var resultado = CalendarService.criarEvento({
+        titulo:     acao.nome,
+        descricao:  'Ação institucional — gerida pelo sistema CCBJ. ID: ' + acao.id,
+        inicio:     inicio,
+        fim:        fim,
+        convidados: convidados,
+        diaTodo:    true
+      });
+
+      acao.googleEventId      = resultado.eventoId;
+      acao.calendarConvidados = resultado.convidados;
+      acao.atualizadoEm       = new Date().toISOString();
+      acao.versao             = (acao.versao || 1) + 1;
+      AcaoRepository.salvar(orgId, acao);
+
+      _auditoria('ACAO_CALENDAR_VINCULADA', id, emailUsuario, { convidados: resultado.convidados });
+      return { ok: true };
+    } catch(e) {
+      Logger.error('acao_engine', 'vincularCalendar', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
+  /**
+   * Remove o vínculo de uma Ação com o Calendar.
+   * @param {string} id
+   * @param {string} emailUsuario
+   * @param {string} [orgId]
+   * @returns {{ ok: boolean, erro?: string }}
+   */
+  function desvincularCalendar(id, emailUsuario, orgId) {
+    orgId = orgId || getOrgConfig().orgId;
+    try {
+      var acao = AcaoRepository.buscarPorId(orgId, id);
+      if (!acao) throw new Error('Ação não encontrada: ' + id);
+      if (!acao.googleEventId) throw new Error('Esta ação não está vinculada ao Calendar.');
+
+      try { CalendarService.excluirEvento(acao.googleEventId); }
+      catch(e) { Logger.warn('acao_engine', 'desvincularCalendar', e.message); }
+
+      acao.googleEventId      = '';
+      acao.calendarConvidados = [];
+      acao.atualizadoEm       = new Date().toISOString();
+      acao.versao             = (acao.versao || 1) + 1;
+      AcaoRepository.salvar(orgId, acao);
+
+      _auditoria('ACAO_CALENDAR_DESVINCULADA', id, emailUsuario, {});
+      return { ok: true };
+    } catch(e) {
+      Logger.error('acao_engine', 'desvincularCalendar', e.message);
+      return { ok: false, erro: e.message };
+    }
+  }
+
   // ─── Fases do Projeto ─────────────────────────────────────────────────────
 
   /**
@@ -472,6 +581,8 @@ var AcaoEngine = (function () {
     obterMetricas:       obterMetricas,
     salvarFase:          salvarFase,
     excluirFase:         excluirFase,
+    vincularCalendar:    vincularCalendar,
+    desvincularCalendar: desvincularCalendar,
     ESTADOS:             ESTADOS,
     TIPOS:               TIPOS
   };

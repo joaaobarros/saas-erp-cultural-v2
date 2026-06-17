@@ -19,6 +19,7 @@
  *          core/services/fsm_guardian.gs (FsmGuardian)
  *          core/config.gs (getOrgConfig)
  *          core/logger.gs (Logger)
+ *          shared/calendar_service.gs (CalendarService)
  */
 
 // ── FSM de Reserva ────────────────────────────────────────────────────────
@@ -498,6 +499,13 @@ var ReservaEngine = (function () {
     });
 
     if (novoStatus === STATUS_RESERVA.CANCELADO) {
+      // Remove o vínculo com o Calendar (se houver) ao cancelar a reserva
+      if (reserva.googleEventId) {
+        try { CalendarService.excluirEvento(reserva.googleEventId); }
+        catch (e) { Logger.warn('reserva_engine', 'mudarStatus', 'Calendar: ' + e.message); }
+        try { ReservaRepository.limparGoogleEvento(id, orgId); } catch (_) {}
+      }
+
       SystemEvents.emit(SystemEventTypes.RESERVATION_CANCELLED, {
         reservaId: id, sala: reserva.sala, data: reserva.data,
         motivo: motivo || '', autor: autor, orgId: orgId
@@ -578,6 +586,19 @@ var ReservaEngine = (function () {
         reserva[k] = dados[k];
       }
     });
+
+    // Reserva já vinculada ao Calendar: mantém o evento sincronizado (best-effort)
+    if (reserva.googleEventId) {
+      try {
+        CalendarService.atualizarEvento(reserva.googleEventId, {
+          titulo:     (reserva.nomeAcao || 'Reserva de espaço') + ' — ' + (reserva.salaNome || reserva.sala),
+          local:      reserva.salaNome || reserva.sala || '',
+          inicio:     new Date(reserva.data + 'T' + reserva.horaInicio + ':00'),
+          fim:        new Date(reserva.data + 'T' + reserva.horaTermino + ':00'),
+          convidados: reserva.calendarConvidados || []
+        });
+      } catch (e) { Logger.warn('reserva_engine', 'atualizar', 'Calendar: ' + e.message); }
+    }
 
     var salva = ReservaRepository.salvar(reserva);
 
@@ -871,6 +892,102 @@ var ReservaEngine = (function () {
     return { ok: true, posEvento: posEvento };
   }
 
+  // ── Google Calendar — vínculo manual ─────────────────────────────────
+  // Vínculo opcional, acionado pelo usuário (nunca automático). O usuário
+  // escolhe se convida todos os envolvidos cadastrados na reserva ou apenas
+  // um subconjunto, podendo ainda acrescentar e-mails extras.
+
+  /**
+   * Envolvidos cadastrados na reserva (candidatos a convidado no Calendar).
+   * @param {Reserva} reserva
+   * @returns {string[]}
+   */
+  function _envolvidosCalendar(reserva) {
+    var envolvidos = [];
+    [reserva.responsavel, reserva.coResponsavel, reserva.criadoPor].forEach(function (e) {
+      if (e && String(e).indexOf('@') !== -1) envolvidos.push(String(e).trim());
+    });
+    return envolvidos.filter(function (e, i, arr) { return arr.indexOf(e) === i; });
+  }
+
+  /**
+   * Resolve a lista final de convidados a partir do modo escolhido pelo usuário.
+   * @param {Reserva} reserva
+   * @param {Object} opcoes — { modo: 'todos'|'especificos', selecionados?: string[], extras?: string[] }
+   * @returns {string[]}
+   */
+  function _resolverConvidadosCalendar(reserva, opcoes) {
+    opcoes = opcoes || {};
+    var envolvidos = _envolvidosCalendar(reserva);
+    var base = opcoes.modo === 'especificos'
+      ? envolvidos.filter(function (e) { return (opcoes.selecionados || []).indexOf(e) !== -1; })
+      : envolvidos;
+    var extras = (opcoes.extras || []).filter(function (e) { return e && String(e).indexOf('@') !== -1; });
+    return base.concat(extras);
+  }
+
+  /**
+   * Vincula uma reserva a um novo evento no Calendar.
+   * @param {string} id
+   * @param {Object} opcoes — { modo, selecionados?, extras? }
+   * @param {string} autor
+   * @param {string} orgId
+   * @returns {Reserva}
+   */
+  function vincularCalendar(id, opcoes, autor, orgId) {
+    var reserva = ReservaRepository.buscarPorId(id, orgId);
+    if (!reserva) throw new Error('Reserva não encontrada: ' + id);
+    if (reserva.googleEventId) throw new Error('Esta reserva já está vinculada ao Calendar.');
+    if (!reserva.data || !reserva.horaInicio || !reserva.horaTermino) {
+      throw new Error('Reserva sem data/horário definidos — não é possível vincular ao Calendar.');
+    }
+
+    var convidados = _resolverConvidadosCalendar(reserva, opcoes);
+    var resultado = CalendarService.criarEvento({
+      titulo:     (reserva.nomeAcao || 'Reserva de espaço') + ' — ' + (reserva.salaNome || reserva.sala),
+      local:      reserva.salaNome || reserva.sala || '',
+      descricao:  'Reserva de espaço — gerida pelo sistema CCBJ. ID: ' + reserva.id,
+      inicio:     new Date(reserva.data + 'T' + reserva.horaInicio + ':00'),
+      fim:        new Date(reserva.data + 'T' + reserva.horaTermino + ':00'),
+      convidados: convidados
+    });
+
+    reserva.googleEventId      = resultado.eventoId;
+    reserva.calendarConvidados = resultado.convidados;
+    var salva = ReservaRepository.salvar(reserva);
+
+    AuditoriaService.registrar('RESERVA_CALENDAR_VINCULADA', 'espacos', {
+      reservaId: id, convidados: resultado.convidados, autor: autor, orgId: orgId
+    });
+    Logger.info('reserva_engine', 'vincularCalendar', id + ' vinculado: ' + resultado.eventoId);
+    return salva;
+  }
+
+  /**
+   * Remove o vínculo de uma reserva com o Calendar (exclui o evento).
+   * @param {string} id
+   * @param {string} autor
+   * @param {string} orgId
+   * @returns {Reserva}
+   */
+  function desvincularCalendar(id, autor, orgId) {
+    var reserva = ReservaRepository.buscarPorId(id, orgId);
+    if (!reserva) throw new Error('Reserva não encontrada: ' + id);
+    if (!reserva.googleEventId) throw new Error('Esta reserva não está vinculada ao Calendar.');
+
+    try { CalendarService.excluirEvento(reserva.googleEventId); }
+    catch (e) { Logger.warn('reserva_engine', 'desvincularCalendar', e.message); }
+
+    reserva.googleEventId      = '';
+    reserva.calendarConvidados = [];
+    var salva = ReservaRepository.salvar(reserva);
+
+    AuditoriaService.registrar('RESERVA_CALENDAR_DESVINCULADA', 'espacos', {
+      reservaId: id, autor: autor, orgId: orgId
+    });
+    return salva;
+  }
+
   // ── Helpers privados ────────────────────────────────────────────────
 
   function _inferirTurno(horaInicio, horaTermino) {
@@ -909,6 +1026,8 @@ var ReservaEngine = (function () {
     atualizar:           atualizar,
     mudarStatus:         mudarStatus,
     registrarPosEvento:  registrarPosEvento,
+    vincularCalendar:    vincularCalendar,
+    desvincularCalendar: desvincularCalendar,
 
     // Guarda de conflito (exposta para testes)
     assertSemConflito:          assertSemConflito,

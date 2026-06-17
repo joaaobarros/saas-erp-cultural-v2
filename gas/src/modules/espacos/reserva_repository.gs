@@ -10,7 +10,11 @@
  *     nomeAcao, tipoAcao, responsavel, setor, coResponsavel, release,
  *     itensVolantes, status, motivoCancelamento, observacoes,
  *     acaoId, idLote, criadoEm, atualizadoEm, criadoPor, versao,
- *     minutosMontagem, minutosEncerramento, posEvento }
+ *     minutosMontagem, minutosEncerramento, posEvento,
+ *     googleEventId, calendarConvidados }
+ *
+ * googleEventId: id do evento no Google Calendar (vínculo manual, opcional — '' se não vinculado)
+ * calendarConvidados: string[] — e-mails convidados no evento vinculado
  *
  * posEvento: { realizado, contabilizar, publicoPresente, observacoes,
  *              comprovacoes:[{url,descricao,tipo}], registradoPor, registradoEm }
@@ -34,7 +38,8 @@ var ReservaRepository = (function () {
     'Setor', 'CoResponsavel', 'Release', 'ItensVolantes',
     'Status', 'MotivoCancelamento', 'Observacoes',
     'AcaoId', 'IdLote', 'CriadoEm', 'AtualizadoEm', 'CriadoPor', 'Versao',
-    'MinutosMontagem', 'MinutosEncerramento', 'PosEvento'
+    'MinutosMontagem', 'MinutosEncerramento', 'PosEvento',
+    'GoogleEventId', 'CalendarConvidados'
   ];
 
   var _COL = {};
@@ -47,6 +52,11 @@ var ReservaRepository = (function () {
   function _parsePosEvento(raw) {
     if (!raw) return null;
     try { return JSON.parse(String(raw)); } catch (_) { return null; }
+  }
+
+  function _parseConvidados(raw) {
+    if (!raw) return [];
+    try { var v = JSON.parse(String(raw)); return Array.isArray(v) ? v : []; } catch (_) { return []; }
   }
 
   /** Número seguro de colunas a ler: nunca mais do que o Sheet tem. */
@@ -88,7 +98,9 @@ var ReservaRepository = (function () {
       versao:              Number(row[_COL.Versao]       || 1),
       minutosMontagem:     Number(row[_COL.MinutosMontagem]     || 0),
       minutosEncerramento: Number(row[_COL.MinutosEncerramento] || 0),
-      posEvento:           _parsePosEvento(row[_COL.PosEvento])
+      posEvento:           _parsePosEvento(row[_COL.PosEvento]),
+      googleEventId:       row[_COL.GoogleEventId]              || '',
+      calendarConvidados:  _parseConvidados(row[_COL.CalendarConvidados])
     };
   }
 
@@ -119,7 +131,9 @@ var ReservaRepository = (function () {
       r.versao              || 1,
       Number(r.minutosMontagem     || 0),
       Number(r.minutosEncerramento || 0),
-      r.posEvento ? JSON.stringify(r.posEvento) : ''
+      r.posEvento ? JSON.stringify(r.posEvento) : '',
+      r.googleEventId || '',
+      r.calendarConvidados && r.calendarConvidados.length ? JSON.stringify(r.calendarConvidados) : ''
     ];
   }
 
@@ -438,6 +452,26 @@ var ReservaRepository = (function () {
   }
 
   /**
+   * Limpa o vínculo com o Google Calendar (googleEventId e calendarConvidados).
+   * Operação leve: atualiza apenas essas duas colunas.
+   * @param {string} id
+   * @param {string} orgId
+   */
+  function limparGoogleEvento(id, orgId) {
+    var aba = _getSheet();
+    if (!aba || aba.getLastRow() < 2) return;
+    var dados = aba.getRange(2, 1, aba.getLastRow() - 1, _nCols(aba)).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][_COL.ID]).trim() === String(id).trim() &&
+          dados[i][_COL.OrgId] === orgId) {
+        aba.getRange(i + 2, _COL.GoogleEventId + 1).setValue('');
+        aba.getRange(i + 2, _COL.CalendarConvidados + 1).setValue('');
+        return;
+      }
+    }
+  }
+
+  /**
    * Métricas rápidas de reservas.
    * @param {string} orgId
    * @returns {{ total, pendente, confirmado, em_uso, concluido, cancelado, hoje }}
@@ -477,6 +511,7 @@ var ReservaRepository = (function () {
     atualizarStatus:           atualizarStatus,
     atualizarPosEvento:        atualizarPosEvento,
     atualizarPreEvento:        atualizarPreEvento,
+    limparGoogleEvento:        limparGoogleEvento,
     metricas:                  metricas
   };
 

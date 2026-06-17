@@ -8,11 +8,14 @@
  *
  * Schema de uma Reunião:
  *   id, orgId, titulo, tipo (ordinaria|extraordinaria|comite|workshop),
- *   local, dataHora, duracao (min), convocadoPor, pauta[],
+ *   local, dataHora, duracao (min), convocadoPor,
+ *   pauta[{ id, texto, discussao, decisao }] (itens legados em string puro são
+ *     normalizados para este formato na leitura pelo frontend — sem migração),
  *   presentes[], ausentesJustificados[], ausentesNaoJustificados[],
  *   status (rascunho|agendada|em_andamento|encerrada|cancelada),
  *   ata { rascunho, textoFinal, aprovadaEm, aprovadaPor, versoes[] },
- *   encaminhamentos[{ id, texto, responsavel, prazo, status, concluidoEm }],
+ *   encaminhamentos[{ id, texto, responsavel, prazo, status, concluidoEm, pautaId }]
+ *     (pautaId null = encaminhamento geral, não vinculado a um item específico),
  *   links[{ label, url }], anexos[{ nome, url, mimeType }],
  *   acaoVinculadaId, googleEventId (sincronizado ao Calendar a partir de "agendada"),
  *   criadoEm, atualizadoEm, criadoPor, versao
