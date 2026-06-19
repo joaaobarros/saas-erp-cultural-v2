@@ -66,6 +66,8 @@ function ctrl_auditoria_timeline(modulo, entidadeId, limite) {
 
 /**
  * Lista log de auditoria com filtros.
+ * Fonte: AuditoriaStore (auditoria_operacional.json) — fonte canônica de
+ * eventos persistidos por AuditoriaService.registrar() em todo o sistema.
  */
 function ctrl_auditoria_listar(params) {
   return GasResponse.wrap(function() {
@@ -76,46 +78,34 @@ function ctrl_auditoria_listar(params) {
     if (!['admin','superadmin'].includes(papel)) throw new Error('Sem permissão');
 
     var filtros = params || {};
-    var orgId   = getOrgConfig().orgId;
 
     try {
-      var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_MASTER');
-      if (!sheetId) return { registros: [], total: 0 };
-
-      var ss  = SpreadsheetApp.openById(sheetId);
-      var aba = ss.getSheetByName('Auditoria');
-      if (!aba || aba.getLastRow() < 2) return { registros: [], total: 0 };
-
-      var linhas = aba.getRange(2, 1, aba.getLastRow() - 1, 10).getValues();
-      var registros = [];
-      linhas.forEach(function(l) {
-        var reg = {
-          id:        l[0] || '',
-          evento:    l[1] || '',
-          modulo:    l[2] || '',
-          email:     l[3] || '',
-          criadoEm:  l[4] || '',
-          orgId:     l[5] || '',
-          before:    l[6] ? _tryParse(l[6]) : null,
-          after:     l[7] ? _tryParse(l[7]) : null,
-          ip:        l[8] || '',
-          sessaoId:  l[9] || ''
-        };
-        if (!reg.id) return;
-        if (orgId && reg.orgId && reg.orgId !== orgId) return;
-        if (filtros.modulo    && reg.modulo  !== filtros.modulo)  return;
-        if (filtros.email     && reg.email   !== filtros.email)   return;
-        if (filtros.evento    && reg.evento  !== filtros.evento)  return;
-        if (filtros.desde     && new Date(reg.criadoEm) < new Date(filtros.desde)) return;
-        if (filtros.ate       && new Date(reg.criadoEm) > new Date(filtros.ate))   return;
-        registros.push(reg);
+      var eventos = AuditoriaStore.consultar({
+        modulo:   filtros.modulo   || undefined,
+        usuario:  filtros.email    || undefined,
+        tipo:     filtros.evento   || undefined,
+        de:       filtros.desde    ? new Date(filtros.desde).toISOString()                      : undefined,
+        ate:      filtros.ate      ? new Date(filtros.ate + 'T23:59:59.999Z').toISOString()      : undefined,
+        limite:   filtros.limite   ? Math.min(filtros.limite, 500) : 100
       });
 
-      // Mais recente primeiro; limitar retorno
-      registros.sort(function(a, b) { return new Date(b.criadoEm) - new Date(a.criadoEm); });
-      var limite = filtros.limite ? Math.min(filtros.limite, 500) : 100;
-      return { registros: registros.slice(0, limite), total: registros.length };
+      var registros = eventos.map(function(ev) {
+        return {
+          id:        ev.id,
+          evento:    ev.tipo,
+          modulo:    ev.modulo,
+          acao:      ev.acao,
+          email:     ev.usuario,
+          criadoEm:  ev.timestamp,
+          categoria: ev.categoria,
+          resultado: ev.resultado,
+          mensagem:  ev.mensagem,
+          before:    ev.antes  || null,
+          after:     ev.depois || null
+        };
+      });
+
+      return { registros: registros, total: registros.length };
     } catch(e) {
       Logger.error('auditoria_controller', 'ctrl_auditoria_listar', e.message);
       return { registros: [], total: 0, erro: e.message };
@@ -124,8 +114,10 @@ function ctrl_auditoria_listar(params) {
 }
 
 /**
- * Desfaz uma operação usando o snapshot `before` do log de auditoria.
+ * Desfaz uma operação usando o snapshot `before`/`after` do log de auditoria.
  * Suporta: criação (exclui), edição (restaura before), exclusão (recria).
+ * Só é possível para módulos com persistência canônica em JSON (ver MODULO_JSON_CANONICO)
+ * e para eventos cujo emissor passou antes/depois ao chamar AuditoriaService.registrar().
  */
 function ctrl_auditoria_rollback(params) {
   return GasResponse.wrap(function() {
@@ -138,37 +130,17 @@ function ctrl_auditoria_rollback(params) {
     var registroId = params && params.registroId;
     if (!registroId) throw new Error('registroId obrigatório');
 
-    var orgId = getOrgConfig().orgId;
-    var props = PropertiesService.getScriptProperties();
-    var sheetId = props.getProperty('SHEET_ID_MASTER');
-    if (!sheetId) throw new Error('Planilha MASTER não encontrada.');
+    var ev = AuditoriaStore.obterPorId(registroId);
+    if (!ev) throw new Error('Registro de auditoria não encontrado: ' + registroId);
+    if (!ev.antes && !ev.depois) throw new Error('Registro sem dados antes/depois — rollback impossível.');
 
-    var ss     = SpreadsheetApp.openById(sheetId);
-    var aba    = ss.getSheetByName('Auditoria');
-    if (!aba || aba.getLastRow() < 2) throw new Error('Log de auditoria vazio.');
-
-    var ids    = aba.getRange(2, 1, aba.getLastRow() - 1, 1).getValues();
-    var numLinha = -1;
-    for (var i = 0; i < ids.length; i++) {
-      if (ids[i][0] === registroId) { numLinha = i + 2; break; }
-    }
-    if (numLinha === -1) throw new Error('Registro de auditoria não encontrado: ' + registroId);
-
-    var linha   = aba.getRange(numLinha, 1, 1, 10).getValues()[0];
-    var evento  = linha[1];
-    var modulo  = linha[2];
-    var before  = linha[6] ? _tryParse(linha[6]) : null;
-    var after   = linha[7] ? _tryParse(linha[7]) : null;
-
-    if (!before && !after) throw new Error('Registro sem dados before/after — rollback impossível.');
-
-    var resultado = _executarRollback(modulo, evento, before, after, orgId, email);
+    var resultado = _executarRollback(ev.modulo, ev.tipo, ev.antes, ev.depois, email);
 
     AuditoriaService.registrar('ROLLBACK_EXECUTADO', 'auditoria', {
       registroId: registroId,
-      evento:     evento,
-      modulo:     modulo,
-      email:      email
+      evento:     ev.tipo,
+      modulo:     ev.modulo,
+      usuario:    email
     });
 
     return { ok: true, mensagem: 'Rollback executado: ' + resultado };
@@ -186,32 +158,18 @@ function ctrl_auditoria_detectar_suspeitos(params) {
     var papel = acesso.registro && acesso.registro.papel;
     if (!['admin','superadmin'].includes(papel)) throw new Error('Sem permissão');
 
-    var orgId     = getOrgConfig().orgId;
     var janela    = (params && params.janelaMin) || 5; // minutos
     var limiteOps = (params && params.limiteOps) || 20;
 
     try {
-      var props   = PropertiesService.getScriptProperties();
-      var sheetId = props.getProperty('SHEET_ID_MASTER');
-      if (!sheetId) return { suspeitos: [] };
+      var agora_ = new Date();
+      var desde  = new Date(agora_.getTime() - janela * 60000).toISOString();
+      var eventos = AuditoriaStore.consultar({ de: desde, limite: 5000 });
 
-      var ss     = SpreadsheetApp.openById(sheetId);
-      var aba    = ss.getSheetByName('Auditoria');
-      if (!aba || aba.getLastRow() < 2) return { suspeitos: [] };
-
-      var linhas  = aba.getRange(2, 1, aba.getLastRow() - 1, 6).getValues();
-      var agora_  = new Date();
-      var desde   = new Date(agora_.getTime() - janela * 60000);
       var contagemPorEmail = {};
-
-      linhas.forEach(function(l) {
-        var emailL = l[3];
-        var ts     = l[4];
-        if (!emailL || !ts) return;
-        if (l[5] && l[5] !== orgId) return;
-        if (new Date(ts) >= desde) {
-          contagemPorEmail[emailL] = (contagemPorEmail[emailL] || 0) + 1;
-        }
+      eventos.forEach(function(ev) {
+        if (!ev.usuario) return;
+        contagemPorEmail[ev.usuario] = (contagemPorEmail[ev.usuario] || 0) + 1;
       });
 
       var suspeitos = Object.keys(contagemPorEmail)
@@ -221,7 +179,7 @@ function ctrl_auditoria_detectar_suspeitos(params) {
       if (suspeitos.length > 0) {
         AlertasEngine.emitir('AUDITORIA_FALHA',
           suspeitos.length + ' usuário(s) com comportamento suspeito (>' + limiteOps + ' ops em ' + janela + 'min).',
-          { orgId: orgId, entidade: 'sistema', entidadeId: 'auditoria_suspeita' });
+          { orgId: getOrgConfig().orgId, entidade: 'sistema', entidadeId: 'auditoria_suspeita' });
       }
 
       return { suspeitos: suspeitos, janela: janela, limite: limiteOps };
@@ -237,27 +195,36 @@ function _tryParse(str) {
   try { return JSON.parse(str); } catch(e) { return str; }
 }
 
-function _executarRollback(modulo, evento, before, after, orgId, email) {
-  // Mapeamento de módulo → arquivo JSON canônico
-  var MODULO_JSON = {
-    tarefas:      'tarefas.json',
-    pessoas:      'colaboradores.json',
-    reunioes:     'reunioes.json',
-    comunicacao:  'balcao_demandas.json',
-    acoes:        'acoes.json',
-    reservas:     'reservas.json',
-    contratos:    'contratos.json',
-    agentes:      'agentes_culturais.json',
-    acervo:       'acervo.json',
-    voluntarios:  'voluntarios.json',
-    parcerias:    'parcerias.json'
-  };
+// Mapeamento de módulo → arquivo JSON canônico.
+// Inclui apenas módulos cuja fonte de verdade é comprovadamente um arquivo JSON
+// (via criarJsonRepository ou readJSON/modifyJSON direto) — módulos cuja fonte
+// real é uma planilha (Sheets via DataGateway, ex: reservas, ativos, estoque)
+// NÃO entram aqui: escrever no JSON não afetaria o dado real e daria falso
+// sucesso. Para esses, o rollback automático não é suportado.
+var MODULO_JSON_CANONICO = {
+  tarefas:      'tarefas.json',
+  pessoas:      'colaboradores.json',
+  reunioes:     'reunioes.json',
+  comunicacao:  'balcao_demandas.json',
+  acoes:        'acoes.json',
+  contratos:    'contratos.json',
+  agentes:      'agentes_culturais.json',
+  acervo:       'acervo.json',
+  voluntarios:  'voluntarios.json',
+  parcerias:    'parcerias.json'
+};
 
-  var arquivo = MODULO_JSON[modulo];
-  if (!arquivo) return 'módulo "' + modulo + '" sem rollback automático.';
+function _executarRollback(modulo, evento, before, after, email) {
+  var arquivo = MODULO_JSON_CANONICO[modulo];
+  if (!arquivo) {
+    return 'módulo "' + modulo + '" não suportado para rollback automático ' +
+      '(persistência em planilha ou sem mapeamento canônico) — reverter manualmente.';
+  }
+
+  var eventoUpper = String(evento || '').toUpperCase();
 
   // Criação: excluir o registro (usar after.id)
-  if (evento.indexOf('_CRIADO') !== -1 || evento.indexOf('_CRIADA') !== -1) {
+  if (eventoUpper.indexOf('_CRIADO') !== -1 || eventoUpper.indexOf('_CRIADA') !== -1 || eventoUpper.indexOf('CRIADO') === 0) {
     var idAlvo = after && (after.id || after.ID);
     if (!idAlvo) return 'ID não encontrado para exclusão.';
     modifyJSON(arquivo, function(lista) {

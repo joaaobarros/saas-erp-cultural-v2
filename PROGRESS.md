@@ -39,7 +39,23 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s109)**: **Fix — Observabilidade: violações FSM espúrias (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS — Deploy @1025.**
+**Fase atual (s110)**: **Fix/Reestruturação — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento — Deploy @1026.**
+
+**O que foi implementado agora**:
+- Causa raiz de "Nenhum registro encontrado" na Auditoria Visual: `ctrl_auditoria_listar`/`ctrl_auditoria_rollback`/`ctrl_auditoria_detectar_suspeitos` ([auditoria_controller.gs](gas/src/modules/admin/auditoria_controller.gs)) liam de uma aba "Auditoria" na planilha MASTER que nunca recebia dados — os 200+ eventos gravados por `AuditoriaService.registrar()` sempre foram para `auditoria_operacional.json` (via `AuditoriaStore`), nunca para a aba. As 3 funções foram reescritas para ler de `AuditoriaStore.consultar()`/`obterPorId()` (novo método).
+- `AuditoriaService._persistir()` não extraía `antes`/`depois` dos dados enviados pelos módulos (só `registrarMutacaoCritica` capturava) — rollback sempre falhava com "sem dados antes/depois". Corrigido para extrair `dados.antes/depois` ou `dados.before/after`.
+- Bug sistêmico: 6 arquivos (`ponto_controller.gs`, `ponto_engine.gs`, `holerite_repository.gs`, `reuniao_engine.gs`, `escuta_controller.gs`, `escuta_engine.gs`) chamavam `AuditoriaService.registrar(tipo, modulo, dados, email)` com 4 argumentos, mas a função só aceitava 3 — o e-mail do ator era descartado silenciosamente. `registrar()` agora aceita o 4º parâmetro `usuario` como fallback.
+- `_executarRollback`: mapa `MODULO_JSON` tinha 11 módulos, incluindo `reservas: 'reservas.json'` — **incorreto**, pois `reserva_repository.gs` usa Sheets via `DataGateway`, não esse JSON; o rollback "funcionava" mas escrevia num arquivo órfão sem efeito real. Renomeado para `MODULO_JSON_CANONICO`, com `reservas` removido e cada entrada verificada contra o repositório real (`criarJsonRepository`/`readJSON`+`modifyJSON` como fonte primária). Módulos fora do mapa agora retornam mensagem clara de "não suportado" em vez de falso sucesso.
+- Gaps reais de cobertura corrigidos: `HoleriteRepository.marcarPago` (sem auditoria), `AfdLayoutRepository.salvar/excluir` (sem auditoria).
+- Snapshots `antes`/`depois` adicionados em `pessoas_engine.gs` (`salvar` — COLABORADOR_CRIADO/ATUALIZADO) e `tarefa_engine.gs` (`criar`/`editar`) — primeiros módulos com rollback de fato funcional via Auditoria Visual.
+- `index.html` (`AuditoriaVisualUI._render`) — nova coluna "Mensagem" (humanamente legível) e destaque visual de eventos com `resultado:'falha'`.
+- Commitado também (sessão anterior, não revisado nesta sessão — ver commit `5216936`): idempotência FSM em férias/colaborador/tarefas/reservas + CSS da tabela "Uso por Módulo" + CSS mobile "Meu Perfil" + label "Oficializada" em férias.
+
+**O que NÃO foi feito (fora do escopo desta fase)**:
+- Apenas `pessoas` e `tarefas` têm snapshots antes/depois reais hoje — os outros 8 módulos em `MODULO_JSON_CANONICO` (reuniões, comunicação, ações, contratos, agentes, acervo, voluntários, parcerias) têm rollback **infraestruturalmente pronto**, mas precisam do mesmo padrão (`antes`/`depois` no payload do `_audit`/`registrar`) nos respectivos engines para o botão "Desfazer" aparecer.
+- Cobertura de auditoria não foi auditada fora de Pessoas/Ponto/Holerite/Encargos (essas resultaram já bem cobertas nos engines/repositories — a hipótese inicial de "Ponto/RH sem auditoria" estava errada, baseada em grep só nos controllers).
+
+**Fase anterior (s109)**: **Fix — Observabilidade: violações FSM espúrias (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS — Deploy @1025.**
 
 **O que foi implementado agora**:
 - Causa raiz das 11 violações `FSM_INVALID_TRANSITION` do dashboard de Observabilidade (hotspots `colaborador_status` 100% falha e `reservas` 100% falha):

@@ -135,6 +135,7 @@ var HoleriteRepository = (function () {
     h.pagoEm  = _ts();
     _salvar(lista);
     _sincronizarSheet(orgId, h);
+    AuditoriaService.registrar('HOLERITE_MARCADO_PAGO', 'holerite', { id: id }, email);
     return h;
   }
 

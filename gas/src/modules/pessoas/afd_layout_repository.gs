@@ -190,9 +190,11 @@ var AfdLayoutRepository = (function() {
   function salvar(orgId, dados) {
     if (dados.builtin) throw new Error('Layouts builtin não podem ser editados. Use duplicar() para criar uma variante.');
     var id = dados.id || gerarId('LAYOUT');
+    var eraNovo = false;
     modifyJSON(ARQUIVO, function(lista) {
       if (!Array.isArray(lista)) lista = [];
       var idx = lista.findIndex(function(l){ return l.id === id; });
+      eraNovo = idx < 0;
       var reg = Object.assign({}, dados, {
         id:           id,
         orgId:        orgId,
@@ -202,6 +204,10 @@ var AfdLayoutRepository = (function() {
       else lista.push(reg);
       return lista;
     });
+    try {
+      AuditoriaService.registrar(eraNovo ? 'AFD_LAYOUT_CRIADO' : 'AFD_LAYOUT_ATUALIZADO', 'ponto',
+        { id: id, nome: dados.nome || '' });
+    } catch(_) {}
     return id;
   }
 
@@ -212,6 +218,7 @@ var AfdLayoutRepository = (function() {
     modifyJSON(ARQUIVO, function(lista) {
       return (lista || []).filter(function(l){ return l.id !== id; });
     });
+    try { AuditoriaService.registrar('AFD_LAYOUT_EXCLUIDO', 'ponto', { id: id, nome: layout.nome || '' }); } catch(_) {}
     return { ok: true };
   }
 

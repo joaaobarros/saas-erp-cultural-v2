@@ -20,9 +20,9 @@ var PRIORIDADE_TAREFA = Object.freeze({
 });
 
 var _TRANSICOES_TAREFA = {
-  pendente:      ['em_andamento', 'bloqueada', 'cancelada'],
+  pendente:      ['em_andamento', 'bloqueada', 'cancelada', 'concluida'],
   em_andamento: ['concluida', 'bloqueada', 'cancelada'],
-  bloqueada:    ['em_andamento', 'cancelada'],
+  bloqueada:    ['em_andamento', 'cancelada', 'concluida'],
   concluida:    [],
   cancelada:    []
 };
@@ -157,7 +157,7 @@ var TarefaEngine = (function () {
     tarefa = TarefaRepository.salvar(tarefa.orgId, tarefa);
     _emitir(SystemEventTypes.TASK_CREATED || 'TASK_CREATED', tarefa, emailCriador);
     _emitir(SystemEventTypes.TAREFA_CRIADA || 'TAREFA_CRIADA', tarefa, emailCriador, { responsavel: tarefa.responsavel });
-    _registrarAuditoria('TAREFA_CRIADA', tarefa, emailCriador);
+    _registrarAuditoria('TAREFA_CRIADA', tarefa, emailCriador, { depois: tarefa });
     return tarefa;
   }
 
@@ -165,6 +165,7 @@ var TarefaEngine = (function () {
     var orgId = _orgId();
     var tarefa = TarefaRepository.buscarPorId(orgId, id);
     if (!tarefa) throw new Error('Tarefa nao encontrada: ' + id);
+    var snapshotAntes = JSON.parse(JSON.stringify(tarefa));
 
     var editaveis = ['titulo', 'descricao', 'prioridade', 'responsavel', 'executores',
       'setor', 'modulo', 'tipo', 'prazo', 'acaoId', 'idAcao', 'processoId',
@@ -197,7 +198,7 @@ var TarefaEngine = (function () {
 
     tarefa = TarefaRepository.salvar(orgId, tarefa);
     _emitir(SystemEventTypes.TASK_UPDATED || 'TASK_UPDATED', tarefa, emailEditor, { alteracoes: alteracoes });
-    _registrarAuditoria('TAREFA_ATUALIZADA', tarefa, emailEditor, { alteracoes: alteracoes });
+    _registrarAuditoria('TAREFA_ATUALIZADA', tarefa, emailEditor, { alteracoes: alteracoes, antes: snapshotAntes, depois: tarefa });
     return tarefa;
   }
 

@@ -142,6 +142,7 @@ var PessoasEngine = (function () {
 
   function _transitarColaborador(colaborador, novoStatus, emailOperador) {
     var atual = colaborador.status || 'ativo';
+    if (atual === novoStatus) return; // já está no status desejado — no-op idempotente
     if (typeof FsmGuardian !== 'undefined') {
       FsmGuardian.assertValida('colaborador_status', atual, novoStatus);
     }
@@ -155,6 +156,7 @@ var PessoasEngine = (function () {
 
   function _transitarFerias(ferias, novoStatus, emailOperador, dados) {
     var atual = ferias.status || 'pendente';
+    if (atual === novoStatus) return ferias; // já está no status desejado — no-op idempotente
     if (typeof FsmGuardian !== 'undefined') {
       FsmGuardian.assertValida('ferias_status', atual, novoStatus);
     }
@@ -315,6 +317,9 @@ var PessoasEngine = (function () {
       throw new Error('Nome do colaborador é obrigatório.');
     }
 
+    // Snapshot pré-escrita — habilita rollback via Auditoria Visual (módulo 'pessoas')
+    var antes = dados.id ? ColaboradorRepository.buscarPorId(orgId, dados.id) : null;
+
     // Normalizar e-mails
     if (dados.emailInstitucional)
       dados.emailInstitucional = String(dados.emailInstitucional).toLowerCase().trim();
@@ -326,7 +331,10 @@ var PessoasEngine = (function () {
 
     var resultado = ColaboradorRepository.salvar(orgId, dados);
     var evento    = resultado.isNovo ? 'COLABORADOR_CRIADO' : 'COLABORADOR_ATUALIZADO';
-    _audit(evento, { id: resultado.id, nome: dados.nome, operador: emailOperador || '' });
+    _audit(evento, {
+      id: resultado.id, nome: dados.nome, operador: emailOperador || '',
+      antes: antes, depois: dados
+    });
     _emit(SystemEventTypes ? SystemEventTypes.COLABORADOR_ATUALIZADO : evento, {
       idColaborador: resultado.id, orgId: orgId, operador: emailOperador || ''
     });

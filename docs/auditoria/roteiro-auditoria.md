@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s108 @1024 (Pessoas/RH vínculo 3 vias + labels setor) · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s110 @1026 (Auditoria Visual: mismatch JSON↔Sheet, rollback, bug do 4º argumento) · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s109 @1025 — Observabilidade: FSM espúria (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS
+### Estado atual: s110 @1026 — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1026 | s110 | Ver `AUD-01`/`AUD-02`/`AUD-03`/`AUD-04` abaixo (seção Admin). Resumo: `ctrl_auditoria_listar/rollback/detectar_suspeitos` reescritos para ler do `AuditoriaStore` (JSON) em vez da aba "Auditoria" (Sheet, sempre vazia); `_persistir()` passa a extrair `antes`/`depois`; mapa de rollback corrigido (`reservas` removido por apontar a arquivo órfão); bug do 4º argumento (`email`) descartado em `AuditoriaService.registrar()` corrigido em 6 arquivos; snapshots antes/depois adicionados em `pessoas_engine.gs` e `tarefa_engine.gs`; gaps reais de cobertura corrigidos em `HoleriteRepository.marcarPago` e `AfdLayoutRepository`. |
+
+### Estado atual (fase anterior): s109 @1025 — Observabilidade: FSM espúria (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
@@ -332,6 +338,10 @@
 | ~~OBS-01~~ | Observabilidade | ✅ CORRIGIDO @1025 — tabela "Uso por Módulo" usava classes CSS órfãs `table-lista`/`table-responsive` (sem nenhuma regra em todo o projeto), renderizando sem padding/alinhamento/zebra; trocada para `tabela`/`table-wrap` (padrão usado em todo o resto do sistema) + larguras de coluna explícitas | — |
 | ~~OBS-02~~ | Observabilidade | ✅ CORRIGIDO @1025 — hotspots `colaborador_status` (100% falha, 9/9) e `reservas` (100% falha, 1/1) no ranking de módulos eram causados por violações FSM espúrias (`ativo→ativo`, `ferias→ferias`, `confirmado→confirmado`) geradas por chamadas idempotentes sem guarda — não havia bug de runtime nesses domínios. Ver `PES-17`/`ESP-31` | — |
 | ~~PES-17~~ | Pessoas — Férias | ✅ CORRIGIDO @1025 — `concluirFerias`(linha 548)/`aprovarFerias`(linha 509) chamavam `mudarStatus` do colaborador sem checar status atual; conclusão automática de férias vencidas (`autoConcluirFeriasVencidas`, ator `sistema`) gerava `ativo→ativo` quando o colaborador nunca havia sido movido para `ferias` (data de início futura). `_transitarColaborador`/`_transitarFerias` agora são no-op idempotente quando `atual === novoStatus` | — |
+| ~~AUD-01~~ | Admin — Auditoria Visual | ✅ CORRIGIDO @1026 — tela sempre mostrava "Nenhum registro encontrado": `ctrl_auditoria_listar`/`ctrl_auditoria_rollback`/`ctrl_auditoria_detectar_suspeitos` liam de uma aba "Auditoria" na planilha MASTER que nunca recebia dados; os 200+ eventos de `AuditoriaService.registrar()` sempre foram gravados em `auditoria_operacional.json` via `AuditoriaStore`. As 3 funções foram reescritas para ler do `AuditoriaStore` | — |
+| ~~AUD-02~~ | Admin — Auditoria Visual | ✅ CORRIGIDO @1026 — rollback sempre falhava com "sem dados before/after": `AuditoriaService._persistir()` não extraía `antes`/`depois` do payload (só `registrarMutacaoCritica` capturava). Corrigido para extrair `dados.antes/depois` ou `dados.before/after`. Mapa de módulos (`MODULO_JSON_CANONICO`) corrigido: `reservas` removido por apontar a um `reservas.json` órfão (módulo real usa Sheets via `DataGateway`) — rollback "funcionava" mas não tinha efeito real; módulos fora do mapa agora retornam erro claro em vez de falso sucesso | — |
+| ~~AUD-03~~ | Sistema — Auditoria | ✅ CORRIGIDO @1026 — bug sistêmico: 6 arquivos chamavam `AuditoriaService.registrar(tipo, modulo, dados, email)` com 4 argumentos, mas a função só aceitava 3 — o e-mail do ator era descartado silenciosamente, perdendo rastreabilidade de "quem fez" mesmo em eventos já auditados. `registrar()` agora aceita o 4º parâmetro como fallback | — |
+| AUD-04 | Admin — Auditoria Visual | Rollback com snapshot antes/depois real só existe em `pessoas` (colaboradores) e `tarefas`; os outros 8 módulos de `MODULO_JSON_CANONICO` (reuniões, comunicação, ações, contratos, agentes, acervo, voluntários, parcerias) têm a infraestrutura pronta mas precisam do mesmo padrão nos engines para o botão "Desfazer" aparecer | 🟡 |
 | PFANTASMA | Admin | "Perfis Fantasma" solicitado mas não implementado | 🔴 |
 | PREVIEW-01 | Admin | Preview de Primeiro Acesso com comportamento incerto | 🟡 |
 | PES-02 | Pessoas | Email não integrado com base de usuários | 🔴 |

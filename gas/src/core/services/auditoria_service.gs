@@ -56,9 +56,11 @@ var AuditoriaService = (function () {
         acao:         (dados && (dados.operacao || dados.acao || dados.action)) || '',
         entidadeId:   (dados && (dados.entidadeId || dados.id || dados.reservaId || dados.contratoId)) || '',
         entidadeTipo: (dados && (dados.entidade   || dados.entidadeTipo || dados.tipo)) || '',
-        usuario:      (dados && (dados.usuario    || dados.email || dados.ator)) || '',
+        usuario:      (dados && (dados.usuario    || dados.email || dados.ator || dados.operador)) || '',
         resultado:    resultado || 'sucesso',
         mensagem:     (dados && (dados.msg || dados.mensagem)) || tipo,
+        antes:        (dados && (dados.antes  || dados.before)) || null,
+        depois:       (dados && (dados.depois || dados.after))  || null,
         contexto:     dados || null
       });
     } catch (e) {
@@ -75,11 +77,17 @@ var AuditoriaService = (function () {
    * @param {string} tipoEvento — constante SystemEventTypes
    * @param {string} modulo     — módulo de origem
    * @param {Object} dados      — payload do evento
+   * @param {string} [usuario]  — email do ator; usado quando não vem embutido em `dados`
+   *                              (vários call sites históricos passam o email aqui)
    */
-  function registrar(tipoEvento, modulo, dados) {
+  function registrar(tipoEvento, modulo, dados, usuario) {
     try { Logger.info(modulo, tipoEvento, dados); } catch (e) {}
-    _emitirEvento(tipoEvento, modulo, dados);
-    _persistir(tipoEvento, modulo, dados, 'sucesso');
+    var payload = dados || {};
+    if (usuario && !payload.usuario && !payload.email && !payload.ator && !payload.operador) {
+      payload = typeof Object.assign === 'function' ? Object.assign({ usuario: usuario }, payload) : payload;
+    }
+    _emitirEvento(tipoEvento, modulo, payload);
+    _persistir(tipoEvento, modulo, payload, 'sucesso');
   }
 
   /**

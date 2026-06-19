@@ -235,11 +235,30 @@ var AuditoriaStore = (function () {
     }
   }
 
+  /**
+   * Busca um evento específico pelo id (AUD_...).
+   * @param {string} id
+   * @returns {Object|null}
+   */
+  function obterPorId(id) {
+    try {
+      var lista = readJSON(_FILE);
+      if (!Array.isArray(lista)) return null;
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === id) return lista[i];
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   return {
-    registrar:         registrar,
-    consultar:         consultar,
-    obterEstatisticas: obterEstatisticas,
-    obterModulosAtivos: obterModulosAtivos
+    registrar:          registrar,
+    consultar:          consultar,
+    obterEstatisticas:  obterEstatisticas,
+    obterModulosAtivos: obterModulosAtivos,
+    obterPorId:         obterPorId
   };
 
 })();

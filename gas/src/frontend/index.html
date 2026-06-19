@@ -1037,6 +1037,50 @@ body {
   .hol-totais { grid-template-columns: 1fr !important; }
   .hol-ch-header { grid-template-columns: 1fr !important; }
   .grid-3 { grid-template-columns: 1fr !important; }
+
+  /* Meu Perfil: cabeçalho fixo + cards em carrossel horizontal (swipe) */
+  #view-perfil .perfil-header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg);
+    margin: -16px -16px 0; padding: 16px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px !important;
+  }
+  #view-perfil .perfil-header #perfil-foto-ini,
+  #view-perfil .perfil-header #perfil-foto-img,
+  #view-perfil .perfil-header > div:first-child {
+    width: 56px !important; height: 56px !important;
+  }
+  #view-perfil .perfil-header #perfil-nome-display { font-size: 17px !important; }
+  #view-perfil .perfil-header #perfil-btn-recarregar { font-size: 0; padding: 6px !important; }
+  #view-perfil .perfil-header #perfil-btn-recarregar .ms { font-size: 18px !important; }
+  #view-perfil .perfil-msg { margin-top: 14px !important; }
+  #view-perfil .perfil-grid {
+    display: flex !important;
+    grid-template-columns: none !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 0 !important;
+    margin-top: 14px !important;
+    padding-bottom: 4px;
+  }
+  #view-perfil .perfil-grid .card {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    box-sizing: border-box;
+    margin: 0 !important;
+    max-height: calc(100vh - 268px);
+    overflow-y: auto;
+  }
+  #view-perfil .perfil-col-edit { display: contents; }
+  #view-perfil .perfil-acoes {
+    position: sticky; bottom: 0; z-index: 5;
+    background: var(--bg);
+    margin: 0 -16px !important; padding: 12px 16px !important;
+    border-top: 1px solid var(--border);
+    justify-content: center !important;
+  }
 }
 
 /* ── Tabelas sem wrapper: overflow horizontal nativo ─────────────────── */
@@ -1068,6 +1112,9 @@ body {
   #home-banner { flex-direction: column; gap: 8px; }
   /* Topbar: padding mínimo */
   #topbar { padding: 0 10px; gap: 6px; }
+  /* Meu Perfil: ajusta bleed do cabeçalho/ações ao padding reduzido de #conteudo */
+  #view-perfil .perfil-header { margin: -12px -12px 0; padding: 12px 12px 14px; }
+  #view-perfil .perfil-acoes { margin: 0 -12px !important; padding: 12px !important; }
 }
 
 /* ── Redução de movimento (acessibilidade) ───────────────────────────── */
@@ -6741,15 +6788,15 @@ select.form-control { cursor: pointer; }
               <span class="ms" style="font-size:16px;vertical-align:middle;margin-right:4px;">widgets</span>
               Uso por Módulo
             </h3>
-            <div class="table-responsive">
-              <table class="table-lista" id="sm-tabela-modulos">
+            <div class="table-wrap">
+              <table class="tabela" id="sm-tabela-modulos">
                 <thead>
                   <tr>
-                    <th>Módulo</th>
-                    <th style="text-align:right;">Total Eventos</th>
-                    <th style="text-align:right;">Falhas</th>
-                    <th style="text-align:right;">Taxa de Erro</th>
-                    <th>Atividade</th>
+                    <th style="width:26%;">Módulo</th>
+                    <th style="width:14%;text-align:right;white-space:nowrap;">Total Eventos</th>
+                    <th style="width:10%;text-align:right;white-space:nowrap;">Falhas</th>
+                    <th style="width:14%;text-align:right;white-space:nowrap;">Taxa de Erro</th>
+                    <th style="width:36%;">Atividade</th>
                   </tr>
                 </thead>
                 <tbody id="sm-tabela-modulos-body"></tbody>
@@ -9957,7 +10004,7 @@ select.form-control { cursor: pointer; }
 
       <!-- ═══════════ MEU PERFIL ═══════════ -->
       <div id="view-perfil" class="view">
-        <div class="page-header" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <div class="page-header perfil-header" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
           <div style="position:relative;width:88px;height:88px;flex-shrink:0;cursor:pointer;" onclick="PerfilUI.clicarFoto()" title="Alterar foto de perfil">
             <div class="user-avatar" id="perfil-foto-ini" style="width:88px;height:88px;font-size:32px;font-weight:700;border:3px solid var(--color-primary);"></div>
             <img id="perfil-foto-img" src="" alt="foto" style="display:none;position:absolute;inset:0;width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);">
@@ -9974,7 +10021,9 @@ select.form-control { cursor: pointer; }
           <input type="file" id="perfil-foto-input" accept="image/*" style="display:none;" onchange="PerfilUI.onFotoSelecionada(this)">
         </div>
 
-        <div style="display:grid;grid-template-columns:260px 1fr;gap:20px;margin-top:20px;align-items:start;">
+        <div id="perfil-msg" class="perfil-msg" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin:14px 0 0;"></div>
+
+        <div class="perfil-grid" style="display:grid;grid-template-columns:260px 1fr;gap:20px;margin-top:20px;align-items:start;">
 
           <!-- Coluna esquerda — dados somente leitura (gerenciados pelo RH) -->
           <div class="card">
@@ -9988,9 +10037,7 @@ select.form-control { cursor: pointer; }
           </div>
 
           <!-- Coluna direita — dados editáveis pelo próprio colaborador -->
-          <div>
-            <div id="perfil-msg" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>
-
+          <div class="perfil-col-edit">
             <div class="card" style="margin-bottom:14px;">
               <div class="card-header"><span class="card-title"><span class="ms ms-sm">badge</span> Apresentação</span></div>
               <div style="padding:12px 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -10200,12 +10247,13 @@ select.form-control { cursor: pointer; }
               </div>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;padding-bottom:24px;">
-              <button class="btn btn-ghost" id="perfil-btn-descartar" onclick="BtnGuard.wrap('perfil-btn-descartar','Carregando…',PerfilUI.carregar)"><span class="ms ms-sm">cancel</span> Descartar</button>
-              <button class="btn btn-primario" id="perfil-btn-salvar" onclick="BtnGuard.wrap('perfil-btn-salvar','Salvando…',PerfilUI.salvar)"><span class="ms ms-sm">save</span> Salvar alterações</button>
-            </div>
           </div><!-- /coluna direita -->
 
+        </div><!-- /perfil-grid -->
+
+        <div class="perfil-acoes" style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;padding-bottom:24px;">
+          <button class="btn btn-ghost" id="perfil-btn-descartar" onclick="BtnGuard.wrap('perfil-btn-descartar','Carregando…',PerfilUI.carregar)"><span class="ms ms-sm">cancel</span> Descartar</button>
+          <button class="btn btn-primario" id="perfil-btn-salvar" onclick="BtnGuard.wrap('perfil-btn-salvar','Salvando…',PerfilUI.salvar)"><span class="ms ms-sm">save</span> Salvar alterações</button>
         </div>
       </div><!-- /view-perfil -->
 
@@ -32640,9 +32688,9 @@ var SistemaMetricasUI = (function() {
           : '<span class="badge badge-success">0%</span>';
       return '<tr>' +
                '<td><code style="font-size:12px;">' + escaparHtml(m.modulo) + '</code></td>' +
-               '<td style="text-align:right;font-weight:600;">' + m.total + '</td>' +
-               '<td style="text-align:right;">' + m.falhas + '</td>' +
-               '<td style="text-align:right;">' + taxaBadge + '</td>' +
+               '<td style="text-align:right;font-weight:600;white-space:nowrap;">' + m.total + '</td>' +
+               '<td style="text-align:right;white-space:nowrap;">' + m.falhas + '</td>' +
+               '<td style="text-align:right;white-space:nowrap;">' + taxaBadge + '</td>' +
                '<td style="min-width:100px;">' +
                  '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">' +
                    '<div style="height:100%;width:' + pct + '%;background:' + corBar + ';border-radius:3px;transition:width .4s;"></div>' +
@@ -36616,23 +36664,26 @@ var AuditoriaVisualUI = (function() {
   function _render() {
     var el = document.getElementById('aud-lista-container');
     if (!_registros.length) { el.innerHTML = '<p class="muted-text">Nenhum registro encontrado.</p>'; return; }
-    var html = '<div style="overflow-x:auto;"><div style="min-width:700px;">';
+    var html = '<div style="overflow-x:auto;"><div style="min-width:900px;">';
     html += '<div style="display:flex;gap:10px;padding:6px 0;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;">' +
-      '<div style="width:130px;">Data/Hora</div>' +
-      '<div style="width:160px;">Evento</div>' +
-      '<div style="width:100px;">Módulo</div>' +
-      '<div style="flex:1;">Email</div>' +
+      '<div style="width:110px;">Data/Hora</div>' +
+      '<div style="width:150px;">Evento</div>' +
+      '<div style="width:90px;">Módulo</div>' +
+      '<div style="width:170px;">Email</div>' +
+      '<div style="flex:1;">Mensagem</div>' +
       '<div style="width:80px;">Ação</div>' +
     '</div>';
     _registros.forEach(function(r) {
       var cls = _eventoClass(r.evento);
       var id  = JSON.stringify(r.id).replace(/"/g,"'");
       var temRollback = r.before || r.after;
+      var falha = r.resultado === 'falha';
       html += '<div class="aud-row">' +
-        '<div style="width:130px;flex-shrink:0;color:var(--muted);">' + _fmtTs(r.criadoEm) + '</div>' +
-        '<div style="width:160px;flex-shrink:0;"><span class="aud-evento-chip ' + cls + '">' + escaparHtml((r.evento||'').slice(0,22)) + '</span></div>' +
-        '<div style="width:100px;flex-shrink:0;color:var(--muted);font-size:12px;">' + escaparHtml(r.modulo||'') + '</div>' +
-        '<div style="flex:1;font-size:13px;">' + escaparHtml(r.email||'') + '</div>' +
+        '<div style="width:110px;flex-shrink:0;color:var(--muted);">' + _fmtTs(r.criadoEm) + '</div>' +
+        '<div style="width:150px;flex-shrink:0;"><span class="aud-evento-chip ' + cls + '">' + escaparHtml((r.evento||'').slice(0,22)) + '</span></div>' +
+        '<div style="width:90px;flex-shrink:0;color:var(--muted);font-size:12px;">' + escaparHtml(r.modulo||'') + '</div>' +
+        '<div style="width:170px;flex-shrink:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escaparHtml(r.email||'') + '</div>' +
+        '<div style="flex:1;font-size:12px;color:' + (falha ? '#dc2626' : 'var(--text2)') + ';">' + escaparHtml(r.mensagem||'') + '</div>' +
         '<div style="width:80px;flex-shrink:0;">' +
           (temRollback ? '<button class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 6px;" ' +
             'onclick="AuditoriaVisualUI.confirmarRollback(' + id + ')" data-bg-skip="1">↩ Desfazer</button>' : '') +
@@ -40373,7 +40424,7 @@ var RhUI = (function() {
         vencido:      { label:'Prazo legal expirado', cor:'#b91c1c', bg:'#fff1f2', desc:'A janela para gozo encerrou. Dias pendentes serão pagos em dobro na rescisão (CLT art. 137).' },
         gozado:       { label:'Férias integralmente gozadas', cor:'#15803d', bg:'#f0fdf4', desc:'' }
       };
-      var _ferLabel = { concluido:'Realizada', aprovado:'Aprovada', pendente:'Pendente', cancelado:'Cancelada', recusado:'Recusada', pendente_ajuste:'Em ajuste' };
+      var _ferLabel = { concluido:'Oficializada', aprovado:'Aprovada', pendente:'Pendente', cancelado:'Cancelada', recusado:'Recusada', pendente_ajuste:'Em ajuste' };
       var _ferCor   = { concluido:'#15803d', aprovado:'#1d4ed8', pendente:'#b45309', cancelado:'#6b7280', recusado:'#b91c1c', pendente_ajuste:'#7c3aed' };
 
       var MAX = 4;
