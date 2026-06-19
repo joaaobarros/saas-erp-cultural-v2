@@ -485,6 +485,10 @@ var ReservaEngine = (function () {
     var reserva = ReservaRepository.buscarPorId(id, orgId);
     if (!reserva) throw new Error('Reserva não encontrada: ' + id);
 
+    if (reserva.status === novoStatus) {
+      return { id: id, de: reserva.status, para: novoStatus }; // já está no status desejado — no-op idempotente
+    }
+
     FsmGuardian.assertValida('reservas', reserva.status, novoStatus, id, autor);
 
     ReservaRepository.atualizarStatus(id, novoStatus, orgId, motivo || '');

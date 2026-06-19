@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s107 @1023 (Reuniões: ciclo/lote + Calendar explícito + tarefas imediatas) · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s108 @1024 (Pessoas/RH vínculo 3 vias + labels setor) · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s108 @1024 — Pessoas/RH vínculo 3 vias + labels setor
+### Estado atual: s109 @1025 — Observabilidade: FSM espúria (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1025 | s109 | `pessoas_engine.gs`: `_transitarColaborador`/`_transitarFerias` ganham guarda de idempotência (no-op se já no status alvo) — elimina `ativo→ativo` e `ferias→ferias` geradas por `concluirFerias`/`aprovarFerias`. `reserva_engine.gs`: mesma guarda em `mudarStatus` — elimina `confirmado→confirmado` por duplo-clique. `tarefa_engine.gs`: `_TRANSICOES_TAREFA` passa a aceitar `pendente→concluida` e `bloqueada→concluida`, alinhando a FSM ao botão "Concluir" que a UI já exibia para qualquer tarefa ativa. `index.html`: tabela "Uso por Módulo" trocou classes órfãs `table-lista`/`table-responsive` (sem CSS definido) por `tabela`/`table-wrap` (padrão estilizado do resto do sistema) + larguras de coluna explícitas. |
+
+### Estado atual (fase anterior): s108 @1024 — Pessoas/RH vínculo 3 vias + labels setor
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
@@ -322,6 +328,10 @@
 | ~~TAR-03~~ | Tarefas | ✅ CORRIGIDO @654 — form ganha campos Prazo + Vínculo (select tipo: Ação/Reserva/Contrato; select ID dinâmico carregado por `atualizarVinculo()` com cache). `criar()` passa `acaoId`/`reservaId`/`contratoId` ao backend. Engine + repository recebem os dois novos campos (`reservaId`, `contratoId`). Lista exibe badges de vínculo (Ação/Reserva/Contrato) e prazo. Header migrado para `view-header` DS. | — |
 | ~~TAR-04~~ | Tarefas | ✅ CORRIGIDO — `TarefaEngine.verificarPrazos()` + trigger diário 08:00 (`criarTriggerVerificacaoPrazos()`); `TASK_DELAYED` notifica responsável por e-mail (uma vez por tarefa, via `atrasoNotificadoEm`); `TAREFA_CRIADA` notifica responsável ao ser atribuído por outra pessoa | — |
 | TAR-05 | Tarefas | Sem alertas para vencimento | 🟡 |
+| ~~TAR-06~~ | Tarefas | ✅ CORRIGIDO @1025 — FSM `_TRANSICOES_TAREFA` não permitia `pendente→concluida` nem `bloqueada→concluida`, mas o botão "Concluir" da UI era exibido para qualquer tarefa ativa; usuário via "Erro ao concluir tarefa." ao clicar. FSM ampliada para refletir o comportamento real da UI | — |
+| ~~OBS-01~~ | Observabilidade | ✅ CORRIGIDO @1025 — tabela "Uso por Módulo" usava classes CSS órfãs `table-lista`/`table-responsive` (sem nenhuma regra em todo o projeto), renderizando sem padding/alinhamento/zebra; trocada para `tabela`/`table-wrap` (padrão usado em todo o resto do sistema) + larguras de coluna explícitas | — |
+| ~~OBS-02~~ | Observabilidade | ✅ CORRIGIDO @1025 — hotspots `colaborador_status` (100% falha, 9/9) e `reservas` (100% falha, 1/1) no ranking de módulos eram causados por violações FSM espúrias (`ativo→ativo`, `ferias→ferias`, `confirmado→confirmado`) geradas por chamadas idempotentes sem guarda — não havia bug de runtime nesses domínios. Ver `PES-17`/`ESP-31` | — |
+| ~~PES-17~~ | Pessoas — Férias | ✅ CORRIGIDO @1025 — `concluirFerias`(linha 548)/`aprovarFerias`(linha 509) chamavam `mudarStatus` do colaborador sem checar status atual; conclusão automática de férias vencidas (`autoConcluirFeriasVencidas`, ator `sistema`) gerava `ativo→ativo` quando o colaborador nunca havia sido movido para `ferias` (data de início futura). `_transitarColaborador`/`_transitarFerias` agora são no-op idempotente quando `atual === novoStatus` | — |
 | PFANTASMA | Admin | "Perfis Fantasma" solicitado mas não implementado | 🔴 |
 | PREVIEW-01 | Admin | Preview de Primeiro Acesso com comportamento incerto | 🟡 |
 | PES-02 | Pessoas | Email não integrado com base de usuários | 🔴 |
@@ -381,6 +391,7 @@
 | ESP-28b | Infraestrutura — Pós-evento | Edição posterior e histórico de alterações ausentes | 🔴 |
 | ESP-29 | Infraestrutura — Horário Local | UX validação visual dinâmica conforme espaço selecionado | 🟡 |
 | ~~ESP-30~~ | Infraestrutura — Reserva | ✅ IMPLEMENTADO @1019 — vínculo manual (opcional) com Google Calendar: botão "Vincular ao Calendar" no detalhe da reserva; usuário escolhe convidar todos os envolvidos (`responsavel`/`coResponsavel`/`criadoPor`) ou selecionar específicos + e-mails extras; sincroniza ao editar, remove ao cancelar. | — |
+| ~~ESP-31~~ | Infraestrutura — Reserva | ✅ CORRIGIDO @1025 — `reserva_engine.gs.mudarStatus` chamava `FsmGuardian.assertValida` sem checar se a reserva já estava no status alvo, gerando `confirmado→confirmado` em duplo-clique/reenvio da ação "Confirmar"; agora retorna no-op idempotente quando `reserva.status === novoStatus` | — |
 | ~~ADM-01~~ | Admin | ✅ CORRIGIDO @861 — `_carregarPendentes()` recebe error callback; DOM atualizado com mensagem de erro em vez de "⏳ Carregando…" eterno | — |
 | ADM-02 | Admin | Permissões por módulo sem granularidade por funcionalidade | 🔴 |
 | ADM-03 | Admin | Campo Setor no modal "Editar usuário" | 🟡 |

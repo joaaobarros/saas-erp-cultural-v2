@@ -39,7 +39,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s108)**: **Fix — Pessoas/RH: vínculo Usuário ↔ Colaborador ↔ Meu Perfil + labels de setor — Deploy @1024.**
+**Fase atual (s109)**: **Fix — Observabilidade: violações FSM espúrias (férias/colaborador/tarefas/reservas) + tabela "Uso por Módulo" sem CSS — Deploy @1025.**
+
+**O que foi implementado agora**:
+- Causa raiz das 11 violações `FSM_INVALID_TRANSITION` do dashboard de Observabilidade (hotspots `colaborador_status` 100% falha e `reservas` 100% falha):
+  - `pessoas_engine.gs` — `_transitarColaborador`/`_transitarFerias` ganham guarda de idempotência (`if (atual === novoStatus) return`): `aprovarFerias`/`concluirFerias` chamavam `mudarStatus` do colaborador sem checar se ele já estava no status alvo, gerando `ativo → ativo` (conclusão automática de férias vencidas) e `ferias → ferias`.
+  - `reserva_engine.gs` — `mudarStatus` ganha a mesma guarda de idempotência; evita `confirmado → confirmado` em duplo-clique/reenvio de ação.
+  - `tarefa_engine.gs` — `_TRANSICOES_TAREFA` passa a aceitar `pendente → concluida` e `bloqueada → concluida`: o botão "Concluir" do frontend (`index.html`, `.btn-concluir-tarefa`) já era exibido para qualquer tarefa ativa, não só `em_andamento`; a FSM estava mais restritiva que a UI e gerava erro real para o usuário, não só ruído de observabilidade.
+- `index.html` — tabela "Uso por Módulo" (Observabilidade) usava classes CSS órfãs (`table-lista`/`table-responsive`, sem nenhuma regra definida em todo o projeto), por isso renderizava sem padding/alinhamento/zebra — daí o desalinhamento visual das colunas. Trocado para o par `tabela`/`table-wrap`, já estilizado e usado em todos os outros módulos (Agentes, Voluntários etc.). Larguras de coluna explícitas adicionadas (`Módulo` 26%, `Total Eventos`/`Falhas`/`Taxa de Erro` 14/10/14% com `white-space:nowrap`, `Atividade` 36%).
+
+**Verificação feita**:
+- Leitura cruzada de `fsm_guardian.gs` + cada `*_engine.gs` envolvido confirmando que as 11 violações (9 `colaborador_status` + 1 `tarefas` + 1 `reservas`) batem exatamente com os 3 pontos corrigidos.
+- Nenhum outro ponto do JS referencia as classes `table-lista`/`table-responsive` (só usadas nessa tabela, busca por ID confirma).
+
+**Fase anterior (s108)**: **Fix — Pessoas/RH: vínculo Usuário ↔ Colaborador ↔ Meu Perfil + labels de setor — Deploy @1024.**
 
 **O que foi implementado agora**:
 - `index.html` — `_badgeSetor` sem ícone e com atribuição de cores sem repetição por estouro da paleta fixa; fallback HSL para setores acima da paleta base.
