@@ -39,11 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1028.**
+**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1029.**
 
 **Ajuste pós-feedback do usuário (mesma fase s111, @1028)**:
 - @1027 havia introduzido, além do cabeçalho fixo pedido, um redesenho visual não solicitado em Meu Perfil mobile (avatar reduzido a 56px, botão "Recarregar" virou ícone sem texto, barra de ações fixada no rodapé com bleed de borda, cards com `max-height`/scrollbar interna). Usuário pediu para manter o padrão visual original, só com o cabeçalho fixo.
 - Revertido: avatar/nome/botão voltam ao tamanho original; barra de Salvar/Descartar volta ao fluxo normal (não fixa, sem bleed); cards voltam à altura natural (sem `max-height`/scroll interno). Mantido apenas `#view-perfil .perfil-header { position:sticky; top:0; z-index:5; background:var(--bg); }` (o pedido original) e o swipe horizontal entre cards via `.perfil-grid`/`scroll-snap`, que já era o comportamento visível nos prints originais do usuário (grid de 2 colunas sem coalescer em mobile).
+
+**Ajuste 2 pós-feedback do usuário (mesma fase s111, @1029)**:
+- @1028 ainda fazia CADA card (Apresentação, Contato, Contato de Emergência, Endereço, Diversidade, Saúde, Vestuário) virar sua própria página de swipe horizontal, via `display:contents` em `.perfil-col-edit` (que promovia os cards-netos a itens diretos do flex row). Usuário esclareceu: quer só **2 colunas** no swipe — "Dados Profissionais" e "Dados Pessoais" (a segunda sendo a coluna inteira, com os cards empilhados verticalmente dentro dela, como sempre foi).
+- Removido o `display:contents`; `.perfil-col-edit` volta a ser um bloco normal (cards filhos empilham verticalmente dentro dele, no fluxo de sempre) e passa a ser, ele mesmo, o 2º item do flex row (`flex:0 0 100%; scroll-snap-align:start`), exatamente espelhando a estrutura original de 2 colunas do grid desktop (`260px 1fr`).
 
 **O que foi implementado agora**:
 - Auditoria sistemática de toda a `index.html` (46k+ linhas) à procura de grids/larguras fixas que não colapsam em telas de celular, usando o padrão já estabelecido pelo sistema (regras `!important` nos `@media` existentes, escopadas por classe).

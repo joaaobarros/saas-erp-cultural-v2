@@ -1,15 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s111 @1028 (Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs; Meu Perfil header fixo sem alterar visual) · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s111 @1029 (Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs; Meu Perfil header fixo com 2 colunas de swipe) · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s111 @1028 — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs
+### Estado atual: s111 @1029 — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
 | @1027 | s111 | Meu Perfil: cabeçalho fixo + cards em carrossel horizontal (swipe) em mobile. TaskHub (form "Nova Tarefa"): grids `minmax()` que somavam >540px colapsam para 1 coluna (`.tf-form-grid`). RH/Perfil (grids de endereço CEP/Logradouro/Número/UF): colunas fixas colapsam para 1 coluna (`.rh-endereco-grid`, 3 pontos). Classes CSS órfãs sem nenhuma definição em todo o arquivo corrigidas: `.table-wrap` (6 usos) e `.data-table` (4 usos, painéis admin/Observabilidade) — mesmo padrão de bug já visto em s109. |
 | @1028 | s111 | Ajuste pós-feedback: @1027 redesenhou visualmente o cabeçalho/ações do Meu Perfil mobile além do pedido (avatar 56px, botão sem texto, barra de ações fixa, cards com scroll interno). Revertido para o visual original — mantido só `position:sticky` no cabeçalho. |
+| @1029 | s111 | Ajuste 2 pós-feedback: @1028 ainda fazia cada card virar sua própria página de swipe (via `display:contents`). Usuário pediu apenas 2 colunas de swipe — "Dados Profissionais" e "Dados Pessoais" (2ª coluna com os cards empilhados verticalmente dentro dela). `.perfil-col-edit` volta a ser bloco normal e passa a ser, ela mesma, o 2º item do swipe horizontal. |
 
 ### Estado atual (fase anterior): s110 @1026 — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento
 
