@@ -39,7 +39,11 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1027.**
+**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1028.**
+
+**Ajuste pós-feedback do usuário (mesma fase s111, @1028)**:
+- @1027 havia introduzido, além do cabeçalho fixo pedido, um redesenho visual não solicitado em Meu Perfil mobile (avatar reduzido a 56px, botão "Recarregar" virou ícone sem texto, barra de ações fixada no rodapé com bleed de borda, cards com `max-height`/scrollbar interna). Usuário pediu para manter o padrão visual original, só com o cabeçalho fixo.
+- Revertido: avatar/nome/botão voltam ao tamanho original; barra de Salvar/Descartar volta ao fluxo normal (não fixa, sem bleed); cards voltam à altura natural (sem `max-height`/scroll interno). Mantido apenas `#view-perfil .perfil-header { position:sticky; top:0; z-index:5; background:var(--bg); }` (o pedido original) e o swipe horizontal entre cards via `.perfil-grid`/`scroll-snap`, que já era o comportamento visível nos prints originais do usuário (grid de 2 colunas sem coalescer em mobile).
 
 **O que foi implementado agora**:
 - Auditoria sistemática de toda a `index.html` (46k+ linhas) à procura de grids/larguras fixas que não colapsam em telas de celular, usando o padrão já estabelecido pelo sistema (regras `!important` nos `@media` existentes, escopadas por classe).
