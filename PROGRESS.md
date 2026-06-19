@@ -39,7 +39,24 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s110)**: **Fix/Reestruturação — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento — Deploy @1026.**
+**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1027.**
+
+**O que foi implementado agora**:
+- Auditoria sistemática de toda a `index.html` (46k+ linhas) à procura de grids/larguras fixas que não colapsam em telas de celular, usando o padrão já estabelecido pelo sistema (regras `!important` nos `@media` existentes, escopadas por classe).
+- TaskHub (`#view-taskhub`, formulário "Nova Tarefa"): dois grids com `minmax(220px,…)`/`minmax(180px,…)`/`minmax(140px,…)` somavam >540px de largura mínima — em telas ≤375px o formulário forçava scroll horizontal da página inteira. Adicionada classe `.tf-form-grid` + regra `grid-template-columns:1fr !important` em `@media (max-width:680px)`.
+- RH (`#view-rh`, ficha do colaborador) e Meu Perfil (`#view-perfil`, card Endereço): grids de endereço com colunas fixas (`150px 1fr 110px`, `1fr 1fr 1fr 80px`, `130px 1fr 80px 60px`) comprimiam o campo "Logradouro" a poucos pixels em mobile. Unificados sob a classe `.rh-endereco-grid` (reaproveitada nos 3 pontos) com o mesmo colapso para 1 coluna.
+- Classes CSS órfãs (mesmo padrão de bug já documentado na fase s109 para a tabela "Uso por Módulo"): `.table-wrap` (6 usos, em Agentes/Voluntários/Parcerias/Setor-Módulos) nunca teve definição — recebeu o mesmo CSS de `.table-wrapper` (`overflow-x:auto` + borda). `.data-table` (4 usos, em painéis administrativos/Observabilidade) também nunca teve definição — passou a compartilhar o estilo de `.tabela` e foi incluída na regra de overflow horizontal mobile (`@media max-width:768px`).
+- Não alterada a lógica JS de nenhum módulo — apenas CSS/classes, zero risco de regressão funcional.
+
+**Achados descartados (falsos positivos do levantamento inicial)**:
+- Filtros de Auditoria (`#aud-filtro-*`, larguras fixas 140–200px) e selects de Exportações Financeiro (`min-width:260px`): ambos já estão dentro de containers `flex-wrap`, então apenas quebram linha em telas estreitas — não há overflow real, descartado como não-bug.
+- Grade da galeria de Quadros (`repeat(auto-fill,minmax(240px,1fr))`): `auto-fill` já colapsa para 1 coluna sozinho em telas estreitas — comportamento responsivo nativo, sem necessidade de override.
+
+**Verificação feita**:
+- `git diff` revisado linha a linha antes do commit — apenas as classes/regras descritas acima, sem alteração de estrutura HTML fora do necessário.
+- Confirmado por busca textual que `.table-wrap` e `.data-table` não tinham nenhuma definição CSS em todo o arquivo antes desta fase (mesma classe de bug do achado s109).
+
+**Fase anterior (s110)**: **Fix/Reestruturação — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento — Deploy @1026.**
 
 **O que foi implementado agora**:
 - Causa raiz de "Nenhum registro encontrado" na Auditoria Visual: `ctrl_auditoria_listar`/`ctrl_auditoria_rollback`/`ctrl_auditoria_detectar_suspeitos` ([auditoria_controller.gs](gas/src/modules/admin/auditoria_controller.gs)) liam de uma aba "Auditoria" na planilha MASTER que nunca recebia dados — os 200+ eventos gravados por `AuditoriaService.registrar()` sempre foram para `auditoria_operacional.json` (via `AuditoriaStore`), nunca para a aba. As 3 funções foram reescritas para ler de `AuditoriaStore.consultar()`/`obterPorId()` (novo método).

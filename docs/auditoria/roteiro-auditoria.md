@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s110 @1026 (Auditoria Visual: mismatch JSON↔Sheet, rollback, bug do 4º argumento) · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s111 @1027 (Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs) · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s110 @1026 — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento
+### Estado atual: s111 @1027 — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1027 | s111 | Meu Perfil: cabeçalho fixo + cards em carrossel horizontal (swipe) em mobile. TaskHub (form "Nova Tarefa"): grids `minmax()` que somavam >540px colapsam para 1 coluna (`.tf-form-grid`). RH/Perfil (grids de endereço CEP/Logradouro/Número/UF): colunas fixas colapsam para 1 coluna (`.rh-endereco-grid`, 3 pontos). Classes CSS órfãs sem nenhuma definição em todo o arquivo corrigidas: `.table-wrap` (6 usos) e `.data-table` (4 usos, painéis admin/Observabilidade) — mesmo padrão de bug já visto em s109. |
+
+### Estado atual (fase anterior): s110 @1026 — Auditoria Visual: mismatch JSON↔Sheet, rollback quebrado, bug do 4º argumento
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

@@ -720,10 +720,10 @@ body {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    TABLE (tabela)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tabela th, .tabela td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.tabela th { font-weight: 600; color: var(--text2); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; background: var(--surface2); }
-.tabela tr:hover td { background: var(--color-primary-lt); }
+.tabela, .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabela th, .tabela td, .data-table th, .data-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tabela th, .data-table th { font-weight: 600; color: var(--text2); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; background: var(--surface2); }
+.tabela tr:hover td, .data-table tr:hover td { background: var(--color-primary-lt); }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    BOTÕES ADICIONAIS
@@ -1037,6 +1037,10 @@ body {
   .hol-totais { grid-template-columns: 1fr !important; }
   .hol-ch-header { grid-template-columns: 1fr !important; }
   .grid-3 { grid-template-columns: 1fr !important; }
+  /* TaskHub — formulário de nova tarefa: colunas minmax() colapsam em 1 coluna */
+  .tf-form-grid { grid-template-columns: 1fr !important; }
+  /* RH/Perfil — grids de endereço com colunas fixas (CEP/UF/Número) colapsam em 1 coluna */
+  .rh-endereco-grid { grid-template-columns: 1fr !important; }
 
   /* Meu Perfil: cabeçalho fixo + cards em carrossel horizontal (swipe) */
   #view-perfil .perfil-header {
@@ -1089,7 +1093,8 @@ body {
   .ind-mes-table,
   .hol-lista,
   .aud-table,
-  .tabela { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .tabela,
+  .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
 }
 
 /* ── Celulares compactos (≤ 480 px) ─────────────────────────────────── */
@@ -1541,6 +1546,7 @@ textarea.input { resize: vertical; }
    TABLE WRAPPER & TABELA-DADOS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .table-wrapper { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--border); }
+.table-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1px solid var(--border); }
 .tabela-dados {
   width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface);
 }
@@ -7385,7 +7391,7 @@ select.form-control { cursor: pointer; }
                   <span class="ms">add_task</span> Nova Tarefa
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
+              <div class="tf-form-grid" style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,.55fr) minmax(140px,.35fr);gap:10px;margin-bottom:10px;">
                 <div class="form-group" style="margin-bottom:0;">
                   <label class="form-label">Título *</label>
                   <input id="tf-titulo" class="form-control" type="text" placeholder="Ex: Preparar pauta da reunião">
@@ -7404,7 +7410,7 @@ select.form-control { cursor: pointer; }
                   </select>
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
+              <div class="tf-form-grid" style="display:grid;grid-template-columns:minmax(160px,.4fr) minmax(200px,1fr) auto;gap:10px;align-items:end;">
                 <div class="form-group" style="margin-bottom:0;">
                   <label class="form-label">Prazo</label>
                   <input id="tf-prazo" class="form-control" type="date">
@@ -9075,12 +9081,12 @@ select.form-control { cursor: pointer; }
                 </div>
               </div>
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
-              <div style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
+              <div class="rh-endereco-grid" style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
                 <div class="form-group"><label class="form-label">CEP</label><input id="rh-pf-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" onblur="RhUI._buscarCep(this.value)"></div>
                 <div class="form-group"><label class="form-label">Logradouro</label><input id="rh-pf-logradouro" class="form-input" type="text" placeholder="Rua, Av.…"></div>
                 <div class="form-group"><label class="form-label">Número</label><input id="rh-pf-num-end" class="form-input" type="text" placeholder="Nº"></div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:10px;margin-bottom:16px;">
+              <div class="rh-endereco-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Complemento</label><input id="rh-pf-complemento" class="form-input" type="text" placeholder="Apto, sala…"></div>
                 <div class="form-group"><label class="form-label">Bairro</label><input id="rh-pf-bairro" class="form-input" type="text"></div>
                 <div class="form-group"><label class="form-label">Cidade</label><input id="rh-pf-cidade" class="form-input" type="text"></div>
@@ -10074,7 +10080,7 @@ select.form-control { cursor: pointer; }
 
             <div class="card" style="margin-bottom:14px;">
               <div class="card-header"><span class="card-title"><span class="ms ms-sm">home</span> Endereço</span></div>
-              <div style="padding:12px 16px 16px;display:grid;grid-template-columns:130px 1fr 80px 60px;gap:10px;">
+              <div class="rh-endereco-grid" style="padding:12px 16px 16px;display:grid;grid-template-columns:130px 1fr 80px 60px;gap:10px;">
                 <div class="form-group"><label class="form-label">CEP</label><input id="p-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" onblur="PerfilUI.buscarCep(this.value)"></div>
                 <div class="form-group"><label class="form-label">Logradouro</label><input id="p-logradouro" class="form-input" type="text"></div>
                 <div class="form-group"><label class="form-label">Número</label><input id="p-num-end" class="form-input" type="text"></div>
