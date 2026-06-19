@@ -11828,7 +11828,7 @@ var IdentidadeAdmin = (function() {
     });
   }
 
-  return { carregar, salvar, removerLogo, restaurarPadrao, extrairCores, previewLogo, uploadLogo, sincronizarCor, sincronizarHex, aprovar };
+  return { carregar, salvar, removerLogo, restaurarPadrao, extrairCores, previewLogo, uploadLogo, sincronizarCor, sincronizarHex, aprovar, carregarPendentes: _carregarPendentes };
 })();
 
 // ═══════════════════════════════════════════════════════════
@@ -16987,6 +16987,7 @@ var AdminCadastrosUI = (function() {
     var btnDados = document.querySelector('#admin-cadastros-tabs .tab-btn[data-tab="dados"]');
     if (btnDados) btnDados.style.display = ehSuperadmin ? '' : 'none';
     abrirTab('espacos');
+    IdentidadeAdmin.carregarPendentes();
   }
 
   return {
@@ -17071,8 +17072,12 @@ var DatasComemorativasAdmin = (function() {
     if (!el) return;
     el.innerHTML = '<p class="muted-text">Carregando…</p>';
     GAS.admin.listarDatasComemorativas(function(r) {
-      var lista = r && r.ok ? (r.data || []) : [];
-      _renderLista(el, lista);
+      if (!r || !r.ok) {
+        var msg = (r && r.error && r.error.message) || 'Erro desconhecido ao carregar datas.';
+        el.innerHTML = '<p style="color:#ef4444;">Erro ao carregar: ' + escaparHtml(msg) + '</p>';
+        return;
+      }
+      _renderLista(el, r.data || []);
     }, function(e) {
       el.innerHTML = '<p style="color:#ef4444;">Erro ao carregar: ' + escaparHtml(e.message) + '</p>';
     });

@@ -39,7 +39,16 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1029.**
+**Fase atual (s112)**: **Fix — Administração: "Acessos Pendentes" preso em "Carregando…" + erro real de "Datas Comemorativas" mascarado como lista vazia — Deploy @1030.**
+
+**O que foi implementado agora**:
+- Usuário reportou print do painel Administração: card "Acessos Pendentes" travado em "⏳ Carregando solicitações…" e aba "Datas Comemorativas" exibindo "Nenhuma data cadastrada" (deveria sempre mostrar as 30 datas pré-cadastradas via `_mergeComDefaults`, já corrigido na fase s93).
+- Causa raiz #1 (Acessos Pendentes): `_carregarPendentes()` ([index.html](gas/src/frontend/index.html)) só era chamada de dentro de `IdentidadeAdmin.carregar()`, que só executa quando o usuário clica na aba "Identidade Visual" — mas o card de Acessos Pendentes é renderizado fora do sistema de abas, sempre visível no topo da página. Se o usuário nunca visita essa aba (ou se `GAS.admin.getIdentidade` falhar, o que aborta a função antes de chegar em `_carregarPendentes()`), o card fica preso no estado de loading inicial indefinidamente. Corrigido: `_carregarPendentes` exposta como `IdentidadeAdmin.carregarPendentes()` e chamada diretamente em `AdminCadastrosUI.aoAbrir()`, independente de qualquer aba.
+- Causa raiz #2 (Datas Comemorativas): `DatasComemorativasAdmin.carregar()` tratava qualquer resposta com `r.ok === false` exatamente como lista vazia (`var lista = r && r.ok ? (r.data||[]) : [];`), sem nunca exibir `r.error.message`. Como o backend (`_mergeComDefaults`) sempre retorna as 30 datas default independente do JSON salvo, uma lista vazia só pode vir de uma exceção capturada por `GasResponse.wrap` (ex.: `_assertAdmin()` negando acesso) — erro que estava sendo silenciosamente convertido em "Nenhuma data cadastrada", impedindo diagnóstico. Corrigido para exibir a mensagem real de erro nesse caso.
+
+**Pendente de confirmação do usuário**: após o deploy, reabrir Administração → aba "Datas Comemorativas". Se ainda aparecer vazio, agora deve mostrar a mensagem de erro real (ex. permissão negada) em vez de "Nenhuma data cadastrada" — copiar essa mensagem para investigação da causa raiz definitiva.
+
+**Fase anterior (s111)**: **Fix — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil (grids de endereço) e classes CSS órfãs (`table-wrap`, `data-table`) — Deploy @1029.**
 
 **Ajuste pós-feedback do usuário (mesma fase s111, @1028)**:
 - @1027 havia introduzido, além do cabeçalho fixo pedido, um redesenho visual não solicitado em Meu Perfil mobile (avatar reduzido a 56px, botão "Recarregar" virou ícone sem texto, barra de ações fixada no rodapé com bleed de borda, cards com `max-height`/scrollbar interna). Usuário pediu para manter o padrão visual original, só com o cabeçalho fixo.
