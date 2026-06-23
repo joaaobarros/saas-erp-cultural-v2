@@ -38443,11 +38443,15 @@ var DashboardUI = (function() {
       var html = '';
       if (d.kpis) {
         var kpis = d.kpis;
+        var pctOcup = (kpis.taxaOcupacaoEspacos && kpis.taxaOcupacaoEspacos.percentual != null) ? kpis.taxaOcupacaoEspacos.percentual : 0;
+        var pctPrazo = (kpis.taxaConclusaoNoPrazo && kpis.taxaConclusaoNoPrazo.percentual != null) ? kpis.taxaConclusaoNoPrazo.percentual : 0;
+        var pctExec = (kpis.execucaoOrcamentaria && kpis.execucaoOrcamentaria.percentual != null) ? kpis.execucaoOrcamentaria.percentual : 0;
+        var nps = (kpis.indiceSatisfacaoPublico && kpis.indiceSatisfacaoPublico.media != null) ? kpis.indiceSatisfacaoPublico.media : '—';
         html += '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' +
-          _statCard('Ocupação Espaços', Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%', null, '', "Router.navegar('espacos')") +
-          _statCard('Ações no Prazo', Math.round((kpis.taxaConclusaoPrazo||0)*100)+'%', null, '', "Router.navegar('acoes')") +
-          _statCard('Exec. Orçamentária', Math.round((kpis.execucaoOrcamentaria||0)*100)+'%', null, '', "Router.navegar('financeiro')") +
-          _statCard('NPS Público', kpis.npsPublico != null ? kpis.npsPublico : '0', null, '', "Router.navegar('escuta')") +
+          _statCard('Ocupação Espaços', pctOcup+'%', null, (kpis.taxaOcupacaoEspacos||{}).total + ' reservas no total', "Router.navegar('espacos')") +
+          _statCard('Ações no Prazo', pctPrazo+'%', null, (kpis.taxaConclusaoNoPrazo||{}).concluidas + ' concluídas', "Router.navegar('acoes')") +
+          _statCard('Exec. Orçamentária', pctExec+'%', null, '', "Router.navegar('financeiro')") +
+          _statCard('NPS Público', nps, null, '', "Router.navegar('escuta')") +
         '</div>';
       }
       if (d.riscos && d.riscos.length) {

@@ -39,7 +39,14 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s117)**: **Feat — Dashboard: profundidade real nas 5 abas (tendência temporal + breakdown por dimensão) — Deploy @1035.**
+**Fase atual (s118)**: **Fix — Dashboard: NaN% no Estratégico + 'Erro ao carregar' no Operacional + insight de execução orçamentária nunca disparava — Deploy @1036 (pendente).**
+
+**O que foi implementado agora**:
+- **Bug NaN% no Estratégico** (`index.html`): o código antigo fazia `Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%'` — tratava o objeto KPI `{ percentual: N, ... }` como número, resultando em NaN. Corrigido: extraídas variáveis `pctOcup/pctPrazo/pctExec` que acessam `.percentual` diretamente; `taxaConclusaoPrazo` corrigido para `taxaConclusaoNoPrazo` (nome real do engine); NPS Público usa `.media` (pode ser null → exibe '—').
+- **Bug 'Erro ao carregar' no Operacional** (`dashboard_controller.gs`): `MetricsEngine.obterDashboard()` era código legado que lia a planilha Reservas por índice de coluna hardcoded (16 colunas) — incompatível com o schema atual `reservas.json` (26+ campos). Substituído por cálculo direto no JSON (reservas já carregadas no bloco anterior). Resultado: `tendencias.top5Salas`, `top5Setores`, `ultimos6Meses` calculados por agrupamentos sobre `r.sala`, `r.setor`, `r.data`.
+- **Bug `_gerarInsightsRegras` Estratégico** (`dashboard_controller.gs`): condição `m.kpis.execucaoOrcamentaria < 0.3` tratava o objeto como fração decimal (JS converte objeto → NaN, `NaN < 0.3` é sempre false — insight nunca disparava). Corrigido para `.execucaoOrcamentaria.percentual < 30`.
+
+**Fase anterior (s117)**: **Feat — Dashboard: profundidade real nas 5 abas (tendência temporal + breakdown por dimensão) — Deploy @1035.**
 
 **O que foi implementado agora**:
 - Usuário apontou que as abas do Dashboard (Operacional/Financeiro/Estratégico/Estoque/Alertas) só repetiam métricas já visíveis em cada módulo, sem a profundidade do BI Demográfico (série histórica, drill-down, breakdown). Confirmado com o usuário: profundidade = tendência temporal + breakdown por dimensão, combinados, em todas as abas.

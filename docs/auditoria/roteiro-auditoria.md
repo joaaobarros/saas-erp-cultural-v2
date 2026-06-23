@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s113 @1031 (Datas Comemorativas: causa raiz real do "map of undefined" corrigida) · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s118 @1036 (Dashboard: NaN% Estratégico + Erro ao carregar Operacional + insight execução orçamentária) · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025 · s108 @1024
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s113 @1031 — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" corrigida
+### Estado atual: s118 @1036 — Dashboard: 3 bugs silenciosos corrigidos
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1036 | s118 | **NaN% no Estratégico** (`index.html`): código antigo fazia `Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%'` — objeto KPI multiplicado por 100 = NaN. Corrigido: variáveis `pctOcup/pctPrazo/pctExec` extraem `.percentual` do sub-objeto; `taxaConclusaoPrazo` → `taxaConclusaoNoPrazo`; NPS usa `.media` (null → '—'). **'Erro ao carregar' no Operacional** (`dashboard_controller.gs`): `MetricsEngine.obterDashboard()` legado lia a planilha por índice de coluna hardcoded (16 colunas vs 26+ no schema atual), retornando erro. Substituído por cálculo direto no JSON já carregado: `top5Salas`, `top5Setores`, `ultimos6Meses` por agrupamento de `r.sala`/`r.setor`/`r.data`. **Insight de execução orçamentária nunca disparava** (`dashboard_controller.gs`): condição `m.kpis.execucaoOrcamentaria < 0.3` comparava objeto com número (NaN < 0.3 = false sempre). Corrigido para `.execucaoOrcamentaria.percentual < 30`. |
+
+### Estado anterior: s113 @1031 — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" corrigida
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

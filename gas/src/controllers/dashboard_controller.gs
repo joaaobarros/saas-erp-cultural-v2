@@ -95,10 +95,31 @@ function ctrl_dashboard_operacional(params) {
       resultado.chaves = { atrasadas: chaves.length };
     } catch(e) { resultado.chaves = { atrasadas: 0 }; }
 
-    // Profundidade: tendência últimos 6 meses + breakdown por sala/setor —
-    // já calculado por MetricsEngine, nunca antes surfaced no dashboard.
+    // Profundidade: tendência últimos 6 meses + breakdown por sala/setor.
+    // Calculado direto do JSON (reservas já carregadas acima) — NÃO usa
+    // MetricsEngine.obterDashboard()/_calcularDashboard(): aquele código é
+    // legado ("absorvido de mod_metrics.gs"), lê a aba Sheet por índice de
+    // coluna hardcoded (16 colunas) que não bate mais com o schema atual de
+    // reservas.json (26+ campos, via ReservaRepository) — nunca tinha sido
+    // chamado em produção antes desta sessão, e quebra com a planilha real.
     try {
-      resultado.tendencias = MetricsEngine.obterDashboard(null, null, null, null);
+      var porSala = {}, porSetorOp = {}, porMesOp = {};
+      reservas.forEach(function(r) {
+        var sala = r.sala || 'Não informado';
+        var setor = r.setor || 'Não informado';
+        porSala[sala] = (porSala[sala] || 0) + 1;
+        porSetorOp[setor] = (porSetorOp[setor] || 0) + 1;
+        var d = r.data ? new Date(r.data) : null;
+        if (d && !isNaN(d.getTime())) {
+          var chave = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+          porMesOp[chave] = (porMesOp[chave] || 0) + 1;
+        }
+      });
+      resultado.tendencias = {
+        top5Salas:    Object.entries(porSala).sort(function(a,b){return b[1]-a[1];}).slice(0,5),
+        top5Setores:  Object.entries(porSetorOp).sort(function(a,b){return b[1]-a[1];}).slice(0,5),
+        ultimos6Meses: Object.entries(porMesOp).sort().slice(-6)
+      };
     } catch(e) { resultado.tendencias = null; }
 
     return resultado;
@@ -494,7 +515,7 @@ function _gerarInsightsRegras(tipo, m) {
     if (m.clima && m.clima.mediaPonderada && m.clima.mediaPonderada < 3)
       insights.push({ tipo: 'regra', severidade: 'URGENTE',
         texto: 'Clima organizacional crítico (média ' + m.clima.mediaPonderada + '/5). Ação imediata necessária.' });
-    if (m.kpis && m.kpis.execucaoOrcamentaria && m.kpis.execucaoOrcamentaria < 0.3)
+    if (m.kpis && m.kpis.execucaoOrcamentaria && m.kpis.execucaoOrcamentaria.percentual < 30)
       insights.push({ tipo: 'regra', severidade: 'ATENÇÃO',
         texto: 'Execução orçamentária abaixo de 30% — risco de prestação de contas.' });
   }
