@@ -528,7 +528,21 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 116 (2026-06-23)
+## HANDOFF ATUAL — SESSÃO 117 (2026-06-23)
+
+### Estado atual: Feat — Dashboard: profundidade real nas 5 abas — Deploy @1035
+
+### O que foi feito nesta sessão (s117)
+| Deploy | O que foi implementado |
+|---|---|
+| @1035 | Helpers `_renderTendencia`/`_renderBreakdown` em `DashboardUI`. Operacional ganhou tendência de reservas + top espaços/setores via `MetricsEngine.obterDashboard()` (código morto reativado). Estratégico ganhou sparkline de clima (6 rodadas) + ações por setor. Financeiro ganhou breakdown por fonte de recurso + tendência de contratos firmados. Estoque ganhou breakdown por categoria + tendência de saídas. Alertas ganhou breakdown por setor (banco de horas, férias). Ver detalhe completo em PROGRESS.md s117. |
+
+### Pendente para smoke test
+- Dashboard → cada uma das 5 abas (Operacional/Financeiro/Estratégico/Estoque/Alertas): tendência (sparkline) e breakdown (barras) aparecem abaixo dos cards, sem erro no console.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 116 (2026-06-23)
 
 ### Estado atual: Feat — Mapa por cidade + categorias de rubrica Rouanet + aba Conformidade — Deploy @1034
 

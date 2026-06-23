@@ -39,7 +39,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s116)**: **Feat — BI Demográfico: mapa por cidade + Financeiro: categorias de rubrica Lei Rouanet + Dashboard: aba "Conformidade" — Deploy @1034.**
+**Fase atual (s117)**: **Feat — Dashboard: profundidade real nas 5 abas (tendência temporal + breakdown por dimensão) — Deploy @1035.**
+
+**O que foi implementado agora**:
+- Usuário apontou que as abas do Dashboard (Operacional/Financeiro/Estratégico/Estoque/Alertas) só repetiam métricas já visíveis em cada módulo, sem a profundidade do BI Demográfico (série histórica, drill-down, breakdown). Confirmado com o usuário: profundidade = tendência temporal + breakdown por dimensão, combinados, em todas as abas.
+- Dois helpers novos e genéricos em `DashboardUI` (`index.html`): `_renderTendencia()` (sparkline em barras CSS) e `_renderBreakdown()` (barras horizontais por dimensão, mesmo padrão visual já usado em `BiDemograficoUI._renderGeo`) — reaproveitados nas 5 abas, sem duplicar renderização.
+- **Operacional**: descoberto que `MetricsEngine.obterDashboard()` (top5Salas, top5Setores, ultimos6Meses, horasPico, cancelamentosPorSala) está **totalmente calculado e nunca foi consumido por nenhum controller** desde que foi escrito — mesmo padrão de código morto já encontrado 2x nesta sessão (exportações, limites Rouanet). Agora alimenta a aba: tendência de reservas por mês + top 5 espaços/setores.
+- **Estratégico**: `EscutaEngine.obterEvolucaoClimaHistorica()` já existia mas só expunha a última rodada — agora expõe as últimas 6 (sparkline). Ações ganharam breakdown por setor.
+- **Financeiro**: breakdown por tipo de fonte de recurso (`FonteRecursoRepository`). Tendência usa contratos firmados por mês de vigência — **não** pagamentos mensais, porque `contrato.pagamentos[]` nunca é populado (`TODO Fase 4` real em `contrato_repository.gs:152`); evitado construir tendência sobre dado que não existe.
+- **Estoque**: breakdown de valor em estoque por categoria de item; tendência de saídas por mês via `ItemEstoqueRepository.listarMovimentacoes`.
+- **Alertas**: banco de horas excedente e férias pendentes ganharam breakdown por setor do colaborador. Ativos/almoxarifado não têm campo `setor` no cadastro — não inventado, ficaram só com a contagem total já existente.
+
+**Pendente de confirmação do usuário**: smoke test das 5 abas — cada uma deve mostrar tendência (barras) + breakdown (barras horizontais) abaixo dos cards já existentes, sem erro no console.
+
+**Fase anterior (s116)**: **Feat — BI Demográfico: mapa por cidade + Financeiro: categorias de rubrica Lei Rouanet + Dashboard: aba "Conformidade" — Deploy @1034.**
 
 **O que foi implementado agora**:
 - **Mapa por cidade (BI Demográfico)**: usuário pediu profundidade adicional no mapa territorial. Adicionado 3º modo de visualização "Cidades" (`index.html` — `BiDemograficoUI._renderCidades`), bolhas proporcionais à contagem por `cidadeKey`, ao lado dos modos já existentes "Calor" e "Bairros". Reaproveita `_corBairro()` para a escala de cor; sem polígono (escala municipal não se beneficia do contorno de bairro do Nominatim). Os dados geográficos por cidade já eram resolvidos no backend (`bi_demografico_controller.gs` já registra `cidKey` em `locais`) — mudança 100% frontend.

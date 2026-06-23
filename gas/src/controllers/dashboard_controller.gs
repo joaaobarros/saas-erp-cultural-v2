@@ -95,6 +95,12 @@ function ctrl_dashboard_operacional(params) {
       resultado.chaves = { atrasadas: chaves.length };
     } catch(e) { resultado.chaves = { atrasadas: 0 }; }
 
+    // Profundidade: tendência últimos 6 meses + breakdown por sala/setor —
+    // já calculado por MetricsEngine, nunca antes surfaced no dashboard.
+    try {
+      resultado.tendencias = MetricsEngine.obterDashboard(null, null, null, null);
+    } catch(e) { resultado.tendencias = null; }
+
     return resultado;
   }, 'ctrl_dashboard_operacional');
 }
@@ -154,14 +160,38 @@ function ctrl_dashboard_financeiro(params) {
       };
     } catch(e) { resultado.aditivos = null; }
 
-    // Fontes de Recurso — saldos
+    // Fontes de Recurso — saldos + breakdown por tipo
     try {
       var fontes = lerJSON('fontes_recurso.json') || [];
       fontes = fontes.filter(function(f){ return f.orgId === orgId && f.status === 'ativo'; });
       var totalFontes = 0;
-      fontes.forEach(function(f){ totalFontes += Number(f.valor||0); });
-      resultado.fontes = { ativas: fontes.length, totalValor: totalFontes };
+      var porTipoFonte = {};
+      fontes.forEach(function(f){
+        var v = Number(f.valorTotal||0);
+        totalFontes += v;
+        var t = f.tipo || 'outro';
+        porTipoFonte[t] = (porTipoFonte[t] || 0) + v;
+      });
+      resultado.fontes = { ativas: fontes.length, totalValor: totalFontes, porTipo: porTipoFonte };
     } catch(e) { resultado.fontes = null; }
+
+    // Tendência: contratos por mês de início de vigência (últimos 12 meses) —
+    // pagamentos[] de cada contrato ainda não é populado (TODO Fase 4 em
+    // contrato_repository.gs), então o sinal real disponível é o portfólio.
+    try {
+      var todosContratos = lerJSON('contratos.json') || [];
+      todosContratos = todosContratos.filter(function(c){ return c.orgId === orgId; });
+      var porMesContrato = {};
+      todosContratos.forEach(function(c) {
+        var d = c.vigenciaInicio ? new Date(c.vigenciaInicio) : null;
+        if (!d || isNaN(d.getTime())) return;
+        var chave = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        porMesContrato[chave] = (porMesContrato[chave] || 0) + 1;
+      });
+      resultado.tendenciaContratos = Object.keys(porMesContrato).sort().slice(-12).map(function(k) {
+        return { mes: k, total: porMesContrato[k] };
+      });
+    } catch(e) { resultado.tendenciaContratos = []; }
 
     return resultado;
   }, 'ctrl_dashboard_financeiro');
@@ -177,10 +207,39 @@ function ctrl_dashboard_financeiro(params) {
 function ctrl_dashboard_estoque(params) {
   return GasResponse.wrap(function() {
     var ctx   = _ctxDash();
+    var orgId = ctx.orgId;
     var resultado = {};
     try {
-      resultado.estoque = EstoqueEngine.metricas(ctx.orgId);
+      resultado.estoque = EstoqueEngine.metricas(orgId);
     } catch(e) { resultado.estoque = null; }
+
+    // Breakdown por categoria de item (valor em estoque)
+    try {
+      var itens = EstoqueEngine.listarItens({}, orgId);
+      var porCategoria = {};
+      itens.forEach(function(it) {
+        var c = it.categoria || 'Sem categoria';
+        var v = Number(it.saldoTotal||0) * Number(it.valorUnitario||0);
+        porCategoria[c] = (porCategoria[c] || 0) + v;
+      });
+      resultado.porCategoria = porCategoria;
+    } catch(e) { resultado.porCategoria = null; }
+
+    // Tendência: saídas por mês (últimos 6 meses)
+    try {
+      var movs = ItemEstoqueRepository.listarMovimentacoes({ tipo: 'saida_solicitacao' }, orgId);
+      var porMesSaida = {};
+      movs.forEach(function(m) {
+        var d = m.criadoEm ? new Date(m.criadoEm) : null;
+        if (!d || isNaN(d.getTime())) return;
+        var chave = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+        porMesSaida[chave] = (porMesSaida[chave] || 0) + Number(m.quantidade||0);
+      });
+      resultado.tendenciaSaidas = Object.keys(porMesSaida).sort().slice(-6).map(function(k) {
+        return { mes: k, total: porMesSaida[k] };
+      });
+    } catch(e) { resultado.tendenciaSaidas = []; }
+
     return resultado;
   }, 'ctrl_dashboard_estoque');
 }
@@ -198,15 +257,31 @@ function ctrl_dashboard_alertas(params) {
     var orgId = ctx.orgId;
     var resultado = {};
 
+    // Mapa colaboradorId → setor, reaproveitado pelos dois indicadores de RH abaixo
+    var _mapaSetorColab = {};
+    try {
+      ColaboradorRepository.listar(orgId, {}).forEach(function(c) { _mapaSetorColab[c.id] = c.setor || 'Sem setor'; });
+    } catch(e) {}
+
     try {
       var limiteHoras = (SistemaConfigService.getParametrosRH().banco_horas_limite_horas) || 120;
       var excedentes  = PontoRepository.listarBancoHorasExcedente(orgId, limiteHoras * 60);
-      resultado.bancoHoras = { excedentes: excedentes.length, limiteHoras: limiteHoras };
+      var porSetorBH  = {};
+      excedentes.forEach(function(b) {
+        var s = _mapaSetorColab[b.colaboradorId] || 'Não identificado';
+        porSetorBH[s] = (porSetorBH[s] || 0) + 1;
+      });
+      resultado.bancoHoras = { excedentes: excedentes.length, limiteHoras: limiteHoras, porSetor: porSetorBH };
     } catch(e) { resultado.bancoHoras = null; }
 
     try {
       var pendentes = PessoasEngine.listarFerias({ status: 'pendente' }, orgId);
-      resultado.ferias = { pendentes: pendentes.length };
+      var porSetorFerias = {};
+      pendentes.forEach(function(f) {
+        var s = _mapaSetorColab[f.idColaborador] || 'Não identificado';
+        porSetorFerias[s] = (porSetorFerias[s] || 0) + 1;
+      });
+      resultado.ferias = { pendentes: pendentes.length, porSetor: porSetorFerias };
     } catch(e) { resultado.ferias = null; }
 
     try {
@@ -275,21 +350,28 @@ function ctrl_dashboard_estrategico(params) {
       };
     } catch(e) { resultado.objetivos = null; }
 
-    // Última pesquisa de clima
+    // Série histórica de clima (últimas 6 rodadas) — tendência, não só o último valor
     try {
-      var evolucao = EscutaEngine.obterEvolucaoClimaHistorica(orgId, 2);
+      var evolucao = EscutaEngine.obterEvolucaoClimaHistorica(orgId, 6);
+      resultado.climaSerie = evolucao;
       resultado.clima = evolucao.length > 0 ? evolucao[evolucao.length-1] : null;
-    } catch(e) { resultado.clima = null; }
+    } catch(e) { resultado.climaSerie = []; resultado.clima = null; }
 
-    // Ações em execução
+    // Ações em execução — total + breakdown por setor
     try {
       var acoes = lerJSON('acoes.json') || [];
       acoes = acoes.filter(function(a){ return a.orgId === orgId; });
+      var porSetorAcoes = {};
+      acoes.forEach(function(a) {
+        var s = a.setor || 'Sem setor';
+        porSetorAcoes[s] = (porSetorAcoes[s] || 0) + 1;
+      });
       resultado.acoes = {
         total:       acoes.length,
         emExecucao:  acoes.filter(function(a){ return a.status === 'em_execucao'; }).length,
         planejadas:  acoes.filter(function(a){ return a.status === 'planejada'; }).length,
-        concluidas:  acoes.filter(function(a){ return a.status === 'concluida'; }).length
+        concluidas:  acoes.filter(function(a){ return a.status === 'concluida'; }).length,
+        porSetor:    porSetorAcoes
       };
     } catch(e) { resultado.acoes = null; }
 
