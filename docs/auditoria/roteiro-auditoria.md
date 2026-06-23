@@ -4,7 +4,13 @@
 
 ---
 
-### Estado atual: s126 @pendente — Infraestrutura: Patrimônio e Estoque deixam de ser aba duplicada
+### Estado atual: s127 @1045 — Pessoas/RH: endereço histórico backend + campos readonly + BI geocodificador CEP puro + máscara CEP
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1045 | s127 | **Histórico de endereço silencioso** (`pessoas_engine.gs`, `colaborador_repository.gs`): `salvar()` detecta mudança de endereço comparando com snapshot `antes`; arquiva endereço anterior em `enderecoHistorico[]` com `dataInicio`/`dataFim`. `enderecoHistorico` adicionado a `_CAMPOS_PROTEGIDOS`. **Campos readonly** (`index.html`): logradouro/bairro/cidade/UF readonly por padrão; botão "Editar manualmente" visível apenas para `rh`/`admin`/`superadmin`. **Geocodificador CEP puro** (`bi_demografico_controller.gs`): query era `"Rua L, 61659-170, Brasil"` — geocodificador ignorava CEP e resolvia nome de rua em ponto errado (7 quarteirões). Corrigido para `"61659-170, Brasil"` (CEP identifica face de quadra no BRA). Cache key `geo3:` substitui `geo:` e `geo2:`; purga das entradas legadas. **Máscara CEP** (`index.html`): `mascaraCepValor()`/`mascaraCepInput()` globais em `#rh-pf-cep` e `#p-cep`. |
+
+### Estado anterior: s126 @1044 — Infraestrutura: Patrimônio e Estoque deixam de ser aba duplicada
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
