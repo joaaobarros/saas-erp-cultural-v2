@@ -1,14 +1,20 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s112 @1030 (Admin: Acessos Pendentes preso em loading + erro real de Datas Comemorativas mascarado) · s111 @1029 · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
+> Deploy atual: s113 @1031 (Datas Comemorativas: causa raiz real do "map of undefined" corrigida) · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025 · s108 @1024 · s107 @1023 · s106 @1022 · s105 @1019 · s104 @1018
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s112 @1030 — Admin: Acessos Pendentes preso em loading + erro real de Datas Comemorativas mascarado
+### Estado atual: s113 @1031 — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" corrigida
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @1030 | s112 | Usuário reportou print do painel Administração: "Acessos Pendentes" travado em "Carregando solicitações…" e aba "Datas Comemorativas" exibindo "Nenhuma data cadastrada" (deveria sempre mostrar as 30 datas pré-cadastradas via `_mergeComDefaults`, fase s93). Causa #1: `_carregarPendentes()` só executava dentro de `IdentidadeAdmin.carregar()` (aba "Identidade Visual"), mas o card de pendentes é renderizado fora do sistema de abas — corrigido expondo `IdentidadeAdmin.carregarPendentes()` e chamando direto em `AdminCadastrosUI.aoAbrir()`. Causa #2: `DatasComemorativasAdmin.carregar()` tratava `r.ok===false` como lista vazia sem nunca mostrar `r.error.message` — como o backend sempre retorna os 30 defaults, uma lista vazia só pode vir de exceção capturada por `GasResponse.wrap` (ex. `_assertAdmin` negando acesso); agora a mensagem de erro real é exibida. **Pendente**: usuário precisa reabrir a aba após o deploy — se ainda vier vazio, a mensagem de erro real vai aparecer e revelar a causa raiz definitiva. |
+| @1031 | s113 | O fix de s112 desmascarou o erro real: ao abrir Administração → Cadastros Base → Datas Comemorativas, aparecia "Erro ao carregar: Cannot read properties of undefined (reading 'map')". Causa raiz: em `config_admin_service.gs`, `var _DATAS_COMEMORATIVAS_DEFAULT` (array das 34 datas pré-cadastradas) estava declarada **depois** do `return {...}` que expõe a API do módulo — como é um `var` de escopo do IIFE (não function declaration hoisted por inteiro), a atribuição nunca executava porque o `return` já tinha encerrado a função; a var ficava `undefined` para sempre e `_mergeComDefaults()` quebrava em `.map(...)`. Bug pré-existente desde a fase s90/s93, sempre mascarado como "lista vazia" até o fix de s112 expor a mensagem real. Reproduzido isoladamente em Node (carregando o arquivo real com stubs dos deps) para confirmar a causa antes de corrigir. Fix: array movido para antes do `return`. Revalidado em Node: `listarDatasComemorativas()`/`getDatasComemorativas()` retornam as 34 datas. |
+
+### Estado atual (fase anterior): s112 @1030 — Admin: Acessos Pendentes preso em loading + erro real de Datas Comemorativas mascarado
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1030 | s112 | Usuário reportou print do painel Administração: "Acessos Pendentes" travado em "Carregando solicitações…" e aba "Datas Comemorativas" exibindo "Nenhuma data cadastrada" (deveria sempre mostrar as 30 datas pré-cadastradas via `_mergeComDefaults`, fase s93). Causa #1: `_carregarPendentes()` só executava dentro de `IdentidadeAdmin.carregar()` (aba "Identidade Visual"), mas o card de pendentes é renderizado fora do sistema de abas — corrigido expondo `IdentidadeAdmin.carregarPendentes()` e chamando direto em `AdminCadastrosUI.aoAbrir()`. Causa #2: `DatasComemorativasAdmin.carregar()` tratava `r.ok===false` como lista vazia sem nunca mostrar `r.error.message` — como o backend sempre retorna os 30 defaults, uma lista vazia só pode vir de exceção capturada por `GasResponse.wrap` (ex. `_assertAdmin` negando acesso); agora a mensagem de erro real é exibida. Causa raiz definitiva encontrada e corrigida em s113 @1031. |
 
 ### Estado atual (fase anterior): s111 @1029 — Auditoria de adaptabilidade mobile: TaskHub, RH/Perfil, classes CSS órfãs
 
@@ -522,7 +528,24 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 107 (2026-06-17)
+## HANDOFF ATUAL — SESSÃO 113 (2026-06-22)
+
+### Estado atual: Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão — Deploy @1031
+
+### O que foi feito nesta sessão (s113)
+| Deploy | O que foi implementado |
+|---|---|
+| @1031 | Usuário reportou item "Relatórios" do menu lateral sempre "inativo". Investigação revelou que `ModulosRegistryService` (`modules/admin/modulos_registry_service.gs:18`) já havia removido `RELATORIOS` do catálogo canônico de módulos deliberadamente ("não existe view correspondente; exportações ficam em Financeiro"), mas o item de menu, atalhos da Home, matrizes de permissão (frontend + `permissoes_v2_engine.gs`), entradas do Manual e do wizard de setup nunca foram limpos — ficaram órfãos, permanentemente inacessíveis. Removidas todas as referências mortas a `RELATORIOS` (módulo de menu/RBAC — não confundir com a planilha de dados `SHEET_ID_RELATORIOS`/CODIP, que segue intacta). Corrigido também `manual.html`: as entradas de ajuda "Relatórios" e "BI Demográfico" estavam gated por `modulo:'RELATORIOS'` (logo inacessíveis) — passaram para `modulo:null`. Adicionada nova aba "BI Estoque" ao dashboard cross-módulo já existente (`DashboardUI`/`ctrl_dashboard_estoque`), reaproveitando `EstoqueEngine.metricas()` sem duplicar cálculo — cobre o único gap real de dados (itens críticos, valor em estoque, permanentes, solicitações pendentes) que as abas Operacional/Financeiro/Estratégico/Demográfico não tinham. |
+
+### Pendente para smoke test
+- Sidebar: confirmar que "Relatórios" não aparece mais (nem para superadmin com tag "inativo").
+- Dashboard (`BI — Central de Inteligência`): nova aba "BI Estoque" carrega métricas sem erro no console.
+- Manual: abrir artigos "Relatórios" e "BI Demográfico" e confirmar que abrem normalmente (antes ficavam ocultos por módulo inativo).
+- Wizard de setup de nova organização: passo 5 (Módulos) não deve mais oferecer "Relatórios" como opção.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 107 (2026-06-17)
 
 ### Estado atual: Feat — Reuniões com ciclo/lote, Calendar explícito e tarefas imediatas — Deploy @1023
 

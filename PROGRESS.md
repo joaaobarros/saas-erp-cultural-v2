@@ -39,7 +39,14 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s112)**: **Fix — Administração: "Acessos Pendentes" preso em "Carregando…" + erro real de "Datas Comemorativas" mascarado como lista vazia — Deploy @1030.**
+**Fase atual (s113)**: **Fix — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" — Deploy @1031.**
+
+**O que foi implementado agora**:
+- O fix de s112 desmascarou o erro real (antes virava silenciosamente "Nenhuma data cadastrada"), revelando `Erro ao carregar: Cannot read properties of undefined (reading 'map')` ao abrir Administração → Cadastros Base → Datas Comemorativas.
+- Causa raiz: em [config_admin_service.gs](gas/src/modules/admin/config_admin_service.gs), a `var _DATAS_COMEMORATIVAS_DEFAULT` (array com as 34 datas pré-cadastradas) estava declarada **depois** do `return { ... }` que expõe a API pública do módulo (`ConfigAdminService = (function(){ ...; return {...}; ... código morto ...; })()`). Como é um `var` de escopo do IIFE (não uma function declaration, que é hoisted por inteiro), só a declaração era hoisted — a atribuição do array nunca executava, porque o `return` já tinha encerrado a função. `_DATAS_COMEMORATIVAS_DEFAULT` ficava `undefined` para sempre, e `_mergeComDefaults()` quebrava em `_DATAS_COMEMORATIVAS_DEFAULT.map(...)`. Reproduzido isoladamente em Node antes de corrigir (carregando o arquivo real com stubs dos deps) para confirmar a causa exata.
+- Corrigido: array movido para antes do `return` (continua no mesmo escopo do IIFE, só mudou de posição). Revalidado no Node: `listarDatasComemorativas()`/`getDatasComemorativas()` agora retornam as 34 datas corretamente.
+
+**Fase anterior (s112)**: **Fix — Administração: "Acessos Pendentes" preso em "Carregando…" + erro real de "Datas Comemorativas" mascarado como lista vazia — Deploy @1030.**
 
 **O que foi implementado agora**:
 - Usuário reportou print do painel Administração: card "Acessos Pendentes" travado em "⏳ Carregando solicitações…" e aba "Datas Comemorativas" exibindo "Nenhuma data cadastrada" (deveria sempre mostrar as 30 datas pré-cadastradas via `_mergeComDefaults`, já corrigido na fase s93).

@@ -620,6 +620,55 @@ var ConfigAdminService = (function () {
     }
   }
 
+  // ─── Datas Comemorativas ─────────────────────────────────────────────────
+  // NOTA: esta var precisa estar declarada ANTES do `return` abaixo — como é um
+  // `var` de escopo do IIFE (não uma function declaration), código após o
+  // `return` nunca executa, e a atribuição original ficava sempre `undefined`
+  // (causa do bug "Cannot read properties of undefined (reading 'map')").
+  var _DATAS_COMEMORATIVAS_DEFAULT = [
+    // ── Datas cívicas e festivas ──────────────────────────────────────────────
+    { id:'ano_novo',     mes:1,  dia:1,  label:'Feliz Ano Novo!',                        sub:'Que este ano seja repleto de realizações!',                    icone:'🎆', motion:'fogos'        },
+    { id:'fortaleza',    mes:3,  dia:25, label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726.',                                             icone:'🦀', motion:'estrelas'     },
+    { id:'namorados',    mes:6,  dia:12, label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',                 icone:'💛', motion:'coracoes'     },
+    { id:'ceara',        mes:7,  dia:23, label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824.',                                icone:'☀️', motion:'ouro'         },
+    { id:'independ',     mes:9,  dia:7,  label:'Independência do Brasil!',               sub:'7 de Setembro de 1822.',                                       icone:'🇧🇷', motion:'verde_amarelo' },
+    { id:'criancas',     mes:10, dia:12, label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.',    icone:'⭐', motion:'estrelas'     },
+    { id:'finados',      mes:11, dia:2,  label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',                       icone:'🕯️', motion:null           },
+    { id:'natal',        mes:12, dia:25, label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.',         icone:'🎄', motion:'papai_noel'   },
+    { id:'reveillon',    mes:12, dia:31, label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!',             icone:'🎊', motion:'fogos'        },
+    // ── Negritude e Diáspora Africana ────────────────────────────────────────
+    { id:'abolicao_ce',  mes:3,  dia:17, label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.',           icone:'✊',  motion:'ouro',      cls:'dc-abolicao' },
+    { id:'abolicao_br',  mes:5,  dia:13, label:'Abolição da Escravatura no Brasil',      sub:'Lei Áurea, 1888 — uma conquista que ainda exige reparação.',   icone:'✊',  motion:'ouro',      cls:'dc-abolicao' },
+    { id:'africa',       mes:5,  dia:25, label:'Dia da África',                          sub:'Celebrando as culturas, histórias e lutas do continente.',     icone:'🌍', motion:'ouro',      cls:'dc-africa'   },
+    { id:'consciencia',  mes:11, dia:20, label:'Dia da Consciência Negra',               sub:'Zumbi dos Palmares e a luta permanente pelo povo negro.',      icone:'✊',  motion:'ouro',      cls:'dc-consciencia' },
+    // ── Povos Originários ────────────────────────────────────────────────────
+    { id:'indigenas_br', mes:4,  dia:19, label:'Dia dos Povos Indígenas',                sub:'Resistência, cultura e direitos dos povos originários.',       icone:'🪶', motion:'estrelas',  cls:'dc-indigena' },
+    { id:'indigenas_onu',mes:8,  dia:9,  label:'Dia Internacional dos Povos Indígenas',  sub:'ONU — saberes, línguas e territórios dos povos nativos.',      icone:'🌿', motion:'estrelas',  cls:'dc-indigena' },
+    // ── Direitos Humanos e Igualdade ─────────────────────────────────────────
+    { id:'mulheres',     mes:3,  dia:8,  label:'Dia Internacional das Mulheres',         sub:'Pela igualdade, liberdade e direitos das mulheres.',            icone:'💜', motion:'estrelas',  cls:'dc-mulheres' },
+    { id:'lgbtqia',      mes:6,  dia:28, label:'Dia Internacional do Orgulho LGBTQIA+', sub:'Amor, identidade e o direito de ser quem se é.',               icone:'🏳️‍🌈', motion:'fogos', cls:'dc-arco-iris'},
+    { id:'violencia_m',  mes:11, dia:25, label:'Dia pela Eliminação da Violência contra as Mulheres', sub:'Nenhuma forma de violência é aceitável.',         icone:'💜', motion:null,         cls:'dc-mulheres' },
+    { id:'dir_humanos',  mes:12, dia:10, label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', motion:'estrelas' },
+    // ── Bairros de Fortaleza ─────────────────────────────────────────────────
+    { id:'bom_jardim',   mes:3,  dia:24, label:'Aniversário do Bom Jardim!',              sub:'Fundado em 1961 — comunidade, arte e resistência.',            icone:'🌿', motion:'bairro',       cls:'dc-bairro'   },
+    { id:'canindezinho', mes:10, dia:4,  label:'Aniversário do Canindezinho!',             sub:'Padroeiro São Francisco de Assis — celebrando a comunidade.', icone:'⛪', motion:'bairro',       cls:'dc-bairro'   },
+    // ── CCBJ ─────────────────────────────────────────────────────────────────
+    { id:'ccbj',         mes:12, dia:19, label:'Aniversário do CCBJ!',                    sub:'Centro Cultural Bom Jardim — inaugurado em 19 de dezembro de 2006. Arte, cultura e resistência no território!', icone:'🏛️', motion:'ccbj_20anos', cls:'dc-ccbj' },
+    // ── Arte e Cultura ───────────────────────────────────────────────────────
+    { id:'teatro',       mes:3,  dia:27, label:'Dia Mundial do Teatro',                   sub:'A arte cênica que transforma vidas e territórios.',            icone:'🎭', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'livro',        mes:4,  dia:23, label:'Dia Mundial do Livro e do Direito Autoral',sub:'A leitura que liberta — UNESCO, desde 1995.',                 icone:'📖', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'danca',        mes:4,  dia:29, label:'Dia Internacional da Dança',              sub:'O movimento que fala o que as palavras não alcançam.',         icone:'💃', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'museus',       mes:5,  dia:18, label:'Dia Internacional dos Museus',            sub:'Patrimônio, memória e acesso à cultura para todos.',           icone:'🏛️', motion:'cultura',      cls:'dc-cultura'  },
+    { id:'santo_antonio',mes:6,  dia:13, label:'Dia de Santo Antônio — Festa Junina!',   sub:'O mês mais junino do Nordeste começa aqui!',                  icone:'🎉', motion:'sao_joao',      cls:'dc-sao-joao' },
+    { id:'sao_joao',     mes:6,  dia:24, label:'Feliz Festa de São João!',               sub:'Quadrilha, forró, fogueira e todo o coração do Nordeste!',     icone:'🎆', motion:'sao_joao',      cls:'dc-sao-joao' },
+    { id:'patrimonio',   mes:8,  dia:17, label:'Dia do Patrimônio Histórico e Cultural',  sub:'IPHAN — preservar é resistir ao apagamento da memória.',       icone:'🏰', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'folclore',     mes:8,  dia:22, label:'Dia do Folclore',                         sub:'A sabedoria popular que nasce do povo e volta para o povo.',   icone:'🎪', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'cultura_br',   mes:11, dia:5,  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'musica',       mes:11, dia:22, label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'samba',        mes:12, dia:2,  label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', motion:'cultura',       cls:'dc-cultura'  },
+    { id:'forro',        mes:12, dia:13, label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', motion:'sao_joao',      cls:'dc-sao-joao' }
+  ];
+
   return {
     listarEspacos:               listarEspacos,
     salvarEspaco:                salvarEspaco,
@@ -742,52 +791,6 @@ var ConfigAdminService = (function () {
     });
     return { numNiveis: params.niveis.length };
   }
-
-  // ─── Datas Comemorativas ─────────────────────────────────────────────────
-
-  var _DATAS_COMEMORATIVAS_DEFAULT = [
-    // ── Datas cívicas e festivas ──────────────────────────────────────────────
-    { id:'ano_novo',     mes:1,  dia:1,  label:'Feliz Ano Novo!',                        sub:'Que este ano seja repleto de realizações!',                    icone:'🎆', motion:'fogos'        },
-    { id:'fortaleza',    mes:3,  dia:25, label:'Aniversário de Fortaleza!',              sub:'Fundada em 1726.',                                             icone:'🦀', motion:'estrelas'     },
-    { id:'namorados',    mes:6,  dia:12, label:'Feliz Dia dos Namorados!',               sub:'Que o amor esteja em tudo que você faz hoje.',                 icone:'💛', motion:'coracoes'     },
-    { id:'ceara',        mes:7,  dia:23, label:'Aniversário do Ceará!',                  sub:'Emancipação política em 1824.',                                icone:'☀️', motion:'ouro'         },
-    { id:'independ',     mes:9,  dia:7,  label:'Independência do Brasil!',               sub:'7 de Setembro de 1822.',                                       icone:'🇧🇷', motion:'verde_amarelo' },
-    { id:'criancas',     mes:10, dia:12, label:'Feliz Dia das Crianças!',                sub:'Que o espírito lúdico e criativo esteja sempre com você.',    icone:'⭐', motion:'estrelas'     },
-    { id:'finados',      mes:11, dia:2,  label:'Dia de Finados',                         sub:'Momento de reflexão e memória afetiva.',                       icone:'🕯️', motion:null           },
-    { id:'natal',        mes:12, dia:25, label:'Feliz Natal!',                           sub:'Que a alegria, a paz e o amor preencham seu coração.',         icone:'🎄', motion:'papai_noel'   },
-    { id:'reveillon',    mes:12, dia:31, label:'Feliz Réveillon!',                       sub:'A virada está chegando — que venha cheio de luz!',             icone:'🎊', motion:'fogos'        },
-    // ── Negritude e Diáspora Africana ────────────────────────────────────────
-    { id:'abolicao_ce',  mes:3,  dia:17, label:'17 de Março — Abolição do Ceará (1884)', sub:'Ceará: primeiro estado a libertar os escravizados.',           icone:'✊',  motion:'ouro',      cls:'dc-abolicao' },
-    { id:'abolicao_br',  mes:5,  dia:13, label:'Abolição da Escravatura no Brasil',      sub:'Lei Áurea, 1888 — uma conquista que ainda exige reparação.',   icone:'✊',  motion:'ouro',      cls:'dc-abolicao' },
-    { id:'africa',       mes:5,  dia:25, label:'Dia da África',                          sub:'Celebrando as culturas, histórias e lutas do continente.',     icone:'🌍', motion:'ouro',      cls:'dc-africa'   },
-    { id:'consciencia',  mes:11, dia:20, label:'Dia da Consciência Negra',               sub:'Zumbi dos Palmares e a luta permanente pelo povo negro.',      icone:'✊',  motion:'ouro',      cls:'dc-consciencia' },
-    // ── Povos Originários ────────────────────────────────────────────────────
-    { id:'indigenas_br', mes:4,  dia:19, label:'Dia dos Povos Indígenas',                sub:'Resistência, cultura e direitos dos povos originários.',       icone:'🪶', motion:'estrelas',  cls:'dc-indigena' },
-    { id:'indigenas_onu',mes:8,  dia:9,  label:'Dia Internacional dos Povos Indígenas',  sub:'ONU — saberes, línguas e territórios dos povos nativos.',      icone:'🌿', motion:'estrelas',  cls:'dc-indigena' },
-    // ── Direitos Humanos e Igualdade ─────────────────────────────────────────
-    { id:'mulheres',     mes:3,  dia:8,  label:'Dia Internacional das Mulheres',         sub:'Pela igualdade, liberdade e direitos das mulheres.',            icone:'💜', motion:'estrelas',  cls:'dc-mulheres' },
-    { id:'lgbtqia',      mes:6,  dia:28, label:'Dia Internacional do Orgulho LGBTQIA+', sub:'Amor, identidade e o direito de ser quem se é.',               icone:'🏳️‍🌈', motion:'fogos', cls:'dc-arco-iris'},
-    { id:'violencia_m',  mes:11, dia:25, label:'Dia pela Eliminação da Violência contra as Mulheres', sub:'Nenhuma forma de violência é aceitável.',         icone:'💜', motion:null,         cls:'dc-mulheres' },
-    { id:'dir_humanos',  mes:12, dia:10, label:'Dia Internacional dos Direitos Humanos', sub:'Declaração Universal dos Direitos Humanos — 10 de dezembro de 1948.', icone:'🕊️', motion:'estrelas' },
-    // ── Bairros de Fortaleza ─────────────────────────────────────────────────
-    { id:'bom_jardim',   mes:3,  dia:24, label:'Aniversário do Bom Jardim!',              sub:'Fundado em 1961 — comunidade, arte e resistência.',            icone:'🌿', motion:'bairro',       cls:'dc-bairro'   },
-    { id:'canindezinho', mes:10, dia:4,  label:'Aniversário do Canindezinho!',             sub:'Padroeiro São Francisco de Assis — celebrando a comunidade.', icone:'⛪', motion:'bairro',       cls:'dc-bairro'   },
-    // ── CCBJ ─────────────────────────────────────────────────────────────────
-    { id:'ccbj',         mes:12, dia:19, label:'Aniversário do CCBJ!',                    sub:'Centro Cultural Bom Jardim — inaugurado em 19 de dezembro de 2006. Arte, cultura e resistência no território!', icone:'🏛️', motion:'ccbj_20anos', cls:'dc-ccbj' },
-    // ── Arte e Cultura ───────────────────────────────────────────────────────
-    { id:'teatro',       mes:3,  dia:27, label:'Dia Mundial do Teatro',                   sub:'A arte cênica que transforma vidas e territórios.',            icone:'🎭', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'livro',        mes:4,  dia:23, label:'Dia Mundial do Livro e do Direito Autoral',sub:'A leitura que liberta — UNESCO, desde 1995.',                 icone:'📖', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'danca',        mes:4,  dia:29, label:'Dia Internacional da Dança',              sub:'O movimento que fala o que as palavras não alcançam.',         icone:'💃', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'museus',       mes:5,  dia:18, label:'Dia Internacional dos Museus',            sub:'Patrimônio, memória e acesso à cultura para todos.',           icone:'🏛️', motion:'cultura',      cls:'dc-cultura'  },
-    { id:'santo_antonio',mes:6,  dia:13, label:'Dia de Santo Antônio — Festa Junina!',   sub:'O mês mais junino do Nordeste começa aqui!',                  icone:'🎉', motion:'sao_joao',      cls:'dc-sao-joao' },
-    { id:'sao_joao',     mes:6,  dia:24, label:'Feliz Festa de São João!',               sub:'Quadrilha, forró, fogueira e todo o coração do Nordeste!',     icone:'🎆', motion:'sao_joao',      cls:'dc-sao-joao' },
-    { id:'patrimonio',   mes:8,  dia:17, label:'Dia do Patrimônio Histórico e Cultural',  sub:'IPHAN — preservar é resistir ao apagamento da memória.',       icone:'🏰', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'folclore',     mes:8,  dia:22, label:'Dia do Folclore',                         sub:'A sabedoria popular que nasce do povo e volta para o povo.',   icone:'🎪', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'cultura_br',   mes:11, dia:5,  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'musica',       mes:11, dia:22, label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'samba',        mes:12, dia:2,  label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'forro',        mes:12, dia:13, label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', motion:'sao_joao',      cls:'dc-sao-joao' }
-  ];
 
   function _lerDatasComemorativasJSON() {
     try {
