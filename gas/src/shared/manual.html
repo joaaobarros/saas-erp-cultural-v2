@@ -158,22 +158,30 @@ var ManualUI = (function () {
     },
 
     { id:'dashboard', label:'Dashboard', icone:'dashboard', modulo:null,
-      tags:['dashboard','métricas','indicadores','gráficos','resumo','sla','orçamento','kpi','operacional','financeiro','estratégico'],
-      descricao:'Visão geral dos números e indicadores do sistema — três pilares: Operacional, Financeiro e Estratégico',
+      tags:['dashboard','métricas','indicadores','gráficos','resumo','sla','orçamento','kpi','operacional','financeiro','estratégico','alertas','conformidade','tendência','banco de horas','férias vencidas'],
+      descricao:'Visão geral dos números e indicadores do sistema — cinco abas: Operacional, Financeiro, Estratégico, Alertas e Conformidade',
       content: function(papel, feat) {
-        return _p('O Dashboard reúne os principais indicadores da instituição organizados em três pilares. Use-o para acompanhar o dia a dia e identificar pontos de atenção rapidamente.')
-          + _h2('<span class="ms ms-sm">speed</span> Pilar Operacional')
-          + _card('museum', 'Espaços', 'Quantos espaços estão disponíveis, em uso ou em manutenção.')
+        return _p('O Dashboard reúne os principais indicadores da instituição em cinco abas. Cada aba combina cards de resumo, gráficos de tendência histórica e breakdowns por dimensão.')
+          + _h2('<span class="ms ms-sm">speed</span> Aba Operacional')
+          + _card('museum', 'Espaços', 'Quantos espaços estão disponíveis, em uso ou em manutenção. Tendência de reservas por mês e top 5 espaços/setores mais usados.')
           + _card('people', 'Equipe', 'Total de colaboradores ativos e afastados.')
           + _card('event', 'Ações culturais', 'Quantidade de ações em cada fase: planejadas, em produção, em execução e concluídas.')
           + _card('task_alt', 'Tarefas', 'Resumo das tarefas em aberto, concluídas e bloqueadas.')
           + _card('support_agent', 'SLA de Demandas', 'Demandas do Balcão dentro ou fora do prazo (SLA). Identifique gargalos antes que vençam.')
-          + _h2('<span class="ms ms-sm">account_balance</span> Pilar Financeiro')
-          + _card('pie_chart', 'Execução orçamentária', 'Percentual executado do orçamento total por fonte de recurso. Atualizado em tempo real a partir dos contratos e pagamentos.')
+          + _h2('<span class="ms ms-sm">account_balance</span> Aba Financeiro')
+          + _card('pie_chart', 'Execução orçamentária', 'Percentual executado do orçamento total por fonte de recurso. Breakdown por tipo de fonte.')
           + _card('description', 'Contratos ativos', 'Número de contratos em vigor, encerrados no mês e com vigência vencendo nos próximos 30 dias.')
-          + _h2('<span class="ms ms-sm">flag</span> Pilar Estratégico')
-          + _card('bar_chart', 'KPIs calculados automaticamente', 'Indicadores-chave derivados dos dados reais do sistema: taxa de ocupação dos espaços, conclusão de ações no prazo, custo médio por ação, satisfação do público (NPS) e renovação de agentes culturais.')
-          + _card('warning', 'Riscos identificados', 'Alertas automáticos: ações com prazo vencido, objetivos estratégicos sem ações vinculadas, contratos vencendo e índice de clima organizacional abaixo do limiar.')
+          + _h2('<span class="ms ms-sm">flag</span> Aba Estratégico')
+          + _card('bar_chart', 'KPIs calculados automaticamente', 'Indicadores-chave: taxa de ocupação dos espaços, conclusão de ações no prazo, custo médio por ação, NPS do público e renovação de agentes. Tendência das últimas 6 rodadas de clima organizacional.')
+          + _card('warning', 'Riscos identificados', 'Alertas automáticos: ações com prazo vencido, objetivos estratégicos sem ações, contratos vencendo e clima abaixo do limiar. Breakdown de ações por setor.')
+          + _h2('<span class="ms ms-sm">notifications_active</span> Aba Alertas')
+          + _card('timer_off', 'Banco de horas excedente', 'Colaboradores CLT com banco de horas positivo acima de 40 h — risco de perda de crédito. Breakdown por setor.')
+          + _card('beach_access', 'Férias pendentes', 'Colaboradores com janela concessiva vencida ou próxima do vencimento. Breakdown por setor.')
+          + _card('inventory_2', 'Itens abaixo do mínimo', 'Itens do almoxarifado com saldo abaixo do estoque mínimo configurado.')
+          + _card('construction', 'Ativos com manutenção pendente', 'Bens patrimoniais com manutenção agendada ou vencida.')
+          + _h2('<span class="ms ms-sm">verified_user</span> Aba Conformidade (Lei Rouanet)')
+          + _card('gavel', 'Limites por categoria de rubrica', 'Para contratos modalidade Lei Rouanet, o sistema compara o percentual real de cada categoria (Divulgação ≤ 20 %, Captação ≤ 10 %, Administração ≤ 15 %) contra os limites legais e sinaliza quando o limite é ultrapassado.')
+          + _calloutAviso('A aba Conformidade só exibe dados quando há contratos com modalidade "lei_rouanet" e rubricas classificadas com a categoria Rouanet correspondente. Rubricas sem classificação aparecem como "não classificado" e não entram no cálculo.')
           + _calloutInfo('O Dashboard é atualizado automaticamente cada vez que você acessa. As métricas financeiras e estratégicas usam cache de até 2 minutos para garantir performance.');
       }
     },
@@ -398,12 +406,12 @@ var ManualUI = (function () {
     // ── PESSOAS & RH ──────────────────────────────────────────────────────
 
     { id:'pessoas', label:'Colaboradores', icone:'badge', modulo:'PESSOAS',
-      tags:['colaborador','cadastro','pessoa','equipe','status','desligamento','afastamento','meu perfil','dados pessoais','pcd','gênero','raça','demográfico','aniversário'],
+      tags:['colaborador','cadastro','pessoa','equipe','status','desligamento','afastamento','meu perfil','dados pessoais','pcd','gênero','raça','demográfico','aniversário','endereço','cep','ordenar','filtrar'],
       descricao:'Cadastro e acompanhamento dos colaboradores da instituição',
       content: function(papel, feat) {
         var html = _p('O módulo de Colaboradores é o cadastro central de todas as pessoas que trabalham ou trabalharam no CCBJ.')
           + _h2('<span class="ms ms-sm">badge</span> O que você vê')
-          + _card('list', 'Lista de colaboradores', 'Nome, cargo, setor e status de cada colaborador.')
+          + _card('list', 'Lista de colaboradores', 'Nome, cargo, setor, vínculo, admissão e status de cada colaborador. Clique nos cabeçalhos de coluna para ordenar — a seta indica a direção atual.')
           + _card('account_circle', 'Ficha do colaborador', 'Histórico de cargos, setor, data de entrada, contato, vínculo e observações.')
           + _tabela(['Status','Significado'],[
               ['Ativo','Trabalhando normalmente.'],
@@ -412,9 +420,10 @@ var ManualUI = (function () {
             ]);
         if (feat && feat.editar) {
           html += _h2('<span class="ms ms-sm">edit</span> Gerenciar cadastros (RH / Admin)')
-            + _card('person_add', 'Novo colaborador', 'Preencha nome, cargo, setor, tipo de vínculo (CLT, PJ, Bolsista, Professor, Voluntário, Estagiário), data de início e dados de contato.')
-            + _card('edit', 'Editar informações', 'Atualize cargo, setor ou qualquer dado cadastral.')
-            + _card('cake', 'Data de nascimento', 'Campo opcional no formulário de cadastro. Quando preenchido, o colaborador aparece na seção de aniversariantes do Meu Centro nos 7 dias anteriores ao seu aniversário.')
+            + _card('person_add', 'Novo colaborador', 'Clique em "Novo" para abrir o formulário em modal. Preencha nome, cargo, setor, tipo de vínculo (CLT, PJ, Bolsista, Professor, Voluntário, Estagiário), data de início e dados de contato.')
+            + _card('edit', 'Editar informações', 'Clique no lápis ao lado do colaborador para abrir o formulário de edição em modal.')
+            + _card('home', 'Endereço residencial', 'Digite o CEP e os demais campos (logradouro, bairro, cidade, UF) são preenchidos automaticamente pelo ViaCEP. Os campos ficam bloqueados para edição direta — clique em "Editar manualmente" para corrigir dado que o ViaCEP não encontrou corretamente.')
+            + _card('cake', 'Data de nascimento', 'Campo opcional. Quando preenchido, o colaborador aparece na seção de aniversariantes do Meu Centro nos 7 dias anteriores ao aniversário.')
             + _card('swap_horiz', 'Mudar status', 'Registre afastamentos, retornos ou desligamentos. Ao desligar, o e-mail do colaborador é bloqueado automaticamente em todos os módulos.');
         }
         html += _calloutInfo('Colaboradores sem <strong>data de nascimento</strong> preenchida não aparecem na seção de aniversariantes do Meu Centro. Mantenha esse campo atualizado para que a equipe possa ser lembrada das datas.');
@@ -428,7 +437,7 @@ var ManualUI = (function () {
           + _ul([
               '<strong>Apelido / Pronomes</strong> — como você prefere ser chamado(a)',
               '<strong>E-mail pessoal e telefone</strong>',
-              '<strong>Endereço residencial</strong>',
+              '<strong>Endereço residencial</strong> — informe o CEP e os demais campos são preenchidos automaticamente',
               '<strong>Contato de emergência</strong> — nome, parentesco e telefone',
               '<strong>Gênero, orientação sexual e raça/cor</strong> — autodeclarados, visíveis apenas para RH e Admin',
               '<strong>PcD</strong> — se é pessoa com deficiência, tipo e descrição do suporte necessário',
@@ -894,8 +903,8 @@ var ManualUI = (function () {
     },
 
     { id:'bi-demografico', label:'BI Demográfico', icone:'diversity_3', modulo:null,
-      tags:['bi','demográfico','gênero','raça','cor','orientação','pcd','território','faixa etária','mapa de calor','diversidade','beneficiário','equipe','análise','dados'],
-      descricao:'Análise demográfica da equipe e dos beneficiários — gênero, raça/cor, PcD, território e mais',
+      tags:['bi','demográfico','gênero','raça','cor','orientação','pcd','território','faixa etária','mapa de calor','diversidade','beneficiário','equipe','análise','dados','idh','bairro','cidade','calor','overlay','mapa'],
+      descricao:'Análise demográfica da equipe e dos beneficiários — gênero, raça/cor, PcD, território, IDH e mapa de calor',
       content: function(papel, feat) {
         return _p('O BI Demográfico transforma os dados autodeclarados pelos colaboradores e os dados de inscrições do público em painéis de análise agregados. Nunca exibe dados individuais.')
           + _h2('<span class="ms ms-sm">group</span> Análise da equipe')
@@ -905,9 +914,18 @@ var ManualUI = (function () {
           + _card('corporate_fare', 'Por setor', 'Compare a diversidade entre os diferentes setores da organização.')
           + _card('cake', 'Faixa etária', 'Pirâmide etária da equipe: percentual por faixa de 10 anos.')
           + _h2('<span class="ms ms-sm">groups</span> Análise de beneficiários (Público)')
-          + _card('map', 'Território', 'De quais bairros e regiões vêm as pessoas que participam das ações culturais. Mapa de calor por localização informada no momento da inscrição.')
+          + _card('map', 'Território', 'De quais bairros e regiões vêm as pessoas que participam das ações culturais. Derivado do CEP informado na inscrição via ViaCEP.')
           + _card('wc', 'Gênero do público', 'Distribuição de gênero dos participantes inscritos nas ações.')
           + _card('cake', 'Faixa etária do público', 'Pirâmide etária dos beneficiários.')
+          + _h2('<span class="ms ms-sm">map</span> Mapa territorial')
+          + _p('O mapa exibe a distribuição geográfica da equipe e dos beneficiários. Há três modos de visualização:')
+          + _tabela(['Modo','O que mostra'],[
+              ['Bairros','Círculos proporcionais à contagem de pessoas por bairro, coloridos pelo IDH do bairro (azul = alto IDH → vermelho = baixo IDH).'],
+              ['Cidades','Bolhas por município — útil quando a equipe ou o público vem de várias cidades da região.'],
+              ['Calor (overlay)','Sobreposição de mapa de calor sobre os bairros/cidades. Ativado pelo botão de chama no canto do mapa. Cada ponto representa uma pessoa no endereço geocodificado pelo CEP.']
+            ])
+          + _card('leaderboard', 'IDH territorial', 'Polígonos de bairros coloridos pelo IDH (Índice de Desenvolvimento Humano) obtido do Atlas Brasil. Cobertura total do Ceará com fallback UDH → IDHM quando necessário.')
+          + _calloutInfo('O endereço dos colaboradores é geocodificado pelo CEP cadastrado no formulário RH. Quanto mais preciso o CEP, mais preciso o ponto no mapa. Bairro, cidade e UF são preenchidos automaticamente pelo ViaCEP ao digitar o CEP — não precisam ser digitados manualmente.')
           + _calloutInfo('Os dados demográficos da equipe são alimentados pelo campo "Meu Perfil" de cada colaborador. Grupos com menos de 5 pessoas são ocultados para proteger identidades.')
           + _calloutAviso('Dados demográficos são visíveis apenas para RH, Admin e SuperAdmin. Nunca compartilhe capturas de tela com dados individuais identificáveis.');
       }
