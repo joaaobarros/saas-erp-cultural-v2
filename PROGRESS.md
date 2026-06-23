@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s129)**: **Fix — BI Demográfico: sem limite de geocodificações + erros não cacheados — Deploy @pendente.**
+**Fase atual (s129)**: **Fix — BI Demográfico: sem limite de geocodificações + erros não cacheados — Deploy @1049.**
 
 **O que foi implementado agora**:
 - **Sem cap de geocodificações** (`bi_demografico_controller.gs`): removida a constante `_BI_GEO_MAX_NOVOS` e todos os seus checks em `_biResolverGeo` e em `ctrl_bi_demografico_beneficiarios`. Todos os endereços/CEPs são processados em cada chamada, sem limite.

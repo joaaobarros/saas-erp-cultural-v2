@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s129 @pendente (BI geo: sem limite de CEPs + erros não cacheados) · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s129 @1049 (BI geo: sem limite de CEPs + erros não cacheados) · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -8,7 +8,7 @@
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @pendente | s129 | **Sem cap** (`bi_demografico_controller.gs`): removida `_BI_GEO_MAX_NOVOS` e todos os seus checks — todos os CEPs/endereços são geocodificados em cada chamada sem limitação. **Erros não cacheados**: `{erro: true}` não é gravado no cache; o endereço é retentado na próxima chamada (antes ficava permanentemente invisível no mapa). |
+| @1049 | s129 | **Sem cap** (`bi_demografico_controller.gs`): removida `_BI_GEO_MAX_NOVOS` e todos os seus checks — todos os CEPs/endereços são geocodificados em cada chamada sem limitação. **Erros não cacheados**: `{erro: true}` não é gravado no cache; o endereço é retentado na próxima chamada (antes ficava permanentemente invisível no mapa). |
 
 ### Estado anterior: s128 @1048 — BI Demográfico: geocodificação com CEP + logradouro + número
 
