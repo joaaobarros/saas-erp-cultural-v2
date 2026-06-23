@@ -185,6 +185,44 @@ function ctrl_dashboard_estoque(params) {
   }, 'ctrl_dashboard_estoque');
 }
 
+// ─── Dashboard Alertas Operacionais ───────────────────────────────────────────
+
+/**
+ * Alertas operacionais agregados: banco de horas excedente, férias pendentes
+ * de aprovação, ativos em manutenção, empréstimos de almoxarifado atrasados.
+ * Cada indicador já é calculado por seu módulo de origem — sem duplicar cálculo.
+ */
+function ctrl_dashboard_alertas(params) {
+  return GasResponse.wrap(function() {
+    var ctx   = _ctxDash();
+    var orgId = ctx.orgId;
+    var resultado = {};
+
+    try {
+      var limiteHoras = (SistemaConfigService.getParametrosRH().banco_horas_limite_horas) || 120;
+      var excedentes  = PontoRepository.listarBancoHorasExcedente(orgId, limiteHoras * 60);
+      resultado.bancoHoras = { excedentes: excedentes.length, limiteHoras: limiteHoras };
+    } catch(e) { resultado.bancoHoras = null; }
+
+    try {
+      var pendentes = PessoasEngine.listarFerias({ status: 'pendente' }, orgId);
+      resultado.ferias = { pendentes: pendentes.length };
+    } catch(e) { resultado.ferias = null; }
+
+    try {
+      var mAtivos = AtivosEngine.metricas(orgId);
+      resultado.ativos = { manutencao: mAtivos.manutencao || 0 };
+    } catch(e) { resultado.ativos = null; }
+
+    try {
+      var mAlmox = AlmoxarifadoEngine.metricas(orgId);
+      resultado.almoxarifado = { atrasados: mAlmox.emprestimosAtrasados || 0 };
+    } catch(e) { resultado.almoxarifado = null; }
+
+    return resultado;
+  }, 'ctrl_dashboard_alertas');
+}
+
 // ─── Dashboard Estratégico ────────────────────────────────────────────────────
 
 /**

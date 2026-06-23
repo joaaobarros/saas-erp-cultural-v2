@@ -39,7 +39,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s114)**: **Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão do menu — Deploy @1032.**
+**Fase atual (s115)**: **Feat — Dashboard: aba "Alertas" operacionais (banco de horas, férias, ativos, almoxarifado) — Deploy @1033.**
+
+**O que foi implementado agora**:
+- Continuação do "Centro de Controle" (dashboard cross-módulo) iniciado em s114. Usuário pediu profundidade em métricas cross-módulo para monitoramento, decisão estratégica e prestação de contas. Pesquisa em duas rodadas revelou: (1) `acaoId` já liga 16+ módulos — Ação já é hub real; (2) os limites Lei Rouanet (`config_org.json`) nunca são comparados contra execução real porque as rubricas só têm `categoria` custeio/investimento, sem classificação divulgação/captação/administração — **não implementado** por exigir decisão de produto sobre o modelo de dados do Financeiro; (3) o painel de Exportações (CODIP/SALIC/SNIIC/PNAB) **já existe** em Público e Financeiro (`ExportacoesUI`, Fase 13.1) — não duplicado.
+- Implementada a trilha com gap real e seguro: aba "Alertas" no Dashboard agregando 4 indicadores já calculados em seus módulos de origem, sem inventar dado novo: banco de horas excedente (novo `PontoRepository.listarBancoHorasExcedente()`, comparado ao limite `parametrosRH.banco_horas_limite_horas` de `config_org.json`), férias pendentes de aprovação (`PessoasEngine.listarFerias({status:'pendente'})`), ativos em manutenção (`AtivosEngine.metricas().manutencao`), empréstimos de almoxarifado atrasados (`AlmoxarifadoEngine.metricas().emprestimosAtrasados`). Novo `ctrl_dashboard_alertas` em `controllers/dashboard_controller.gs` compõe os 4.
+
+**Pendente de confirmação do usuário**: smoke test descrito em `docs/auditoria/roteiro-auditoria.md` (seção HANDOFF SESSÃO 115) — aba "Alertas" do Dashboard carrega os 4 cards sem erro.
+
+**Decisão de produto pendente (não implementada)**: card de conformidade com limites Lei Rouanet exige adicionar categoria Rouanet (divulgação/captação/administração/pessoal/custeio/capital) às rubricas do Financeiro — ver detalhes na sessão s114/s115 deste arquivo antes de iniciar.
+
+**Fase anterior (s114)**: **Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão do menu — Deploy @1032.**
 
 **O que foi implementado agora**:
 - Usuário reportou que o item "Relatórios" do menu lateral aparece sempre como "inativo". Investigação encontrou que `ModulosRegistryService` (`gas/src/modules/admin/modulos_registry_service.gs:18`) já havia removido `RELATORIOS` do catálogo canônico de módulos ativáveis em sessão anterior, com o comentário explícito "não existe view correspondente; exportações ficam em Financeiro" — mas nunca foi feita a limpeza das referências órfãs que dependiam desse módulo: item do menu lateral, 2 atalhos da Home (nunca renderizavam), matriz de permissões duplicada no frontend (`index.html`), matriz RBAC canônica (`core/services/permissoes_v2_engine.gs`), 2 entradas do Manual (`shared/manual.html` — ficavam inacessíveis, mesmo tendo conteúdo útil), catálogo do wizard de setup de nova org (`portal/wizard_setup.html`), mapa de auditoria por módulo (`modules/admin/sistema_metricas_controller.gs`) e o seed `core/data/config_org.json`. Todas removidas/corrigidas — **não foi tocada** a planilha de dados real `SHEET_ID_RELATORIOS`/aba CODIP (`core/setup.gs`, `core/utils.gs`, `core/services/metrics_engine.gs`), que é infraestrutura de dados legítima sem relação com o módulo de menu morto.

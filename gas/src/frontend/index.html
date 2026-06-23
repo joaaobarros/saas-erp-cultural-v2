@@ -8576,7 +8576,7 @@ select.form-control { cursor: pointer; }
         <div class="mod-header">
           <div>
             <h2 style="margin:0;font-size:20px;font-weight:700;">BI — Central de Inteligência</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Estoque · Demográfico</p>
+            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Estoque · Alertas · Demográfico</p>
           </div>
           <button class="btn btn-secundario btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
         </div>
@@ -8586,6 +8586,7 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> BI Financeiro</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> BI Estratégico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('estoque',this)" data-bg-skip="1"><span class="ms ms-sm">inventory_2</span> BI Estoque</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('alertas',this)" data-bg-skip="1"><span class="ms ms-sm">notifications_active</span> Alertas</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('demografico',this)" data-bg-skip="1"><span class="ms ms-sm">person_search</span> BI Demográfico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1"><span class="ms ms-sm">smart_toy</span> Insights IA</button>
         </div>
@@ -8601,6 +8602,9 @@ select.form-control { cursor: pointer; }
         </div>
         <div id="dash-tab-estoque" class="oculto">
           <div id="dash-estoque-content"><p class="muted-text">⏳ Carregando…</p></div>
+        </div>
+        <div id="dash-tab-alertas" class="oculto">
+          <div id="dash-alertas-content"><p class="muted-text">⏳ Carregando…</p></div>
         </div>
         <div id="dash-tab-demografico" class="oculto"></div>
 
@@ -10935,6 +10939,7 @@ var GAS = {
     financeiro:  function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_financeiro({}); },
     estrategico: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estrategico({}); },
     estoque:     function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estoque({}); },
+    alertas:     function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_alertas({}); },
     insightsIA:  function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_insights_ia(p||{}); },
     relatorioIA: function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_relatorio_ia(p||{}); }
   },
@@ -38232,13 +38237,14 @@ var DashboardUI = (function() {
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
     if (tab === 'estoque')     _carregarEstoque();
+    if (tab === 'alertas')     _carregarAlertas();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.atualizar(null); }
     _carregado = true;
   }
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['operacional','financeiro','estrategico','estoque','demografico','insights'].forEach(function(t) {
+    ['operacional','financeiro','estrategico','estoque','alertas','demografico','insights'].forEach(function(t) {
       var el = document.getElementById('dash-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -38248,6 +38254,7 @@ var DashboardUI = (function() {
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
     if (tab === 'estoque')     _carregarEstoque();
+    if (tab === 'alertas')     _carregarAlertas();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.aoAbrir(); }
   }
 
@@ -38316,6 +38323,21 @@ var DashboardUI = (function() {
       }
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel de estoque.</p>'; });
+  }
+
+  function _carregarAlertas() {
+    var el = document.getElementById('dash-alertas-content');
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando…</p>';
+    GAS.dashboard.alertas(function(r) {
+      if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
+      var d = r.data || {};
+      var cards = [];
+      if (d.bancoHoras) cards.push(_statCard('Banco de Horas Excedente', d.bancoHoras.excedentes||0, d.bancoHoras.excedentes>0?'var(--danger)':null, 'limite ' + d.bancoHoras.limiteHoras + 'h', "Router.navegar('ponto')"));
+      if (d.ferias)     cards.push(_statCard('Férias Pendentes de Aprovação', d.ferias.pendentes||0, d.ferias.pendentes>0?'var(--warning)':null, '', "Router.navegar('rh')"));
+      if (d.ativos)     cards.push(_statCard('Ativos em Manutenção', d.ativos.manutencao||0, d.ativos.manutencao>0?'var(--warning)':null, '', "Router.navegar('espacos')"));
+      if (d.almoxarifado) cards.push(_statCard('Empréstimos Atrasados', d.almoxarifado.atrasados||0, d.almoxarifado.atrasados>0?'var(--danger)':null, '', "Router.navegar('espacos')"));
+      if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
+    }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar alertas operacionais.</p>'; });
   }
 
   function _carregarEstrategico() {

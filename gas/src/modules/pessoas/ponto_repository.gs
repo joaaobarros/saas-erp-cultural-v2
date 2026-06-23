@@ -168,6 +168,18 @@ var PontoRepository = (function() {
     };
   }
 
+  /**
+   * Lista os registros de banco de horas da org com saldo acima do limite informado.
+   * @param {string} orgId
+   * @param {number} limiteMinutos
+   */
+  function listarBancoHorasExcedente(orgId, limiteMinutos) {
+    var lista = readJSON(ARQUIVO_BH) || [];
+    return lista.filter(function(b) {
+      return b.orgId === orgId && Math.abs(Number(b.saldoMinutos || 0)) > limiteMinutos;
+    });
+  }
+
   function atualizarBancoHoras(orgId, colaboradorId, deltaMinutos, motivo) {
     modifyJSON(ARQUIVO_BH, function(lista) {
       if (!Array.isArray(lista)) lista = [];
@@ -286,6 +298,7 @@ var PontoRepository = (function() {
     reverterImportacao:       reverterImportacao,
     proximoNSR:               proximoNSR,
     obterBancoHoras:          obterBancoHoras,
+    listarBancoHorasExcedente: listarBancoHorasExcedente,
     atualizarBancoHoras:      atualizarBancoHoras,
     creditarDiaBH:            creditarDiaBH,
     resetarBancoHoras:        resetarBancoHoras,

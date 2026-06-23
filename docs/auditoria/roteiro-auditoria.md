@@ -528,7 +528,23 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 114 (2026-06-22)
+## HANDOFF ATUAL — SESSÃO 115 (2026-06-23)
+
+### Estado atual: Feat — Dashboard: aba "Alertas" operacionais — Deploy @1033
+
+### O que foi feito nesta sessão (s115)
+| Deploy | O que foi implementado |
+|---|---|
+| @1033 | Usuário pediu para aprofundar o estudo de métricas cross-módulo (custo/horas por Ação foram dados como exemplo, não limite) antes de estruturar o "Centro de Controle". Catalogadas métricas reais (com file:line) em 3 eixos: monitoramento operacional, decisão estratégica (visão "Ação 360°", já viável via `acaoId`), e prestação de contas (achado crítico: limites Lei Rouanet configurados mas nunca verificados contra execução real — rubricas não têm a categoria necessária para isso, fora de escopo). Investigação também corrigiu uma suposição errada: o painel de exportações institucionais (CODIP/SALIC/SNIIC/PNAB) **já existe** (`ExportacoesUI` em Financeiro + Público), não havia gap ali. Implementada a trilha confirmada como gap real: aba "Alertas" no Dashboard (`DashboardUI`) com 4 indicadores já calculados nos módulos de origem — banco de horas excedente, férias pendentes, ativos em manutenção, empréstimos de almoxarifado atrasados. Novo `ctrl_dashboard_alertas` + novo método `PontoRepository.listarBancoHorasExcedente()` (único código novo de agregação; os outros 3 reaproveitam `metricas()`/`listarFerias()` já existentes). |
+
+### Pendente para smoke test
+- Dashboard → aba "Alertas": 4 cards carregam sem erro no console.
+- Card "Banco de Horas Excedente" reflete corretamente colaboradores com saldo (positivo ou negativo) acima de 120h (config padrão).
+- Card "Férias Pendentes" bate com a lista real em RH → Férias.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 114 (2026-06-22)
 
 ### Estado atual: Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão — Deploy @1032
 
