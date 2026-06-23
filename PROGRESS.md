@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s126)**: **Fix — Infraestrutura: abas Patrimônio e Estoque duplicadas corrigidas — Deploy @pendente.**
+**Fase atual (s126)**: **Fix — Infraestrutura: abas Patrimônio e Estoque duplicadas corrigidas — Deploy @1044.**
 
 **O que foi implementado agora**:
 - **Bug causa raiz** (`index.html`, `EspacosUI.abrirTab`): linha `var painelKey = tab === 'ativos' ? 'estoque' : tab` forçava o painel `esp-tab-ativos` a nunca ser exibido — ambos os botões ("Patrimônio" e "Estoque") mostravam sempre `esp-tab-estoque`. Linha removida: `painelKey = tab` (sem redirecionamento).

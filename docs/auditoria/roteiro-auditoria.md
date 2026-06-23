@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s126 @pendente (Infraestrutura: Patrimônio e Estoque duplicados corrigidos) · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025
+> Deploy atual: s126 @1044 (Infraestrutura: Patrimônio e Estoque duplicados corrigidos) · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -8,7 +8,7 @@
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @pendente | s126 | **Bug `abrirTab` em `EspacosUI`** (`index.html`): linha `var painelKey = tab === 'ativos' ? 'estoque' : tab` redirecionava o painel do botão "Patrimônio" para `esp-tab-estoque` (o mesmo painel do botão "Estoque"), tornando as duas abas idênticas. Corrigido para `var painelKey = tab` (sem alias). Lazy-load correspondente corrigido de `EstoqueUI.abrirSubTab('patrimonio')` para `AtivosUI.carregar()`. Resultado: "Patrimônio" exibe `esp-tab-ativos` (`AtivosUI` — bens/tombamento/localização) e "Estoque" exibe `esp-tab-estoque` (`EstoqueUI` — almoxarifado/saldo/movimentações). |
+| @1044 | s126 | **Bug `abrirTab` em `EspacosUI`** (`index.html`): linha `var painelKey = tab === 'ativos' ? 'estoque' : tab` redirecionava o painel do botão "Patrimônio" para `esp-tab-estoque` (o mesmo painel do botão "Estoque"), tornando as duas abas idênticas. Corrigido para `var painelKey = tab` (sem alias). Lazy-load correspondente corrigido de `EstoqueUI.abrirSubTab('patrimonio')` para `AtivosUI.carregar()`. Resultado: "Patrimônio" exibe `esp-tab-ativos` (`AtivosUI` — bens/tombamento/localização) e "Estoque" exibe `esp-tab-estoque` (`EstoqueUI` — almoxarifado/saldo/movimentações). |
 
 ### Estado anterior: s118 @1036 — Dashboard: 3 bugs silenciosos corrigidos
 
