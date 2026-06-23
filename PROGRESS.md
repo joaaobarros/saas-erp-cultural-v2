@@ -39,7 +39,12 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s127)**: **Feat/Fix — Pessoas/RH: ordenação multi-fator + form em modal; Endereço histórico; BI geo CEP puro — Deploy @1045.**
+**Fase atual (s128)**: **Fix — BI Demográfico: query geocodificação inclui CEP + logradouro + número — Deploy @1046.**
+
+**O que foi implementado agora**:
+- **BI Demográfico — query com endereço completo** (`bi_demografico_controller.gs`): quando CEP, logradouro e número estão todos disponíveis, a query agora monta `Logradouro, N - NNNNN-NNN, Brasil` em vez de usar só o CEP. CEP puro coloca o pino no centro da face de quadra; com o número, o geocodificador resolve o imóvel exato. Cache bumped seletivamente: chaves `end:*` passam de prefixo `geo3:` para `geo4:` (bust apenas dos endereços precisos — bairros/CEP continuam em `geo3:` sem re-geocodificação). Purga de `geo3:end:*` adicionada ao passo de limpeza do `modifyJSON`.
+
+**Fase anterior (s127)**: **Feat/Fix — Pessoas/RH: ordenação multi-fator + form em modal; Endereço histórico; BI geo CEP puro — Deploy @1045.**
 
 **O que foi implementado agora**:
 - **Ordenação multi-fator** (`index.html`, `RhUI`): cabeçalhos das colunas Nome/Setor/Cargo/Vínculo/Admissão/Status são clicáveis. Clique simples = critério primário (ASC → DESC cicla); Shift+clique = adiciona critério secundário/terciário. Ícone `unfold_more`/`arrow_upward`/`arrow_downward` + número de prioridade sobrescrito indicam estado ativo. Ordenação default preservada (setor + nome).
