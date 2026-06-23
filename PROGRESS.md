@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s130)**: **Fix — BI Demográfico: heat overlay corrigido — reverte query logradouro+número (causava coords erradas) — Deploy @pendente.**
+**Fase atual (s130)**: **Fix — BI Demográfico: heat overlay corrigido — reverte query logradouro+número (causava coords erradas) — Deploy @1050.**
 
 **O que foi implementado agora**:
 - **Revertida query com logradouro+número** (`bi_demografico_controller.gs`): a query `Logradouro, N - CEP, Brasil` introduzida em s128 fazia o Maps ignorar o CEP e resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados — dois pontos do heat overlay apareciam no centro-oeste e na Bahia em vez de Fortaleza. Voltou para CEP puro (`NNNNN-NNN, Brasil`), que âncora corretamente na face de quadra (~50–100 m).
