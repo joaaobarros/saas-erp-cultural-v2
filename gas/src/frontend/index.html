@@ -1982,6 +1982,15 @@ select.form-control { cursor: pointer; }
   /* ── Leaflet: isola contexto de empilhamento ──────────────────────────── */
   .leaflet-container { z-index: 0; isolation: isolate; }
 
+  /* Tela cheia do mapa BI Demográfico */
+  #bi-dem-mapa:fullscreen,
+  #bi-dem-mapa:-webkit-full-screen,
+  #bi-dem-mapa:-moz-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
 /* ── BulkBar — seleção múltipla ─────────────────────────────────────────── */
 .bulk-check { width:16px;height:16px;cursor:pointer;flex-shrink:0;accent-color:var(--color-primary); }
 .bulk-bar { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
@@ -9951,6 +9960,11 @@ select.form-control { cursor: pointer; }
               <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
                 onclick="BtnGuard.wrap('bi-dem-btn-mapa','Carregando mapa…',BiDemograficoUI.iniciarMapa)">
                 <span class="ms ms-sm">travel_explore</span> Carregar Mapa
+              </button>
+              <button class="btn btn-ghost btn-sm" id="bi-dem-btn-fullscreen" title="Tela cheia"
+                onclick="BiDemograficoUI.toggleTelaCheia()" data-bg-skip="1"
+                style="padding:2px 6px;min-width:0;">
+                <span class="ms ms-sm" id="bi-dem-fullscreen-icon">fullscreen</span>
               </button>
             </div>
           </div>
@@ -45107,6 +45121,15 @@ var BiDemograficoUI = (function () {
   // Bairros do epicentro do projeto CCBJ (Grande Bom Jardim, Fortaleza/CE)
   var _EPICENTRO = ['bom jardim','canindezinho','siqueira','granja lisboa','granja portugal'];
 
+  // Paleta fria compartilhada entre _renderBairros e _renderCidades
+  function _corBairro(pct, epicentro) {
+    if (epicentro) return '#f59e0b';
+    if (pct > 0.7) return '#1e40af';
+    if (pct > 0.4) return '#2563eb';
+    if (pct > 0.2) return '#60a5fa';
+    return '#bfdbfe';
+  }
+
   // Busca sequencial com rate-limit 1 req/s; onDone() chamado ao finalizar
   function _fetchBairrosSequencial(bairros, onDone) {
     var pendentes = bairros.filter(function(b) {
@@ -45165,6 +45188,31 @@ var BiDemograficoUI = (function () {
     if (!el) return;
     el.style.display = n > 0 ? '' : 'none';
     if (txt) txt.textContent = n + ' endereço(s) aguardando geocodificação';
+  }
+
+  function _toggleTelaCheia() {
+    var el = document.getElementById('bi-dem-mapa');
+    if (!el) return;
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+    if (!fsEl) {
+      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+      if (req) req.call(el);
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+      if (exit) exit.call(document);
+    }
+  }
+
+  // Atualiza ícone e recalcula tamanho do Leaflet ao entrar/sair de tela cheia
+  document.addEventListener('fullscreenchange', _onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', _onFullscreenChange);
+  document.addEventListener('mozfullscreenchange', _onFullscreenChange);
+
+  function _onFullscreenChange() {
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+    var icon = document.getElementById('bi-dem-fullscreen-icon');
+    if (icon) icon.textContent = fsEl ? 'fullscreen_exit' : 'fullscreen';
+    if (_mapa) setTimeout(function(){ _mapa.invalidateSize(); }, 200);
   }
 
   function _resetarMapa() {
@@ -45276,15 +45324,6 @@ var BiDemograficoUI = (function () {
         if (n === _EPICENTRO[i] || n.indexOf(_EPICENTRO[i]) !== -1) return true;
       }
       return false;
-    }
-
-    // Paleta fria (intensidade = azul escuro → azul claro); epicentro = dourado
-    function _corBairro(pct, epicentro) {
-      if (epicentro) return '#f59e0b'; // âmbar/dourado — epicentro CCBJ
-      if (pct > 0.7) return '#1e40af';
-      if (pct > 0.4) return '#2563eb';
-      if (pct > 0.2) return '#60a5fa';
-      return '#bfdbfe';
     }
 
     function _tooltipBairro(p) {
@@ -45486,9 +45525,10 @@ var BiDemograficoUI = (function () {
     limparFiltros: limparFiltros,
     setGeoView:    setGeoView,
     setModoMapa:   setModoMapa,
-    iniciarMapa:   iniciarMapa,
-    gerarPersonas: gerarPersonas,
-    _drillDown:    _drillDown
+    iniciarMapa:     iniciarMapa,
+    toggleTelaCheia: _toggleTelaCheia,
+    gerarPersonas:   gerarPersonas,
+    _drillDown:      _drillDown
   };
 })();
 // Rota legada redireciona para o BI unificado no Dashboard
