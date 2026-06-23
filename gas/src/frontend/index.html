@@ -38312,11 +38312,36 @@ var DashboardUI = (function() {
       if (d.balcao)  cards.push(_statCard('Balcão Aberto', d.balcao.abertas, d.balcao.atrasadas>0?'var(--warning)':null, d.balcao.atrasadas + ' com prazo vencido', "Router.navegar('balcao')"));
       if (d.alertas) cards.push(_statCard('Alertas Não Lidos', d.alertas.naoLidos, d.alertas.naoLidos>5?'var(--danger)':d.alertas.naoLidos>0?'var(--warning)':null, '', "Router.navegar('home')"));
       if (d.chaves)  cards.push(_statCard('Chaves Atrasadas', d.chaves.atrasadas, d.chaves.atrasadas>0?'var(--danger)':null, '', "Router.navegar('espacos')"));
-      var profundidade = '';
+      // Painel Saúde Operacional — análise cruzada de 3 domínios
+      var pctTarefasOk = (d.tarefas && d.tarefas.total > 0)
+        ? Math.max(0, Math.round(((d.tarefas.total - d.tarefas.atrasadas) / d.tarefas.total) * 100))
+        : null;
+      var pctSlaOk = (d.balcao && d.balcao.abertas > 0)
+        ? Math.max(0, Math.round(((d.balcao.abertas - d.balcao.atrasadas) / d.balcao.abertas) * 100))
+        : null;
+      var corTarefas = pctTarefasOk !== null ? (pctTarefasOk >= 80 ? '#16a34a' : pctTarefasOk >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8';
+      var corSla     = pctSlaOk     !== null ? (pctSlaOk     >= 80 ? '#16a34a' : pctSlaOk     >= 60 ? '#f59e0b' : '#ef4444') : '#94a3b8';
+      var ativosHoje = d.espacos ? (d.espacos.reservasAtivas || 0) : null;
+      var saudeHtml = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 16px;margin-bottom:20px;">'+
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:18px;">SAÚDE OPERACIONAL — ANÁLISE CRUZADA</div>'+
+        '<div style="display:flex;gap:12px;justify-content:space-around;align-items:flex-start;flex-wrap:wrap;">'+
+          _progressoAnel(pctTarefasOk, 'Tarefas no Prazo', corTarefas)+
+          _progressoAnel(pctSlaOk,     'SLA Balcão OK',    corSla)+
+          '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:88px;">'+
+            '<div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface2);">'+
+              '<span style="font-size:26px;font-weight:800;color:var(--primary);">'+(ativosHoje !== null ? ativosHoje : '—')+'</span>'+
+            '</div>'+
+            '<div style="font-size:11px;color:var(--text2);text-align:center;line-height:1.3;max-width:85px;">Em Uso Agora'+
+              (d.espacos ? '<br>'+d.espacos.reservasHoje+' agendadas hoje' : '')+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+      var profundidade = saudeHtml;
       var t = d.tendencias;
       if (t) {
         var serieMeses = (t.ultimos6Meses||[]).map(function(p){ return { mes:p[0], total:p[1] }; });
-        profundidade += _renderTendencia(serieMeses, 'total', 'Reservas — últimos meses');
+        profundidade += _renderTendencia(serieMeses, 'total', 'Reservas — últimos 6 meses');
         var bSalas = {}; (t.top5Salas||[]).forEach(function(p){ bSalas[p[0]] = p[1]; });
         var bSetores = {}; (t.top5Setores||[]).forEach(function(p){ bSetores[p[0]] = p[1]; });
         profundidade += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">' +
@@ -38347,9 +38372,28 @@ var DashboardUI = (function() {
       if (d.aditivos)       cards.push(_statCard('Aditivos em Análise', d.aditivos.emAnalise, d.aditivos.emAnalise>0?'var(--warning)':null, '', "Router.navegar('financeiro')"));
       if (d.fontes)         cards.push(_statCard('Fontes Ativas', d.fontes.ativas, null, 'R$ ' + _fmtMoeda(d.fontes.totalValor), "Router.navegar('financeiro')"));
       var profundidadeFin = '';
-      profundidadeFin += _renderTendencia(d.tendenciaContratos || [], 'total', 'Contratos firmados — últimos meses');
+      // Painel visual de execução orçamentária com anel + barra de progresso
+      if (d.contratos) {
+        var pctFin = d.contratos.pctExecucao || 0;
+        var corFin = pctFin >= 70 ? '#16a34a' : pctFin < 30 ? '#ef4444' : '#f59e0b';
+        profundidadeFin += '<div style="display:flex;align-items:flex-start;gap:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:20px;flex-wrap:wrap;">'+
+          _progressoAnel(pctFin, 'Execução Orçamentária', corFin)+
+          '<div style="flex:1;min-width:180px;padding-top:4px;">'+
+            '<div style="font-size:22px;font-weight:800;color:'+corFin+';margin-bottom:2px;">'+_fmtMoeda(d.contratos.totalExecutado)+'</div>'+
+            '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">de '+_fmtMoeda(d.contratos.totalPrevisto)+' previstos</div>'+
+            '<div style="background:var(--surface2);border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px;">'+
+              '<div style="background:'+corFin+';height:10px;width:'+Math.min(100,pctFin)+'%;border-radius:6px;transition:width .5s;"></div>'+
+            '</div>'+
+            '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);">'+
+              '<span>'+d.contratos.ativos+' contratos ativos</span>'+
+              '<span>'+d.contratos.total+' total</span>'+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      }
+      profundidadeFin += _renderTendencia(d.tendenciaContratos || [], 'total', 'Contratos firmados — últimos 12 meses');
       profundidadeFin += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">' +
-        _renderBreakdown(d.fontes && d.fontes.porTipo, 'Fontes de Recurso por Tipo', function(v){ return 'R$ ' + _fmtMoeda(v); }) +
+        _renderBreakdown(d.fontes && d.fontes.porTipo, 'Fontes de Recurso por Tipo', function(v){ return _fmtMoeda(v); }) +
       '</div>';
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>' + profundidadeFin;
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel financeiro.</p>'; });
@@ -38443,15 +38487,26 @@ var DashboardUI = (function() {
       var html = '';
       if (d.kpis) {
         var kpis = d.kpis;
-        var pctOcup = (kpis.taxaOcupacaoEspacos && kpis.taxaOcupacaoEspacos.percentual != null) ? kpis.taxaOcupacaoEspacos.percentual : 0;
-        var pctPrazo = (kpis.taxaConclusaoNoPrazo && kpis.taxaConclusaoNoPrazo.percentual != null) ? kpis.taxaConclusaoNoPrazo.percentual : 0;
-        var pctExec = (kpis.execucaoOrcamentaria && kpis.execucaoOrcamentaria.percentual != null) ? kpis.execucaoOrcamentaria.percentual : 0;
-        var nps = (kpis.indiceSatisfacaoPublico && kpis.indiceSatisfacaoPublico.media != null) ? kpis.indiceSatisfacaoPublico.media : '—';
-        html += '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' +
-          _statCard('Ocupação Espaços', pctOcup+'%', null, (kpis.taxaOcupacaoEspacos||{}).total + ' reservas no total', "Router.navegar('espacos')") +
-          _statCard('Ações no Prazo', pctPrazo+'%', null, (kpis.taxaConclusaoNoPrazo||{}).concluidas + ' concluídas', "Router.navegar('acoes')") +
-          _statCard('Exec. Orçamentária', pctExec+'%', null, '', "Router.navegar('financeiro')") +
-          _statCard('NPS Público', nps, null, '', "Router.navegar('escuta')") +
+        var pctOcup  = (kpis.taxaOcupacaoEspacos  && kpis.taxaOcupacaoEspacos.percentual  != null) ? kpis.taxaOcupacaoEspacos.percentual  : 0;
+        var pctPrazo = (kpis.taxaConclusaoNoPrazo  && kpis.taxaConclusaoNoPrazo.percentual != null) ? kpis.taxaConclusaoNoPrazo.percentual  : 0;
+        var pctExec  = (kpis.execucaoOrcamentaria  && kpis.execucaoOrcamentaria.percentual != null) ? kpis.execucaoOrcamentaria.percentual  : 0;
+        var nps      = (kpis.indiceSatisfacaoPublico && kpis.indiceSatisfacaoPublico.media != null) ? kpis.indiceSatisfacaoPublico.media    : null;
+        var pctNps   = nps !== null ? Math.round((nps / 10) * 100) : null;
+        var corExec  = pctExec >= 70 ? '#16a34a' : pctExec >= 40 ? '#f59e0b' : '#ef4444';
+        html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 16px;margin-bottom:20px;">'+
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:18px;">KPIs ESTRATÉGICOS — ANÁLISE CRUZADA</div>'+
+          '<div style="display:flex;gap:12px;justify-content:space-around;flex-wrap:wrap;">'+
+            _progressoAnel(pctOcup,  'Ocupação Espaços',   '#7c3aed')+
+            _progressoAnel(pctPrazo, 'Ações no Prazo',     '#16a34a')+
+            _progressoAnel(pctExec,  'Exec. Orçamentária', corExec)+
+            _progressoAnel(pctNps,   'NPS Público (×10)',  '#f59e0b')+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-around;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--text2);gap:8px;">'+
+            '<span>'+((kpis.taxaOcupacaoEspacos||{}).total||0)+' reservas</span>'+
+            '<span>'+((kpis.taxaConclusaoNoPrazo||{}).concluidas||0)+' concluídas</span>'+
+            '<span>R$ '+_fmtMoeda((kpis.execucaoOrcamentaria||{}).totalExecutado||0)+' executados</span>'+
+            '<span>'+((kpis.indiceSatisfacaoPublico||{}).respondidas||0)+' pesquisas</span>'+
+          '</div>'+
         '</div>';
       }
       if (d.riscos && d.riscos.length) {
@@ -38520,26 +38575,63 @@ var DashboardUI = (function() {
   var _MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   /**
-   * Sparkline simples em barras CSS — série [{mes:'YYYY-MM', total:N}] ou
-   * [{rodada, mediaPonderada}] via campo customizado. titulo opcional.
+   * Gráfico de barras SVG com eixo Y, grid e labels — série [{mes:'YYYY-MM', total:N}]
+   * ou [{rodada, mediaPonderada}] via campo customizado.
    */
   function _renderTendencia(serie, campo, titulo) {
     if (!serie || !serie.length) return '';
-    var max = Math.max.apply(null, serie.map(function(s){ return Number(s[campo])||0; }).concat([1]));
-    var barras = serie.map(function(s) {
+    var W = 420, H = 130, PL = 36, PR = 8, PT = 18, PB = 26;
+    var xs = W - PL - PR, ys = H - PT - PB;
+    var vals = serie.map(function(s){ return Number(s[campo])||0; });
+    var maxV = Math.max.apply(null, vals.concat([1]));
+    var n = serie.length;
+    var bW = Math.max(6, Math.floor(xs / n) - 4);
+    var bars = serie.map(function(s, i) {
       var v = Number(s[campo])||0;
-      var pct = Math.max(3, Math.round(v/max*100));
-      var label = s.mes ? (_MESES_ABREV[parseInt(s.mes.split('-')[1],10)-1] || s.mes) : ('R' + (s.rodada||''));
-      return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;">' +
-        '<div title="' + label + ': ' + v + '" style="width:100%;max-width:28px;height:60px;display:flex;align-items:flex-end;">' +
-          '<div style="width:100%;background:var(--primary);opacity:.65;border-radius:3px 3px 0 0;height:' + pct + '%;"></div>' +
-        '</div>' +
-        '<span style="font-size:10px;color:var(--text2);white-space:nowrap;">' + _esc(label) + '</span>' +
-      '</div>';
+      var bH = Math.max(maxV > 0 ? Math.round((v / maxV) * ys) : 0, v > 0 ? 2 : 0);
+      var bX = PL + Math.round(i * xs / n) + Math.floor((xs / n - bW) / 2);
+      var bY = PT + ys - bH;
+      var label = s.mes ? (_MESES_ABREV[(parseInt(s.mes.split('-')[1],10)||1)-1] || s.mes.slice(5,7)) : ('R'+(s.rodada||''));
+      return '<rect x="'+bX+'" y="'+bY+'" width="'+bW+'" height="'+bH+'" rx="2" fill="var(--primary)" opacity=".75"/>'+
+        '<text x="'+(bX+Math.round(bW/2))+'" y="'+(bY-3)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+v+'</text>'+
+        '<text x="'+(bX+Math.round(bW/2))+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+label+'</text>';
     }).join('');
-    return '<div style="margin-bottom:16px;">' +
-      (titulo ? '<h4 style="font-size:12px;margin:0 0 8px;color:var(--text2);">' + _esc(titulo) + '</h4>' : '') +
-      '<div style="display:flex;gap:4px;align-items:flex-end;">' + barras + '</div>' +
+    var grid = [0, 0.25, 0.5, 0.75, 1].map(function(f) {
+      var gY = Math.round(PT + ys * (1 - f));
+      var gL = Math.round(maxV * f);
+      return '<line x1="'+PL+'" y1="'+gY+'" x2="'+(W-PR)+'" y2="'+gY+'" stroke="var(--border)" stroke-width="'+(f===0||f===1?'1':'0.5')+'"/>'+
+        '<text x="'+(PL-4)+'" y="'+(gY+3)+'" text-anchor="end" font-size="8" fill="var(--text2)">'+gL+'</text>';
+    }).join('');
+    return '<div style="margin-bottom:20px;">'+
+      (titulo ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;">'+_esc(titulo)+'</div>' : '')+
+      '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
+        grid+bars+
+        '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
+      '</svg>'+
+    '</div>';
+  }
+
+  /**
+   * Anel de progresso SVG (donut) para KPIs percentuais.
+   * pct: 0-100 ou null; label: texto abaixo; cor: hex ou CSS var.
+   */
+  function _progressoAnel(pct, label, cor) {
+    var r = 30, cx = 40, cy = 40, sw = 8;
+    var circ = 2 * Math.PI * r;
+    var v = (pct !== null && pct !== undefined && !isNaN(Number(pct))) ? Math.min(100, Math.max(0, Number(pct))) : 0;
+    var dash = (circ * v / 100).toFixed(1);
+    var gap = circ.toFixed(1);
+    var c = cor || (v >= 70 ? '#16a34a' : v >= 40 ? '#f59e0b' : '#ef4444');
+    var txt = (pct !== null && pct !== undefined && !isNaN(Number(pct))) ? pct+'%' : '—';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:88px;">'+
+      '<svg width="80" height="80" viewBox="0 0 80 80">'+
+        '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--surface2)" stroke-width="'+sw+'"/>'+
+        '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'" '+
+          'stroke-dasharray="'+dash+' '+gap+'" stroke-linecap="round" '+
+          'transform="rotate(-90 '+cx+' '+cy+')" style="transition:stroke-dasharray .4s ease;"/>'+
+        '<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="14" font-weight="700" fill="'+c+'">'+txt+'</text>'+
+      '</svg>'+
+      '<div style="font-size:11px;color:var(--text2);text-align:center;line-height:1.3;max-width:85px;">'+_esc(label)+'</div>'+
     '</div>';
   }
 

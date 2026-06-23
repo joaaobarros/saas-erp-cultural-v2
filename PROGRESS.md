@@ -39,7 +39,16 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s118)**: **Fix — Dashboard: NaN% no Estratégico + 'Erro ao carregar' no Operacional + insight de execução orçamentária nunca disparava — Deploy @1036 (pendente).**
+**Fase atual (s119)**: **Feat — Dashboard: redesenho visual com gráficos SVG, progress rings e análises cruzadas — Deploy @1037 (pendente).**
+
+**O que foi implementado agora**:
+- **`_renderTendencia` → SVG real**: substituiu os CSS-height bars por gráfico de barras SVG com eixo Y, 5 gridlines, labels de valor acima de cada barra e labels de mês/rodada abaixo. Responsivo via `viewBox`. Mesmo API (`serie, campo, titulo`) — todas as abas ganham o visual sem mudança de chamada.
+- **`_progressoAnel` (novo)**: SVG donut ring para KPIs percentuais. Cor auto-selecionada (verde ≥70%, amarelo ≥40%, vermelho <40%) ou custom. Transição CSS de 0.4s. Usado nas 3 análises cruzadas abaixo.
+- **Estratégico — KPIs Cruzados**: 4 progress rings lado a lado (Ocupação Espaços, Ações no Prazo, Exec. Orçamentária, NPS Público) dentro de card "KPIs ESTRATÉGICOS — ANÁLISE CRUZADA". Detalhe numérico abaixo de cada ring (reservas, concluídas, R$ executados, nº pesquisas).
+- **Financeiro — Execução Orçamentária Visual**: painel com ring de % ao lado de valor absoluto em destaque + barra de progresso linear + contagem de contratos. Aparece acima do gráfico de tendência.
+- **Operacional — Saúde Operacional Cruzada**: painel com 2 rings (% Tarefas no Prazo, % SLA Balcão OK) + card numérico central "Em Uso Agora" (reservas ativas + agendadas hoje). Cor dos rings adaptativa ao desempenho.
+
+**Fase anterior (s118)**: **Fix — Dashboard: NaN% no Estratégico + 'Erro ao carregar' no Operacional + insight de execução orçamentária nunca disparava — Deploy @1036.**
 
 **O que foi implementado agora**:
 - **Bug NaN% no Estratégico** (`index.html`): o código antigo fazia `Math.round((kpis.taxaOcupacaoEspacos||0)*100)+'%'` — tratava o objeto KPI `{ percentual: N, ... }` como número, resultando em NaN. Corrigido: extraídas variáveis `pctOcup/pctPrazo/pctExec` que acessam `.percentual` diretamente; `taxaConclusaoPrazo` corrigido para `taxaConclusaoNoPrazo` (nome real do engine); NPS Público usa `.media` (pode ser null → exibe '—').

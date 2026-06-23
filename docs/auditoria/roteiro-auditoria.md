@@ -4,7 +4,13 @@
 
 ---
 
-### Estado atual: s118 @1036 — Dashboard: 3 bugs silenciosos corrigidos
+### Estado atual: s119 @1037 — Dashboard: redesenho visual com SVG e análises cruzadas
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1037 | s119 | `_renderTendencia` reescrita com SVG real (eixo Y, 5 gridlines, value labels acima de cada barra, labels de período abaixo; responsivo via viewBox). `_progressoAnel` novo: donut SVG com transição CSS e cor adaptativa ao valor. Estratégico: 4 rings lado a lado em painel "KPIs ESTRATÉGICOS — ANÁLISE CRUZADA" (Ocupação Espaços, Ações no Prazo, Exec. Orçamentária, NPS Público) + detalhe numérico abaixo de cada ring. Financeiro: painel visual de execução orçamentária com ring + valor absoluto + barra linear + contagem de contratos. Operacional: painel "SAÚDE OPERACIONAL — ANÁLISE CRUZADA" com 2 rings (% Tarefas no Prazo, % SLA Balcão OK) + card numérico "Em Uso Agora" (reservas ativas). |
+
+### Estado anterior: s118 @1036 — Dashboard: 3 bugs silenciosos corrigidos
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
