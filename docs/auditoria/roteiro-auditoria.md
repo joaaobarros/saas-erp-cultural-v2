@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s128 @1046 (BI geo: query CEP+logradouro+número) · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s128 @1048 (BI geo: query CEP+logradouro+número) · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -8,7 +8,7 @@
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @1046 | s128 | **Query com endereço completo** (`bi_demografico_controller.gs`): `_biGeocodificar` agora usa `Logradouro, N - NNNNN-NNN, Brasil` quando CEP + logradouro + número estão todos disponíveis. Antes usava só CEP, posicionando o pino no centro da face de quadra (erro de ~50–200 m). Cache bumped seletivamente: `end:*` passa de `geo3:` para `geo4:` (bust apenas dos endereços precisos; bairros/CEP mantêm `geo3:`). Purga de `geo3:end:*` adicionada ao passo de limpeza do `modifyJSON`. |
+| @1048 | s128 | **Query com endereço completo** (`bi_demografico_controller.gs`): `_biGeocodificar` agora usa `Logradouro, N - NNNNN-NNN, Brasil` quando CEP + logradouro + número estão todos disponíveis. Antes usava só CEP, posicionando o pino no centro da face de quadra (erro de ~50–200 m). Cache bumped seletivamente: `end:*` passa de `geo3:` para `geo4:` (bust apenas dos endereços precisos; bairros/CEP mantêm `geo3:`). Purga de `geo3:end:*` adicionada ao passo de limpeza do `modifyJSON`. |
 
 ### Estado anterior: s127 @1045 — Pessoas/RH: endereço histórico backend + campos readonly + BI geocodificador CEP puro + máscara CEP
 

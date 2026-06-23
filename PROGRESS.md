@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s128)**: **Fix — BI Demográfico: query geocodificação inclui CEP + logradouro + número — Deploy @1046.**
+**Fase atual (s128)**: **Fix — BI Demográfico: query geocodificação inclui CEP + logradouro + número — Deploy @1048.**
 
 **O que foi implementado agora**:
 - **BI Demográfico — query com endereço completo** (`bi_demografico_controller.gs`): quando CEP, logradouro e número estão todos disponíveis, a query agora monta `Logradouro, N - NNNNN-NNN, Brasil` em vez de usar só o CEP. CEP puro coloca o pino no centro da face de quadra; com o número, o geocodificador resolve o imóvel exato. Cache bumped seletivamente: chaves `end:*` passam de prefixo `geo3:` para `geo4:` (bust apenas dos endereços precisos — bairros/CEP continuam em `geo3:` sem re-geocodificação). Purga de `geo3:end:*` adicionada ao passo de limpeza do `modifyJSON`.
