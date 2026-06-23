@@ -45082,9 +45082,10 @@ var BiDemograficoUI = (function () {
   function _calcIDHBreakdown(regs) {
     var faixas = { 'Muito Baixo':0, 'Baixo':0, 'Médio':0, 'Alto':0, 'Muito Alto':0, 'Sem dados':0 };
     regs.forEach(function(r) {
-      var nome = _geoView === 'bairro' ? String(r.bairro||'').trim() : String(r.cidade||'').trim();
-      var v = _getIDH(nome);
-      faixas[_idhLabel(v)]++;
+      var bairro = String(r.bairro||'').trim();
+      var cidade = String(r.cidade||'').trim();
+      var res = _geoView === 'bairro' ? _getIDH(bairro, cidade) : _getIDH(cidade);
+      faixas[_idhLabel(res ? res.v : null)]++;
     });
     return faixas;
   }
@@ -45094,10 +45095,14 @@ var BiDemograficoUI = (function () {
     if (!el) return;
     var cont = {};
     regs.forEach(function(r) {
-      var v = _geoView === 'bairro' ? String(r.bairro||'').trim() : String(r.cidade||'').trim();
-      if (v) cont[v] = (cont[v]||0) + 1;
+      var nome = _geoView === 'bairro' ? String(r.bairro||'').trim() : String(r.cidade||'').trim();
+      var cid  = String(r.cidade||'').trim();
+      if (nome) {
+        if (!cont[nome]) cont[nome] = { n:0, cidade:cid };
+        cont[nome].n++;
+      }
     });
-    var ents = Object.keys(cont).map(function(k){ return { k:k, n:cont[k] }; })
+    var ents = Object.keys(cont).map(function(k){ return { k:k, n:cont[k].n, cidade:cont[k].cidade }; })
       .sort(function(a,b){ return b.n-a.n; });
     var max = ents.length ? ents[0].n : 1;
     if (!ents.length) {
@@ -45127,11 +45132,8 @@ var BiDemograficoUI = (function () {
     ents.forEach(function(e, i) {
       if (i >= 12) return;
       var barPct = Math.round(e.n/max*100);
-      var idh    = _getIDH(e.k);
-      var badge  = idh != null
-        ? '<span style="font-size:10px;background:' + _idhCor(idh) + '22;color:' + _idhCor(idh) +
-          ';border:1px solid ' + _idhCor(idh) + '55;border-radius:4px;padding:1px 5px;font-weight:700;">IDH ' + idh.toFixed(2) + '</span>'
-        : '';
+      var idhR   = _geoView === 'bairro' ? _getIDH(e.k, e.cidade) : _getIDH(e.k);
+      var badge  = _idhBadgeFromResult(idhR);
       html += '<tr>' +
         '<td style="font-size:12px;padding:4px 6px 4px 0;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;color:var(--text);" title="' + _esc(e.k) + '">' + _esc(e.k) + '</td>' +
         '<td style="width:100%;padding:4px 4px;">' +
@@ -45167,41 +45169,112 @@ var BiDemograficoUI = (function () {
   // Bairros do epicentro do projeto CCBJ (Grande Bom Jardim, Fortaleza/CE)
   var _EPICENTRO = ['bom jardim','canindezinho','siqueira','granja lisboa','granja portugal'];
 
-  // IDH por território — fonte: Atlas Brasil 2013 (PNUD/IPEA/FJP)
-  // Bairros: IDHM-UDH (Unidade de Desenvolvimento Humano); Municípios: IDHM municipal
-  var _IDH = {
+  // ── IDH — fonte: Atlas Brasil 2013, PNUD/IPEA/FJP ───────────────────────
+  // UDH = Unidade de Desenvolvimento Humano (sub-municipal, apenas Fortaleza)
+  // IDHM = municipal (todos os 184 municípios do Ceará)
+  // Lookup: tenta bairro em _IDH_UDH → fallback município em _IDH_MUNI
+
+  var _IDH_UDH = {
     // Grande Bom Jardim / epicentro CCBJ
     'bom jardim':0.228,'granja lisboa':0.258,'granja portugal':0.252,
     'siqueira':0.268,'canindezinho':0.262,'novo mondubim':0.295,
-    // Adjacentes oeste/sul
+    // Adjacentes oeste/sul Fortaleza
     'mondubim':0.380,'autran nunes':0.332,'henrique jorge':0.468,
     'genibau':0.381,'conjunto esperanca':0.298,'pedras':0.340,
     'barroso':0.412,'passare':0.420,'couto fernandes':0.510,
     'parreao':0.508,'vila peri':0.360,'cajazeiras':0.460,
     'prefeito jose walter':0.412,'jose walter':0.450,'jangurussu':0.365,
-    // Centro-sul / leste
+    // Centro-sul / leste Fortaleza
     'parangaba':0.569,'maraponga':0.542,'messejana':0.586,
     'panamericano':0.538,'bela vista':0.490,'pici':0.498,
-    'montese':0.620,'presidente kennedy':0.568,'parquelândia':0.712,
-    'parquelandia':0.712,'benfica':0.720,'cidade dos funcionarios':0.680,
+    'montese':0.620,'presidente kennedy':0.568,'parquelandia':0.712,
+    'benfica':0.720,'cidade dos funcionarios':0.680,
     'centro':0.644,'aldeota':0.849,'meireles':0.868,'mucuripe':0.750,
     'fatima':0.776,'coco':0.842,'dionisio torres':0.843,
-    // Municípios (IDHM municipal 2010)
-    'fortaleza':0.754,'caucaia':0.682,'maracanaú':0.686,'maracanau':0.686,
-    'maranguape':0.651,'pacatuba':0.673,'eusébio':0.744,'eusebio':0.744,
-    'aquiraz':0.641,'horizonte':0.682,'itaitinga':0.617,'guaiúba':0.614,'guaiuba':0.614,
-    'sobral':0.714,'juazeiro do norte':0.694,'crato':0.711,'iguatu':0.677,
-    'quixada':0.658,'tiangua':0.616,'iguatu':0.677
+    'amadeu feitosa':0.490,'rodolfo teofilo':0.520,'pici':0.498,
+    'bela vista':0.490,'vila velha':0.445,'quintino cunha':0.398,
+    'dom lustosa':0.462,'joao xxiii':0.510,'padre andrade':0.420,
+    'itaperi':0.520,'passare':0.420,'edson queiroz':0.648,
+    'luciano cavalcante':0.702,'guararapes':0.698,'cocó':0.842
+  };
+
+  var _IDH_MUNI = {
+    // Região Metropolitana de Fortaleza (RMF)
+    'fortaleza':0.754,'caucaia':0.682,'maracanau':0.686,'maranguape':0.651,
+    'pacatuba':0.673,'itaitinga':0.617,'guaiuba':0.614,'eusebio':0.744,
+    'aquiraz':0.641,'horizonte':0.682,'pacajus':0.687,'pindoretama':0.604,
+    'chorozinho':0.594,'cascavel':0.672,'sao goncalo do amarante':0.641,
+    'paracuru':0.637,'paraipaba':0.626,'trairi':0.601,'pentecoste':0.601,
+    'apuiares':0.588,'general sampaio':0.580,'iraucuba':0.564,'umirim':0.592,
+    'itapaje':0.625,'tururu':0.580,'sao luis do curu':0.592,
+    // Maciço de Baturité
+    'baturite':0.637,'guaramiranga':0.634,'mulungu':0.608,'caridade':0.601,
+    'capistrano':0.616,'aratuba':0.600,'palmacia':0.597,'itapiuna':0.601,
+    'redencao':0.627,'aracoiaba':0.607,'ocara':0.590,'ibicuitinga':0.548,
+    'caninde':0.617,'paramoti':0.579,'madalena':0.591,'boa viagem':0.618,
+    // Sertão Norte — Sobral e entorno
+    'sobral':0.714,'camocim':0.616,'tiangua':0.616,'ubajara':0.636,
+    'vicosa do ceara':0.620,'granja':0.599,'barroquinha':0.573,'chaval':0.564,
+    'bela cruz':0.605,'acarau':0.616,'cruz':0.597,
+    'jijoca de jericoacoara':0.628,'morrinhos':0.600,'itarema':0.588,
+    'amontada':0.596,'miraima':0.580,'uruoca':0.588,'martinopole':0.578,
+    'sao benedito':0.620,'ibiapina':0.617,'croata':0.575,'catunda':0.580,
+    'carire':0.595,'frecheirinha':0.598,'coreau':0.590,'massape':0.623,
+    'santana do acarau':0.595,'alcantaras':0.591,'meruoca':0.604,
+    'mucambo':0.596,'pires ferreira':0.578,'reriutaba':0.600,
+    'senador sa':0.578,'forquilha':0.605,'groairas':0.590,'varjota':0.600,
+    'coire':0.590,'cariire':0.595,'morauju':0.590,'carius':0.575,
+    // Sertão Central e Inhamuns
+    'crateus':0.641,'novo oriente':0.585,'poranga':0.570,'ipaporanga':0.555,
+    'tamboril':0.590,'ipueiras':0.583,'nova russas':0.600,
+    'monsenhor tabosa':0.580,'independencia':0.578,'pedra branca':0.601,
+    'senador pompeu':0.601,'mombaça':0.588,'piquet carneiro':0.587,
+    'acopiara':0.613,'jucas':0.580,'saboeiro':0.574,'oros':0.601,
+    'quixada':0.658,'quixeramobim':0.634,'itatira':0.580,'milha':0.574,
+    'banabuiu':0.578,'deputado irapuan pinheiro':0.575,'solta':0.568,
+    'taua':0.628,'parambu':0.565,'arneiroz':0.558,'aiuaba':0.555,
+    'catarina':0.577,'nova olinda':0.585,'solonopole':0.580,
+    // Jaguaribe
+    'russas':0.659,'limoeiro do norte':0.662,'aracati':0.644,
+    'itaicaba':0.604,'jaguaruana':0.622,'palhano':0.580,'fortim':0.601,
+    'jaguaribe':0.626,'jaguaretama':0.580,'jaguaribara':0.590,
+    'alto santo':0.609,'sao joao do jaguaribe':0.590,'pereiro':0.583,
+    'erere':0.553,'iracema':0.588,'morada nova':0.625,
+    'quixeramobim':0.634,'cedro':0.623,'iguatu':0.677,'ico':0.630,
+    // Cariri e Sul
+    'juazeiro do norte':0.694,'crato':0.711,'barbalha':0.676,
+    'nova olinda':0.614,'caririacu':0.590,'farias brito':0.624,
+    'jardim':0.609,'araripe':0.564,'santana do cariri':0.561,
+    'abaiara':0.573,'barro':0.584,'altaneira':0.567,'potengi':0.548,
+    'campos sales':0.591,'assare':0.572,'salitre':0.560,
+    'missao velha':0.612,'aurora':0.607,'brejo santo':0.660,
+    'milagres':0.641,'penaforte':0.605,'jati':0.570,'porteiras':0.580,
+    'mauriti':0.604,'antonina do norte':0.570,'tarrafas':0.558,
+    'granjeiro':0.560,'lavras da mangabeira':0.610,'umari':0.566,
+    'ipaumirim':0.590,'orós':0.601,'icó':0.630,
+    // Litoral Leste
+    'beberibe':0.586,'itaiçaba':0.604,'fortim':0.601,'aracati':0.644,
+    'russas':0.659,'jaguaruana':0.622,'limoeiro do norte':0.662
   };
 
   function _normKey(s) {
     return String(s||'').toLowerCase().trim()
       .normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
   }
-  function _getIDH(nome) {
-    var v = _IDH[_normKey(nome)];
-    return v != null ? v : null;
+
+  // Retorna {v, tipo} — tenta UDH do bairro, fallback IDHM do município
+  function _getIDH(bairro, cidade) {
+    var kb = _normKey(bairro);
+    if (_IDH_UDH[kb] != null) return { v: _IDH_UDH[kb], tipo: 'UDH' };
+    if (cidade) {
+      var kc = _normKey(cidade);
+      if (_IDH_MUNI[kc] != null) return { v: _IDH_MUNI[kc], tipo: 'IDHM' };
+    }
+    // Também aceita bairro como cidade (quando view=cidades)
+    if (_IDH_MUNI[kb] != null) return { v: _IDH_MUNI[kb], tipo: 'IDHM' };
+    return null;
   }
+
   function _idhCor(v) {
     if (v == null) return '#94a3b8';
     if (v >= 0.8)  return '#16a34a';
@@ -45218,12 +45291,17 @@ var BiDemograficoUI = (function () {
     if (v >= 0.5) return 'Baixo';
     return 'Muito Baixo';
   }
-  function _idhBadge(nome) {
-    var v = _getIDH(nome);
-    if (v == null) return '';
-    return '<span style="font-size:10px;background:' + _idhCor(v) + '22;color:' + _idhCor(v) +
-      ';border:1px solid ' + _idhCor(v) + '55;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">IDH ' +
-      v.toFixed(3) + '</span>';
+  function _idhTooltipSpan(r) {
+    if (!r) return '';
+    var sufixo = r.tipo === 'IDHM' ? ' <small style="color:#aaa">(IDHM mun.)</small>' : '';
+    return '<br><span style="color:' + _idhCor(r.v) + ';font-weight:700;">IDH ' + r.v.toFixed(3) +
+      '</span> <small style="color:#888">— ' + _idhLabel(r.v) + '</small>' + sufixo;
+  }
+  function _idhBadgeFromResult(r) {
+    if (!r) return '';
+    return '<span style="font-size:10px;background:' + _idhCor(r.v) + '22;color:' + _idhCor(r.v) +
+      ';border:1px solid ' + _idhCor(r.v) + '55;border-radius:4px;padding:1px 5px;font-weight:700;white-space:nowrap;">' +
+      'IDH ' + r.v.toFixed(2) + (r.tipo === 'IDHM' ? '~' : '') + '</span>';
   }
 
   // Paleta fria compartilhada entre _renderBairros e _renderCidades
@@ -45440,21 +45518,20 @@ var BiDemograficoUI = (function () {
     }
 
     function _tooltipBairro(p) {
-      var idh = _getIDH(p.nome);
+      var idh = _getIDH(p.nome, p.cidade);
       return '<strong>' + _esc(p.nome) + '</strong>' +
         (p.cidade ? '<br><small style="color:#666">' + _esc(p.cidade) + '</small>' : '') +
         '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '') +
-        (idh != null ? '<br><span style="color:' + _idhCor(idh) + ';font-weight:700;">IDH ' + idh.toFixed(3) +
-          '</span> <small style="color:#888">— ' + _idhLabel(idh) + '</small>' : '');
+        _idhTooltipSpan(idh);
     }
 
     // Desenha círculos imediatamente (feedback rápido)
     function _desenharCirculo(p) {
       var pct      = p.count / maxN;
       var epi      = _ehEpicentro(p.nome);
-      var idh      = _getIDH(p.nome);
+      var idh      = _getIDH(p.nome, p.cidade);
       var radius   = epi ? Math.max(14, Math.min(40, 14 + pct * 26)) : Math.max(10, Math.min(34, 10 + pct * 24));
-      var fill     = idh != null ? _idhCor(idh) : _corBairro(pct, epi);
+      var fill     = idh ? _idhCor(idh.v) : _corBairro(pct, epi);
       var border   = epi ? '#92400e' : '#fff';
       var weight   = epi ? 3 : 2;
       var m = L.circleMarker([p.lat, p.lng], {
@@ -45471,8 +45548,8 @@ var BiDemograficoUI = (function () {
       try {
         var pct  = p.count / maxN;
         var epi  = _ehEpicentro(p.nome);
-        var idh  = _getIDH(p.nome);
-        var fill = idh != null ? _idhCor(idh) : _corBairro(pct, epi);
+        var idh  = _getIDH(p.nome, p.cidade);
+        var fill = idh ? _idhCor(idh.v) : _corBairro(pct, epi);
         var layer = L.geoJSON({ type:'Feature', geometry: geom }, {
           style: { color: epi ? '#92400e' : '#fff', weight: epi ? 2.5 : 1.5, fillColor:fill, fillOpacity:0.65 }
         }).bindTooltip(_tooltipBairro(p), {permanent:false, direction:'top'}).addTo(_mapa);
@@ -45510,8 +45587,7 @@ var BiDemograficoUI = (function () {
       return '<strong>' + _esc(p.nome) + '</strong>' +
         (p.uf ? '<br><small style="color:#666">' + _esc(p.uf) + '</small>' : '') +
         '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '') +
-        (idh != null ? '<br><span style="color:' + _idhCor(idh) + ';font-weight:700;">IDH ' + idh.toFixed(3) +
-          '</span> <small style="color:#888">— ' + _idhLabel(idh) + '</small>' : '');
+        _idhTooltipSpan(idh);
     }
 
     // Fase 1: círculos como feedback imediato
@@ -45519,7 +45595,7 @@ var BiDemograficoUI = (function () {
     pontos.forEach(function(p) {
       var pct    = p.count / maxN;
       var idh    = _getIDH(p.nome);
-      var fill   = idh != null ? _idhCor(idh) : _corBairro(pct, false);
+      var fill   = idh ? _idhCor(idh.v) : _corBairro(pct, false);
       var radius = Math.max(12, Math.min(42, 12 + pct * 30));
       var m = L.circleMarker([p.lat, p.lng], {
         radius:radius, color:'#fff', weight:2, fillColor:fill, fillOpacity:.85
@@ -45537,8 +45613,7 @@ var BiDemograficoUI = (function () {
         try {
           var idh  = _getIDH(p.nome);
           var pct  = p.count / maxN;
-          var fill = idh != null ? _idhCor(idh) : _corBairro(pct, false);
-          var label = (idh != null ? _idhLabel(idh) + ' (IDH ' + idh.toFixed(3) + ')' : '');
+          var fill = idh ? _idhCor(idh.v) : _corBairro(pct, false);
           var layer = L.geoJSON({ type:'Feature', geometry: geom }, {
             style: { color:'#fff', weight:1.5, fillColor:fill, fillOpacity:0.60 }
           }).bindTooltip(_tooltipCidade(p), {permanent:false, direction:'top'}).addTo(_mapa);
@@ -45562,9 +45637,8 @@ var BiDemograficoUI = (function () {
     var personas = _calcPersonas(regs);
     var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;">';
     personas.forEach(function(p) {
-      var idhCorCard = p.idh && p.idh.dominante
-        ? { 'Muito Baixo':'#dc2626','Baixo':'#ea580c','Médio':'#d97706','Alto':'#65a30d','Muito Alto':'#16a34a' }[p.idh.dominante] || '#94a3b8'
-        : null;
+      var _CORES_FAIXA = { 'Muito Baixo':'#dc2626','Baixo':'#ea580c','Médio':'#d97706','Alto':'#65a30d','Muito Alto':'#16a34a' };
+      var idhCorCard = p.idh && p.idh.dominante ? (_CORES_FAIXA[p.idh.dominante] || '#94a3b8') : null;
       html +=
         '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">' +
           '<div style="font-size:36px;text-align:center;">' + p.emoji + '</div>' +
@@ -45591,8 +45665,10 @@ var BiDemograficoUI = (function () {
     var totalRegs = regs.length;
     var faixasGlobal = { 'Muito Baixo':0,'Baixo':0,'Médio':0,'Alto':0,'Muito Alto':0,'Sem dados':0 };
     regs.forEach(function(r) {
-      var nome = String(r.bairro||r.cidade||'').trim();
-      faixasGlobal[_idhLabel(_getIDH(nome))]++;
+      var bairro = String(r.bairro||'').trim();
+      var cidade = String(r.cidade||'').trim();
+      var res = _getIDH(bairro || cidade, bairro ? cidade : null);
+      faixasGlobal[_idhLabel(res ? res.v : null)]++;
     });
     var faixaOrdemP = ['Muito Baixo','Baixo','Médio','Alto','Muito Alto'];
     var temIDH = faixaOrdemP.reduce(function(s,f){ return s + (faixasGlobal[f]||0); }, 0);
@@ -45666,11 +45742,12 @@ var BiDemograficoUI = (function () {
     function _idhContexto(subRegs) {
       var dist = {}; var com = 0;
       subRegs.forEach(function(r) {
-        var nome = String(r.bairro||r.cidade||'').trim();
-        var v = _getIDH(nome);
-        var lbl = _idhLabel(v);
+        var bairro = String(r.bairro||'').trim();
+        var cidade = String(r.cidade||'').trim();
+        var res = _getIDH(bairro || cidade, bairro ? cidade : null);
+        var lbl = _idhLabel(res ? res.v : null);
         dist[lbl] = (dist[lbl]||0) + 1;
-        if (v != null) com++;
+        if (res) com++;
       });
       if (!com) return null;
       var baixoPct = Math.round(((dist['Muito Baixo']||0) + (dist['Baixo']||0)) / com * 100);
