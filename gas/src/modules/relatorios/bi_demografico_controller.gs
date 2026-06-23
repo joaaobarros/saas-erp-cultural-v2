@@ -90,24 +90,21 @@ function _biViaCep(cep) {
 }
 
 /**
- * Geocodifica via Maps usando o endereço completo disponível.
+ * Geocodifica via Maps usando o endereço disponível.
  * info: { logradouro?, numero?, bairro, cidade, uf, cep? }
  * Retorna {lat,lng} ou {erro:true}.
  *
- * Estratégia de precisão decrescente:
- * 1. CEP + logradouro + número → endereço exato (pino na porta)
- * 2. CEP puro → face de quadra (quando logradouro/número ausentes)
- * 3. Fallback sem CEP → bairro + cidade + UF
+ * Estratégia: CEP puro quando disponível.
+ * CEPs brasileiros de 8 dígitos identificam a face de quadra com precisão
+ * de ~50–100 m. Incluir o logradouro na query faz o geocodificador ignorar
+ * o CEP e resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados.
+ * Fallback sem CEP: logradouro + bairro + cidade + UF.
  */
 function _biGeocodificar(info) {
   var cepLimpo = String(info.cep || '').replace(/\D/g, '');
   var query;
-  if (cepLimpo.length === 8 && info.logradouro && info.numero) {
-    // Endereço completo — CEP ancora a rua, número pina o imóvel exato
-    query = info.logradouro + ', ' + info.numero + ' - ' +
-            cepLimpo.slice(0, 5) + '-' + cepLimpo.slice(5) + ', Brasil';
-  } else if (cepLimpo.length === 8) {
-    // CEP puro — localiza a face de quadra quando número não está disponível
+  if (cepLimpo.length === 8) {
+    // CEP puro — localiza a face de quadra; mais confiável que nome de rua + CEP
     query = cepLimpo.slice(0, 5) + '-' + cepLimpo.slice(5) + ', Brasil';
   } else {
     // fallback sem CEP: bairro + cidade + UF
@@ -169,9 +166,9 @@ function _biResolverGeo(locais) {
   var consultas = 0; // apenas contagem informativa (sem cap)
 
   Object.keys(locais).forEach(function (chave) {
-    // geo4: para end:* — bust seletivo das entradas que antes usavam só CEP;
+    // geo5: para end:* — bust das entradas geo4: que usavam logradouro+número (query errada);
     // bairros e cep: mantêm geo3: para não re-geocodificar desnecessariamente.
-    var prefix   = chave.slice(0, 4) === 'end:' ? 'geo4:' : 'geo3:';
+    var prefix   = chave.slice(0, 4) === 'end:' ? 'geo5:' : 'geo3:';
     var cacheKey = prefix + chave;
     var hit = cache[cacheKey] || novos[cacheKey];
     // Erros cacheados são ignorados — a geocodificação é retentada na próxima chamada.
@@ -192,8 +189,8 @@ function _biResolverGeo(locais) {
     var mapa = (atual && !Array.isArray(atual) && typeof atual === 'object') ? atual : {};
     Object.keys(mapa).forEach(function (k) {
       if (k.slice(0, 4) === 'geo:' || k.slice(0, 5) === 'geo2:') delete mapa[k];
-      // geo3:end:* eram geocodificados só com CEP; agora usam endereço completo (geo4:end:*)
-      if (k.slice(0, 9) === 'geo3:end:') delete mapa[k];
+      // geo3:end:* e geo4:end:* são obsoletos (geo4 usava logradouro+número → coordenadas erradas)
+      if (k.slice(0, 9) === 'geo3:end:' || k.slice(0, 9) === 'geo4:end:') delete mapa[k];
     });
     Object.keys(novos).forEach(function (k) { mapa[k] = novos[k]; });
     return mapa;

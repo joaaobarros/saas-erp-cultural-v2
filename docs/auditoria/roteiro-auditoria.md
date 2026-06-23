@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s129 @1049 (BI geo: sem limite de CEPs + erros não cacheados) · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s130 @pendente (BI heat: reverte logradouro+número, fix coords erradas) · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s129 — BI Demográfico: sem limite de geocodificações + erros não cacheados
+### Estado atual: s130 — BI heat overlay: reverte query logradouro+número (coordenadas erradas)
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @pendente | s130 | **Revertida query logradouro+número** (`bi_demografico_controller.gs`): query `Logradouro, N - CEP, Brasil` de s128 fazia o Maps resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados — heat overlay aparecia no Goiás e na Bahia. Voltou para CEP puro (`NNNNN-NNN, Brasil`). Cache bumped: `end:*` usa `geo5:` (purga `geo3:end:*` e `geo4:end:*`). |
+
+### Estado anterior: s129 — BI Demográfico: sem limite de geocodificações + erros não cacheados
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

@@ -39,7 +39,13 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s129)**: **Fix — BI Demográfico: sem limite de geocodificações + erros não cacheados — Deploy @1049.**
+**Fase atual (s130)**: **Fix — BI Demográfico: heat overlay corrigido — reverte query logradouro+número (causava coords erradas) — Deploy @pendente.**
+
+**O que foi implementado agora**:
+- **Revertida query com logradouro+número** (`bi_demografico_controller.gs`): a query `Logradouro, N - CEP, Brasil` introduzida em s128 fazia o Maps ignorar o CEP e resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados — dois pontos do heat overlay apareciam no centro-oeste e na Bahia em vez de Fortaleza. Voltou para CEP puro (`NNNNN-NNN, Brasil`), que âncora corretamente na face de quadra (~50–100 m).
+- **Cache geo5: para end:*** : bust das entradas `geo4:end:*` (coordenadas erradas gravadas com a query ruim) e também das `geo3:end:*`. Bairros/cidades continuam em `geo3:` sem re-geocodificação.
+
+**Fase anterior (s129)**: **Fix — BI Demográfico: sem limite de geocodificações + erros não cacheados — Deploy @1049.**
 
 **O que foi implementado agora**:
 - **Sem cap de geocodificações** (`bi_demografico_controller.gs`): removida a constante `_BI_GEO_MAX_NOVOS` e todos os seus checks em `_biResolverGeo` e em `ctrl_bi_demografico_beneficiarios`. Todos os endereços/CEPs são processados em cada chamada, sem limite.
