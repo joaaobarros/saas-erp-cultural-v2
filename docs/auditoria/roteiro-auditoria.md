@@ -1,14 +1,14 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s118 @1036 (Dashboard: NaN% Estratégico + Erro ao carregar Operacional + insight execução orçamentária) · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025 · s108 @1024
+> Deploy atual: s126 @pendente (Infraestrutura: Patrimônio e Estoque duplicados corrigidos) · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026 · s109 @1025
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s119 @1037 — Dashboard: redesenho visual com SVG e análises cruzadas
+### Estado atual: s126 @pendente — Infraestrutura: Patrimônio e Estoque deixam de ser aba duplicada
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @1037 | s119 | `_renderTendencia` reescrita com SVG real (eixo Y, 5 gridlines, value labels acima de cada barra, labels de período abaixo; responsivo via viewBox). `_progressoAnel` novo: donut SVG com transição CSS e cor adaptativa ao valor. Estratégico: 4 rings lado a lado em painel "KPIs ESTRATÉGICOS — ANÁLISE CRUZADA" (Ocupação Espaços, Ações no Prazo, Exec. Orçamentária, NPS Público) + detalhe numérico abaixo de cada ring. Financeiro: painel visual de execução orçamentária com ring + valor absoluto + barra linear + contagem de contratos. Operacional: painel "SAÚDE OPERACIONAL — ANÁLISE CRUZADA" com 2 rings (% Tarefas no Prazo, % SLA Balcão OK) + card numérico "Em Uso Agora" (reservas ativas). |
+| @pendente | s126 | **Bug `abrirTab` em `EspacosUI`** (`index.html`): linha `var painelKey = tab === 'ativos' ? 'estoque' : tab` redirecionava o painel do botão "Patrimônio" para `esp-tab-estoque` (o mesmo painel do botão "Estoque"), tornando as duas abas idênticas. Corrigido para `var painelKey = tab` (sem alias). Lazy-load correspondente corrigido de `EstoqueUI.abrirSubTab('patrimonio')` para `AtivosUI.carregar()`. Resultado: "Patrimônio" exibe `esp-tab-ativos` (`AtivosUI` — bens/tombamento/localização) e "Estoque" exibe `esp-tab-estoque` (`EstoqueUI` — almoxarifado/saldo/movimentações). |
 
 ### Estado anterior: s118 @1036 — Dashboard: 3 bugs silenciosos corrigidos
 

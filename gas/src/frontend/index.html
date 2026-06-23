@@ -1948,6 +1948,35 @@ select.form-control { cursor: pointer; }
 .hol-badge-cancelado { background:#fee2e2; color:#991b1b; }
 /* Modal holerite — contracheque formal */
 .hol-modal-overlay  { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1200; display:flex; align-items:center; justify-content:center; padding:16px; }
+/* === RH Colaborador Form — modal overlay === */
+#rh-colab-form {
+  display:none; position:fixed; inset:0; z-index:900;
+  background:rgba(15,23,42,.70);
+  backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  align-items:flex-start; justify-content:center;
+  padding:20px; overflow-y:auto;
+}
+#rh-colab-form.rh-form-aberto { display:flex; }
+.rh-modal-inner {
+  background:var(--surface); border-radius:20px;
+  box-shadow:0 24px 80px rgba(0,0,0,.20), 0 8px 20px rgba(0,0,0,.10);
+  width:100%; max-width:780px; margin:auto;
+  border-top:3px solid var(--color-primary);
+  animation:modalEntrar .22s ease forwards;
+  display:flex; flex-direction:column;
+}
+.rh-modal-head {
+  padding:18px 22px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  background:linear-gradient(135deg,rgba(var(--color-primary-rgb),.05) 0%,var(--surface) 60%);
+  border-radius:20px 20px 0 0;
+}
+.rh-modal-bdy { padding:20px 22px; overflow-y:auto; }
+.rh-modal-ftr {
+  padding:14px 22px; border-top:1px solid var(--border);
+  display:flex; justify-content:flex-end; gap:8px; flex-shrink:0;
+  background:var(--surface2); border-radius:0 0 20px 20px;
+}
 .hol-modal-box      { background:var(--surface); border-radius:14px; box-shadow:0 24px 80px rgba(0,0,0,.3); width:100%; max-width:680px; max-height:92vh; overflow-y:auto; }
 .hol-modal-header   { padding:20px 24px 14px; border-bottom:1px solid var(--border); }
 .hol-modal-title    { font-size:16px; font-weight:700; color:var(--text1); }
@@ -8860,8 +8889,17 @@ select.form-control { cursor: pointer; }
               <span class="ms ms-sm" style="color:var(--muted)">search</span>
               <input id="rh-eq-busca" type="text" class="form-input" style="flex:1;max-width:360px;padding:6px 10px;font-size:13px;" placeholder="Buscar por nome, setor ou cargo…" oninput="RhUI._filtrarEquipe()">
             </div>
-            <div id="rh-colab-form" style="display:none;border-top:1px solid var(--border);padding:16px 20px;">
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Profissionais</div>
+            <div id="rh-colab-form" onclick="if(event.target===this)RhUI.fecharFormColab()">
+              <div class="rh-modal-inner">
+              <div class="rh-modal-head">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="ms" style="color:var(--color-primary);font-size:22px;">person</span>
+                  <h3 id="rh-colab-modal-titulo" style="margin:0;font-size:1.02rem;font-weight:700;letter-spacing:-.015em;">Novo Colaborador</h3>
+                </div>
+                <button class="modal-close" onclick="RhUI.fecharFormColab()" data-bg-skip="1">✕</button>
+              </div>
+              <div class="rh-modal-bdy">
+              <div class="form-section-title" style="margin-top:0;">Dados Profissionais</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Nome completo *</label><input id="rh-pf-nome" class="form-input" type="text" placeholder="Nome do colaborador"></div>
                 <div class="form-group"><label class="form-label">E-mail institucional</label><select id="rh-pf-email" class="form-input" onchange="RhUI._preencherDeUsuario(this.value)"><option value="">Selecione o usuário…</option></select></div>
@@ -8900,7 +8938,7 @@ select.form-control { cursor: pointer; }
                   <p style="font-size:11px;color:var(--text2);margin:4px 0 0;">Use "Semanal" para escalas pactuadas que mudam de dias/turnos (ex.: professores 20h em 2-3 dias).</p>
                 </div>
               </div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Dados Pessoais</div>
+              <div class="form-section-title">Dados Pessoais</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Como deseja ser chamado(a)</label><input id="rh-pf-apelido" class="form-input" type="text" placeholder="Apelido ou nome social"></div>
                 <div class="form-group"><label class="form-label">Pronomes</label>
@@ -8950,13 +8988,13 @@ select.form-control { cursor: pointer; }
                 </div>
                 <div class="form-group"><label class="form-label">Telefone / Celular</label><div style="display:flex;align-items:center;gap:6px;"><input id="rh-pf-telefone" class="form-input" type="tel" placeholder="(00) 00000-0000" style="flex:1;min-width:0;"><label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;color:#25D366;font-weight:700;"><input type="checkbox" id="rh-pf-telefone-wpp" style="accent-color:#25D366;width:13px;height:13px;cursor:pointer;">WPP</label></div></div>
               </div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Contato de Emergência</div>
+              <div class="form-section-title">Contato de Emergência</div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Nome</label><input id="rh-pf-emg-nome" class="form-input" type="text" placeholder="Nome do contato"></div>
                 <div class="form-group"><label class="form-label">Telefone</label><div style="display:flex;align-items:center;gap:6px;"><input id="rh-pf-emg-tel" class="form-input" type="tel" placeholder="(00) 00000-0000" style="flex:1;min-width:0;"><label style="display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap;cursor:pointer;color:#25D366;font-weight:700;"><input type="checkbox" id="rh-pf-emg-tel-wpp" style="accent-color:#25D366;width:13px;height:13px;cursor:pointer;">WPP</label></div></div>
                 <div class="form-group"><label class="form-label">Parentesco / Relação</label><input id="rh-pf-emg-parentesco" class="form-input" type="text" placeholder="Ex: Cônjuge, Mãe…"></div>
               </div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Saúde e Outros</div>
+              <div class="form-section-title">Saúde e Outros</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                 <div class="form-group"><label class="form-label">Tipo Sanguíneo</label>
                   <select id="rh-pf-tipo-sanguineo" class="form-input">
@@ -8969,7 +9007,7 @@ select.form-control { cursor: pointer; }
                 </div>
                 <div class="form-group"><label class="form-label">Alergias</label><input id="rh-pf-alergias" class="form-input" type="text" placeholder="Ex: amendoim, látex, penicilina…"></div>
               </div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Vestuário / Uniformes <button type="button" class="btn btn-ghost" style="padding:0;width:16px;height:16px;min-width:16px;margin-left:4px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;" onclick="RhUI._abrirGuiaTamanhos()" title="Ver guia de tamanhos" data-bg-skip="1">?</button></div>
+              <div class="form-section-title">Vestuário / Uniformes <button type="button" class="btn btn-ghost" style="padding:0;width:16px;height:16px;min-width:16px;margin-left:4px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;" onclick="RhUI._abrirGuiaTamanhos()" title="Ver guia de tamanhos" data-bg-skip="1">?</button></div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Camiseta / Uniforme</label>
                   <select id="rh-pf-tamanho-vestiario" class="form-input">
@@ -9078,24 +9116,26 @@ select.form-control { cursor: pointer; }
                   </div>
                 </div>
               </div>
-              <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:8px;">Endereço</div>
+              <div class="form-section-title" style="display:flex;align-items:center;gap:8px;">Endereço <button id="rh-btn-unlock-end" style="display:none;font-size:11px;padding:2px 8px;height:auto;line-height:1.4;text-transform:none;font-weight:600;letter-spacing:0;" class="btn btn-ghost btn-sm" onclick="RhUI._toggleEnderecoLock()" data-bg-skip="1"><span class="ms ms-sm">lock_open</span> Editar manualmente</button></div>
               <div class="rh-endereco-grid" style="display:grid;grid-template-columns:150px 1fr 110px;gap:10px;margin-bottom:8px;">
-                <div class="form-group"><label class="form-label">CEP</label><input id="rh-pf-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" onblur="RhUI._buscarCep(this.value)"></div>
-                <div class="form-group"><label class="form-label">Logradouro</label><input id="rh-pf-logradouro" class="form-input" type="text" placeholder="Rua, Av.…"></div>
+                <div class="form-group"><label class="form-label">CEP</label><input id="rh-pf-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" oninput="mascaraCepInput(this)" onblur="RhUI._buscarCep(this.value)"></div>
+                <div class="form-group"><label class="form-label">Logradouro</label><input id="rh-pf-logradouro" class="form-input" type="text" placeholder="Rua, Av.…" readonly style="background:var(--surface2);cursor:not-allowed;"></div>
                 <div class="form-group"><label class="form-label">Número</label><input id="rh-pf-num-end" class="form-input" type="text" placeholder="Nº"></div>
               </div>
               <div class="rh-endereco-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:10px;margin-bottom:16px;">
                 <div class="form-group"><label class="form-label">Complemento</label><input id="rh-pf-complemento" class="form-input" type="text" placeholder="Apto, sala…"></div>
-                <div class="form-group"><label class="form-label">Bairro</label><input id="rh-pf-bairro" class="form-input" type="text"></div>
-                <div class="form-group"><label class="form-label">Cidade</label><input id="rh-pf-cidade" class="form-input" type="text"></div>
-                <div class="form-group"><label class="form-label">UF</label><input id="rh-pf-uf" class="form-input" type="text" maxlength="2" placeholder="CE"></div>
+                <div class="form-group"><label class="form-label">Bairro</label><input id="rh-pf-bairro" class="form-input" type="text" readonly style="background:var(--surface2);cursor:not-allowed;"></div>
+                <div class="form-group"><label class="form-label">Cidade</label><input id="rh-pf-cidade" class="form-input" type="text" readonly style="background:var(--surface2);cursor:not-allowed;"></div>
+                <div class="form-group"><label class="form-label">UF</label><input id="rh-pf-uf" class="form-input" type="text" maxlength="2" placeholder="CE" readonly style="background:var(--surface2);cursor:not-allowed;"></div>
               </div>
               <input type="hidden" id="rh-pf-id">
-              <div style="display:flex;gap:8px;margin-top:8px;">
-                <button class="btn btn-primario" id="rh-btn-salvar-colab" onclick="RhUI.salvarColab()"><span class="ms ms-sm">save</span> Salvar</button>
+              </div><!-- /rh-modal-bdy -->
+              <div class="rh-modal-ftr">
                 <button class="btn btn-ghost" onclick="RhUI.fecharFormColab()" data-bg-skip="1">Cancelar</button>
+                <button class="btn btn-primario" id="rh-btn-salvar-colab" onclick="RhUI.salvarColab()"><span class="ms ms-sm">save</span> Salvar</button>
               </div>
-            </div>
+              </div><!-- /rh-modal-inner -->
+            </div><!-- /rh-colab-form -->
             <div id="rh-eq-lista"></div>
           </div>
         </div>
@@ -10102,7 +10142,7 @@ select.form-control { cursor: pointer; }
             <div class="card" style="margin-bottom:14px;">
               <div class="card-header"><span class="card-title"><span class="ms ms-sm">home</span> Endereço</span></div>
               <div class="rh-endereco-grid" style="padding:12px 16px 16px;display:grid;grid-template-columns:130px 1fr 80px 60px;gap:10px;">
-                <div class="form-group"><label class="form-label">CEP</label><input id="p-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" onblur="PerfilUI.buscarCep(this.value)"></div>
+                <div class="form-group"><label class="form-label">CEP</label><input id="p-cep" class="form-input" type="text" placeholder="00000-000" maxlength="9" oninput="mascaraCepInput(this)" onblur="PerfilUI.buscarCep(this.value)"></div>
                 <div class="form-group"><label class="form-label">Logradouro</label><input id="p-logradouro" class="form-input" type="text"></div>
                 <div class="form-group"><label class="form-label">Número</label><input id="p-num-end" class="form-input" type="text"></div>
                 <div class="form-group"><label class="form-label">UF</label><input id="p-uf" class="form-input" type="text" maxlength="2" placeholder="CE"></div>
@@ -19830,8 +19870,7 @@ var EspacosUI = (function() {
   };
 
   function abrirTab(tab) {
-    // 'ativos' é alias de 'estoque' (patrimônio integrado)
-    var painelKey = tab === 'ativos' ? 'estoque' : tab;
+    var painelKey = tab;
     // Ocultar todas
     document.querySelectorAll('.esp-tab-content').forEach(function(el){ el.style.display='none'; });
     // Desmarcar todos os botões de tab
@@ -19857,7 +19896,7 @@ var EspacosUI = (function() {
       if (tab === 'reservas')    ReservasUI.carregar();
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
-      if (tab === 'ativos')      EstoqueUI.abrirSubTab('patrimonio');
+      if (tab === 'ativos')      AtivosUI.carregar();
       if (tab === 'estoque')     EstoqueUI.aoAbrir();
       if (tab === 'config')      InfraConfigUI.aoAbrir();
     }
@@ -40059,6 +40098,7 @@ var RhUI = (function() {
   var _eventoEditandoId  = null;
   var _historicoCache    = [];
   var _descPSPercCache   = 0.30; // padrão; sobrescrito quando encargos carregam
+  var _sortCriteria      = [{campo:'setor', dir:'asc'}, {campo:'nome', dir:'asc'}];
 
   function _fmtMoeda(v) { if (!v && v!==0) return '0,00'; return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   function _esc(s) { return escaparHtml(s); }
@@ -40222,12 +40262,83 @@ var RhUI = (function() {
     return '<div style="position:relative;display:inline-flex;width:34px;height:34px;flex-shrink:0;align-items:center;justify-content:center;" class="user-avatar">'+inner+overlay+'</div>';
   }
 
+  function _idxSort(campo) {
+    for (var i = 0; i < _sortCriteria.length; i++) { if (_sortCriteria[i].campo === campo) return i; }
+    return -1;
+  }
+
+  function _thSortable(campo, label) {
+    var idx  = _idxSort(campo);
+    var dir  = idx >= 0 ? _sortCriteria[idx].dir : null;
+    var icon = dir === 'asc' ? 'arrow_upward' : dir === 'desc' ? 'arrow_downward' : 'unfold_more';
+    var badge = (idx >= 0 && _sortCriteria.length > 1)
+      ? '<sup style="font-size:9px;font-weight:700;color:var(--color-primary);margin-left:1px;">'+(idx+1)+'</sup>' : '';
+    var iconStyle = idx >= 0 ? 'color:var(--color-primary)' : 'color:var(--border2)';
+    return '<th style="cursor:pointer;user-select:none;white-space:nowrap;" '
+      + 'title="Clique para ordenar • Shift+clique para adicionar critério" '
+      + 'onclick="RhUI._toggleSort(\''+campo+'\',event)">'
+      + label + badge
+      + ' <span class="ms" style="font-size:13px;vertical-align:middle;'+iconStyle+'">'+icon+'</span>'
+      + '</th>';
+  }
+
+  function _sortarLista(lista) {
+    if (!_sortCriteria.length) return lista;
+    return lista.slice().sort(function(a, b) {
+      for (var i = 0; i < _sortCriteria.length; i++) {
+        var s = _sortCriteria[i];
+        var va, vb;
+        if      (s.campo === 'nome')     { va = a.nomeApelido||a.nome||'';      vb = b.nomeApelido||b.nome||''; }
+        else if (s.campo === 'setor')    { va = a.setor||'';                    vb = b.setor||''; }
+        else if (s.campo === 'cargo')    { va = a.cargo||'';                    vb = b.cargo||''; }
+        else if (s.campo === 'vinculo')  { va = a.vinculo||a.tipoVinculo||'';   vb = b.vinculo||b.tipoVinculo||''; }
+        else if (s.campo === 'admissao') { va = a.dataAdmissao||'';             vb = b.dataAdmissao||''; }
+        else if (s.campo === 'status')   { va = a.status||'';                   vb = b.status||''; }
+        else { continue; }
+        var cmp = va.localeCompare(vb, 'pt-BR');
+        if (cmp !== 0) return s.dir === 'asc' ? cmp : -cmp;
+      }
+      return 0;
+    });
+  }
+
+  function _toggleSort(campo, evt) {
+    var shift = evt && evt.shiftKey;
+    var idx   = _idxSort(campo);
+    if (!shift) {
+      // Clique simples: coluna torna-se único critério (ou inverte se já for)
+      if (idx === 0 && _sortCriteria.length === 1) {
+        _sortCriteria[0].dir = _sortCriteria[0].dir === 'asc' ? 'desc' : 'asc';
+      } else if (idx >= 0) {
+        _sortCriteria = [_sortCriteria[idx]]; // isola mantendo direção
+      } else {
+        _sortCriteria = [{campo:campo, dir:'asc'}];
+      }
+    } else {
+      // Shift+clique: adiciona/cicla/remove critério secundário
+      if (idx >= 0) {
+        if (_sortCriteria[idx].dir === 'asc') { _sortCriteria[idx].dir = 'desc'; }
+        else { _sortCriteria.splice(idx, 1); }
+      } else {
+        _sortCriteria.push({campo:campo, dir:'asc'});
+      }
+    }
+    _filtrarEquipe();
+  }
+
   function _renderEquipe(lista) {
     var el = document.getElementById('rh-eq-lista');
     if (!el) return;
     if (!lista || !lista.length) { el.innerHTML = _empty('Nenhum colaborador encontrado.'); return; }
     el.innerHTML = '<table class="tabela"><thead><tr>'+
-      '<th style="width:36px;"></th><th>Nome</th><th>Setor</th><th>Cargo</th><th>Vínculo</th><th>Admissão</th><th>Status</th><th></th>'+
+      '<th style="width:36px;"></th>'+
+      _thSortable('nome','Nome')+
+      _thSortable('setor','Setor')+
+      _thSortable('cargo','Cargo')+
+      _thSortable('vinculo','Vínculo')+
+      _thSortable('admissao','Admissão')+
+      _thSortable('status','Status')+
+      '<th></th>'+
       '</tr></thead><tbody>'+
       lista.map(function(c){
         var nomeExib = c.nomeApelido ? ('<strong>'+_esc(c.nomeApelido)+'</strong><br><span style="font-size:11px;color:var(--text2)">'+_esc(c.nome||'')+'</span>') : '<strong>'+_esc(c.nome||'—')+'</strong>';
@@ -40254,12 +40365,13 @@ var RhUI = (function() {
     if (q) {
       lista = lista.filter(function(c) {
         return (c.nome||'').toLowerCase().indexOf(q)!==-1
+          || (c.nomeApelido||'').toLowerCase().indexOf(q)!==-1
           || (c.setor||'').toLowerCase().indexOf(q)!==-1
           || (c.cargo||'').toLowerCase().indexOf(q)!==-1
           || (c.emailInstitucional||c.email||'').toLowerCase().indexOf(q)!==-1;
       });
     }
-    _renderEquipe(lista);
+    _renderEquipe(_sortarLista(lista));
   }
 
   function carregarEquipe() {
@@ -40275,18 +40387,11 @@ var RhUI = (function() {
           el.innerHTML = _empty('Erro ao carregar colaboradores: ' + ((resp && resp.error && resp.error.message) || 'resposta invalida.'));
           return;
         }
-        var lista = Array.isArray(resp.data) ? resp.data : [];
-        // Ordenar por setor + nome
-        lista.sort(function(a,b) {
-          var sa = (a.setor||'zzz').localeCompare(b.setor||'zzz','pt-BR');
-          if (sa !== 0) return sa;
-          return (a.nome||'').localeCompare(b.nome||'','pt-BR');
-        });
-        _colaboradores = lista;
+        _colaboradores = Array.isArray(resp.data) ? resp.data : [];
         // Limpar filtro de busca a cada recarga
         var bEl = document.getElementById('rh-eq-busca');
         if (bEl) bEl.value = '';
-        _renderEquipe(lista);
+        _filtrarEquipe();
         _popularSelectColaboradores('rh-hist-colab');
       } catch(ex) {
         el.innerHTML = _empty('Erro ao renderizar: '+ex.message);
@@ -40363,13 +40468,14 @@ var RhUI = (function() {
     })();
     document.getElementById('rh-pf-email-pessoal').value= colab?(colab.emailPessoal||''):'';
     document.getElementById('rh-pf-nascimento').value   = colab?((colab.dataNascimento||'').slice(0,10)):'';
-    document.getElementById('rh-pf-cep').value          = addr.cep||'';
+    document.getElementById('rh-pf-cep').value          = mascaraCepValor(addr.cep||'');
     document.getElementById('rh-pf-logradouro').value   = addr.logradouro||'';
     document.getElementById('rh-pf-num-end').value      = addr.numero||'';
     document.getElementById('rh-pf-complemento').value  = addr.complemento||'';
     document.getElementById('rh-pf-bairro').value       = addr.bairro||'';
     document.getElementById('rh-pf-cidade').value       = addr.cidade||'';
     document.getElementById('rh-pf-uf').value           = addr.uf||'';
+    _resetEnderecoLock();
     // Diversidade, contato e saúde
     // Valor legado (ex.: genero 'feminino'/'masculino' pré-taxonomia Cis/Trans):
     // injeta option temporária para não apagar o dado silenciosamente ao salvar
@@ -40480,13 +40586,10 @@ var RhUI = (function() {
         cargos.map(function(c){ return '<option value="'+_esc(c.titulo||c.nome||c)+'">'+_esc(c.titulo||c.nome||c)+'</option>'; }).join('');
       if (colab&&colab.cargo) sel.value = colab.cargo;
     }, function(){});
-    document.getElementById('rh-colab-form').style.display='';
+    var _tit = document.getElementById('rh-colab-modal-titulo');
+    if (_tit) _tit.textContent = (colab && colab.id) ? 'Editar Colaborador' : 'Novo Colaborador';
+    document.getElementById('rh-colab-form').classList.add('rh-form-aberto');
     document.getElementById('rh-btn-novo-colab').style.display='none';
-    // Rolar até o form para garantir visibilidade
-    setTimeout(function(){
-      var form = document.getElementById('rh-colab-form');
-      if (form) form.scrollIntoView({behavior:'smooth', block:'start'});
-    }, 60);
   }
 
   function _setCargaForm(horas) {
@@ -40506,7 +40609,7 @@ var RhUI = (function() {
   }
 
   function fecharFormColab() {
-    document.getElementById('rh-colab-form').style.display='none';
+    document.getElementById('rh-colab-form').classList.remove('rh-form-aberto');
     document.getElementById('rh-btn-novo-colab').style.display='';
   }
 
@@ -40587,6 +40690,7 @@ var RhUI = (function() {
       .then(function(d) {
         if (d.erro) return;
         var el = function(id){ return document.getElementById(id); };
+        // ViaCEP pode preencher campos readonly (atribuição via JS funciona normalmente)
         if (el('rh-pf-logradouro') && d.logradouro) el('rh-pf-logradouro').value = d.logradouro;
         if (el('rh-pf-bairro')     && d.bairro)     el('rh-pf-bairro').value     = d.bairro;
         if (el('rh-pf-cidade')     && d.localidade) el('rh-pf-cidade').value      = d.localidade;
@@ -40595,6 +40699,42 @@ var RhUI = (function() {
         if (el('rh-pf-num-end')) el('rh-pf-num-end').focus();
       })
       .catch(function(){});
+  }
+
+  var _END_CAMPOS_TRAVADOS = ['rh-pf-logradouro','rh-pf-bairro','rh-pf-cidade','rh-pf-uf'];
+
+  function _resetEnderecoLock() {
+    var boot = App.getBoot && App.getBoot();
+    var papel = (boot && boot.usuarioPapel) || '';
+    var podeDesbloquear = papel === 'rh' || papel === 'admin' || papel === 'superadmin';
+    var btn = document.getElementById('rh-btn-unlock-end');
+    if (btn) {
+      btn.style.display = podeDesbloquear ? '' : 'none';
+      btn.innerHTML = '<span class="ms ms-sm">lock_open</span> Editar manualmente';
+    }
+    _END_CAMPOS_TRAVADOS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.readOnly = true;
+      el.style.background = 'var(--surface2)';
+      el.style.cursor = 'not-allowed';
+    });
+  }
+
+  function _toggleEnderecoLock() {
+    var el0 = document.getElementById(_END_CAMPOS_TRAVADOS[0]);
+    var travado = el0 && el0.readOnly;
+    var btn = document.getElementById('rh-btn-unlock-end');
+    _END_CAMPOS_TRAVADOS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.readOnly = !travado;
+      el.style.background = travado ? '' : 'var(--surface2)';
+      el.style.cursor     = travado ? ''  : 'not-allowed';
+    });
+    if (btn) btn.innerHTML = travado
+      ? '<span class="ms ms-sm">lock</span> Travar campos'
+      : '<span class="ms ms-sm">lock_open</span> Editar manualmente';
   }
 
   function editarColab(id) {
@@ -44134,7 +44274,7 @@ var RhUI = (function() {
 
   return {
     aoAbrir:aoAbrir, setTab:setTab,
-    carregarEquipe:carregarEquipe, _renderEquipe:_renderEquipe, _filtrarEquipe:_filtrarEquipe,
+    carregarEquipe:carregarEquipe, _renderEquipe:_renderEquipe, _filtrarEquipe:_filtrarEquipe, _toggleSort:_toggleSort,
     abrirFormColab:abrirFormColab, fecharFormColab:fecharFormColab,
     editarColab:editarColab, verColab:verColab, _abrirFormEventoComColab:_abrirFormEventoComColab, _abrirFeriasComColab:_abrirFeriasComColab,
     salvarColab:salvarColab, _setCargaForm:_setCargaForm, _preencherDeUsuario:_preencherDeUsuario, _toggleRhPronoumesOutro:_toggleRhPronoumesOutro, _togglePcd:_togglePcd, _togglePcdSuporte:_togglePcdSuporte, _togglePaiMae:_togglePaiMae,
@@ -46849,6 +46989,18 @@ function mascaraTelValor(v) {
   if (d.length <= 6)  return '('+d.slice(0,2)+') '+d.slice(2);
   if (d.length <= 10) return '('+d.slice(0,2)+') '+d.slice(2,6)+'-'+d.slice(6);
   return '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7,11);
+}
+function mascaraCepValor(v) {
+  var d = (v || '').replace(/\D/g,'').slice(0,8);
+  if (!d) return '';
+  if (d.length <= 5) return d;
+  return d.slice(0,5) + '-' + d.slice(5);
+}
+function mascaraCepInput(el) {
+  var cur = el.value; var pos = el.selectionStart;
+  el.value = mascaraCepValor(cur);
+  // Reposicionar cursor considerando o hífen inserido na posição 5
+  try { el.setSelectionRange(pos + (el.value.length - cur.length), pos + (el.value.length - cur.length)); } catch(_) {}
 }
 var PerfilUI = (function() {
   var _colab      = null;
