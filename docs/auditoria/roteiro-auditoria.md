@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s130 @1050 (BI heat: reverte logradouro+número, fix coords erradas) · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s131 @pendente (BI heat: mesma base coords que bairros/cidades) · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s130 — BI heat overlay: reverte query logradouro+número (coordenadas erradas)
+### Estado atual: s131 — BI heat: mesma base de coordenadas que bairros/cidades
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @pendente | s131 | **Frontend** (index.html, _addHeatOverlay): .geoKey \|\| r.bairroKey → .bairroKey \|\| r.geoKey — mesma prioridade de _renderBairros. **Backend** (i_demografico_controller.gs): geoKey do registro passa a ser airroKey quando disponível. Heat, bairros e cidades usam a mesma fonte de coordenadas. |
+
+### Estado anterior: s130 — BI heat overlay: reverte query logradouro+número (coordenadas erradas)
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

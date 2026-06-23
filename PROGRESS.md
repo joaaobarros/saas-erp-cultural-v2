@@ -39,7 +39,13 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s130)**: **Fix — BI Demográfico: heat overlay corrigido — reverte query logradouro+número (causava coords erradas) — Deploy @1050.**
+**Fase atual (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @pendente.**
+
+**O que foi implementado agora**:
+- **Frontend heat unificado** (`index.html`, `_addHeatOverlay`): trocado `r.geoKey || r.bairroKey` por `r.bairroKey || r.geoKey` — mesma prioridade de `_renderBairros`. Heat, bairros e cidades agora usam a mesma fonte de coordenadas.
+- **Backend geoKey unificado** (`bi_demografico_controller.gs`): `geoKey` do registro não aponta mais para `end:*` (geocodificação CEP-puro, base diferente). Agora `geoKey = bairroKey` sempre que bairroKey existir; `cep:*` apenas como fallback para quem não tem bairro+cidade. Elimina bifurcação na fonte de geocodificação.
+
+**Fase anterior (s130)**: **Fix — BI Demográfico: heat overlay corrigido — reverte query logradouro+número (causava coords erradas) — Deploy @1050.**
 
 **O que foi implementado agora**:
 - **Revertida query com logradouro+número** (`bi_demografico_controller.gs`): a query `Logradouro, N - CEP, Brasil` introduzida em s128 fazia o Maps ignorar o CEP e resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados — dois pontos do heat overlay apareciam no centro-oeste e na Bahia em vez de Fortaleza. Voltou para CEP puro (`NNNNN-NNN, Brasil`), que âncora corretamente na face de quadra (~50–100 m).

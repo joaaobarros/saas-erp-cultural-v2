@@ -266,16 +266,15 @@ function ctrl_bi_demografico_equipe() {
         cidKey = '|' + _biNormalizar(cidade);
         locais[cidKey] = { bairro: '', cidade: cidade, uf: uf };
       }
-      // Chave precisa — usa endereço completo quando disponível para melhor geocodificação
+      // geoKey aponta para a mesma chave que _renderBairros usa:
+      // bairroKey quando disponível (geocodificação bairro+cidade, mesma base de todos os modos);
+      // cep: como fallback apenas quando não há bairro+cidade.
       var geoKey = '';
-      if (cep.length === 8 && logradouro) {
-        geoKey = 'end:' + cep + ':' + _biNormalizar(logradouro);
-        locais[geoKey] = { logradouro: logradouro, numero: numero, bairro: bairro, cidade: cidade, uf: uf, cep: cep };
-      } else if (cep.length === 8 && bairro) {
+      if (bairroKey) {
+        geoKey = bairroKey;
+      } else if (cep.length === 8) {
         geoKey = 'cep:' + cep;
         locais[geoKey] = { bairro: bairro, cidade: cidade, uf: uf, cep: cep };
-      } else {
-        geoKey = bairroKey;
       }
       // nomeDisplay: primeiro nome + inicial do sobrenome — identificação leve para planejamento de eventos
       var nomePartes = String(c.nome || '').trim().split(/\s+/);
