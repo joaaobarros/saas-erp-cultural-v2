@@ -9940,13 +9940,8 @@ select.form-control { cursor: pointer; }
                 <span class="ms ms-sm">hourglass_empty</span>
                 <span id="bi-dem-geo-pendentes-txt"></span>
               </span>
-              <div style="display:flex;gap:3px;">
-                <button class="btn btn-ghost btn-sm tab-btn tab-ativa" id="bi-dem-modo-calor"
-                  style="font-size:11px;padding:2px 8px;min-width:0;"
-                  onclick="BiDemograficoUI.setModoMapa('calor')" data-bg-skip="1">
-                  <span class="ms ms-sm">whatshot</span> Calor
-                </button>
-                <button class="btn btn-ghost btn-sm tab-btn" id="bi-dem-modo-bairros"
+              <div style="display:flex;gap:3px;align-items:center;">
+                <button class="btn btn-ghost btn-sm tab-btn tab-ativa" id="bi-dem-modo-bairros"
                   style="font-size:11px;padding:2px 8px;min-width:0;"
                   onclick="BiDemograficoUI.setModoMapa('bairros')" data-bg-skip="1">
                   <span class="ms ms-sm">location_city</span> Bairros
@@ -9955,6 +9950,13 @@ select.form-control { cursor: pointer; }
                   style="font-size:11px;padding:2px 8px;min-width:0;"
                   onclick="BiDemograficoUI.setModoMapa('cidades')" data-bg-skip="1">
                   <span class="ms ms-sm">public</span> Cidades
+                </button>
+                <span style="width:1px;height:18px;background:var(--border);margin:0 3px;display:inline-block;"></span>
+                <button class="btn btn-ghost btn-sm tab-btn" id="bi-dem-modo-calor"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.toggleCalor()" data-bg-skip="1"
+                  title="Sobrepor mapa de calor sobre bairros/cidades">
+                  <span class="ms ms-sm">whatshot</span> Calor
                 </button>
               </div>
               <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
@@ -44197,7 +44199,8 @@ var BiDemograficoUI = (function () {
   var _mapa        = null;
   var _heatLayer   = null;
   var _mapaAtivo   = false;
-  var _modoMapa    = 'calor'; // 'calor' | 'bairros'
+  var _modoMapa    = 'bairros'; // 'bairros' | 'cidades'
+  var _showCalor   = false;    // overlay de calor independente
   var _drilldownData = {};    // { key: [regs] } — preenchido durante render
   var _drilldownSeq  = 0;
 
@@ -45155,10 +45158,17 @@ var BiDemograficoUI = (function () {
 
   function setModoMapa(modo) {
     _modoMapa = modo;
-    ['calor', 'bairros', 'cidades'].forEach(function (m) {
+    ['bairros', 'cidades'].forEach(function (m) {
       var b = document.getElementById('bi-dem-modo-' + m);
       if (b) b.classList.toggle('tab-ativa', m === modo);
     });
+    if (_mapaAtivo) _atualizarMapa(_getDadosFiltrados());
+  }
+
+  function toggleCalor() {
+    _showCalor = !_showCalor;
+    var btn = document.getElementById('bi-dem-modo-calor');
+    if (btn) btn.classList.toggle('tab-ativa', _showCalor);
     if (_mapaAtivo) _atualizarMapa(_getDadosFiltrados());
   }
 
@@ -45460,40 +45470,34 @@ var BiDemograficoUI = (function () {
 
   function _renderPontosNoMapa(regs, geo) {
     if (!_mapa) return;
+    // Limpa tudo antes de re-renderizar
     if (_heatLayer) { _mapa.removeLayer(_heatLayer); _heatLayer = null; }
     _mapa.eachLayer(function(l){ if (l._biDemMarker) _mapa.removeLayer(l); });
-    if (_modoMapa === 'bairros') { _renderBairros(regs, geo); return; }
-    if (_modoMapa === 'cidades') { _renderCidades(regs, geo); return; }
-    _renderCalor(regs, geo);
+    // Renderiza base (IDH + polígonos/círculos)
+    if (_modoMapa === 'cidades') _renderCidades(regs, geo);
+    else _renderBairros(regs, geo);
+    // Sobrepõe calor se toggle ativo (não bloqueia; executa depois da base)
+    if (_showCalor) _addHeatOverlay(regs, geo);
   }
 
-  function _renderCalor(regs, geo) {
-    var cont = {};
+  // Sobrepõe leaflet-heat sobre a camada base sem remover polígonos/círculos
+  function _addHeatOverlay(regs, geo) {
+    if (typeof L.heatLayer === 'undefined') return;
+    var cont = {}; var maxN = 1;
     regs.forEach(function(r) {
       var k = r.geoKey;
-      if (k && geo[k]) cont[k] = (cont[k]||0) + 1;
+      if (k && geo[k]) { cont[k] = (cont[k]||0)+1; if (cont[k]>maxN) maxN=cont[k]; }
     });
-    var pontos = [], maxN = 1;
+    var pontos = [];
     Object.keys(cont).forEach(function(k) {
-      if (geo[k]) { pontos.push([geo[k].lat, geo[k].lng, cont[k]]); if (cont[k]>maxN) maxN=cont[k]; }
+      if (geo[k]) pontos.push([geo[k].lat, geo[k].lng, cont[k]]);
     });
-    if (!pontos.length) { Toast.aviso('Nenhum ponto geocodificado para os filtros atuais.'); return; }
-    if (typeof L.heatLayer !== 'undefined') {
-      // radius/minOpacity altos para garantir visibilidade mesmo com pontos esparsos
-      _heatLayer = L.heatLayer(pontos, {
-        radius:45, blur:18, maxZoom:18, max:maxN, minOpacity:0.55,
-        gradient:{0.0:'#fde68a',0.3:'#fb923c',0.6:'#ef4444',1.0:'#7f1d1d'}
-      }).addTo(_mapa);
-    } else {
-      pontos.forEach(function(p) {
-        var m = L.circleMarker([p[0],p[1]], {
-          radius: Math.max(10, Math.min(28, 10 + p[2]*3)),
-          color:'#ef4444', fillColor:'#ef4444', fillOpacity:.7, weight:1.5
-        }).addTo(_mapa);
-        m._biDemMarker = true;
-      });
-    }
-    try { _mapa.fitBounds(pontos.map(function(p){return[p[0],p[1]];}), {padding:[40,40]}); } catch(e) {}
+    if (!pontos.length) return;
+    // Opacidade reduzida para não encobrir os polígonos IDH abaixo
+    _heatLayer = L.heatLayer(pontos, {
+      radius:40, blur:22, maxZoom:18, max:maxN, minOpacity:0.30,
+      gradient:{0.0:'#fde68a55',0.3:'#fb923c',0.6:'#ef4444',1.0:'#7f1d1d'}
+    }).addTo(_mapa);
   }
 
   function _renderBairros(regs, geo) {
@@ -45807,7 +45811,8 @@ var BiDemograficoUI = (function () {
     aplicarFiltros:aplicarFiltros,
     limparFiltros: limparFiltros,
     setGeoView:    setGeoView,
-    setModoMapa:   setModoMapa,
+    setModoMapa:     setModoMapa,
+    toggleCalor:     toggleCalor,
     iniciarMapa:     iniciarMapa,
     toggleTelaCheia: _toggleTelaCheia,
     gerarPersonas:   gerarPersonas,
