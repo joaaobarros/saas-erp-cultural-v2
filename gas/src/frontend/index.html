@@ -45480,21 +45480,25 @@ var BiDemograficoUI = (function () {
     if (_showCalor) _addHeatOverlay(regs, geo);
   }
 
-  // Sobrepõe leaflet-heat — 1 ponto por pessoa (sobreposição natural = mais brilho)
-  // Gradiente azul-índigo para contrastar com a paleta IDH (verdes/ambers/vermelhos)
+  // Sobrepõe leaflet-heat — 1 ponto por pessoa no endereço mais preciso disponível
+  // geoKey = endereço exato (end:CEP:logradouro) quando disponível no backend;
+  // bairroKey = centróide do bairro (fallback quando só há bairro/cidade).
+  // Gradiente azul-índigo contrasta com paleta IDH (vermelhos/ambers/verdes).
   function _addHeatOverlay(regs, geo) {
     if (typeof L.heatLayer === 'undefined') return;
     var pontos = [];
     regs.forEach(function(r) {
-      // Prefere bairroKey para mapa de bairros, geoKey como fallback
-      var k = r.bairroKey || r.geoKey;
+      // geoKey tem prioridade — pode ser endereço preciso (end:CEP:logradouro)
+      var k = r.geoKey || r.bairroKey;
       if (k && geo[k]) pontos.push([geo[k].lat, geo[k].lng, 1]);
     });
     if (!pontos.length) return;
-    // max:1 + radius grande = cada pessoa cria mancha visível; sobreposições somam intensidade
+    // radius pequeno = pontos distintos dentro do bairro, não uma mancha única
+    // minOpacity alto = visível mesmo com 1 ocorrência
+    // max:1 = cada pessoa = 1 unidade de intensidade; sobreposições somam
     _heatLayer = L.heatLayer(pontos, {
-      radius: 55, blur: 30, maxZoom: 18, max: 1, minOpacity: 0.50,
-      gradient: { 0.0:'#bfdbfe', 0.3:'#60a5fa', 0.6:'#2563eb', 1.0:'#1e3a8a' }
+      radius: 28, blur: 16, maxZoom: 18, max: 1, minOpacity: 0.70,
+      gradient: { 0.0:'#93c5fd', 0.4:'#3b82f6', 0.75:'#1d4ed8', 1.0:'#1e3a8a' }
     }).addTo(_mapa);
   }
 
