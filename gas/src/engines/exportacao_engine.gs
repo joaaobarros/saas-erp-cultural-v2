@@ -199,6 +199,7 @@ var ExportacaoEngine = (function () {
               x += '          <ItemAnexoIX>'    + _esc(rub.itemAnexoIX || '')   + '</ItemAnexoIX>\n';
               x += '          <Descricao>'      + _esc(rub.nome || '')          + '</Descricao>\n';
               x += '          <Categoria>'      + _esc(rub.categoria || '')     + '</Categoria>\n';
+              x += '          <CategoriaRouanet>' + _esc(rub.categoriaRouanet || '') + '</CategoriaRouanet>\n';
               x += '          <QtdMeses>'       + _num(rub.qtdMeses)            + '</QtdMeses>\n';
               x += '          <CustoMensal>'    + _num(rub.custoMensal)         + '</CustoMensal>\n';
               x += '          <ValorTotal>'     + _num(rub.valorTotal)          + '</ValorTotal>\n';

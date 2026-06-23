@@ -63,9 +63,11 @@ var BootService = (function () {
 
     var tiposAfastamento = [];
     var tiposOcorrencia  = [];
+    var tiposRubrica     = [];
     try {
       tiposAfastamento = SistemaConfigService.getTiposAfastamento ? SistemaConfigService.getTiposAfastamento() : [];
       tiposOcorrencia  = SistemaConfigService.getTiposOcorrencia  ? SistemaConfigService.getTiposOcorrencia()  : [];
+      tiposRubrica     = SistemaConfigService.getTiposRubrica     ? SistemaConfigService.getTiposRubrica()     : [];
     } catch(_e) {}
 
     var usuarioPapel = 'colaborador';
@@ -157,6 +159,7 @@ var BootService = (function () {
       itens:              itens,
       tiposAfastamento:   tiposAfastamento,
       tiposOcorrencia:    tiposOcorrencia,
+      tiposRubrica:       tiposRubrica,
       timestamp:          agora()
     };
 

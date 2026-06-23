@@ -223,6 +223,25 @@ function ctrl_dashboard_alertas(params) {
   }, 'ctrl_dashboard_alertas');
 }
 
+// ─── Dashboard Conformidade (Lei Rouanet) ─────────────────────────────────────
+
+/**
+ * Conformidade com os limites percentuais da Lei Rouanet por contrato.
+ * Delega para ContratosEngine.conformidadeRouanet — sem duplicar cálculo.
+ * Rubricas sem categoriaRouanet aparecem como "não classificado", nunca
+ * são adivinhadas por nome.
+ */
+function ctrl_dashboard_conformidade(params) {
+  return GasResponse.wrap(function() {
+    var ctx = _ctxDash();
+    var resultado = {};
+    try {
+      resultado.contratos = ContratosEngine.conformidadeRouanet(ctx.orgId);
+    } catch(e) { resultado.contratos = null; }
+    return resultado;
+  }, 'ctrl_dashboard_conformidade');
+}
+
 // ─── Dashboard Estratégico ────────────────────────────────────────────────────
 
 /**

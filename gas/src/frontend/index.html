@@ -4006,6 +4006,11 @@ select.form-control { cursor: pointer; }
                       <option value="investimento">Investimento</option>
                     </select>
                   </div>
+                  <div class="form-group"><label class="form-label">Categoria Lei Rouanet</label>
+                    <select id="cd-rub-categoria-rouanet" class="form-input">
+                      <option value="">— Não classificado —</option>
+                    </select>
+                  </div>
                   <div class="form-group"><label class="form-label">Setor</label>
                     <select id="cd-rub-setor" class="form-input"></select>
                   </div>
@@ -8576,7 +8581,7 @@ select.form-control { cursor: pointer; }
         <div class="mod-header">
           <div>
             <h2 style="margin:0;font-size:20px;font-weight:700;">BI — Central de Inteligência</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Estoque · Alertas · Demográfico</p>
+            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Estoque · Alertas · Conformidade · Demográfico</p>
           </div>
           <button class="btn btn-secundario btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
         </div>
@@ -8587,6 +8592,7 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> BI Estratégico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('estoque',this)" data-bg-skip="1"><span class="ms ms-sm">inventory_2</span> BI Estoque</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('alertas',this)" data-bg-skip="1"><span class="ms ms-sm">notifications_active</span> Alertas</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('conformidade',this)" data-bg-skip="1"><span class="ms ms-sm">gavel</span> Conformidade</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('demografico',this)" data-bg-skip="1"><span class="ms ms-sm">person_search</span> BI Demográfico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1"><span class="ms ms-sm">smart_toy</span> Insights IA</button>
         </div>
@@ -8605,6 +8611,9 @@ select.form-control { cursor: pointer; }
         </div>
         <div id="dash-tab-alertas" class="oculto">
           <div id="dash-alertas-content"><p class="muted-text">⏳ Carregando…</p></div>
+        </div>
+        <div id="dash-tab-conformidade" class="oculto">
+          <div id="dash-conformidade-content"><p class="muted-text">⏳ Carregando…</p></div>
         </div>
         <div id="dash-tab-demografico" class="oculto"></div>
 
@@ -9933,6 +9942,11 @@ select.form-control { cursor: pointer; }
                   onclick="BiDemograficoUI.setModoMapa('bairros')" data-bg-skip="1">
                   <span class="ms ms-sm">location_city</span> Bairros
                 </button>
+                <button class="btn btn-ghost btn-sm tab-btn" id="bi-dem-modo-cidades"
+                  style="font-size:11px;padding:2px 8px;min-width:0;"
+                  onclick="BiDemograficoUI.setModoMapa('cidades')" data-bg-skip="1">
+                  <span class="ms ms-sm">public</span> Cidades
+                </button>
               </div>
               <button class="btn btn-ghost btn-sm" id="bi-dem-btn-mapa"
                 onclick="BtnGuard.wrap('bi-dem-btn-mapa','Carregando mapa…',BiDemograficoUI.iniciarMapa)">
@@ -10940,6 +10954,7 @@ var GAS = {
     estrategico: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estrategico({}); },
     estoque:     function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estoque({}); },
     alertas:     function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_alertas({}); },
+    conformidade: function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_conformidade({}); },
     insightsIA:  function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_insights_ia(p||{}); },
     relatorioIA: function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_relatorio_ia(p||{}); }
   },
@@ -13467,6 +13482,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rub-atv-id').value    = atvId  || '';
     document.getElementById('cd-rub-id').value        = '';
     document.getElementById('cd-rub-categoria').value = 'custeio';
+    var selRouanet = document.getElementById('cd-rub-categoria-rouanet');
+    if (selRouanet) selRouanet.innerHTML = _tiposRubricaOpts('');
     document.getElementById('cd-rub-codigo').value    = '';
     document.getElementById('cd-rub-item-anexo').value= '';
     document.getElementById('cd-rub-meses').value     = _calcMesesMeta(metaId);
@@ -13488,6 +13505,8 @@ var ContratosDetailUI = (function() {
     document.getElementById('cd-rub-atv-id').value    = atvId  || '';
     document.getElementById('cd-rub-id').value        = r.id || '';
     document.getElementById('cd-rub-categoria').value = r.categoria || 'custeio';
+    var selRouanetE = document.getElementById('cd-rub-categoria-rouanet');
+    if (selRouanetE) selRouanetE.innerHTML = _tiposRubricaOpts(r.categoriaRouanet || '');
     document.getElementById('cd-rub-codigo').value    = r.codigoSeplag || '';
     document.getElementById('cd-rub-item-anexo').value= r.itemAnexoIX || r.itemAnexo || '';
     document.getElementById('cd-rub-meses').value     = r.qtdMeses || 12;
@@ -13532,6 +13551,15 @@ var ContratosDetailUI = (function() {
     return '<option value="">— Setor —</option>' +
       setores.map(function(s){
         return '<option value="'+escaparHtml(s.id)+'"'+(s.id===valorAtual?' selected':'')+'>'+escaparHtml(s.nome||s.id)+'</option>';
+      }).join('');
+  }
+
+  function _tiposRubricaOpts(valorAtual) {
+    var tipos = (App.getBoot && App.getBoot() && App.getBoot().tiposRubrica) || [];
+    return '<option value="">— Não classificado —</option>' +
+      tipos.map(function(t){
+        var lim = t.limitePercentual ? ' (limite ' + Math.round(t.limitePercentual*100) + '%)' : '';
+        return '<option value="'+escaparHtml(t.id)+'"'+(t.id===valorAtual?' selected':'')+'>'+escaparHtml(t.label||t.id)+lim+'</option>';
       }).join('');
   }
 
@@ -13604,6 +13632,7 @@ var ContratosDetailUI = (function() {
       codigoSeplag:    item.codigo || '',
       itemAnexoIX:     item.itemAnexo || '',
       categoria:       document.getElementById('cd-rub-categoria').value || 'custeio',
+      categoriaRouanet: (document.getElementById('cd-rub-categoria-rouanet') || {}).value || '',
       setor:           (_selSetor && _selSetor.value) || '',
       qtdMeses:        parseInt(document.getElementById('cd-rub-meses').value,10)||12,
       valorTotal:      total,
@@ -38238,13 +38267,14 @@ var DashboardUI = (function() {
     if (tab === 'estrategico') _carregarEstrategico();
     if (tab === 'estoque')     _carregarEstoque();
     if (tab === 'alertas')     _carregarAlertas();
+    if (tab === 'conformidade') _carregarConformidade();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.atualizar(null); }
     _carregado = true;
   }
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['operacional','financeiro','estrategico','estoque','alertas','demografico','insights'].forEach(function(t) {
+    ['operacional','financeiro','estrategico','estoque','alertas','conformidade','demografico','insights'].forEach(function(t) {
       var el = document.getElementById('dash-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -38255,6 +38285,7 @@ var DashboardUI = (function() {
     if (tab === 'estrategico') _carregarEstrategico();
     if (tab === 'estoque')     _carregarEstoque();
     if (tab === 'alertas')     _carregarAlertas();
+    if (tab === 'conformidade') _carregarConformidade();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.aoAbrir(); }
   }
 
@@ -38338,6 +38369,42 @@ var DashboardUI = (function() {
       if (d.almoxarifado) cards.push(_statCard('Empréstimos Atrasados', d.almoxarifado.atrasados||0, d.almoxarifado.atrasados>0?'var(--danger)':null, '', "Router.navegar('espacos')"));
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar alertas operacionais.</p>'; });
+  }
+
+  function _carregarConformidade() {
+    var el = document.getElementById('dash-conformidade-content');
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando…</p>';
+    GAS.dashboard.conformidade(function(r) {
+      if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
+      var lista = (r.data && r.data.contratos) || [];
+      if (!lista.length) {
+        if (el) el.innerHTML = '<div class="empty-state"><p>Nenhum contrato Lei Rouanet ativo.</p></div>';
+        return;
+      }
+      var html = lista.map(function(c) {
+        var barras = c.categorias.map(function(cat) {
+          var cor = cat.alerta ? 'var(--danger)' : (cat.pct > cat.limitePct * 0.8 ? 'var(--warning)' : 'var(--success)');
+          var pctBarra = Math.min(100, (cat.pct / cat.limitePct) * 100);
+          return '<div style="margin-bottom:8px;">' +
+            '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;">' +
+              '<span>' + _esc(cat.label) + (cat.alerta ? ' <strong style="color:var(--danger);">⚠ acima do limite</strong>' : '') + '</span>' +
+              '<span style="color:var(--text2);">' + cat.pct + '% de ' + cat.limitePct + '% · R$ ' + _fmtMoeda(cat.valor) + '</span>' +
+            '</div>' +
+            '<div style="background:var(--surface2);border-radius:4px;height:10px;overflow:hidden;">' +
+              '<div style="background:' + cor + ';height:10px;width:' + pctBarra + '%;border-radius:4px;"></div>' +
+            '</div></div>';
+        }).join('');
+        return '<div class="card" style="padding:14px 16px;margin-bottom:14px;cursor:pointer;" onclick="Router.navegar(\'financeiro\')">' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
+            '<strong style="font-size:14px;">' + _esc(c.nome) + (c.numero ? ' (' + _esc(c.numero) + ')' : '') + '</strong>' +
+            '<span style="font-size:12px;color:var(--text2);">Valor total: R$ ' + _fmtMoeda(c.valorTotal) + '</span>' +
+          '</div>' +
+          barras +
+          (c.naoClassificado > 0 ? '<p style="font-size:11px;color:var(--text2);margin-top:6px;">R$ ' + _fmtMoeda(c.naoClassificado) + ' em rubricas sem categoria Lei Rouanet definida — não entram no cálculo acima.</p>' : '') +
+        '</div>';
+      }).join('');
+      if (el) el.innerHTML = html;
+    }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar conformidade.</p>'; });
   }
 
   function _carregarEstrategico() {
@@ -44841,7 +44908,7 @@ var BiDemograficoUI = (function () {
 
   function setModoMapa(modo) {
     _modoMapa = modo;
-    ['calor', 'bairros'].forEach(function (m) {
+    ['calor', 'bairros', 'cidades'].forEach(function (m) {
       var b = document.getElementById('bi-dem-modo-' + m);
       if (b) b.classList.toggle('tab-ativa', m === modo);
     });
@@ -44971,6 +45038,7 @@ var BiDemograficoUI = (function () {
     if (_heatLayer) { _mapa.removeLayer(_heatLayer); _heatLayer = null; }
     _mapa.eachLayer(function(l){ if (l._biDemMarker) _mapa.removeLayer(l); });
     if (_modoMapa === 'bairros') { _renderBairros(regs, geo); return; }
+    if (_modoMapa === 'cidades') { _renderCidades(regs, geo); return; }
     _renderCalor(regs, geo);
   }
 
@@ -45078,6 +45146,41 @@ var BiDemograficoUI = (function () {
     _fetchBairrosSequencial(pontos, function() {
       pontos.forEach(function(p) { _aplicarPoligono(p, circulos[p.key]); });
     });
+  }
+
+  /**
+   * Mapa agregado por cidade — bolhas proporcionais à contagem, sem polígono
+   * (escala municipal não se beneficia do contorno de bairro do Nominatim).
+   */
+  function _renderCidades(regs, geo) {
+    var cData = {};
+    regs.forEach(function(r) {
+      var ck = r.cidadeKey;
+      if (!ck || !geo[ck]) return;
+      if (!cData[ck]) cData[ck] = { count:0, lat:geo[ck].lat, lng:geo[ck].lng, nome:r.cidade||ck, uf:r.uf||'', key:ck };
+      cData[ck].count++;
+    });
+    var pontos = Object.keys(cData).map(function(k){ return cData[k]; });
+    pontos.sort(function(a,b){ return b.count - a.count; });
+    if (!pontos.length) { Toast.aviso('Nenhuma cidade geocodificada para os filtros atuais.'); return; }
+    var maxN = pontos[0].count;
+
+    function _tooltipCidade(p) {
+      return '<strong>' + _esc(p.nome) + '</strong>' +
+        (p.uf ? '<br><small style="color:#666">' + _esc(p.uf) + '</small>' : '') +
+        '<br>' + p.count + ' pessoa' + (p.count > 1 ? 's' : '');
+    }
+
+    pontos.forEach(function(p) {
+      var pct    = p.count / maxN;
+      var fill   = _corBairro(pct, false);
+      var radius = Math.max(12, Math.min(42, 12 + pct * 30));
+      var m = L.circleMarker([p.lat, p.lng], {
+        radius:radius, color:'#fff', weight:2, fillColor:fill, fillOpacity:.85
+      }).bindTooltip(_tooltipCidade(p), {permanent:false, direction:'top'}).addTo(_mapa);
+      m._biDemMarker = true;
+    });
+    try { _mapa.fitBounds(pontos.map(function(p){return[p.lat,p.lng];}), {padding:[40,40]}); } catch(e) {}
   }
 
   // ── Personas ─────────────────────────────────────────────────────────────

@@ -963,6 +963,77 @@ var ContratosEngine = (function () {
     };
   }
 
+  /**
+   * Conformidade com os limites percentuais da Lei Rouanet (divulgação,
+   * captação, administração) por contrato modalidade='lei_rouanet'.
+   * Soma rubricas (atividades e legado direto na meta) por categoriaRouanet
+   * e compara contra config_org.json tiposRubrica[].limitePercentual.
+   *
+   * Rubricas sem categoriaRouanet definida entram em "naoClassificado" —
+   * nunca são adivinhadas por nome, para não gerar número que engane
+   * prestação de contas.
+   *
+   * @param {string} orgId
+   * @returns {Array<{idContrato, nome, valorTotal, naoClassificado, categorias[]}>}
+   */
+  function conformidadeRouanet(orgId) {
+    orgId = orgId || _orgId();
+    var tipos  = (typeof SistemaConfigService !== 'undefined') ? SistemaConfigService.getTiposRubrica() : [];
+    var limites = tipos.filter(function(t) { return t.limitePercentual; });
+    if (!limites.length) return [];
+
+    var contratos = ContratoRepository.listar(orgId, {}).filter(function(c) {
+      return c.modalidade === 'lei_rouanet' && c.status !== 'Cancelado';
+    });
+
+    return contratos.map(function(c) {
+      var porCategoria = {};
+      limites.forEach(function(t) { porCategoria[t.id] = 0; });
+      var naoClassificado = 0;
+      var somaClassificada = 0;
+
+      (c.metas || []).forEach(function(meta) {
+        var todasRub = [];
+        (meta.atividades || []).forEach(function(atv) { todasRub = todasRub.concat(atv.rubricas || []); });
+        todasRub = todasRub.concat(meta.rubricas || []); // legado direto na meta
+        todasRub.forEach(function(rub) {
+          var valor = Number(rub.valorTotal || 0);
+          if (rub.categoriaRouanet && porCategoria.hasOwnProperty(rub.categoriaRouanet)) {
+            porCategoria[rub.categoriaRouanet] += valor;
+            somaClassificada += valor;
+          } else {
+            naoClassificado += valor;
+          }
+        });
+      });
+
+      var valorTotal = Number(c.valorTotal || 0);
+      var categorias = limites.map(function(t) {
+        var valor = porCategoria[t.id] || 0;
+        var pct   = valorTotal > 0 ? (valor / valorTotal) : 0;
+        return {
+          id:        t.id,
+          label:     t.label,
+          valor:     +valor.toFixed(2),
+          pct:       +(pct * 100).toFixed(1),
+          limitePct: +(t.limitePercentual * 100).toFixed(1),
+          alerta:    pct > t.limitePercentual
+        };
+      });
+
+      return {
+        idContrato:       c.id,
+        nome:             c.nome || '',
+        numero:           c.numero || '',
+        valorTotal:       +valorTotal.toFixed(2),
+        somaClassificada: +somaClassificada.toFixed(2),
+        naoClassificado:  +naoClassificado.toFixed(2),
+        categorias:       categorias,
+        algumAlerta:      categorias.some(function(cat) { return cat.alerta; })
+      };
+    });
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // RUBRICAS (Itens de Despesa)
   // ──────────────────────────────────────────────────────────────────
@@ -1600,6 +1671,7 @@ var ContratosEngine = (function () {
     calcularCustoPessoal:   calcularCustoPessoal,
     autoVincularPessoal:    autoVincularPessoal,
     painelOrcamentoPessoal: painelOrcamentoPessoal,
+    conformidadeRouanet:    conformidadeRouanet,
 
     // Rubricas / Itens de Despesa
     salvarRubrica:               salvarRubrica,

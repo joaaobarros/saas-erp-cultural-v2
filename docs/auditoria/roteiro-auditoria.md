@@ -528,7 +528,23 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 115 (2026-06-23)
+## HANDOFF ATUAL — SESSÃO 116 (2026-06-23)
+
+### Estado atual: Feat — Mapa por cidade + categorias de rubrica Rouanet + aba Conformidade — Deploy @1034
+
+### O que foi feito nesta sessão (s116)
+| Deploy | O que foi implementado |
+|---|---|
+| @1034 | Mapa "Cidades" no BI Demográfico (3º modo, ao lado de Calor/Bairros). Campo novo `categoriaRouanet` nas rubricas do Financeiro (separado do `categoria` custeio/investimento usado pelo SALIC). Nova aba "Conformidade" no Dashboard com `ContratosEngine.conformidadeRouanet()` comparando execução real por categoria Rouanet contra os limites de `config_org.json`. Ver detalhe completo em PROGRESS.md s116. |
+
+### Pendente para smoke test
+- BI Demográfico → mapa → botão "Cidades": bolhas aparecem corretamente.
+- Financeiro → editar/criar Item de Despesa: campo "Categoria Lei Rouanet" aparece e salva.
+- Dashboard → aba "Conformidade": contratos Lei Rouanet aparecem com barras por categoria; contratos sem rubrica classificada mostram tudo em "não classificado".
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 115 (2026-06-23)
 
 ### Estado atual: Feat — Dashboard: aba "Alertas" operacionais — Deploy @1033
 
