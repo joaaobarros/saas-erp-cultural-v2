@@ -528,14 +528,14 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 113 (2026-06-22)
+## HANDOFF ATUAL — SESSÃO 114 (2026-06-22)
 
-### Estado atual: Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão — Deploy @1031
+### Estado atual: Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão — Deploy @1032
 
-### O que foi feito nesta sessão (s113)
+### O que foi feito nesta sessão (s114)
 | Deploy | O que foi implementado |
 |---|---|
-| @1031 | Usuário reportou item "Relatórios" do menu lateral sempre "inativo". Investigação revelou que `ModulosRegistryService` (`modules/admin/modulos_registry_service.gs:18`) já havia removido `RELATORIOS` do catálogo canônico de módulos deliberadamente ("não existe view correspondente; exportações ficam em Financeiro"), mas o item de menu, atalhos da Home, matrizes de permissão (frontend + `permissoes_v2_engine.gs`), entradas do Manual e do wizard de setup nunca foram limpos — ficaram órfãos, permanentemente inacessíveis. Removidas todas as referências mortas a `RELATORIOS` (módulo de menu/RBAC — não confundir com a planilha de dados `SHEET_ID_RELATORIOS`/CODIP, que segue intacta). Corrigido também `manual.html`: as entradas de ajuda "Relatórios" e "BI Demográfico" estavam gated por `modulo:'RELATORIOS'` (logo inacessíveis) — passaram para `modulo:null`. Adicionada nova aba "BI Estoque" ao dashboard cross-módulo já existente (`DashboardUI`/`ctrl_dashboard_estoque`), reaproveitando `EstoqueEngine.metricas()` sem duplicar cálculo — cobre o único gap real de dados (itens críticos, valor em estoque, permanentes, solicitações pendentes) que as abas Operacional/Financeiro/Estratégico/Demográfico não tinham. |
+| @1032 | Usuário reportou item "Relatórios" do menu lateral sempre "inativo". Investigação revelou que `ModulosRegistryService` (`modules/admin/modulos_registry_service.gs:18`) já havia removido `RELATORIOS` do catálogo canônico de módulos deliberadamente ("não existe view correspondente; exportações ficam em Financeiro"), mas o item de menu, atalhos da Home, matrizes de permissão (frontend + `permissoes_v2_engine.gs`), entradas do Manual e do wizard de setup nunca foram limpos — ficaram órfãos, permanentemente inacessíveis. Removidas todas as referências mortas a `RELATORIOS` (módulo de menu/RBAC — não confundir com a planilha de dados `SHEET_ID_RELATORIOS`/CODIP, que segue intacta). Corrigido também `manual.html`: as entradas de ajuda "Relatórios" e "BI Demográfico" estavam gated por `modulo:'RELATORIOS'` (logo inacessíveis) — passaram para `modulo:null`. Adicionada nova aba "BI Estoque" ao dashboard cross-módulo já existente (`DashboardUI`/`ctrl_dashboard_estoque`), reaproveitando `EstoqueEngine.metricas()` sem duplicar cálculo — cobre o único gap real de dados (itens críticos, valor em estoque, permanentes, solicitações pendentes) que as abas Operacional/Financeiro/Estratégico/Demográfico não tinham. |
 
 ### Pendente para smoke test
 - Sidebar: confirmar que "Relatórios" não aparece mais (nem para superadmin com tag "inativo").

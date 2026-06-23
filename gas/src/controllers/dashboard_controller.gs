@@ -167,6 +167,24 @@ function ctrl_dashboard_financeiro(params) {
   }, 'ctrl_dashboard_financeiro');
 }
 
+// ─── Dashboard Estoque ───────────────────────────────────────────────────────
+
+/**
+ * Dashboard de estoque: itens críticos, valor em estoque, permanentes por status,
+ * solicitações de material pendentes. Delega para EstoqueEngine.metricas
+ * (mesma fonte usada por ctrl_estoque_metricas) — sem duplicar cálculo.
+ */
+function ctrl_dashboard_estoque(params) {
+  return GasResponse.wrap(function() {
+    var ctx   = _ctxDash();
+    var resultado = {};
+    try {
+      resultado.estoque = EstoqueEngine.metricas(ctx.orgId);
+    } catch(e) { resultado.estoque = null; }
+    return resultado;
+  }, 'ctrl_dashboard_estoque');
+}
+
 // ─── Dashboard Estratégico ────────────────────────────────────────────────────
 
 /**

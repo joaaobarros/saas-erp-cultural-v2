@@ -39,7 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s113)**: **Fix — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" — Deploy @1031.**
+**Fase atual (s114)**: **Feat/Cleanup — Dashboard: aba BI Estoque + remoção do módulo RELATORIOS órfão do menu — Deploy @1032.**
+
+**O que foi implementado agora**:
+- Usuário reportou que o item "Relatórios" do menu lateral aparece sempre como "inativo". Investigação encontrou que `ModulosRegistryService` (`gas/src/modules/admin/modulos_registry_service.gs:18`) já havia removido `RELATORIOS` do catálogo canônico de módulos ativáveis em sessão anterior, com o comentário explícito "não existe view correspondente; exportações ficam em Financeiro" — mas nunca foi feita a limpeza das referências órfãs que dependiam desse módulo: item do menu lateral, 2 atalhos da Home (nunca renderizavam), matriz de permissões duplicada no frontend (`index.html`), matriz RBAC canônica (`core/services/permissoes_v2_engine.gs`), 2 entradas do Manual (`shared/manual.html` — ficavam inacessíveis, mesmo tendo conteúdo útil), catálogo do wizard de setup de nova org (`portal/wizard_setup.html`), mapa de auditoria por módulo (`modules/admin/sistema_metricas_controller.gs`) e o seed `core/data/config_org.json`. Todas removidas/corrigidas — **não foi tocada** a planilha de dados real `SHEET_ID_RELATORIOS`/aba CODIP (`core/setup.gs`, `core/utils.gs`, `core/services/metrics_engine.gs`), que é infraestrutura de dados legítima sem relação com o módulo de menu morto.
+- Em paralelo, identificado que já existe um dashboard cross-módulo completo e sempre ativo (`DashboardUI` em `index.html`, controllers em `controllers/dashboard_controller.gs`) com abas BI Operacional/Financeiro/Estratégico/Demográfico — faltava apenas Estoque/Itens. Adicionada aba "BI Estoque" reaproveitando `EstoqueEngine.metricas()` (mesma fonte de `ctrl_estoque_metricas`) via novo `ctrl_dashboard_estoque`, sem duplicar cálculo.
+
+**Pendente de confirmação do usuário**: smoke test descrito em `docs/auditoria/roteiro-auditoria.md` (seção HANDOFF SESSÃO 114) — sidebar sem "Relatórios", aba BI Estoque carregando, artigos do Manual acessíveis, wizard sem a opção "Relatórios".
+
+**Fase anterior (s113)**: **Fix — Datas Comemorativas: causa raiz real do "Cannot read properties of undefined (reading 'map')" — Deploy @1031.**
 
 **O que foi implementado agora**:
 - O fix de s112 desmascarou o erro real (antes virava silenciosamente "Nenhuma data cadastrada"), revelando `Erro ao carregar: Cannot read properties of undefined (reading 'map')` ao abrir Administração → Cadastros Base → Datas Comemorativas.

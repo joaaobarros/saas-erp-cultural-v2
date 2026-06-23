@@ -8576,7 +8576,7 @@ select.form-control { cursor: pointer; }
         <div class="mod-header">
           <div>
             <h2 style="margin:0;font-size:20px;font-weight:700;">BI — Central de Inteligência</h2>
-            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Demográfico</p>
+            <p style="margin:2px 0 0;font-size:13px;color:var(--text2);">Operacional · Financeiro · Estratégico · Estoque · Demográfico</p>
           </div>
           <button class="btn btn-secundario btn-sm" onclick="DashboardUI.atualizar()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Atualizar</button>
         </div>
@@ -8585,6 +8585,7 @@ select.form-control { cursor: pointer; }
           <button class="tab-btn tab-ativa" onclick="DashboardUI.setTab('operacional',this)" data-bg-skip="1"><span class="ms ms-sm">bolt</span> BI Operacional</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('financeiro',this)" data-bg-skip="1"><span class="ms ms-sm">payments</span> BI Financeiro</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('estrategico',this)" data-bg-skip="1"><span class="ms ms-sm">flag</span> BI Estratégico</button>
+          <button class="tab-btn" onclick="DashboardUI.setTab('estoque',this)" data-bg-skip="1"><span class="ms ms-sm">inventory_2</span> BI Estoque</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('demografico',this)" data-bg-skip="1"><span class="ms ms-sm">person_search</span> BI Demográfico</button>
           <button class="tab-btn" onclick="DashboardUI.setTab('insights',this)" data-bg-skip="1"><span class="ms ms-sm">smart_toy</span> Insights IA</button>
         </div>
@@ -8597,6 +8598,9 @@ select.form-control { cursor: pointer; }
         </div>
         <div id="dash-tab-estrategico" class="oculto">
           <div id="dash-est-content"><p class="muted-text">⏳ Carregando…</p></div>
+        </div>
+        <div id="dash-tab-estoque" class="oculto">
+          <div id="dash-estoque-content"><p class="muted-text">⏳ Carregando…</p></div>
         </div>
         <div id="dash-tab-demografico" class="oculto"></div>
 
@@ -10930,6 +10934,7 @@ var GAS = {
     operacional: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_operacional({}); },
     financeiro:  function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_financeiro({}); },
     estrategico: function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estrategico({}); },
+    estoque:     function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_estoque({}); },
     insightsIA:  function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_insights_ia(p||{}); },
     relatorioIA: function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_dashboard_relatorio_ia(p||{}); }
   },
@@ -16144,7 +16149,6 @@ var AdminCadastrosUI = (function() {
     { id: 'COMUNICACAO', label: 'Comunicação'    },
     { id: 'TAREFAS',     label: 'Tarefas'        },
     { id: 'REUNIOES',    label: 'Reuniões'       },
-    { id: 'RELATORIOS',  label: 'Relatórios'     },
     { id: 'ADMIN',       label: 'Administração'  },
     { id: 'MASTER',      label: 'Master'         },
     { id: 'PUBLICO',     label: 'Público'        }
@@ -16152,14 +16156,14 @@ var AdminCadastrosUI = (function() {
 
   // Matriz RBAC base por papel (espelho compacto do backend — sem chamar o servidor)
   var _PERM_MATRIZ = {
-    superadmin: {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},RELATORIOS:{v:1,e:1,x:1},ADMIN:{v:1,e:1,x:1},MASTER:{v:1,e:1,x:1},PUBLICO:{v:1,e:1,x:1}},
-    admin:      {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:0},FINANCEIRO:{v:1,e:1,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:1,e:1,x:0},MASTER:{v:1,e:1,x:0},PUBLICO:{v:1,e:1,x:0}},
-    gestor:     {ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:1,x:0},RELATORIOS:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:1,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
-    financeiro: {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
-    rh:         {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:1,e:1,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
-    comunicacao:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:1,x:0}},
-    habilitador:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
-    colaborador:{ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},RELATORIOS:{v:0,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}}
+    superadmin: {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},ADMIN:{v:1,e:1,x:1},MASTER:{v:1,e:1,x:1},PUBLICO:{v:1,e:1,x:1}},
+    admin:      {ACOES:{v:1,e:1,x:1},ESPACOS:{v:1,e:1,x:1},PESSOAS:{v:1,e:1,x:0},FINANCEIRO:{v:1,e:1,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:1},REUNIOES:{v:1,e:1,x:1},ADMIN:{v:1,e:1,x:0},MASTER:{v:1,e:1,x:0},PUBLICO:{v:1,e:1,x:0}},
+    gestor:     {ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:1,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:1,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
+    financeiro: {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:1,e:1,x:1},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
+    rh:         {ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:1,e:1,x:1},FINANCEIRO:{v:1,e:0,x:0},COMUNICACAO:{v:0,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:0,e:0,x:0}},
+    comunicacao:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:1,x:1},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:1,x:0}},
+    habilitador:{ACOES:{v:1,e:1,x:0},ESPACOS:{v:1,e:1,x:0},PESSOAS:{v:1,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}},
+    colaborador:{ACOES:{v:1,e:0,x:0},ESPACOS:{v:1,e:0,x:0},PESSOAS:{v:0,e:0,x:0},FINANCEIRO:{v:0,e:0,x:0},COMUNICACAO:{v:1,e:0,x:0},TAREFAS:{v:1,e:1,x:0},REUNIOES:{v:1,e:0,x:0},ADMIN:{v:0,e:0,x:0},MASTER:{v:0,e:0,x:0},PUBLICO:{v:1,e:0,x:0}}
   };
 
   function _renderMatrizPermissoes(papel, overrides) {
@@ -30333,7 +30337,6 @@ var App = (function() {
     { id:'reunioes',    label:'Reuniões',         icone:'groups',                  modulo:'REUNIOES' },
     { secao:'OPERACIONAL' },
     { id:'comunicacao', label:'Comunicação',     icone:'campaign',                modulo:'COMUNICACAO' },
-    { id:'relatorios',  label:'Relatórios',      icone:'bar_chart',               modulo:'RELATORIOS' },
     { id:'quadros',     label:'Quadros',          icone:'dashboard_customize',      modulo:null },
     { id:'sessoes',     label:'Sessões Interativas', icone:'group_work',           modulo:null },
     { secao:'MEMÓRIA' },
@@ -31105,8 +31108,7 @@ var App = (function() {
     var qas = [
       { label:'Nova Ação',      icone:'theater_comedy', modulo:'ACOES',      view:'acoes'      },
       { label:'Infraestrutura', icone:'museum',          modulo:'ESPACOS',    view:'espacos'    },
-      { label:'Financeiro',     icone:'payments',        modulo:'FINANCEIRO', view:'financeiro' },
-      { label:'Relatórios',     icone:'bar_chart',       modulo:'RELATORIOS', view:'relatorios' }
+      { label:'Financeiro',     icone:'payments',        modulo:'FINANCEIRO', view:'financeiro' }
     ].filter(function(q) { return ativos.indexOf(q.modulo) !== -1; });
     _renderHomeQuickActions(qas);
     _renderHomeAniversariantes();
@@ -31150,8 +31152,7 @@ var App = (function() {
     var qasGestor = [
       { label: 'Meu Centro',  icone: 'hub',       modulo: null,         view: 'taskhub'    },
       { label: 'Aprovações',  icone: 'approval',  modulo: 'ESPACOS',    view: 'aprovacoes' },
-      { label: 'Reuniões',    icone: 'groups',     modulo: 'REUNIOES',   view: 'reunioes'   },
-      { label: 'Relatórios',  icone: 'bar_chart',  modulo: 'RELATORIOS', view: 'relatorios' }
+      { label: 'Reuniões',    icone: 'groups',     modulo: 'REUNIOES',   view: 'reunioes'   }
     ];
     var qasColaborador = [
       { label: 'Meu Centro',  icone: 'hub',            modulo: null,       view: 'taskhub' },
@@ -38230,13 +38231,14 @@ var DashboardUI = (function() {
     if (tab === 'operacional' || !_carregado) _carregarOperacional();
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
+    if (tab === 'estoque')     _carregarEstoque();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.atualizar(null); }
     _carregado = true;
   }
 
   function setTab(tab, btn) {
     _tabAtual = tab;
-    ['operacional','financeiro','estrategico','demografico','insights'].forEach(function(t) {
+    ['operacional','financeiro','estrategico','estoque','demografico','insights'].forEach(function(t) {
       var el = document.getElementById('dash-tab-' + t);
       if (el) el.classList.toggle('oculto', t !== tab);
     });
@@ -38245,6 +38247,7 @@ var DashboardUI = (function() {
     if (tab === 'operacional') _carregarOperacional();
     if (tab === 'financeiro')  _carregarFinanceiro();
     if (tab === 'estrategico') _carregarEstrategico();
+    if (tab === 'estoque')     _carregarEstoque();
     if (tab === 'demografico') { _montarDemografico(); BiDemograficoUI.aoAbrir(); }
   }
 
@@ -38294,6 +38297,25 @@ var DashboardUI = (function() {
       if (d.fontes)         cards.push(_statCard('Fontes Ativas', d.fontes.ativas, null, 'R$ ' + _fmtMoeda(d.fontes.totalValor), "Router.navegar('financeiro')"));
       if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
     }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel financeiro.</p>'; });
+  }
+
+  function _carregarEstoque() {
+    var el = document.getElementById('dash-estoque-content');
+    if (el) el.innerHTML = '<p class="muted-text">⏳ Carregando…</p>';
+    GAS.dashboard.estoque(function(r) {
+      if (!r || !r.ok) { if(el) el.innerHTML = '<p class="muted-text">Erro.</p>'; return; }
+      var d = r.data && r.data.estoque;
+      var cards = [];
+      if (d) {
+        cards.push(_statCard('Itens em Estoque', d.totalItens||0, null, 'R$ ' + _fmtMoeda(d.totalValorEstoque), "Router.navegar('espacos')"));
+        var criticos = (d.itensCriticosZerados||0) + (d.itensCriticosBaixo||0);
+        cards.push(_statCard('Itens Críticos', criticos, criticos>0?'var(--danger)':null, (d.itensCriticosZerados||0) + ' zerados · ' + (d.itensCriticosBaixo||0) + ' baixos', "Router.navegar('espacos')"));
+        cards.push(_statCard('Permanentes em Uso', d.permanentesEmUso||0, null, 'de ' + (d.totalPermanentes||0) + ' total', "Router.navegar('espacos')"));
+        cards.push(_statCard('Permanentes em Manutenção', d.permanentesManutencao||0, d.permanentesManutencao>0?'var(--warning)':null, '', "Router.navegar('espacos')"));
+        cards.push(_statCard('Solicitações Pendentes', d.pendentes||0, d.pendentes>0?'var(--warning)':null, 'de ' + (d.total||0) + ' total', "Router.navegar('espacos')"));
+      }
+      if (el) el.innerHTML = '<div class="stats-strip" style="flex-wrap:wrap;gap:16px;margin-bottom:20px;">' + cards.join('') + '</div>';
+    }, function(){ if(el) el.innerHTML = '<p class="muted-text">Erro ao carregar painel de estoque.</p>'; });
   }
 
   function _carregarEstrategico() {

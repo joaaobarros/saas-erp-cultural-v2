@@ -26,8 +26,7 @@ var _SM_MAPA_AUDIT = {
   'ACOES':       ['acoes', 'acao', 'habilitacoes', 'qualificacoes'],
   'ESPACOS':     ['reservas', 'ativos', 'chaves', 'almoxarifado', 'espacos', 'solicitacao_reserva'],
   'REUNIOES':    ['reunioes'],
-  'COMUNICACAO': ['comunicacao', 'rece'],
-  'RELATORIOS':  ['relatorios', 'codip']
+  'COMUNICACAO': ['comunicacao', 'rece']
 };
 
 /**
