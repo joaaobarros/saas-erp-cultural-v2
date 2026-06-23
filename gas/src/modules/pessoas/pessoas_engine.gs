@@ -320,6 +320,37 @@ var PessoasEngine = (function () {
     // Snapshot pré-escrita — habilita rollback via Auditoria Visual (módulo 'pessoas')
     var antes = dados.id ? ColaboradorRepository.buscarPorId(orgId, dados.id) : null;
 
+    // Histórico de endereço — arquivar endereço anterior se houve mudança
+    if (antes && dados.endereco) {
+      var _endAnt = antes.endereco || {};
+      var _endNov = dados.endereco;
+      var _cepAnt = String(_endAnt.cep || '').replace(/\D/g, '');
+      var _cepNov = String(_endNov.cep || '').replace(/\D/g, '');
+      var _endMudou = _cepAnt !== _cepNov ||
+        (_endAnt.logradouro || '') !== (_endNov.logradouro || '') ||
+        (_endAnt.bairro     || '') !== (_endNov.bairro     || '') ||
+        (_endAnt.cidade     || '') !== (_endNov.cidade     || '') ||
+        (_endAnt.uf         || '') !== (_endNov.uf         || '');
+      if (_endMudou && (_endAnt.cep || _endAnt.bairro || _endAnt.logradouro)) {
+        var _hoje  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        var _hist  = Array.isArray(antes.enderecoHistorico) ? antes.enderecoHistorico.slice() : [];
+        var _ult   = _hist.length ? _hist[_hist.length - 1] : null;
+        var _dtIni = (_ult && _ult.dataFim) || antes.dataAdmissao || (String(antes.criadoEm || '').slice(0, 10)) || '';
+        _hist.push({
+          logradouro:  _endAnt.logradouro  || '',
+          numero:      _endAnt.numero      || '',
+          complemento: _endAnt.complemento || '',
+          bairro:      _endAnt.bairro      || '',
+          cidade:      _endAnt.cidade      || '',
+          uf:          _endAnt.uf          || '',
+          cep:         _endAnt.cep         || '',
+          dataInicio:  _dtIni,
+          dataFim:     _hoje
+        });
+        dados.enderecoHistorico = _hist;
+      }
+    }
+
     // Normalizar e-mails
     if (dados.emailInstitucional)
       dados.emailInstitucional = String(dados.emailInstitucional).toLowerCase().trim();

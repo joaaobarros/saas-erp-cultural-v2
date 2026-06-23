@@ -204,7 +204,7 @@ var ColaboradorRepository = (function () {
           'salarioBruto','salario','fotoPerfil','beneficios',
           // históricos temporais — arrays de entradas {dados, dataInicio, dataFim}
           'pcdHistorico','paiMaeHistorico',
-          'generoHistorico','racaCorHistorico','sexualidadeHistorico'
+          'generoHistorico','racaCorHistorico','sexualidadeHistorico','enderecoHistorico'
         ];
         Object.keys(prev).forEach(function(k) {
           if (dados[k] === undefined) {

@@ -39,7 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s126)**: **Fix — Infraestrutura: abas Patrimônio e Estoque duplicadas corrigidas — Deploy @1044.**
+**Fase atual (s127)**: **Feat/Fix — Pessoas/RH: ordenação multi-fator + form em modal; Endereço histórico; BI geo CEP puro — Deploy @1045.**
+
+**O que foi implementado agora**:
+- **Ordenação multi-fator** (`index.html`, `RhUI`): cabeçalhos das colunas Nome/Setor/Cargo/Vínculo/Admissão/Status são clicáveis. Clique simples = critério primário (ASC → DESC cicla); Shift+clique = adiciona critério secundário/terciário. Ícone `unfold_more`/`arrow_upward`/`arrow_downward` + número de prioridade sobrescrito indicam estado ativo. Ordenação default preservada (setor + nome).
+- **Form em modal sobreposta** (`index.html`, `RhUI`): `div#rh-colab-form` convertido de inline-expand para `position:fixed` modal overlay (backdrop `rgba(15,23,42,.70)` + blur, `z-index:900`, animação `modalEntrar`). Header com ícone + título dinâmico ("Novo Colaborador" / "Editar Colaborador") + botão `✕`; footer fixo com Cancelar/Salvar; clicar no backdrop fecha. Seis seções com `form-section-title` (cor primária + borda inferior) — mesma classe de RECE, Reuniões e Contratos.
+- **Histórico de endereço** (`pessoas_engine.gs`, `colaborador_repository.gs`): ao salvar colaborador, se o endereço mudou (CEP, logradouro, bairro, cidade ou UF), o endereço anterior é arquivado em `enderecoHistorico[]` com `dataInicio`/`dataFim`. Campo `enderecoHistorico` adicionado à lista de arrays temporais preservados no merge de update.
+- **BI Demográfico — geocodificação CEP puro** (`bi_demografico_controller.gs`): quando CEP disponível, query agora usa apenas `NNNNN-NNN, Brasil` — mais precisa que `logradouro + cidade` (CEP identifica face de quadra no BRA, evitando ambiguidade de nomes genéricos como "Rua A"). Fallback mantido para registros sem CEP. Cache key bumped de `geo2:` para `geo3:` para invalidar entradas antigas com query ruim. Limpeza de entradas `geo:` e `geo2:` legadas na mesma escrita.
+
+**Fase anterior (s126)**: **Fix — Infraestrutura: abas Patrimônio e Estoque duplicadas corrigidas — Deploy @1044.**
 
 **O que foi implementado agora**:
 - **Bug causa raiz** (`index.html`, `EspacosUI.abrirTab`): linha `var painelKey = tab === 'ativos' ? 'estoque' : tab` forçava o painel `esp-tab-ativos` a nunca ser exibido — ambos os botões ("Patrimônio" e "Estoque") mostravam sempre `esp-tab-estoque`. Linha removida: `painelKey = tab` (sem redirecionamento).

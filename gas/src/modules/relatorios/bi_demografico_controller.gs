@@ -93,18 +93,30 @@ function _biViaCep(cep) {
  * Geocodifica via Maps usando o endereço completo disponível.
  * info: { logradouro?, numero?, bairro, cidade, uf, cep? }
  * Retorna {lat,lng} ou {erro:true}.
+ *
+ * Estratégia: quando CEP disponível, usar APENAS o CEP como query —
+ * CEP identifica a face de quadra em BRA e é localizador unívoco.
+ * Incluir logradouro na query confunde o geocodificador, que pode
+ * resolver o nome genérico ("Rua L", "Rua A") em outro ponto da cidade
+ * ignorando o CEP. CEP-only evita esse problema.
  */
 function _biGeocodificar(info) {
-  var partes = [];
-  if (info.logradouro && info.numero) partes.push(info.logradouro + ', ' + info.numero);
-  else if (info.logradouro)           partes.push(info.logradouro);
-  if (info.bairro) partes.push(info.bairro);
-  if (info.cidade) partes.push(info.cidade);
-  partes.push(info.uf || 'CE');
-  if (info.cep && info.cep.length === 8)
-    partes.push(info.cep.slice(0, 5) + '-' + info.cep.slice(5));
-  partes.push('Brasil');
-  var query = partes.filter(function (p) { return !!String(p || '').trim(); }).join(', ');
+  var cepLimpo = String(info.cep || '').replace(/\D/g, '');
+  var query;
+  if (cepLimpo.length === 8) {
+    // CEP puro — o geocodificador usa sua base de CEPs BR sem ambiguidade de nome de rua
+    query = cepLimpo.slice(0, 5) + '-' + cepLimpo.slice(5) + ', Brasil';
+  } else {
+    // fallback sem CEP: bairro + cidade + UF
+    var partes = [];
+    if (info.logradouro && info.numero) partes.push(info.logradouro + ', ' + info.numero);
+    else if (info.logradouro)           partes.push(info.logradouro);
+    if (info.bairro) partes.push(info.bairro);
+    if (info.cidade) partes.push(info.cidade);
+    partes.push(info.uf || 'CE');
+    partes.push('Brasil');
+    query = partes.filter(function (p) { return !!String(p || '').trim(); }).join(', ');
+  }
   try {
     var r = Maps.newGeocoder().setRegion('br').setLanguage('pt-BR').geocode(query);
     if (r && r.status === 'OK' && r.results && r.results.length) {
@@ -154,7 +166,9 @@ function _biResolverGeo(locais) {
   var consultas = 0;
 
   Object.keys(locais).forEach(function (chave) {
-    var cacheKey = 'geo:' + chave;
+    // geo3: — bust de geo: (query bairro+cidade) e geo2: (query rua+CEP).
+    // Query agora usa CEP puro, eliminando ambiguidade de nome de rua.
+    var cacheKey = 'geo3:' + chave;
     var hit = cache[cacheKey] || novos[cacheKey];
     if (!hit) {
       if (consultas >= _BI_GEO_MAX_NOVOS) { pendentes++; return; }
@@ -167,7 +181,15 @@ function _biResolverGeo(locais) {
     if (hit && !hit.erro) geo[chave] = { lat: hit.lat, lng: hit.lng };
   });
 
-  _biGeoCacheGravar(novos);
+  // Purgar entradas legadas (geo: e geo2:) na mesma escrita — cache limpo sem resíduo.
+  modifyJSON(_BI_GEO_ARQUIVO, function (atual) {
+    var mapa = (atual && !Array.isArray(atual) && typeof atual === 'object') ? atual : {};
+    Object.keys(mapa).forEach(function (k) {
+      if (k.slice(0, 4) === 'geo:' || k.slice(0, 5) === 'geo2:') delete mapa[k];
+    });
+    Object.keys(novos).forEach(function (k) { mapa[k] = novos[k]; });
+    return mapa;
+  });
   return { geo: geo, pendentes: pendentes };
 }
 
