@@ -26,7 +26,7 @@
  */
 
 var _BI_GEO_ARQUIVO   = 'bi_geo_cache.json';
-var _BI_GEO_MAX_NOVOS = 30;
+// Sem limite de geocodificações por chamada — todos os endereços são processados.
 var _BI_PAPEIS        = ['superadmin', 'admin', 'rh', 'gestor'];
 
 // ── Helpers privados ─────────────────────────────────────────────────
@@ -166,7 +166,7 @@ function _biResolverGeo(locais) {
   var novos     = {};
   var geo       = {};
   var pendentes = 0;
-  var consultas = 0;
+  var consultas = 0; // apenas contagem informativa (sem cap)
 
   Object.keys(locais).forEach(function (chave) {
     // geo4: para end:* — bust seletivo das entradas que antes usavam só CEP;
@@ -174,13 +174,15 @@ function _biResolverGeo(locais) {
     var prefix   = chave.slice(0, 4) === 'end:' ? 'geo4:' : 'geo3:';
     var cacheKey = prefix + chave;
     var hit = cache[cacheKey] || novos[cacheKey];
+    // Erros cacheados são ignorados — a geocodificação é retentada na próxima chamada.
+    if (hit && hit.erro) hit = null;
     if (!hit) {
-      if (consultas >= _BI_GEO_MAX_NOVOS) { pendentes++; return; }
       consultas++;
       var l = locais[chave];
       hit = _biGeocodificar(l);
       hit.em = new Date().toISOString();
-      novos[cacheKey] = hit;
+      // Só cacheia sucesso — falhas são retentadas na próxima chamada.
+      if (!hit.erro) novos[cacheKey] = hit;
     }
     if (hit && !hit.erro) geo[chave] = { lat: hit.lat, lng: hit.lng };
   });
@@ -348,10 +350,8 @@ function ctrl_bi_demografico_beneficiarios() {
   return GasResponse.wrap(function () {
     var ctx        = _ctxBiDemografico();
     var inscricoes = PublicoRepository.Inscricoes.listar(ctx.orgId, {});
-    var cache        = _biGeoCacheLer();
-    var novosCep     = {};
-    var consultas    = 0;
-    var cepPendentes = 0;
+    var cache    = _biGeoCacheLer();
+    var novosCep = {};
 
     var locais    = {};
     var registros = inscricoes.map(function (i) {
@@ -360,15 +360,12 @@ function ctrl_bi_demografico_beneficiarios() {
       if (cepLimpo.length === 8) {
         var cacheKey = 'cep:' + cepLimpo;
         endCep = cache[cacheKey] || novosCep[cacheKey];
+        // Erros cacheados são ignorados — retenta na próxima chamada.
+        if (endCep && endCep.erro) endCep = null;
         if (!endCep) {
-          if (consultas < _BI_GEO_MAX_NOVOS) {
-            consultas++;
-            endCep = _biViaCep(cepLimpo);
-            endCep.em = new Date().toISOString();
-            novosCep[cacheKey] = endCep;
-          } else {
-            cepPendentes++;
-          }
+          endCep = _biViaCep(cepLimpo);
+          endCep.em = new Date().toISOString();
+          if (!endCep.erro) novosCep[cacheKey] = endCep;
         }
       }
       var bairro = (endCep && !endCep.erro) ? _biTitleCase(endCep.bairro) : '';
@@ -412,7 +409,7 @@ function ctrl_bi_demografico_beneficiarios() {
     return {
       registros:    registros,
       geo:          resGeo.geo,
-      geoPendentes: resGeo.pendentes + cepPendentes,
+      geoPendentes: resGeo.pendentes,
       geradoEm:     new Date().toISOString()
     };
   }, 'ctrl_bi_demografico_beneficiarios');
