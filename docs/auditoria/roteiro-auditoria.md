@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s134 @1054 (Sessões Interativas v3: templates, gamificação, wizard, votação, ranking, timer, identidade) · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s135 @1061 (Quadros v2: Napkin+Miro, sticky/frame/tabela, borracha, apresentação, cross-module sem quebra de fluxo) · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s134 — Sessões Interativas v3: templates, gamificação, wizard, votação, ranking, timer, identidade
+### Estado atual: s135 — Quadros v2: Napkin + Miro + ferramentas canvas + cross-module sem quebra de fluxo
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1061 | s135 | **QuadrosUI** (index.html): campos `tipo/urlExterna/napkinPrompt/categoria` no form. Miro: URL share → live-embed automático. Napkin: URL via `app.napkin.ai/?text=...` do prompt. 12 categorias visuais dinâmicas por tipo (`_CATS_BY_TIPO`). Overlay iframe `#qdro-ext-overlay` z-index:1500. Ferramentas: Sticky Note (7 cores, drop-shadow, word-wrap, paleta), Frame/Slide (borda tracejada roxa, label via `_modalInput`), Tabela (grid configurável). Borracha: closest-point-on-bbox + preview círculo vermelho. Apresentação: `apresentarCanvas()` dark overlay pan/zoom/ESC + `apresentarExterno()` iframe fullscreen. Integração Ações: aba "Quadros" no painel, `_novoQuadroAcao` abre `#qdro-modal` (z-index:1100) sobre painel (z-index:1000) sem fechar. Integração Reuniões: aba "Quadros" no modal, `_novoQuadroReuniao` abre `#qdro-modal` sobre modal sem fechar. `QuadrosUI.setAfterSaveCb()` exposto — callback pós-save atualiza lista da aba correta sem navegar. |
+
+### Estado anterior: s134 — Sessões Interativas v3: templates, gamificação, wizard, votação, ranking, timer, identidade
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

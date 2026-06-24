@@ -2041,6 +2041,24 @@ select.form-control { cursor: pointer; }
 .quadro-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .2s; }
 .quadro-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.10); }
 .qdro-thumb { width:100%;height:80px;background:var(--surface2);border-radius:8px;margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted); }
+.qdro-thumb-miro { background:#4262ff18; }
+.qdro-thumb-napkin { background:#7c3aed18; }
+.badge-qdro-miro { display:inline-block;font-size:10px;font-weight:700;color:#4262ff;background:#4262ff15;border-radius:4px;padding:1px 6px;margin-right:3px; }
+.badge-qdro-napkin { display:inline-block;font-size:10px;font-weight:700;color:#7c3aed;background:#7c3aed15;border-radius:4px;padding:1px 6px;margin-right:3px; }
+.qdro-apresentacao-overlay { position:fixed;inset:0;background:#000;z-index:1800;display:flex;flex-direction:column; }
+.qdro-apresentacao-bar { display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(0,0,0,.7);flex-shrink:0; }
+.badge-qdro-cat { display:inline-block;font-size:10px;border-radius:4px;padding:1px 6px;margin-right:3px;font-weight:600; }
+.badge-qdro-cat-mindmap    { color:#0ea5e9;background:#0ea5e915; }
+.badge-qdro-cat-fluxograma { color:#f59e0b;background:#f59e0b15; }
+.badge-qdro-cat-infografico{ color:#10b981;background:#10b98115; }
+.badge-qdro-cat-framework  { color:#ec4899;background:#ec489915; }
+.badge-qdro-cat-dados      { color:#6366f1;background:#6366f115; }
+.badge-qdro-cat-imagens    { color:#64748b;background:#64748b15; }
+.badge-qdro-cat-tabela     { color:#0891b2;background:#0891b215; }
+.badge-qdro-cat-diagrama   { color:#7c3aed;background:#7c3aed15; }
+.badge-qdro-cat-kanban     { color:#d97706;background:#d9770615; }
+.badge-qdro-cat-brainstorm { color:#16a34a;background:#16a34a15; }
+.badge-qdro-cat-marcacao   { color:#dc2626;background:#dc262615; }
 .sess-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:8px; }
 .sess-badge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em; }
 .sess-badge.ativa { background:#dcfce7;color:#166534; }
@@ -6516,6 +6534,9 @@ select.form-control { cursor: pointer; }
             <button class="tab-btn" onclick="AcoesUI._abrirTab('mapa', this)" data-tab="mapa">
               <span class="ms ms-sm">map</span> Mapa do Evento
             </button>
+            <button class="tab-btn" onclick="AcoesUI._abrirTab('quadros', this)" data-tab="quadros">
+              <span class="ms ms-sm">dashboard_customize</span> Quadros
+            </button>
           </div>
         </div>
         <!-- Conteúdo do painel -->
@@ -6613,6 +6634,19 @@ select.form-control { cursor: pointer; }
           <!-- Aba Mapa do Evento -->
           <div id="painel-tab-mapa" class="oculto" style="height:100%;min-height:480px;overflow:hidden;position:relative;">
             <div id="painel-mapa-container" style="position:absolute;inset:0;"></div>
+          </div>
+          <!-- Aba Quadros -->
+          <div id="painel-tab-quadros" class="oculto">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <span style="font-size:13px;font-weight:600;color:var(--muted);">Quadros vinculados a esta ação</span>
+              <button class="btn btn-primary btn-sm" data-bg-skip="1"
+                onclick="AcoesUI._novoQuadroAcao()">
+                <span class="ms ms-sm">add</span> Novo Quadro
+              </button>
+            </div>
+            <div id="painel-quadros-lista" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <p class="muted-text" style="grid-column:1/-1;">Carregando…</p>
+            </div>
           </div>
         </div>
       </div>
@@ -7210,6 +7244,7 @@ select.form-control { cursor: pointer; }
               <button class="tab-btn" onclick="ReunioesUI.setModalTab('pauta',this)" type="button" data-bg-skip="1">Pauta</button>
               <button class="tab-btn" onclick="ReunioesUI.setModalTab('presentes',this)" type="button" data-bg-skip="1">Presença</button>
               <button class="tab-btn" onclick="ReunioesUI.setModalTab('ata',this)" type="button" data-bg-skip="1">Ata &amp; Encaminhamentos</button>
+              <button class="tab-btn" onclick="ReunioesUI.setModalTab('quadros',this)" type="button" data-bg-skip="1"><span class="ms ms-sm">dashboard_customize</span> Quadros</button>
             </div>
             <!-- Tab Dados -->
             <div id="run-mtab-dados">
@@ -7327,6 +7362,19 @@ select.form-control { cursor: pointer; }
                 </div>
               </div>
               <div id="run-enc-form-lista" style="font-size:13px;"></div>
+            </div>
+            <!-- Tab Quadros da Reunião -->
+            <div id="run-mtab-quadros" class="oculto">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span style="font-size:13px;font-weight:600;color:var(--muted);">Quadros vinculados a esta reunião</span>
+                <button class="btn btn-primary btn-sm" data-bg-skip="1" type="button"
+                  onclick="ReunioesUI._novoQuadroReuniao()">
+                  <span class="ms ms-sm">add</span> Novo Quadro
+                </button>
+              </div>
+              <div id="run-quadros-lista" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <p class="muted-text" style="grid-column:1/-1;">Abra uma reunião salva para ver os quadros.</p>
+              </div>
             </div>
           </form>
           </div><!-- /modal-body -->
@@ -7549,15 +7597,24 @@ select.form-control { cursor: pointer; }
             <span class="ms">add</span> Novo Quadro
           </button>
         </div>
-        <div class="tab-bar" style="margin-bottom:14px;">
+        <div class="tab-bar" style="margin-bottom:14px;flex-wrap:wrap;">
           <button class="tab-btn ativa" onclick="QuadrosUI.setTab('todos',this)" data-bg-skip="1">Todos</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('vinculados',this)" data-bg-skip="1">Vinculados a Ação</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('vinculados',this)" data-bg-skip="1">Vinculados</button>
+          <button class="tab-btn" style="color:#4262ff;font-weight:700;" onclick="QuadrosUI.setTab('miro',this)" data-bg-skip="1">Miro</button>
+          <button class="tab-btn" style="color:#7c3aed;font-weight:700;" onclick="QuadrosUI.setTab('napkin',this)" data-bg-skip="1">Napkin</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('mindmap',this)" data-bg-skip="1">Mindmaps</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('fluxograma',this)" data-bg-skip="1">Fluxogramas</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('infografico',this)" data-bg-skip="1">Infográficos</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('framework',this)" data-bg-skip="1">Frameworks</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('tabela',this)" data-bg-skip="1">Tabelas</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('kanban',this)" data-bg-skip="1">Kanban</button>
+          <button class="tab-btn" onclick="QuadrosUI.setTab('brainstorm',this)" data-bg-skip="1">Brainstorm</button>
         </div>
         <div id="quadros-lista" class="lista-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
           <p class="muted-text">Carregando quadros…</p>
         </div>
         <!-- Modal Quadro -->
-        <div id="qdro-modal" class="modal-overlay oculto" onclick="if(event.target===this)QuadrosUI.fecharForm()">
+        <div id="qdro-modal" class="modal-overlay oculto" style="z-index:1100;" onclick="if(event.target===this)QuadrosUI.fecharForm()">
           <div class="modal-box" style="max-width:540px">
             <div class="modal-header">
               <h2 id="qdro-modal-titulo">Novo Quadro</h2>
@@ -7566,6 +7623,35 @@ select.form-control { cursor: pointer; }
             <div class="modal-body">
               <div class="form-group"><label>Título *</label><input type="text" id="qdro-titulo" class="form-control" required></div>
               <div class="form-group"><label>Descrição</label><textarea id="qdro-descricao" class="form-control" rows="2"></textarea></div>
+              <div class="form-group">
+                <label>Tipo de Quadro</label>
+                <select id="qdro-tipo" class="form-control" onchange="QuadrosUI._onTipoChange(this.value)">
+                  <option value="interno">Interno — Canvas próprio</option>
+                  <option value="miro">Miro</option>
+                  <option value="napkin">Napkin</option>
+                </select>
+              </div>
+              <div class="form-group" id="qdro-url-group" style="display:none;">
+                <label id="qdro-url-label">URL do Board</label>
+                <input type="url" id="qdro-url-externa" class="form-control" placeholder="Cole aqui a URL do quadro…">
+                <p id="qdro-url-hint" style="font-size:11px;color:var(--muted);margin-top:4px;"></p>
+              </div>
+              <div class="form-group" id="qdro-napkin-prompt-group" style="display:none;">
+                <label>Prompt / Conteúdo para Napkin <span style="font-weight:400;color:var(--muted)">(opcional — abre o Napkin com seu texto)</span></label>
+                <textarea id="qdro-napkin-prompt" class="form-control" rows="3" placeholder="Descreva o que deseja visualizar. Ex: Mostre o processo de aprovação de projetos do CCBJ em três etapas…"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Categoria Visual</label>
+                <select id="qdro-categoria" class="form-control">
+                  <option value="livre">Canvas Livre</option>
+                  <option value="mindmap">Mindmap</option>
+                  <option value="fluxograma">Fluxograma</option>
+                  <option value="infografico">Infográfico</option>
+                  <option value="framework">Framework Visual</option>
+                  <option value="dados">Gráficos de Dados</option>
+                  <option value="imagens">Imagens / Assets</option>
+                </select>
+              </div>
               <div class="form-group"><label>Ação Vinculada</label><select id="qdro-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
               <div class="form-group"><label>Reunião Vinculada</label><select id="qdro-reuniao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
               <div class="form-group">
@@ -7588,12 +7674,45 @@ select.form-control { cursor: pointer; }
             </button>
             <h3 id="qdro-editor-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Quadro</h3>
             <div id="qdro-editor-colabs" style="display:flex;gap:3px;align-items:center;flex-shrink:0;"></div>
+            <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" data-bg-skip="1"
+              onclick="QuadrosUI.apresentarCanvas()">
+              <span class="ms ms-sm">present_to_all</span> Apresentar
+            </button>
             <button id="qdro-editor-salvar-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;"
               onclick="BtnGuard.wrap('qdro-editor-salvar-btn','Salvando…',QuadrosUI.salvarSnapshot)">
               <span class="ms ms-sm">save</span> Salvar
             </button>
           </div>
           <div id="qdro-editor-container" style="flex:1;min-height:0;"></div>
+        </div>
+        <!-- Overlay de ferramenta externa (Miro / Napkin) -->
+        <div id="qdro-ext-overlay" class="oculto" style="position:fixed;inset:0;background:var(--surface);z-index:1500;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+            <button class="btn btn-secondary btn-sm" onclick="QuadrosUI.fecharEditorExterno()" data-bg-skip="1">
+              <span class="ms ms-sm">arrow_back</span> Voltar
+            </button>
+            <span id="qdro-ext-badge"></span>
+            <h3 id="qdro-ext-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></h3>
+            <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" data-bg-skip="1"
+              onclick="QuadrosUI.apresentarExterno()">
+              <span class="ms ms-sm">present_to_all</span> Apresentar
+            </button>
+            <a id="qdro-ext-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="flex-shrink:0;" data-bg-skip="1">
+              <span class="ms ms-sm">open_in_new</span> Abrir em nova aba
+            </a>
+          </div>
+          <iframe id="qdro-ext-iframe" src="" style="flex:1;border:none;width:100%;background:#f0f0f0;" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
+        </div>
+        <!-- Overlay de apresentação (canvas interno em tela cheia) -->
+        <div id="qdro-pres-overlay" class="oculto" style="position:fixed;inset:0;background:#1a1a2e;z-index:1600;display:flex;flex-direction:column;">
+          <div class="qdro-apresentacao-bar">
+            <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none;" onclick="QuadrosUI.fecharApresentacaoCanvas()" data-bg-skip="1">
+              <span class="ms ms-sm">close</span> Sair da Apresentação
+            </button>
+            <h3 id="qdro-pres-titulo" style="margin:0;font-size:14px;font-weight:600;color:#fff;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></h3>
+            <span style="font-size:11px;color:rgba(255,255,255,.5);">ESC para sair &nbsp;·&nbsp; scroll = zoom &nbsp;·&nbsp; arrastar = mover</span>
+          </div>
+          <canvas id="qdro-pres-canvas" style="flex:1;width:100%;display:block;cursor:grab;"></canvas>
         </div>
       </div><!-- /view-quadros -->
 
@@ -29528,33 +29647,62 @@ var AcoesUI = (function() {
   }
 
   function _abrirTab(tabId, btnEl) {
-    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro','contratacoes_acao','fases','mapa'];
+    var tabs = ['geral','tarefas','reservas','contratos','equipe','financeiro','contratacoes_acao','fases','mapa','quadros'];
     tabs.forEach(function(t) {
       var content = document.getElementById('painel-tab-'+t);
       if (content) content.classList.toggle('oculto', t !== tabId);
     });
-    // Lazy-load aba Fases
-    if (tabId === 'fases' && _painelAcao) {
-      _renderizarFases(_painelAcao);
-    }
-    // Lazy-load aba Mapa
-    if (tabId === 'mapa' && _painelAcao && typeof MapaAcaoUI !== 'undefined') {
-      MapaAcaoUI.aoAbrir(_painelAcao);
-    }
-    // Lazy-load aba Contratações da Ação
-    if (tabId === 'contratacoes_acao' && _painelAcao) {
-      SolicitacoesUI.carregarParaAcao(_painelAcao.id);
-    }
-    // Lazy-load timeline na aba Geral
-    if (tabId === 'geral' && _painelAcao) {
-      _carregarTimelineAcao(_painelAcao.id);
-    }
-    // Atualizar botão ativo
+    if (tabId === 'fases' && _painelAcao) { _renderizarFases(_painelAcao); }
+    if (tabId === 'mapa' && _painelAcao && typeof MapaAcaoUI !== 'undefined') { MapaAcaoUI.aoAbrir(_painelAcao); }
+    if (tabId === 'contratacoes_acao' && _painelAcao) { SolicitacoesUI.carregarParaAcao(_painelAcao.id); }
+    if (tabId === 'geral' && _painelAcao) { _carregarTimelineAcao(_painelAcao.id); }
+    if (tabId === 'quadros' && _painelAcao) { _renderQuadrosAcaoPanel(_painelAcao.id); }
     var painel = document.getElementById('acao-painel');
-    if (painel) {
-      painel.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
-    }
+    if (painel) { painel.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('ativa'); }); }
     if (btnEl) btnEl.classList.add('ativa');
+  }
+
+  function _renderQuadrosAcaoPanel(acaoId) {
+    var el = document.getElementById('painel-quadros-lista'); if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;">Carregando…</p>';
+    GAS.quadros.listar({ acaoId: acaoId }, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      if (!lista.length) {
+        el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;">'
+          + '<span class="ms" style="font-size:32px;color:var(--muted)">dashboard_customize</span>'
+          + '<p class="muted-text" style="margin-top:8px;font-size:12px;">Nenhum quadro vinculado. Clique em "Novo Quadro".</p></div>';
+        return;
+      }
+      var catLbl = { livre:'Canvas', mindmap:'Mindmap', fluxograma:'Fluxograma', infografico:'Infográfico',
+                     framework:'Framework', dados:'Dados', imagens:'Imagens', tabela:'Tabelas',
+                     diagrama:'Diagrama', kanban:'Kanban', brainstorm:'Brainstorm', marcacao:'Colaboração' };
+      el.innerHTML = lista.map(function(q) {
+        var eid = JSON.stringify(q.id).replace(/"/g,"'");
+        var tipo = q.tipo || 'interno';
+        var ic = tipo === 'miro' ? '<span style="font-size:12px;font-weight:800;color:#4262ff;">M</span>'
+               : tipo === 'napkin' ? '<span style="font-size:12px;font-weight:800;color:#7c3aed;">N</span>'
+               : '<span class="ms ms-sm" style="color:var(--muted)">edit_square</span>';
+        return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="QuadrosUI.abrirEditor(' + eid + ')">'
+          + ic + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(q.titulo) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(catLbl[q.categoria||'livre']||'Canvas') + '</div></div>'
+          + '<span class="ms ms-sm" style="color:var(--muted);flex-shrink:0;">open_in_new</span>'
+          + '</div>';
+      }).join('');
+    }, function() { el.innerHTML = '<p class="error-text" style="grid-column:1/-1;">Erro ao carregar.</p>'; });
+  }
+
+  function _novoQuadroAcao() {
+    if (!_painelAcao) return;
+    var acaoId  = _painelAcao.id;
+    var acaoTit = _painelAcao.titulo || '';
+    // Abre o form de quadro SEM fechar o painel da ação (overlay sobre painel)
+    QuadrosUI.setAfterSaveCb(function() { _renderQuadrosAcaoPanel(acaoId); });
+    QuadrosUI.abrirForm(null);
+    setTimeout(function() {
+      var tEl = document.getElementById('qdro-titulo'); if (tEl && acaoTit) tEl.value = 'Quadro — ' + acaoTit;
+      var asel = document.getElementById('qdro-acao-id');
+      if (asel && acaoId) { for (var i = 0; i < asel.options.length; i++) { if (asel.options[i].value === acaoId) { asel.selectedIndex = i; break; } } }
+    }, 400);
   }
 
   function _carregarPainelIntegrado(acaoId) {
@@ -30100,7 +30248,9 @@ var AcoesUI = (function() {
     _toggleVinculo:           _toggleVinculo,
     _onVinculoContratoChange: _onVinculoContratoChange,
     _onVinculoMetaChange:     _onVinculoMetaChange,
-    _preencherVinculoForm:    _preencherVinculoForm
+    _preencherVinculoForm:    _preencherVinculoForm,
+    _novoQuadroAcao:       _novoQuadroAcao,
+    _renderQuadrosAcaoPanel: _renderQuadrosAcaoPanel
   };
 
 })();
@@ -34655,11 +34805,52 @@ var ReunioesUI = (function() {
   }
 
   function setModalTab(tab, btn) {
-    ['dados','pauta','presentes','ata'].forEach(function(t) {
-      document.getElementById('run-mtab-' + t).classList.toggle('oculto', t !== tab);
+    ['dados','pauta','presentes','ata','quadros'].forEach(function(t) {
+      var el = document.getElementById('run-mtab-' + t); if (el) el.classList.toggle('oculto', t !== tab);
     });
     document.querySelectorAll('#run-modal .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
     if (btn) btn.classList.add('ativa');
+    if (tab === 'quadros' && _idAtual) _renderQuadrosReuniao(_idAtual);
+  }
+
+  function _renderQuadrosReuniao(reuniaoId) {
+    var el = document.getElementById('run-quadros-lista'); if (!el) return;
+    el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;">Carregando…</p>';
+    GAS.quadros.listar({ reuniaoId: reuniaoId }, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data : [];
+      if (!lista.length) {
+        el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;">'
+          + '<span class="ms" style="font-size:32px;color:var(--muted)">dashboard_customize</span>'
+          + '<p class="muted-text" style="margin-top:8px;font-size:12px;">Nenhum quadro vinculado. Clique em "Novo Quadro" para criar.</p></div>';
+        return;
+      }
+      el.innerHTML = lista.map(function(q) {
+        var eid = JSON.stringify(q.id).replace(/"/g,"'");
+        var tipo = q.tipo || 'interno';
+        var ic = tipo === 'miro' ? 'M' : tipo === 'napkin' ? 'N' : '';
+        var icStyle = tipo === 'miro' ? 'color:#4262ff;' : tipo === 'napkin' ? 'color:#7c3aed;' : '';
+        return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="QuadrosUI.abrirEditor(' + eid + ')">'
+          + (ic ? '<span style="font-size:13px;font-weight:800;' + icStyle + '">' + ic + '</span>' : '<span class="ms ms-sm" style="color:var(--muted)">edit_square</span>')
+          + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(q.titulo) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(_CATS[q.categoria||'livre']||'Canvas') + '</div></div>'
+          + '<button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0;" onclick="event.stopPropagation();QuadrosUI.abrirEditor(' + eid + ')" data-bg-skip="1"><span class="ms ms-sm">open_in_new</span></button>'
+          + '</div>';
+      }).join('');
+    }, function() { el.innerHTML = '<p class="error-text" style="grid-column:1/-1;">Erro ao carregar quadros.</p>'; });
+  }
+
+  function _novoQuadroReuniao() {
+    var reuniaoId  = _idAtual;
+    var reuniaoTit = (document.getElementById('run-titulo')||{}).value || '';
+    // Abre o form de quadro SEM fechar o modal da reunião (overlay sobre overlay)
+    QuadrosUI.setAfterSaveCb(function() { _renderQuadrosReuniao(reuniaoId); });
+    QuadrosUI.abrirForm(null);
+    // Pré-selecionar a reunião atual e sugerir título
+    setTimeout(function() {
+      var tEl = document.getElementById('qdro-titulo'); if (tEl && reuniaoTit) tEl.value = 'Quadro — ' + reuniaoTit;
+      var rsel = document.getElementById('qdro-reuniao-id');
+      if (rsel && reuniaoId) { for (var i = 0; i < rsel.options.length; i++) { if (rsel.options[i].value === reuniaoId) { rsel.selectedIndex = i; break; } } }
+    }, 400);
   }
 
   function _coletarDados() {
@@ -35426,7 +35617,8 @@ var ReunioesUI = (function() {
            _agendarAutoSalvar: _agendarAutoSalvar,
            _addLink: _addLink, _addAnexo: _addAnexo,
            _togglePautaCard: _togglePautaCard, _salvarEProximaPauta: _salvarEProximaPauta,
-           _removerPauta: _removerPauta, _atualizarBadgePauta: _atualizarBadgePauta };
+           _removerPauta: _removerPauta, _atualizarBadgePauta: _atualizarBadgePauta,
+           _novoQuadroReuniao: _novoQuadroReuniao, _renderQuadrosReuniao: _renderQuadrosReuniao };
 })();
 Router.registrar('reunioes', 'Reuniões', ReunioesUI.aoAbrir);
 
@@ -35956,6 +36148,8 @@ var QuadrosUI = (function() {
   var _lista = [], _carregado = false, _tabAtual = 'todos';
   var _idAtual = null, _editor = null, _cvState = null;
   var _keyListeners = [], _winListeners = [];
+  var _afterSaveCb = null;
+  function setAfterSaveCb(fn) { _afterSaveCb = fn; }
 
   // ── Lista ─────────────────────────────────────────────────────────────────
   function aoAbrir() { if (!_carregado) carregar(); }
@@ -35971,6 +36165,39 @@ var QuadrosUI = (function() {
     }, function(e) { el.innerHTML = '<p class="error-text">' + escaparHtml(e.message) + '</p>'; });
   }
 
+  var _CATS = { mindmap:'Mindmap', fluxograma:'Fluxograma', infografico:'Infográfico', framework:'Framework', dados:'Dados', imagens:'Imagens',
+                tabela:'Tabelas', diagrama:'Diagramas', kanban:'Kanban', brainstorm:'Brainstorm', marcacao:'@Colaboração', livre:'' };
+  var _CAT_ICO = { mindmap:'account_tree', fluxograma:'schema', infografico:'bar_chart', framework:'grid_view', dados:'show_chart', imagens:'image',
+                   tabela:'table_chart', diagrama:'device_hub', kanban:'view_kanban', brainstorm:'lightbulb', marcacao:'alternate_email' };
+  var _CATS_BY_TIPO = {
+    'interno': [
+      { v:'livre',       l:'Board Infinito (Canvas Livre)' },
+      { v:'mindmap',     l:'Mapa Mental (Mindmap)' },
+      { v:'fluxograma',  l:'Fluxograma' },
+      { v:'infografico', l:'Infográfico' },
+      { v:'framework',   l:'Framework Visual' },
+      { v:'dados',       l:'Gráficos de Dados' },
+      { v:'imagens',     l:'Imagens / Assets' }
+    ],
+    'miro': [
+      { v:'livre',       l:'Board Infinito' },
+      { v:'tabela',      l:'Tabelas' },
+      { v:'diagrama',    l:'Diagramas' },
+      { v:'mindmap',     l:'Mapa Mental' },
+      { v:'kanban',      l:'Kanban' },
+      { v:'brainstorm',  l:'Brainstorm' },
+      { v:'marcacao',    l:'@Marcação de Colaboradores' }
+    ],
+    'napkin': [
+      { v:'mindmap',     l:'Mindmap' },
+      { v:'fluxograma',  l:'Fluxograma' },
+      { v:'infografico', l:'Infográfico' },
+      { v:'framework',   l:'Framework Visual' },
+      { v:'dados',       l:'Gráficos de Dados' },
+      { v:'imagens',     l:'Imagens / Assets' }
+    ]
+  };
+
   function setTab(tab, btn) {
     _tabAtual = tab;
     document.querySelectorAll('#view-quadros .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
@@ -35978,11 +36205,153 @@ var QuadrosUI = (function() {
     _renderLista();
   }
 
+  // ── Tipo change ───────────────────────────────────────────────────────────
+  function _onTipoChange(tipo) {
+    var grp  = document.getElementById('qdro-url-group');
+    var lbl  = document.getElementById('qdro-url-label');
+    var hint = document.getElementById('qdro-url-hint');
+    var napGrp = document.getElementById('qdro-napkin-prompt-group');
+    var catSel = document.getElementById('qdro-categoria');
+    // Rebuild categoria options
+    var opts = (_CATS_BY_TIPO[tipo] || _CATS_BY_TIPO['interno']);
+    if (catSel) {
+      var prev = catSel.value;
+      catSel.innerHTML = opts.map(function(o){ return '<option value="' + o.v + '">' + o.l + '</option>'; }).join('');
+      if (opts.some(function(o){ return o.v === prev; })) catSel.value = prev;
+    }
+    if (!grp) return;
+    if (tipo === 'miro') {
+      grp.style.display = '';
+      if (lbl)  lbl.textContent = 'URL do Board Miro';
+      if (hint) hint.innerHTML  = 'Cole a URL de compartilhamento do Miro. Ex: <code>https://miro.com/app/board/uXjVO.../</code>'
+        + '<br>Dica: no Miro use o botão <b>Share → Copy link</b>.';
+      if (napGrp) napGrp.style.display = 'none';
+    } else if (tipo === 'napkin') {
+      grp.style.display = '';
+      if (lbl)  lbl.textContent = 'URL do Board Napkin (opcional)';
+      if (hint) hint.innerHTML  = 'Se já tiver um board: cole a URL. Caso contrário, preencha o prompt abaixo.';
+      if (napGrp) napGrp.style.display = '';
+    } else {
+      grp.style.display = 'none';
+      if (hint) hint.textContent = '';
+      if (napGrp) napGrp.style.display = 'none';
+    }
+  }
+
+  // ── URL helpers ───────────────────────────────────────────────────────────
+  function _miroEmbedUrl(url) {
+    var m = url.match(/miro\.com\/app\/board\/([^/?#]+)/);
+    return m ? 'https://miro.com/app/live-embed/' + m[1] + '/?autoplay=yep&embedAutoplay=true' : url;
+  }
+
+  function _napkinEmbedUrl(url) { return url; }
+
+  // ── Editor externo (Miro / Napkin) ────────────────────────────────────────
+  var _qdroExtAtual = null;
+  function _abrirEditorExterno(q) {
+    _qdroExtAtual = q;
+    var tipo = q.tipo || 'interno';
+    var url = q.urlExterna || '';
+    var embedUrl = tipo === 'miro' ? _miroEmbedUrl(url) : _napkinEmbedUrl(url);
+    var badge = tipo === 'miro'
+      ? '<span class="badge-qdro-miro">Miro</span>'
+      : '<span class="badge-qdro-napkin">Napkin</span>';
+    var badgeEl = document.getElementById('qdro-ext-badge'); if (badgeEl) badgeEl.innerHTML = badge;
+    var tituloEl = document.getElementById('qdro-ext-titulo'); if (tituloEl) tituloEl.textContent = q.titulo || 'Quadro';
+    var linkEl = document.getElementById('qdro-ext-link'); if (linkEl) linkEl.href = url;
+    var ifr = document.getElementById('qdro-ext-iframe'); if (ifr) ifr.src = embedUrl;
+    document.getElementById('qdro-ext-overlay').classList.remove('oculto');
+  }
+
+  function fecharEditorExterno() {
+    document.getElementById('qdro-ext-overlay').classList.add('oculto');
+    var ifr = document.getElementById('qdro-ext-iframe'); if (ifr) ifr.src = '';
+    _qdroExtAtual = null; _idAtual = null;
+  }
+
+  // ── Apresentação — ferramenta externa (iframe fullscreen) ─────────────────
+  function apresentarExterno(idOpt) {
+    if (idOpt !== undefined) {
+      GAS.quadros.obter(idOpt, function(resp) {
+        if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
+        _qdroExtAtual = resp.data; _idAtual = idOpt;
+        _abrirEditorExterno(resp.data);
+        setTimeout(function() { _fullscreenIframe(); }, 300);
+      }, function(e) { Toast.erro(e.message || e); });
+      return;
+    }
+    _fullscreenIframe();
+  }
+
+  function _fullscreenIframe() {
+    var ifr = document.getElementById('qdro-ext-iframe');
+    if (!ifr) return;
+    var fn = ifr.requestFullscreen || ifr.webkitRequestFullscreen || ifr.mozRequestFullScreen;
+    if (fn) { fn.call(ifr); }
+    else { Toast.aviso('Fullscreen não suportado neste browser — use o botão "Abrir em nova aba".'); }
+  }
+
+  // ── Apresentação — canvas interno ─────────────────────────────────────────
+  var _presState = null;
+  function apresentarCanvas() {
+    if (!_cvState || !_cvState.shapes) { Toast.aviso('Abra um quadro antes de apresentar.'); return; }
+    _abrirPresCanvas(_cvState.shapes, document.getElementById('qdro-editor-titulo').textContent || 'Quadro');
+  }
+
+  function apresentarCanvasDireto(id) {
+    GAS.quadros.obter(id, function(resp) {
+      if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
+      var q = resp.data;
+      if ((q.tipo || 'interno') !== 'interno') { apresentarExterno(id); return; }
+      var shapes = (q.snapshot && q.snapshot.shapes) ? q.snapshot.shapes : [];
+      _abrirPresCanvas(shapes, q.titulo || 'Quadro');
+    }, function(e) { Toast.erro(e.message || e); });
+  }
+
+  function _abrirPresCanvas(shapes, titulo) {
+    document.getElementById('qdro-pres-titulo').textContent = titulo;
+    document.getElementById('qdro-pres-overlay').classList.remove('oculto');
+    _presState = { shapes: shapes, panX: 0, panY: 0, zoom: 1, isPanning: false, panStart: null, imgCache: {} };
+    _renderPresCanvas();
+    var escFn = function(e) { if (e.key === 'Escape') { fecharApresentacaoCanvas(); document.removeEventListener('keydown', escFn); } };
+    document.addEventListener('keydown', escFn);
+    var cv = document.getElementById('qdro-pres-canvas');
+    if (!cv) return;
+    cv.width = cv.offsetWidth || window.innerWidth;
+    cv.height = cv.offsetHeight || (window.innerHeight - 48);
+    cv.onmousedown = function(e) { _presState.isPanning = true; _presState.panStart = {x:e.clientX - _presState.panX, y:e.clientY - _presState.panY}; cv.style.cursor='grabbing'; };
+    cv.onmousemove = function(e) { if (!_presState.isPanning) return; _presState.panX = e.clientX - _presState.panStart.x; _presState.panY = e.clientY - _presState.panStart.y; _renderPresCanvas(); };
+    cv.onmouseup = cv.onmouseleave = function() { _presState.isPanning = false; cv.style.cursor='grab'; };
+    cv.onwheel = function(e) { e.preventDefault(); var d = e.deltaY < 0 ? 1.1 : 0.9; _presState.zoom = Math.max(0.1, Math.min(10, _presState.zoom * d)); _renderPresCanvas(); };
+    window.addEventListener('resize', _renderPresCanvas);
+  }
+
+  function _renderPresCanvas() {
+    var cv = document.getElementById('qdro-pres-canvas'); if (!cv || !_presState) return;
+    cv.width = cv.offsetWidth || window.innerWidth;
+    cv.height = cv.offsetHeight || (window.innerHeight - 48);
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.save();
+    ctx.translate(_presState.panX, _presState.panY);
+    ctx.scale(_presState.zoom, _presState.zoom);
+    (_presState.shapes || []).forEach(function(s) { _drawShape(ctx, s, _presState.imgCache); });
+    ctx.restore();
+  }
+
+  function fecharApresentacaoCanvas() {
+    document.getElementById('qdro-pres-overlay').classList.add('oculto');
+    _presState = null;
+    window.removeEventListener('resize', _renderPresCanvas);
+  }
+
   function _renderLista() {
     var el = document.getElementById('quadros-lista');
-    var lista = _tabAtual === 'vinculados'
-      ? _lista.filter(function(q) { return q.acaoId || q.reuniaoId; })
-      : _lista;
+    var lista = _lista;
+    if (_tabAtual === 'vinculados') lista = lista.filter(function(q){ return q.acaoId || q.reuniaoId; });
+    else if (_tabAtual === 'miro')   lista = lista.filter(function(q){ return (q.tipo||'interno') === 'miro'; });
+    else if (_tabAtual === 'napkin') lista = lista.filter(function(q){ return (q.tipo||'interno') === 'napkin'; });
+    else if (_tabAtual !== 'todos')  lista = lista.filter(function(q){ return (q.categoria||'livre') === _tabAtual; });
     if (!lista.length) {
       el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:40px;">'
         + '<span class="ms" style="font-size:40px;color:var(--muted)">dashboard_customize</span>'
@@ -35993,19 +36362,47 @@ var QuadrosUI = (function() {
     }
     el.innerHTML = lista.map(function(q) {
       var id = JSON.stringify(q.id).replace(/"/g,"'");
+      var tipo = q.tipo || 'interno';
+      var isExt = tipo === 'miro' || tipo === 'napkin';
       var colabs = (q.colaboradores || []).slice(0,4).map(function(c) {
         return '<span title="' + escaparHtml(c) + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:8px;font-weight:700;margin-right:-3px;">' + escaparHtml((c||'?')[0].toUpperCase()) + '</span>';
       }).join('');
       var tags = '';
       if (q.acaoId)    tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;margin-right:3px;">Ação</span>';
       if (q.reuniaoId) tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;">Reunião</span>';
+      var tipoBadge = tipo === 'miro'
+        ? '<span class="badge-qdro-miro">Miro</span>'
+        : tipo === 'napkin'
+          ? '<span class="badge-qdro-napkin">Napkin</span>'
+          : '';
+      var cat = q.categoria || 'livre';
+      var catLabel = _CATS[cat] || '';
+      var catIco = _CAT_ICO[cat] || '';
+      var catBadge = (cat && cat !== 'livre')
+        ? '<span class="badge-qdro-cat badge-qdro-cat-' + cat + '">'
+          + (catIco ? '<span class="ms ms-sm" style="font-size:10px;vertical-align:middle;">' + catIco + '</span> ' : '')
+          + catLabel + '</span>'
+        : '';
+      var thumb = tipo === 'miro'
+        ? '<div class="qdro-thumb qdro-thumb-miro"><span style="font-size:30px;font-weight:900;color:#4262ff;letter-spacing:-1px;">M</span></div>'
+        : tipo === 'napkin'
+          ? '<div class="qdro-thumb qdro-thumb-napkin"><span style="font-size:30px;font-weight:900;color:#7c3aed;letter-spacing:-1px;">N</span></div>'
+          : '<div class="qdro-thumb"><span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span></div>';
+      var btnApresentar = isExt
+        ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.apresentarExterno(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">present_to_all</span></button>'
+        : '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.apresentarCanvasDireto(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">present_to_all</span></button>';
       return '<div class="quadro-card" onclick="QuadrosUI.abrirEditor(' + id + ')">'
-        + '<div class="qdro-thumb"><span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span></div>'
-        + '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + escaparHtml(q.titulo) + '</div>'
+        + thumb
+        + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap;">'
+          + (tipoBadge ? tipoBadge : '')
+          + (catBadge ? catBadge : '')
+          + '<span style="font-weight:600;font-size:14px;">' + escaparHtml(q.titulo) + '</span>'
+        + '</div>'
         + (tags ? '<div style="margin-bottom:5px;">' + tags + '</div>' : '')
         + (colabs ? '<div style="display:flex;align-items:center;gap:2px;margin-bottom:6px;">' + colabs + '</div>' : '')
         + (q.atualizadoPor ? '<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">Editado por ' + escaparHtml(q.atualizadoPor) + '</div>' : '')
         + '<div style="display:flex;gap:6px;margin-top:auto;">'
+          + btnApresentar
           + '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.abrirForm(' + id + ')" data-bg-skip="1">Configurar</button>'
           + '<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-error);" onclick="event.stopPropagation();QuadrosUI.excluir(' + id + ')" data-bg-skip="1">Excluir</button>'
         + '</div>'
@@ -36017,9 +36414,12 @@ var QuadrosUI = (function() {
   function abrirForm(id) {
     _idAtual = id || null;
     document.getElementById('qdro-modal-titulo').textContent = id ? 'Configurar Quadro' : 'Novo Quadro';
-    ['qdro-titulo','qdro-descricao','qdro-acao-id','qdro-reuniao-id','qdro-colaboradores'].forEach(function(eid) {
+    ['qdro-titulo','qdro-descricao','qdro-acao-id','qdro-reuniao-id','qdro-colaboradores','qdro-url-externa','qdro-napkin-prompt'].forEach(function(eid) {
       var el = document.getElementById(eid); if (el) el.value = '';
     });
+    var tipoEl = document.getElementById('qdro-tipo'); if (tipoEl) tipoEl.value = 'interno';
+    _onTipoChange('interno');
+    var catEl = document.getElementById('qdro-categoria'); if (catEl) catEl.value = 'livre';
     if (id) {
       var q = _lista.filter(function(x){ return x.id === id; })[0];
       if (q) {
@@ -36028,6 +36428,12 @@ var QuadrosUI = (function() {
         document.getElementById('qdro-acao-id').value       = q.acaoId          || '';
         document.getElementById('qdro-reuniao-id').value    = q.reuniaoId       || '';
         document.getElementById('qdro-colaboradores').value = (q.colaboradores || []).join(', ');
+        var t = q.tipo || 'interno';
+        if (tipoEl) tipoEl.value = t;
+        _onTipoChange(t);
+        var urlEl = document.getElementById('qdro-url-externa'); if (urlEl) urlEl.value = q.urlExterna || '';
+        var npEl = document.getElementById('qdro-napkin-prompt'); if (npEl) npEl.value = q.napkinPrompt || '';
+        var catEl2 = document.getElementById('qdro-categoria'); if (catEl2) catEl2.value = q.categoria || 'livre';
       }
     }
     _carregarSelectAcoes();
@@ -36040,12 +36446,28 @@ var QuadrosUI = (function() {
   function salvar(done) {
     var titulo = (document.getElementById('qdro-titulo')||{}).value || '';
     if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
+    var tipo = (document.getElementById('qdro-tipo')||{}).value || 'interno';
+    var urlExterna = ((document.getElementById('qdro-url-externa')||{}).value || '').trim();
+    var napkinPrompt = ((document.getElementById('qdro-napkin-prompt')||{}).value || '').trim();
+    if (tipo === 'napkin' && !urlExterna && napkinPrompt) {
+      urlExterna = 'https://app.napkin.ai/?text=' + encodeURIComponent(napkinPrompt);
+    }
+    if (tipo === 'miro' && !urlExterna) {
+      done(); Toast.aviso('URL do board Miro é obrigatória.'); return;
+    }
+    if (tipo === 'napkin' && !urlExterna) {
+      done(); Toast.aviso('Informe a URL do board ou o conteúdo para abrir no Napkin.'); return;
+    }
     var colabRaw = (document.getElementById('qdro-colaboradores')||{}).value || '';
     var colabs = colabRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     GAS.quadros.salvar({
       id:            _idAtual || undefined,
       titulo:        titulo.trim(),
       descricao:     (document.getElementById('qdro-descricao')||{}).value    || '',
+      tipo:          tipo,
+      urlExterna:    urlExterna || null,
+      napkinPrompt:  napkinPrompt || null,
+      categoria:     (document.getElementById('qdro-categoria')||{}).value || 'livre',
       acaoId:        (document.getElementById('qdro-acao-id')||{}).value       || '',
       reuniaoId:     (document.getElementById('qdro-reuniao-id')||{}).value    || '',
       colaboradores: colabs
@@ -36053,14 +36475,16 @@ var QuadrosUI = (function() {
       done();
       if (!resp || !resp.ok) { Toast.erro('Erro ao salvar quadro.'); return; }
       Toast.sucesso(_idAtual ? 'Quadro atualizado.' : 'Quadro criado.');
-      fecharForm(); _carregado = false; carregar();
+      fecharForm();
+      var cb = _afterSaveCb; _afterSaveCb = null;
+      if (cb) { cb(); } else { _carregado = false; carregar(); }
     }, function(e) { done(); Toast.erro(e.message || e); });
   }
 
   function excluir(id) {
     _abrirModalConfirmar({
       titulo:'Excluir Quadro', icone:'delete_forever', corIcone:'#ef4444',
-      mensagem:'Excluir este quadro? O canvas será perdido permanentemente.',
+      mensagem:'Excluir este quadro permanentemente? Esta ação não pode ser desfeita.',
       labelConfirmar:'Excluir',
       cb: function() {
         GAS.quadros.excluir(id, function(resp) {
@@ -36076,6 +36500,8 @@ var QuadrosUI = (function() {
       if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
       var q = resp.data;
       _idAtual = id;
+      var tipo = q.tipo || 'interno';
+      if (tipo === 'miro' || tipo === 'napkin') { _abrirEditorExterno(q); return; }
       document.getElementById('qdro-editor-titulo').textContent = q.titulo || 'Quadro';
       var colabEl = document.getElementById('qdro-editor-colabs');
       if (colabEl) colabEl.innerHTML = (q.colaboradores || []).map(function(c) {
@@ -36139,14 +36565,17 @@ var QuadrosUI = (function() {
     }
 
     var TOOLS = [
-      {id:'select', ico:'near_me',       lbl:'Selecionar'},
-      {id:'pencil', ico:'draw',          lbl:'Lápis'},
-      {id:'line',   ico:'remove',        lbl:'Linha'},
-      {id:'arrow',  ico:'trending_flat', lbl:'Seta'},
-      {id:'rect',   ico:'rectangle',     lbl:'Retângulo'},
-      {id:'circle', ico:'circle',        lbl:'Círculo'},
-      {id:'text',   ico:'text_fields',   lbl:'Texto'},
-      {id:'eraser', ico:'ink_eraser',    lbl:'Borracha'}
+      {id:'select', ico:'near_me',        lbl:'Selecionar'},
+      {id:'pencil', ico:'draw',           lbl:'Lápis'},
+      {id:'line',   ico:'remove',         lbl:'Linha'},
+      {id:'arrow',  ico:'trending_flat',  lbl:'Seta'},
+      {id:'rect',   ico:'rectangle',      lbl:'Retângulo'},
+      {id:'circle', ico:'circle',         lbl:'Círculo'},
+      {id:'text',   ico:'text_fields',    lbl:'Texto'},
+      {id:'sticky', ico:'sticky_note_2',  lbl:'Sticky Note'},
+      {id:'frame',  ico:'crop_free',      lbl:'Frame / Slide'},
+      {id:'table',  ico:'table_chart',    lbl:'Tabela'},
+      {id:'eraser', ico:'ink_eraser',     lbl:'Borracha'}
     ];
     TOOLS.forEach(function(t) {
       var b = document.createElement('button');
@@ -36264,6 +36693,26 @@ var QuadrosUI = (function() {
       ctx.restore();
     }
 
+    function _roundRect(ctx, x, y, w, h, r) {
+      r = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+    }
+
+    function _wrapText(ctx, txt, x, y, maxW, lineH) {
+      var words = (txt || '').split(/\s+/), line = '';
+      words.forEach(function(w) {
+        var test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > maxW && line) {
+          ctx.fillText(line, x, y); y += lineH; line = w;
+        } else line = test;
+      });
+      if (line) ctx.fillText(line, x, y);
+    }
+
     function _drawShape(ctx, s) {
       ctx.save();
       ctx.strokeStyle = s.color || '#1e293b'; ctx.fillStyle = s.color || '#1e293b';
@@ -36295,6 +36744,46 @@ var QuadrosUI = (function() {
         ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2 - hl*Math.cos(ang - Math.PI/6), s.y2 - hl*Math.sin(ang - Math.PI/6));
         ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2 - hl*Math.cos(ang + Math.PI/6), s.y2 - hl*Math.sin(ang + Math.PI/6));
         ctx.stroke();
+      } else if (s.t === 'sticky') {
+        var sW = Math.abs(s.w) || 180, sH = Math.abs(s.h) || 180;
+        var sc = s.stickyColor || '#fef08a';
+        ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+        ctx.fillStyle = sc; _roundRect(ctx, s.x, s.y, sW, sH, 6); ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+        _roundRect(ctx, s.x, s.y, sW, sH, 6); ctx.stroke();
+        if (s.txt) {
+          var sFs = Math.max(11, Math.min(16, sW / 12));
+          ctx.fillStyle = '#1e293b'; ctx.font = sFs + 'px Inter,system-ui,sans-serif'; ctx.textAlign = 'left';
+          _wrapText(ctx, s.txt, s.x + 10, s.y + sFs + 8, sW - 20, sFs * 1.4);
+        }
+      } else if (s.t === 'frame') {
+        var fW = s.w || 400, fH = s.h || 300;
+        ctx.fillStyle = 'rgba(99,102,241,0.04)'; ctx.fillRect(s.x, s.y, fW, fH);
+        ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2;
+        ctx.setLineDash([8, 4]); ctx.strokeRect(s.x, s.y, fW, fH); ctx.setLineDash([]);
+        if (s.label) {
+          var fFs = Math.max(11, 13);
+          ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y - fFs - 6, ctx.measureText(s.label).width + 16, fFs + 8);
+          ctx.fillStyle = '#6366f1'; ctx.font = 'bold ' + fFs + 'px Inter,system-ui,sans-serif'; ctx.textAlign = 'left';
+          ctx.fillText(s.label, s.x + 6, s.y - 4);
+        }
+      } else if (s.t === 'table') {
+        var tW = Math.abs(s.w) || 240, tH = Math.abs(s.h) || 120;
+        var tR = s.rows || 3, tC = s.cols || 3;
+        var cW = tW / tC, cH = tH / tR;
+        ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, tW, tH);
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(s.x, s.y, tW, cH);
+        ctx.strokeStyle = s.color || '#1e293b'; ctx.lineWidth = s.lw || 1;
+        for (var ri = 0; ri <= tR; ri++) { ctx.beginPath(); ctx.moveTo(s.x, s.y + ri*cH); ctx.lineTo(s.x + tW, s.y + ri*cH); ctx.stroke(); }
+        for (var ci = 0; ci <= tC; ci++) { ctx.beginPath(); ctx.moveTo(s.x + ci*cW, s.y); ctx.lineTo(s.x + ci*cW, s.y + tH); ctx.stroke(); }
+        var tFs = Math.max(9, Math.min(13, cH * 0.45));
+        ctx.fillStyle = '#1e293b'; ctx.font = tFs + 'px Inter,sans-serif'; ctx.textAlign = 'center';
+        if (s.cells) s.cells.forEach(function(row, rri) {
+          row.forEach(function(cell, cci) {
+            if (cell) ctx.fillText((cell+'').slice(0, Math.floor(cW/tFs*1.6)), s.x + cci*cW + cW/2, s.y + rri*cH + cH/2 + tFs*0.35);
+          });
+        });
       } else if (s.t === 'image') {
         var img = _getImg(s);
         if (img && img.complete && img.naturalWidth > 0) {
@@ -36308,17 +36797,13 @@ var QuadrosUI = (function() {
         var W = s.w || 160, H = s.h || 110;
         ctx.fillStyle = '#f1f5f9'; ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
         ctx.fillRect(s.x, s.y, W, H); ctx.strokeRect(s.x, s.y, W, H);
-        // Ícone de documento
         var ix = s.x + W/2 - 14, iy = s.y + 12, iw = 28, ih = 36, co = 8;
         ctx.fillStyle = '#dbeafe'; ctx.fillRect(ix, iy, iw, ih);
         ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1; ctx.strokeRect(ix, iy, iw, ih);
         ctx.fillStyle = '#3b82f6';
         ctx.beginPath(); ctx.moveTo(ix + iw - co, iy); ctx.lineTo(ix + iw - co, iy + co); ctx.lineTo(ix + iw, iy + co); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 1;
-        [iy + 14, iy + 20, iy + 26].forEach(function(ly) {
-          ctx.beginPath(); ctx.moveTo(ix + 4, ly); ctx.lineTo(ix + iw - 4, ly); ctx.stroke();
-        });
-        // Nome do arquivo
+        [iy + 14, iy + 20, iy + 26].forEach(function(ly) { ctx.beginPath(); ctx.moveTo(ix + 4, ly); ctx.lineTo(ix + iw - 4, ly); ctx.stroke(); });
         ctx.fillStyle = '#374151'; ctx.font = 'bold 10px Inter,sans-serif'; ctx.textAlign = 'left';
         ctx.fillText((s.name || 'Arquivo').slice(0, 20), s.x + 5, s.y + H - 22);
         ctx.fillStyle = '#94a3b8'; ctx.font = '9px Inter,sans-serif';
@@ -36398,8 +36883,9 @@ var QuadrosUI = (function() {
 
     function _updCursor() {
       if (_cvState.spaceDown || _cvState.isPanning) { cv.style.cursor = _cvState.isPanning ? 'grabbing' : 'grab'; return; }
-      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair', text:'text', eraser:'cell' };
-      cv.style.cursor = C[_cvState.tool] || 'default';
+      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair',
+                text:'text', sticky:'copy', frame:'crosshair', table:'crosshair', eraser:'none' };
+      cv.style.cursor = C[_cvState.tool] !== undefined ? C[_cvState.tool] : 'default';
     }
 
     // ── Zoom ──────────────────────────────────────────────────────────────────
@@ -36447,20 +36933,32 @@ var QuadrosUI = (function() {
       reader.readAsDataURL(file);
     }
 
-    // ── Borracha brush ────────────────────────────────────────────────────────
+    // ── Borracha brush (melhorada: preview + interseção real) ─────────────────
+    var _eraserSx = 0, _eraserSy = 0;
     function _eraseAt(wx, wy) {
-      var R = Math.max(10, _cvState.lineWidth * 3) / _cvState.zoom;
+      var R = Math.max(12, _cvState.lineWidth * 5) / _cvState.zoom;
       var before = _cvState.shapes.length;
       _cvState.shapes = _cvState.shapes.filter(function(s) {
         if (s.t === 'pencil') {
           s.pts = s.pts.filter(function(p) { return Math.hypot(p.x - wx, p.y - wy) > R; });
           return s.pts.length > 1;
         }
+        // Closest point on bbox to eraser center (precise boundary intersection)
         var bb = _bbox(s);
-        return Math.hypot(bb.x + bb.w/2 - wx, bb.y + bb.h/2 - wy) > R * 2;
+        var cx = Math.max(bb.x, Math.min(bb.x + bb.w, wx));
+        var cy = Math.max(bb.y, Math.min(bb.y + bb.h, wy));
+        return Math.hypot(cx - wx, cy - wy) > R;
       });
       if (_cvState.selIdx >= _cvState.shapes.length) _cvState.selIdx = -1;
-      if (_cvState.shapes.length !== before) _redraw();
+      if (_cvState.shapes.length !== before) _redraw(); else _drawEraserPreview();
+    }
+
+    function _drawEraserPreview() {
+      var R = Math.max(12, _cvState.lineWidth * 5);
+      var ctx = cv.getContext('2d');
+      ctx.save(); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.globalAlpha = 0.9;
+      ctx.beginPath(); ctx.arc(_eraserSx, _eraserSy, R, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
     }
 
     // ── Handlers de mouse/toque ────────────────────────────────────────────────
@@ -36476,25 +36974,34 @@ var QuadrosUI = (function() {
         _cvState.panStart = { mx:src.clientX, my:src.clientY, px:_cvState.panX, py:_cvState.panY };
         cv.style.cursor = 'grabbing'; return;
       }
-      if (_cvState.tool === 'eraser') { _cvState.isErasing = true; _eraseAt(p.x, p.y); return; }
+      if (_cvState.tool === 'eraser') { _cvState.isErasing = true; _eraserSx = p.sx; _eraserSy = p.sy; _eraseAt(p.x, p.y); return; }
+      if (_cvState.tool === 'sticky') { _abrirStickyEditor(p.x, p.y); return; }
+      if (_cvState.tool === 'table')  { _abrirTableEditor(p.x, p.y); return; }
 
       if (_cvState.tool === 'select') {
-        // Duplo clique em doc para download
         if (_cvState.selIdx >= 0) {
           var sh = _cvState.shapes[_cvState.selIdx];
-          if (sh && sh.t === 'doc' && _hit(sh, p.x, p.y)) {
+          if (sh && _hit(sh, p.x, p.y)) {
             var now = Date.now();
-            if (now - _cvState.lastDocClick < 450 && _cvState.lastDocClickIdx === _cvState.selIdx) {
-              var a = document.createElement('a'); a.href = sh.data; a.download = sh.name || 'arquivo'; a.click();
-              _cvState.lastDocClick = 0; return;
-            }
+            var isDblClick = now - _cvState.lastDocClick < 400 && _cvState.lastDocClickIdx === _cvState.selIdx;
             _cvState.lastDocClick = now; _cvState.lastDocClickIdx = _cvState.selIdx;
+            if (isDblClick) {
+              if (sh.t === 'doc') {
+                var a = document.createElement('a'); a.href = sh.data; a.download = sh.name || 'arquivo'; a.click();
+                _cvState.lastDocClick = 0; return;
+              }
+              if (sh.t === 'sticky') { _editarSticky(sh); return; }
+              if (sh.t === 'frame')  { _editarFrameLabel(sh); return; }
+              if (sh.t === 'text')   {
+                _modalInput({ titulo:'Editar Texto', label:'Texto', obrigatorio:true, valorPadrao: sh.txt }, function(txt) {
+                  if (txt !== null) { sh.txt = txt; _redraw(); }
+                }); return;
+              }
+            }
           }
-          // Handle de resize
           var hid = _handleHit(sh, p.x, p.y);
           if (hid) { _cvState.dragMode = hid; _cvState.dragBase = JSON.parse(JSON.stringify(sh)); _cvState.dragMouse = { wx:p.x, wy:p.y }; return; }
         }
-        // Hit em shapes (de trás para frente)
         var hit = -1;
         for (var i = _cvState.shapes.length - 1; i >= 0; i--) { if (_hit(_cvState.shapes[i], p.x, p.y)) { hit = i; break; } }
         if (hit >= 0) {
@@ -36524,7 +37031,8 @@ var QuadrosUI = (function() {
         _cvState.panY = _cvState.panStart.py + (src.clientY - _cvState.panStart.my);
         _updZoomLabel(); _redraw(); return;
       }
-      if (_cvState.isErasing) { e.preventDefault(); _eraseAt(p.x, p.y); return; }
+      if (_cvState.isErasing) { e.preventDefault(); _eraserSx = p.sx; _eraserSy = p.sy; _eraseAt(p.x, p.y); return; }
+      if (_cvState.tool === 'eraser' && !_cvState.isErasing) { _eraserSx = p.sx; _eraserSy = p.sy; _redraw(); _drawEraserPreview(); return; }
       if (_cvState.tool === 'select' && _cvState.dragMode && _cvState.selIdx >= 0) {
         e.preventDefault();
         var s = _cvState.shapes[_cvState.selIdx];
@@ -36546,13 +37054,116 @@ var QuadrosUI = (function() {
       if (_cvState.isErasing) { _cvState.isErasing = false; }
       if (_cvState.dragMode)  { _cvState.dragMode = null; }
       if (_cvState.drawing && _cvState.cur) {
+        var sizeOk = Math.abs(_cvState.cur.w) > 3 || Math.abs(_cvState.cur.h) > 3;
         var ok = (_cvState.tool === 'pencil' && _cvState.cur.pts && _cvState.cur.pts.length > 1)
           || (_cvState.tool === 'line' || _cvState.tool === 'arrow')
-          || ((_cvState.tool === 'rect' || _cvState.tool === 'circle') && (Math.abs(_cvState.cur.w) > 3 || Math.abs(_cvState.cur.h) > 3));
-        if (ok) _cvState.shapes.push(_cvState.cur);
+          || ((_cvState.tool === 'rect' || _cvState.tool === 'circle') && sizeOk)
+          || (_cvState.tool === 'frame' && sizeOk);
+        if (ok) {
+          if (_cvState.tool === 'frame') {
+            var framePending = _cvState.cur;
+            _cvState.shapes.push(framePending);
+            var fIdx = _cvState.shapes.length - 1;
+            _cvState.cur = null; _cvState.drawing = false; _redraw();
+            _modalInput({ titulo:'Nome do Frame / Slide', label:'Nome', obrigatorio:false, valorPadrao:'Frame' }, function(lbl) {
+              _cvState.shapes[fIdx].label = lbl || 'Frame';
+              _cvState.selIdx = fIdx; _redraw();
+            });
+            return;
+          }
+          _cvState.shapes.push(_cvState.cur);
+        }
         _cvState.cur = null;
       }
       _cvState.drawing = false; _redraw();
+    }
+
+    // ── Sticky Note editor ────────────────────────────────────────────────────
+    var STICKY_COLORS = [
+      { v:'#fef08a', l:'Amarelo' },{ v:'#bae6fd', l:'Azul' },{ v:'#bbf7d0', l:'Verde' },
+      { v:'#fecdd3', l:'Rosa' },{ v:'#fed7aa', l:'Laranja' },{ v:'#e9d5ff', l:'Roxo' },{ v:'#f1f5f9', l:'Cinza' }
+    ];
+    function _mkStickyModal(titulo, initTxt, initColor, onOk) {
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+        + '<h3 style="margin:0 0 14px;font-size:15px;">' + escaparHtml(titulo) + '</h3>'
+        + '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Texto</label>'
+        + '<textarea id="qdro-stk-txt" rows="5" style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;" placeholder="Digite o conteúdo…">' + escaparHtml(initTxt || '') + '</textarea>'
+        + '<label style="font-size:12px;font-weight:600;display:block;margin:12px 0 6px;">Cor</label>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="qdro-stk-colors">'
+        + STICKY_COLORS.map(function(c) {
+            return '<span title="' + c.l + '" data-c="' + c.v + '" style="display:inline-block;width:26px;height:26px;border-radius:50%;background:' + c.v + ';border:2px solid ' + (c.v===initColor?'#6366f1':'#cbd5e1') + ';cursor:pointer;"></span>';
+          }).join('')
+        + '</div>'
+        + '<input type="hidden" id="qdro-stk-col" value="' + (initColor || '#fef08a') + '">'
+        + '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end;">'
+        + '<button id="qdro-stk-cancel" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar</button>'
+        + '<button id="qdro-stk-ok" class="btn btn-primary btn-sm" data-bg-skip="1">OK</button>'
+        + '</div></div>';
+      document.body.appendChild(box);
+      box.querySelectorAll('#qdro-stk-colors span').forEach(function(sp) {
+        sp.onclick = function() {
+          box.querySelectorAll('#qdro-stk-colors span').forEach(function(s2){ s2.style.border='2px solid #cbd5e1'; });
+          sp.style.border = '2px solid #6366f1';
+          document.getElementById('qdro-stk-col').value = sp.getAttribute('data-c');
+        };
+      });
+      document.getElementById('qdro-stk-cancel').onclick = function() { document.body.removeChild(box); };
+      document.getElementById('qdro-stk-ok').onclick = function() {
+        var txt = document.getElementById('qdro-stk-txt').value;
+        var col = document.getElementById('qdro-stk-col').value || '#fef08a';
+        document.body.removeChild(box); onOk(txt, col);
+      };
+      setTimeout(function(){ var ta = document.getElementById('qdro-stk-txt'); if (ta) ta.focus(); }, 60);
+    }
+
+    function _abrirStickyEditor(wx, wy) {
+      _mkStickyModal('Novo Sticky Note', '', '#fef08a', function(txt, col) {
+        if (!txt.trim()) return;
+        _cvState.shapes.push({ t:'sticky', x:wx - 90, y:wy - 90, w:180, h:180, txt:txt, stickyColor:col, lw:2, color:'#1e293b' });
+        _cvState.selIdx = _cvState.shapes.length - 1; _redraw();
+      });
+    }
+
+    function _editarSticky(sh) {
+      _mkStickyModal('Editar Sticky Note', sh.txt, sh.stickyColor, function(txt, col) {
+        sh.txt = txt; sh.stickyColor = col; _redraw();
+      });
+    }
+
+    // ── Tabela editor ─────────────────────────────────────────────────────────
+    function _abrirTableEditor(wx, wy) {
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:300px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+        + '<h3 style="margin:0 0 14px;font-size:15px;">Inserir Tabela</h3>'
+        + '<div style="display:flex;gap:12px;margin-bottom:16px;">'
+        + '<div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Linhas</label><input type="number" id="qdro-tbl-r" class="form-control" value="3" min="1" max="20"></div>'
+        + '<div style="flex:1;"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">Colunas</label><input type="number" id="qdro-tbl-c" class="form-control" value="3" min="1" max="12"></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+        + '<button id="qdro-tbl-cancel" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar</button>'
+        + '<button id="qdro-tbl-ok" class="btn btn-primary btn-sm" data-bg-skip="1">Inserir</button>'
+        + '</div></div>';
+      document.body.appendChild(box);
+      document.getElementById('qdro-tbl-cancel').onclick = function() { document.body.removeChild(box); };
+      document.getElementById('qdro-tbl-ok').onclick = function() {
+        var rows = Math.max(1, parseInt(document.getElementById('qdro-tbl-r').value) || 3);
+        var cols = Math.max(1, parseInt(document.getElementById('qdro-tbl-c').value) || 3);
+        document.body.removeChild(box);
+        var cells = [];
+        for (var r2 = 0; r2 < rows; r2++) { var row2 = []; for (var c2 = 0; c2 < cols; c2++) row2.push(''); cells.push(row2); }
+        _cvState.shapes.push({ t:'table', x:wx - cols*40, y:wy - rows*20, w:cols*80, h:rows*40, rows:rows, cols:cols, cells:cells, lw:1, color:'#1e293b' });
+        _cvState.selIdx = _cvState.shapes.length - 1; _redraw();
+      };
+    }
+
+    // ── Frame label editor ────────────────────────────────────────────────────
+    function _editarFrameLabel(sh) {
+      _modalInput({ titulo:'Renomear Frame', label:'Nome do Frame', obrigatorio:false, valorPadrao: sh.label || '' }, function(lbl) {
+        if (lbl !== null) { sh.label = lbl || 'Frame'; _redraw(); }
+      });
     }
 
     // Cursor hover para select tool
@@ -36681,6 +37292,10 @@ var QuadrosUI = (function() {
   return { aoAbrir:aoAbrir, carregar:carregar, setTab:setTab,
            abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, excluir:excluir,
            abrirEditor:abrirEditor, fecharEditor:fecharEditor, salvarSnapshot:salvarSnapshot,
+           fecharEditorExterno:fecharEditorExterno,
+           apresentarExterno:apresentarExterno, apresentarCanvas:apresentarCanvas,
+           apresentarCanvasDireto:apresentarCanvasDireto, fecharApresentacaoCanvas:fecharApresentacaoCanvas,
+           _onTipoChange:_onTipoChange, setAfterSaveCb:setAfterSaveCb,
            _setTool:_setTool, _undo:_undo, _clearCanvas:_clearCanvas };
 })();
 Router.registrar('quadros', 'Quadros', QuadrosUI.aoAbrir);
