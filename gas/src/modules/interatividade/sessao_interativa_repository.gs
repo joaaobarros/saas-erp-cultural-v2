@@ -34,10 +34,13 @@ var SessaoInterativaRepository = (function() {
     if (filtros.acaoId)    lista = lista.filter(function(s) { return s.acaoId    === filtros.acaoId; });
     // Não retornar atividades completas na listagem
     return lista.map(function(s) {
-      return { id: s.id, titulo: s.titulo, codigo: s.codigo, status: s.status,
-               totalAtividades: (s.atividades||[]).length, atividadeAtual: s.atividadeAtual,
-               criadoPor: s.criadoPor, criadoEm: s.criadoEm, reuniaoId: s.reuniaoId,
-               acaoId: s.acaoId, totalParticipantes: s.totalParticipantes || 0 };
+      return { id: s.id, titulo: s.titulo, descricao: s.descricao || '', codigo: s.codigo,
+               status: s.status, totalAtividades: (s.atividades||[]).length,
+               atividadeAtual: s.atividadeAtual, criadoPor: s.criadoPor,
+               criadoEm: s.criadoEm, reuniaoId: s.reuniaoId, acaoId: s.acaoId,
+               totalParticipantes: s.totalParticipantes || 0,
+               modoIdentidade: s.modoIdentidade || 'escolha',
+               gamificacao: s.gamificacao || { habilitada: false } };
     });
   }
 
@@ -57,11 +60,15 @@ var SessaoInterativaRepository = (function() {
     var nova = {
       id:              _gerarId('SES'),
       titulo:          dados.titulo || 'Sessão Interativa',
+      descricao:       dados.descricao || '',
       orgId:           orgId,
       codigo:          _gerarCodigo(),
-      status:          'rascunho',   // rascunho → ativa → encerrada
+      status:          'rascunho',
       atividades:      dados.atividades || [],
-      atividadeAtual:  -1,           // -1 = aguardando início
+      atividadeAtual:  -1,
+      gamificacao:     dados.gamificacao || { habilitada: false, pontosPorAcerto: 10, bonusVelocidade: false },
+      modoIdentidade:  dados.modoIdentidade || 'escolha',
+      templateId:      dados.templateId || null,
       criadoPor:       emailUsuario,
       reuniaoId:       dados.reuniaoId  || null,
       acaoId:          dados.acaoId     || null,
@@ -97,13 +104,18 @@ var SessaoInterativaRepository = (function() {
   function registrarResposta(orgId, dados) {
     var agora = new Date().toISOString();
     var resp = {
-      id:           _gerarId('RSP'),
-      sessaoId:     dados.sessaoId,
-      atividadeIdx: dados.atividadeIdx,
-      participanteId: dados.participanteId || 'anonimo_' + Math.random().toString(36).slice(2,6),
+      id:              _gerarId('RSP'),
+      sessaoId:        dados.sessaoId,
+      atividadeIdx:    dados.atividadeIdx,
+      participanteId:  dados.participanteId || 'anonimo_' + Math.random().toString(36).slice(2,6),
       participanteNome: dados.participanteNome || 'Anônimo',
-      resposta:     dados.resposta,
-      timestamp:    agora
+      resposta:        dados.resposta,
+      avatar:          dados.avatar || '',
+      apelido:         dados.apelido || '',
+      correta:         dados.correta !== undefined ? dados.correta : null,
+      pontos_ganhos:   dados.pontos_ganhos || 0,
+      tempo_resposta:  dados.tempo_resposta != null ? dados.tempo_resposta : null,
+      timestamp:       agora
     };
     modifyJSON(_fileRespostas(orgId), function(lista) {
       if (!Array.isArray(lista)) lista = [];

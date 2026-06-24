@@ -7610,27 +7610,141 @@ select.form-control { cursor: pointer; }
           </button>
         </div>
         <div id="sessoes-lista" class="lista-container"><p class="muted-text">Carregando sessões…</p></div>
-        <!-- Modal Nova Sessão -->
+        <!-- Wizard Nova Sessão (3 passos) -->
         <div id="sess-modal" class="modal-overlay oculto" onclick="if(event.target===this)SessaoUI.fecharForm()">
-          <div class="modal-box" style="max-width:540px">
-            <div class="modal-header">
-              <h2>Nova Sessão Interativa</h2>
+          <div class="modal-box" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;">
+            <div class="modal-header" style="flex-shrink:0;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <h2 id="sess-wizard-titulo">Nova Sessão</h2>
+                <div style="display:flex;gap:4px;margin-left:8px;" id="sess-wizard-steps">
+                  <span id="swz-dot-1" style="width:28px;height:6px;border-radius:3px;background:var(--color-primary);transition:all .2s;"></span>
+                  <span id="swz-dot-2" style="width:6px;height:6px;border-radius:3px;background:var(--border);transition:all .2s;"></span>
+                  <span id="swz-dot-3" style="width:6px;height:6px;border-radius:3px;background:var(--border);transition:all .2s;"></span>
+                </div>
+              </div>
               <button class="modal-close" onclick="SessaoUI.fecharForm()" data-bg-skip="1">✕</button>
             </div>
-            <div class="modal-body">
-              <div class="form-group"><label>Título *</label><input type="text" id="sess-titulo" class="form-control" required></div>
-              <div class="form-group"><label>Descrição</label><textarea id="sess-descricao" class="form-control" rows="2"></textarea></div>
-              <div class="form-group"><label>Ação Vinculada</label><select id="sess-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
+
+            <!-- PASSO 1: Galeria de templates -->
+            <div id="sess-wz-passo1" class="modal-body" style="overflow-y:auto;flex:1;">
+              <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Escolha um modelo ou crie do zero.</p>
+              <div id="sess-tpl-galeria" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px;">
+                <div style="font-size:12px;color:var(--muted);">Carregando templates…</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" style="width:100%;border:2px dashed var(--border);"
+                onclick="SessaoUI.wizardDoZero()" data-bg-skip="1">
+                <span class="ms ms-sm">add_circle</span> Criar do zero (sem template)
+              </button>
+            </div>
+
+            <!-- PASSO 2: Configurações -->
+            <div id="sess-wz-passo2" class="modal-body oculto" style="overflow-y:auto;flex:1;">
+              <div class="form-group"><label>Título *</label>
+                <input type="text" id="sess-titulo" class="form-control" required placeholder="Ex.: Quiz da Reunião de Equipe">
+              </div>
+              <div class="form-group"><label>Descrição</label>
+                <textarea id="sess-descricao" class="form-control" rows="2" placeholder="Descrição opcional"></textarea>
+              </div>
+              <div class="form-group"><label>Modo de identidade dos participantes</label>
+                <select id="sess-modo-id" class="form-control">
+                  <option value="escolha">Participante escolhe (nome real ou persona)</option>
+                  <option value="anonimo">Apenas apelido anônimo</option>
+                  <option value="nome_real">Nome real obrigatório</option>
+                </select>
+              </div>
               <div class="form-group">
-                <label>Atividades (uma por linha — ex.: "enquete: Gostou do evento?")</label>
-                <textarea id="sess-atividades" class="form-control" rows="4"
-                  placeholder="enquete: Gostou do evento?&#10;qa: Perguntas ao palestrante&#10;votacao: Escolha o próximo tema"></textarea>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="sess-gamif-on" onchange="SessaoUI.toggleGamif(this.checked)" style="width:16px;height:16px;">
+                  Habilitar gamificação (pontuação em quiz)
+                </label>
+              </div>
+              <div id="sess-gamif-cfg" class="oculto" style="background:var(--surface2);border-radius:8px;padding:12px;margin-top:4px;">
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+                  <div class="form-group" style="margin:0;"><label>Pontos por acerto</label>
+                    <input type="number" id="sess-gamif-pontos" class="form-control" value="10" min="1" max="100">
+                  </div>
+                  <div class="form-group" style="margin:0;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:20px;">
+                      <input type="checkbox" id="sess-gamif-bonus" style="width:14px;height:14px;">
+                      Bônus de velocidade
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group"><label>Ação Vinculada</label>
+                <select id="sess-acao-id" class="form-control"><option value="">— Nenhuma —</option></select>
+              </div>
+            </div>
+
+            <!-- PASSO 3: Construtor de atividades -->
+            <div id="sess-wz-passo3" class="modal-body oculto" style="overflow-y:auto;flex:1;">
+              <div id="sess-ativs-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+              <div style="position:relative;">
+                <button class="btn btn-ghost btn-sm" id="sess-add-ativ-btn" style="width:100%;border:2px dashed var(--border);"
+                  onclick="SessaoUI.togglePickerTipo()" data-bg-skip="1">
+                  <span class="ms ms-sm">add</span> Adicionar Atividade
+                </button>
+                <div id="sess-tipo-picker" class="oculto" style="position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;z-index:10;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('quiz')" data-bg-skip="1">🧠 Quiz</button>
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('enquete')" data-bg-skip="1">📊 Enquete</button>
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('nuvem')" data-bg-skip="1">☁️ Nuvem</button>
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('brainstorm')" data-bg-skip="1">💡 Brainstorm</button>
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('qa')" data-bg-skip="1">❓ Q&amp;A</button>
+                  <button class="btn btn-ghost btn-sm" onclick="SessaoUI.addAtividade('votacao')" data-bg-skip="1">🗳️ Votação</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="flex-shrink:0;" id="sess-wz-footer">
+              <button class="btn btn-secondary" id="sess-wz-back" onclick="SessaoUI.wizardBack()" data-bg-skip="1" style="display:none;">Voltar</button>
+              <button class="btn btn-secondary" onclick="SessaoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+              <button id="sess-wz-next" class="btn btn-primary" onclick="SessaoUI.wizardNext()" data-bg-skip="1">Próximo →</button>
+              <button id="sess-criar-btn" class="btn btn-primary oculto"
+                onclick="BtnGuard.wrap('sess-criar-btn','Criando…',SessaoUI.criar)">Criar Sessão</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Salvar como Template -->
+        <div id="sess-tpl-modal" class="modal-overlay oculto" onclick="if(event.target===this)document.getElementById('sess-tpl-modal').classList.add('oculto')">
+          <div class="modal-box" style="max-width:480px;">
+            <div class="modal-header">
+              <h2>Salvar como Template</h2>
+              <button class="modal-close" onclick="document.getElementById('sess-tpl-modal').classList.add('oculto')" data-bg-skip="1">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group"><label>Título do Template *</label>
+                <input type="text" id="tpl-titulo" class="form-control">
+              </div>
+              <div class="form-group"><label>Descrição</label>
+                <textarea id="tpl-descricao" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label>Categoria</label>
+                  <select id="tpl-categoria" class="form-control">
+                    <option value="quiz">Quiz</option>
+                    <option value="icebreaker">Quebra-Gelo</option>
+                    <option value="feedback">Feedback / Retro</option>
+                    <option value="apresentacao">Apresentação</option>
+                    <option value="brainstorm">Brainstorm</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Ícone</label>
+                  <input type="text" id="tpl-icone" class="form-control" maxlength="4" placeholder="📋" style="text-align:center;font-size:20px;">
+                </div>
+              </div>
+              <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="tpl-publico" checked style="width:15px;height:15px;">
+                  Compartilhar com toda a organização
+                </label>
               </div>
             </div>
             <div class="modal-footer">
-              <button class="btn btn-secondary" onclick="SessaoUI.fecharForm()" data-bg-skip="1">Cancelar</button>
-              <button id="sess-criar-btn" class="btn btn-primary"
-                onclick="BtnGuard.wrap('sess-criar-btn','Criando…',SessaoUI.criar)">Criar Sessão</button>
+              <button class="btn btn-secondary" onclick="document.getElementById('sess-tpl-modal').classList.add('oculto')" data-bg-skip="1">Cancelar</button>
+              <button id="sess-salvar-tpl-btn" class="btn btn-primary"
+                onclick="BtnGuard.wrap('sess-salvar-tpl-btn','Salvando…',SessaoUI.salvarTemplate)">Salvar Template</button>
             </div>
           </div>
         </div>
@@ -7694,8 +7808,27 @@ select.form-control { cursor: pointer; }
                 </div>
               </div>
             </div>
+            <!-- Timer da atividade atual -->
+            <div id="sess-host-timer" class="oculto" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+              <span class="ms ms-sm" style="color:var(--warning);">timer</span>
+              <div style="flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;">
+                <div id="sess-timer-barra" style="height:100%;background:var(--success);border-radius:4px;transition:width 1s linear;width:100%;"></div>
+              </div>
+              <span id="sess-timer-num" style="font-size:16px;font-weight:800;color:var(--warning);min-width:32px;text-align:right;">—</span>
+            </div>
             <!-- Resultados visuais -->
             <div id="sess-host-resultados" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;min-height:100px;"></div>
+            <!-- Ranking ao vivo (gamificação) -->
+            <div id="sess-host-ranking" class="oculto" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px;">
+              <p style="font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 10px;">🏆 Ranking ao Vivo</p>
+              <div id="sess-ranking-lista"></div>
+            </div>
+            <!-- Botão Salvar como Template (só quando encerrada) -->
+            <div id="sess-salvar-tpl-wrap" class="oculto" style="margin-top:12px;text-align:right;">
+              <button class="btn btn-secondary btn-sm" onclick="SessaoUI.abrirModalTemplate()" data-bg-skip="1">
+                <span class="ms ms-sm">bookmark_add</span> Salvar como Template
+              </button>
+            </div>
           </div>
         </div>
         <!-- Sobreposição de projeção -->
@@ -11165,12 +11298,18 @@ GAS.quadros = {
 };
 // ── Namespace GAS: Sessão Interativa ────────────────────────────────────────
 GAS.sessao = {
-  listar:     function(f,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_listar(f||{}); },
-  criar:      function(d,cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_criar(d); },
-  ativar:     function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_ativar(id); },
-  avancar:    function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_avancar(id); },
-  encerrar:   function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_encerrar(id); },
-  resultados: function(id,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_resultados(id); }
+  listar:           function(f,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_listar(f||{}); },
+  criar:            function(d,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_criar(d); },
+  ativar:           function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_ativar(id); },
+  avancar:          function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_avancar(id); },
+  encerrar:         function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_encerrar(id); },
+  resultados:       function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_resultados(id); },
+  ranking:          function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_ranking(id); },
+  listarTemplates:  function(f,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_listarTemplates(f||{}); },
+  criarTemplate:    function(d,cb,err)     { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_criarTemplate(d); },
+  atualizarTemplate:function(id,d,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_atualizarTemplate(id,d); },
+  excluirTemplate:  function(id,cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_excluirTemplate(id); },
+  criarDeTemplate:  function(tId,d,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_sessao_criarDeTemplate(tId,d||{}); }
 };
 // ── Namespace GAS: Document Sharing ────────────────────────────────────────
 GAS.docSharing = {
@@ -37005,10 +37144,434 @@ var SessaoUI = (function() {
     }, function(){ sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
   }
 
+  // ── Wizard de criação ───────────────────────────────────────────────────────
+
+  var _wizardPasso = 1;
+  var _wizardAtividades = [];
+  var _wizardTemplateId = null;
+  var _timerInterval = null;
+  var _timerSegundos = 0;
+
+  function abrirForm() {
+    _wizardPasso = 1;
+    _wizardAtividades = [];
+    _wizardTemplateId = null;
+    document.getElementById('sess-titulo').value = '';
+    document.getElementById('sess-descricao').value = '';
+    document.getElementById('sess-modo-id').value = 'escolha';
+    document.getElementById('sess-gamif-on').checked = false;
+    document.getElementById('sess-gamif-cfg').classList.add('oculto');
+    document.getElementById('sess-gamif-pontos').value = '10';
+    document.getElementById('sess-gamif-bonus').checked = false;
+    _carregarSelectAcoesSess();
+    _wizardRenderPasso(1);
+    _carregarGaleriaTemplates();
+    document.getElementById('sess-modal').classList.remove('oculto');
+  }
+
+  function fecharForm() {
+    document.getElementById('sess-modal').classList.add('oculto');
+    document.getElementById('sess-tipo-picker').classList.add('oculto');
+  }
+
+  function toggleGamif(on) {
+    document.getElementById('sess-gamif-cfg').classList.toggle('oculto', !on);
+  }
+
+  function _wizardRenderPasso(p) {
+    _wizardPasso = p;
+    [1,2,3].forEach(function(n) {
+      document.getElementById('sess-wz-passo' + n).classList.toggle('oculto', n !== p);
+      var dot = document.getElementById('swz-dot-' + n);
+      dot.style.background = n <= p ? 'var(--color-primary)' : 'var(--border)';
+      dot.style.width = n === p ? '28px' : '6px';
+    });
+    var titles = { 1: 'Escolher Modelo', 2: 'Configurações', 3: 'Atividades' };
+    document.getElementById('sess-wizard-titulo').textContent = titles[p] || 'Nova Sessão';
+    var back = document.getElementById('sess-wz-back');
+    var next = document.getElementById('sess-wz-next');
+    var criar = document.getElementById('sess-criar-btn');
+    back.style.display = p > 1 ? '' : 'none';
+    next.classList.toggle('oculto', p === 3);
+    criar.classList.toggle('oculto', p !== 3);
+    next.textContent = p === 1 ? 'Próximo →' : 'Próximo →';
+  }
+
+  function wizardNext() {
+    if (_wizardPasso === 1) {
+      _wizardRenderPasso(2);
+    } else if (_wizardPasso === 2) {
+      if (!(document.getElementById('sess-titulo').value||'').trim()) {
+        Toast.aviso('Título obrigatório.'); return;
+      }
+      _renderAtivsList();
+      _wizardRenderPasso(3);
+    }
+  }
+
+  function wizardBack() {
+    if (_wizardPasso > 1) _wizardRenderPasso(_wizardPasso - 1);
+  }
+
+  function wizardDoZero() {
+    _wizardTemplateId = null;
+    _wizardAtividades = [];
+    _wizardRenderPasso(2);
+  }
+
+  function _carregarGaleriaTemplates() {
+    var el = document.getElementById('sess-tpl-galeria');
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Carregando templates…</div>';
+    GAS.sessao.listarTemplates({}, function(resp) {
+      if (!resp || !resp.ok) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Erro ao carregar templates.</div>'; return; }
+      var lista = resp.data || [];
+      if (!lista.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Nenhum template disponível.</div>'; return; }
+      el.innerHTML = lista.map(function(tpl) {
+        var id = JSON.stringify(tpl.id).replace(/"/g,"'");
+        return '<div onclick="SessaoUI.usarTemplate(' + id + ')" style="cursor:pointer;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;border-top:3px solid ' + escaparHtml(tpl.cor||'#6b7280') + ';transition:all .15s;" onmouseover="this.style.borderColor=\'' + escaparHtml(tpl.cor||'#6b7280') + '\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+          + '<div style="font-size:24px;margin-bottom:8px;">' + escaparHtml(tpl.icone||'📋') + '</div>'
+          + '<p style="font-size:13px;font-weight:700;margin:0 0 4px;line-height:1.3;">' + escaparHtml(tpl.titulo) + '</p>'
+          + '<p style="font-size:11px;color:var(--muted);margin:0;line-height:1.4;">' + escaparHtml(tpl.descricao||'') + '</p>'
+          + '<p style="font-size:10px;color:var(--muted);margin:6px 0 0;">' + (tpl.atividades||[]).length + ' atividade(s)</p>'
+          + '</div>';
+      }).join('');
+    }, function() { el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Erro ao carregar templates.</div>'; });
+  }
+
+  function usarTemplate(id) {
+    _wizardTemplateId = id;
+    // Carregar atividades do template
+    GAS.sessao.listarTemplates({}, function(resp) {
+      var lista = (resp && resp.ok) ? resp.data || [] : [];
+      var tpl   = lista.filter(function(t){ return t.id === id; })[0];
+      if (tpl) {
+        _wizardAtividades = JSON.parse(JSON.stringify(tpl.atividades || []));
+        document.getElementById('sess-titulo').value = tpl.titulo || '';
+        document.getElementById('sess-descricao').value = tpl.descricao || '';
+        document.getElementById('sess-modo-id').value = tpl.modoIdentidade || 'escolha';
+        var gam = tpl.gamificacao || {};
+        document.getElementById('sess-gamif-on').checked = !!gam.habilitada;
+        toggleGamif(!!gam.habilitada);
+        document.getElementById('sess-gamif-pontos').value = gam.pontosPorAcerto || 10;
+        document.getElementById('sess-gamif-bonus').checked = !!gam.bonusVelocidade;
+      }
+      _wizardRenderPasso(2);
+    }, function() { _wizardRenderPasso(2); });
+  }
+
+  // ── Construtor de atividades ────────────────────────────────────────────────
+
+  function _renderAtivsList() {
+    var el = document.getElementById('sess-ativs-lista');
+    if (!_wizardAtividades.length) {
+      el.innerHTML = '<p style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">Nenhuma atividade adicionada. Clique em "+ Adicionar Atividade" abaixo.</p>';
+      return;
+    }
+    el.innerHTML = _wizardAtividades.map(function(a, i) {
+      var label = {quiz:'🧠 Quiz',enquete:'📊 Enquete',nuvem:'☁️ Nuvem',brainstorm:'💡 Brainstorm',qa:'❓ Q&A',votacao:'🗳️ Votação'}[a.tipo] || a.tipo;
+      return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+          + '<span style="font-size:11px;font-weight:700;color:var(--muted);">#' + (i+1) + ' ' + label + '</span>'
+          + '<div style="margin-left:auto;display:flex;gap:4px;">'
+            + (i > 0 ? '<button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="SessaoUI.moverAtiv(' + i + ',-1)" data-bg-skip="1">↑</button>' : '')
+            + (i < _wizardAtividades.length-1 ? '<button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="SessaoUI.moverAtiv(' + i + ',1)" data-bg-skip="1">↓</button>' : '')
+            + '<button class="btn btn-ghost btn-sm" style="padding:2px 6px;color:var(--danger);" onclick="SessaoUI.removerAtiv(' + i + ')" data-bg-skip="1">✕</button>'
+          + '</div>'
+        + '</div>'
+        + _renderFormAtiv(a, i)
+      + '</div>';
+    }).join('');
+  }
+
+  function _renderFormAtiv(a, i) {
+    var html = '<div class="form-group" style="margin:0 0 8px;"><label style="font-size:11px;">Pergunta / Instrução *</label>'
+      + '<input type="text" class="form-control" style="font-size:13px;" value="' + escaparHtml(a.texto||'') + '" oninput="SessaoUI.setAtivCampo(' + i + ',\'texto\',this.value)">'
+      + '</div>';
+
+    if (a.tipo === 'quiz' || a.tipo === 'enquete' || a.tipo === 'votacao') {
+      html += '<div id="sess-atv-opts-' + i + '">'
+        + (a.opcoes||[]).map(function(op, j) {
+            return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">'
+              + (a.tipo === 'quiz' ? '<input type="radio" name="gab-' + i + '" ' + (a.gabarito === op ? 'checked' : '') + ' onclick="SessaoUI.setAtivGabarito(' + i + ',' + j + ')" title="Gabarito" style="flex-shrink:0;cursor:pointer;">' : '')
+              + '<input class="form-control" style="font-size:13px;" value="' + escaparHtml(op) + '" oninput="SessaoUI.setAtivOpcao(' + i + ',' + j + ',this.value)">'
+              + '<button class="btn btn-ghost btn-sm" style="padding:2px 6px;flex-shrink:0;" onclick="SessaoUI.removerOpcao(' + i + ',' + j + ')" data-bg-skip="1">✕</button>'
+            + '</div>';
+        }).join('')
+        + '</div>'
+        + '<button class="btn btn-ghost btn-sm" onclick="SessaoUI.addOpcao(' + i + ')" data-bg-skip="1" style="font-size:11px;margin-bottom:8px;">+ Opção</button>';
+      if (a.tipo === 'quiz') {
+        html += '<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">'
+          + '<div class="form-group" style="margin:0;"><label style="font-size:11px;">Pontos</label><input type="number" class="form-control" value="' + (a.pontos||10) + '" min="1" oninput="SessaoUI.setAtivCampo(' + i + ',\'pontos\',+this.value)"></div>'
+          + '<div class="form-group" style="margin:0;"><label style="font-size:11px;">Timer (seg, 0=sem)</label><input type="number" class="form-control" value="' + (a.tempo||0) + '" min="0" oninput="SessaoUI.setAtivCampo(' + i + ',\'tempo\',+this.value)"></div>'
+          + '</div>';
+      }
+      if (a.tipo === 'votacao') {
+        html += '<div class="form-group" style="margin:0;"><label style="font-size:11px;">Votos por participante</label>'
+          + '<input type="number" class="form-control" value="' + (a.votos_por_part||3) + '" min="1" oninput="SessaoUI.setAtivCampo(' + i + ',\'votos_por_part\',+this.value)">'
+          + '</div>';
+      }
+    }
+
+    if (a.tipo === 'brainstorm' || a.tipo === 'qa') {
+      html += '<div class="form-group" style="margin:0;"><label style="font-size:11px;">Instrução adicional (opcional)</label>'
+        + '<input type="text" class="form-control" style="font-size:13px;" value="' + escaparHtml(a.instrucoes||'') + '" oninput="SessaoUI.setAtivCampo(' + i + ',\'instrucoes\',this.value)">'
+        + '</div>';
+    }
+
+    if (a.tipo !== 'quiz') {
+      html += '<div class="form-group" style="margin:4px 0 0;"><label style="font-size:11px;">Timer (seg, 0=sem)</label>'
+        + '<input type="number" class="form-control" value="' + (a.tempo||0) + '" min="0" style="width:100px;" oninput="SessaoUI.setAtivCampo(' + i + ',\'tempo\',+this.value)">'
+        + '</div>';
+    }
+
+    return html;
+  }
+
+  function addAtividade(tipo) {
+    document.getElementById('sess-tipo-picker').classList.add('oculto');
+    var ativ = { tipo: tipo, texto: '', opcoes: [], gabarito: null, pontos: 10, tempo: 0, instrucoes: '', votos_por_part: 3 };
+    if (tipo === 'quiz' || tipo === 'enquete') ativ.opcoes = ['', ''];
+    if (tipo === 'votacao') ativ.opcoes = ['', ''];
+    _wizardAtividades.push(ativ);
+    _renderAtivsList();
+  }
+
+  function removerAtiv(i) {
+    _wizardAtividades.splice(i, 1);
+    _renderAtivsList();
+  }
+
+  function moverAtiv(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= _wizardAtividades.length) return;
+    var tmp = _wizardAtividades[i];
+    _wizardAtividades[i] = _wizardAtividades[j];
+    _wizardAtividades[j] = tmp;
+    _renderAtivsList();
+  }
+
+  function setAtivCampo(i, campo, valor) {
+    if (_wizardAtividades[i]) _wizardAtividades[i][campo] = valor;
+  }
+
+  function setAtivOpcao(i, j, valor) {
+    if (_wizardAtividades[i] && _wizardAtividades[i].opcoes) _wizardAtividades[i].opcoes[j] = valor;
+  }
+
+  function setAtivGabarito(i, j) {
+    if (_wizardAtividades[i]) _wizardAtividades[i].gabarito = (_wizardAtividades[i].opcoes||[])[j] || null;
+  }
+
+  function addOpcao(i) {
+    if (!_wizardAtividades[i]) return;
+    (_wizardAtividades[i].opcoes = _wizardAtividades[i].opcoes || []).push('');
+    _renderAtivsList();
+  }
+
+  function removerOpcao(i, j) {
+    if (!_wizardAtividades[i] || !_wizardAtividades[i].opcoes) return;
+    _wizardAtividades[i].opcoes.splice(j, 1);
+    _renderAtivsList();
+  }
+
+  function togglePickerTipo() {
+    document.getElementById('sess-tipo-picker').classList.toggle('oculto');
+  }
+
+  // ── Criar (com wizard) ──────────────────────────────────────────────────────
+
+  function criar(done) {
+    var titulo = (document.getElementById('sess-titulo') || {}).value || '';
+    if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
+    var gamifOn = document.getElementById('sess-gamif-on').checked;
+    var dados = {
+      titulo:         titulo.trim(),
+      descricao:      (document.getElementById('sess-descricao') || {}).value || '',
+      modoIdentidade: (document.getElementById('sess-modo-id') || {}).value || 'escolha',
+      gamificacao: {
+        habilitada:      gamifOn,
+        pontosPorAcerto: gamifOn ? (+document.getElementById('sess-gamif-pontos').value || 10) : 0,
+        bonusVelocidade: gamifOn ? document.getElementById('sess-gamif-bonus').checked : false
+      },
+      acaoId:         (document.getElementById('sess-acao-id') || {}).value || '',
+      atividades:     _wizardAtividades,
+      templateId:     _wizardTemplateId || null
+    };
+
+    var fn = _wizardTemplateId
+      ? function(cb, err) { GAS.sessao.criarDeTemplate(_wizardTemplateId, dados, cb, err); }
+      : function(cb, err) { GAS.sessao.criar(dados, cb, err); };
+
+    fn(function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao criar sessão.'); return; }
+      Toast.sucesso('Sessão criada!');
+      fecharForm();
+      _carregado = false; carregar();
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
+  // ── Timer no host ───────────────────────────────────────────────────────────
+
+  function _iniciarTimerHost(segundos) {
+    if (_timerInterval) clearInterval(_timerInterval);
+    if (!segundos || segundos <= 0) {
+      document.getElementById('sess-host-timer').classList.add('oculto');
+      return;
+    }
+    _timerSegundos = segundos;
+    document.getElementById('sess-host-timer').classList.remove('oculto');
+    _atualizarTimerHost();
+    _timerInterval = setInterval(function() {
+      _timerSegundos--;
+      _atualizarTimerHost();
+      if (_timerSegundos <= 0) {
+        clearInterval(_timerInterval);
+        _timerInterval = null;
+        var btn = document.getElementById('sess-host-avancar-btn');
+        if (btn) { btn.style.boxShadow = '0 0 0 3px #ef4444'; }
+      }
+    }, 1000);
+  }
+
+  function _atualizarTimerHost() {
+    var num   = document.getElementById('sess-timer-num');
+    var barra = document.getElementById('sess-timer-barra');
+    if (!num || !barra) return;
+    num.textContent = _timerSegundos;
+    barra.style.background = _timerSegundos <= 5 ? '#ef4444' : _timerSegundos <= 10 ? '#f59e0b' : '#10b981';
+    // pct calculado a partir do último dadosResultados que tem tempo
+    var pct = _dadosResultados ? _calcPctTimer(_timerSegundos) : 100;
+    barra.style.width = pct + '%';
+  }
+
+  function _calcPctTimer(restante) {
+    var ativ = (_dadosResultados && _dadosResultados.atividadeAtual) || {};
+    var total = ativ.tempo || 0;
+    if (!total) return 100;
+    return Math.max(0, Math.round((restante / total) * 100));
+  }
+
+  // Versão estendida de _carregarResultados: gerencia timer e ranking
+  // Substitui a declaração anterior por hoisting (a última vence em JS sloppy mode)
+  function _carregarResultados() {
+    if (!_idAtual) return;
+    GAS.sessao.resultados(_idAtual, function(resp) {
+      if (!resp || !resp.ok) return;
+      var d = resp.data || {};
+      _dadosResultados = d;
+      var sessao    = d.sessao || {};
+      var atividade = d.atividadeAtual || {};
+
+      document.getElementById('sess-host-participantes').textContent =
+        (d.totalParticipantes || 0) + ' participante' + (d.totalParticipantes !== 1 ? 's' : '');
+      document.getElementById('sess-host-total-resp').textContent =
+        (d.totalRespostas || 0) + ' resposta' + (d.totalRespostas !== 1 ? 's' : '');
+
+      var textoAtiv = atividade.pergunta || atividade.titulo || atividade.texto || '—';
+      document.getElementById('sess-host-ativ-atual').textContent = textoAtiv;
+      document.getElementById('sess-host-ativ-idx').textContent = d.indiceAtual != null
+        ? 'Atividade ' + (d.indiceAtual + 1) + ' de ' + (d.totalAtividades || '?') : '';
+
+      _atualizarHostBadge(sessao.status || 'rascunho');
+      _renderResultadoAtividade(d, atividade);
+
+      // Timer: iniciar quando muda atividade ou timer ainda não iniciado
+      if (atividade.tempo > 0 && sessao.status === 'ativa') {
+        var prevIdx = _timerAtivIdx !== undefined ? _timerAtivIdx : -1;
+        if (d.indiceAtual !== prevIdx) {
+          _timerAtivIdx = d.indiceAtual;
+          _iniciarTimerHost(atividade.tempo);
+        }
+      } else {
+        if (_timerInterval) clearInterval(_timerInterval);
+        document.getElementById('sess-host-timer').classList.add('oculto');
+      }
+
+      // Ranking ao vivo
+      var gamif = sessao.gamificacao || {};
+      var rankEl = document.getElementById('sess-host-ranking');
+      if (gamif.habilitada && (sessao.status === 'ativa' || sessao.status === 'encerrada')) {
+        rankEl.classList.remove('oculto');
+        _carregarRankingHost();
+      } else {
+        rankEl.classList.add('oculto');
+      }
+
+      // Botão Salvar como Template (só encerrada)
+      var wrapTpl = document.getElementById('sess-salvar-tpl-wrap');
+      if (wrapTpl) wrapTpl.classList.toggle('oculto', sessao.status !== 'encerrada');
+
+      if (!document.getElementById('sess-projecao-overlay').classList.contains('oculto')) {
+        _atualizarProjecao(d, atividade);
+      }
+    });
+  }
+
+  var _timerAtivIdx = undefined;
+
+  function _carregarRankingHost() {
+    if (!_idAtual) return;
+    GAS.sessao.ranking(_idAtual, function(resp) {
+      if (!resp || !resp.ok) return;
+      var ranking = (resp.data && resp.data.ranking) || [];
+      var el = document.getElementById('sess-ranking-lista');
+      if (!el) return;
+      if (!ranking.length) { el.innerHTML = '<p style="font-size:12px;color:var(--muted);">Nenhum ponto computado ainda.</p>'; return; }
+      var MEDALHAS = ['🥇','🥈','🥉'];
+      el.innerHTML = ranking.slice(0, 10).map(function(p, i) {
+        var nome = p.apelido || p.nome || 'Anônimo';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">'
+          + '<span style="font-size:16px;flex-shrink:0;">' + (MEDALHAS[i] || ('#' + p.pos)) + '</span>'
+          + (p.avatar ? '<span style="font-size:18px;">' + escaparHtml(p.avatar) + '</span>' : '')
+          + '<span style="font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(nome) + '</span>'
+          + '<span style="font-size:14px;font-weight:800;color:var(--color-primary);">' + p.pontos + ' pts</span>'
+        + '</div>';
+      }).join('');
+    });
+  }
+
+  // ── Salvar como Template ────────────────────────────────────────────────────
+
+  function abrirModalTemplate() {
+    var sessao = _sessaoAtual || {};
+    document.getElementById('tpl-titulo').value = sessao.titulo || '';
+    document.getElementById('tpl-descricao').value = sessao.descricao || '';
+    document.getElementById('tpl-categoria').value = 'custom';
+    document.getElementById('tpl-icone').value = '📋';
+    document.getElementById('tpl-publico').checked = true;
+    document.getElementById('sess-tpl-modal').classList.remove('oculto');
+  }
+
+  function salvarTemplate(done) {
+    var titulo = (document.getElementById('tpl-titulo').value || '').trim();
+    if (!titulo) { done(); Toast.aviso('Título do template obrigatório.'); return; }
+    var dados = {
+      sessaoId:  _idAtual,
+      titulo:    titulo,
+      descricao: (document.getElementById('tpl-descricao').value || '').trim(),
+      categoria: document.getElementById('tpl-categoria').value || 'custom',
+      icone:     (document.getElementById('tpl-icone').value || '📋').trim(),
+      publico:   document.getElementById('tpl-publico').checked
+    };
+    GAS.sessao.criarTemplate(dados, function(resp) {
+      done();
+      if (!resp || !resp.ok) { Toast.erro('Erro ao salvar template.'); return; }
+      Toast.sucesso('Template salvo com sucesso!');
+      document.getElementById('sess-tpl-modal').classList.add('oculto');
+    }, function(e) { done(); Toast.erro(e.message || e); });
+  }
+
   return { aoAbrir: aoAbrir, carregar: carregar, abrirForm: abrirForm, fecharForm: fecharForm,
            criar: criar, abrirHost: abrirHost, fecharHost: fecharHost, copiarLink: copiarLink,
            ativar: ativar, avancar: avancar, encerrar: encerrar,
-           abrirProjecao: abrirProjecao, fecharProjecao: fecharProjecao };
+           abrirProjecao: abrirProjecao, fecharProjecao: fecharProjecao,
+           wizardNext: wizardNext, wizardBack: wizardBack, wizardDoZero: wizardDoZero,
+           usarTemplate: usarTemplate, toggleGamif: toggleGamif, togglePickerTipo: togglePickerTipo,
+           addAtividade: addAtividade, removerAtiv: removerAtiv, moverAtiv: moverAtiv,
+           setAtivCampo: setAtivCampo, setAtivOpcao: setAtivOpcao, setAtivGabarito: setAtivGabarito,
+           addOpcao: addOpcao, removerOpcao: removerOpcao,
+           abrirModalTemplate: abrirModalTemplate, salvarTemplate: salvarTemplate };
 })();
 Router.registrar('sessoes', 'Sessões Interativas', SessaoUI.aoAbrir);
 

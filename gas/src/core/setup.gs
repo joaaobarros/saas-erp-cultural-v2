@@ -337,6 +337,14 @@ function inicializarSistema() {
     }
   }
 
+  // Interatividade — Templates de Sessões
+  if (typeof TemplatesInteratividadeRepository !== 'undefined' &&
+      typeof TemplatesInteratividadeRepository.prepararIndice === 'function') {
+    try { TemplatesInteratividadeRepository.prepararIndice(); } catch(e) {
+      Logger.warn('setup', 'inicializarSistema', 'TemplatesInteratividadeRepository.prepararIndice: ' + e.message);
+    }
+  }
+
   // Colaboração — Document Sharing (Papermark pattern)
   if (typeof DocumentSharingService !== 'undefined' &&
       typeof DocumentSharingService.prepararIndice === 'function') {

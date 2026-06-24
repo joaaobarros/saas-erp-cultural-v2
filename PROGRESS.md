@@ -39,14 +39,22 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s133)**: **feat — Sessões Interativas v2: UI portal redesenhado, nuvem de palavras visual, gráficos de barras, modo projeção, QR real — Deploy @1053.**
+**Fase atual (s134)**: **feat — Sessões Interativas v3: templates, gamificação, wizard 3 passos, tipo votação, ranking, timer, tela de identidade — Deploy @1054.**
 
 **O que foi implementado agora**:
-- **Portal participante** (`portal_sessao_participante.html`): redesenho completo — badges de letra (A/B/C) nas opções de quiz, confetti CSS ao enviar resposta, tela de aguardando animada, contador de total de atividades, feedback visual de sucesso, Enter nos inputs para avançar, foco automático.
-- **ctrl_sessao.gs — ativar**: retorna `{sessao, linkParticipante}` (antes retornava apenas sessão atualizada sem URL); isso corrigia QR code que nunca aparecia.
-- **ctrl_sessao.gs — resultados**: adicionados `indiceAtual` e `totalAtividades` na resposta (antes ausentes, painel host exibia "—" para tudo).
-- **Painel host HTML** (`index.html`): layout reformulado — info bar com contadores de participantes e respostas, seção de acesso com QR 160×160 real (api.qrserver.com), código da sessão em destaque, botão "Copiar Link", botão "Projetar" (modo apresentação).
-- **SessaoUI JS** (`index.html`): reescrita completa — `_carregarResultados` usa shape correto do backend; `_renderBarras` com barras horizontais animadas e % para quiz/enquete; `_renderNuvem` com cloud visual (font-size proporcional à frequência, 50 palavras, cores variadas); `_renderCards` com cards scrolláveis para brainstorm/Q&A; modo projeção fullscreen (`abrirProjecao/fecharProjecao`) com versões ampliadas de todas as visualizações; `copiarLink` com fallback clipboard.
+- **templates_repository.gs** (novo): 4 templates sistema (Quiz, Quebra-Gelo, Retrospectiva, Apresentação Participativa), templates da org em Drive JSON; CRUD com controle de permissão; sistemas invioláveis.
+- **ctrl_sessao.gs** — novos endpoints: `ctrl_sessao_listarTemplates`, `criarTemplate`, `atualizarTemplate`, `excluirTemplate`, `criarDeTemplate`, `ctrl_sessao_ranking`; modificados: `publica_entrar` (retorna modoIdentidade + gamificacaoHabilitada), `publica_responder` (calcula correta + pontos_ganhos + bônus velocidade); `resultados` agora agrega tipo `votacao`.
+- **sessao_interativa_repository.gs** — schema estendido: sessão ganha `gamificacao/modoIdentidade/templateId/descricao`; resposta ganha `avatar/apelido/correta/pontos_ganhos/tempo_resposta`.
+- **setup.gs** — registra `TemplatesInteratividadeRepository.prepararIndice()` em `inicializarSistema()`.
+- **index.html GAS namespace** — `GAS.sessao` estendido com 6 novos bindings (ranking, templates CRUD, criarDeTemplate).
+- **index.html HTML** — modal simples substituído por wizard 3 passos: galeria de templates → configurações (modoIdentidade, gamificação) → builder visual de atividades (add/reorder/edit por tipo); modal "Salvar como Template"; painel lateral de ranking ao vivo; timer countdown; botão "Salvar como Template" (encerrada).
+- **index.html SessaoUI JS** — wizard completo com lógica de templates, builder de atividades por tipo (quiz com gabarito/pontos/timer, enquete, nuvem, brainstorm, Q&A, votação); timer host sincronizado por atividade; ranking ao vivo a cada ciclo; `_carregarResultados` estendido (versão substitui original por hoisting).
+- **portal_sessao_participante.html** — reescrita completa: tela de identidade (nome real / persona / escolha), galeria de 30 avatares emoji, timer countdown com auto-submit, tipo `votacao` com distribuição de N votos, feedback imediato pós-quiz (✅/❌ + gabarito + pontos), tela de ranking (busca `ctrl_sessao_ranking`), stat de pontos na tela final.
+
+**Fase anterior (s133)**: **feat — Sessões Interativas v2: UI portal redesenhado, nuvem de palavras visual, gráficos de barras, modo projeção, QR real — Deploy @1053.**
+
+**O que foi implementado em s133**:
+- Portal participante redesenho, ctrl_sessao.gs correções de ativar/resultados, painel host com QR real, SessaoUI JS reescrita.
 
 **Fase anterior (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @1052.**
 
