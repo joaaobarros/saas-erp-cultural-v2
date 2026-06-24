@@ -37285,7 +37285,12 @@ var QuadrosUI = (function() {
       var lista = (resp && resp.ok) ? resp.data : [];
       sel.innerHTML = '<option value="">— Nenhuma —</option>'
         + lista.filter(function(r) { return r.status !== 'cancelada'; })
-            .map(function(r) { return '<option value="' + escaparHtml(r.id) + '">' + escaparHtml(r.titulo || r.id) + '</option>'; }).join('');
+            .sort(function(a,b){ return (b.dataHora||'').localeCompare(a.dataHora||''); })
+            .map(function(r) {
+              var dt = r.dataHora ? fmtDataPtBR(r.dataHora.slice(0,10)) + (r.dataHora.length > 10 ? ' ' + r.dataHora.slice(11,16) : '') : '';
+              var lbl = escaparHtml(r.titulo || r.id) + (dt ? ' — ' + dt : '');
+              return '<option value="' + escaparHtml(r.id) + '">' + lbl + '</option>';
+            }).join('');
     }, function() { sel.innerHTML = '<option value="">— Nenhuma —</option>'; });
   }
 

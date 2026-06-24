@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s135)**: **feat — Quadros: Napkin + Miro integrados, apresentação, sticky/frame/tabela, borracha melhorada, integração cross-module Ações+Reuniões sem quebra de fluxo — Deploy @1061.**
+**Fase atual (s135)**: **feat — Quadros: Napkin + Miro integrados, apresentação, sticky/frame/tabela, borracha melhorada, integração cross-module Ações+Reuniões sem quebra de fluxo; fix select reunião com data+hora — Deploy @1063.**
 
 **O que foi implementado agora**:
 - **Napkin + Miro**: campos `tipo` (interno/miro/napkin), `urlExterna`, `napkinPrompt`, `categoria` no form. Miro: conversão automática de share URL → live-embed (`?autoplay=yep&embedAutoplay=true`). Napkin: gera URL `app.napkin.ai/?text=...` do prompt. Overlay iframe (`#qdro-ext-overlay`, z-index:1500) com botão apresentar fullscreen + abrir em nova aba. 12 categorias visuais dinâmicas por tipo (`_CATS_BY_TIPO`).
