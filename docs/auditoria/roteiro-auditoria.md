@@ -1,10 +1,22 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s132 @1052 (BI heat: CEP como chave precisao, query logradouro+bairro+cidade) · s131 @1051 (BI heat: mesma base coords que bairros/cidades) · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s134 @1054 (Sessões Interativas v3: templates, gamificação, wizard, votação, ranking, timer, identidade) · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s132 — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade
+### Estado atual: s134 — Sessões Interativas v3: templates, gamificação, wizard, votação, ranking, timer, identidade
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1054 | s134 | **templates_repository.gs** (novo): 4 templates sistema + CRUD org. **ctrl_sessao.gs**: `listarTemplates`, `criarTemplate`, `atualizarTemplate`, `excluirTemplate`, `criarDeTemplate`, `ranking`; `publica_entrar` retorna modoIdentidade+gamificacaoHabilitada; `publica_responder` calcula correta+pontos+bônus velocidade. **sessao_interativa_repository.gs**: schema estendido (gamificacao/modoIdentidade/templateId; resposta ganha avatar/apelido/correta/pontos_ganhos/tempo_resposta). **setup.gs** registra TemplatesInteratividadeRepository. **index.html**: wizard 3 passos (galeria → config → builder), ranking ao vivo, timer countdown, "Salvar como Template". **portal_sessao_participante.html**: reescrita completa com tela de identidade, 30 avatares emoji, tipo votação, feedback quiz, tela ranking. |
+
+### Estado anterior: s133 — Sessões Interativas v2: UI portal redesenhado, nuvem visual, barras, projeção, QR real
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1053 | s133 | **Portal participante** redesenho completo. **ctrl_sessao.gs**: correções de ativar/resultados. **Painel host**: QR code real (qrcode.js). **SessaoUI**: reescrita com nuvem de palavras visual, gráficos de barras, modo projeção (fullscreen). |
+
+### Estado anterior: s132 — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
