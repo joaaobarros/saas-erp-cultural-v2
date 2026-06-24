@@ -44,7 +44,9 @@ function ctrl_sessao_ativar(id) {
     if (sessao.criadoPor !== ctx.email && !['admin','superadmin'].includes(ctx.papel)) {
       throw new Error('Sem permissão.');
     }
-    return SessaoInterativaRepository.atualizarSessao(ctx.orgId, id, { status: 'ativa', atividadeAtual: 0 });
+    var atualizada = SessaoInterativaRepository.atualizarSessao(ctx.orgId, id, { status: 'ativa', atividadeAtual: 0 });
+    var linkParticipante = ScriptApp.getService().getUrl() + '?secao=sessao&codigo=' + atualizada.codigo;
+    return { sessao: atualizada, linkParticipante: linkParticipante };
   }, 'ctrl_sessao_ativar');
 }
 
@@ -100,6 +102,8 @@ function ctrl_sessao_resultados(id) {
       sessao:            { id: sessao.id, titulo: sessao.titulo, status: sessao.status,
                            atividadeAtual: sessao.atividadeAtual, codigo: sessao.codigo },
       atividadeAtual:    atividade,
+      indiceAtual:       atividadeIdx,
+      totalAtividades:   (sessao.atividades||[]).length,
       totalRespostas:    respostas.length,
       totalParticipantes: totalParticipantes,
       contagem:          contagem,

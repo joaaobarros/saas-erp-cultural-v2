@@ -39,7 +39,16 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @1052.**
+**Fase atual (s133)**: **feat — Sessões Interativas v2: UI portal redesenhado, nuvem de palavras visual, gráficos de barras, modo projeção, QR real — Deploy @1053.**
+
+**O que foi implementado agora**:
+- **Portal participante** (`portal_sessao_participante.html`): redesenho completo — badges de letra (A/B/C) nas opções de quiz, confetti CSS ao enviar resposta, tela de aguardando animada, contador de total de atividades, feedback visual de sucesso, Enter nos inputs para avançar, foco automático.
+- **ctrl_sessao.gs — ativar**: retorna `{sessao, linkParticipante}` (antes retornava apenas sessão atualizada sem URL); isso corrigia QR code que nunca aparecia.
+- **ctrl_sessao.gs — resultados**: adicionados `indiceAtual` e `totalAtividades` na resposta (antes ausentes, painel host exibia "—" para tudo).
+- **Painel host HTML** (`index.html`): layout reformulado — info bar com contadores de participantes e respostas, seção de acesso com QR 160×160 real (api.qrserver.com), código da sessão em destaque, botão "Copiar Link", botão "Projetar" (modo apresentação).
+- **SessaoUI JS** (`index.html`): reescrita completa — `_carregarResultados` usa shape correto do backend; `_renderBarras` com barras horizontais animadas e % para quiz/enquete; `_renderNuvem` com cloud visual (font-size proporcional à frequência, 50 palavras, cores variadas); `_renderCards` com cards scrolláveis para brainstorm/Q&A; modo projeção fullscreen (`abrirProjecao/fecharProjecao`) com versões ampliadas de todas as visualizações; `copiarLink` com fallback clipboard.
+
+**Fase anterior (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @1052.**
 
 **O que foi implementado agora**:
 - **_biGeocodificar unificada** (i_demografico_controller.gs): NUNCA usa CEP na query. Sempre logradouro+bairro+cidade+UF+Brasil. CEP âncora errado (resolve nomes genéricos em outros estados); lugares nomeados ancoram à cidade correta.
