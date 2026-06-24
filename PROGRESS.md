@@ -39,14 +39,18 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s135)**: **feat — Quadros: Napkin + Miro integrados, apresentação, sticky/frame/tabela, borracha melhorada, integração cross-module Ações+Reuniões sem quebra de fluxo; fix select reunião com data+hora — Deploy @1063.**
+**Fase atual (s136)**: **feat — Estúdio de Análises Visuais no BI: editor de tabela, 6 tipos de gráfico SVG, galeria, importação do ERP e colar CSV — Deploy @1065.**
 
 **O que foi implementado agora**:
-- **Napkin + Miro**: campos `tipo` (interno/miro/napkin), `urlExterna`, `napkinPrompt`, `categoria` no form. Miro: conversão automática de share URL → live-embed (`?autoplay=yep&embedAutoplay=true`). Napkin: gera URL `app.napkin.ai/?text=...` do prompt. Overlay iframe (`#qdro-ext-overlay`, z-index:1500) com botão apresentar fullscreen + abrir em nova aba. 12 categorias visuais dinâmicas por tipo (`_CATS_BY_TIPO`).
-- **Ferramentas canvas**: Sticky Note (7 cores, drop-shadow, word-wrap, editor modal com paleta), Frame/Slide (borda roxa tracejada, label editável via `_modalInput`), Tabela (grid configurável, cabeçalho cinza, texto por célula).
-- **Borracha melhorada**: hit-detection por distância ao bounding-box (closest-point), preview visual círculo vermelho tracejado, `_drawEraserPreview()`.
-- **Apresentação**: `apresentarCanvas()` (modo `#qdro-pres-overlay` dark, z-index:1800, pan/zoom/ESC) e `apresentarExterno()` via `iframe.requestFullscreen()` para Miro/Napkin.
-- **Integração cross-module sem quebra de fluxo**: aba "Quadros" no painel de Ações e no modal de Reuniões. `_novoQuadroAcao` / `_novoQuadroReuniao` abrem `#qdro-modal` (z-index:1100) sobre o contexto pai **sem fechar o painel/modal**. Pós-salvar: callback `setAfterSaveCb` atualiza a lista de quadros da aba correta em vez de navegar para a view Quadros. Ação pré-selecionada + título sugerido automaticamente.
+- **Nova aba "Análises" no BI**: botão tab `analytics` no `DashboardUI`, div `#dash-tab-analises` + `#analise-studio-root`.
+- **AnaliseEstudioUI** (IIFE, ~550 linhas): modo galeria (grid de análises salvas com miniatura SVG) e modo editor (tabela de dados + configuração + preview de gráfico).
+- **6 tipos de gráfico SVG nativo**: Barras verticais, Barras horizontais, Linha, Área, Pizza (com %), Dispersão. Multi-séries (até 4 colunas). Grid, eixos e tooltips via `<title>`. Modo miniatura `_mini` para thumbnails na galeria.
+- **Importação de dados**: colar CSV (modal com textarea), importar do ERP (operacional/financeiro/estoque via `ctrl_analise_importar_dados`), editor de tabela manual com add/remove linha e coluna.
+- **Paleta de 8 cores** interativa; visualização fullscreen via modal (`_abrirVisualizador`).
+- **Backend** `analise_controller.gs`: `ctrl_analise_listar`, `ctrl_analise_salvar`, `ctrl_analise_excluir`, `ctrl_analise_importar_dados` — persistência em PropertiesService (`ANALISE_STUDIO_ITEMS`).
+- **GAS.analise** namespace adicionado em `index.html`.
+
+**Fase anterior (s135)**: **feat — Quadros: Napkin + Miro integrados, apresentação, sticky/frame/tabela, borracha melhorada, integração cross-module Ações+Reuniões sem quebra de fluxo; fix select reunião com data+hora — Deploy @1063.**
 
 **Fase anterior (s134)**: **feat — Sessões Interativas v3: templates, gamificação, wizard 3 passos, tipo votação, ranking, timer, tela de identidade — Deploy @1054.**
 
