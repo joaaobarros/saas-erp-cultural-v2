@@ -45620,15 +45620,14 @@ var BiDemograficoUI = (function () {
     if (_showCalor) _addHeatOverlay(regs, geo);
   }
 
-  // Sobrepõe leaflet-heat — mesma base de coordenadas que _renderBairros.
+  // Sobrepõe leaflet-heat — geoKey (cep:*) primeiro para precisão por CEP/rua;
+  // bairroKey como fallback para quem não tem CEP cadastrado.
   // Gradiente azul-índigo contrasta com paleta IDH (vermelhos/ambers/verdes).
   function _addHeatOverlay(regs, geo) {
     if (typeof L.heatLayer === 'undefined') return;
     var pontos = [];
     regs.forEach(function(r) {
-      // Mesma prioridade de _renderBairros: bairroKey primeiro, geoKey como fallback.
-      // Garante que heat, bairros e cidades usem a mesma fonte de coordenadas.
-      var k = r.bairroKey || r.geoKey;
+      var k = r.geoKey || r.bairroKey;
       if (k && geo[k]) pontos.push([geo[k].lat, geo[k].lng, 1]);
     });
     if (!pontos.length) return;

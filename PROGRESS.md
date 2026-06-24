@@ -39,7 +39,14 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @1051.**
+**Fase atual (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @pendente.**
+
+**O que foi implementado agora**:
+- **_biGeocodificar unificada** (i_demografico_controller.gs): NUNCA usa CEP na query. Sempre logradouro+bairro+cidade+UF+Brasil. CEP âncora errado (resolve nomes genéricos em outros estados); lugares nomeados ancoram à cidade correta.
+- **geoKey = cep:XXXXXXXX** quando CEP disponível — chave distinta do bairroKey. Geocodificação com logradouro+bairro+cidade dá precisão por rua/quadra, não centroide de bairro.
+- **Cache geo6:cep:***: bust de geo3:cep:* (CEP-puro antigo) e de todos os end:* (chave descontinuada).
+- **Heat .geoKey || r.bairroKey**: per-CEP primeiro, bairro como fallback — diferente de bairros view (airroKey || geoKey).
+**Fase anterior (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @1051.**
 
 **O que foi implementado agora**:
 - **Frontend heat unificado** (`index.html`, `_addHeatOverlay`): trocado `r.geoKey || r.bairroKey` por `r.bairroKey || r.geoKey` — mesma prioridade de `_renderBairros`. Heat, bairros e cidades agora usam a mesma fonte de coordenadas.

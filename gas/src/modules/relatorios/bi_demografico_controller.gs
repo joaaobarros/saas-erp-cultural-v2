@@ -94,29 +94,21 @@ function _biViaCep(cep) {
  * info: { logradouro?, numero?, bairro, cidade, uf, cep? }
  * Retorna {lat,lng} ou {erro:true}.
  *
- * Estratégia: CEP puro quando disponível.
- * CEPs brasileiros de 8 dígitos identificam a face de quadra com precisão
- * de ~50–100 m. Incluir o logradouro na query faz o geocodificador ignorar
- * o CEP e resolver nomes genéricos ("Rua A", "Rua Dois") em outros estados.
- * Fallback sem CEP: logradouro + bairro + cidade + UF.
+ * Estratégia: NUNCA usar CEP na query — o CEP é apenas chave de cache.
+ * A query usa lugares nomeados (logradouro, bairro, cidade, UF) que ancoram
+ * a busca à cidade correta. CEP na query faz o geocodificador resolver
+ * nomes genéricos ("Rua A", "Rua Dois") em outros estados.
+ * Quanto mais campos disponíveis, mais precisa a localização.
  */
 function _biGeocodificar(info) {
-  var cepLimpo = String(info.cep || '').replace(/\D/g, '');
-  var query;
-  if (cepLimpo.length === 8) {
-    // CEP puro — localiza a face de quadra; mais confiável que nome de rua + CEP
-    query = cepLimpo.slice(0, 5) + '-' + cepLimpo.slice(5) + ', Brasil';
-  } else {
-    // fallback sem CEP: bairro + cidade + UF
-    var partes = [];
-    if (info.logradouro && info.numero) partes.push(info.logradouro + ', ' + info.numero);
-    else if (info.logradouro)           partes.push(info.logradouro);
-    if (info.bairro) partes.push(info.bairro);
-    if (info.cidade) partes.push(info.cidade);
-    partes.push(info.uf || 'CE');
-    partes.push('Brasil');
-    query = partes.filter(function (p) { return !!String(p || '').trim(); }).join(', ');
-  }
+  var partes = [];
+  if (info.logradouro && info.numero) partes.push(info.logradouro + ', ' + info.numero);
+  else if (info.logradouro)           partes.push(info.logradouro);
+  if (info.bairro) partes.push(info.bairro);
+  if (info.cidade) partes.push(info.cidade);
+  partes.push(info.uf || 'CE');
+  partes.push('Brasil');
+  var query = partes.filter(function (p) { return !!String(p || '').trim(); }).join(', ');
   try {
     var r = Maps.newGeocoder().setRegion('br').setLanguage('pt-BR').geocode(query);
     if (r && r.status === 'OK' && r.results && r.results.length) {
@@ -166,9 +158,9 @@ function _biResolverGeo(locais) {
   var consultas = 0; // apenas contagem informativa (sem cap)
 
   Object.keys(locais).forEach(function (chave) {
-    // geo5: para end:* — bust das entradas geo4: que usavam logradouro+número (query errada);
-    // bairros e cep: mantêm geo3: para não re-geocodificar desnecessariamente.
-    var prefix   = chave.slice(0, 4) === 'end:' ? 'geo5:' : 'geo3:';
+    // geo6: para cep:* — nova query logradouro+bairro+cidade (bust dos geo3:cep:* com CEP-puro).
+    // bairro|cidade e |cidade mantêm geo3: (query inalterada, sem necessidade de re-geocodificar).
+    var prefix   = chave.slice(0, 4) === 'cep:' ? 'geo6:' : 'geo3:';
     var cacheKey = prefix + chave;
     var hit = cache[cacheKey] || novos[cacheKey];
     // Erros cacheados são ignorados — a geocodificação é retentada na próxima chamada.
@@ -184,13 +176,15 @@ function _biResolverGeo(locais) {
     if (hit && !hit.erro) geo[chave] = { lat: hit.lat, lng: hit.lng };
   });
 
-  // Purgar entradas legadas (geo:, geo2:) e end: que usavam CEP-puro (geo3:end:*).
+  // Purgar entradas legadas e todas as variantes de cep:/end: com query errada.
   modifyJSON(_BI_GEO_ARQUIVO, function (atual) {
     var mapa = (atual && !Array.isArray(atual) && typeof atual === 'object') ? atual : {};
     Object.keys(mapa).forEach(function (k) {
       if (k.slice(0, 4) === 'geo:' || k.slice(0, 5) === 'geo2:') delete mapa[k];
-      // geo3:end:* e geo4:end:* são obsoletos (geo4 usava logradouro+número → coordenadas erradas)
-      if (k.slice(0, 9) === 'geo3:end:' || k.slice(0, 9) === 'geo4:end:') delete mapa[k];
+      // end:* de todas as versões — chave descontinuada
+      if (k.slice(0, 9) === 'geo3:end:' || k.slice(0, 9) === 'geo4:end:' || k.slice(0, 9) === 'geo5:end:') delete mapa[k];
+      // geo3:cep:* usava CEP-puro na query (coordenadas às vezes erradas) → substituído por geo6:cep:*
+      if (k.slice(0, 9) === 'geo3:cep:') delete mapa[k];
     });
     Object.keys(novos).forEach(function (k) { mapa[k] = novos[k]; });
     return mapa;
@@ -266,15 +260,16 @@ function ctrl_bi_demografico_equipe() {
         cidKey = '|' + _biNormalizar(cidade);
         locais[cidKey] = { bairro: '', cidade: cidade, uf: uf };
       }
-      // geoKey aponta para a mesma chave que _renderBairros usa:
-      // bairroKey quando disponível (geocodificação bairro+cidade, mesma base de todos os modos);
-      // cep: como fallback apenas quando não há bairro+cidade.
+      // geoKey = cep:XXXXXXXX quando CEP disponível — chave distinta do bairroKey.
+      // Permite que o heat overlay posicione cada pessoa no seu CEP específico
+      // (precisão por rua/quadra) em vez do centroide do bairro.
+      // A geocodificação usa logradouro+bairro+cidade+UF (nunca CEP na query).
       var geoKey = '';
-      if (bairroKey) {
-        geoKey = bairroKey;
-      } else if (cep.length === 8) {
+      if (cep.length === 8) {
         geoKey = 'cep:' + cep;
-        locais[geoKey] = { bairro: bairro, cidade: cidade, uf: uf, cep: cep };
+        locais[geoKey] = { logradouro: logradouro, numero: numero, bairro: bairro, cidade: cidade, uf: uf };
+      } else {
+        geoKey = bairroKey;
       }
       // nomeDisplay: primeiro nome + inicial do sobrenome — identificação leve para planejamento de eventos
       var nomePartes = String(c.nome || '').trim().split(/\s+/);
