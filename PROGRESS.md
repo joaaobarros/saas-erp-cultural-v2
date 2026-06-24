@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @pendente.**
+**Fase atual (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @1051.**
 
 **O que foi implementado agora**:
 - **Frontend heat unificado** (`index.html`, `_addHeatOverlay`): trocado `r.geoKey || r.bairroKey` por `r.bairroKey || r.geoKey` — mesma prioridade de `_renderBairros`. Heat, bairros e cidades agora usam a mesma fonte de coordenadas.
