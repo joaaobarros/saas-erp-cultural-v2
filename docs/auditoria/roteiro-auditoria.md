@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s132 @pendente (BI heat: CEP como chave precisao, query logradouro+bairro+cidade) · s131 @1051 (BI heat: mesma base coords que bairros/cidades) · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s132 @1052 (BI heat: CEP como chave precisao, query logradouro+bairro+cidade) · s131 @1051 (BI heat: mesma base coords que bairros/cidades) · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -8,7 +8,7 @@
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
-| @pendente | s132 | **_biGeocodificar** nunca usa CEP na query — logradouro+bairro+cidade+UF+Brasil sempre. **geoKey = cep:XXXXXXXX** separado do bairroKey; geocodificado com logradouro+bairro+cidade → precisão por rua. **geo6:cep:*** substitui geo3:cep:* (CEP-puro). Heat usa geoKey || bairroKey (per-CEP > bairro). |
+| @1052 | s132 | **_biGeocodificar** nunca usa CEP na query — logradouro+bairro+cidade+UF+Brasil sempre. **geoKey = cep:XXXXXXXX** separado do bairroKey; geocodificado com logradouro+bairro+cidade → precisão por rua. **geo6:cep:*** substitui geo3:cep:* (CEP-puro). Heat usa geoKey || bairroKey (per-CEP > bairro). |
 ### Estado anterior: s131 — BI heat: mesma base de coordenadas que bairros/cidades
 
 | Deploy | Fase | O que foi implementado |

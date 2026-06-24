@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @pendente.**
+**Fase atual (s132)**: **Fix — BI heat: CEP como chave de precisão, query logradouro+bairro+cidade — Deploy @1052.**
 
 **O que foi implementado agora**:
 - **_biGeocodificar unificada** (i_demografico_controller.gs): NUNCA usa CEP na query. Sempre logradouro+bairro+cidade+UF+Brasil. CEP âncora errado (resolve nomes genéricos em outros estados); lugares nomeados ancoram à cidade correta.
