@@ -39,7 +39,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s141)**: **feat — Quadros v5: conector inteligente (snap a âncoras), 8 novas figuras, marcador/pincel, estilo de linha, 14 novos templates categorizados, vincular tarefa/pessoa, dados do sistema — Deploy @1072.**
+**Fase atual (s142)**: **feat — Estúdio de Análises v4: Dashboard Builder (Power BI-like), 4 tipos de widget, grid flexível, editor modal, visibilidade + compartilhamento, fix [object Object] nos compartilhamentos — Deploy @1073.**
+
+**O que foi implementado agora**:
+- **Dashboard Builder completo**: aba "Dashboards" no Estúdio de Análises ao lado de "Análises". Galeria de dashboards com preview de ícones por widget, data de criação e indicador de visibilidade.
+- **4 tipos de widget**: Gráfico (9 tipos SVG existentes), KPI Card (valor agregado com soma/contagem/média/máx/mín, formatos número/moeda/porcentagem), Tabela (grid paginada) e Separador/Título (seção visual).
+- **Grid flexível**: 5 tamanhos de coluna — Total (100%), 2/3, 1/2, 1/3, 1/4. Responsivo (mobile → tudo full). Reordenação via setas ↑↓ por widget. Seletor de tamanho inline no cabeçalho do widget.
+- **Widget Editor Modal**: configuração completa via `_abrirModalSimples`. Tipo, título, subtítulo, dataset (optgroups por módulo), cruzamento, modo ao vivo/estático, tipo de gráfico, cor, agregação KPI, formato, máx. linhas tabela, tamanho.
+- **Dashboard View (read-only)**: carrega widgets em paralelo via GAS. Widgets dinâmicos re-buscam dados do backend ao abrir. Botão Editar aparece apenas para o dono.
+- **Visibilidade + compartilhamento**: privada/restrita/pública — mesmo modelo das análises. Compartilhamento por pessoa, setor ou cargo via datalist com dados reais do boot.
+- **Backend `analise_controller.gs`**: `ctrl_analise_dashboard_listar`, `ctrl_analise_dashboard_salvar`, `ctrl_analise_dashboard_excluir`, `ctrl_analise_widget_dados` — chave `ANALISE_DASHBOARD_ITEMS` separada. Reutiliza `_analise_podeVer`.
+- **fix [object Object]**: `_compTipoChange` e `_dashCompTipoChg` agora extraem `s.id||s.nome||s.label` dos objetos `boot.setores` em vez de converter o objeto para string.
+- **CSS**: `.db-canvas`, `.db-widget`, `.db-widget-hdr/body/ttl/ico`, `.db-kpi-val/lbl`, `.db-sep-body/title/sub`, `.db-table`, `.db-galeria-grid`, `.db-card`, `.db-add-menu`, `.db-tab-btn`, `.db-tipo-pill`, `.db-size-chip`, `.db-view-toolbar` adicionados.
+
+**Fase anterior (s141)**: **feat — Quadros v5: conector inteligente (snap a âncoras), 8 novas figuras, marcador/pincel, estilo de linha, 14 novos templates categorizados, vincular tarefa/pessoa, dados do sistema — Deploy @1072.**
 
 **O que foi implementado agora**:
 - **Conector inteligente**: ferramenta `connector` mostra 4 âncoras (N/S/L/O) em cada forma ao passar o mouse; snap automático ao clicar perto de uma âncora; cria seta com estilo de linha configurável; duplo clique edita etiqueta do conector.

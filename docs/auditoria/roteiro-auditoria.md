@@ -1,13 +1,14 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s141 @1072 (Quadros v5: conector inteligente, 8 figuras, marcador/pincel, 14 templates, vincular tarefa/pessoa, dados do sistema) · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s142 @1073 (Estúdio de Análises v4: Dashboard Builder, 4 tipos de widget, fix [object Object]) · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s141 — Quadros v5: conector inteligente, figuras, templates, dados do sistema
+### Estado atual: s142 — Estúdio de Análises v4: Dashboard Builder
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
+| @1073 | s142 | **AnaliseEstudioUI** + **analise_controller.gs**: Dashboard Builder completo — aba "Dashboards" na galeria; 4 tipos de widget (Gráfico, KPI Card, Tabela, Separador); grid flexível 5 tamanhos; Widget Editor Modal com dataset optgroups + agregação + cor; Dashboard View com dados ao vivo em paralelo; visibilidade + compartilhamento por pessoa/setor/cargo; backend `ANALISE_DASHBOARD_ITEMS`; **fix [object Object]**: `_compTipoChange` e `_dashCompTipoChg` extraem `s.nome||s.id` dos objetos `boot.setores`. |
 | @1072 | s141 | **QuadrosUI** (index.html): conector inteligente com snap a 4 âncoras por forma + etiqueta editável por duplo clique; 8 novas figuras (triângulo, hexágono, pentágono, estrela, callout, marcador, pincel, conector); estilo de linha (sólida/tracejada/pontilhada) na barra inferior; 14 templates em 4 categorias; vincular tarefa (busca GAS.tarefas), vincular pessoa (modal manual), dados do sistema (quadro/ação/reunião/tarefas/indicador como widget). |
 | @1071 | s140 | **AnaliseEstudioUI** + **analise_controller.gs**: cruzamento livre de qualquer par de datasets via "Cruzar com…"; modo Ao vivo (re-busca ao abrir); Meu Painel com pin e localStorage; picker visibilidade (Privada/Compartilhada/Pública) com destinatários por pessoa/setor/cargo; `donoEmail` gravado no backend; `_analise_podeVer()` filtra por email/setor/cargo; proteção de edição por não-dono. |
 
@@ -622,7 +623,31 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 118 (2026-06-25)
+## HANDOFF ATUAL — SESSÃO 119 (2026-06-25)
+
+### Estado atual: Feat — Estúdio de Análises v4: Dashboard Builder — Deploy @1073
+
+### O que foi feito nesta sessão (s142)
+| Deploy | O que foi implementado |
+|---|---|
+| @1073 | **AnaliseEstudioUI** + **analise_controller.gs**: Dashboard Builder completo (aba Dashboards, 4 tipos de widget, grid 5 tamanhos, Widget Editor Modal, Dashboard View ao vivo, visibilidade + compartilhamento). Fix [object Object] em setores/cargos nos painéis de compartilhamento. |
+
+### Pendente para smoke test
+- Análises → aba "Dashboards" → verificar galeria vazia com CTA.
+- Criar novo dashboard → editor carrega → botão "Adicionar widget" → dropdown com 4 opções.
+- Adicionar widget Gráfico → editor modal abre → selecionar dataset → confirmar → widget aparece no canvas.
+- Adicionar widget KPI → configurar agregação e formato → valor calcula corretamente.
+- Adicionar widget Tabela e Separador → exibição correta.
+- Redimensionar widget com select de tamanho → classes CSS mudam em tempo real.
+- Mover widget com setas ↑↓ → ordem do canvas atualiza.
+- Salvar dashboard → aparece na galeria com widgets como ícones de preview.
+- Visualizar dashboard → widgets ao vivo carregam dados do backend.
+- Compartilhamento → visibilidade "Compartilhada" → selecionar setor → verificar que exibe nome do setor (não `[object Object]`).
+- Excluir dashboard → modal de confirmação → some da galeria.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 118 (2026-06-25)
 
 ### Estado atual: Feat — Quadros v5: conector inteligente, figuras, templates, dados do sistema — Deploy @1072
 

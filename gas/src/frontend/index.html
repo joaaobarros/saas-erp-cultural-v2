@@ -42222,6 +42222,613 @@ var AnaliseEstudioUI = (function() {
     '</svg>';
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD BUILDER
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function _renderDashboardGaleria() {
+    var meuEmail = ((App.getBoot && App.getBoot()) || {}).usuarioEmail || '';
+    if (!_dashLista.length) {
+      return '<div style="text-align:center;padding:56px 20px;">' +
+        '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">dashboard_customize</span>' +
+        '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Nenhum dashboard criado ainda.</p>' +
+        '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Combine múltiplos gráficos, KPIs e tabelas numa única visualização interativa.</p>' +
+        '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novoDashboard()" data-bg-skip="1"><span class="ms ms-sm">add</span> Criar primeiro dashboard</button>' +
+      '</div>';
+    }
+    var html = '<div class="db-galeria-grid">';
+    _dashLista.slice().reverse().forEach(function(d) {
+      var safeId = JSON.stringify(d.id||'').replace(/"/g,"'");
+      var wCount = (d.widgets||[]).length;
+      var isMeu = !d.donoEmail || d.donoEmail === meuEmail;
+      var vis = d.visibilidade || 'privada';
+      var visIcone = vis==='privada'?'lock':vis==='restrita'?'group':'public';
+      var previewIcons = (d.widgets||[]).slice(0,8).map(function(w){
+        var ic = w.tipo==='kpi'?'speed':w.tipo==='tabela'?'table_chart':w.tipo==='separador'?'title':'bar_chart';
+        var sz = w.tamanho==='full'?'28px':w.tamanho==='1/2'?'22px':'18px';
+        return '<span class="ms" style="font-size:'+sz+';color:var(--primary);opacity:.7;">'+ic+'</span>';
+      }).join('');
+      html +=
+        '<div class="db-card">' +
+          '<div class="db-card-preview" onclick="AnaliseEstudioUI.visualizarDashboard('+safeId+')" style="cursor:pointer;">' +
+            (previewIcons||'<span class="ms" style="font-size:36px;color:var(--text2);">dashboard</span>') +
+          '</div>' +
+          '<div class="db-card-info">' +
+            '<div style="font-size:14px;font-weight:700;margin-bottom:4px;">' + _esc(d.titulo) + '</div>' +
+            '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">' +
+              '<span style="background:var(--surface2);color:var(--text2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+wCount+' widget'+(wCount!==1?'s':'')+'</span>' +
+              '<span style="background:var(--surface2);color:var(--text2);border-radius:20px;padding:2px 6px;font-size:11px;display:inline-flex;align-items:center;gap:2px;"><span class="ms" style="font-size:10px;">'+visIcone+'</span></span>' +
+              (!isMeu && d.donoEmail ? '<span style="font-size:10px;color:var(--text2);">'+_esc(d.donoEmail.split('@')[0])+'</span>' : '') +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--text2);margin-top:3px;">'+fmtDataPtBR((d.criadoEm||'').slice(0,10))+'</div>' +
+          '</div>' +
+          '<div class="db-card-actions">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarDashboard('+safeId+')" data-bg-skip="1" title="Visualizar"><span class="ms ms-sm">open_in_full</span></button>' +
+            (isMeu ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarDashboard('+safeId+')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' : '') +
+            (isMeu ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirDashboard('+safeId+')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' : '') +
+          '</div>' +
+        '</div>';
+    });
+    return html + '</div>';
+  }
+
+  function novoDashboard() {
+    _dashEditandoId = null; _dashTitulo = 'Novo Dashboard'; _dashDescricao = '';
+    _dashVis = 'privada'; _dashComp = []; _dashWidgets = [];
+    _modo = 'dashboard-editor'; _renderDashboardEditor();
+  }
+
+  function editarDashboard(id) {
+    var d = _dashLista.find(function(x){ return x.id === id; });
+    if (!d) return;
+    _dashEditandoId = id; _dashTitulo = d.titulo||''; _dashDescricao = d.descricao||'';
+    _dashVis = d.visibilidade||'privada'; _dashComp = (d.compartilhadoCom||[]).slice();
+    _dashWidgets = (d.widgets||[]).map(function(w){ return Object.assign({},w); });
+    _modo = 'dashboard-editor'; _renderDashboardEditor();
+  }
+
+  function visualizarDashboard(id) {
+    var d = _dashLista.find(function(x){ return x.id === id; });
+    if (!d) return;
+    _dashEditandoId = id; _dashTitulo = d.titulo||'';
+    _dashWidgets = (d.widgets||[]).map(function(w){ return Object.assign({},w); });
+    _modo = 'dashboard-view'; _renderDashboardView(d);
+  }
+
+  function excluirDashboard(id) {
+    var d = _dashLista.find(function(x){ return x.id === id; });
+    if (!d) return;
+    _abrirModalConfirmar({
+      titulo:'Excluir Dashboard', icone:'delete_forever', corIcone:'#ef4444',
+      mensagem:'Excluir "'+_esc(d.titulo)+'"? Esta ação não pode ser desfeita.',
+      labelConfirmar:'Excluir',
+      cb: function() {
+        GAS.analise.dashboardExcluir({ id:id }, function(r) {
+          if (!r||!r.ok) { Toast.erro('Erro ao excluir.'); return; }
+          _dashLista = _dashLista.filter(function(x){ return x.id!==id; });
+          _renderGaleria(); Toast.sucesso('Dashboard excluído.');
+        }, function(){ Toast.erro('Erro ao excluir.'); });
+      }
+    });
+  }
+
+  function irDashboardGaleria() { _modo='galeria'; _dashTabAtual='dashboards'; _renderGaleria(); }
+
+  function _renderDashboardEditor() {
+    var root = document.getElementById('analise-studio-root');
+    if (!root) return;
+    var visTabs = [
+      {v:'privada',icon:'lock',label:'Privada',desc:'Só você'},
+      {v:'restrita',icon:'group',label:'Compartilhada',desc:'Pessoas específicas'},
+      {v:'publica',icon:'public',label:'Pública',desc:'Todos os usuários'}
+    ].map(function(opt) {
+      var sel = _dashVis===opt.v;
+      return '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid '+(sel?'var(--primary)':'var(--border)')+';border-radius:8px;cursor:pointer;background:'+(sel?'var(--primary-soft,#eef2ff)':'var(--surface)')+';flex:1;min-width:90px;transition:all .15s;">' +
+        '<input type="radio" name="dash-vis-r" value="'+opt.v+'"'+(sel?' checked':'')+' onchange="AnaliseEstudioUI.setDashVisibilidade(\''+opt.v+'\')" style="display:none;">' +
+        '<span class="ms" style="font-size:18px;'+(sel?'color:var(--primary)':'color:var(--text2)')+'">'+opt.icon+'</span>' +
+        '<span><span style="font-size:12px;font-weight:600;display:block;">'+opt.label+'</span><span style="font-size:10px;color:var(--text2);">'+opt.desc+'</span></span>' +
+      '</label>';
+    }).join('');
+    var canvasHtml = _dashWidgets.length ? _renderDashCanvas() : _dashCanvasVazio();
+    root.innerHTML =
+      '<div class="db-view-toolbar">' +
+        '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
+        '<input id="dash-titulo-inp" class="form-control" value="'+_esc(_dashTitulo)+'" placeholder="Título do Dashboard" ' +
+          'style="flex:1;min-width:160px;font-weight:700;font-size:15px;" oninput="AnaliseEstudioUI._dashAtualizarTitulo(this.value)">' +
+        '<div style="position:relative;">' +
+          '<button class="btn btn-primario btn-sm" id="btn-dash-add" onclick="AnaliseEstudioUI._dashToggleMenu()" data-bg-skip="1">' +
+            '<span class="ms ms-sm">add</span> Adicionar widget' +
+          '</button>' +
+          '<div id="dash-add-menu" class="db-add-menu">' +
+            '<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;gap:8px;font-size:13px;" onclick="AnaliseEstudioUI._dashAdicionarWidget(\'grafico\')" data-bg-skip="1"><span class="ms">bar_chart</span> Gráfico</button>' +
+            '<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;gap:8px;font-size:13px;" onclick="AnaliseEstudioUI._dashAdicionarWidget(\'kpi\')" data-bg-skip="1"><span class="ms">speed</span> KPI Card</button>' +
+            '<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;gap:8px;font-size:13px;" onclick="AnaliseEstudioUI._dashAdicionarWidget(\'tabela\')" data-bg-skip="1"><span class="ms">table_chart</span> Tabela</button>' +
+            '<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;gap:8px;font-size:13px;" onclick="AnaliseEstudioUI._dashAdicionarWidget(\'separador\')" data-bg-skip="1"><span class="ms">title</span> Separador/Título</button>' +
+          '</div>' +
+        '</div>' +
+        '<button id="btn-dash-salvar" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-dash-salvar\',\'Salvando…\',AnaliseEstudioUI.salvarDashboard)">' +
+          '<span class="ms ms-sm">save</span> Salvar' +
+        '</button>' +
+      '</div>' +
+      '<div id="dash-canvas">' + canvasHtml + '</div>' +
+      '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">' +
+        '<div class="analise-section-title">Visibilidade</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' + visTabs + '</div>' +
+        '<div id="dash-comp-wrap"></div>' +
+      '</div>';
+    _dashRenderComp();
+    document.addEventListener('click', _dashMenuOutsideClick);
+  }
+
+  function _dashCanvasVazio() {
+    return '<div style="border:2px dashed var(--border);border-radius:12px;padding:48px 20px;text-align:center;color:var(--text2);">' +
+      '<span class="ms" style="font-size:44px;display:block;margin-bottom:10px;">add_box</span>' +
+      '<p style="font-size:14px;font-weight:600;margin:0 0 4px;">Canvas vazio</p>' +
+      '<p style="font-size:12px;margin:0;">Clique em "Adicionar widget" para começar a montar seu dashboard.</p>' +
+    '</div>';
+  }
+
+  function _dashAtualizarTitulo(v) { _dashTitulo = v; }
+
+  function _dashToggleMenu() {
+    var m = document.getElementById('dash-add-menu');
+    if (m) m.classList.toggle('aberto');
+  }
+
+  function _dashMenuOutsideClick(e) {
+    var m = document.getElementById('dash-add-menu');
+    var btn = document.getElementById('btn-dash-add');
+    if (!m || !m.classList.contains('aberto')) return;
+    if (btn && btn.contains(e.target)) return;
+    if (!m.contains(e.target)) m.classList.remove('aberto');
+  }
+
+  function _dashSizeClass(tamanho) {
+    var map = {full:'full','2/3':'twothird','1/2':'half','1/3':'third','1/4':'quarter'};
+    return 'db-w-' + (map[tamanho] || 'full');
+  }
+
+  function _renderDashCanvas() {
+    return '<div class="db-canvas">' +
+      _dashWidgets.map(function(w, idx){ return _renderDashWidgetCard(w, idx, true); }).join('') +
+    '</div>';
+  }
+
+  function _renderDashWidgetCard(w, idx, editMode) {
+    var n = _dashWidgets.length;
+    var ico = {kpi:'speed',tabela:'table_chart',separador:'title',grafico:'bar_chart'}[w.tipo||'grafico']||'bar_chart';
+    var sc  = _dashSizeClass(w.tamanho||'full');
+    var sizeOpts = ['full','2/3','1/2','1/3','1/4'].map(function(s){
+      var lb={full:'Total','2/3':'2/3','1/2':'1/2','1/3':'1/3','1/4':'1/4'}[s];
+      return '<option value="'+s+'"'+(w.tamanho===s?' selected':'')+'>'+lb+'</option>';
+    }).join('');
+    var bodyHtml = _renderWidgetBody(w, false);
+    return '<div class="db-widget '+sc+'" id="dbw-'+idx+'">' +
+      '<div class="db-widget-hdr">' +
+        '<span class="ms db-widget-ico">'+ico+'</span>' +
+        '<span class="db-widget-ttl">'+_esc(w.titulo||('Widget '+(idx+1)))+'</span>' +
+        (editMode ? (
+          '<select class="select-sm" style="font-size:11px;width:auto;flex-shrink:0;" onchange="AnaliseEstudioUI._dashMudarTamanho('+idx+',this.value)" title="Tamanho">'+sizeOpts+'</select>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._dashEditarWidget('+idx+')" data-bg-skip="1" title="Configurar"><span class="ms ms-sm">tune</span></button>' +
+          (idx > 0 ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._dashMoverWidget('+idx+',-1)" data-bg-skip="1" title="Mover para cima"><span class="ms ms-sm">arrow_upward</span></button>' : '') +
+          (idx < n-1 ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._dashMoverWidget('+idx+',1)" data-bg-skip="1" title="Mover para baixo"><span class="ms ms-sm">arrow_downward</span></button>' : '') +
+          '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI._dashRemoverWidget('+idx+')" data-bg-skip="1" title="Remover"><span class="ms ms-sm">close</span></button>'
+        ) : '') +
+      '</div>' +
+      '<div class="db-widget-body">'+bodyHtml+'</div>' +
+    '</div>';
+  }
+
+  function _renderWidgetBody(w, loading) {
+    if (loading) return '<p class="muted-text" style="text-align:center;padding:20px;">Carregando…</p>';
+    try {
+      if (w.tipo === 'separador') {
+        var sepCor = (w.config&&w.config.cor) ? w.config.cor : 'var(--primary)';
+        return '<div class="db-sep-body" style="border-left-color:'+_esc(sepCor)+';">' +
+          '<div class="db-sep-title">'+_esc(w.titulo||'')+'</div>' +
+          (w.subtitulo ? '<div class="db-sep-sub">'+_esc(w.subtitulo)+'</div>' : '') +
+        '</div>';
+      }
+      if (w.tipo === 'kpi') {
+        var kpiCfg = w.kpiConfig || {};
+        var kpiVal = _kpiCalc(w.linhas||[], w.colunas||['Label','Valor'], kpiCfg.agregacao||'soma', kpiCfg.serieIdx||1);
+        var kpiStr = kpiCfg.formato==='moeda' ? 'R$ '+kpiVal.toLocaleString('pt-BR',{maximumFractionDigits:0}) :
+                     kpiCfg.formato==='percent' ? kpiVal.toFixed(1)+'%' : _fmtNum(kpiVal);
+        var kpiColNm = ((w.colunas||[])[kpiCfg.serieIdx||1]) || (w.colunas||[])[1] || 'Valor';
+        return '<div style="display:flex;flex-direction:column;justify-content:center;min-height:80px;">' +
+          '<div class="db-kpi-val">'+kpiStr+'</div>' +
+          '<div class="db-kpi-lbl">'+_esc(kpiColNm)+'</div>' +
+        '</div>';
+      }
+      if (w.tipo === 'tabela') {
+        var maxR = (w.tabelaConfig||{}).maxLinhas || 10;
+        return _tabelaRender(w.colunas||['Label','Valor'], (w.linhas||[]).slice(0,maxR));
+      }
+      var rows = (w.linhas||[]).filter(function(r){ return r[0]||r[1]; });
+      if (!rows.length) return '<p class="muted-text" style="text-align:center;padding:20px;font-size:12px;">Sem dados. Clique em <span class="ms" style="font-size:13px;vertical-align:middle;">tune</span> para configurar.</p>';
+      var cfg2 = { titulo:'', tipo:(w.config&&w.config.tipo)||'barras', corPrimaria:(w.config&&w.config.corPrimaria)||'#4f46e5',
+        ajustes: Object.assign({rotulos:true,formato:'auto',grade:true,linhaRef:''},(w.config&&w.config.ajustes)||{}) };
+      return _renderizarGrafico(w.colunas||['Label','Valor'], rows, cfg2);
+    } catch(e) { return '<p class="muted-text" style="text-align:center;padding:12px;">Erro ao renderizar widget.</p>'; }
+  }
+
+  function _kpiCalc(linhas, colunas, agregacao, serieIdx) {
+    var si = Math.max(1, serieIdx||1);
+    var vals = (linhas||[]).map(function(r){ return Number(r[si])||0; });
+    if (!vals.length) return 0;
+    if (agregacao==='contagem') return vals.length;
+    if (agregacao==='media')   return vals.reduce(function(s,v){ return s+v; },0) / vals.length;
+    if (agregacao==='max')     return Math.max.apply(null, vals);
+    if (agregacao==='min')     return Math.min.apply(null, vals);
+    return vals.reduce(function(s,v){ return s+v; },0);
+  }
+
+  function _tabelaRender(colunas, linhas) {
+    if (!linhas.length) return '<p class="muted-text" style="padding:8px;font-size:12px;">Sem dados</p>';
+    return '<div style="overflow-x:auto;"><table class="db-table">' +
+      '<thead><tr>'+colunas.map(function(c){ return '<th>'+_esc(c)+'</th>'; }).join('')+'</tr></thead>' +
+      '<tbody>'+linhas.map(function(r){
+        return '<tr>'+r.map(function(c){
+          return '<td>'+_esc(String(c===null||c===undefined?'—':c))+'</td>';
+        }).join('')+'</tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  function _dashMudarTamanho(idx, tam) {
+    if (!_dashWidgets[idx]) return;
+    _dashWidgets[idx].tamanho = tam;
+    var el = document.getElementById('dbw-'+idx);
+    if (!el) return;
+    ['db-w-full','db-w-twothird','db-w-half','db-w-third','db-w-quarter'].forEach(function(c){ el.classList.remove(c); });
+    el.classList.add(_dashSizeClass(tam));
+  }
+
+  function _dashRemoverWidget(idx) {
+    _dashWidgets.splice(idx, 1);
+    var el = document.getElementById('dash-canvas');
+    if (el) el.innerHTML = _dashWidgets.length ? _renderDashCanvas() : _dashCanvasVazio();
+  }
+
+  function _dashMoverWidget(idx, dir) {
+    var ni = idx + dir;
+    if (ni<0 || ni>=_dashWidgets.length) return;
+    var tmp = _dashWidgets[idx]; _dashWidgets[idx]=_dashWidgets[ni]; _dashWidgets[ni]=tmp;
+    var el = document.getElementById('dash-canvas');
+    if (el) el.innerHTML = _renderDashCanvas();
+  }
+
+  function _dashAdicionarWidget(tipo) {
+    var m = document.getElementById('dash-add-menu'); if (m) m.classList.remove('aberto');
+    var defs = {grafico:{tamanho:'1/2',titulo:'Gráfico'},kpi:{tamanho:'1/4',titulo:'KPI'},tabela:{tamanho:'1/2',titulo:'Tabela'},separador:{tamanho:'full',titulo:'Seção'}};
+    var d = defs[tipo] || defs.grafico;
+    var w = { id:'w-'+Date.now(), tipo:tipo, tamanho:d.tamanho, titulo:d.titulo, subtitulo:'',
+              dsId:null, dsId2:null, modoUpdate:'dinamico',
+              colunas:['Label','Valor'], linhas:[],
+              config:{tipo:'barras',corPrimaria:'#4f46e5',ajustes:{rotulos:true,formato:'auto',grade:true,linhaRef:''}},
+              kpiConfig:{agregacao:'soma',serieIdx:1,formato:'numero'},
+              tabelaConfig:{maxLinhas:10} };
+    _abrirWidgetEditor(w, function(configured) {
+      if (!configured) return;
+      _dashWidgets.push(configured);
+      var el = document.getElementById('dash-canvas');
+      if (el) el.innerHTML = _renderDashCanvas();
+    });
+  }
+
+  function _dashEditarWidget(idx) {
+    var w = _dashWidgets[idx]; if (!w) return;
+    var clone = JSON.parse(JSON.stringify(w));
+    _abrirWidgetEditor(clone, function(configured) {
+      if (!configured) return;
+      _dashWidgets[idx] = configured;
+      var el = document.getElementById('dash-canvas');
+      if (el) el.innerHTML = _renderDashCanvas();
+    });
+  }
+
+  // ── Widget Editor Modal ────────────────────────────────────────────────────
+  function _weCatSelect(selectedId, elId, onChangeFn) {
+    var grupos = {}, ordem = [];
+    _CATALOGO_LOCAL.forEach(function(ds) {
+      if (!grupos[ds.modulo]) { grupos[ds.modulo]=[]; ordem.push(ds.modulo); }
+      grupos[ds.modulo].push(ds);
+    });
+    var opts = '<option value="">-- Selecionar dataset --</option>';
+    ordem.forEach(function(mod) {
+      opts += '<optgroup label="'+_esc(mod)+'">';
+      grupos[mod].forEach(function(ds) {
+        opts += '<option value="'+_esc(ds.id)+'"'+(ds.id===selectedId?' selected':'')+'>'+_esc(ds.label)+'</option>';
+      });
+      opts += '</optgroup>';
+    });
+    return '<select id="'+elId+'" class="form-control" onchange="AnaliseEstudioUI.'+onChangeFn+'(this.value)">'+opts+'</select>';
+  }
+
+  function _abrirWidgetEditor(wDraft, cb) {
+    _weDraftWidget = wDraft;
+    _weDraftCb = cb;
+    var uid = 'we-'+Date.now();
+    var tipoAtual = wDraft.tipo || 'grafico';
+    var showData = tipoAtual!=='separador';
+    var showGraf = tipoAtual==='grafico';
+    var showKpi  = tipoAtual==='kpi';
+    var showTab  = tipoAtual==='tabela';
+    var showSep  = tipoAtual==='separador';
+    var tipoOpts = _TIPOS.map(function(t){
+      return '<option value="'+t.id+'"'+((wDraft.config&&wDraft.config.tipo)===t.id?' selected':'')+'>'+t.label+'</option>';
+    }).join('');
+    var swatches = _PALETA.map(function(c){
+      return '<span class="analise-swatch'+((wDraft.config&&wDraft.config.corPrimaria)===c?' ativa':'')+'" data-cor="'+c+'" onclick="AnaliseEstudioUI._weSetCor(\''+c+'\')" style="background:'+c+';" title="'+c+'"></span>';
+    }).join('');
+    var kpiCfg = wDraft.kpiConfig || {};
+    var tblCfg = wDraft.tabelaConfig || {};
+    var kpiAgregOpts = ['soma','contagem','media','max','min'].map(function(a){
+      var l={soma:'Soma',contagem:'Contagem',media:'Média',max:'Máximo',min:'Mínimo'}[a];
+      return '<option value="'+a+'"'+(kpiCfg.agregacao===a?' selected':'')+'>'+l+'</option>';
+    }).join('');
+    var kpiFmtOpts = ['numero','moeda','percent'].map(function(f){
+      var l={numero:'Número',moeda:'Moeda (R$)',percent:'Porcentagem (%)'}[f];
+      return '<option value="'+f+'"'+(kpiCfg.formato===f?' selected':'')+'>'+l+'</option>';
+    }).join('');
+    var sizeChips = ['full','2/3','1/2','1/3','1/4'].map(function(s){
+      var lb={full:'Total','2/3':'2/3','1/2':'1/2','1/3':'1/3','1/4':'1/4'}[s];
+      return '<button class="db-size-chip'+(wDraft.tamanho===s?' sel':'')+'" onclick="AnaliseEstudioUI._weTamanho(\''+uid+'\',\''+s+'\')" data-bg-skip="1">'+lb+'</button>';
+    }).join('');
+    var tipoChips = ['grafico','kpi','tabela','separador'].map(function(t){
+      var icons={grafico:'bar_chart',kpi:'speed',tabela:'table_chart',separador:'title'};
+      var labels={grafico:'Gráfico',kpi:'KPI Card',tabela:'Tabela',separador:'Separador'};
+      return '<button class="db-tipo-pill'+(tipoAtual===t?' sel':'')+'" id="we-tipo-btn-'+t+'-'+uid+'" onclick="AnaliseEstudioUI._weTipoChg(\''+uid+'\',\''+t+'\')" data-bg-skip="1"><span class="ms" style="font-size:15px;">'+icons[t]+'</span>'+labels[t]+'</button>';
+    }).join('');
+    var html =
+      '<div id="we-modal-'+uid+'" style="padding:20px;max-height:82vh;overflow-y:auto;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
+          '<h3 style="margin:0;font-size:15px;font-weight:700;">Configurar Widget</h3>' +
+          '<button class="btn btn-ghost btn-sm" onclick="document.querySelector(\'.modal-simples\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
+        '</div>' +
+        '<div style="margin-bottom:14px;"><div class="analise-section-title">Tipo</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+tipoChips+'</div></div>' +
+        '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Título</label>' +
+          '<input id="we-titulo-'+uid+'" class="form-control" value="'+_esc(wDraft.titulo||'')+'"></div>' +
+        '<div id="we-sub-'+uid+'" style="display:'+(showSep?'':'none')+';">' +
+          '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Subtítulo (opcional)</label>' +
+            '<input id="we-subval-'+uid+'" class="form-control" value="'+_esc(wDraft.subtitulo||'')+'"></div></div>' +
+        '<div id="we-data-'+uid+'" style="display:'+(showData?'':'none')+';">' +
+          '<div class="analise-section-title" style="margin-top:4px;">Fonte de dados</div>' +
+          _weCatSelect(wDraft.dsId||'', 'we-ds-'+uid, '_weSelDs') +
+          '<div id="we-ds2-wrap-'+uid+'" style="margin-top:6px;display:'+(wDraft.dsId&&!showKpi?'':'none')+';">' +
+            '<label class="form-label" style="margin-top:4px;">Cruzar com (opcional)</label>' +
+            _weCatSelect(wDraft.dsId2||'', 'we-ds2-'+uid, '_weSelDs2') +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:14px;font-size:12px;margin-top:8px;flex-wrap:wrap;">' +
+            '<span style="color:var(--text2);font-size:11px;font-weight:600;">Atualização:</span>' +
+            '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="we-upd-'+uid+'" value="estatico"'+(wDraft.modoUpdate!=='dinamico'?' checked':'')+' onchange="AnaliseEstudioUI._weModoUpd(\'estatico\')"><span>Estática</span></label>' +
+            '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="we-upd-'+uid+'" value="dinamico"'+(wDraft.modoUpdate==='dinamico'?' checked':'')+' onchange="AnaliseEstudioUI._weModoUpd(\'dinamico\')"><span style="color:#16a34a;font-weight:600;">Ao vivo</span></label>' +
+          '</div>' +
+        '</div>' +
+        '<div id="we-graf-'+uid+'" style="display:'+(showGraf?'':'none')+';">' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">' +
+            '<div class="form-group" style="margin:0;flex:1;min-width:120px;"><label class="form-label">Tipo de gráfico</label>' +
+              '<select id="we-grtipo-'+uid+'" class="form-control">'+tipoOpts+'</select></div>' +
+            '<div class="form-group" style="margin:0;"><label class="form-label">Cor principal</label>' +
+              '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">'+swatches+'</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div id="we-kpi-'+uid+'" style="display:'+(showKpi?'':'none')+';">' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">' +
+            '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Agregação</label>' +
+              '<select id="we-kpi-agreg-'+uid+'" class="form-control">'+kpiAgregOpts+'</select></div>' +
+            '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Formato</label>' +
+              '<select id="we-kpi-fmt-'+uid+'" class="form-control">'+kpiFmtOpts+'</select></div>' +
+          '</div>' +
+        '</div>' +
+        '<div id="we-tab-'+uid+'" style="display:'+(showTab?'':'none')+';">' +
+          '<div class="form-group" style="margin-top:10px;"><label class="form-label">Máx. linhas exibidas</label>' +
+            '<input id="we-tabmax-'+uid+'" type="number" class="form-control" value="'+(tblCfg.maxLinhas||10)+'" min="3" max="100"></div>' +
+        '</div>' +
+        '<div style="margin-top:14px;"><div class="analise-section-title">Tamanho no dashboard</div>' +
+          '<div id="we-size-'+uid+'" style="display:flex;gap:6px;flex-wrap:wrap;">'+sizeChips+'</div></div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+          '<button class="btn btn-ghost" onclick="document.querySelector(\'.modal-simples\').remove();AnaliseEstudioUI._weCancelar();" data-bg-skip="1">Cancelar</button>' +
+          '<button class="btn btn-primario" onclick="AnaliseEstudioUI._weConfirmar(\''+uid+'\')" data-bg-skip="1">Confirmar widget</button>' +
+        '</div>' +
+      '</div>';
+    _abrirModalSimples(html);
+  }
+
+  function _weCancelar() { _weDraftWidget=null; _weDraftCb=null; }
+
+  function _weTipoChg(uid, tipo) {
+    if (!_weDraftWidget) return;
+    _weDraftWidget.tipo = tipo;
+    ['grafico','kpi','tabela','separador'].forEach(function(t){
+      var btn = document.getElementById('we-tipo-btn-'+t+'-'+uid);
+      if (btn) btn.classList.toggle('sel', t===tipo);
+    });
+    var showData=tipo!=='separador', showGraf=tipo==='grafico', showKpi=tipo==='kpi', showTab=tipo==='tabela', showSep=tipo==='separador';
+    [['we-sub-'+uid,showSep],['we-data-'+uid,showData],['we-graf-'+uid,showGraf],['we-kpi-'+uid,showKpi],['we-tab-'+uid,showTab]].forEach(function(s){
+      var el=document.getElementById(s[0]); if(el) el.style.display=s[1]?'':'none';
+    });
+  }
+
+  function _weSetCor(cor) {
+    if (!_weDraftWidget) return;
+    if (!_weDraftWidget.config) _weDraftWidget.config={};
+    _weDraftWidget.config.corPrimaria = cor;
+    document.querySelectorAll('.modal-simples .analise-swatch').forEach(function(s){ s.classList.toggle('ativa', s.dataset.cor===cor); });
+  }
+
+  function _weTamanho(uid, tam) {
+    if (!_weDraftWidget) return;
+    _weDraftWidget.tamanho = tam;
+    var cont = document.getElementById('we-size-'+uid); if(!cont) return;
+    cont.querySelectorAll('.db-size-chip').forEach(function(btn){
+      var m = btn.getAttribute('onclick').match(/'([^']+)'\)$/);
+      if (m) btn.classList.toggle('sel', m[1]===tam);
+    });
+  }
+
+  function _weModoUpd(modo) { if (_weDraftWidget) _weDraftWidget.modoUpdate=modo; }
+
+  function _weSelDs(val) {
+    if (!_weDraftWidget) return;
+    _weDraftWidget.dsId = val||null; _weDraftWidget.dsId2 = null;
+    var modal = document.querySelector('.modal-simples [id^="we-modal-"]');
+    var uid = modal ? (modal.id.match(/we-modal-(.+)/)||[])[1]||'' : '';
+    var ds2w = document.getElementById('we-ds2-wrap-'+uid);
+    if (ds2w) ds2w.style.display = (val && _weDraftWidget.tipo==='grafico') ? '' : 'none';
+    if (!val) { _weDraftWidget.colunas=['Label','Valor']; _weDraftWidget.linhas=[]; return; }
+    Toast.aviso('Carregando: '+_dsLabel(val)+'…');
+    GAS.analise.importarDados({ id:val }, function(r) {
+      if (!r||!r.ok||!r.data) { Toast.erro('Erro ao carregar dados.'); return; }
+      _weDraftWidget.colunas = r.data.colunas||['Label','Valor'];
+      _weDraftWidget.linhas  = r.data.linhas||[];
+      Toast.sucesso(_dsLabel(val)+' carregado — '+(_weDraftWidget.linhas.length)+' linhas.');
+    }, function(){ Toast.erro('Erro ao carregar dados.'); });
+  }
+
+  function _weSelDs2(val) {
+    if (!_weDraftWidget || !_weDraftWidget.dsId) return;
+    if (!val) { _weDraftWidget.dsId2=null; return; }
+    GAS.analise.cruzar({ dsA:_weDraftWidget.dsId, dsB:val }, function(r) {
+      if (!r||!r.ok||!r.data) { Toast.erro('Erro ao cruzar datasets.'); return; }
+      _weDraftWidget.dsId2 = val;
+      _weDraftWidget.colunas = r.data.colunas||['Label','A','B'];
+      _weDraftWidget.linhas  = r.data.linhas||[];
+      Toast.sucesso('Cruzamento carregado — '+_weDraftWidget.linhas.length+' linhas.');
+    }, function(){ Toast.erro('Erro ao cruzar.'); });
+  }
+
+  function _weConfirmar(uid) {
+    if (!_weDraftWidget) { var m=document.querySelector('.modal-simples'); if(m) m.remove(); return; }
+    var tEl=document.getElementById('we-titulo-'+uid); if(tEl) _weDraftWidget.titulo=tEl.value.trim();
+    var sEl=document.getElementById('we-subval-'+uid); if(sEl) _weDraftWidget.subtitulo=sEl.value.trim();
+    if (!_weDraftWidget.config) _weDraftWidget.config={};
+    var gtEl=document.getElementById('we-grtipo-'+uid); if(gtEl) _weDraftWidget.config.tipo=gtEl.value;
+    if (!_weDraftWidget.kpiConfig) _weDraftWidget.kpiConfig={};
+    var agEl=document.getElementById('we-kpi-agreg-'+uid); if(agEl) _weDraftWidget.kpiConfig.agregacao=agEl.value;
+    var fmEl=document.getElementById('we-kpi-fmt-'+uid);  if(fmEl) _weDraftWidget.kpiConfig.formato=fmEl.value;
+    if (!_weDraftWidget.tabelaConfig) _weDraftWidget.tabelaConfig={};
+    var mxEl=document.getElementById('we-tabmax-'+uid); if(mxEl) _weDraftWidget.tabelaConfig.maxLinhas=parseInt(mxEl.value)||10;
+    var modal=document.querySelector('.modal-simples'); if(modal) modal.remove();
+    var cb=_weDraftCb, w=_weDraftWidget; _weDraftWidget=null; _weDraftCb=null;
+    if (cb) cb(w);
+  }
+
+  // ── Dashboard View (read-only) ─────────────────────────────────────────────
+  function _renderDashboardView(d) {
+    var root = document.getElementById('analise-studio-root'); if (!root) return;
+    var boot = (App.getBoot&&App.getBoot())||{};
+    root.innerHTML =
+      '<div class="db-view-toolbar">' +
+        '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
+        '<h2 style="margin:0;font-size:16px;font-weight:700;flex:1;">'+_esc(d.titulo)+'</h2>' +
+        (d.descricao ? '<span style="font-size:12px;color:var(--text2);">'+_esc(d.descricao)+'</span>' : '') +
+        (boot.usuarioEmail===d.donoEmail ?
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarDashboard(\''+_esc(d.id)+'\')" data-bg-skip="1"><span class="ms ms-sm">edit</span> Editar</button>' : '') +
+      '</div>' +
+      '<div id="dash-view-canvas" class="db-canvas">' +
+        (d.widgets||[]).map(function(w,idx){
+          var ico={kpi:'speed',tabela:'table_chart',separador:'title',grafico:'bar_chart'}[w.tipo]||'bar_chart';
+          var sc=_dashSizeClass(w.tamanho||'full');
+          var bodyHtml = w.tipo==='separador' ? _renderWidgetBody(w,false) : '<p class="muted-text" style="text-align:center;padding:16px;">Carregando…</p>';
+          return '<div class="db-widget '+sc+'" id="dbvw-'+idx+'">' +
+            '<div class="db-widget-hdr"><span class="ms db-widget-ico">'+ico+'</span><span class="db-widget-ttl">'+_esc(w.titulo||'')+'</span></div>' +
+            '<div class="db-widget-body">'+bodyHtml+'</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    (d.widgets||[]).forEach(function(w,idx) {
+      if (w.tipo==='separador') return;
+      var onDone = function(linhas, colunas) {
+        var el=document.getElementById('dbvw-'+idx); if(!el) return;
+        var body=el.querySelector('.db-widget-body'); if(!body) return;
+        body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
+      };
+      if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
+      var onData=function(r){ onDone(r&&r.ok&&r.data?r.data.linhas||[]:w.linhas||[], r&&r.ok&&r.data?r.data.colunas||['Label','Valor']:w.colunas||['Label','Valor']); };
+      if (w.dsId2) GAS.analise.cruzar({dsA:w.dsId,dsB:w.dsId2}, onData, function(){ onDone(w.linhas||[],w.colunas||['Label','Valor']); });
+      else GAS.analise.importarDados({id:w.dsId}, onData, function(){ onDone(w.linhas||[],w.colunas||['Label','Valor']); });
+    });
+  }
+
+  // ── Dashboard Save + Visibility ────────────────────────────────────────────
+  function salvarDashboard(done) {
+    var tEl=document.getElementById('dash-titulo-inp'); if(tEl) _dashTitulo=tEl.value.trim();
+    if (!_dashTitulo) { Toast.aviso('Informe o título do dashboard.'); if(done) done(); return; }
+    var params = { id:_dashEditandoId||undefined, titulo:_dashTitulo, descricao:_dashDescricao,
+      visibilidade:_dashVis, compartilhadoCom:_dashComp.slice(),
+      widgets:_dashWidgets.map(function(w){ return Object.assign({},w); }) };
+    GAS.analise.dashboardSalvar(params, function(r) {
+      if (done) done();
+      if (!r||!r.ok) { Toast.erro('Erro ao salvar dashboard.'); return; }
+      Toast.sucesso('Dashboard salvo!');
+      var nId=(r.data||{}).id||_dashEditandoId;
+      if (!_dashEditandoId) _dashEditandoId=nId;
+      var entry=Object.assign({},params,{id:nId,criadoEm:new Date().toISOString(),donoEmail:((App.getBoot&&App.getBoot())||{}).usuarioEmail||''});
+      var idx=_dashLista.findIndex(function(x){ return x.id===nId; });
+      if (idx>=0) _dashLista[idx]=entry; else _dashLista.push(entry);
+    }, function(){ if(done) done(); Toast.erro('Erro ao salvar.'); });
+  }
+
+  function setDashVisibilidade(v) {
+    _dashVis = v;
+    document.querySelectorAll('[name="dash-vis-r"]').forEach(function(rb) {
+      var lbl=rb.closest('label'); if(!lbl) return;
+      var sel=rb.value===v;
+      lbl.style.borderColor=sel?'var(--primary)':'var(--border)';
+      lbl.style.background=sel?'var(--primary-soft,#eef2ff)':'var(--surface)';
+      var ic=lbl.querySelector('.ms'); if(ic) ic.style.color=sel?'var(--primary)':'var(--text2)';
+    });
+    _dashRenderComp();
+  }
+
+  function _dashRenderComp() {
+    var wrap=document.getElementById('dash-comp-wrap'); if(!wrap) return;
+    if (_dashVis!=='restrita') { wrap.innerHTML=''; return; }
+    var uid='dc-'+Date.now();
+    var boot=(App.getBoot&&App.getBoot())||{};
+    var tags=_dashComp.map(function(c,i){
+      var icon=c.tipo==='pessoa'?'person':c.tipo==='setor'?'business':'work';
+      return '<span class="analise-comp-tag"><span class="ms" style="font-size:12px;">'+icon+'</span>'+_esc(c.label)+'<button onclick="AnaliseEstudioUI._dashRemComp('+i+')">×</button></span>';
+    }).join('');
+    var setoresOpts=(boot.setores||[]).map(function(s){ var v=s.id||s.nome||s.label||s; var l=s.nome||s.label||s.id||v; return '<option value="'+_esc(v)+'">'+_esc(l)+'</option>'; }).join('');
+    wrap.innerHTML=
+      '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:4px;">' +
+        '<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:8px;">Quem pode ver este dashboard:</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">'+(tags||'<span style="font-size:11px;color:var(--text2);">Nenhuma restrição adicionada</span>')+'</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+          '<select id="dc-tipo-'+uid+'" class="select-sm" onchange="AnaliseEstudioUI._dashCompTipoChg(\''+uid+'\')">' +
+            '<option value="pessoa">Pessoa (e-mail)</option><option value="setor">Setor</option><option value="cargo">Cargo</option>' +
+          '</select>' +
+          '<input id="dc-val-'+uid+'" type="email" class="form-control" style="width:190px;font-size:12px;padding:3px 8px;" placeholder="email@exemplo.com" list="dc-dl-'+uid+'">' +
+          '<datalist id="dc-dl-'+uid+'">'+setoresOpts+'</datalist>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._dashCompAdd(\''+uid+'\')" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function _dashCompTipoChg(uid) {
+    var tipo=(document.getElementById('dc-tipo-'+uid)||{}).value||'pessoa';
+    var inp=document.getElementById('dc-val-'+uid); if(!inp) return;
+    inp.placeholder={pessoa:'email@exemplo.com',setor:'Nome do setor',cargo:'Nome do cargo'}[tipo]||'';
+    inp.type=tipo==='pessoa'?'email':'text';
+    var boot=(App.getBoot&&App.getBoot())||{}, dl=document.getElementById('dc-dl-'+uid); if(!dl) return;
+    dl.innerHTML = tipo==='setor' ?
+      (boot.setores||[]).map(function(s){ var v=s.id||s.nome||s.label||s; var l=s.nome||s.label||s.id||v; return '<option value="'+_esc(v)+'">'+_esc(l)+'</option>'; }).join('') : '';
+  }
+
+  function _dashCompAdd(uid) {
+    var tipo=(document.getElementById('dc-tipo-'+uid)||{}).value||'pessoa';
+    var valor=((document.getElementById('dc-val-'+uid)||{}).value||'').trim().toLowerCase();
+    if (!valor) { Toast.aviso('Informe o valor para compartilhar.'); return; }
+    for (var i=0;i<_dashComp.length;i++) { if (_dashComp[i].tipo===tipo&&_dashComp[i].valor===valor) return; }
+    _dashComp.push({tipo:tipo,valor:valor,label:valor});
+    _dashRenderComp();
+    var inp=document.getElementById('dc-val-'+uid); if(inp) inp.value='';
+  }
+
+  function _dashRemComp(i) { _dashComp.splice(i,1); _dashRenderComp(); }
+
   return {
     aoAbrir, novaAnalise, editarAnalise, visualizarAnalise, excluirAnalise,
     irGaleria, irPainel, _painelToggle, _painelRefresh,
@@ -42231,7 +42838,14 @@ var AnaliseEstudioUI = (function() {
     _csvConfirmar, _importarDataset, _filtrarCatalogo, _cancelarCruz,
     _cruzarCom, _removerDs, setModoUpdate,
     setVisibilidade, adicionarCompartilhamento, removerCompartilhamento,
-    _compTipoChange, _compAdicionarUI, _renderFontes, _renderComp, _dsLabel
+    _compTipoChange, _compAdicionarUI, _renderFontes, _renderComp, _dsLabel,
+    // Dashboard Builder
+    setDashTab, novoDashboard, editarDashboard, visualizarDashboard, excluirDashboard,
+    irDashboardGaleria, salvarDashboard, setDashVisibilidade,
+    _dashAdicionarWidget, _dashEditarWidget, _dashRemoverWidget, _dashMoverWidget, _dashMudarTamanho,
+    _dashAtualizarTitulo, _dashToggleMenu, _dashCompTipoChg, _dashCompAdd, _dashRemComp,
+    _weTipoChg, _weSetCor, _weTamanho, _weModoUpd, _weSelDs, _weSelDs2, _weConfirmar, _weCancelar,
+    _renderAnalisesGaleria
   };
 })();
 
