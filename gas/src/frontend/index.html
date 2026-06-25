@@ -7644,16 +7644,9 @@ select.form-control { cursor: pointer; }
             <span class="ms">add</span> Novo Quadro
           </button>
         </div>
-        <div class="tab-bar" style="margin-bottom:14px;flex-wrap:wrap;">
+        <div class="tab-bar" style="margin-bottom:14px;">
           <button class="tab-btn ativa" onclick="QuadrosUI.setTab('todos',this)" data-bg-skip="1">Todos</button>
           <button class="tab-btn" onclick="QuadrosUI.setTab('vinculados',this)" data-bg-skip="1">Vinculados</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('mindmap',this)" data-bg-skip="1">Mindmaps</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('fluxograma',this)" data-bg-skip="1">Fluxogramas</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('infografico',this)" data-bg-skip="1">Infográficos</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('framework',this)" data-bg-skip="1">Frameworks</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('tabela',this)" data-bg-skip="1">Tabelas</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('kanban',this)" data-bg-skip="1">Kanban</button>
-          <button class="tab-btn" onclick="QuadrosUI.setTab('brainstorm',this)" data-bg-skip="1">Brainstorm</button>
         </div>
         <div id="quadros-lista" class="lista-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
           <p class="muted-text">Carregando quadros…</p>
@@ -36992,7 +36985,12 @@ var QuadrosUI = (function() {
           _cvState.selIdx = hit; _cvState.dragMode = 'move';
           _cvState.dragBase = JSON.parse(JSON.stringify(_cvState.shapes[hit]));
           _cvState.dragMouse = { wx:p.x, wy:p.y };
-        } else { _cvState.selIdx = -1; _cvState.dragMode = null; }
+        } else {
+          _cvState.selIdx = -1; _cvState.dragMode = null;
+          _cvState.isPanning = true;
+          _cvState.panStart = { mx: src.clientX, my: src.clientY, px: _cvState.panX, py: _cvState.panY };
+          cv.style.cursor = 'grabbing';
+        }
         _redraw(); return;
       }
       if (_cvState.tool === 'text') {

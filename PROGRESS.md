@@ -50,6 +50,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **Sugerir tipo**: botão auto-recomenda o tipo de gráfico com base em quantidade de linhas e séries.
 - **GAS.analise.cruzar** adicionado ao namespace.
 - **fix QuadrosUI**: `_resizeObserver` com `disconnect()` no cleanup — previne memory leak.
+- **fix QuadrosUI**: panning no canvas ao clicar em área vazia (mousedown sem hit → `isPanning`, cursor `grabbing`).
 - **CSS**: `.analise-catalogo-*`, `.analise-stats-strip`, `.analise-ajustes-*` adicionados.
 
 **Fase anterior (s137)**: **fix/feat — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin, seleção de ferramenta corrigida, bug _CATS corrigido — Deploy @1066.**
