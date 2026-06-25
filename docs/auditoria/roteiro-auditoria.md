@@ -2253,7 +2253,25 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 53 (2026-06-16) → PRÓXIMA
+## HANDOFF ATUAL — SESSÃO 138 (2026-06-25) → PRÓXIMA
+
+### Estado: Deploy @1069 · feat — Estúdio de Análises v2: catálogo 27 datasets, 9 tipos gráfico, cruzamento multi-módulo
+
+### O que foi feito nesta sessão (s138)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @1069 | Backend analise_controller | `ctrl_analise_catalogo`, `ctrl_analise_cruzar`, 27 datasets cobrindo todos os módulos, funções de cruzamento `_cruzar_pessoas_tarefas`, `_cruzar_reservas_tarefas`, `_cruzar_acoes_publico_mes`, `_cruzar_custom` |
+| @1069 | AnaliseEstudioUI v2 | Catálogo modal com busca; 9 tipos gráfico (+ barras_emp, rosca, funil); stats strip (total/média/máx/mín); ajustes avançados (rótulos, grade, formato, linha ref); botão "Sugerir tipo"; dica contextual por tipo |
+| @1069 | CSS analise | `.analise-catalogo-*`, `.analise-stats-strip`, `.analise-stat-item`, `.analise-ajustes-panel` |
+| @1069 | GAS namespace | `GAS.analise.cruzar` adicionado |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Abrir BI → aba Análises → "Nova análise" → "Catálogo de dados" → selecionar "Tarefas por setor" → importar e verificar dados; (2) Selecionar cruzamento "Pessoas × Tarefas" → verificar 3 colunas e barras empilhadas; (3) Testar "Sugerir tipo" → toggle ajustes avançados; (4) Salvar análise → verificar miniatura na galeria
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 95 (2026-06-16) → SESSÃO 96
 
 ### Estado: Deploy @994 · UX/Fix — Financeiro/Contratos: CANCELADO na FSM, cores por setor, ordenamento, bug rubrica, feedback Execução
 

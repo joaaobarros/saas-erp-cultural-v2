@@ -39,14 +39,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s137)**: **fix/feat — Quadros v3: toolbar flutuante moderna (Excalidraw-style), sem Miro/Napkin, seleção visual de ferramenta corrigida, bug _CATS em Reunião corrigido — Deploy @1066.**
+**Fase atual (s138)**: **feat — Estúdio de Análises v2: catálogo 27 datasets (todos os módulos), 9 tipos de gráfico, cruzamento multi-módulo, stats strip, ajustes avançados, sugestão de tipo — Deploy @1069.**
 
 **O que foi implementado agora**:
-- **Remoção de Miro e Napkin**: sem integrações externas; tudo interno. Abas Miro/Napkin removidas da tab-bar. Modal limpo (sem "Tipo de Quadro", sem campo URL, sem prompt Napkin).
-- **Toolbar flutuante moderna**: painel vertical à esquerda (pill flotante, ícones apenas, sem texto), barra de cores + espessura centralizada na base, controles de zoom no canto inferior direito, botões Desfazer/Limpar no canto superior direito.
-- **Seleção visual de ferramenta corrigida**: `_setTool` agora alterna classe CSS `.ativa` em todos os 11 botões (antes só 8 — sticky/frame/table não recebiam estado ativo).
-- **Bug crítico corrigido** em `_renderQuadrosReuniao` (ReunioesUI): função usava `_CATS` do escopo privado de `QuadrosUI` (inacessível) → TypeError ao recarregar lista após salvar quadro. Substituído por objeto local `_QDRO_CAT_LBL`.
-- **Categoria Visual** removida do form "Novo Quadro"; visível apenas em "Configurar" (edição). Canvas sempre infinito.
+- **Backend `analise_controller.gs`** reescrito: `ctrl_analise_catalogo()` + `ctrl_analise_cruzar()` + `ctrl_analise_importar_dados()` agora suporta 27 datasets cobrindo todos os módulos (Espaços, Tarefas, Reuniões, Financeiro, Pessoas, Ações, Público, Estoque, Comunicação, Escuta + 3 Cruzamentos). Funções `_cruzar_pessoas_tarefas`, `_cruzar_reservas_tarefas`, `_cruzar_acoes_publico_mes` e join customizado `_cruzar_custom` para qualquer par de datasets.
+- **Catálogo de Dados modal**: botão "Catálogo de dados" abre overlay com 27 datasets organizados por módulo + busca ao vivo. Chip especial (dashed) para cruzamentos. Click importa e fecha automaticamente.
+- **9 tipos de gráfico SVG**: Barras, Horizontal, Barras Empilhadas (nova), Linha, Área, Pizza, Rosca/Donut (nova), Funil/Ranking (nova), Dispersão. Cada tipo tem `dica` contextual exibida após gerar.
+- **Stats strip**: total, média, máx, mín, itens — atualiza automaticamente ao gerar.
+- **Ajustes avançados** colapsáveis: toggle de rótulos, toggle de grade, formato de valor (auto/número/R$/%), linha de referência horizontal.
+- **Sugerir tipo**: botão auto-recomenda o tipo de gráfico com base em quantidade de linhas e séries.
+- **GAS.analise.cruzar** adicionado ao namespace.
+- **CSS**: `.analise-catalogo-*`, `.analise-stats-strip`, `.analise-ajustes-*` adicionados.
+
+**Fase anterior (s137)**: **fix/feat — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin, seleção de ferramenta corrigida, bug _CATS corrigido — Deploy @1066.**
 
 **Fase anterior (s136)**: **feat — Estúdio de Análises Visuais no BI: editor de tabela, 6 tipos de gráfico SVG, galeria, importação do ERP e colar CSV — Deploy @1065.**
 

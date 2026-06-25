@@ -2092,6 +2092,28 @@ select.form-control { cursor: pointer; }
 .analise-swatch { width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .1s,border-color .1s;flex-shrink:0; }
 .analise-swatch:hover { transform:scale(1.15); }
 .analise-swatch.ativa { border-color:#000;transform:scale(1.1); }
+/* catálogo de dados */
+.analise-catalogo-overlay { position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2200;display:flex;align-items:center;justify-content:center;padding:16px; }
+.analise-catalogo-box { background:var(--surface);border-radius:14px;width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.3);overflow:hidden; }
+.analise-catalogo-head { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0; }
+.analise-catalogo-head h3 { margin:0;font-size:16px;font-weight:700;flex:1; }
+.analise-catalogo-body { overflow-y:auto;padding:12px 20px 20px;flex:1; }
+.analise-cat-grupo { margin-bottom:16px; }
+.analise-cat-grupo-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border); }
+.analise-cat-chips { display:flex;flex-wrap:wrap;gap:6px; }
+.analise-cat-chip { display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;background:var(--surface);transition:all .15s;user-select:none; }
+.analise-cat-chip:hover { background:var(--primary);color:#fff;border-color:var(--primary); }
+.analise-cat-chip.cruz { border-style:dashed;color:var(--primary); }
+.analise-cat-chip.cruz:hover { background:var(--primary);color:#fff; }
+/* stats strip */
+.analise-stats-strip { display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px; }
+.analise-stat-item { flex:1;text-align:center;padding:7px 4px;border-right:1px solid var(--border); }
+.analise-stat-item:last-child { border-right:none; }
+.analise-stat-val { font-size:14px;font-weight:700;color:var(--primary); }
+.analise-stat-lbl { font-size:10px;color:var(--text2);margin-top:1px; }
+/* ajustes avançados */
+.analise-ajustes-panel { border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface2);margin-top:6px; }
+.analise-ajustes-toggle { font-size:12px;color:var(--primary);cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;margin-top:4px;user-select:none; }
 
   </style>
 </head>
@@ -11433,10 +11455,11 @@ GAS.docSharing = {
   revogar:           function(tok,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_doc_revogar(tok); }
 };
 GAS.analise = {
-  listar:        function(cb,err)    { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_listar(); },
-  salvar:        function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_salvar(p||{}); },
-  excluir:       function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_excluir(p||{}); },
-  importarDados: function(p,cb,err)  { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_importar_dados(p||{}); }
+  listar:        function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_listar(); },
+  salvar:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_salvar(p||{}); },
+  excluir:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_excluir(p||{}); },
+  importarDados: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_importar_dados(p||{}); },
+  cruzar:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_cruzar(p||{}); }
 };
 
 // Inicializa navegação por setas em tab bars com overflow (ADM-07, ACO-09)
@@ -40174,17 +40197,22 @@ var AnaliseEstudioUI = (function() {
   var _colunas    = ['Label', 'Valor'];
   var _linhas     = [['',''],['',''],['',''],['',''],['','']];
   var _config     = { titulo: '', tipo: 'barras', corPrimaria: '#4f46e5' };
+  var _ajustes    = { rotulos: true, formato: 'auto', grade: true, linhaRef: '' };
   var _editandoId = null;
   var _lista      = [];
+  var _catCache   = null; // catálogo de datasets em memória
 
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
-    { id:'barras',       label:'Barras',       icon:'bar_chart'    },
-    { id:'barras_horiz', label:'Horizontal',   icon:'align_justify'},
-    { id:'linha',        label:'Linha',         icon:'show_chart'   },
-    { id:'area',         label:'Área',          icon:'area_chart'   },
-    { id:'pizza',        label:'Pizza',         icon:'pie_chart'    },
-    { id:'dispersao',    label:'Dispersão',     icon:'scatter_plot' }
+    { id:'barras',       label:'Barras',        icon:'bar_chart',       dica:'Ideal para comparar categorias distintas.' },
+    { id:'barras_horiz', label:'Horizontal',    icon:'align_justify',   dica:'Melhor quando os rótulos são longos.' },
+    { id:'barras_emp',   label:'Empilhadas',    icon:'stacked_bar_chart',dica:'Mostra composição de múltiplas séries.' },
+    { id:'linha',        label:'Linha',          icon:'show_chart',      dica:'Perfeito para mostrar evolução no tempo.' },
+    { id:'area',         label:'Área',           icon:'area_chart',      dica:'Destaca volume acumulado ao longo do tempo.' },
+    { id:'pizza',        label:'Pizza',          icon:'pie_chart',       dica:'Proporções de um todo — até 8 fatias.' },
+    { id:'rosca',        label:'Rosca',          icon:'donut_large',     dica:'Como pizza, mas com espaço central para KPI.' },
+    { id:'funil',        label:'Ranking',        icon:'filter_list',     dica:'Top-N decrescente — destaca líderes.' },
+    { id:'dispersao',    label:'Dispersão',      icon:'scatter_plot',    dica:'Correlação entre duas variáveis numéricas.' }
   ];
 
   // ── Público ────────────────────────────────────────────────────────────────
@@ -40195,6 +40223,7 @@ var AnaliseEstudioUI = (function() {
     _colunas = ['Label', 'Valor'];
     _linhas  = [['',''],['',''],['',''],['',''],['','']];
     _config  = { titulo: '', tipo: 'barras', corPrimaria: '#4f46e5' };
+    _ajustes = { rotulos: true, formato: 'auto', grade: true, linhaRef: '' };
     _modo = 'editor';
     _renderEditor();
   }
@@ -40206,6 +40235,7 @@ var AnaliseEstudioUI = (function() {
     _colunas = (a.colunas || ['Label','Valor']).slice();
     _linhas  = (a.linhas  || []).map(function(r){ return r.slice(); });
     _config  = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5' };
+    _ajustes = Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{});
     _modo = 'editor';
     _renderEditor();
   }
@@ -40213,11 +40243,10 @@ var AnaliseEstudioUI = (function() {
   function visualizarAnalise(id) {
     var a = _lista.find(function(x){ return x.id === id; });
     if (!a) return;
-    var cols = a.colunas || ['Label','Valor'];
     var rows = (a.linhas || []).filter(function(r){ return r[0]||r[1]; });
-    var cfg  = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5' };
-    var svg  = _renderizarGrafico(cols, rows, cfg);
-    _abrirVisualizador(a.titulo, svg);
+    var cfg  = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
+                 ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
+    _abrirVisualizador(a.titulo, _renderizarGrafico(a.colunas||['Label','Valor'], rows, cfg));
   }
 
   function excluirAnalise(id) {
@@ -40238,34 +40267,70 @@ var AnaliseEstudioUI = (function() {
     });
   }
 
-  function irGaleria()          { _modo = 'galeria'; _renderGaleria(); }
-  function adicionarLinha()     { _linhas.push(_colunas.map(function(_,i){ return i===0?'':0; })); _atualizarTabelaDom(); }
-  function removerLinha(i)      { if (_linhas.length > 1) { _linhas.splice(i,1); _atualizarTabelaDom(); } }
-  function adicionarColuna()    {
+  function irGaleria()      { _modo = 'galeria'; _renderGaleria(); }
+  function adicionarLinha() { _linhas.push(_colunas.map(function(_,i){ return i===0?'':0; })); _atualizarTabelaDom(); }
+  function removerLinha(i)  { if (_linhas.length > 1) { _linhas.splice(i,1); _atualizarTabelaDom(); } }
+  function adicionarColuna() {
     if (_colunas.length >= 5) { Toast.aviso('Máximo 4 séries de dados.'); return; }
     _colunas.push('Série ' + _colunas.length);
     _linhas.forEach(function(r){ r.push(0); });
     _atualizarTabelaDom();
   }
-  function removerColuna(ci)    {
+  function removerColuna(ci) {
     if (_colunas.length <= 2) return;
     _colunas.splice(ci, 1);
     _linhas.forEach(function(r){ r.splice(ci,1); });
     _atualizarTabelaDom();
   }
-  function renomearColuna(i,v)  { _colunas[i] = v; }
+  function renomearColuna(i,v)      { _colunas[i] = v; }
   function atualizarCelula(ri,ci,v) { if (_linhas[ri]) _linhas[ri][ci] = ci===0 ? v : (parseFloat(String(v).replace(',','.')) || 0); }
-  function setCor(cor)          {
+
+  function setCor(cor) {
     _config.corPrimaria = cor;
     document.querySelectorAll('#analise-studio-root .analise-swatch').forEach(function(s){
       s.classList.toggle('ativa', s.dataset.cor === cor);
     });
   }
+
   function atualizarConfig() {
     var tEl  = document.getElementById('analise-cfg-titulo');
     var tipEl = document.getElementById('analise-cfg-tipo');
-    if (tEl)  _config.titulo = tEl.value;
-    if (tipEl) _config.tipo  = tipEl.value;
+    if (tEl)   _config.titulo = tEl.value;
+    if (tipEl) _config.tipo   = tipEl.value;
+    var fmtEl = document.getElementById('analise-cfg-fmt');
+    var refEl = document.getElementById('analise-cfg-ref');
+    var grEl  = document.getElementById('analise-cfg-grade');
+    var lbEl  = document.getElementById('analise-cfg-rotulos');
+    if (fmtEl) _ajustes.formato  = fmtEl.value;
+    if (refEl) _ajustes.linhaRef = refEl.value;
+    if (grEl)  _ajustes.grade    = grEl.checked;
+    if (lbEl)  _ajustes.rotulos  = lbEl.checked;
+  }
+
+  function toggleAjustes() {
+    _ajustesVis = !_ajustesVis;
+    var p = document.getElementById('analise-ajustes-panel');
+    var t = document.getElementById('analise-ajustes-toggle');
+    if (p) p.style.display = _ajustesVis ? '' : 'none';
+    if (t) t.innerHTML = '<span class="ms ms-sm">' + (_ajustesVis?'expand_less':'expand_more') + '</span>' +
+      (_ajustesVis ? 'Ocultar ajustes' : 'Ajustes avançados');
+  }
+
+  function sugerirTipo() {
+    _sincDom();
+    var rows = _linhas.filter(function(r){ return String(r[0]).trim(); });
+    var n = rows.length, series = _colunas.length - 1;
+    var sugestao = 'barras';
+    if (series >= 2)              sugestao = 'barras_emp';
+    else if (n <= 6)              sugestao = 'pizza';
+    else if (n >= 6 && series===1) sugestao = 'linha';
+    if (n >= 10 && series===1)    sugestao = 'barras_horiz';
+    _config.tipo = sugestao;
+    var tipEl = document.getElementById('analise-cfg-tipo');
+    if (tipEl) tipEl.value = sugestao;
+    gerarGrafico();
+    var ti = _TIPOS.find(function(t){ return t.id===sugestao; });
+    Toast.sucesso('Sugestão: ' + (ti ? ti.label : sugestao));
   }
 
   function gerarGrafico() {
@@ -40276,10 +40341,35 @@ var AnaliseEstudioUI = (function() {
     var rows = _linhas.filter(function(r){ return String(r[0]).trim() || Number(r[1]); });
     if (!rows.length) {
       area.innerHTML = '<p class="muted-text" style="text-align:center;padding:30px;">Preencha os dados para gerar o gráfico.</p>';
+      _atualizarStats([]);
       return;
     }
-    try { area.innerHTML = _renderizarGrafico(_colunas, rows, _config); }
+    var cfgGraf = Object.assign({}, _config, { ajustes: _ajustes });
+    try { area.innerHTML = _renderizarGrafico(_colunas, rows, cfgGraf); }
     catch(e) { area.innerHTML = '<p class="muted-text" style="text-align:center;">Erro ao renderizar.</p>'; }
+    _atualizarStats(rows);
+    // dica contextual
+    var ti = _TIPOS.find(function(t){ return t.id===_config.tipo; });
+    var dEl = document.getElementById('analise-dica');
+    if (dEl && ti) dEl.textContent = ti.dica;
+  }
+
+  function _atualizarStats(rows) {
+    var el = document.getElementById('analise-stats-strip');
+    if (!el) return;
+    if (!rows.length) { el.style.display='none'; return; }
+    var vals = rows.map(function(r){ return Number(r[1])||0; });
+    var total = vals.reduce(function(s,v){ return s+v; },0);
+    var media = rows.length ? total/rows.length : 0;
+    var max   = Math.max.apply(null, vals);
+    var min   = Math.min.apply(null, vals);
+    el.style.display = '';
+    el.innerHTML =
+      '<div class="analise-stat-item"><div class="analise-stat-val">' + _fmtNum(total) + '</div><div class="analise-stat-lbl">Total</div></div>' +
+      '<div class="analise-stat-item"><div class="analise-stat-val">' + _fmtNum(media) + '</div><div class="analise-stat-lbl">Média</div></div>' +
+      '<div class="analise-stat-item"><div class="analise-stat-val">' + _fmtNum(max) + '</div><div class="analise-stat-lbl">Máx.</div></div>' +
+      '<div class="analise-stat-item"><div class="analise-stat-val">' + _fmtNum(min) + '</div><div class="analise-stat-lbl">Mín.</div></div>' +
+      '<div class="analise-stat-item"><div class="analise-stat-val">' + rows.length + '</div><div class="analise-stat-lbl">Itens</div></div>';
   }
 
   function salvar(done) {
@@ -40293,7 +40383,7 @@ var AnaliseEstudioUI = (function() {
       tipo:    _config.tipo,
       colunas: _colunas.slice(),
       linhas:  rows,
-      config:  { corPrimaria: _config.corPrimaria }
+      config:  { corPrimaria: _config.corPrimaria, ajustes: _ajustes }
     };
     GAS.analise.salvar(params, function(r) {
       if (done) done();
@@ -40317,16 +40407,15 @@ var AnaliseEstudioUI = (function() {
       '<div style="display:flex;gap:8px;margin-top:12px;">' +
         '<button class="btn btn-primario" onclick="AnaliseEstudioUI._csvConfirmar(\'' + uid + '\')" data-bg-skip="1">Importar</button>' +
         '<button class="btn btn-ghost" onclick="document.querySelector(\'.modal-simples\').remove()" data-bg-skip="1">Cancelar</button>' +
-      '</div>' +
-    '</div>';
+      '</div></div>';
     _abrirModalSimples(html);
     setTimeout(function(){ var el=document.getElementById(uid); if(el) el.focus(); }, 80);
   }
 
   function _csvConfirmar(uid) {
-    var el = document.getElementById(uid);
+    var el  = document.getElementById(uid);
     var txt = el ? el.value.trim() : '';
-    var m = document.querySelector('.modal-simples'); if (m) m.remove();
+    var m   = document.querySelector('.modal-simples'); if (m) m.remove();
     if (!txt) return;
     var parsed = _parseCsv(txt);
     if (!parsed.colunas.length) { Toast.erro('CSV inválido ou vazio.'); return; }
@@ -40336,22 +40425,125 @@ var AnaliseEstudioUI = (function() {
     Toast.sucesso('CSV importado: ' + _linhas.length + ' linhas.');
   }
 
+  // ── Catálogo de Dados ──────────────────────────────────────────────────────
+  var _CATALOGO_LOCAL = [
+    { id:'reservas_espaco',         modulo:'Espaços',         label:'Reservas por espaço' },
+    { id:'reservas_setor',          modulo:'Espaços',         label:'Reservas por setor' },
+    { id:'reservas_mes',            modulo:'Espaços',         label:'Reservas por mês' },
+    { id:'carros_destino',          modulo:'Espaços',         label:'Viagens por destino' },
+    { id:'carros_setor',            modulo:'Espaços',         label:'Viagens por setor' },
+    { id:'tarefas_status',          modulo:'Tarefas',         label:'Tarefas por status' },
+    { id:'tarefas_setor',           modulo:'Tarefas',         label:'Tarefas por setor' },
+    { id:'tarefas_responsavel',     modulo:'Tarefas',         label:'Tarefas por responsável' },
+    { id:'reunioes_tipo',           modulo:'Reuniões',        label:'Reuniões por tipo' },
+    { id:'reunioes_mes',            modulo:'Reuniões',        label:'Reuniões por mês' },
+    { id:'encaminhamentos_status',  modulo:'Reuniões',        label:'Encaminhamentos por status' },
+    { id:'financeiro_execucao',     modulo:'Financeiro',      label:'Execução orçamentária' },
+    { id:'financeiro_rubrica',      modulo:'Financeiro',      label:'Valor por rubrica' },
+    { id:'pessoas_setor',           modulo:'Pessoas',         label:'Colaboradores por setor' },
+    { id:'pessoas_cargo',           modulo:'Pessoas',         label:'Colaboradores por cargo' },
+    { id:'pessoas_vinculo',         modulo:'Pessoas',         label:'Colaboradores por vínculo' },
+    { id:'acoes_status',            modulo:'Ações Culturais', label:'Ações por status' },
+    { id:'acoes_tipo',              modulo:'Ações Culturais', label:'Ações por tipo' },
+    { id:'acoes_mes',               modulo:'Ações Culturais', label:'Ações por mês' },
+    { id:'publico_acao',            modulo:'Público',         label:'Público por ação' },
+    { id:'publico_mes',             modulo:'Público',         label:'Inscrições por mês' },
+    { id:'estoque_categoria',       modulo:'Estoque',         label:'Itens por categoria' },
+    { id:'balcao_status',           modulo:'Comunicação',     label:'Demandas por status' },
+    { id:'escuta_pesquisa',         modulo:'Escuta',          label:'Resultados de escuta' },
+    { id:'cruzar_pessoas_tarefas',  modulo:'Cruzamentos',     label:'Pessoas × Tarefas (setor)' },
+    { id:'cruzar_reservas_tarefas', modulo:'Cruzamentos',     label:'Reservas × Tarefas (setor)' },
+    { id:'cruzar_acoes_publico_mes',modulo:'Cruzamentos',     label:'Ações × Público (mês)' },
+  ];
+
+  function abrirCatalogo() {
+    var cat = _CATALOGO_LOCAL;
+    // agrupa por módulo
+    var grupos = {};
+    var ordem  = [];
+    cat.forEach(function(ds) {
+      if (!grupos[ds.modulo]) { grupos[ds.modulo] = []; ordem.push(ds.modulo); }
+      grupos[ds.modulo].push(ds);
+    });
+    var uid = 'cat-busca-' + Date.now();
+    var gruposHtml = ordem.map(function(mod) {
+      var isCruz = mod === 'Cruzamentos';
+      var chips = grupos[mod].map(function(ds) {
+        var safeId = JSON.stringify(ds.id).replace(/"/g,"'");
+        var safeLabel = _esc(ds.label);
+        return '<span class="analise-cat-chip' + (isCruz?' cruz':'') + '" onclick="AnaliseEstudioUI._importarDataset(' + safeId + ')" title="' + safeLabel + '">' +
+          (isCruz ? '<span class="ms" style="font-size:13px;">merge</span>' : '') + safeLabel + '</span>';
+      }).join('');
+      return '<div class="analise-cat-grupo">' +
+        '<div class="analise-cat-grupo-label">' + _esc(mod) + '</div>' +
+        '<div class="analise-cat-chips" data-modulo="' + _esc(mod) + '">' + chips + '</div></div>';
+    }).join('');
+
+    var ov = document.createElement('div');
+    ov.className = 'analise-catalogo-overlay';
+    ov.id = 'analise-catalogo-ov';
+    ov.innerHTML =
+      '<div class="analise-catalogo-box">' +
+        '<div class="analise-catalogo-head">' +
+          '<span class="ms" style="color:var(--primary);">dataset</span>' +
+          '<h3>Catálogo de Dados</h3>' +
+          '<input id="' + uid + '" type="search" class="form-control" style="max-width:200px;font-size:13px;" placeholder="Buscar..." oninput="AnaliseEstudioUI._filtrarCatalogo(this.value)">' +
+          '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'analise-catalogo-ov\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
+        '</div>' +
+        '<div class="analise-catalogo-body" id="analise-cat-body">' + gruposHtml + '</div>' +
+      '</div>';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+    setTimeout(function(){ var el=document.getElementById(uid); if(el) el.focus(); }, 60);
+  }
+
+  function _filtrarCatalogo(q) {
+    q = (q||'').toLowerCase().trim();
+    var grupos = document.querySelectorAll('#analise-cat-body .analise-cat-grupo');
+    grupos.forEach(function(g) {
+      var chips = g.querySelectorAll('.analise-cat-chip');
+      var qualquerVisivel = false;
+      chips.forEach(function(c) {
+        var match = !q || c.textContent.toLowerCase().indexOf(q) >= 0;
+        c.style.display = match ? '' : 'none';
+        if (match) qualquerVisivel = true;
+      });
+      g.style.display = qualquerVisivel ? '' : 'none';
+    });
+  }
+
+  function _importarDataset(dsId) {
+    var ov = document.getElementById('analise-catalogo-ov');
+    if (ov) ov.remove();
+    var label = '';
+    _CATALOGO_LOCAL.forEach(function(ds){ if(ds.id===dsId) label = ds.label; });
+    Toast.aviso('Carregando: ' + label + '…');
+    GAS.analise.importarDados({ id: dsId }, function(r) {
+      if (!r||!r.ok||!r.data) { Toast.erro('Sem dados para "' + label + '". Verifique permissões.'); return; }
+      var d = r.data;
+      _colunas = d.colunas && d.colunas.length ? d.colunas : ['Label','Valor'];
+      _linhas  = d.linhas  && d.linhas.length  ? d.linhas  : [['',0]];
+      // para cruzamentos com 3 colunas, sugerir barras_emp ou linha
+      if (_colunas.length >= 3 && _config.tipo === 'barras') {
+        _config.tipo = 'barras_emp';
+        var tipEl = document.getElementById('analise-cfg-tipo');
+        if (tipEl) tipEl.value = 'barras_emp';
+      }
+      _atualizarTabelaDom();
+      gerarGrafico();
+      Toast.sucesso(_linhas.length + ' registros importados — ' + label);
+    }, function(){ Toast.erro('Erro ao carregar "' + label + '". Verifique permissões.'); });
+  }
+
   function importarModulo(modulo) {
     if (!modulo) return;
-    GAS.analise.importarDados({ modulo:modulo }, function(r) {
-      if (!r||!r.ok||!r.data) { Toast.erro('Sem dados disponíveis para "' + modulo + '".'); return; }
-      var d = r.data;
-      _colunas = d.colunas || ['Label','Valor'];
-      _linhas  = d.linhas && d.linhas.length ? d.linhas : [['',0]];
-      _atualizarTabelaDom();
-      Toast.sucesso((_linhas.length) + ' registros importados de "' + modulo + '".');
-    }, function(){ Toast.erro('Erro ao importar dados.'); });
+    _importarDataset(modulo);
   }
 
   // ── Privado ────────────────────────────────────────────────────────────────
   function _carregarGaleria() {
     var root = document.getElementById('analise-studio-root');
-    if (root) root.innerHTML = '<p class="muted-text">⏳ Carregando análises…</p>';
+    if (root) root.innerHTML = '<p class="muted-text">Carregando análises…</p>';
     GAS.analise.listar(function(r) {
       _lista     = (r && r.ok) ? (r.data || []) : [];
       _carregado = true;
@@ -40362,45 +40554,51 @@ var AnaliseEstudioUI = (function() {
   function _renderGaleria() {
     var root = document.getElementById('analise-studio-root');
     if (!root) return;
-    var html = '<div class="analise-toolbar">' +
-      '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
-        '<span class="ms ms-sm">add</span> Nova Análise' +
-      '</button>' +
-      '<span style="font-size:13px;color:var(--text2);">' + _lista.length + ' análise(s) salva(s)</span>' +
-    '</div>';
-
-    if (!_lista.length) {
-      html += '<div style="text-align:center;padding:56px 20px;">' +
-        '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">analytics</span>' +
-        '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Nenhuma análise ainda.</p>' +
-        '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Crie gráficos e visualizações a partir de dados do ERP ou insira manualmente.</p>' +
-        '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
-          '<span class="ms ms-sm">add_chart</span> Criar primeira análise' +
+    var html =
+      '<div class="view-header" style="margin-bottom:16px;">' +
+        '<div>' +
+          '<div class="view-title">Estúdio de Análises</div>' +
+          '<div class="view-subtitle">Crie, salve e explore visualizações a partir de qualquer módulo do sistema.</div>' +
+        '</div>' +
+        '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
+          '<span class="ms ms-sm">add_chart</span> Nova análise' +
         '</button>' +
       '</div>';
+
+    if (!_lista.length) {
+      html +=
+        '<div style="text-align:center;padding:56px 20px;">' +
+          '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">analytics</span>' +
+          '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Nenhuma análise ainda.</p>' +
+          '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Importe dados de qualquer módulo ou cole um CSV para começar.</p>' +
+          '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
+            '<span class="ms ms-sm">add_chart</span> Criar primeira análise' +
+          '</button>' +
+        '</div>';
     } else {
       html += '<div class="analise-galeria-grid">';
       _lista.slice().reverse().forEach(function(a) {
-        var ti = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
+        var ti     = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
         var preview = _svgMiniatura(a);
-        var safeId = JSON.stringify(a.id||'').replace(/"/g,"'");
-        html += '<div class="analise-card">' +
-          '<div class="analise-card-preview">' + preview + '</div>' +
-          '<div class="analise-card-info">' +
-            '<div style="font-size:14px;font-weight:600;margin-bottom:5px;">' + _esc(a.titulo) + '</div>' +
-            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-              '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;">' +
-                '<span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) +
-              '</span>' +
-              '<span style="font-size:11px;color:var(--text2);">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</span>' +
+        var safeId  = JSON.stringify(a.id||'').replace(/"/g,"'");
+        html +=
+          '<div class="analise-card">' +
+            '<div class="analise-card-preview">' + preview + '</div>' +
+            '<div class="analise-card-info">' +
+              '<div style="font-size:14px;font-weight:600;margin-bottom:5px;">' + _esc(a.titulo) + '</div>' +
+              '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+                '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;">' +
+                  '<span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) +
+                '</span>' +
+                '<span style="font-size:11px;color:var(--text2);">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</span>' +
+              '</div>' +
             '</div>' +
-          '</div>' +
-          '<div class="analise-card-actions">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Visualizar em tela cheia"><span class="ms ms-sm">open_in_full</span></button>' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' +
-            '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' +
-          '</div>' +
-        '</div>';
+            '<div class="analise-card-actions">' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Tela cheia"><span class="ms ms-sm">open_in_full</span></button>' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' +
+              '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' +
+            '</div>' +
+          '</div>';
       });
       html += '</div>';
     }
@@ -40423,22 +40621,21 @@ var AnaliseEstudioUI = (function() {
     var html =
       '<div class="analise-toolbar">' +
         '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
-        '<h3 style="margin:0;font-size:15px;font-weight:700;">' + (_editandoId?'Editar Análise':'Nova Análise') + '</h3>' +
+        '<h3 style="margin:0;font-size:15px;font-weight:700;">' + (_editandoId ? 'Editar Análise' : 'Nova Análise') + '</h3>' +
       '</div>' +
 
       '<div class="analise-editor-grid">' +
 
-        // ── Painel dados
+        // ── Painel Dados
         '<div class="analise-painel-dados">' +
           '<div class="analise-section-title">Dados</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.colarCsv()" data-bg-skip="1"><span class="ms ms-sm">content_paste</span> Colar CSV</button>' +
-            '<select class="select-sm" style="max-width:170px;" onchange="AnaliseEstudioUI.importarModulo(this.value);this.value=\'\'">' +
-              '<option value="">Importar do ERP…</option>' +
-              '<option value="operacional">Operacional</option>' +
-              '<option value="financeiro">Financeiro</option>' +
-              '<option value="estoque">Estoque</option>' +
-            '</select>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.abrirCatalogo()" data-bg-skip="1">' +
+              '<span class="ms ms-sm">dataset</span> Catálogo de dados' +
+            '</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.colarCsv()" data-bg-skip="1">' +
+              '<span class="ms ms-sm">content_paste</span> Colar CSV' +
+            '</button>' +
           '</div>' +
           '<div style="overflow-x:auto;">' +
             '<table class="analise-table-editor" id="analise-table">' +
@@ -40452,7 +40649,7 @@ var AnaliseEstudioUI = (function() {
           '</div>' +
         '</div>' +
 
-        // ── Painel visual
+        // ── Painel Visual
         '<div class="analise-painel-visual">' +
           '<div class="analise-section-title">Visualização</div>' +
           '<div class="form-group" style="margin-bottom:8px;">' +
@@ -40462,7 +40659,7 @@ var AnaliseEstudioUI = (function() {
           '<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">' +
             '<div class="form-group" style="margin:0;flex:1;min-width:120px;">' +
               '<label class="form-label">Tipo de gráfico</label>' +
-              '<select id="analise-cfg-tipo" class="form-control" onchange="AnaliseEstudioUI.atualizarConfig()">' + tipoOpts + '</select>' +
+              '<select id="analise-cfg-tipo" class="form-control" onchange="AnaliseEstudioUI.atualizarConfig();AnaliseEstudioUI.gerarGrafico()">' + tipoOpts + '</select>' +
             '</div>' +
             '<div class="form-group" style="margin:0;">' +
               '<label class="form-label">Cor principal</label>' +
@@ -40472,11 +40669,42 @@ var AnaliseEstudioUI = (function() {
           '<div class="analise-chart-area" id="analise-chart-area">' +
             '<p class="muted-text" style="text-align:center;">Preencha os dados e clique em <strong>Gerar</strong>.</p>' +
           '</div>' +
+          '<div id="analise-stats-strip" class="analise-stats-strip" style="display:none;"></div>' +
+          '<div id="analise-dica" style="font-size:11px;color:var(--text2);margin-top:4px;min-height:14px;"></div>' +
+
+          // Ajustes avançados
+          '<span id="analise-ajustes-toggle" class="analise-ajustes-toggle" onclick="AnaliseEstudioUI.toggleAjustes()" data-bg-skip="1">' +
+            '<span class="ms ms-sm">expand_more</span> Ajustes avançados' +
+          '</span>' +
+          '<div id="analise-ajustes-panel" class="analise-ajustes-panel" style="display:none;">' +
+            '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+              '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">' +
+                '<input type="checkbox" id="analise-cfg-rotulos"' + (_ajustes.rotulos?' checked':'') + ' onchange="AnaliseEstudioUI.atualizarConfig();AnaliseEstudioUI.gerarGrafico()"> Rótulos' +
+              '</label>' +
+              '<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">' +
+                '<input type="checkbox" id="analise-cfg-grade"' + (_ajustes.grade?' checked':'') + ' onchange="AnaliseEstudioUI.atualizarConfig();AnaliseEstudioUI.gerarGrafico()"> Grade' +
+              '</label>' +
+              '<div style="display:flex;align-items:center;gap:5px;">' +
+                '<label style="font-size:12px;white-space:nowrap;">Formato</label>' +
+                '<select id="analise-cfg-fmt" class="select-sm" onchange="AnaliseEstudioUI.atualizarConfig();AnaliseEstudioUI.gerarGrafico()">' +
+                  '<option value="auto"' + (_ajustes.formato==='auto'?' selected':'') + '>Auto</option>' +
+                  '<option value="numero"' + (_ajustes.formato==='numero'?' selected':'') + '>Número</option>' +
+                  '<option value="moeda"' + (_ajustes.formato==='moeda'?' selected':'') + '>R$</option>' +
+                  '<option value="percent"' + (_ajustes.formato==='percent'?' selected':'') + '>%</option>' +
+                '</select>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:5px;">' +
+                '<label style="font-size:12px;white-space:nowrap;">Linha ref.</label>' +
+                '<input type="number" id="analise-cfg-ref" class="form-control" style="width:80px;font-size:12px;padding:3px 6px;" value="' + (_ajustes.linhaRef||'') + '" placeholder="ex: 100" oninput="AnaliseEstudioUI.atualizarConfig();AnaliseEstudioUI.gerarGrafico()">' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
           '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
-            '<button class="btn btn-secundario" onclick="AnaliseEstudioUI.gerarGrafico()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Gerar Gráfico</button>' +
-            '<button id="btn-analise-salvar" class="btn btn-primario"' +
-              ' onclick="BtnGuard.wrap(\'btn-analise-salvar\',\'Salvando…\',AnaliseEstudioUI.salvar)">' +
-              '<span class="ms ms-sm">save</span> Salvar Análise' +
+            '<button class="btn btn-secundario" onclick="AnaliseEstudioUI.gerarGrafico()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Gerar</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.sugerirTipo()" data-bg-skip="1" title="Sugerir tipo de gráfico com base nos dados"><span class="ms ms-sm">auto_awesome</span> Sugerir tipo</button>' +
+            '<button id="btn-analise-salvar" class="btn btn-primario" onclick="BtnGuard.wrap(\'btn-analise-salvar\',\'Salvando…\',AnaliseEstudioUI.salvar)">' +
+              '<span class="ms ms-sm">save</span> Salvar' +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -40562,19 +40790,23 @@ var AnaliseEstudioUI = (function() {
   // ── Renderizador central ───────────────────────────────────────────────────
   function _renderizarGrafico(colunas, linhas, cfg) {
     var tipo = cfg.tipo || 'barras';
+    var aj   = cfg.ajustes || {};
     var html = cfg.titulo
       ? '<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:12px;">' + _esc(cfg.titulo) + '</div>'
       : '';
     try {
       if      (tipo==='barras')       html += _svgBarras(colunas,linhas,cfg);
       else if (tipo==='barras_horiz') html += _svgBarrasHoriz(colunas,linhas,cfg);
+      else if (tipo==='barras_emp')   html += _svgBarrasEmp(colunas,linhas,cfg);
       else if (tipo==='linha')        html += _svgLinha(colunas,linhas,cfg);
       else if (tipo==='area')         html += _svgArea(colunas,linhas,cfg);
-      else if (tipo==='pizza')        html += _svgPizza(colunas,linhas,cfg);
+      else if (tipo==='pizza')        html += _svgPizza(colunas,linhas,cfg,false);
+      else if (tipo==='rosca')        html += _svgPizza(colunas,linhas,cfg,true);
+      else if (tipo==='funil')        html += _svgFunil(colunas,linhas,cfg);
       else if (tipo==='dispersao')    html += _svgDispersao(colunas,linhas,cfg);
       else                            html += _svgBarras(colunas,linhas,cfg);
     } catch(e) { return '<p class="muted-text">Erro ao renderizar gráfico.</p>'; }
-    if (colunas.length > 2 && tipo !== 'pizza') html += _legenda(colunas, cfg);
+    if (colunas.length > 2 && tipo !== 'pizza' && tipo !== 'rosca') html += _legenda(colunas, cfg);
     return '<div>' + html + '</div>';
   }
 
@@ -40583,7 +40815,7 @@ var AnaliseEstudioUI = (function() {
     if (!rows.length) return '<div style="height:80px;background:var(--surface2);border-radius:4px;"></div>';
     try {
       return _renderizarGrafico(a.colunas||['L','V'], rows, {
-        titulo:'', tipo:a.tipo, corPrimaria:(a.config||{}).corPrimaria||'#4f46e5', _mini:true
+        titulo:'', tipo: a.tipo, corPrimaria:(a.config||{}).corPrimaria||'#4f46e5', _mini:true
       });
     } catch(e) { return ''; }
   }
@@ -40607,58 +40839,92 @@ var AnaliseEstudioUI = (function() {
 
   function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  function _grid(PL,PT,ys,W,PR,maxV) {
+  function _fmtNum(v) {
+    if (Math.abs(v) >= 1000000) return (v/1000000).toFixed(1).replace('.',',') + ' M';
+    if (Math.abs(v) >= 1000)    return (v/1000).toFixed(1).replace('.',',') + ' k';
+    return (Math.round(v*10)/10).toLocaleString('pt-BR');
+  }
+
+  function _fmtVal(v, fmt) {
+    fmt = fmt || 'auto';
+    if (fmt === 'moeda')   return 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+    if (fmt === 'percent') return (v||0).toFixed(1) + '%';
+    if (fmt === 'numero')  return (v||0).toLocaleString('pt-BR');
+    return _fmtNum(v);
+  }
+
+  function _grid(PL,PT,ys,W,PR,maxV,grade) {
+    if (grade === false) return '';
     return [0,.25,.5,.75,1].map(function(f){
       var gY=(PT+ys*(1-f)).toFixed(1);
-      return '<line x1="'+PL+'" y1="'+gY+'" x2="'+(W-PR)+'" y2="'+gY+'" stroke="var(--border)" stroke-width="'+(f===0||f===1?'1':'.5')+'"/>'+
+      return '<line x1="'+PL+'" y1="'+gY+'" x2="'+(W-PR)+'" y2="'+gY+'" stroke="var(--border)" stroke-width="'+(f===0||f===1?'1':'.4')+'"/>'+
         '<text x="'+(PL-4)+'" y="'+(Number(gY)+3.5)+'" text-anchor="end" font-size="8" fill="var(--text2)">'+(Math.round(maxV*f))+'</text>';
     }).join('');
   }
 
-  // ── Barras verticais ──────────────────────────────────────────────────────
+  function _metaLinha(PL,W,PR,PT,ys,maxV,linhaRef) {
+    if (!linhaRef) return '';
+    var v = parseFloat(linhaRef);
+    if (isNaN(v) || maxV <= 0) return '';
+    var gy = (PT + ys - (v/maxV)*ys).toFixed(1);
+    return '<line x1="'+PL+'" y1="'+gy+'" x2="'+(W-PR)+'" y2="'+gy+'" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,3"/>' +
+      '<text x="'+(W-PR-2)+'" y="'+(Number(gy)-3)+'" text-anchor="end" font-size="9" fill="#ef4444">'+v+'</text>';
+  }
+
+  // ── Barras verticais ───────────────────────────────────────────────────────
   function _svgBarras(cols, rows, cfg) {
-    var mini=!!cfg._mini, W=500, H=mini?80:220, PL=40, PR=10, PT=10, PB=mini?14:30;
+    var mini=!!cfg._mini, W=500, H=mini?80:230, PL=40, PR=10, PT=14, PB=mini?14:32;
     var xs=W-PL-PR, ys=H-PT-PB;
-    var series=cols.length-1;
-    var cores=_cores(series,cfg.corPrimaria);
+    var aj=cfg.ajustes||{}, fmt=aj.formato||'auto', rotulos=aj.rotulos!==false, grade=aj.grade!==false;
+    var series=cols.length-1, cores=_cores(series,cfg.corPrimaria);
     var vals=rows.map(function(r){ return cols.slice(1).map(function(_,si){ return Number(r[si+1])||0; }); });
     var maxV=Math.max.apply(null,vals.map(function(v){ return Math.max.apply(null,v); }).concat([1]));
-    var n=rows.length, grpW=xs/n, barW=Math.max(3,(grpW/series)-2);
+    var n=rows.length, grpW=xs/n;
+    var barW=Math.min(56, Math.max(4, (grpW/series)-3));
     var bars='',labels='';
     rows.forEach(function(row,ri){
       vals[ri].forEach(function(v,si){
-        var bH=Math.max(maxV>0?Math.round((v/maxV)*ys):0,v>0?2:0);
-        var bX=PL+ri*grpW+si*(barW+2)+(grpW-series*(barW+2))/2;
+        var bH=Math.max(maxV>0?Math.round((v/maxV)*ys):0, v>0?2:0);
+        var bX=PL + ri*grpW + (grpW - series*(barW+2))/2 + si*(barW+2);
         var bY=PT+ys-bH;
-        bars+='<rect x="'+bX.toFixed(1)+'" y="'+bY.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+bH.toFixed(1)+'" rx="2" fill="'+cores[si]+'" opacity=".85">'+
-          '<title>'+_esc(row[0])+': '+v+'</title></rect>';
-        if (!mini && v>0) bars+='<text x="'+(bX+barW/2).toFixed(1)+'" y="'+(bY-3).toFixed(1)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+v+'</text>';
+        bars+='<rect x="'+bX.toFixed(1)+'" y="'+bY.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+bH.toFixed(1)+'" rx="3" fill="'+cores[si]+'" opacity=".88">'+
+          '<title>'+_esc(row[0])+': '+_fmtVal(v,fmt)+'</title></rect>';
+        if (!mini && rotulos && v>0 && bH>10) {
+          bars+='<text x="'+(bX+barW/2).toFixed(1)+'" y="'+(bY-3).toFixed(1)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_fmtVal(v,fmt)+'</text>';
+        }
       });
-      if (!mini) { var lX=(PL+ri*grpW+grpW/2).toFixed(1); labels+='<text x="'+lX+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="var(--text2)">'+_esc(String(row[0]).slice(0,10))+'</text>'; }
+      if (!mini) {
+        var lX=(PL+ri*grpW+grpW/2).toFixed(1);
+        var lbl=String(row[0]).length>10?String(row[0]).slice(0,9)+'…':String(row[0]);
+        labels+='<text x="'+lX+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_esc(lbl)+'</text>';
+      }
     });
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
-      (mini?'':_grid(PL,PT,ys,W,PR,maxV))+bars+labels+
+      (mini?'':_grid(PL,PT,ys,W,PR,maxV,grade))+
+      (mini?'':_metaLinha(PL,W,PR,PT,ys,maxV,aj.linhaRef))+
+      bars+labels+
       '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
       '<line x1="'+PL+'" y1="'+(PT+ys)+'" x2="'+(W-PR)+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
     '</svg>';
   }
 
-  // ── Barras horizontais ────────────────────────────────────────────────────
+  // ── Barras horizontais ─────────────────────────────────────────────────────
   function _svgBarrasHoriz(cols, rows, cfg) {
-    var mini=!!cfg._mini, W=500, PL=mini?36:130, PR=36, PT=6, PB=6;
-    var rowH=mini?10:26, H=rows.length*rowH+PT+PB+8;
+    var mini=!!cfg._mini, W=500, PL=mini?36:136, PR=50, PT=6, PB=6;
+    var rowH=mini?10:28, H=rows.length*rowH+PT+PB+8;
     var xs=W-PL-PR;
+    var aj=cfg.ajustes||{}, fmt=aj.formato||'auto', rotulos=aj.rotulos!==false;
     var vals=rows.map(function(r){ return Number(r[1])||0; });
     var maxV=Math.max.apply(null,vals.concat([1]));
-    var cor=cfg.corPrimaria||'#4f46e5';
-    var bars='',labels='';
+    var cor=cfg.corPrimaria||'#4f46e5', bars='',labels='';
     rows.forEach(function(row,ri){
-      var v=vals[ri], bW=maxV>0?Math.round((v/maxV)*xs):0, bY=PT+ri*rowH+2;
-      bars+='<rect x="'+PL+'" y="'+bY+'" width="'+bW+'" height="'+(rowH-4)+'" rx="2" fill="'+cor+'" opacity=".85">'+
-        '<title>'+_esc(row[0])+': '+v+'</title></rect>';
+      var v=vals[ri], bW=maxV>0?Math.round((v/maxV)*xs):0, bY=PT+ri*rowH+3;
+      bars+='<rect x="'+PL+'" y="'+bY+'" width="'+bW+'" height="'+(rowH-6)+'" rx="3" fill="'+cor+'" opacity=".88">'+
+        '<title>'+_esc(row[0])+': '+_fmtVal(v,fmt)+'</title></rect>';
       if (!mini) {
-        labels+='<text x="'+(PL-4)+'" y="'+(bY+rowH/2)+'" text-anchor="end" font-size="10" fill="var(--text)">'+_esc(String(row[0]).slice(0,18))+'</text>';
-        if (v>0) labels+='<text x="'+(PL+bW+4)+'" y="'+(bY+rowH/2)+'" font-size="9" fill="var(--text2)">'+v+'</text>';
+        var lbl=String(row[0]).length>20?String(row[0]).slice(0,19)+'…':String(row[0]);
+        labels+='<text x="'+(PL-5)+'" y="'+(bY+rowH/2-3+6)+'" text-anchor="end" font-size="10" fill="var(--text)">'+_esc(lbl)+'</text>';
+        if (rotulos && v>0) labels+='<text x="'+(PL+bW+5)+'" y="'+(bY+rowH/2-3+6)+'" font-size="9" fill="var(--text2)">'+_fmtVal(v,fmt)+'</text>';
       }
     });
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
@@ -40666,38 +40932,80 @@ var AnaliseEstudioUI = (function() {
       bars+labels+'</svg>';
   }
 
-  // ── Linha ────────────────────────────────────────────────────────────────
-  function _svgLinha(cols, rows, cfg) {
-    var mini=!!cfg._mini, W=500, H=mini?80:220, PL=40, PR=10, PT=10, PB=mini?14:30;
+  // ── Barras empilhadas ──────────────────────────────────────────────────────
+  function _svgBarrasEmp(cols, rows, cfg) {
+    var mini=!!cfg._mini, W=500, H=mini?80:230, PL=40, PR=10, PT=14, PB=mini?14:32;
     var xs=W-PL-PR, ys=H-PT-PB;
+    var aj=cfg.ajustes||{}, grade=aj.grade!==false, rotulos=aj.rotulos!==false;
+    var series=cols.length-1, cores=_cores(series,cfg.corPrimaria);
+    var vals=rows.map(function(r){ return cols.slice(1).map(function(_,si){ return Number(r[si+1])||0; }); });
+    var totais=vals.map(function(v){ return v.reduce(function(s,x){ return s+x; },0); });
+    var maxV=Math.max.apply(null,totais.concat([1]));
+    var n=rows.length, grpW=xs/n, barW=Math.min(56,Math.max(6,grpW*0.7));
+    var bars='',labels='';
+    rows.forEach(function(row,ri){
+      var bX=PL+ri*grpW+(grpW-barW)/2, yAcum=PT+ys;
+      vals[ri].forEach(function(v,si){
+        if (v<=0) return;
+        var bH=Math.max(Math.round((v/maxV)*ys),2);
+        yAcum-=bH;
+        bars+='<rect x="'+bX.toFixed(1)+'" y="'+yAcum.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+bH+'" fill="'+cores[si]+'" opacity=".88">'+
+          '<title>'+_esc(cols[si+1]||'')+' / '+_esc(row[0])+': '+v+'</title></rect>';
+      });
+      if (!mini && rotulos) {
+        var lbl=String(row[0]).length>9?String(row[0]).slice(0,8)+'…':String(row[0]);
+        labels+='<text x="'+(bX+barW/2).toFixed(1)+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_esc(lbl)+'</text>';
+        if (totais[ri]>0) labels+='<text x="'+(bX+barW/2).toFixed(1)+'" y="'+(yAcum-4).toFixed(1)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+totais[ri]+'</text>';
+      }
+    });
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
+      (mini?'':_grid(PL,PT,ys,W,PR,maxV,grade))+bars+labels+
+      '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
+      '<line x1="'+PL+'" y1="'+(PT+ys)+'" x2="'+(W-PR)+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
+    '</svg>';
+  }
+
+  // ── Linha ──────────────────────────────────────────────────────────────────
+  function _svgLinha(cols, rows, cfg) {
+    var mini=!!cfg._mini, W=500, H=mini?80:230, PL=40, PR=10, PT=14, PB=mini?14:32;
+    var xs=W-PL-PR, ys=H-PT-PB;
+    var aj=cfg.ajustes||{}, grade=aj.grade!==false, rotulos=aj.rotulos!==false, fmt=aj.formato||'auto';
     var series=cols.length-1, cores=_cores(series,cfg.corPrimaria);
     var vals=rows.map(function(r){ return cols.slice(1).map(function(_,si){ return Number(r[si+1])||0; }); });
     var maxV=Math.max.apply(null,vals.map(function(v){ return Math.max.apply(null,v); }).concat([1]));
     var n=rows.length, paths='',dots='',labels='';
     for (var si=0; si<series; si++) {
       var pts=rows.map(function(_,ri){
-        var v=vals[ri][si];
-        return (PL+Math.round(ri*xs/(n-1||1)))+','+(PT+ys-Math.round((v/maxV)*ys));
+        return (PL+Math.round(ri*xs/(n-1||1)))+','+(PT+ys-Math.round((vals[ri][si]/maxV)*ys));
       });
-      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cores[si]+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cores[si]+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
       if (!mini) rows.forEach(function(row,ri){
         var v=vals[ri][si];
         var px=PL+Math.round(ri*xs/(n-1||1)), py=PT+ys-Math.round((v/maxV)*ys);
-        dots+='<circle cx="'+px+'" cy="'+py+'" r="3.5" fill="'+cores[si]+'" stroke="var(--surface)" stroke-width="1.5"><title>'+_esc(row[0])+': '+v+'</title></circle>';
-        if (si===0) labels+='<text x="'+px+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="var(--text2)">'+_esc(String(row[0]).slice(0,10))+'</text>';
+        dots+='<circle cx="'+px+'" cy="'+py+'" r="4" fill="'+cores[si]+'" stroke="var(--surface)" stroke-width="2"><title>'+_esc(row[0])+': '+_fmtVal(v,fmt)+'</title></circle>';
+        if (si===0) {
+          var lbl=String(row[0]).length>9?String(row[0]).slice(0,8)+'…':String(row[0]);
+          labels+='<text x="'+px+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_esc(lbl)+'</text>';
+        }
+        if (rotulos && si===0 && n<=12) {
+          labels+='<text x="'+px+'" y="'+(py-8)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_fmtVal(v,fmt)+'</text>';
+        }
       });
     }
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
-      (mini?'':_grid(PL,PT,ys,W,PR,maxV))+paths+dots+labels+
+      (mini?'':_grid(PL,PT,ys,W,PR,maxV,grade))+
+      (mini?'':_metaLinha(PL,W,PR,PT,ys,maxV,aj.linhaRef))+
+      paths+dots+labels+
       '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
       '<line x1="'+PL+'" y1="'+(PT+ys)+'" x2="'+(W-PR)+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
     '</svg>';
   }
 
-  // ── Área ─────────────────────────────────────────────────────────────────
+  // ── Área ───────────────────────────────────────────────────────────────────
   function _svgArea(cols, rows, cfg) {
-    var mini=!!cfg._mini, W=500, H=mini?80:220, PL=40, PR=10, PT=10, PB=mini?14:30;
+    var mini=!!cfg._mini, W=500, H=mini?80:230, PL=40, PR=10, PT=14, PB=mini?14:32;
     var xs=W-PL-PR, ys=H-PT-PB, base=PT+ys;
+    var aj=cfg.ajustes||{}, grade=aj.grade!==false;
     var series=cols.length-1, cores=_cores(series,cfg.corPrimaria);
     var vals=rows.map(function(r){ return cols.slice(1).map(function(_,si){ return Number(r[si+1])||0; }); });
     var maxV=Math.max.apply(null,vals.map(function(v){ return Math.max.apply(null,v); }).concat([1]));
@@ -40706,24 +41014,27 @@ var AnaliseEstudioUI = (function() {
       var pts=rows.map(function(_,ri){
         return (PL+Math.round(ri*xs/(n-1||1)))+','+(PT+ys-Math.round((vals[ri][si]/maxV)*ys));
       });
-      var firstX=PL, lastX=PL+Math.round((n-1)*xs/(n-1||1));
-      areas+='<polygon points="'+pts.join(' ')+' '+lastX+','+base+' '+firstX+','+base+'" fill="'+cores[si]+'" opacity=".15"/>';
-      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cores[si]+'" stroke-width="2" stroke-linejoin="round"/>';
+      var lastX=PL+Math.round((n-1)*xs/(n-1||1));
+      areas+='<polygon points="'+pts.join(' ')+' '+lastX+','+base+' '+PL+','+base+'" fill="'+cores[si]+'" opacity=".18"/>';
+      paths+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+cores[si]+'" stroke-width="2.5" stroke-linejoin="round"/>';
       if (!mini && si===0) rows.forEach(function(row,ri){
         var px=PL+Math.round(ri*xs/(n-1||1));
-        labels+='<text x="'+px+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="var(--text2)">'+_esc(String(row[0]).slice(0,10))+'</text>';
+        var lbl=String(row[0]).length>9?String(row[0]).slice(0,8)+'…':String(row[0]);
+        labels+='<text x="'+px+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_esc(lbl)+'</text>';
       });
     }
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
-      (mini?'':_grid(PL,PT,ys,W,PR,maxV))+areas+paths+labels+
+      (mini?'':_grid(PL,PT,ys,W,PR,maxV,grade))+areas+paths+labels+
       '<line x1="'+PL+'" y1="'+base+'" x2="'+(W-PR)+'" y2="'+base+'" stroke="var(--border)" stroke-width="1"/>'+
     '</svg>';
   }
 
-  // ── Pizza ────────────────────────────────────────────────────────────────
-  function _svgPizza(cols, rows, cfg) {
-    var mini=!!cfg._mini, S=mini?80:240, cx=S/2, cy=S/2, r=S/2-14;
+  // ── Pizza / Rosca ──────────────────────────────────────────────────────────
+  function _svgPizza(cols, rows, cfg, rosca) {
+    var mini=!!cfg._mini, S=mini?80:260, cx=S/2, cy=S/2, r=S/2-16;
+    var ri = rosca ? r*0.45 : 0;
     var p=['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
+    var aj=cfg.ajustes||{}, fmt=aj.formato||'auto';
     var dados=rows.map(function(row){ return {label:row[0], v:Number(row[1])||0}; }).filter(function(d){ return d.v>0; });
     if (!dados.length) return '<p class="muted-text" style="text-align:center;padding:20px;">Sem valores numéricos.</p>';
     var total=dados.reduce(function(s,d){ return s+d.v; },0);
@@ -40733,23 +41044,59 @@ var AnaliseEstudioUI = (function() {
       var x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang);
       var x2=cx+r*Math.cos(ang+span), y2=cy+r*Math.sin(ang+span);
       var large=span>Math.PI?1:0, c=p[i%p.length];
-      slices+='<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+c+'" stroke="var(--surface)" stroke-width="1.5" opacity=".9">'+
-        '<title>'+_esc(String(d.label))+': '+d.v+' ('+Math.round(d.v/total*100)+'%)</title></path>';
-      if (!mini && span>0.25) {
-        var ma=ang+span/2;
-        slices+='<text x="'+(cx+r*.65*Math.cos(ma)).toFixed(1)+'" y="'+(cy+r*.65*Math.sin(ma)+4).toFixed(1)+'" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">'+Math.round(d.v/total*100)+'%</text>';
+      if (rosca) {
+        var ix1=cx+ri*Math.cos(ang+span), iy1=cy+ri*Math.sin(ang+span);
+        var ix2=cx+ri*Math.cos(ang), iy2=cy+ri*Math.sin(ang);
+        slices+='<path d="M'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' L'+ix1.toFixed(2)+','+iy1.toFixed(2)+' A'+ri+','+ri+' 0 '+large+',0 '+ix2.toFixed(2)+','+iy2.toFixed(2)+' Z" fill="'+c+'" stroke="var(--surface)" stroke-width="2" opacity=".9"><title>'+_esc(String(d.label))+': '+_fmtVal(d.v,fmt)+' ('+Math.round(d.v/total*100)+'%)</title></path>';
+      } else {
+        slices+='<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+c+'" stroke="var(--surface)" stroke-width="1.5" opacity=".9"><title>'+_esc(String(d.label))+': '+_fmtVal(d.v,fmt)+' ('+Math.round(d.v/total*100)+'%)</title></path>';
+      }
+      if (!mini && span > 0.22) {
+        var ma=ang+span/2, tr=rosca?(r+ri)/2:r*0.65;
+        slices+='<text x="'+(cx+tr*Math.cos(ma)).toFixed(1)+'" y="'+(cy+tr*Math.sin(ma)+4).toFixed(1)+'" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">'+Math.round(d.v/total*100)+'%</text>';
       }
       ang+=span;
     });
+    // rosca: KPI central
+    var centro='';
+    if (!mini && rosca) centro='<text x="'+cx+'" y="'+(cy-6)+'" text-anchor="middle" font-size="22" font-weight="700" fill="var(--text)">'+dados.length+'</text><text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" font-size="10" fill="var(--text2)">itens</text>';
     var legend='';
     if (!mini) legend='<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">'+
-      dados.map(function(d,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;"><span style="width:10px;height:10px;border-radius:2px;background:'+p[i%p.length]+';display:inline-block;"></span>'+_esc(String(d.label))+' ('+d.v+')</span>'; }).join('')+'</div>';
-    return '<svg viewBox="0 0 '+S+' '+S+'" style="width:100%;max-width:'+S+'px;height:auto;display:block;margin:auto;">'+slices+'</svg>'+legend;
+      dados.slice(0,8).map(function(d,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;"><span style="width:10px;height:10px;border-radius:2px;background:'+p[i%p.length]+';display:inline-block;"></span>'+_esc(String(d.label))+' ('+_fmtVal(d.v,fmt)+')</span>'; }).join('')+'</div>';
+    return '<svg viewBox="0 0 '+S+' '+S+'" style="width:100%;max-width:'+S+'px;height:auto;display:block;margin:auto;">'+slices+centro+'</svg>'+legend;
   }
 
-  // ── Dispersão ────────────────────────────────────────────────────────────
+  // ── Funil / Ranking ────────────────────────────────────────────────────────
+  function _svgFunil(cols, rows, cfg) {
+    var mini=!!cfg._mini, W=500, PL=mini?36:140, PR=50, PT=6, PB=6;
+    var rowH=mini?10:30, H=rows.length*rowH+PT+PB+4;
+    var xs=W-PL-PR;
+    var aj=cfg.ajustes||{}, fmt=aj.formato||'auto';
+    var vals=rows.map(function(r){ return Number(r[1])||0; });
+    var sorted=rows.map(function(r,i){ return {label:r[0],v:vals[i]}; }).sort(function(a,b){ return b.v-a.v; });
+    var maxV=sorted.length?sorted[0].v:1;
+    var p=['#4f46e5','#0ea5e9','#10b981','#f59e0b','#f97316'];
+    var bars='',labels='';
+    sorted.forEach(function(d,ri){
+      var bW=maxV>0?Math.round((d.v/maxV)*xs):0;
+      var bY=PT+ri*rowH+3;
+      var cor=p[ri%p.length];
+      bars+='<rect x="'+PL+'" y="'+bY+'" width="'+bW+'" height="'+(rowH-6)+'" rx="3" fill="'+cor+'" opacity=".85">'+
+        '<title>'+_esc(d.label)+': '+_fmtVal(d.v,fmt)+'</title></rect>';
+      if (!mini) {
+        var lbl=String(d.label).length>20?String(d.label).slice(0,19)+'…':String(d.label);
+        labels+='<text x="'+(PL-5)+'" y="'+(bY+rowH/2-3+7)+'" text-anchor="end" font-size="10" fill="var(--text)">'+_esc(lbl)+'</text>';
+        labels+='<text x="'+(PL+bW+6)+'" y="'+(bY+rowH/2-3+7)+'" font-size="9" font-weight="600" fill="var(--text2)">'+_fmtVal(d.v,fmt)+'</text>';
+      }
+    });
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
+      '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(H-PB)+'" stroke="var(--border)" stroke-width="1"/>'+
+      bars+labels+'</svg>';
+  }
+
+  // ── Dispersão ──────────────────────────────────────────────────────────────
   function _svgDispersao(cols, rows, cfg) {
-    var mini=!!cfg._mini, W=500, H=mini?80:240, PL=40, PR=10, PT=10, PB=30;
+    var mini=!!cfg._mini, W=500, H=mini?80:250, PL=44, PR=10, PT=14, PB=32;
     var xs=W-PL-PR, ys=H-PT-PB;
     var has3=cols.length>=3;
     var xVals=rows.map(function(r,i){ return has3?(Number(r[1])||0):i; });
@@ -40760,21 +41107,22 @@ var AnaliseEstudioUI = (function() {
       var px=PL+Math.round((xVals[ri]/maxX)*xs), py=PT+ys-Math.round((yVals[ri]/maxY)*ys);
       dots+='<circle cx="'+px+'" cy="'+py+'" r="5" fill="'+cor+'" opacity=".75" stroke="var(--surface)" stroke-width="1.5">'+
         '<title>'+_esc(row[0])+': ('+xVals[ri]+', '+yVals[ri]+')</title></circle>';
-      if (!mini) dots+='<text x="'+(px+8)+'" y="'+(py+4)+'" font-size="9" fill="var(--text2)">'+_esc(String(row[0]).slice(0,10))+'</text>';
+      if (!mini && rows.length<=20) dots+='<text x="'+(px+7)+'" y="'+(py+4)+'" font-size="9" fill="var(--text2)">'+_esc(String(row[0]).slice(0,10))+'</text>';
     });
     return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
       '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
       '<line x1="'+PL+'" y1="'+(PT+ys)+'" x2="'+(W-PR)+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
       dots+
-      (!mini?'<text x="'+(PL+xs/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="var(--text2)">'+_esc(has3?(cols[1]||'X'):'Índice')+'</text>'+
-        '<text x="14" y="'+(PT+ys/2)+'" text-anchor="middle" font-size="10" fill="var(--text2)" transform="rotate(-90 14,'+(PT+ys/2)+')">'+_esc(has3?(cols[2]||'Y'):(cols[1]||'Y'))+'</text>':'')+'</svg>';
+      (!mini?'<text x="'+(PL+xs/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="10" fill="var(--text2)">'+_esc(has3?(cols[1]||'X'):'Índice')+'</text>':'')+
+    '</svg>';
   }
 
   return {
     aoAbrir, novaAnalise, editarAnalise, visualizarAnalise, excluirAnalise, irGaleria,
     adicionarLinha, removerLinha, adicionarColuna, removerColuna, renomearColuna,
-    atualizarCelula, atualizarConfig, setCor, gerarGrafico, salvar, colarCsv, importarModulo,
-    _csvConfirmar
+    atualizarCelula, atualizarConfig, setCor, gerarGrafico, salvar, colarCsv,
+    importarModulo, abrirCatalogo, toggleAjustes, sugerirTipo,
+    _csvConfirmar, _importarDataset, _filtrarCatalogo
   };
 })();
 
