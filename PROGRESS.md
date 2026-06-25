@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1074.**
+**Fase atual (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
 
 **O que foi implementado agora**:
 - **Drag & Drop**: reordenação de widgets por arrastar (HTML5 drag API). Handle `drag_indicator`, estado `is-dragging` / `drag-over` com feedback visual. Setas ↑↓ removidas — apenas arrastar.
