@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s146)**: **feat — Dashboard Builder: sidebar lateral (Data Studio style), dados ao vivo no editor, filtros interativos (setor + datas custom) — Deploy @1089.**
+**Fase atual (s146)**: **feat — Dashboard Builder: sidebar lateral (Data Studio style), dados ao vivo no editor, filtros interativos (setor + datas custom); fix crítico: AnaliseEstudioUI IIFE crash restaura todos os botões — Deploy @1091.**
 
 **O que foi implementado agora**:
 - **Sidebar lateral para widget editor**: `.db-widget-sidebar` (position:fixed, 360px, slide-in from right) substitui o modal central ao configurar widgets. `_abrirWidgetEditor` injeta o formulário na sidebar em vez de `_abrirModalSimples`. `_weCancelarSidebar` fecha sem destruir o canvas. Fallback para modal central se sidebar não existir no DOM.
