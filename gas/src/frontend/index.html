@@ -2226,6 +2226,20 @@ select.form-control { cursor: pointer; }
 .db-forma-picker { display:flex;gap:6px;flex-wrap:wrap; }
 .db-forma-opt { width:42px;height:42px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface);transition:all .15s; }
 .db-forma-opt:hover,.db-forma-opt.sel { border-color:var(--primary);background:var(--primary-soft,#eef2ff); }
+/* ── Widget Editor Sidebar (Data Studio style) ───────────────────────────── */
+.db-widget-sidebar { position:fixed;top:0;right:0;width:360px;height:100vh;background:var(--surface);border-left:1px solid var(--border);box-shadow:-6px 0 28px rgba(0,0,0,.13);z-index:1800;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow:hidden; }
+.db-widget-sidebar.aberta { transform:translateX(0); }
+.db-sidebar-hdr { padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;background:var(--surface2); }
+.db-sidebar-hdr h4 { margin:0;font-size:13px;font-weight:700;flex:1;color:var(--text); }
+.db-sidebar-body { flex:1;overflow-y:auto;padding:14px 16px; }
+.db-sidebar-footer { padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;background:var(--surface); }
+/* ── Dashboard View: filtro bar expandido ────────────────────────────────── */
+.db-filtro-bar { display:flex;align-items:center;gap:6px;padding:8px 0 10px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:14px; }
+.db-filtro-sep { width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 2px; }
+.db-filtro-group { display:flex;align-items:center;gap:5px;flex-wrap:wrap; }
+.db-filtro-label { font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap; }
+/* Preview de dados no editor (sem dados) */
+.db-widget-loading { padding:20px;text-align:center;font-size:12px;color:var(--text2); }
 
   </style>
 </head>
@@ -41429,6 +41443,7 @@ var AnaliseEstudioUI = (function() {
   var _dashDragIdx    = null;   // índice do widget em drag & drop
   var _dashSugArr     = [];     // sugestões — índice para onclick seguro
   var _dashFiltroTempo = null;  // {de, ate, label} | null
+  var _dashFiltroExtra = { setor: '' };  // filtros adicionais na view
 
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
@@ -43040,6 +43055,14 @@ var AnaliseEstudioUI = (function() {
       return '<button class="btn btn-ghost" style="width:100%;justify-content:flex-start;gap:8px;font-size:13px;" onclick="AnaliseEstudioUI._dashAdicionarWidget(\''+t.id+'\')" data-bg-skip="1"><span class="ms">'+t.icon+'</span> '+t.label+'</button>';
     }).join('');
     var canvasHtml = _dashWidgets.length ? _renderDashCanvas() : _dashCanvasVazio();
+    // Garante que a sidebar existe no DOM (position:fixed, fora do fluxo do root)
+    if (!document.getElementById('db-widget-sidebar')) {
+      var sbEl = document.createElement('div');
+      sbEl.id = 'db-widget-sidebar';
+      sbEl.className = 'db-widget-sidebar';
+      document.body.appendChild(sbEl);
+    }
+
     root.innerHTML =
       '<div class="db-view-toolbar" style="position:sticky;top:0;z-index:50;background:var(--surface);padding:10px 0 10px;margin-bottom:8px;">' +
         '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span></button>' +
@@ -43252,6 +43275,28 @@ var AnaliseEstudioUI = (function() {
     if (el) el.innerHTML = _renderDashCanvas();
   }
 
+  // Carrega pré-visualização de dados para um widget no canvas do editor
+  function _dashCarregarWidgetPreview(idx) {
+    var w = _dashWidgets[idx]; if (!w) return;
+    if (w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma') return;
+    if (!w.dsId) return;
+    var el = document.getElementById('dbw-'+idx); if (!el) return;
+    var body = el.querySelector('.db-widget-body'); if (!body) return;
+    body.innerHTML = '<div class="db-widget-loading"><span class="ms" style="font-size:18px;color:var(--primary);">sync</span> Carregando…</div>';
+    var onData = function(r) {
+      var linhas  = r&&r.ok&&r.data ? r.data.linhas||[]           : w.linhas||[];
+      var colunas = r&&r.ok&&r.data ? r.data.colunas||['Label','Valor'] : w.colunas||['Label','Valor'];
+      _dashWidgets[idx].linhas  = linhas;
+      _dashWidgets[idx].colunas = colunas;
+      if (body.isConnected) body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
+    };
+    var onErr = function() {
+      if (body.isConnected) body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;color:var(--danger);">Erro ao carregar dados.</p>';
+    };
+    if (w.dsId2) GAS.analise.cruzar({dsA:w.dsId,dsB:w.dsId2}, onData, onErr);
+    else         GAS.analise.importarDados({id:w.dsId}, onData, onErr);
+  }
+
   function _dashAdicionarWidget(tipo) {
     var m = document.getElementById('dash-add-menu'); if (m) m.classList.remove('aberto');
     var defs = {grafico:{tamanho:'1/2',titulo:'Gráfico'},kpi:{tamanho:'1/4',titulo:'KPI'},tabela:{tamanho:'1/2',titulo:'Tabela'},
@@ -43272,6 +43317,7 @@ var AnaliseEstudioUI = (function() {
       _dashWidgets.push(configured);
       var el = document.getElementById('dash-canvas');
       if (el) el.innerHTML = _renderDashCanvas();
+      _dashCarregarWidgetPreview(_dashWidgets.length - 1);
     });
   }
 
@@ -43289,7 +43335,8 @@ var AnaliseEstudioUI = (function() {
     _dashWidgets.push(w);
     var el = document.getElementById('dash-canvas');
     if (el) el.innerHTML = _renderDashCanvas();
-    Toast.sucesso('"'+w.titulo+'" adicionado. Clique em tune para personalizar.');
+    _dashCarregarWidgetPreview(_dashWidgets.length - 1);
+    Toast.sucesso('"'+w.titulo+'" adicionado com dados ao vivo.');
   }
 
   // keep backward compat alias (just in case old onclick strings exist in saved data)
@@ -43305,6 +43352,7 @@ var AnaliseEstudioUI = (function() {
       _dashWidgets[idx] = configured;
       var el = document.getElementById('dash-canvas');
       if (el) el.innerHTML = _renderDashCanvas();
+      _dashCarregarWidgetPreview(idx);
     });
   }
 
@@ -43358,12 +43406,10 @@ var AnaliseEstudioUI = (function() {
     var tipoChips = _DB_TIPOS_EXTRA.map(function(t){
       return '<div class="db-tipo-card'+(tipoAtual===t.id?' sel':'')+'" id="we-tipo-btn-'+t.id+'-'+uid+'" onclick="AnaliseEstudioUI._weTipoChg(\''+uid+'\',\''+t.id+'\')" data-bg-skip="1"><span class="ms">'+t.icon+'</span>'+t.label+'</div>';
     }).join('');
-    var html =
-      '<div id="we-modal-'+uid+'" style="padding:20px;max-height:82vh;overflow-y:auto;">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
-          '<h3 style="margin:0;font-size:15px;font-weight:700;">Configurar Widget</h3>' +
-          '<button class="btn btn-ghost btn-sm" onclick="document.querySelector(\'.modal-simples\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
-        '</div>' +
+
+    // Conteúdo do formulário (sem header nem footer — ambos entram na sidebar ou modal wrapper)
+    var formHtml =
+      '<div id="we-modal-'+uid+'">' +
         '<div style="margin-bottom:14px;"><div class="analise-section-title">Tipo</div>' +
           '<div class="db-tipo-grid">'+tipoChips+'</div></div>' +
         '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Título</label>' +
@@ -43404,7 +43450,6 @@ var AnaliseEstudioUI = (function() {
           '<div class="form-group" style="margin-top:10px;"><label class="form-label">Máx. linhas exibidas</label>' +
             '<input id="we-tabmax-'+uid+'" type="number" class="form-control" value="'+(tblCfg.maxLinhas||10)+'" min="3" max="100"></div>' +
         '</div>' +
-        // ── Texto
         '<div id="we-texto-'+uid+'" style="display:'+(tipoAtual==='texto'?'':'none')+';">' +
           '<div class="form-group" style="margin-top:10px;"><label class="form-label">Conteúdo</label>' +
             '<textarea id="we-conteudo-'+uid+'" class="form-control" rows="4" style="resize:vertical;">'+_esc(wDraft.conteudo||'')+'</textarea></div>' +
@@ -43419,7 +43464,6 @@ var AnaliseEstudioUI = (function() {
               '<input type="checkbox" id="we-tx-ital-'+uid+'" style="margin-top:10px;"></div>' +
           '</div>' +
         '</div>' +
-        // ── Imagem
         '<div id="we-img-'+uid+'" style="display:'+(tipoAtual==='imagem'?'':'none')+';">' +
           '<div class="form-group" style="margin-top:10px;"><label class="form-label">URL da imagem</label>' +
             '<input id="we-img-url-'+uid+'" class="form-control" value="'+_esc((wDraft.imagemConfig||{}).url||'')+'" placeholder="https://..."></div>' +
@@ -43428,7 +43472,6 @@ var AnaliseEstudioUI = (function() {
           '<div class="form-group"><label class="form-label">Altura máxima</label>' +
             '<input id="we-img-h-'+uid+'" class="form-control" value="'+_esc((wDraft.imagemConfig||{}).maxAltura||'180px')+'" placeholder="180px"></div>' +
         '</div>' +
-        // ── Forma
         '<div id="we-forma-'+uid+'" style="display:'+(tipoAtual==='forma'?'':'none')+';">' +
           '<div style="margin-top:10px;">' +
             '<div class="analise-section-title">Forma</div>' +
@@ -43453,6 +43496,33 @@ var AnaliseEstudioUI = (function() {
         '</div>' +
         '<div style="margin-top:14px;"><div class="analise-section-title">Tamanho no dashboard</div>' +
           '<div id="we-size-'+uid+'" style="display:flex;gap:6px;flex-wrap:wrap;">'+sizeChips+'</div></div>' +
+      '</div>';
+
+    // ── Injeção na sidebar lateral (preferida) ou modal central (fallback) ──
+    var sb = document.getElementById('db-widget-sidebar');
+    if (sb) {
+      sb.innerHTML =
+        '<div class="db-sidebar-hdr">' +
+          '<span class="ms" style="color:var(--primary);font-size:18px;">tune</span>' +
+          '<h4>Configurar Widget</h4>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._weCancelarSidebar()" data-bg-skip="1"><span class="ms">close</span></button>' +
+        '</div>' +
+        '<div class="db-sidebar-body" id="db-sidebar-body">' + formHtml + '</div>' +
+        '<div class="db-sidebar-footer">' +
+          '<button class="btn btn-ghost" onclick="AnaliseEstudioUI._weCancelarSidebar()" data-bg-skip="1">Cancelar</button>' +
+          '<button class="btn btn-primario" onclick="AnaliseEstudioUI._weConfirmar(\''+uid+'\')" data-bg-skip="1">Confirmar</button>' +
+        '</div>';
+      sb.classList.add('aberta');
+      return;
+    }
+    // Fallback: modal central
+    var html =
+      '<div id="we-modal-fb-'+uid+'" style="padding:20px;max-height:82vh;overflow-y:auto;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
+          '<h3 style="margin:0;font-size:15px;font-weight:700;">Configurar Widget</h3>' +
+          '<button class="btn btn-ghost btn-sm" onclick="document.querySelector(\'.modal-simples\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
+        '</div>' +
+        formHtml +
         '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
           '<button class="btn btn-ghost" onclick="document.querySelector(\'.modal-simples\').remove();AnaliseEstudioUI._weCancelar();" data-bg-skip="1">Cancelar</button>' +
           '<button class="btn btn-primario" onclick="AnaliseEstudioUI._weConfirmar(\''+uid+'\')" data-bg-skip="1">Confirmar widget</button>' +
@@ -43498,6 +43568,12 @@ var AnaliseEstudioUI = (function() {
 
   function _weCancelar() { _weDraftWidget=null; _weDraftCb=null; }
 
+  function _weCancelarSidebar() {
+    var sb = document.getElementById('db-widget-sidebar');
+    if (sb) { sb.classList.remove('aberta'); }
+    _weDraftWidget = null; _weDraftCb = null;
+  }
+
   function _weTipoChg(uid, tipo) {
     if (!_weDraftWidget) return;
     _weDraftWidget.tipo = tipo;
@@ -43525,7 +43601,8 @@ var AnaliseEstudioUI = (function() {
     if (!_weDraftWidget) return;
     if (!_weDraftWidget.config) _weDraftWidget.config={};
     _weDraftWidget.config.corPrimaria = cor;
-    document.querySelectorAll('.modal-simples .analise-swatch').forEach(function(s){ s.classList.toggle('ativa', s.dataset.cor===cor); });
+    var ctx = document.getElementById('db-sidebar-body') || document.querySelector('.modal-simples') || document;
+    ctx.querySelectorAll('.analise-swatch').forEach(function(s){ s.classList.toggle('ativa', s.dataset.cor===cor); });
   }
 
   function _weTamanho(uid, tam) {
@@ -43543,8 +43620,8 @@ var AnaliseEstudioUI = (function() {
   function _weSelDs(val) {
     if (!_weDraftWidget) return;
     _weDraftWidget.dsId = val||null; _weDraftWidget.dsId2 = null;
-    var modal = document.querySelector('.modal-simples [id^="we-modal-"]');
-    var uid = modal ? (modal.id.match(/we-modal-(.+)/)||[])[1]||'' : '';
+    var modalEl = document.querySelector('#db-sidebar-body [id^="we-modal-"]') || document.querySelector('.modal-simples [id^="we-modal-"]');
+    var uid = modalEl ? (modalEl.id.match(/we-modal-(.+)/)||[])[1]||'' : '';
     var ds2w = document.getElementById('we-ds2-wrap-'+uid);
     if (ds2w) ds2w.style.display = (val && _weDraftWidget.tipo==='grafico') ? '' : 'none';
     if (!val) { _weDraftWidget.colunas=['Label','Valor']; _weDraftWidget.linhas=[]; return; }
@@ -43612,7 +43689,13 @@ var AnaliseEstudioUI = (function() {
       _weDraftWidget.formaConfig.tamanho  = parseInt(gv('we-forma-sz-'+uid))||80;
       if (!_weDraftWidget.formaConfig.forma) _weDraftWidget.formaConfig.forma='circulo';
     }
-    var modal=document.querySelector('.modal-simples'); if(modal) modal.remove();
+    // Fecha sidebar ou modal central
+    var sb = document.getElementById('db-widget-sidebar');
+    if (sb && sb.classList.contains('aberta')) {
+      sb.classList.remove('aberta');
+    } else {
+      var modal=document.querySelector('.modal-simples'); if(modal) modal.remove();
+    }
     var cb=_weDraftCb, w=_weDraftWidget; _weDraftWidget=null; _weDraftCb=null;
     if (cb) cb(w);
   }
@@ -43634,20 +43717,47 @@ var AnaliseEstudioUI = (function() {
     else if (preset==='ano')  de = now.getFullYear()+'-01-01';
     _dashFiltroTempo = de ? {de:de, ate:ate, preset:preset} : null;
     document.querySelectorAll('.db-periodo-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.preset===preset); });
+    // Limpa inputs de data customizados quando preset é aplicado
+    var dEl=document.getElementById('db-filtro-de'), aEl=document.getElementById('db-filtro-ate');
+    if(dEl) dEl.value=''; if(aEl) aEl.value='';
+    var d = _dashLista.find(function(x){ return x.id===_dashEditandoId; });
+    if (d) _dashRecarregarWidgets(d.widgets||[]);
+  }
+
+  function _dashSetFiltroDatas() {
+    var de  = (document.getElementById('db-filtro-de') ||{}).value||'';
+    var ate = (document.getElementById('db-filtro-ate')||{}).value||'';
+    _dashFiltroTempo = (de||ate) ? {de:de, ate:ate, preset:'custom'} : null;
+    document.querySelectorAll('.db-periodo-btn').forEach(function(b){ b.classList.remove('sel'); });
+    var d = _dashLista.find(function(x){ return x.id===_dashEditandoId; });
+    if (d) _dashRecarregarWidgets(d.widgets||[]);
+  }
+
+  function _dashSetFiltroSetor(setor) {
+    _dashFiltroExtra.setor = setor;
     var d = _dashLista.find(function(x){ return x.id===_dashEditandoId; });
     if (d) _dashRecarregarWidgets(d.widgets||[]);
   }
 
   function _dashRecarregarWidgets(widgets) {
     var canvas = document.getElementById('dash-view-canvas'); if (!canvas) return;
+    var fParams = {};
+    if (_dashFiltroTempo && _dashFiltroTempo.de)  fParams.de  = _dashFiltroTempo.de;
+    if (_dashFiltroTempo && _dashFiltroTempo.ate) fParams.ate = _dashFiltroTempo.ate;
+    if (_dashFiltroExtra && _dashFiltroExtra.setor) fParams.setor = _dashFiltroExtra.setor;
     widgets.forEach(function(w, idx) {
       if (w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma') return;
       var el = document.getElementById('dbvw-'+idx); if (!el) return;
       var body = el.querySelector('.db-widget-body'); if (!body) return;
-      body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;">Atualizando…</p>';
-      var fParams = _dashFiltroTempo ? {de:_dashFiltroTempo.de, ate:_dashFiltroTempo.ate} : {};
+      body.innerHTML = '<div class="db-widget-loading"><span class="ms" style="font-size:14px;color:var(--primary);">sync</span> Atualizando…</div>';
       var onDone = function(linhas, colunas) {
         if (!body.isConnected) return;
+        // Filtro client-side por setor (primeiro campo = label de categoria)
+        if (fParams.setor && linhas.length) {
+          var sf = fParams.setor.toLowerCase();
+          var filtered = linhas.filter(function(r){ return (r[0]||'').toLowerCase()===sf; });
+          if (filtered.length) linhas = filtered;
+        }
         body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
       };
       if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
@@ -43662,13 +43772,36 @@ var AnaliseEstudioUI = (function() {
     var root = document.getElementById('analise-studio-root'); if (!root) return;
     var boot = (App.getBoot&&App.getBoot())||{};
     _dashFiltroTempo = null;
-    var periodoBar = '<div class="db-periodo-bar">' +
-      '<span class="ms" style="font-size:14px;color:var(--text2);">date_range</span>' +
-      '<span style="font-size:11px;color:var(--text2);font-weight:600;">Período:</span>' +
-      _DB_PERIODO_PRESETS.map(function(p){
-        return '<button class="db-periodo-btn'+((!_dashFiltroTempo&&p.id==='tudo')||(_dashFiltroTempo&&_dashFiltroTempo.preset===p.id)?' sel':'')+'" data-preset="'+p.id+'" onclick="AnaliseEstudioUI._dashSetFiltroTempo(\''+p.id+'\')" data-bg-skip="1">'+p.label+'</button>';
-      }).join('') +
-    '</div>';
+    _dashFiltroExtra = { setor: '' };
+    var setoresOpts = '<option value="">Todos os setores</option>' +
+      (boot.setores||[]).map(function(s){
+        var v=s.id||s.nome||s.label||s; var l=s.nome||s.label||s.id||v;
+        return '<option value="'+_esc(v)+'">'+_esc(l)+'</option>';
+      }).join('');
+    var filtroBar =
+      '<div class="db-filtro-bar">' +
+        '<div class="db-filtro-group">' +
+          '<span class="ms" style="font-size:14px;color:var(--text2);">date_range</span>' +
+          '<span class="db-filtro-label">Período:</span>' +
+          _DB_PERIODO_PRESETS.map(function(p){
+            return '<button class="db-periodo-btn'+(p.id==='tudo'?' sel':'')+'" data-preset="'+p.id+'" onclick="AnaliseEstudioUI._dashSetFiltroTempo(\''+p.id+'\')" data-bg-skip="1">'+p.label+'</button>';
+          }).join('') +
+        '</div>' +
+        '<div class="db-filtro-sep"></div>' +
+        '<div class="db-filtro-group">' +
+          '<span class="ms" style="font-size:13px;color:var(--text2);">event</span>' +
+          '<span class="db-filtro-label">De:</span>' +
+          '<input type="date" id="db-filtro-de" class="form-control" style="width:130px;font-size:12px;padding:3px 6px;" onchange="AnaliseEstudioUI._dashSetFiltroDatas()">' +
+          '<span class="db-filtro-label">Até:</span>' +
+          '<input type="date" id="db-filtro-ate" class="form-control" style="width:130px;font-size:12px;padding:3px 6px;" onchange="AnaliseEstudioUI._dashSetFiltroDatas()">' +
+        '</div>' +
+        '<div class="db-filtro-sep"></div>' +
+        '<div class="db-filtro-group">' +
+          '<span class="ms" style="font-size:13px;color:var(--text2);">business</span>' +
+          '<span class="db-filtro-label">Setor:</span>' +
+          '<select id="db-filtro-setor" class="select-sm" onchange="AnaliseEstudioUI._dashSetFiltroSetor(this.value)">' + setoresOpts + '</select>' +
+        '</div>' +
+      '</div>';
     root.innerHTML =
       '<div class="db-view-toolbar" style="position:sticky;top:0;z-index:50;background:var(--surface);padding:8px 0;">' +
         '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span></button>' +
@@ -43677,7 +43810,7 @@ var AnaliseEstudioUI = (function() {
         (boot.usuarioEmail===d.donoEmail ?
           '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarDashboard(\''+_esc(d.id)+'\')" data-bg-skip="1"><span class="ms ms-sm">edit</span> Editar</button>' : '') +
       '</div>' +
-      periodoBar +
+      filtroBar +
       '<div id="dash-view-canvas" class="db-canvas">' +
         (d.widgets||[]).map(function(w,idx){
           var ticoMap={kpi:'speed',tabela:'table_chart',separador:'title',texto:'text_fields',imagem:'image',forma:'category',grafico:'bar_chart'};
@@ -43788,10 +43921,12 @@ var AnaliseEstudioUI = (function() {
     _dashAdicionarWidget, _dashEditarWidget, _dashRemoverWidget, _dashMoverWidget, _dashMudarTamanho,
     _dashAtualizarTitulo, _dashToggleMenu, _dashCompTipoChg, _dashCompAdd, _dashRemComp,
     _weTipoChg, _weSetCor, _weTamanho, _weModoUpd, _weSelDs, _weSelDs2, _weConfirmar, _weCancelar, _weForma,
+    _weCancelarSidebar,
     _abrirSeletorTemplates, _dashFromTemplate, _dashAddSugestao, _dashAddSugestaoByIdx,
     _dashDragStart, _dashDragOver, _dashDrop, _dashDragEnd,
     _renderFormaWidget, _renderAnalisesGaleria,
-    _dashSetFiltroTempo, _dashRecarregarWidgets
+    _dashSetFiltroTempo, _dashRecarregarWidgets, _dashCarregarWidgetPreview,
+    _dashSetFiltroSetor, _dashSetFiltroDatas
   };
 })();
 

@@ -39,9 +39,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s145)**: **feat — Estúdio de Análises v6: filtro de período (5 presets), 22 sugestões automáticas cobrindo todos os módulos, catálogo expandido para 35 datasets, fix definitivo onclick sugestões por índice — Deploy @1087.**
+**Fase atual (s146)**: **feat — Dashboard Builder: sidebar lateral (Data Studio style), dados ao vivo no editor, filtros interativos (setor + datas custom) — Deploy @1089.**
 
 **O que foi implementado agora**:
+- **Sidebar lateral para widget editor**: `.db-widget-sidebar` (position:fixed, 360px, slide-in from right) substitui o modal central ao configurar widgets. `_abrirWidgetEditor` injeta o formulário na sidebar em vez de `_abrirModalSimples`. `_weCancelarSidebar` fecha sem destruir o canvas. Fallback para modal central se sidebar não existir no DOM.
+- **Sidebar criada automaticamente** em `_renderDashboardEditor` via `document.body.appendChild` — sempre presente ao entrar no editor.
+- **Dados ao vivo no editor** (`_dashCarregarWidgetPreview`): ao adicionar sugestão ou confirmar widget com `dsId`, chama GAS imediatamente e atualiza o body do widget-card com dados reais. Spinner `sync` durante carregamento, mensagem de erro em vermelho se falhar.
+- **Filtros interativos na view** (`.db-filtro-bar`): 3 grupos — presets de período (Tudo / 30d / 3m / 6m / Este ano) + inputs de data customizados De/Até (`_dashSetFiltroDatas`) + select de setor (`_dashSetFiltroSetor`). Todos disparam `_dashRecarregarWidgets`.
+- **Filtro por setor**: frontend aplica filtro client-side nos dados retornados (filtra linhas onde `row[0]` bate o setor). Backend (`analise_controller.gs`) aceita `params.setor` em `ctrl_analise_importar_dados` e aplica `_analise_filtrar_por_setor` nas pessoas (`_ds_pessoas_cargo`, `_ds_pessoas_vinculo`).
+- **Inputs de data custom** sobrescrevem os presets (limpa botões selecionados); presets limpam os inputs.
+
+**Fase anterior (s145)**: **feat — Estúdio de Análises v6: filtro de período (5 presets), 22 sugestões automáticas cobrindo todos os módulos, catálogo expandido para 35 datasets, fix definitivo onclick sugestões por índice — Deploy @1087.**
+
+**O que foi implementado em s145**:
 - **Filtro de período no Dashboard View**: barra `.db-periodo-bar` com 5 presets (Tudo / 30 dias / 3 meses / 6 meses / Este ano). `_dashSetFiltroTempo(preset)` atualiza `_dashFiltroTempo` e chama `_dashRecarregarWidgets` — todos os widgets dinâmicos buscam dados com `de`/`ate` via GAS.analise.importarDados/cruzar.
 - **22 sugestões automáticas** em `_dashSugestoes()`: cobrindo Ações Culturais (3), Público (2), Pessoas (3), Tarefas (2), Reuniões (2), Financeiro (3), Espaços (3), Comunicação (2), Cruzamentos (2).
 - **35 datasets no `_CATALOGO_LOCAL`** do frontend: sincronizado com o backend, agora inclui `ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`.

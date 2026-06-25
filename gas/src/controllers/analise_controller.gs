@@ -37,6 +37,15 @@ function _analise_filtrar_por_data(lista, campo) {
   });
 }
 
+function _analise_filtrar_por_setor(lista, campo) {
+  if (!_analise_filtro_global || !_analise_filtro_global.setor) return lista;
+  var setor = String(_analise_filtro_global.setor).toLowerCase();
+  return (lista||[]).filter(function(item) {
+    var v = item[campo||'setor'];
+    return !v || String(v).toLowerCase() === setor;
+  });
+}
+
 function _analise_mapaParaLinhas(mapa, limite) {
   var pares = Object.keys(mapa).map(function(k) { return [k, mapa[k]]; });
   pares.sort(function(a,b){ return b[1]-a[1]; });
@@ -223,7 +232,9 @@ function ctrl_analise_importar_dados(params) {
   return GasResponse.wrap(function() {
     var id = (params || {}).modulo || (params || {}).id || 'operacional';
     var filtro = null;
-    if ((params||{}).de || (params||{}).ate) filtro = { de: (params||{}).de, ate: (params||{}).ate };
+    if ((params||{}).de || (params||{}).ate || (params||{}).setor) {
+      filtro = { de: (params||{}).de, ate: (params||{}).ate, setor: (params||{}).setor||'' };
+    }
     _analise_filtro_global = filtro;
     try { return _analise_dataset(id); }
     finally { _analise_filtro_global = null; }
@@ -471,6 +482,7 @@ function _ds_pessoas_cargo() {
     var d = ctrl_pessoas_listar({});
     if (!d.ok || !d.data) return { colunas:['Cargo','Colaboradores'], linhas:[] };
     var lista = (d.data||[]).filter(function(p){ return !p.status || p.status === 'ativo'; });
+    lista = _analise_filtrar_por_setor(lista, 'setor');
     return { colunas:['Cargo','Colaboradores'], linhas:_analise_mapaParaLinhas(_analise_agrupar(lista,'cargo'), 15) };
   } catch(e) { return { colunas:['Cargo','Colaboradores'], linhas:[] }; }
 }
@@ -480,6 +492,7 @@ function _ds_pessoas_vinculo() {
     var d = ctrl_pessoas_listar({});
     if (!d.ok || !d.data) return { colunas:['Vínculo','Colaboradores'], linhas:[] };
     var lista = (d.data||[]).filter(function(p){ return !p.status || p.status === 'ativo'; });
+    lista = _analise_filtrar_por_setor(lista, 'setor');
     return { colunas:['Vínculo','Colaboradores'], linhas:_analise_mapaParaLinhas(_analise_agrupar(lista,'vinculo')) };
   } catch(e) { return { colunas:['Vínculo','Colaboradores'], linhas:[] }; }
 }

@@ -2323,7 +2323,39 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 138 (2026-06-25) → PRÓXIMA
+## HANDOFF ATUAL — SESSÃO 146 (2026-06-25) → PRÓXIMA
+
+### Estado: Deploy @1089 · feat — Dashboard Builder: sidebar lateral, dados ao vivo no editor, filtros interativos
+
+### O que foi feito nesta sessão (s146)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @1089 | CSS `.db-widget-sidebar` | Painel lateral `position:fixed` 360px, slide-in from right, `.db-sidebar-hdr/body/footer`; `.db-filtro-bar` com grupos, separadores, label |
+| @1089 | `_abrirWidgetEditor` refatorado | Formulário separado em `formHtml`; sidebar usada preferencialmente (injetada em `#db-widget-sidebar`); fallback para `_abrirModalSimples` se sidebar não existir no DOM |
+| @1089 | `_renderDashboardEditor` | Cria `#db-widget-sidebar` em `document.body` se não existir; sidebar persiste durante toda a sessão do editor |
+| @1089 | `_weCancelarSidebar` (nova) | Fecha sidebar sem destruir canvas; registrada no `return` público |
+| @1089 | `_weConfirmar` | Fecha sidebar OU modal conforme qual está aberto |
+| @1089 | `_weSetCor` | Selector corrigido: busca em `#db-sidebar-body` antes de `.modal-simples` |
+| @1089 | `_weSelDs` | Selector corrigido: `#db-sidebar-body [id^="we-modal-"]` como primário |
+| @1089 | `_dashCarregarWidgetPreview` (nova) | Carrega GAS imediatamente ao adicionar/configurar widget com `dsId`; atualiza body do card no canvas do editor com dados reais ou spinner/erro |
+| @1089 | `_dashAddSugestaoByIdx` | Chama `_dashCarregarWidgetPreview` após push — preview automático |
+| @1089 | `_dashAdicionarWidget` | Chama `_dashCarregarWidgetPreview` após confirmar widget no editor |
+| @1089 | `_dashEditarWidget` | Chama `_dashCarregarWidgetPreview` após confirmar — dados atualizados no canvas |
+| @1089 | `_renderDashboardView` filtroBar | Barra expandida: presets de período + inputs De/Até (date) + select Setor — 3 grupos com separadores visuais |
+| @1089 | `_dashSetFiltroDatas` (nova) | Inputs De/Até sobrescrevem presets; dispara `_dashRecarregarWidgets` |
+| @1089 | `_dashSetFiltroSetor` (nova) | Select de setor dispara `_dashRecarregarWidgets` |
+| @1089 | `_dashRecarregarWidgets` | Passa `setor` em `fParams`; aplica filtro client-side (row[0] match) antes de renderizar |
+| @1089 | Backend `ctrl_analise_importar_dados` | Aceita `params.setor` em `_analise_filtro_global` |
+| @1089 | Backend `_analise_filtrar_por_setor` (nova) | Filtra lista por campo setor quando `_analise_filtro_global.setor` está setado |
+| @1089 | Backend `_ds_pessoas_cargo/vinculo` | Aplicam `_analise_filtrar_por_setor` antes de agrupar |
+
+### Pendentes / próxima ação
+- Testar no browser: (1) Dashboard Builder → Novo dashboard → clicar sugestão → confirmar que sidebar abre à direita com formulário; (2) Selecionar dataset no widget → confirmar preview ao vivo no canvas; (3) Abrir dashboard existente → barra de filtros com 3 grupos (período / data / setor); (4) Aplicar filtro de setor → widgets recarregam; (5) Inputs De/Até → botões preset desmarcam
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 138 (2026-06-25) → SESSÃO 139
 
 ### Estado: Deploy @1069 · feat — Estúdio de Análises v2: catálogo 27 datasets, 9 tipos gráfico, cruzamento multi-módulo
 
@@ -2337,9 +2369,6 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 | @1069 | GAS namespace | `GAS.analise.cruzar` adicionado |
 | @1069 | fix QuadrosUI | `_resizeObserver` com `disconnect()` no cleanup — previne memory leak |
 | @1069 | fix QuadrosUI | panning no canvas: click em área vazia ativa `isPanning`, cursor `grabbing` |
-
-### Pendentes / próxima ação
-- Testar no browser: (1) Abrir BI → aba Análises → "Nova análise" → "Catálogo de dados" → selecionar "Tarefas por setor" → importar e verificar dados; (2) Selecionar cruzamento "Pessoas × Tarefas" → verificar 3 colunas e barras empilhadas; (3) Testar "Sugerir tipo" → toggle ajustes avançados; (4) Salvar análise → verificar miniatura na galeria
 
 ---
 
