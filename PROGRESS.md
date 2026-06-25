@@ -49,6 +49,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **Ajustes avançados** colapsáveis: toggle de rótulos, toggle de grade, formato de valor (auto/número/R$/%), linha de referência horizontal.
 - **Sugerir tipo**: botão auto-recomenda o tipo de gráfico com base em quantidade de linhas e séries.
 - **GAS.analise.cruzar** adicionado ao namespace.
+- **fix QuadrosUI**: `_resizeObserver` com `disconnect()` no cleanup — previne memory leak.
 - **CSS**: `.analise-catalogo-*`, `.analise-stats-strip`, `.analise-ajustes-*` adicionados.
 
 **Fase anterior (s137)**: **fix/feat — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin, seleção de ferramenta corrigida, bug _CATS corrigido — Deploy @1066.**
@@ -77,7 +78,8 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **_biGeocodificar unificada** (i_demografico_controller.gs): NUNCA usa CEP na query. Sempre logradouro+bairro+cidade+UF+Brasil. CEP âncora errado (resolve nomes genéricos em outros estados); lugares nomeados ancoram à cidade correta.
 - **geoKey = cep:XXXXXXXX** quando CEP disponível — chave distinta do bairroKey. Geocodificação com logradouro+bairro+cidade dá precisão por rua/quadra, não centroide de bairro.
 - **Cache geo6:cep:***: bust de geo3:cep:* (CEP-puro antigo) e de todos os end:* (chave descontinuada).
-- **Heat .geoKey || r.bairroKey**: per-CEP primeiro, bairro como fallback — diferente de bairros view (airroKey || geoKey).
+- **Heat 
+.geoKey || r.bairroKey**: per-CEP primeiro, bairro como fallback — diferente de bairros view (airroKey || geoKey).
 **Fase anterior (s131)**: **Fix — BI heat: mesma base de coordenadas que bairros/cidades — Deploy @1051.**
 
 **O que foi implementado agora**:

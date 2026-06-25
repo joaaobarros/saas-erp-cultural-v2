@@ -2265,6 +2265,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 | @1069 | AnaliseEstudioUI v2 | Catálogo modal com busca; 9 tipos gráfico (+ barras_emp, rosca, funil); stats strip (total/média/máx/mín); ajustes avançados (rótulos, grade, formato, linha ref); botão "Sugerir tipo"; dica contextual por tipo |
 | @1069 | CSS analise | `.analise-catalogo-*`, `.analise-stats-strip`, `.analise-stat-item`, `.analise-ajustes-panel` |
 | @1069 | GAS namespace | `GAS.analise.cruzar` adicionado |
+| @1069 | fix QuadrosUI | `_resizeObserver` com `disconnect()` no cleanup — previne memory leak |
 
 ### Pendentes / próxima ação
 - Testar no browser: (1) Abrir BI → aba Análises → "Nova análise" → "Catálogo de dados" → selecionar "Tarefas por setor" → importar e verificar dados; (2) Selecionar cruzamento "Pessoas × Tarefas" → verificar 3 colunas e barras empilhadas; (3) Testar "Sugerir tipo" → toggle ajustes avançados; (4) Salvar análise → verificar miniatura na galeria
