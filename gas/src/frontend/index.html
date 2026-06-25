@@ -36737,7 +36737,7 @@ var QuadrosUI = (function() {
         return '<span title="' + escaparHtml(c) + '" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:9px;font-weight:700;">' + escaparHtml((c||'?')[0].toUpperCase()) + '</span>';
       }).join('');
       document.getElementById('qdro-editor-overlay').classList.remove('oculto');
-      _iniciarEditor(q.snapshot || null);
+      _iniciarEditor(q.snapshot || null, q.categoria || '');
     }, function(e) { Toast.erro(e.message || e); });
   }
 
@@ -36758,7 +36758,8 @@ var QuadrosUI = (function() {
   // ══════════════════════════════════════════════════════════════════════════
   // Engine de canvas infinito
   // ══════════════════════════════════════════════════════════════════════════
-  function _iniciarEditor(snapshot) {
+  function _iniciarEditor(snapshot, categoria) {
+    if (categoria === 'mindmap') { _iniciarMindMap(snapshot); return; }
     _limparEventosGlobais();
     var container = document.getElementById('qdro-editor-container');
     container.innerHTML = '';
@@ -36815,9 +36816,11 @@ var QuadrosUI = (function() {
     var TOOLS = [
       {id:'select',    ico:'near_me',          lbl:'Selecionar (V)'},
       null,
-      {id:'pencil',    ico:'draw',             lbl:'Lápis livre'},
-      {id:'marker',    ico:'edit',             lbl:'Marcador (transparente)'},
-      {id:'brush',     ico:'brush',            lbl:'Pincel (variável)'},
+      {id:'_drawgrp', ico:'draw', lbl:'Ferramentas de Desenho', subs:[
+        {id:'pencil', ico:'draw',  lbl:'Lápis livre',  desc:'Traço fino e preciso'},
+        {id:'marker', ico:'edit',  lbl:'Marcador',      desc:'Traço semitransparente'},
+        {id:'brush',  ico:'brush', lbl:'Pincel',        desc:'Espessura variável'}
+      ]},
       null,
       {id:'connector', ico:'account_tree',     lbl:'Conector inteligente (liga pontos)'},
       {id:'line',      ico:'remove',           lbl:'Linha'},
@@ -36848,8 +36851,69 @@ var QuadrosUI = (function() {
       {id:'_tpl',      ico:'widgets',          lbl:'Templates (OKR, BMC, Kanban, SWOT…)'}
     ];
 
+    var _activeDrawSub = 'pencil';
+
     TOOLS.forEach(function(t) {
       if (!t) { ftb.appendChild(_ftbSep()); return; }
+
+      // ── Grupo de ferramentas de desenho (lápis / marcador / pincel) ───────
+      if (t.id === '_drawgrp') {
+        var grpWrap = document.createElement('div');
+        grpWrap.style.cssText = 'position:relative;';
+        var grpBtn = document.createElement('button');
+        grpBtn.id = 'qdro-tool-draw-group';
+        grpBtn.className = 'qdro-ftb-btn'; grpBtn.setAttribute('data-bg-skip','1');
+        grpBtn.title = t.lbl;
+        grpBtn.style.cssText = 'position:relative;';
+        grpBtn.innerHTML = '<span class="ms" id="qdro-drw-ico" style="font-size:20px;line-height:1;">draw</span>'
+          + '<span style="position:absolute;bottom:2px;right:2px;font-size:7px;color:#94a3b8;line-height:1;">▼</span>';
+        grpBtn.onclick = function(e) {
+          e.stopPropagation();
+          var ex = document.getElementById('qdro-drw-flyout');
+          if (ex) { ex.remove(); return; }
+          var fly = document.createElement('div');
+          fly.id = 'qdro-drw-flyout';
+          fly.style.cssText = 'position:absolute;left:calc(100% + 8px);top:0;z-index:400;background:#fff;border-radius:12px;'
+            + 'box-shadow:0 4px 24px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.06);padding:6px;min-width:180px;';
+          t.subs.forEach(function(sub) {
+            var sb = document.createElement('button');
+            sb.id = 'qdro-tool-' + sub.id;
+            sb.className = 'qdro-ftb-btn' + (sub.id === _activeDrawSub ? ' ativa' : '');
+            sb.setAttribute('data-bg-skip','1');
+            sb.style.cssText = 'display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;'
+              + 'border-radius:8px;justify-content:flex-start;margin-bottom:2px;';
+            sb.innerHTML = '<span class="ms" style="font-size:18px;flex-shrink:0;">'+sub.ico+'</span>'
+              + '<div style="text-align:left;"><div style="font-size:12px;font-weight:600;color:#1e293b;">'+sub.lbl+'</div>'
+              + '<div style="font-size:10px;color:#94a3b8;margin-top:1px;">'+sub.desc+'</div></div>';
+            sb.onclick = (function(sid, sico) {
+              return function(ev) {
+                ev.stopPropagation();
+                _activeDrawSub = sid;
+                var ico = document.getElementById('qdro-drw-ico');
+                if (ico) ico.textContent = sico;
+                grpBtn.classList.add('ativa');
+                _setTool(sid);
+                var f = document.getElementById('qdro-drw-flyout'); if (f) f.remove();
+              };
+            })(sub.id, sub.ico);
+            fly.appendChild(sb);
+          });
+          grpWrap.appendChild(fly);
+          setTimeout(function() {
+            function _closeFly(ev) {
+              if (!fly.contains(ev.target) && ev.target !== grpBtn) {
+                var f = document.getElementById('qdro-drw-flyout'); if (f) f.remove();
+                document.removeEventListener('click', _closeFly);
+              }
+            }
+            document.addEventListener('click', _closeFly);
+          }, 0);
+        };
+        grpWrap.appendChild(grpBtn);
+        ftb.appendChild(grpWrap);
+        return;
+      }
+
       var b = document.createElement('button');
       if (t.id[0] !== '_') b.id = 'qdro-tool-' + t.id;
       b.className = 'qdro-ftb-btn' + (t.id === 'select' ? ' ativa' : ''); b.setAttribute('data-bg-skip','1'); b.title = t.lbl;
@@ -37788,32 +37852,89 @@ var QuadrosUI = (function() {
       };
     }
 
-    // ── Vincular Pessoa ───────────────────────────────────────────────────────
+    // ── Vincular Pessoa — busca em dados cadastrados (nunca campo livre) ─────
     function _inserirPessoa() {
+      var boot = (App.getBoot && App.getBoot()) || {};
+      var pessoas = boot.pessoas || [];
+      var setores = boot.setores || [];
+
       var box = document.createElement('div');
       box.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
-      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
-        + '<h3 style="margin:0 0 14px;font-size:15px;">Vincular Pessoa</h3>'
+      var setOpts = '<option value="">— Setor / Módulo —</option>'
+        + setores.map(function(s) {
+            var v = escaparHtml(s.id||s.nome||''); var l = escaparHtml(s.nome||s.id||'');
+            return '<option value="'+v+'">'+l+'</option>';
+          }).join('');
+      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+        + '<h3 style="margin:0 0 16px;font-size:15px;font-weight:700;">Vincular Pessoa</h3>'
         + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">'
-        + '<input id="qdro-person-nome" class="form-control" placeholder="Nome *">'
-        + '<input id="qdro-person-cargo" class="form-control" placeholder="Cargo / Função">'
-        + '<input id="qdro-person-modulo" class="form-control" placeholder="Módulo / Setor">'
+        + '<div style="position:relative;">'
+        + '<input id="qdro-person-busca" class="form-control" placeholder="Buscar colaborador pelo nome…" autocomplete="off">'
+        + '<div id="qdro-person-lista" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;z-index:10;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.14);max-height:200px;overflow-y:auto;"></div>'
         + '</div>'
+        + '<input id="qdro-person-cargo" class="form-control" placeholder="Cargo / Função (preenchido automaticamente)" readonly style="background:#f8fafc;color:#64748b;">'
+        + '<select id="qdro-person-setor" class="form-control" style="height:40px;">' + setOpts + '</select>'
+        + '</div>'
+        + '<p style="margin:0 0 14px;font-size:11px;color:#94a3b8;">Selecione um colaborador cadastrado. Cargo é preenchido automaticamente.</p>'
         + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
         + '<button id="qdro-person-cancel" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar</button>'
         + '<button id="qdro-person-ok" class="btn btn-primary btn-sm" data-bg-skip="1">Inserir</button>'
         + '</div></div>';
       document.body.appendChild(box);
+
+      var inpBusca = document.getElementById('qdro-person-busca');
+      var inpCargo = document.getElementById('qdro-person-cargo');
+      var selSetor = document.getElementById('qdro-person-setor');
+      var listaEl  = document.getElementById('qdro-person-lista');
+
+      function _renderDropPessoas(matches) {
+        if (!matches.length) { listaEl.style.display='none'; return; }
+        listaEl.innerHTML = matches.map(function(p) {
+          var nome  = typeof p==='string' ? p : (p.nome||p.email||p.emailInstitucional||'?');
+          var cargo = typeof p==='object' ? (p.cargo||'') : '';
+          var setor = typeof p==='object' ? (p.setor||p.moduloAlocado||'') : '';
+          return '<div data-nome="'+escaparHtml(nome)+'" data-cargo="'+escaparHtml(cargo)+'" data-setor="'+escaparHtml(setor)+'"'
+            +' style="padding:9px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;"'
+            +' onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'#fff\'">'
+            +'<div style="font-size:13px;font-weight:600;color:#1e293b;">'+escaparHtml(nome)+'</div>'
+            +(cargo?'<div style="font-size:11px;color:#64748b;">'+escaparHtml(cargo)+'</div>':'')
+            +'</div>';
+        }).join('');
+        listaEl.style.display = 'block';
+        listaEl.querySelectorAll('[data-nome]').forEach(function(el) {
+          el.onclick = function() {
+            inpBusca.value = this.getAttribute('data-nome');
+            inpCargo.value = this.getAttribute('data-cargo')||'';
+            var st = this.getAttribute('data-setor')||'';
+            if (st) selSetor.value = st;
+            listaEl.style.display = 'none';
+          };
+        });
+      }
+
+      inpBusca.oninput = function() {
+        var q = (inpBusca.value||'').toLowerCase().trim();
+        if (!q) { listaEl.style.display='none'; return; }
+        var matches = pessoas.filter(function(p) {
+          var nome = typeof p==='string' ? p : (p.nome||p.email||p.emailInstitucional||'');
+          return nome.toLowerCase().indexOf(q) >= 0;
+        }).slice(0, 10);
+        _renderDropPessoas(matches);
+      };
+
       document.getElementById('qdro-person-cancel').onclick = function() { document.body.removeChild(box); };
       document.getElementById('qdro-person-ok').onclick = function() {
-        var nome = (document.getElementById('qdro-person-nome')||{}).value||'';
-        if (!nome.trim()) { Toast.aviso('Nome obrigatório.'); return; }
+        var nome = (inpBusca.value||'').trim();
+        if (!nome) { Toast.aviso('Selecione um colaborador da lista.'); return; }
         document.body.removeChild(box);
-        var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
-        _cvState.shapes.push({ t:'person-card', id:'pc_'+Date.now(), nome:nome.trim(), cargo:(document.getElementById('qdro-person-cargo')||{}).value||'', modulo:(document.getElementById('qdro-person-modulo')||{}).value||'', x:cx2-90, y:cy2-38, w:180, h:76 });
+        var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom;
+        var cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+        _cvState.shapes.push({ t:'person-card', id:'pc_'+Date.now(), nome:nome,
+          cargo:(inpCargo.value||'').trim(), modulo:(selSetor.value||'').trim(),
+          x:cx2-90, y:cy2-38, w:180, h:76 });
         _cvState.selIdx = _cvState.shapes.length-1; _redraw();
       };
-      setTimeout(function(){ var el = document.getElementById('qdro-person-nome'); if (el) el.focus(); }, 60);
+      setTimeout(function(){ if (inpBusca) inpBusca.focus(); }, 60);
     }
 
     // ── Inserir dado do sistema ───────────────────────────────────────────────
@@ -37974,20 +38095,321 @@ var QuadrosUI = (function() {
     setTimeout(_resize, 30);
   } // fim _iniciarEditor
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Modo Mapa Mental — engine dedicada (MindMeister-like)
+  // Tab: filho  ·  Enter: irmão  ·  Del: remover  ·  Duplo clique: editar
+  // ══════════════════════════════════════════════════════════════════════════
+  function _iniciarMindMap(snapshot) {
+    _limparEventosGlobais();
+    var container = document.getElementById('qdro-editor-container');
+    container.innerHTML = '';
+    container.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;';
+
+    // ── Estado ───────────────────────────────────────────────────────────────
+    var _mm = {
+      nodes: (snapshot && snapshot.mmNodes && snapshot.mmNodes.length)
+        ? JSON.parse(JSON.stringify(snapshot.mmNodes))
+        : [{ id:'root', text:'Ideia Central', parentId:null }],
+      sel: null, panX: 0, panY: 0, zoom: 1, editId: null, seq: Date.now()
+    };
+    var _PALETTE = ['#6366f1','#3b82f6','#22c55e','#f97316','#ef4444','#8b5cf6','#0ea5e9','#ec4899'];
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function _mmById(id) { for(var i=0;i<_mm.nodes.length;i++) if(_mm.nodes[i].id===id) return _mm.nodes[i]; return null; }
+    function _mmCh(id)   { var r=[]; for(var i=0;i<_mm.nodes.length;i++) if(_mm.nodes[i].parentId===id) r.push(_mm.nodes[i]); return r; }
+    function _mmSize(id) { var ch=_mmCh(id); if(!ch.length) return 1; var s=0; for(var i=0;i<ch.length;i++) s+=_mmSize(ch[i].id); return s; }
+    function _mmColor(id) {
+      if(!id||id==='root') return '#6366f1';
+      var n=_mmById(id); if(!n) return '#6366f1';
+      if(!n.parentId||n.parentId==='root') {
+        var sib=_mmCh('root'); for(var i=0;i<sib.length;i++) if(sib[i].id===id) return _PALETTE[i%_PALETTE.length];
+        return '#6366f1';
+      }
+      return _mmColor(n.parentId);
+    }
+
+    // ── Layout ────────────────────────────────────────────────────────────────
+    var NW=148, NH=38, HGAP=188, VUNIT=54;
+    var _pos = {};
+
+    function _computeLayout() {
+      _pos = {};
+      var root=_mmById('root'); if(!root) return;
+      _pos['root'] = { x:-NW/2, y:-NH/2, w:NW, h:NH, color:'#6366f1', side:0 };
+      var ch=_mmCh('root'), right=[], left=[];
+      for(var i=0;i<ch.length;i++) { if(i%2===0) right.push(ch[i]); else left.push(ch[i]); }
+      _mmPlaceBranch(right, HGAP, 1);
+      _mmPlaceBranch(left, -(HGAP+NW), -1);
+    }
+    function _mmBranchH(nodes) { var s=0; for(var i=0;i<nodes.length;i++) s+=_mmSize(nodes[i].id)*VUNIT; return s; }
+    function _mmPlaceBranch(nodes, x, side) {
+      var totalH=_mmBranchH(nodes), y=-totalH/2;
+      for(var i=0;i<nodes.length;i++) {
+        var n=nodes[i], h=_mmSize(n.id)*VUNIT, color=_mmColor(n.id);
+        _pos[n.id]={x:x,y:y+h/2-NH/2,w:NW,h:NH,color:color,side:side};
+        _mmPlaceTree(n.id, x+(side*HGAP), side, y, y+h, color);
+        y+=h;
+      }
+    }
+    function _mmPlaceTree(id, x, side, rTop, rBot, color) {
+      var ch=_mmCh(id); if(!ch.length) return;
+      var totalH=_mmBranchH(ch), y=(rTop+rBot)/2-totalH/2;
+      for(var i=0;i<ch.length;i++) {
+        var c=ch[i], h=_mmSize(c.id)*VUNIT;
+        _pos[c.id]={x:x,y:y+h/2-NH/2,w:NW,h:NH,color:color,side:side};
+        _mmPlaceTree(c.id, x+(side*HGAP), side, y, y+h, color);
+        y+=h;
+      }
+    }
+
+    // ── Canvas ────────────────────────────────────────────────────────────────
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#f8fafc;min-height:0;';
+    var cv2 = document.createElement('canvas');
+    cv2.tabIndex = 0; cv2.style.cssText = 'display:block;touch-action:none;outline:none;';
+    wrap.appendChild(cv2);
+
+    // Barra de dicas
+    var mmHint = document.createElement('div');
+    mmHint.style.cssText = 'position:absolute;bottom:14px;left:50%;transform:translateX(-50%);'
+      + 'background:rgba(15,23,42,.58);color:#fff;font-size:11px;border-radius:20px;'
+      + 'padding:5px 18px;pointer-events:none;white-space:nowrap;letter-spacing:.01em;';
+    mmHint.innerHTML = '<b>Tab</b>: filho &nbsp;·&nbsp; <b>Enter</b>: irmão &nbsp;·&nbsp; '
+      + '<b>Del</b>: remover &nbsp;·&nbsp; <b>F2</b> ou duplo clique: editar';
+    wrap.appendChild(mmHint);
+    container.appendChild(wrap);
+
+    // Resize
+    function _mmResize() { cv2.width=wrap.clientWidth; cv2.height=wrap.clientHeight; _mmDraw(); }
+    var _ro3 = typeof ResizeObserver!=='undefined' ? new ResizeObserver(function(){ _mmResize(); }) : null;
+    if (_ro3) { _ro3.observe(wrap); _resizeObserver=_ro3; }
+    else { var _rf3=function(){ _mmResize(); }; window.addEventListener('resize',_rf3); _winListeners=[{t:'resize',fn:_rf3}]; }
+
+    // ── Helpers de canvas ─────────────────────────────────────────────────────
+    function _mmRR(ctx,x,y,w,h,r) {
+      r=Math.min(r,Math.abs(w)/2,Math.abs(h)/2);
+      ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+      ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+      ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+      ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+    }
+    function _mmTrunc(txt,n) { txt=txt||''; return txt.length<=n?txt:txt.slice(0,n-1)+'…'; }
+
+    // ── Draw ─────────────────────────────────────────────────────────────────
+    function _mmDraw() {
+      var ctx=cv2.getContext('2d'); if(!ctx) return;
+      var W=cv2.width, H=cv2.height;
+      ctx.clearRect(0,0,W,H);
+
+      // Fundo com pontos
+      ctx.save(); ctx.fillStyle='rgba(148,163,184,.35)';
+      var gs=Math.round(22*_mm.zoom); if(gs<4) gs=4;
+      var ox=(W/2+_mm.panX%gs+gs*4)%gs, oy=(H/2+_mm.panY%gs+gs*4)%gs;
+      for(var gx=ox-gs;gx<W+gs;gx+=gs) for(var gy=oy-gs;gy<H+gs;gy+=gs) { ctx.beginPath(); ctx.arc(gx,gy,1.2,0,Math.PI*2); ctx.fill(); }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(W/2+_mm.panX, H/2+_mm.panY);
+      ctx.scale(_mm.zoom, _mm.zoom);
+      _computeLayout();
+
+      // Conectores (antes dos nodos)
+      for(var i=0;i<_mm.nodes.length;i++) {
+        var n=_mm.nodes[i]; if(!n.parentId) continue;
+        var fp=_pos[n.parentId], tp=_pos[n.id]; if(!fp||!tp) continue;
+        var color=tp.color||'#6366f1';
+        var fx, fy;
+        if(n.parentId==='root') {
+          fx=(tp.side>=0)?fp.x+fp.w:fp.x; fy=fp.y+fp.h/2;
+        } else {
+          fx=(fp.side>=0)?fp.x+fp.w:fp.x; fy=fp.y+fp.h/2;
+        }
+        var tx=(tp.side>=0)?tp.x:tp.x+tp.w, ty=tp.y+tp.h/2;
+        var cpx=(fx+tx)/2;
+        ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.globalAlpha=.75;
+        ctx.beginPath(); ctx.moveTo(fx,fy); ctx.bezierCurveTo(cpx,fy,cpx,ty,tx,ty); ctx.stroke();
+        ctx.restore();
+      }
+
+      // Nodos
+      for(var j=0;j<_mm.nodes.length;j++) {
+        var nd=_mm.nodes[j], p=_pos[nd.id]; if(!p) continue;
+        var sel=(nd.id===_mm.sel), isRoot=(nd.id==='root');
+        var x=p.x,y=p.y,w=p.w,h=p.h,c=p.color;
+        ctx.save();
+        ctx.shadowColor='rgba(0,0,0,.12)'; ctx.shadowBlur=10; ctx.shadowOffsetY=4;
+        if(isRoot) {
+          ctx.fillStyle=c; _mmRR(ctx,x,y,w,h,h/2); ctx.fill();
+          if(sel){ctx.shadowColor='transparent';ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=3;_mmRR(ctx,x,y,w,h,h/2);ctx.stroke();}
+          ctx.shadowColor='transparent'; ctx.fillStyle='#fff';
+          ctx.font='bold 13px Inter,sans-serif'; ctx.textAlign='center';
+          ctx.fillText(_mmTrunc(nd.text,18), x+w/2, y+h/2+5);
+        } else {
+          ctx.fillStyle='#fff'; _mmRR(ctx,x,y,w,h,8); ctx.fill();
+          ctx.shadowColor='transparent';
+          ctx.strokeStyle=sel?c:'#e2e8f0'; ctx.lineWidth=sel?2:1;
+          _mmRR(ctx,x,y,w,h,8); ctx.stroke();
+          // Barra lateral colorida
+          ctx.save(); ctx.fillStyle=c; ctx.beginPath();
+          ctx.moveTo(x,y+8); ctx.lineTo(x+4,y+8); ctx.lineTo(x+4,y+h-8); ctx.lineTo(x,y+h-8); ctx.closePath(); ctx.fill();
+          ctx.restore();
+          ctx.fillStyle='#1e293b'; ctx.font='600 12px Inter,sans-serif'; ctx.textAlign='left';
+          ctx.fillText(_mmTrunc(nd.text,17), x+11, y+h/2+4);
+        }
+        // Badge de filhos
+        var chCount=_mmCh(nd.id).length;
+        if(chCount&&!isRoot) {
+          var bx=(p.side>=0)?x+w:x, by=y+h/2;
+          ctx.shadowColor='transparent'; ctx.fillStyle=c;
+          ctx.beginPath(); ctx.arc(bx,by,7,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#fff'; ctx.font='bold 9px Inter,sans-serif'; ctx.textAlign='center';
+          ctx.fillText(chCount, bx, by+3);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // Indicador de zoom
+      ctx.save(); ctx.fillStyle='rgba(100,116,139,.55)'; ctx.font='11px Inter,sans-serif'; ctx.textAlign='right';
+      ctx.fillText(Math.round(_mm.zoom*100)+'%', cv2.width-12, cv2.height-12); ctx.restore();
+    }
+
+    // ── Coordenadas ───────────────────────────────────────────────────────────
+    function _mmToWorld(ex,ey) {
+      var r=cv2.getBoundingClientRect();
+      return {x:(ex-r.left-cv2.width/2-_mm.panX)/_mm.zoom, y:(ey-r.top-cv2.height/2-_mm.panY)/_mm.zoom};
+    }
+    function _mmHit(wx,wy) {
+      for(var i=_mm.nodes.length-1;i>=0;i--) {
+        var n=_mm.nodes[i], p=_pos[n.id]; if(!p) continue;
+        if(wx>=p.x&&wx<=p.x+p.w&&wy>=p.y&&wy<=p.y+p.h) return n.id;
+      }
+      return null;
+    }
+
+    // ── Edição inline ─────────────────────────────────────────────────────────
+    var _mmInp = null;
+    function _mmStartEdit(id) {
+      _mmStopEdit();
+      _mm.editId=id; _mm.sel=id; _computeLayout();
+      var p=_pos[id]; if(!p) return;
+      var n=_mmById(id); if(!n) return;
+      var sx=p.x*_mm.zoom+cv2.width/2+_mm.panX;
+      var sy=p.y*_mm.zoom+cv2.height/2+_mm.panY;
+      var sw=p.w*_mm.zoom, sh=p.h*_mm.zoom;
+      var inp=document.createElement('input'); inp.type='text'; inp.value=n.text||'';
+      inp.style.cssText='position:absolute;left:'+sx+'px;top:'+sy+'px;width:'+sw+'px;height:'+sh+'px;'
+        +'box-sizing:border-box;font-size:'+(12*_mm.zoom)+'px;font-family:Inter,sans-serif;font-weight:600;'
+        +'border:2px solid '+(p.color||'#6366f1')+';border-radius:8px;outline:none;padding:0 10px;z-index:50;'
+        +'background:'+(id==='root'?(p.color||'#6366f1'):'#fff')+';'
+        +'color:'+(id==='root'?'#fff':'#1e293b')+';text-align:'+(id==='root'?'center':'left')+';';
+      wrap.appendChild(inp); _mmInp=inp;
+      inp.focus(); inp.select();
+      inp.onkeydown=function(e){
+        if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();_mmStopEdit();cv2.focus();}
+        e.stopPropagation();
+      };
+      inp.onblur=function(){ _mmStopEdit(); };
+      _mmDraw();
+    }
+    function _mmStopEdit() {
+      if(!_mmInp) return;
+      var val=(_mmInp.value||'').trim();
+      if(_mm.editId&&val){ var n=_mmById(_mm.editId); if(n) n.text=val; }
+      if(_mmInp.parentNode) _mmInp.parentNode.removeChild(_mmInp);
+      _mmInp=null; _mm.editId=null; _mmDraw();
+    }
+
+    // ── Gestão de nodos ───────────────────────────────────────────────────────
+    function _mmAddChild(parentId) {
+      var nid='mm_'+(++_mm.seq);
+      _mm.nodes.push({id:nid,text:'Novo tópico',parentId:parentId});
+      _mm.sel=nid; _mmDraw();
+      setTimeout(function(){ _mmStartEdit(nid); }, 80);
+    }
+    function _mmAddSibling(id) {
+      var n=_mmById(id); if(!n) return;
+      _mmAddChild(n.parentId||'root');
+    }
+    function _mmRemove(id) {
+      if(!id||id==='root') return;
+      var toRem=[id];
+      (function col(pid){ _mmCh(pid).forEach(function(c){ toRem.push(c.id); col(c.id); }); })(id);
+      var parent=(_mmById(id)||{}).parentId||'root';
+      _mm.nodes=_mm.nodes.filter(function(n){ return toRem.indexOf(n.id)<0; });
+      _mm.sel=parent; _mmDraw();
+    }
+
+    // ── Mouse ─────────────────────────────────────────────────────────────────
+    var _mmPan=false, _mmPanStart=null, _mmLastClick=0, _mmLastId=null;
+    cv2.addEventListener('mousedown',function(e){
+      if(e.button!==0) return; if(_mm.editId) return;
+      var w=_mmToWorld(e.clientX,e.clientY), hit=_mmHit(w.x,w.y);
+      if(!hit){_mmPan=true;_mmPanStart={x:e.clientX-_mm.panX,y:e.clientY-_mm.panY};_mmStopEdit();_mm.sel=null;_mmDraw();return;}
+      var now=Date.now();
+      if(hit===_mmLastId&&now-_mmLastClick<380){_mmStartEdit(hit);_mmLastClick=0;_mmLastId=null;return;}
+      _mmLastClick=now;_mmLastId=hit;_mm.sel=hit;_mmDraw();cv2.focus();
+    });
+    cv2.addEventListener('mousemove',function(e){if(_mmPan){_mm.panX=e.clientX-_mmPanStart.x;_mm.panY=e.clientY-_mmPanStart.y;_mmDraw();}});
+    cv2.addEventListener('mouseup',function(){_mmPan=false;});
+    cv2.addEventListener('mouseleave',function(){_mmPan=false;});
+    cv2.addEventListener('wheel',function(e){
+      e.preventDefault();
+      var f=e.deltaY>0?.9:1.1; _mm.zoom=Math.max(.2,Math.min(4,_mm.zoom*f)); _mmDraw();
+    },{passive:false});
+
+    // ── Teclado ───────────────────────────────────────────────────────────────
+    function _onKbMM(e) {
+      if(_mm.editId) return;
+      if(document.activeElement!==cv2&&document.activeElement!==document.body&&document.activeElement!==document.documentElement) return;
+      if(e.key==='Tab'){e.preventDefault();_mmAddChild(_mm.sel||'root');}
+      else if(e.key==='Enter'){e.preventDefault();if(_mm.sel&&_mm.sel!=='root')_mmAddSibling(_mm.sel);else _mmAddChild('root');}
+      else if((e.key==='Delete'||e.key==='Backspace')&&_mm.sel&&_mm.sel!=='root'){e.preventDefault();_mmRemove(_mm.sel);}
+      else if(e.key==='Escape'){_mm.sel=null;_mmDraw();}
+      else if(e.key==='F2'&&_mm.sel){e.preventDefault();_mmStartEdit(_mm.sel);}
+    }
+    document.addEventListener('keydown',_onKbMM);
+    _keyListeners=[{t:'keydown',fn:_onKbMM}];
+    cv2.focus();
+
+    // ── Expor editor (para salvarSnapshot) ────────────────────────────────────
+    _editor = {
+      store: {
+        getSnapshot: function() {
+          return { mmNodes: JSON.parse(JSON.stringify(_mm.nodes)), version: 3 };
+        }
+      }
+    };
+    _cvState = null;
+    setTimeout(_mmResize, 30);
+  } // fim _iniciarMindMap
+
   // ── API pública do toolbar ─────────────────────────────────────────────────
   function _setTool(tool) {
     if (!_cvState) return; _cvState.tool = tool; _cvState.selIdx = -1;
-    var ALL = ['select','pencil','marker','brush','connector','line','arrow','rect','circle','diamond','triangle','hexagon','pentagon','star','callout','text','sticky','frame','table','eraser'];
+    var ALL = ['select','connector','line','arrow','rect','circle','diamond','triangle','hexagon','pentagon','star','callout','text','sticky','frame','table','eraser'];
     ALL.forEach(function(t) {
       var b = document.getElementById('qdro-tool-' + t); if (!b) return;
       if (t === tool) { b.classList.add('ativa'); }
       else            { b.classList.remove('ativa'); }
     });
+    // Botão de grupo de desenho
+    var grpBtn = document.getElementById('qdro-tool-draw-group');
+    if (grpBtn) {
+      var isDraw = (tool==='pencil'||tool==='marker'||tool==='brush');
+      if (isDraw) grpBtn.classList.add('ativa'); else grpBtn.classList.remove('ativa');
+    }
+    // Sub-botões do flyout (se estiver aberto)
+    ['pencil','marker','brush'].forEach(function(t) {
+      var b = document.getElementById('qdro-tool-' + t); if (!b) return;
+      if (t === tool) b.classList.add('ativa'); else b.classList.remove('ativa');
+    });
     var cvel = document.getElementById('qdro-canvas');
     if (cvel) {
-      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair',
-                rect:'crosshair', circle:'crosshair', text:'text', sticky:'copy',
-                frame:'crosshair', table:'crosshair', eraser:'cell' };
+      var C = { select:'default', pencil:'crosshair', marker:'crosshair', brush:'crosshair',
+                line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair',
+                text:'text', sticky:'copy', frame:'crosshair', table:'crosshair', eraser:'cell' };
       cvel.style.cursor = C[tool] || 'default';
     }
     if (_editor && _editor._redraw) _editor._redraw();

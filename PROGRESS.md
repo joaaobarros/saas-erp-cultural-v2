@@ -39,9 +39,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
+**Fase atual (s144)**: **feat — Quadros v6: Mapa Mental MindMeister-like (Tab/Enter, bezier, auto-layout), grupo de ferramentas de desenho (lápis/marcador/pincel em flyout), Vincular Pessoa com busca em dados cadastrados; regra de negócio de vínculos nos docs — Deploy @1081.**
 
 **O que foi implementado agora**:
+- **Mapa Mental dedicado**: quadros com categoria `mindmap` abrem em modo exclusivo com engine separada. Nodos em árvore horizontal, connectors bezier, root ao centro. Tab cria filho, Enter cria irmão, F2/duplo-clique edita inline, Del remove, Esc desseleciona, scroll para zoom, arrastar para pan. Auto-layout com distribuição alternada L/R para filhos do root. Badge de filhos em cada nodo. Salvamento via `snapshot.mmNodes`, retrocompatível.
+- **Grupo de ferramentas de desenho**: lápis, marcador e pincel agrupados em um único botão com ícone dinâmico (▼). Clicar abre flyout com as 3 opções (descrição + ícone), como editores de imagem. `_setTool` atualizado para ativar o botão de grupo.
+- **Vincular Pessoa corrigida**: substituiu 3 inputs livres (Nome, Cargo, Módulo) por busca com autocomplete em `boot.pessoas`, cargo auto-preenchido ao selecionar, setor como `<select>` de `boot.setores`. Nunca campo de texto livre para entidade cadastrada.
+- **Regra de vínculo nos docs**: `CLAUDE.md` recebeu seção `🔗 REGRA DE NEGÓCIO — VÍNCULOS SÃO SEMPRE DADOS CADASTRADOS` com tabela de implementação obrigatória e checklist.
+
+**Fase anterior (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
+
+**O que foi implementado em s143**:
 - **Drag & Drop**: reordenação de widgets por arrastar (HTML5 drag API). Handle `drag_indicator`, estado `is-dragging` / `drag-over` com feedback visual. Setas ↑↓ removidas — apenas arrastar.
 - **7 tipos de widget**: + Texto (conteúdo rico com tamanho/bold/itálico/alinhamento), Imagem (URL + alt + max-height), Forma (8 formas SVG: círculo, retângulo, triângulo, losango, hexágono, estrela, seta, nuvem + cor + texto interno).
 - **6 tamanhos de coluna**: + `3/4` (75%) adicionado. Seletor no header do widget.

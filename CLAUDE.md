@@ -118,6 +118,51 @@ Se for planilha nova, também:
 
 ---
 
+## 🔗 REGRA DE NEGÓCIO — VÍNCULOS SÃO SEMPRE DADOS CADASTRADOS
+
+> **Regra adicionada em 2026-06-25.** Violações identificadas em Quadros (modal "Vincular Pessoa" com campos de texto livre).
+
+**Em hipótese alguma um vínculo pode ser campo de texto aberto.** Todo link a entidades do sistema deve ser resolvido a partir dos dados cadastrados, nunca digitado livremente pelo usuário.
+
+| Tipo de vínculo | Implementação obrigatória |
+|---|---|
+| **Pessoa / Colaborador** | Busca com autocomplete em `App.getBoot().pessoas` ou `GAS.ponto.listarColaboradores()` |
+| **Setor / Módulo** | `<select>` populado de `App.getBoot().setores` |
+| **Ação cultural** | Busca + `<select>` via `GAS.acoes.listar()` |
+| **Reunião** | Busca + `<select>` via `GAS.reunioes.listar()` |
+| **Contrato / Fornecedor** | Busca + `<select>` via `GAS.contratos.listar()` |
+| **Espaço / Recurso** | Busca + `<select>` via `GAS.espacos.listar()` |
+| **Tarefa** | Panel de seleção com busca via `GAS.tarefas.listar()` |
+| **Cargo / Função** | Auto-preenchido ao selecionar pessoa, ou `<datalist>` de cargos existentes |
+
+### Padrão de busca com autocomplete (substituto de `<input>` livre para entidades)
+
+```javascript
+// Padrão obrigatório para vincular pessoa:
+var boot = App.getBoot() || {};
+var pessoas = boot.pessoas || [];
+inpBusca.oninput = function() {
+  var q = this.value.toLowerCase();
+  var matches = pessoas.filter(function(p){ return (p.nome||p.email||'').toLowerCase().indexOf(q)>=0; });
+  // renderizar dropdown com matches → ao clicar, auto-preencher cargo e setor
+};
+// setor: sempre <select> de boot.setores, nunca input livre
+```
+
+> **Anti-padrão PROIBIDO:** `<input placeholder="Módulo / Setor">` ou `<input placeholder="Cargo / Função">` para dados que existem no cadastro.
+> **Anti-padrão PROIBIDO:** Campos livres para Nome de pessoas cadastradas no sistema.
+
+### Checklist de vínculos (executar ao revisar qualquer modal)
+
+```
+[ ] Toda menção de pessoa usa busca em boot.pessoas (não input livre)
+[ ] Setor/módulo usa <select> de boot.setores
+[ ] Ação/reunião/contrato/espaço usa <select> ou busca via GAS.*
+[ ] Cargo é auto-preenchido da pessoa selecionada (editável mas não livre)
+```
+
+---
+
 ## 🧪 AUDITORIA DE BUGS — OBRIGATÓRIA ANTES DE QUALQUER DEPLOY
 
 > Diretriz adicionada após sessão de auditoria (2026-05-22) que identificou 5 bugs ativos no sistema.

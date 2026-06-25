@@ -18,6 +18,25 @@ function _analise_agrupar(lista, campo) {
   return mapa;
 }
 
+// Filtro de data global — setado antes de chamar _analise_dataset para aplicar período
+var _analise_filtro_global = null;
+
+function _analise_filtrar_por_data(lista, campo) {
+  if (!_analise_filtro_global) return lista;
+  var de  = _analise_filtro_global.de  ? new Date(_analise_filtro_global.de)  : null;
+  var ate = _analise_filtro_global.ate ? new Date(_analise_filtro_global.ate + 'T23:59:59') : null;
+  if (!de && !ate) return lista;
+  return (lista||[]).filter(function(item) {
+    var raw = item[campo];
+    if (!raw) return true;
+    var d = (raw instanceof Date) ? raw : new Date(String(raw).slice(0,10));
+    if (isNaN(d.getTime())) return true;
+    if (de  && d < de)  return false;
+    if (ate && d > ate) return false;
+    return true;
+  });
+}
+
 function _analise_mapaParaLinhas(mapa, limite) {
   var pares = Object.keys(mapa).map(function(k) { return [k, mapa[k]]; });
   pares.sort(function(a,b){ return b[1]-a[1]; });
@@ -145,30 +164,48 @@ function ctrl_analise_excluir(params) {
 // ─── Catálogo de datasets ─────────────────────────────────────────────────────
 
 var _ANALISE_CATALOGO = [
+  // Espaços
   { id:'reservas_espaco',         modulo:'Espaços',         label:'Reservas por espaço',           desc:'Quantidade de reservas por sala ou espaço' },
   { id:'reservas_setor',          modulo:'Espaços',         label:'Reservas por setor',            desc:'Reservas agrupadas por setor solicitante' },
   { id:'reservas_mes',            modulo:'Espaços',         label:'Reservas por mês',              desc:'Evolução mensal do número de reservas' },
   { id:'carros_destino',          modulo:'Espaços',         label:'Viagens por destino',           desc:'Reservas de veículo agrupadas por destino' },
   { id:'carros_setor',            modulo:'Espaços',         label:'Viagens por setor',             desc:'Uso de veículos por setor solicitante' },
+  { id:'ativos_status',           modulo:'Espaços',         label:'Patrimônio por status',         desc:'Ativos/patrimônio: disponível, em uso, manutenção…' },
+  // Tarefas
   { id:'tarefas_status',          modulo:'Tarefas',         label:'Tarefas por status',            desc:'Distribuição por status atual (aberta, atrasada, concluída…)' },
   { id:'tarefas_setor',           modulo:'Tarefas',         label:'Tarefas por setor',             desc:'Volume total de tarefas por setor' },
   { id:'tarefas_responsavel',     modulo:'Tarefas',         label:'Tarefas por responsável',       desc:'Carga de trabalho por pessoa' },
+  { id:'tarefas_prioridade',      modulo:'Tarefas',         label:'Tarefas por prioridade',        desc:'Distribuição: urgente, alta, normal, baixa' },
+  // Reuniões
   { id:'reunioes_tipo',           modulo:'Reuniões',        label:'Reuniões por tipo',             desc:'Distribuição das reuniões por tipo' },
   { id:'reunioes_mes',            modulo:'Reuniões',        label:'Reuniões por mês',              desc:'Evolução mensal do número de reuniões' },
   { id:'encaminhamentos_status',  modulo:'Reuniões',        label:'Encaminhamentos por status',    desc:'Status dos encaminhamentos das atas' },
+  // Financeiro
   { id:'financeiro_execucao',     modulo:'Financeiro',      label:'Execução orçamentária',         desc:'Previsto vs. executado (valores R$)' },
   { id:'financeiro_rubrica',      modulo:'Financeiro',      label:'Valor por rubrica',             desc:'Distribuição de valores por rubrica' },
+  { id:'contratos_status',        modulo:'Financeiro',      label:'Contratos por status',          desc:'Contratos: ativos, suspensos, encerrados, cancelados' },
+  { id:'contratos_fonte',         modulo:'Financeiro',      label:'Contratos por fonte',           desc:'Distribuição de contratos por fonte de recurso' },
+  // Pessoas
   { id:'pessoas_setor',           modulo:'Pessoas',         label:'Colaboradores por setor',       desc:'Headcount de colaboradores ativos por setor' },
   { id:'pessoas_cargo',           modulo:'Pessoas',         label:'Colaboradores por cargo',       desc:'Distribuição por cargo ou função' },
   { id:'pessoas_vinculo',         modulo:'Pessoas',         label:'Colaboradores por vínculo',     desc:'CLT, PJ, bolsista, voluntário…' },
+  // Ações Culturais
   { id:'acoes_status',            modulo:'Ações Culturais', label:'Ações por status',              desc:'Distribuição das ações por status atual' },
   { id:'acoes_tipo',              modulo:'Ações Culturais', label:'Ações por tipo',                desc:'Distribuição por tipo de ação cultural' },
   { id:'acoes_mes',               modulo:'Ações Culturais', label:'Ações por mês',                desc:'Evolução mensal de criação de ações' },
+  // Público
   { id:'publico_acao',            modulo:'Público',         label:'Público por ação',              desc:'Inscrições por ação cultural' },
   { id:'publico_mes',             modulo:'Público',         label:'Inscrições por mês',            desc:'Evolução mensal de inscrições' },
+  { id:'presencas_acao',          modulo:'Público',         label:'Presenças por ação',            desc:'Taxa de presença confirmada por ação' },
+  // Estoque
   { id:'estoque_categoria',       modulo:'Estoque',         label:'Itens por categoria',           desc:'Quantidade de itens por categoria de estoque' },
+  // Comunicação
   { id:'balcao_status',           modulo:'Comunicação',     label:'Demandas por status',           desc:'Demandas do balcão agrupadas por status' },
+  { id:'balcao_tipo',             modulo:'Comunicação',     label:'Demandas por tipo',             desc:'Design, foto, vídeo, texto, social…' },
+  { id:'balcao_setor',            modulo:'Comunicação',     label:'Demandas por setor',            desc:'Demandas originadas por setor' },
+  // Escuta
   { id:'escuta_pesquisa',         modulo:'Escuta',          label:'Resultados de escuta',          desc:'Indicadores das pesquisas de escuta organizacional' },
+  // Cruzamentos
   { id:'cruzar_pessoas_tarefas',  modulo:'Cruzamentos',     label:'Pessoas × Tarefas (setor)',     desc:'2 séries: headcount e volume de tarefas por setor' },
   { id:'cruzar_reservas_tarefas', modulo:'Cruzamentos',     label:'Reservas × Tarefas (setor)',    desc:'2 séries: uso de espaços e tarefas por setor' },
   { id:'cruzar_acoes_publico_mes',modulo:'Cruzamentos',     label:'Ações × Público (mês)',         desc:'2 séries: ações criadas e inscrições por mês' },
@@ -185,7 +222,11 @@ function ctrl_analise_catalogo() {
 function ctrl_analise_importar_dados(params) {
   return GasResponse.wrap(function() {
     var id = (params || {}).modulo || (params || {}).id || 'operacional';
-    return _analise_dataset(id);
+    var filtro = null;
+    if ((params||{}).de || (params||{}).ate) filtro = { de: (params||{}).de, ate: (params||{}).ate };
+    _analise_filtro_global = filtro;
+    try { return _analise_dataset(id); }
+    finally { _analise_filtro_global = null; }
   }, 'ctrl_analise_importar_dados');
 }
 

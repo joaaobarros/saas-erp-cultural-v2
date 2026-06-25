@@ -624,27 +624,33 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 120 (2026-06-25)
+## HANDOFF ATUAL — SESSÃO 121 (2026-06-25)
 
-### Estado atual: Feat — Estúdio de Análises v5: Dashboard Builder modernizado — Deploy @1074
+### Estado atual: Feat — Quadros v6: Mapa Mental + grupo de ferramentas + Vincular Pessoa — Deploy @1081
+
+### O que foi feito nesta sessão (s144)
+| Deploy | O que foi implementado |
+|---|---|
+| @1081 | **QuadrosUI** (index.html): `_iniciarMindMap` — engine dedicada para quadros `categoria=mindmap`; nodos em árvore horizontal bezier, auto-layout alternado L/R, Tab/Enter/Del/F2/Esc/scroll/pan. Grupo de ferramentas de desenho em botão único com flyout (lápis/marcador/pincel). `_inserirPessoa` corrigida: busca em `boot.pessoas` + `<select>` de `boot.setores`, nunca campo livre. Regra de vínculo em CLAUDE.md. |
+
+### Smoke test esperado
+- Quadros → criar quadro com categoria "Mindmap" → editar → mapa mental abre (não canvas livre).
+- Root "Ideia Central" ao centro; Tab cria filho; Enter cria irmão; duplo-clique edita inline; Del remove.
+- Connectors bezier curvos; cores alternadas por ramo; pan (arrastar) + zoom (scroll).
+- Salvar → reabrir → nodos preservados.
+- Quadro livre → barra lateral de ferramentas → botão "Ferramentas de Desenho" com ▼ → clicar → flyout com Lápis/Marcador/Pincel; selecionar Marcador → ícone do botão muda para `edit`.
+- Botão "Vincular Pessoa" → modal com busca de colaboradores (não inputs livres) → digitar nome → dropdown filtra lista → clicar → cargo auto-preenchido.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 120 (2026-06-25)
+
+### Estado atual: Feat — Estúdio de Análises v5: Dashboard Builder modernizado — Deploy @1079
 
 ### O que foi feito nesta sessão (s143)
 | Deploy | O que foi implementado |
 |---|---|
 | @1079 | **AnaliseEstudioUI** (index.html): Drag & drop HTML5 para reordenação de widgets; 3 novos tipos: Texto, Imagem, Forma SVG (8 geometrias); `_renderFormaWidget` com SVG puro; 6 tamanhos (+3/4); galeria hero com gradiente; cards `db-card2` com preview de blocos coloridos; 7 templates pré-prontos; 8 sugestões do sistema clicáveis (`_dashAddSugestao`); Widget Editor com `db-tipo-grid`; toolbar sticky; aba "Análises" removida. |
-
-### Pendente para smoke test
-- Estúdio → módulo exibe apenas galeria de dashboards (sem aba "Análises").
-- Galeria vazia → hero section com botões "Novo dashboard" e "Templates".
-- Botão "Templates" → modal com 7 opções → clicar numa → editor com widgets pré-carregados.
-- Editor → sugestões acima do canvas como pills clicáveis → clique adiciona widget.
-- Botão "Adicionar" → dropdown com 7 tipos (Gráfico, KPI Card, Tabela, Seção, Texto, Imagem, Forma).
-- Adicionar widget Texto → editor abre → seção texto visível → configurar → confirmar → div com texto renderizado.
-- Adicionar widget Imagem → URL de imagem → confirmar → img tag renderizado.
-- Adicionar widget Forma → picker de 8 formas → cor → texto → confirmar → SVG renderizado.
-- Drag & drop → arrastar widget pelo handle `drag_indicator` → soltar em nova posição → canvas reordena.
-- Tamanho → selecionar "3/4" → widget ocupa 75% da linha.
-- Salvar → galeria exibe dashboard com preview de blocos coloridos.
 
 ---
 
