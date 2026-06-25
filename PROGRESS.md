@@ -39,18 +39,22 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s144)**: **feat — Quadros v6: Mapa Mental MindMeister-like (Tab/Enter, bezier, auto-layout), grupo de ferramentas de desenho (lápis/marcador/pincel em flyout), Vincular Pessoa com busca em dados cadastrados; regra de negócio de vínculos nos docs; Estúdio de Análises: SVG Medidor/Radar/Combinado implementados, onclick sugestões por índice seguro — Deploy @1083.**
+**Fase atual (s145)**: **feat — Estúdio de Análises v6: filtro de período (5 presets), 22 sugestões automáticas cobrindo todos os módulos, catálogo expandido para 35 datasets, fix definitivo onclick sugestões por índice — Deploy @1084.**
 
 **O que foi implementado agora**:
+- **Filtro de período no Dashboard View**: barra `.db-periodo-bar` com 5 presets (Tudo / 30 dias / 3 meses / 6 meses / Este ano). `_dashSetFiltroTempo(preset)` atualiza `_dashFiltroTempo` e chama `_dashRecarregarWidgets` — todos os widgets dinâmicos buscam dados com `de`/`ate` via GAS.analise.importarDados/cruzar.
+- **22 sugestões automáticas** em `_dashSugestoes()`: cobrindo Ações Culturais (3), Público (2), Pessoas (3), Tarefas (2), Reuniões (2), Financeiro (3), Espaços (3), Comunicação (2), Cruzamentos (2).
+- **35 datasets no `_CATALOGO_LOCAL`** do frontend: sincronizado com o backend, agora inclui `ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`.
+- **Fix definitivo onclick sugestões**: pills usam `AnaliseEstudioUI._dashAddSugestaoByIdx(i)` com `_dashSugArr` populado no render — erro "Erro ao adicionar sugestão" eliminado definitivamente.
+
+**Fase anterior (s144)**: **feat — Quadros v6: Mapa Mental MindMeister-like (Tab/Enter, bezier, auto-layout), grupo de ferramentas de desenho (lápis/marcador/pincel em flyout), Vincular Pessoa com busca em dados cadastrados; regra de negócio de vínculos nos docs; Estúdio de Análises: SVG Medidor/Radar/Combinado implementados, onclick sugestões por índice seguro — Deploy @1083.**
+
+**O que foi implementado em s144**:
 - **Mapa Mental dedicado**: quadros com categoria `mindmap` abrem em modo exclusivo com engine separada. Nodos em árvore horizontal, connectors bezier, root ao centro. Tab cria filho, Enter cria irmão, F2/duplo-clique edita inline, Del remove, Esc desseleciona, scroll para zoom, arrastar para pan. Auto-layout com distribuição alternada L/R para filhos do root. Badge de filhos em cada nodo. Salvamento via `snapshot.mmNodes`, retrocompatível.
 - **Grupo de ferramentas de desenho**: lápis, marcador e pincel agrupados em um único botão com ícone dinâmico (▼). Clicar abre flyout com as 3 opções (descrição + ícone), como editores de imagem. `_setTool` atualizado para ativar o botão de grupo.
 - **Vincular Pessoa corrigida**: substituiu 3 inputs livres (Nome, Cargo, Módulo) por busca com autocomplete em `boot.pessoas`, cargo auto-preenchido ao selecionar, setor como `<select>` de `boot.setores`. Nunca campo de texto livre para entidade cadastrada.
-- **Regra de vínculo nos docs**: `CLAUDE.md` recebeu seção `🔗 REGRA DE NEGÓCIO — VÍNCULOS SÃO SEMPRE DADOS CADASTRADOS` com tabela de implementação obrigatória e checklist.
 - **7 novos datasets do Estúdio de Análises** (analise_controller.gs): `ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`; `_analise_filtrar_por_data` aplicado a `acoes_mes`, `publico_acao`, `publico_mes`.
-- **4 novos tipos de gráfico SVG** (index.html/AnaliseEstudioUI): Medidor (gauge semicircular), Radar (teia de aranha), Combinado (barras + linha), Dispersão (scatter); catálogo de 12 tipos com descrições; `_dashFiltroTempo` para filtro de período.
-- **SVG Medidor/Radar/Combinado implementados**: funções `_svgMedidor`, `_svgRadar`, `_svgCombinado` completas com renderização SVG.
-- **Fix segurança onclick sugestões**: substituído `JSON.stringify` inline no onclick por índice `_dashAddSugestaoByIdx(i)` com `_dashSugArr` — elimina risco de injeção via dados do usuário.
-- **_CATALOGO_LOCAL completo**: 7 datasets de backend (`ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`) adicionados ao catálogo do frontend — ficam disponíveis no seletor do Widget Editor com seus módulos e labels corretos.
+- **4 novos tipos de gráfico SVG**: Medidor (gauge semicircular), Radar (teia de aranha), Combinado (barras + linha), Dispersão (scatter); `_svgMedidor`, `_svgRadar`, `_svgCombinado` implementados.
 
 **Fase anterior (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
 
