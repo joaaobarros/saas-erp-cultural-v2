@@ -2398,6 +2398,26 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF — SESSÃO 148 (2026-06-25) → PRÓXIMA SESSÃO
+
+### Estado: Deploy pendente · feat: Biblioteca SVG dc-icon + logos institucionais
+
+### O que foi feito nesta sessão (s148)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | feat: dc-icon | `gas/src/shared/icons.html`: sprite sheet com 156 símbolos SVG (150 gerais + 6 logos); web component `<dc-icon>` + `dcIcon()` + `dcLogo()` globais |
+| pendente | feat: logos inst | IDM sun/wordmark, CCBJ mark/wordmark, Secult 60 anos, Ceará Governo do Estado vetorizados em `assets/icons/institucional/` |
+| pendente | feat: integração | `index.html`: include icons no head; banner usa `<dc-icon name="teatro">`; sidebar footer com IDM sun + CCBJ mark; DatasComemorativasAdmin aceita nomes dc-icon |
+| pendente | feat: assets | 150+ SVGs baixados (Lucide ISC + Tabler MIT) em `/assets/icons/`; índice semântico em `assets/icons/index.js` |
+
+### Pendentes / próxima ação
+- Executar `clasp push && clasp deploy` para publicar
+- Verificar no browser: (1) Banner com ícone teatro SVG; (2) Sidebar footer com logos IDM + CCBJ; (3) `<dc-icon>` renderizando em telas de admin
+- Criar SVGs custom para ícones sem equivalente: dança, circo, maracatu, cordel, xilogravura, rabeca, fogos de artifício
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 52b (2026-06-14) → SESSÃO 52c
 
 ### Estado: Deploy @902 · Fix: aviso férias vencidas + ícones MS

@@ -39,7 +39,18 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s147)**: **fix — Quadros: flyout do grupo de desenho (lápis/marcador/pincel) cortado pelo overflow-y:auto do ftb; appendado ao `wrap` com posicionamento via getBoundingClientRect — Deploy @1092.**
+**Fase atual (s148)**: **feat — Biblioteca de ícones SVG dc-icon: 156 ícones (Lucide ISC + Tabler MIT) + logos institucionais IDM/CCBJ/Secult-60/Ceará vetorizados; web component `<dc-icon>`; integração no index.html (banner, sidebar footer, DatasComemorativasAdmin) — Deploy pendente.**
+
+**O que foi implementado em s148**:
+- **156 símbolos SVG** em `gas/src/shared/icons.html`: 150 ícones gerais (Lucide + Tabler) + 6 logos institucionais; categorias admin, educação, cultura, território, natureza, diversidade, datas comemorativas, UI.
+- **Logos institucionais vetorizados**: `idm-sun.svg` (sol 18 raios #CE5019), `idm-wordmark.svg` (logo completo IDM), `ccbj-mark.svg` (3 polígonos: amarelo/magenta/verde), `ccbj-wordmark.svg`, `secult-60.svg` (60 anos 1966), `ceara-cultura.svg` (brasão simplificado + texto institucional).
+- **Web component `<dc-icon>`**: uso via `<dc-icon name="musica" size="24" color="#6B46C1">` ou `dcIcon('teatro', {size:24})` ou `dcLogo('ccbj', {height:40})`.
+- **Integração no sistema**: `<?!= include('shared/icons'); ?>` no head; banner `🎭` → `<dc-icon name="teatro" size="56">`; sidebar footer recebe IDM sun + CCBJ mark; `DatasComemorativasAdmin._renderLista` suporta nomes dc-icon além de emoji.
+- **Assets**: `/assets/icons/` com SVG source organizados em admin/, cultura/, datas/, educacao/, territorio/, natureza/, diversidade/, institucional/, ui/.
+- **Índice JS**: `assets/icons/index.js` com mapa semântico `ICONS`, `ICONS_PENDENTES_CUSTOM` (ícones exclusivos ainda sem equivalente), `EMOJI_TO_ICON` (guia de migração).
+- **Ícones exclusivos pendentes de criação custom**: dança, circo, maracatu, cordel, xilogravura, rabeca, coco, reisado, fogos de artifício.
+
+**Fase anterior (s147)**: **fix — Quadros: flyout do grupo de desenho (lápis/marcador/pincel) cortado pelo overflow-y:auto do ftb; appendado ao `wrap` com posicionamento via getBoundingClientRect — Deploy @1092.**
 
 **Fase anterior (s146)**: **feat — Dashboard Builder: sidebar lateral (Data Studio style), dados ao vivo no editor, filtros interativos (setor + datas custom); fix crítico: AnaliseEstudioUI IIFE crash restaura todos os botões — Deploy @1091.**
 
