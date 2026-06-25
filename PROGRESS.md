@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s145)**: **feat — Estúdio de Análises v6: filtro de período (5 presets), 22 sugestões automáticas cobrindo todos os módulos, catálogo expandido para 35 datasets, fix definitivo onclick sugestões por índice — Deploy @1084.**
+**Fase atual (s145)**: **feat — Estúdio de Análises v6: filtro de período (5 presets), 22 sugestões automáticas cobrindo todos os módulos, catálogo expandido para 35 datasets, fix definitivo onclick sugestões por índice — Deploy @1087.**
 
 **O que foi implementado agora**:
 - **Filtro de período no Dashboard View**: barra `.db-periodo-bar` com 5 presets (Tudo / 30 dias / 3 meses / 6 meses / Este ano). `_dashSetFiltroTempo(preset)` atualiza `_dashFiltroTempo` e chama `_dashRecarregarWidgets` — todos os widgets dinâmicos buscam dados com `de`/`ate` via GAS.analise.importarDados/cruzar.
