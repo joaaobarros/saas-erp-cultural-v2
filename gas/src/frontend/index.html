@@ -2114,6 +2114,23 @@ select.form-control { cursor: pointer; }
 /* ajustes avançados */
 .analise-ajustes-panel { border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface2);margin-top:6px; }
 .analise-ajustes-toggle { font-size:12px;color:var(--primary);cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-weight:600;margin-top:4px;user-select:none; }
+/* ── BI Studio v2 ──────────────────────────────────────────────────────────── */
+.analise-modo-badge { display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px; }
+.analise-modo-badge.ao-vivo { background:#dcfce7;color:#16a34a; }
+.analise-modo-badge.estatica { background:var(--surface2);color:var(--text2); }
+.analise-vis-badge { display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:20px;font-size:10px;font-weight:600; }
+.analise-vis-badge.privada { background:#fef3c7;color:#d97706; }
+.analise-vis-badge.publica { background:#dbeafe;color:#1d4ed8; }
+.analise-vis-badge.restrita { background:#ede9fe;color:#7c3aed; }
+.analise-ds-fonte { display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;margin:2px; }
+.analise-ds-fonte button { background:none;border:none;cursor:pointer;color:var(--text2);padding:0 0 0 4px;line-height:1;font-size:16px;opacity:.7; }
+.analise-ds-fonte button:hover { opacity:1;color:var(--danger); }
+.analise-painel-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px; }
+.analise-painel-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px; }
+.analise-painel-card-header { display:flex;align-items:flex-start;justify-content:space-between;gap:8px; }
+.analise-comp-tag { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;background:var(--surface2);border:1px solid var(--border);margin:2px; }
+.analise-comp-tag button { background:none;border:none;cursor:pointer;color:var(--text2);padding:0 0 0 2px;line-height:1;font-size:14px; }
+.analise-vis-picker label { transition:background .15s,border-color .15s; }
 
   </style>
 </head>
@@ -40328,6 +40345,13 @@ var AnaliseEstudioUI = (function() {
   var _editandoId = null;
   var _lista      = [];
   var _catCache   = null; // catálogo de datasets em memória
+  var _dsId         = null;        // dataset primário importado do catálogo
+  var _dsId2        = null;        // dataset secundário (cruzamento)
+  var _modoUpdate   = 'estatico';  // 'estatico' | 'dinamico'
+  var _visibilidade = 'privada';   // 'privada' | 'restrita' | 'publica'
+  var _compartilhados = [];        // [{tipo,valor,label}]
+  var _painelIds    = [];          // IDs fixados no painel pessoal
+  var _catalogoCruz = false;       // true quando catálogo está em modo cruzamento
 
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
@@ -40343,7 +40367,7 @@ var AnaliseEstudioUI = (function() {
   ];
 
   // ── Público ────────────────────────────────────────────────────────────────
-  function aoAbrir() { if (!_carregado) _carregarGaleria(); }
+  function aoAbrir() { _loadPainel(); if (!_carregado) _carregarGaleria(); }
 
   function novaAnalise() {
     _editandoId = null;
@@ -40351,6 +40375,8 @@ var AnaliseEstudioUI = (function() {
     _linhas  = [['',''],['',''],['',''],['',''],['','']];
     _config  = { titulo: '', tipo: 'barras', corPrimaria: '#4f46e5' };
     _ajustes = { rotulos: true, formato: 'auto', grade: true, linhaRef: '' };
+    _dsId = null; _dsId2 = null; _modoUpdate = 'estatico';
+    _visibilidade = 'privada'; _compartilhados = [];
     _modo = 'editor';
     _renderEditor();
   }
@@ -40363,6 +40389,11 @@ var AnaliseEstudioUI = (function() {
     _linhas  = (a.linhas  || []).map(function(r){ return r.slice(); });
     _config  = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5' };
     _ajustes = Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{});
+    _dsId         = a.dsId        || null;
+    _dsId2        = a.dsId2       || null;
+    _modoUpdate   = a.modoUpdate  || 'estatico';
+    _visibilidade = a.visibilidade || 'privada';
+    _compartilhados = (a.compartilhadoCom || []).slice();
     _modo = 'editor';
     _renderEditor();
   }
@@ -40370,9 +40401,24 @@ var AnaliseEstudioUI = (function() {
   function visualizarAnalise(id) {
     var a = _lista.find(function(x){ return x.id === id; });
     if (!a) return;
+    var cfg = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
+                ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
+    if (a.modoUpdate === 'dinamico' && a.dsId) {
+      var uid = 'viz-live-' + Date.now();
+      _abrirVisualizador(a.titulo, '<div id="' + uid + '" style="min-height:200px;display:flex;align-items:center;justify-content:center;"><p class="muted-text">⏳ Atualizando dados ao vivo…</p></div>');
+      var _cb = function(r) {
+        if (!r || !r.ok || !r.data) { var el=document.getElementById(uid); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao buscar dados.</p>'; return; }
+        var d = r.data;
+        var rows2 = (d.linhas||[]).filter(function(r2){ return r2[0]||r2[1]; });
+        var el = document.getElementById(uid);
+        if (el) el.outerHTML = _renderizarGrafico(d.colunas||a.colunas||['Label','Valor'], rows2, cfg);
+      };
+      var _err = function() { var el=document.getElementById(uid); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao atualizar.</p>'; };
+      if (a.dsId2) GAS.analise.cruzar({ dsA: a.dsId, dsB: a.dsId2 }, _cb, _err);
+      else GAS.analise.importarDados({ id: a.dsId }, _cb, _err);
+      return;
+    }
     var rows = (a.linhas || []).filter(function(r){ return r[0]||r[1]; });
-    var cfg  = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
-                 ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
     _abrirVisualizador(a.titulo, _renderizarGrafico(a.colunas||['Label','Valor'], rows, cfg));
   }
 
@@ -40394,7 +40440,7 @@ var AnaliseEstudioUI = (function() {
     });
   }
 
-  function irGaleria()      { _modo = 'galeria'; _renderGaleria(); }
+  function irGaleria()      { _loadPainel(); _modo = 'galeria'; _renderGaleria(); }
   function adicionarLinha() { _linhas.push(_colunas.map(function(_,i){ return i===0?'':0; })); _atualizarTabelaDom(); }
   function removerLinha(i)  { if (_linhas.length > 1) { _linhas.splice(i,1); _atualizarTabelaDom(); } }
   function adicionarColuna() {
@@ -40505,12 +40551,17 @@ var AnaliseEstudioUI = (function() {
     if (!_config.titulo) { Toast.aviso('Informe um título para a análise.'); if(done) done(); return; }
     var rows = _linhas.filter(function(r){ return String(r[0]).trim() || Number(r[1]); });
     var params = {
-      id:      _editandoId || undefined,
-      titulo:  _config.titulo,
-      tipo:    _config.tipo,
-      colunas: _colunas.slice(),
-      linhas:  rows,
-      config:  { corPrimaria: _config.corPrimaria, ajustes: _ajustes }
+      id:              _editandoId || undefined,
+      titulo:          _config.titulo,
+      tipo:            _config.tipo,
+      colunas:         _colunas.slice(),
+      linhas:          rows,
+      config:          { corPrimaria: _config.corPrimaria, ajustes: _ajustes },
+      dsId:            _dsId   || undefined,
+      dsId2:           _dsId2  || undefined,
+      modoUpdate:      _modoUpdate,
+      visibilidade:    _visibilidade,
+      compartilhadoCom: _compartilhados.slice()
     };
     GAS.analise.salvar(params, function(r) {
       if (done) done();
@@ -40583,22 +40634,25 @@ var AnaliseEstudioUI = (function() {
     { id:'cruzar_acoes_publico_mes',modulo:'Cruzamentos',     label:'Ações × Público (mês)' },
   ];
 
-  function abrirCatalogo() {
+  function abrirCatalogo(cruz) {
+    _catalogoCruz = !!cruz;
     var cat = _CATALOGO_LOCAL;
-    // agrupa por módulo
     var grupos = {};
     var ordem  = [];
     cat.forEach(function(ds) {
       if (!grupos[ds.modulo]) { grupos[ds.modulo] = []; ordem.push(ds.modulo); }
       grupos[ds.modulo].push(ds);
     });
+    // Em modo cruzamento, ocultar grupo "Cruzamentos" (já são fixos; cruzamento livre escolhe qualquer par)
+    if (_catalogoCruz) ordem = ordem.filter(function(m){ return m !== 'Cruzamentos'; });
     var uid = 'cat-busca-' + Date.now();
     var gruposHtml = ordem.map(function(mod) {
       var isCruz = mod === 'Cruzamentos';
       var chips = grupos[mod].map(function(ds) {
         var safeId = JSON.stringify(ds.id).replace(/"/g,"'");
         var safeLabel = _esc(ds.label);
-        return '<span class="analise-cat-chip' + (isCruz?' cruz':'') + '" onclick="AnaliseEstudioUI._importarDataset(' + safeId + ')" title="' + safeLabel + '">' +
+        var fn = _catalogoCruz ? ('AnaliseEstudioUI._cruzarCom(' + safeId + ')') : ('AnaliseEstudioUI._importarDataset(' + safeId + ')');
+        return '<span class="analise-cat-chip' + (isCruz?' cruz':'') + '" onclick="' + fn + '" title="' + safeLabel + '">' +
           (isCruz ? '<span class="ms" style="font-size:13px;">merge</span>' : '') + safeLabel + '</span>';
       }).join('');
       return '<div class="analise-cat-grupo">' +
@@ -40609,20 +40663,29 @@ var AnaliseEstudioUI = (function() {
     var ov = document.createElement('div');
     ov.className = 'analise-catalogo-overlay';
     ov.id = 'analise-catalogo-ov';
+    var titulo = _catalogoCruz ? 'Selecionar 2º Dataset (Cruzamento)' : 'Catálogo de Dados';
+    var subtitulo = _catalogoCruz
+      ? '<p style="font-size:12px;color:var(--primary);margin:0;">Escolha com qual dataset cruzar "' + _esc(_dsLabel(_dsId)) + '"</p>'
+      : '';
     ov.innerHTML =
       '<div class="analise-catalogo-box">' +
         '<div class="analise-catalogo-head">' +
-          '<span class="ms" style="color:var(--primary);">dataset</span>' +
-          '<h3>Catálogo de Dados</h3>' +
-          '<input id="' + uid + '" type="search" class="form-control" style="max-width:200px;font-size:13px;" placeholder="Buscar..." oninput="AnaliseEstudioUI._filtrarCatalogo(this.value)">' +
-          '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'analise-catalogo-ov\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
+          '<span class="ms" style="color:var(--primary);">' + (_catalogoCruz?'merge_type':'dataset') + '</span>' +
+          '<div style="flex:1;">' +
+            '<h3 style="margin:0;font-size:15px;font-weight:700;">' + titulo + '</h3>' +
+            subtitulo +
+          '</div>' +
+          '<input id="' + uid + '" type="search" class="form-control" style="max-width:180px;font-size:13px;" placeholder="Buscar..." oninput="AnaliseEstudioUI._filtrarCatalogo(this.value)">' +
+          '<button class="btn btn-ghost btn-sm" onclick="(function(){document.getElementById(\'analise-catalogo-ov\').remove();AnaliseEstudioUI._cancelarCruz();})()" data-bg-skip="1"><span class="ms">close</span></button>' +
         '</div>' +
         '<div class="analise-catalogo-body" id="analise-cat-body">' + gruposHtml + '</div>' +
       '</div>';
-    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    ov.addEventListener('click', function(e){ if(e.target===ov){ ov.remove(); _catalogoCruz=false; } });
     document.body.appendChild(ov);
     setTimeout(function(){ var el=document.getElementById(uid); if(el) el.focus(); }, 60);
   }
+
+  function _cancelarCruz() { _catalogoCruz = false; }
 
   function _filtrarCatalogo(q) {
     q = (q||'').toLowerCase().trim();
@@ -40656,8 +40719,11 @@ var AnaliseEstudioUI = (function() {
         var tipEl = document.getElementById('analise-cfg-tipo');
         if (tipEl) tipEl.value = 'barras_emp';
       }
+      _dsId = dsId;
+      _dsId2 = null;
       _atualizarTabelaDom();
       gerarGrafico();
+      _renderFontes();
       Toast.sucesso(_linhas.length + ' registros importados — ' + label);
     }, function(){ Toast.erro('Erro ao carregar "' + label + '". Verifique permissões.'); });
   }
@@ -40681,15 +40747,24 @@ var AnaliseEstudioUI = (function() {
   function _renderGaleria() {
     var root = document.getElementById('analise-studio-root');
     if (!root) return;
+    var meuEmail = ((App.getBoot && App.getBoot()) || {}).usuarioEmail || '';
+    var pinCount = _painelIds.length;
+
     var html =
       '<div class="view-header" style="margin-bottom:16px;">' +
         '<div>' +
           '<div class="view-title">Estúdio de Análises</div>' +
-          '<div class="view-subtitle">Crie, salve e explore visualizações a partir de qualquer módulo do sistema.</div>' +
+          '<div class="view-subtitle">Crie, cruze dados e compartilhe visualizações dentro das suas permissões.</div>' +
         '</div>' +
-        '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
-          '<span class="ms ms-sm">add_chart</span> Nova análise' +
-        '</button>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irPainel()" data-bg-skip="1">' +
+            '<span class="ms ms-sm">dashboard</span> Meu Painel' +
+            (pinCount ? ' <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;">' + pinCount + '</span>' : '') +
+          '</button>' +
+          '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
+            '<span class="ms ms-sm">add_chart</span> Nova análise' +
+          '</button>' +
+        '</div>' +
       '</div>';
 
     if (!_lista.length) {
@@ -40697,7 +40772,7 @@ var AnaliseEstudioUI = (function() {
         '<div style="text-align:center;padding:56px 20px;">' +
           '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">analytics</span>' +
           '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Nenhuma análise ainda.</p>' +
-          '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Importe dados de qualquer módulo ou cole um CSV para começar.</p>' +
+          '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Importe dados de qualquer módulo, cruze datasets ou cole um CSV para começar.</p>' +
           '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
             '<span class="ms ms-sm">add_chart</span> Criar primeira análise' +
           '</button>' +
@@ -40705,25 +40780,37 @@ var AnaliseEstudioUI = (function() {
     } else {
       html += '<div class="analise-galeria-grid">';
       _lista.slice().reverse().forEach(function(a) {
-        var ti     = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
+        var ti      = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
         var preview = _svgMiniatura(a);
         var safeId  = JSON.stringify(a.id||'').replace(/"/g,"'");
+        var emPainel = _painelIds.indexOf(a.id) >= 0;
+        var isMinha  = !a.donoEmail || a.donoEmail === meuEmail;
+
+        var modoHtml = a.modoUpdate === 'dinamico'
+          ? '<span class="analise-modo-badge ao-vivo"><span class="ms" style="font-size:9px;">sync</span> Ao vivo</span>'
+          : '<span class="analise-modo-badge estatica">Estática</span>';
+        var vis = a.visibilidade || (a.donoEmail ? 'privada' : 'publica');
+        var visIcone = vis === 'privada' ? 'lock' : vis === 'restrita' ? 'group' : 'public';
+        var visLabel = vis === 'privada' ? 'Privada' : vis === 'restrita' ? 'Compartilhada' : 'Pública';
+        var visHtml  = '<span class="analise-vis-badge ' + vis + '" title="' + visLabel + '"><span class="ms" style="font-size:9px;">' + visIcone + '</span></span>';
+
         html +=
           '<div class="analise-card">' +
             '<div class="analise-card-preview">' + preview + '</div>' +
             '<div class="analise-card-info">' +
               '<div style="font-size:14px;font-weight:600;margin-bottom:5px;">' + _esc(a.titulo) + '</div>' +
-              '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-                '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;">' +
-                  '<span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) +
-                '</span>' +
-                '<span style="font-size:11px;color:var(--text2);">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</span>' +
+              '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">' +
+                '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) + '</span>' +
+                modoHtml + visHtml +
+                (!isMinha && a.donoEmail ? '<span style="font-size:10px;color:var(--text2);">' + _esc(a.donoEmail.split('@')[0]) + '</span>' : '') +
               '</div>' +
+              '<div style="font-size:11px;color:var(--text2);margin-top:3px;">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</div>' +
             '</div>' +
             '<div class="analise-card-actions">' +
               '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Tela cheia"><span class="ms ms-sm">open_in_full</span></button>' +
-              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' +
-              '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' +
+              (isMinha ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' : '') +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._painelToggle(' + safeId + ')" data-bg-skip="1" title="' + (emPainel?'Remover do painel':'Fixar no Meu Painel') + '" style="' + (emPainel?'color:var(--primary);':'') + '"><span class="ms ms-sm">push_pin</span></button>' +
+              (isMinha ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' : '') +
             '</div>' +
           '</div>';
       });
@@ -40745,6 +40832,19 @@ var AnaliseEstudioUI = (function() {
         'onclick="AnaliseEstudioUI.setCor(\'' + c + '\')" style="background:' + c + ';" title="' + c + '"></span>';
     }).join('');
 
+    var visTabs = [
+      { v:'privada',  icon:'lock',   label:'Privada',      desc:'Só você' },
+      { v:'restrita', icon:'group',  label:'Compartilhada', desc:'Pessoas específicas' },
+      { v:'publica',  icon:'public', label:'Pública',       desc:'Todos os usuários' }
+    ].map(function(opt) {
+      var sel = _visibilidade === opt.v;
+      return '<label class="analise-vis-picker" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1.5px solid ' + (sel?'var(--primary)':'var(--border)') + ';border-radius:8px;cursor:pointer;background:' + (sel?'var(--primary-soft,#eef2ff)':'var(--surface)') + ';flex:1;min-width:90px;transition:all .15s;">' +
+        '<input type="radio" name="analise-vis-r" value="' + opt.v + '"' + (sel?' checked':'') + ' onchange="AnaliseEstudioUI.setVisibilidade(\'' + opt.v + '\')" style="display:none;">' +
+        '<span class="ms" style="font-size:18px;' + (sel?'color:var(--primary)':'color:var(--text2)') + '">' + opt.icon + '</span>' +
+        '<span><span style="font-size:12px;font-weight:600;display:block;">' + opt.label + '</span><span style="font-size:10px;color:var(--text2);">' + opt.desc + '</span></span>' +
+      '</label>';
+    }).join('');
+
     var html =
       '<div class="analise-toolbar">' +
         '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
@@ -40764,6 +40864,7 @@ var AnaliseEstudioUI = (function() {
               '<span class="ms ms-sm">content_paste</span> Colar CSV' +
             '</button>' +
           '</div>' +
+          '<div id="analise-fontes-wrap" style="margin-bottom:8px;"></div>' +
           '<div style="overflow-x:auto;">' +
             '<table class="analise-table-editor" id="analise-table">' +
               '<thead><tr id="analise-thead-row">' + _renderCabecalho() + '</tr></thead>' +
@@ -40773,6 +40874,13 @@ var AnaliseEstudioUI = (function() {
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
             '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarLinha()" data-bg-skip="1"><span class="ms ms-sm">add</span> Linha</button>' +
             '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarColuna()" data-bg-skip="1" title="Adicionar série (máx 4)"><span class="ms ms-sm">add</span> Série</button>' +
+          '</div>' +
+
+          // Visibilidade
+          '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">' +
+            '<div class="analise-section-title">Visibilidade</div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' + visTabs + '</div>' +
+            '<div id="analise-comp-wrap"></div>' +
           '</div>' +
         '</div>' +
 
@@ -40799,7 +40907,6 @@ var AnaliseEstudioUI = (function() {
           '<div id="analise-stats-strip" class="analise-stats-strip" style="display:none;"></div>' +
           '<div id="analise-dica" style="font-size:11px;color:var(--text2);margin-top:4px;min-height:14px;"></div>' +
 
-          // Ajustes avançados
           '<span id="analise-ajustes-toggle" class="analise-ajustes-toggle" onclick="AnaliseEstudioUI.toggleAjustes()" data-bg-skip="1">' +
             '<span class="ms ms-sm">expand_more</span> Ajustes avançados' +
           '</span>' +
@@ -40839,6 +40946,8 @@ var AnaliseEstudioUI = (function() {
 
     root.innerHTML = html;
     gerarGrafico();
+    _renderFontes();
+    _renderComp();
   }
 
   function _renderCabecalho() {
@@ -40912,6 +41021,244 @@ var AnaliseEstudioUI = (function() {
       '</div>';
     ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
     document.body.appendChild(ov);
+  }
+
+  // ── Painel pessoal ─────────────────────────────────────────────────────────
+  function _loadPainel() {
+    try { _painelIds = JSON.parse(localStorage.getItem('ccbj_analise_painel') || '[]'); }
+    catch(e) { _painelIds = []; }
+  }
+  function _savePainel() {
+    try { localStorage.setItem('ccbj_analise_painel', JSON.stringify(_painelIds)); }
+    catch(e) {}
+  }
+  function irPainel() { _loadPainel(); _modo = 'painel'; _renderPainel(); }
+  function _painelToggle(id) {
+    var idx = _painelIds.indexOf(id);
+    if (idx >= 0) { _painelIds.splice(idx, 1); Toast.aviso('Removido do painel.'); }
+    else           { _painelIds.push(id);        Toast.sucesso('Fixado no Meu Painel!'); }
+    _savePainel();
+    if      (_modo === 'galeria') _renderGaleria();
+    else if (_modo === 'painel')  _renderPainel();
+  }
+  function _painelRefresh(id) {
+    var a = _lista.find(function(x){ return x.id === id; });
+    if (!a || !a.dsId) return;
+    var el = document.getElementById('painel-chart-' + a.id);
+    if (el) el.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;">⏳ Atualizando…</p>';
+    var cfg2 = { titulo:'', tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
+                 ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
+    var _cb2 = function(r) {
+      if (!r || !r.ok || !r.data) return;
+      var d = r.data;
+      var rows2 = (d.linhas||[]).filter(function(rw){ return rw[0]||rw[1]; });
+      var el2 = document.getElementById('painel-chart-' + a.id);
+      if (el2) el2.innerHTML = rows2.length
+        ? _renderizarGrafico(d.colunas||a.colunas||['Label','Valor'], rows2, cfg2)
+        : '<p class="muted-text" style="text-align:center;padding:20px;">Sem dados</p>';
+    };
+    if (a.dsId2) GAS.analise.cruzar({ dsA: a.dsId, dsB: a.dsId2 }, _cb2);
+    else GAS.analise.importarDados({ id: a.dsId }, _cb2);
+  }
+  function _renderPainel() {
+    var root = document.getElementById('analise-studio-root');
+    if (!root) return;
+    var painelItems = _painelIds.map(function(id){ return _lista.find(function(a){ return a.id===id; }); }).filter(Boolean);
+    var html =
+      '<div class="view-header" style="margin-bottom:16px;">' +
+        '<div>' +
+          '<div class="view-title">Meu Painel</div>' +
+          '<div class="view-subtitle">Análises fixadas para acompanhamento contínuo. Clique em <span class="ms" style="font-size:14px;vertical-align:middle;">push_pin</span> na galeria para fixar.</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
+          '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1"><span class="ms ms-sm">add_chart</span> Nova análise</button>' +
+        '</div>' +
+      '</div>';
+    if (!painelItems.length) {
+      html += '<div style="text-align:center;padding:56px 20px;">' +
+        '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">dashboard</span>' +
+        '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Painel vazio.</p>' +
+        '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Clique em <span class="ms" style="font-size:14px;vertical-align:middle;">push_pin</span> em qualquer análise da Galeria.</p>' +
+        '<button class="btn btn-primario" onclick="AnaliseEstudioUI.irGaleria()" data-bg-skip="1"><span class="ms ms-sm">analytics</span> Ir para Galeria</button>' +
+      '</div>';
+    } else {
+      html += '<div class="analise-painel-grid">';
+      painelItems.forEach(function(a) {
+        var safeId = JSON.stringify(a.id||'').replace(/"/g,"'");
+        var cfg3 = { titulo:'', tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
+                     ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
+        var rows3 = (a.linhas||[]).filter(function(r){ return r[0]||r[1]; });
+        var grafHtml = rows3.length ? _renderizarGrafico(a.colunas||['Label','Valor'], rows3, cfg3)
+                                    : '<p class="muted-text" style="text-align:center;padding:20px;">Sem dados</p>';
+        var mBadge = a.modoUpdate==='dinamico'
+          ? '<span class="analise-modo-badge ao-vivo"><span class="ms" style="font-size:9px;">sync</span> Ao vivo</span>'
+          : '';
+        html +=
+          '<div class="analise-painel-card">' +
+            '<div class="analise-painel-card-header">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:14px;font-weight:700;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(a.titulo) + '</div>' +
+                mBadge +
+              '</div>' +
+              '<div style="display:flex;gap:2px;flex-shrink:0;">' +
+                (a.modoUpdate==='dinamico'&&a.dsId ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._painelRefresh(' + safeId + ')" data-bg-skip="1" title="Atualizar"><span class="ms ms-sm">refresh</span></button>' : '') +
+                '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Tela cheia"><span class="ms ms-sm">open_in_full</span></button>' +
+                '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._painelToggle(' + safeId + ')" data-bg-skip="1" title="Remover do painel" style="color:var(--danger)"><span class="ms ms-sm">push_pin</span></button>' +
+              '</div>' +
+            '</div>' +
+            '<div id="painel-chart-' + _esc(a.id) + '">' + grafHtml + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+    root.innerHTML = html;
+    // async-refresh análises ao vivo no painel
+    painelItems.forEach(function(a) { if (a.modoUpdate==='dinamico' && a.dsId) _painelRefresh(a.id); });
+  }
+
+  // ── Cruzamento dinâmico ────────────────────────────────────────────────────
+  function _dsLabel(id) {
+    var ds = _CATALOGO_LOCAL.find(function(d){ return d.id===id; });
+    return ds ? ds.label : id;
+  }
+  function _cruzarCom(dsId2) {
+    var ov = document.getElementById('analise-catalogo-ov');
+    if (ov) ov.remove();
+    _catalogoCruz = false;
+    Toast.aviso('Cruzando dados…');
+    GAS.analise.cruzar({ dsA: _dsId, dsB: dsId2 }, function(r) {
+      if (!r || !r.ok || !r.data) { Toast.erro('Sem dados para este cruzamento.'); return; }
+      var d = r.data;
+      _colunas = d.colunas && d.colunas.length ? d.colunas : ['Label','A','B'];
+      _linhas  = d.linhas  && d.linhas.length  ? d.linhas  : [['',0,0]];
+      _dsId2   = dsId2;
+      if (_config.tipo==='barras'||_config.tipo==='pizza'||_config.tipo==='rosca') {
+        _config.tipo = 'barras_emp';
+        var tipEl = document.getElementById('analise-cfg-tipo');
+        if (tipEl) tipEl.value = 'barras_emp';
+      }
+      _atualizarTabelaDom(); gerarGrafico(); _renderFontes();
+      Toast.sucesso(_linhas.length + ' registros cruzados — ' + _dsLabel(dsId2));
+    }, function(){ Toast.erro('Erro ao cruzar dados.'); });
+  }
+  function _removerDs(qual) {
+    if (qual===2) {
+      _dsId2 = null;
+      _colunas = _colunas.slice(0,2);
+      _linhas  = _linhas.map(function(r){ return r.slice(0,2); });
+    } else {
+      _dsId=null; _dsId2=null;
+      _colunas=['Label','Valor'];
+      _linhas=[['',''],['',''],['',''],['',''],['','']];
+    }
+    _modoUpdate = 'estatico';
+    _atualizarTabelaDom(); gerarGrafico(); _renderFontes();
+  }
+  function setModoUpdate(modo) { _modoUpdate = modo; }
+
+  // ── Fontes e modo no editor ────────────────────────────────────────────────
+  function _renderFontes() {
+    var wrap = document.getElementById('analise-fontes-wrap');
+    if (!wrap) return;
+    if (!_dsId) { wrap.innerHTML = ''; return; }
+    var lb1 = _dsLabel(_dsId);
+    var html = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:6px;">' +
+      '<span class="analise-ds-fonte">' + _esc(lb1) + '<button onclick="AnaliseEstudioUI._removerDs(1)" title="Remover fonte">×</button></span>';
+    if (_dsId2) {
+      html += '<span class="analise-ds-fonte" style="border-style:dashed;">' + _esc(_dsLabel(_dsId2)) +
+        '<button onclick="AnaliseEstudioUI._removerDs(2)" title="Remover cruzamento">×</button></span>';
+    } else {
+      html += '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="AnaliseEstudioUI.abrirCatalogo(true)" data-bg-skip="1">' +
+        '<span class="ms" style="font-size:13px;">merge_type</span> Cruzar com...</button>';
+    }
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:14px;font-size:12px;margin-bottom:4px;flex-wrap:wrap;">' +
+      '<span style="color:var(--text2);font-size:11px;font-weight:600;white-space:nowrap;">Atualização:</span>' +
+      '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;">' +
+        '<input type="radio" name="analise-modo-upd" value="estatico"' + (_modoUpdate!=='dinamico'?' checked':'') + ' onchange="AnaliseEstudioUI.setModoUpdate(\'estatico\')">' +
+        '<span>Estática <span style="font-size:10px;color:var(--text2);">(dados fixos)</span></span>' +
+      '</label>' +
+      '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;">' +
+        '<input type="radio" name="analise-modo-upd" value="dinamico"' + (_modoUpdate==='dinamico'?' checked':'') + ' onchange="AnaliseEstudioUI.setModoUpdate(\'dinamico\')">' +
+        '<span style="color:#16a34a;font-weight:600;">Ao vivo</span> <span style="font-size:10px;color:var(--text2);">(re-busca ao abrir)</span>' +
+      '</label>' +
+    '</div>';
+    wrap.innerHTML = html;
+  }
+
+  // ── Visibilidade e compartilhamento ───────────────────────────────────────
+  function setVisibilidade(v) {
+    _visibilidade = v;
+    document.querySelectorAll('[name="analise-vis-r"]').forEach(function(rb) {
+      var lbl = rb.closest('label');
+      if (!lbl) return;
+      var sel = rb.value===v;
+      lbl.style.borderColor = sel ? 'var(--primary)' : 'var(--border)';
+      lbl.style.background  = sel ? 'var(--primary-soft,#eef2ff)' : 'var(--surface)';
+      var ic = lbl.querySelector('.ms');
+      if (ic) ic.style.color = sel ? 'var(--primary)' : 'var(--text2)';
+    });
+    _renderComp();
+  }
+  function adicionarCompartilhamento(tipo, valor, label) {
+    if (!valor) return;
+    for (var i=0;i<_compartilhados.length;i++) {
+      if (_compartilhados[i].tipo===tipo && _compartilhados[i].valor===valor) return;
+    }
+    _compartilhados.push({ tipo:tipo, valor:valor, label:label||valor });
+    _renderComp();
+  }
+  function removerCompartilhamento(i) { _compartilhados.splice(i,1); _renderComp(); }
+  function _compTipoChange(uid) {
+    var tipo = (document.getElementById('comp-tipo-'+uid)||{}).value||'pessoa';
+    var inp = document.getElementById('comp-val-'+uid);
+    if (!inp) return;
+    var ph = { pessoa:'email@exemplo.com', setor:'Nome do setor', cargo:'Nome do cargo' };
+    inp.placeholder = ph[tipo]||'';
+    inp.type = tipo==='pessoa' ? 'email' : 'text';
+    var boot = (App.getBoot&&App.getBoot())||{};
+    var dl = document.getElementById('comp-val-dl-'+uid);
+    if (dl) dl.innerHTML = tipo==='setor'
+      ? (boot.setores||[]).map(function(s){ return '<option value="'+_esc(s)+'">'; }).join('')
+      : '';
+  }
+  function _compAdicionarUI(uid) {
+    var tipo  = (document.getElementById('comp-tipo-'+uid)||{}).value||'pessoa';
+    var valor = ((document.getElementById('comp-val-'+uid)||{}).value||'').trim().toLowerCase();
+    if (!valor) { Toast.aviso('Informe o valor para compartilhar.'); return; }
+    adicionarCompartilhamento(tipo, valor, valor);
+    var inp = document.getElementById('comp-val-'+uid);
+    if (inp) inp.value = '';
+  }
+  function _renderComp() {
+    var wrap = document.getElementById('analise-comp-wrap');
+    if (!wrap) return;
+    if (_visibilidade !== 'restrita') { wrap.innerHTML=''; return; }
+    var uid = 'comp-'+Date.now();
+    var tags = _compartilhados.map(function(c,i) {
+      var icon = c.tipo==='pessoa'?'person':c.tipo==='setor'?'business':'work';
+      return '<span class="analise-comp-tag">' +
+        '<span class="ms" style="font-size:12px;">'+icon+'</span>' + _esc(c.label) +
+        '<button onclick="AnaliseEstudioUI.removerCompartilhamento('+i+')">×</button></span>';
+    }).join('');
+    wrap.innerHTML =
+      '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:4px;">' +
+        '<div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:8px;">Quem pode ver esta análise:</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">' +
+          (tags || '<span style="font-size:11px;color:var(--text2);">Nenhuma restrição adicionada</span>') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+          '<select id="comp-tipo-'+uid+'" class="select-sm" onchange="AnaliseEstudioUI._compTipoChange(\''+uid+'\')">' +
+            '<option value="pessoa">Pessoa (e-mail)</option>' +
+            '<option value="setor">Setor</option>' +
+            '<option value="cargo">Cargo</option>' +
+          '</select>' +
+          '<input id="comp-val-'+uid+'" type="email" class="form-control" style="width:190px;font-size:12px;padding:3px 8px;" placeholder="email@exemplo.com" list="comp-val-dl-'+uid+'">' +
+          '<datalist id="comp-val-dl-'+uid+'"></datalist>' +
+          '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._compAdicionarUI(\''+uid+'\')" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar</button>' +
+        '</div>' +
+      '</div>';
   }
 
   // ── Renderizador central ───────────────────────────────────────────────────
@@ -41245,11 +41592,15 @@ var AnaliseEstudioUI = (function() {
   }
 
   return {
-    aoAbrir, novaAnalise, editarAnalise, visualizarAnalise, excluirAnalise, irGaleria,
+    aoAbrir, novaAnalise, editarAnalise, visualizarAnalise, excluirAnalise,
+    irGaleria, irPainel, _painelToggle, _painelRefresh,
     adicionarLinha, removerLinha, adicionarColuna, removerColuna, renomearColuna,
     atualizarCelula, atualizarConfig, setCor, gerarGrafico, salvar, colarCsv,
     importarModulo, abrirCatalogo, toggleAjustes, sugerirTipo,
-    _csvConfirmar, _importarDataset, _filtrarCatalogo
+    _csvConfirmar, _importarDataset, _filtrarCatalogo, _cancelarCruz,
+    _cruzarCom, _removerDs, setModoUpdate,
+    setVisibilidade, adicionarCompartilhamento, removerCompartilhamento,
+    _compTipoChange, _compAdicionarUI, _renderFontes, _renderComp, _dsLabel
   };
 })();
 

@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s139 @1070 (Quadros v4: 3 bugs corrigidos, templates internos, pan, abas removidas) · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s140 @1071 (Estúdio Análises v3: cruzamento livre, ao vivo, Meu Painel, visibilidade) · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s139 — Quadros v4: bugs corrigidos + templates + pan
+### Estado atual: s140 — Estúdio de Análises v3: cruzamento livre + ao vivo + Meu Painel + visibilidade
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1071 | s140 | **AnaliseEstudioUI** + **analise_controller.gs**: cruzamento livre de qualquer par de datasets via "Cruzar com…"; modo Ao vivo (re-busca ao abrir); Meu Painel com pin e localStorage; picker visibilidade (Privada/Compartilhada/Pública) com destinatários por pessoa/setor/cargo; `donoEmail` gravado no backend; `_analise_podeVer()` filtra por email/setor/cargo; proteção de edição por não-dono. |
+
+### Estado anterior: s139 — Quadros v4: bugs corrigidos + templates + pan
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

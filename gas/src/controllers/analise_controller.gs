@@ -47,13 +47,59 @@ function _analise_fmtMes(isoMes) {
 
 function ctrl_analise_listar() {
   return GasResponse.wrap(function() {
-    var raw = PropertiesService.getScriptProperties().getProperty(_ANALISE_PROP_KEY);
-    return raw ? JSON.parse(raw) : [];
+    var email = getEmailSessao();
+    var raw   = PropertiesService.getScriptProperties().getProperty(_ANALISE_PROP_KEY);
+    var lista = raw ? JSON.parse(raw) : [];
+    return lista.filter(function(item) { return _analise_podeVer(item, email); });
   }, 'ctrl_analise_listar');
+}
+
+function _analise_podeVer(item, email) {
+  if (!item.donoEmail) return true;           // legado sem dono = público
+  if (item.donoEmail === email) return true;  // dono sempre vê
+  var vis = item.visibilidade || 'publica';
+  if (vis === 'privada') return false;
+  if (vis === 'publica') return true;
+  if (vis === 'restrita') {
+    var cc = item.compartilhadoCom || [];
+    for (var i = 0; i < cc.length; i++) {
+      var e = cc[i];
+      if (e.tipo === 'pessoa' && e.valor === email) return true;
+      var perfil = _analise_getUserPerfil(email);
+      if (e.tipo === 'setor' && perfil.setor && perfil.setor === e.valor) return true;
+      if (e.tipo === 'cargo' && perfil.cargo && perfil.cargo === e.valor) return true;
+    }
+    return false;
+  }
+  return true;
+}
+
+var _analise_perfilCache_ = {};
+function _analise_getUserPerfil(email) {
+  if (_analise_perfilCache_[email]) return _analise_perfilCache_[email];
+  try {
+    var d = ctrl_pessoas_listar({});
+    var perfil = { setor: '', cargo: '' };
+    if (d.ok && d.data) {
+      for (var i = 0; i < d.data.length; i++) {
+        var p = d.data[i];
+        if (p.email === email || p.emailInstitucional === email) {
+          perfil = { setor: p.setor || '', cargo: p.cargo || '' };
+          break;
+        }
+      }
+    }
+    _analise_perfilCache_[email] = perfil;
+    return perfil;
+  } catch(e) {
+    _analise_perfilCache_[email] = { setor: '', cargo: '' };
+    return _analise_perfilCache_[email];
+  }
 }
 
 function ctrl_analise_salvar(params) {
   return GasResponse.wrap(function() {
+    var email = getEmailSessao();
     var raw   = PropertiesService.getScriptProperties().getProperty(_ANALISE_PROP_KEY);
     var lista = raw ? JSON.parse(raw) : [];
     var item  = params || {};
@@ -63,19 +109,23 @@ function ctrl_analise_salvar(params) {
       var idx = -1;
       for (var i = 0; i < lista.length; i++) { if (lista[i].id === item.id) { idx = i; break; } }
       if (idx >= 0) {
+        // só o dono pode editar
+        if (lista[idx].donoEmail && lista[idx].donoEmail !== email) throw new Error('Sem permissão para editar esta análise.');
         for (var k in item) { lista[idx][k] = item[k]; }
         lista[idx].atualizadoEm = new Date().toISOString();
       } else {
-        item.criadoEm = new Date().toISOString();
+        item.donoEmail = email;
+        item.criadoEm  = new Date().toISOString();
         lista.push(item);
       }
     } else {
-      item.id       = Utilities.getUuid();
-      item.criadoEm = new Date().toISOString();
+      item.id        = Utilities.getUuid();
+      item.donoEmail = email;
+      item.criadoEm  = new Date().toISOString();
       lista.push(item);
     }
     PropertiesService.getScriptProperties().setProperty(_ANALISE_PROP_KEY, JSON.stringify(lista));
-    AuditoriaService.registrar('ANALISE_SALVAR', 'analise_studio', { titulo: item.titulo, tipo: item.tipo });
+    AuditoriaService.registrar('ANALISE_SALVAR', 'analise_studio', { titulo: item.titulo, tipo: item.tipo, vis: item.visibilidade });
     return { id: item.id };
   }, 'ctrl_analise_salvar');
 }
