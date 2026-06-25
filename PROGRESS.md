@@ -50,6 +50,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **4 novos tipos de gráfico SVG** (index.html/AnaliseEstudioUI): Medidor (gauge semicircular), Radar (teia de aranha), Combinado (barras + linha), Dispersão (scatter); catálogo de 12 tipos com descrições; `_dashFiltroTempo` para filtro de período.
 - **SVG Medidor/Radar/Combinado implementados**: funções `_svgMedidor`, `_svgRadar`, `_svgCombinado` completas com renderização SVG.
 - **Fix segurança onclick sugestões**: substituído `JSON.stringify` inline no onclick por índice `_dashAddSugestaoByIdx(i)` com `_dashSugArr` — elimina risco de injeção via dados do usuário.
+- **_CATALOGO_LOCAL completo**: 7 datasets de backend (`ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`) adicionados ao catálogo do frontend — ficam disponíveis no seletor do Widget Editor com seus módulos e labels corretos.
 
 **Fase anterior (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
 
