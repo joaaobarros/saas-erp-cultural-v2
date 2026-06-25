@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s149)**: **feat — Quadros: mapa mental evoluído com toolbar dedicada, colapsar/expandir ramos, arraste manual de nodos, setas para ajuste fino, centralizar mapa e snapshot retrocompatível (`mmNodes` + `dx/dy/collapsed`) — Deploy pendente.**
+**Fase atual (s149)**: **feat — Quadros: mapa mental evoluído com toolbar dedicada, colapsar/expandir ramos, arraste manual de nodos, setas para ajuste fino, centralizar mapa e snapshot retrocompatível (`mmNodes` + `dx/dy/collapsed`) — Deploy @1094.**
 
 **O que foi implementado em s149**:
 - **`_iniciarMindMap` completo**: mantém a engine dedicada para quadros `categoria=mindmap`, agora com toolbar visual para adicionar filho/irmão, editar, colapsar/expandir, centralizar e remover.
@@ -48,7 +48,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **Compatibilidade preservada**: quadros antigos sem `dx/dy/collapsed` são normalizados ao abrir; contrato de salvamento continua em `snapshot.mmNodes`.
 - **Atalhos mantidos/ampliados**: Tab cria filho, Enter cria irmão, F2 edita, Del/Backspace remove, Esc desseleciona, Ctrl+0 centraliza, scroll aplica zoom e arrastar fundo faz pan.
 
-**Fase anterior (s148)**: **feat — Biblioteca de ícones SVG dc-icon: 156 ícones (Lucide ISC + Tabler MIT) + logos institucionais IDM/CCBJ/Secult-60/Ceará vetorizados; web component `<dc-icon>`; integração no index.html (banner, sidebar footer, DatasComemorativasAdmin) — Deploy pendente.**
+**Fase anterior (s148)**: **feat — Biblioteca de ícones SVG dc-icon: 156 ícones (Lucide ISC + Tabler MIT) + logos institucionais IDM/CCBJ/Secult-60/Ceará vetorizados; web component `<dc-icon>`; integração no index.html (banner, sidebar footer, DatasComemorativasAdmin) — Deploy @1094.**
 
 **O que foi implementado em s148**:
 - **156 símbolos SVG** em `gas/src/shared/icons.html`: 150 ícones gerais (Lucide + Tabler) + 6 logos institucionais; categorias admin, educação, cultura, território, natureza, diversidade, datas comemorativas, UI.

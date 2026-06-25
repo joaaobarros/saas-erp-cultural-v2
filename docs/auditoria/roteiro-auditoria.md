@@ -636,12 +636,12 @@
 
 ## HANDOFF ATUAL — SESSÃO 122 (2026-06-25)
 
-### Estado atual: Feat — Quadros: mapa mental evoluído — Deploy pendente
+### Estado atual: Feat — Quadros: mapa mental evoluído — Deploy @1094
 
 ### O que foi feito nesta sessão (s149)
 | Deploy | O que foi implementado |
 |---|---|
-| pendente | **QuadrosUI** (index.html): `_iniciarMindMap` evoluído com toolbar dedicada (adicionar filho/irmão, editar, colapsar/expandir, centralizar, remover), arraste manual de nodos com persistência em `mmNodes[].dx/dy`, colapso persistente em `mmNodes[].collapsed`, clique no badge para recolher/expandir, setas para ajuste fino, `Shift+setas` para ajuste maior e `Ctrl+0` para centralizar. Snapshot segue retrocompatível via `snapshot.mmNodes`. |
+| @1094 | **QuadrosUI** (index.html): `_iniciarMindMap` evoluído com toolbar dedicada (adicionar filho/irmão, editar, colapsar/expandir, centralizar, remover), arraste manual de nodos com persistência em `mmNodes[].dx/dy`, colapso persistente em `mmNodes[].collapsed`, clique no badge para recolher/expandir, setas para ajuste fino, `Shift+setas` para ajuste maior e `Ctrl+0` para centralizar. Snapshot segue retrocompatível via `snapshot.mmNodes`. |
 
 ### Smoke test esperado
 - Quadros → criar/abrir quadro com categoria "Mindmap" → editor abre em modo mapa mental, não canvas livre.
