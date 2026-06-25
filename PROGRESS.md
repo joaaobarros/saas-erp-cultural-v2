@@ -39,7 +39,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s138)**: **feat — Estúdio de Análises v2: catálogo 27 datasets (todos os módulos), 9 tipos de gráfico, cruzamento multi-módulo, stats strip, ajustes avançados, sugestão de tipo — Deploy @1069.**
+**Fase atual (s139)**: **fix/feat — Quadros v4: 3 bugs críticos corrigidos + templates internos + pan por arrastar + abas removidas — Deploy @1070 (pendente).**
+
+**O que foi implementado agora**:
+- **Bug 1 corrigido**: `_drawShape` movida para escopo externo do QuadrosUI IIFE — modo Apresentação deixou de crashar com `ReferenceError: _drawShape is not defined` (tela preta).
+- **Bug 2 corrigido**: `_resizeObserver` elevado para módulo com `disconnect()` em `_limparEventosGlobais` — elimina `TypeError: null.zoom` ao abrir quadro em Ações/Reuniões após fechar outro editor.
+- **Bug 3 corrigido**: arrastar canvas vazio (select + click sem hit) inicia pan (`isPanning = true`) em vez de não fazer nada.
+- **Abas de categoria removidas**: tab-bar da listagem ficou só com "Todos" e "Vinculados"; Mindmaps, Fluxogramas, Frameworks etc. deixaram de ser filtros.
+- **Templates internos**: botão "Templates" (ícone `widgets`) adicionado à toolbar esquerda do canvas. Painel flutuante com 8 templates: Mapa Mental, Brainstorm, Kanban, SWOT, Fluxograma, Design Thinking, Cronograma, 5W2H — insere shapes pré-configuradas no canvas.
+- **Shape `diamond` adicionada** a `_drawShape` (usada no fluxograma); frame agora aceita `frameFill` e `frameColor` customizáveis; rect/circle aceitam `fill`.
+
+**Fase anterior (s138)**: **feat — Estúdio de Análises v2: catálogo 27 datasets (todos os módulos), 9 tipos de gráfico, cruzamento multi-módulo, stats strip, ajustes avançados, sugestão de tipo — Deploy @1069.**
 
 **O que foi implementado agora**:
 - **Backend `analise_controller.gs`** reescrito: `ctrl_analise_catalogo()` + `ctrl_analise_cruzar()` + `ctrl_analise_importar_dados()` agora suporta 27 datasets cobrindo todos os módulos (Espaços, Tarefas, Reuniões, Financeiro, Pessoas, Ações, Público, Estoque, Comunicação, Escuta + 3 Cruzamentos). Funções `_cruzar_pessoas_tarefas`, `_cruzar_reservas_tarefas`, `_cruzar_acoes_publico_mes` e join customizado `_cruzar_custom` para qualquer par de datasets.

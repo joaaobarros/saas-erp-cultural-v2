@@ -1,10 +1,22 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s137 @1066 (Quadros v3: toolbar flutuante, sem Miro/Napkin, _setTool corrigido, bug _CATS Reunião) · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s139 @1070 (Quadros v4: 3 bugs corrigidos, templates internos, pan, abas removidas) · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s137 — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin
+### Estado atual: s139 — Quadros v4: bugs corrigidos + templates + pan
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1070 | s139 | **QuadrosUI** (index.html): Bug 1 CORRIGIDO — `_drawShape` movida ao escopo externo do IIFE (apresentação deixou de crashar). Bug 2 CORRIGIDO — `_resizeObserver` com `disconnect()` em `_limparEventosGlobais` (null.zoom ao abrir em Ações/Reuniões). Bug 3 CORRIGIDO — pan ao arrastar canvas vazio (select + nenhum hit → `isPanning`). Abas de categoria removidas da listagem (só Todos + Vinculados). 8 templates internos via botão "widgets" na toolbar: Mapa Mental, Brainstorm, Kanban, SWOT, Fluxograma, Design Thinking, Cronograma, 5W2H. Shape `diamond` adicionada. Frame aceita `frameFill`/`frameColor`; rect/circle aceitam `fill`. |
+
+### Estado anterior: s138 — Estúdio de Análises v2
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1069 | s138 | **AnaliseEstudioUI**: catálogo 27 datasets, 9 tipos gráfico (incl. Empilhadas, Donut, Funil), cruzamento multi-módulo, stats strip, ajustes avançados, sugestão de tipo. |
+
+### Estado anterior: s137 — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
