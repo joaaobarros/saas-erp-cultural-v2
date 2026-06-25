@@ -46,6 +46,8 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **Grupo de ferramentas de desenho**: lápis, marcador e pincel agrupados em um único botão com ícone dinâmico (▼). Clicar abre flyout com as 3 opções (descrição + ícone), como editores de imagem. `_setTool` atualizado para ativar o botão de grupo.
 - **Vincular Pessoa corrigida**: substituiu 3 inputs livres (Nome, Cargo, Módulo) por busca com autocomplete em `boot.pessoas`, cargo auto-preenchido ao selecionar, setor como `<select>` de `boot.setores`. Nunca campo de texto livre para entidade cadastrada.
 - **Regra de vínculo nos docs**: `CLAUDE.md` recebeu seção `🔗 REGRA DE NEGÓCIO — VÍNCULOS SÃO SEMPRE DADOS CADASTRADOS` com tabela de implementação obrigatória e checklist.
+- **7 novos datasets do Estúdio de Análises** (analise_controller.gs): `ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`; `_analise_filtrar_por_data` aplicado a `acoes_mes`, `publico_acao`, `publico_mes`.
+- **4 novos tipos de gráfico SVG** (index.html/AnaliseEstudioUI): Medidor (gauge semicircular), Radar (teia de aranha), Combinado (barras + linha), Dispersão (scatter); catálogo de 12 tipos com descrições; `_dashFiltroTempo` para filtro de período.
 
 **Fase anterior (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
 

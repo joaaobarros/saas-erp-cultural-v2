@@ -264,10 +264,21 @@ function _analise_dataset(id) {
     // Público
     'publico_acao':             _ds_publico_acao,
     'publico_mes':              _ds_publico_mes,
+    // Espaços / Patrimônio
+    'ativos_status':            _ds_ativos_status,
+    // Tarefas
+    'tarefas_prioridade':       _ds_tarefas_prioridade,
+    // Financeiro
+    'contratos_status':         _ds_contratos_status,
+    'contratos_fonte':          _ds_contratos_fonte,
+    // Público
+    'presencas_acao':           _ds_presencas_acao,
     // Estoque
     'estoque_categoria':        _ds_estoque_categoria,
     // Comunicação
     'balcao_status':            _ds_balcao_status,
+    'balcao_tipo':              _ds_balcao_tipo,
+    'balcao_setor':             _ds_balcao_setor,
     // Escuta
     'escuta_pesquisa':          _ds_escuta_pesquisa,
     // Cruzamentos
@@ -495,7 +506,8 @@ function _ds_acoes_mes() {
   try {
     var d = ctrl_acoes_listar({});
     if (!d.ok || !d.data) return { colunas:['Mês','Ações'], linhas:[] };
-    var pares = _analise_porMes(d.data||[], 'criadoEm');
+    var lista = _analise_filtrar_por_data(d.data, 'criadoEm');
+    var pares = _analise_porMes(lista, 'criadoEm');
     return { colunas:['Mês','Ações'], linhas:pares.map(function(p){ return [_analise_fmtMes(p[0]), p[1]]; }) };
   } catch(e) { return { colunas:['Mês','Ações'], linhas:[] }; }
 }
@@ -506,7 +518,7 @@ function _ds_publico_acao() {
   try {
     var d = ctrl_publico_listarInscricoes({});
     if (!d.ok || !d.data) return { colunas:['Ação','Inscrições'], linhas:[] };
-    var lista = d.data || [];
+    var lista = _analise_filtrar_por_data(d.data, 'criadoEm');
     var mapa  = {};
     lista.forEach(function(i){
       var k = i.acaoTitulo || i.acao || i.titulo || i.acaoId || '—';
@@ -520,9 +532,27 @@ function _ds_publico_mes() {
   try {
     var d = ctrl_publico_listarInscricoes({});
     if (!d.ok || !d.data) return { colunas:['Mês','Inscrições'], linhas:[] };
-    var pares = _analise_porMes(d.data||[], 'criadoEm');
+    var lista = _analise_filtrar_por_data(d.data, 'criadoEm');
+    var pares = _analise_porMes(lista, 'criadoEm');
     return { colunas:['Mês','Inscrições'], linhas:pares.map(function(p){ return [_analise_fmtMes(p[0]), p[1]]; }) };
   } catch(e) { return { colunas:['Mês','Inscrições'], linhas:[] }; }
+}
+
+function _ds_presencas_acao() {
+  try {
+    var d = ctrl_publico_listarInscricoes({});
+    if (!d.ok || !d.data) return { colunas:['Ação','Presenças'], linhas:[] };
+    var lista = _analise_filtrar_por_data(d.data, 'criadoEm');
+    var mapaInsc = {}, mapaPresenca = {};
+    lista.forEach(function(i) {
+      var k = i.acaoTitulo || i.acao || i.titulo || i.acaoId || '—';
+      mapaInsc[k] = (mapaInsc[k]||0) + 1;
+      if (i.presenca === true || i.presenca === 'confirmado' || i.presencaConfirmada) mapaPresenca[k] = (mapaPresenca[k]||0) + 1;
+    });
+    var linhas = Object.keys(mapaInsc).map(function(k){ return [k, mapaPresenca[k]||0]; });
+    linhas.sort(function(a,b){ return b[1]-a[1]; });
+    return { colunas:['Ação','Presenças'], linhas:linhas.slice(0,15) };
+  } catch(e) { return { colunas:['Ação','Presenças'], linhas:[] }; }
 }
 
 // ─── Estoque ──────────────────────────────────────────────────────────────────
@@ -535,6 +565,69 @@ function _ds_estoque_categoria() {
   Object.keys(pc).forEach(function(k){ linhas.push([k, pc[k]||0]); });
   linhas.sort(function(a,b){ return b[1]-a[1]; });
   return { colunas:['Categoria','Itens'], linhas:linhas };
+}
+
+// ─── Tarefas (extra) ──────────────────────────────────────────────────────────
+
+function _ds_tarefas_prioridade() {
+  try {
+    var d = ctrl_tarefas_gestao();
+    if (!d.ok || !d.data) return { colunas:['Prioridade','Tarefas'], linhas:[] };
+    var linhas = (d.data.porPrioridade || []).map(function(p){ return [p.prioridade||p.label||'—', p.total||0]; });
+    if (!linhas.length) {
+      // fallback: use status data shaped differently
+      var m = d.data;
+      linhas = [['Urgente',m.urgentes||0],['Alta',m.altas||0],['Normal',m.normais||0],['Baixa',m.baixas||0]].filter(function(r){return r[1]>0;});
+    }
+    linhas.sort(function(a,b){ return b[1]-a[1]; });
+    return { colunas:['Prioridade','Tarefas'], linhas:linhas };
+  } catch(e) { return { colunas:['Prioridade','Tarefas'], linhas:[] }; }
+}
+
+// ─── Financeiro (contratos) ───────────────────────────────────────────────────
+
+function _ds_contratos_status() {
+  try {
+    var d = ctrl_contratos_metricas();
+    if (!d.ok || !d.data) return { colunas:['Status','Contratos'], linhas:[] };
+    var m = d.data;
+    var linhas = [
+      ['Ativos',    m.ativos||0],
+      ['Suspensos', m.suspensos||0],
+      ['Encerrados',m.encerrados||0],
+      ['Cancelados',m.cancelados||0],
+    ].filter(function(r){ return r[1]>0; });
+    return { colunas:['Status','Contratos'], linhas:linhas };
+  } catch(e) { return { colunas:['Status','Contratos'], linhas:[] }; }
+}
+
+function _ds_contratos_fonte() {
+  try {
+    var d = ctrl_contratos_metricas();
+    if (!d.ok || !d.data) return { colunas:['Fonte','Valor (R$)'], linhas:[] };
+    var pf = d.data.porFonte || {};
+    var linhas = Object.keys(pf).map(function(k){ return [k, Math.round(pf[k]||0)]; });
+    linhas.sort(function(a,b){ return b[1]-a[1]; });
+    return { colunas:['Fonte','Valor (R$)'], linhas:linhas };
+  } catch(e) { return { colunas:['Fonte','Valor (R$)'], linhas:[] }; }
+}
+
+// ─── Espaços / Patrimônio ─────────────────────────────────────────────────────
+
+function _ds_ativos_status() {
+  try {
+    var d = ctrl_ativos_metricas();
+    if (!d.ok || !d.data) return { colunas:['Status','Ativos'], linhas:[] };
+    var m = d.data;
+    var linhas = [
+      ['Disponível', m.disponivel||0],
+      ['Em uso',     m.em_uso||0],
+      ['Reservado',  m.reservado||0],
+      ['Manutenção', m.manutencao||0],
+      ['Baixado',    m.baixado||0],
+    ].filter(function(r){ return r[1]>0; });
+    return { colunas:['Status','Ativos'], linhas:linhas };
+  } catch(e) { return { colunas:['Status','Ativos'], linhas:[] }; }
 }
 
 // ─── Comunicação ──────────────────────────────────────────────────────────────
@@ -555,6 +648,22 @@ function _ds_balcao_status() {
     if (!linhas.length) Object.keys(m).forEach(function(k){ if(typeof m[k]==='number') linhas.push([k, m[k]]); });
     return { colunas:['Status','Demandas'], linhas:linhas.filter(function(r){ return r[1]>0; }) };
   } catch(e) { return { colunas:['Status','Demandas'], linhas:[] }; }
+}
+
+function _ds_balcao_tipo() {
+  try {
+    var d = ctrl_balcao_listar({});
+    if (!d.ok || !d.data) return { colunas:['Tipo','Demandas'], linhas:[] };
+    return { colunas:['Tipo','Demandas'], linhas:_analise_mapaParaLinhas(_analise_agrupar(d.data,'tipo')) };
+  } catch(e) { return { colunas:['Tipo','Demandas'], linhas:[] }; }
+}
+
+function _ds_balcao_setor() {
+  try {
+    var d = ctrl_balcao_listar({});
+    if (!d.ok || !d.data) return { colunas:['Setor','Demandas'], linhas:[] };
+    return { colunas:['Setor','Demandas'], linhas:_analise_mapaParaLinhas(_analise_agrupar(d.data,'demandanteSetor')) };
+  } catch(e) { return { colunas:['Setor','Demandas'], linhas:[] }; }
 }
 
 // ─── Escuta ───────────────────────────────────────────────────────────────────
@@ -693,8 +802,13 @@ function ctrl_analise_widget_dados(params) {
   return GasResponse.wrap(function() {
     var dsId  = (params || {}).dsId;
     var dsId2 = (params || {}).dsId2;
+    var filtro = null;
+    if ((params||{}).de || (params||{}).ate) filtro = { de: (params||{}).de, ate: (params||{}).ate };
     if (!dsId) throw new Error('dsId obrigatório');
-    if (dsId2) return _cruzar_custom(dsId, dsId2);
-    return _analise_dataset(dsId);
+    _analise_filtro_global = filtro;
+    try {
+      if (dsId2) return _cruzar_custom(dsId, dsId2);
+      return _analise_dataset(dsId);
+    } finally { _analise_filtro_global = null; }
   }, 'ctrl_analise_widget_dados');
 }

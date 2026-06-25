@@ -41423,18 +41423,23 @@ var AnaliseEstudioUI = (function() {
   var _weDraftWidget  = null;   // widget sendo editado no modal
   var _weDraftCb      = null;   // callback ao confirmar widget
   var _dashDragIdx    = null;   // índice do widget em drag & drop
+  var _dashSugArr     = [];     // sugestões — índice para onclick seguro
+  var _dashFiltroTempo = null;  // {de, ate, label} | null
 
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
-    { id:'barras',       label:'Barras',        icon:'bar_chart',       dica:'Ideal para comparar categorias distintas.' },
-    { id:'barras_horiz', label:'Horizontal',    icon:'align_justify',   dica:'Melhor quando os rótulos são longos.' },
-    { id:'barras_emp',   label:'Empilhadas',    icon:'stacked_bar_chart',dica:'Mostra composição de múltiplas séries.' },
-    { id:'linha',        label:'Linha',          icon:'show_chart',      dica:'Perfeito para mostrar evolução no tempo.' },
-    { id:'area',         label:'Área',           icon:'area_chart',      dica:'Destaca volume acumulado ao longo do tempo.' },
-    { id:'pizza',        label:'Pizza',          icon:'pie_chart',       dica:'Proporções de um todo — até 8 fatias.' },
-    { id:'rosca',        label:'Rosca',          icon:'donut_large',     dica:'Como pizza, mas com espaço central para KPI.' },
-    { id:'funil',        label:'Ranking',        icon:'filter_list',     dica:'Top-N decrescente — destaca líderes.' },
-    { id:'dispersao',    label:'Dispersão',      icon:'scatter_plot',    dica:'Correlação entre duas variáveis numéricas.' }
+    { id:'barras',       label:'Barras',        icon:'bar_chart',         dica:'Ideal para comparar categorias distintas.' },
+    { id:'barras_horiz', label:'Horizontal',    icon:'align_justify',     dica:'Melhor quando os rótulos são longos.' },
+    { id:'barras_emp',   label:'Empilhadas',    icon:'stacked_bar_chart', dica:'Mostra composição de múltiplas séries.' },
+    { id:'linha',        label:'Linha',         icon:'show_chart',        dica:'Perfeito para mostrar evolução no tempo.' },
+    { id:'area',         label:'Área',          icon:'area_chart',        dica:'Destaca volume acumulado ao longo do tempo.' },
+    { id:'pizza',        label:'Pizza',         icon:'pie_chart',         dica:'Proporções de um todo — até 8 fatias.' },
+    { id:'rosca',        label:'Rosca',         icon:'donut_large',       dica:'Como pizza, mas com espaço central para KPI.' },
+    { id:'funil',        label:'Ranking',       icon:'filter_list',       dica:'Top-N decrescente — destaca líderes.' },
+    { id:'dispersao',    label:'Dispersão',     icon:'scatter_plot',      dica:'Correlação entre duas variáveis numéricas.' },
+    { id:'medidor',      label:'Medidor',       icon:'speed',             dica:'Gauge semicircular — ideal para meta vs. realizado.' },
+    { id:'radar',        label:'Radar',         icon:'radar',             dica:'Comparação multidimensional em teia de aranha.' },
+    { id:'combinado',    label:'Combinado',     icon:'multiline_chart',   dica:'Barras + linha na mesma visualização (2 séries).' }
   ];
 
   // ── Público ────────────────────────────────────────────────────────────────
@@ -42328,7 +42333,6 @@ var AnaliseEstudioUI = (function() {
   // ── Renderizador central ───────────────────────────────────────────────────
   function _renderizarGrafico(colunas, linhas, cfg) {
     var tipo = cfg.tipo || 'barras';
-    var aj   = cfg.ajustes || {};
     var html = cfg.titulo
       ? '<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:12px;">' + _esc(cfg.titulo) + '</div>'
       : '';
@@ -42342,9 +42346,12 @@ var AnaliseEstudioUI = (function() {
       else if (tipo==='rosca')        html += _svgPizza(colunas,linhas,cfg,true);
       else if (tipo==='funil')        html += _svgFunil(colunas,linhas,cfg);
       else if (tipo==='dispersao')    html += _svgDispersao(colunas,linhas,cfg);
+      else if (tipo==='medidor')      html += _svgMedidor(colunas,linhas,cfg);
+      else if (tipo==='radar')        html += _svgRadar(colunas,linhas,cfg);
+      else if (tipo==='combinado')    html += _svgCombinado(colunas,linhas,cfg);
       else                            html += _svgBarras(colunas,linhas,cfg);
     } catch(e) { return '<p class="muted-text">Erro ao renderizar gráfico.</p>'; }
-    if (colunas.length > 2 && tipo !== 'pizza' && tipo !== 'rosca') html += _legenda(colunas, cfg);
+    if (colunas.length > 2 && tipo !== 'pizza' && tipo !== 'rosca' && tipo !== 'medidor') html += _legenda(colunas, cfg);
     return '<div>' + html + '</div>';
   }
 

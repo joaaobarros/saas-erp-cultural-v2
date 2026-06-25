@@ -631,7 +631,7 @@
 ### O que foi feito nesta sessão (s144)
 | Deploy | O que foi implementado |
 |---|---|
-| @1081 | **QuadrosUI** (index.html): `_iniciarMindMap` — engine dedicada para quadros `categoria=mindmap`; nodos em árvore horizontal bezier, auto-layout alternado L/R, Tab/Enter/Del/F2/Esc/scroll/pan. Grupo de ferramentas de desenho em botão único com flyout (lápis/marcador/pincel). `_inserirPessoa` corrigida: busca em `boot.pessoas` + `<select>` de `boot.setores`, nunca campo livre. Regra de vínculo em CLAUDE.md. |
+| @1081 | **QuadrosUI** (index.html): `_iniciarMindMap` — engine dedicada para quadros `categoria=mindmap`; nodos em árvore horizontal bezier, auto-layout alternado L/R, Tab/Enter/Del/F2/Esc/scroll/pan. Grupo de ferramentas de desenho em botão único com flyout (lápis/marcador/pincel). `_inserirPessoa` corrigida: busca em `boot.pessoas` + `<select>` de `boot.setores`, nunca campo livre. Regra de vínculo em CLAUDE.md. **analise_controller.gs**: 7 novos datasets (`ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`); filtro de data aplicado a mais datasets. **AnaliseEstudioUI**: 4 novos tipos de gráfico SVG (Medidor/gauge, Radar/teia, Combinado/barras+linha, Dispersão/scatter); catálogo 12 tipos com dicas; `_dashFiltroTempo`. |
 
 ### Smoke test esperado
 - Quadros → criar quadro com categoria "Mindmap" → editar → mapa mental abre (não canvas livre).
