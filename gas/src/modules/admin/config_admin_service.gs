@@ -666,7 +666,12 @@ var ConfigAdminService = (function () {
     { id:'cultura_br',   mes:11, dia:5,  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', motion:'cultura',       cls:'dc-cultura'  },
     { id:'musica',       mes:11, dia:22, label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', motion:'cultura',       cls:'dc-cultura'  },
     { id:'samba',        mes:12, dia:2,  label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', motion:'cultura',       cls:'dc-cultura'  },
-    { id:'forro',        mes:12, dia:13, label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', motion:'sao_joao',      cls:'dc-sao-joao' }
+    { id:'forro',        mes:12, dia:13, label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', motion:'sao_joao',      cls:'dc-sao-joao' },
+    // ── Datas móveis ─────────────────────────────────────────────────────────
+    { id:'carnaval', regra:{tipo:'carnaval'},           label:'Feliz Carnaval!',         sub:'Alegria, cor, música e cultura popular — o maior espetáculo da terra!',       icone:'🎊', motion:'carnaval', cls:'dc-carnaval' },
+    { id:'pascoa',   regra:{tipo:'pascoa'},             label:'Feliz Páscoa!',            sub:'Renovação, esperança e o espírito de recomeço.',                              icone:'🐣', motion:'pascoa',   cls:'dc-pascoa'   },
+    { id:'maes',     regra:{tipo:'ndom',n:2,dow:0,mes:5}, label:'Feliz Dia das Mães!',   sub:'À todas as mães — presentes, memórias e amor incondicional.',                  icone:'💐', motion:'maes',     cls:'dc-maes'     },
+    { id:'pais',     regra:{tipo:'ndom',n:2,dow:0,mes:8}, label:'Feliz Dia dos Pais!',   sub:'À todos os pais — referências, cuidado e presença que transforma.',            icone:'💙', motion:'pais',     cls:'dc-pais'     }
   ];
 
   return {
@@ -792,6 +797,29 @@ var ConfigAdminService = (function () {
     return { numNiveis: params.niveis.length };
   }
 
+  function _calcularPascoaGAS(ano) {
+    var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4;
+    var f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+    var h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+    var l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+    return {mes:Math.floor((h+l-7*m+114)/31), dia:((h+l-7*m+114)%31)+1};
+  }
+
+  function _resolverDataMovelGAS(regra, ano) {
+    if (!regra || !regra.tipo) return null;
+    if (regra.tipo==='pascoa') return _calcularPascoaGAS(ano);
+    if (regra.tipo==='carnaval') {
+      var p=_calcularPascoaGAS(ano), dt=new Date(ano,p.mes-1,p.dia);
+      dt.setDate(dt.getDate()-47);
+      return {mes:dt.getMonth()+1, dia:dt.getDate()};
+    }
+    if (regra.tipo==='ndom') {
+      var dt=new Date(ano,regra.mes-1,1), delta=(regra.dow-dt.getDay()+7)%7;
+      return {mes:regra.mes, dia:1+delta+(regra.n-1)*7};
+    }
+    return null;
+  }
+
   function _lerDatasComemorativasJSON() {
     try {
       var lista = readJSON('datas_comemorativas.json');
@@ -825,26 +853,43 @@ var ConfigAdminService = (function () {
     return resultado;
   }
 
-  /** Leitura pública — não requer admin. Retorna apenas datas ativas. */
+  /** Leitura pública — não requer admin. Retorna apenas datas ativas com mes/dia resolvidos. */
   function getDatasComemorativas() {
     var lista = _mergeComDefaults(_lerDatasComemorativasJSON());
-    return lista.filter(function(d) { return d.ativo !== false; });
+    var ano = new Date().getFullYear();
+    return lista.filter(function(d) { return d.ativo !== false; }).map(function(d) {
+      if (d.regra && !d.mes) {
+        var res = _resolverDataMovelGAS(d.regra, ano);
+        if (res) return Object.assign({}, d, res);
+      }
+      return d;
+    });
   }
 
-  /** Lista todas as datas (inclusive inativas) para o painel admin. */
+  /** Lista todas as datas (inclusive inativas) para o painel admin, com mes/dia resolvidos. */
   function listarDatasComemorativas() {
     _assertAdmin();
-    return _mergeComDefaults(_lerDatasComemorativasJSON());
+    var lista = _mergeComDefaults(_lerDatasComemorativasJSON());
+    var ano = new Date().getFullYear();
+    return lista.map(function(d) {
+      if (d.regra && !d.mes) {
+        var res = _resolverDataMovelGAS(d.regra, ano);
+        if (res) return Object.assign({}, d, res);
+      }
+      return d;
+    });
   }
 
   /**
    * Cria ou atualiza uma data comemorativa.
-   * @param {{ id?, mes, dia, label, sub?, icone?, motion? }} dados
+   * @param {{ id?, mes?, dia?, regra?, label, sub?, icone?, motion? }} dados
    */
   function salvarDataComemorativa(dados) {
     _assertAdmin();
-    if (!dados || !dados.label || !dados.mes || !dados.dia) {
-      throw new Error('Campos obrigatórios: label, mes, dia.');
+    var temDataFixa = dados && dados.mes && dados.dia;
+    var temRegra    = dados && dados.regra && dados.regra.tipo;
+    if (!dados || !dados.label || (!temDataFixa && !temRegra)) {
+      throw new Error('Campos obrigatórios: label e (mes+dia ou regra).');
     }
     var email = getEmailSessao();
     var id    = dados.id || gerarId('dc');
@@ -857,8 +902,6 @@ var ConfigAdminService = (function () {
       for (var i = 0; i < lista.length; i++) { if (lista[i].id === id) { idx = i; break; } }
       var registro = {
         id:           id,
-        mes:          Number(dados.mes),
-        dia:          Number(dados.dia),
         label:        String(dados.label).trim(),
         sub:          dados.sub          ? String(dados.sub).trim()   : '',
         icone:        dados.icone        ? String(dados.icone).trim() : '',
@@ -866,6 +909,12 @@ var ConfigAdminService = (function () {
         ativo:        true,
         atualizadoEm: agora()
       };
+      if (temRegra) {
+        registro.regra = dados.regra;
+      } else {
+        registro.mes = Number(dados.mes);
+        registro.dia = Number(dados.dia);
+      }
       if (idx >= 0) lista[idx] = registro; else lista.push(registro);
       return lista;
     });
