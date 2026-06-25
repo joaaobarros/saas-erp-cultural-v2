@@ -39,7 +39,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s142)**: **feat — Estúdio de Análises v4: Dashboard Builder (Power BI-like), 4 tipos de widget, grid flexível, editor modal, visibilidade + compartilhamento, fix [object Object] nos compartilhamentos — Deploy @1073.**
+**Fase atual (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1074.**
+
+**O que foi implementado agora**:
+- **Drag & Drop**: reordenação de widgets por arrastar (HTML5 drag API). Handle `drag_indicator`, estado `is-dragging` / `drag-over` com feedback visual. Setas ↑↓ removidas — apenas arrastar.
+- **7 tipos de widget**: + Texto (conteúdo rico com tamanho/bold/itálico/alinhamento), Imagem (URL + alt + max-height), Forma (8 formas SVG: círculo, retângulo, triângulo, losango, hexágono, estrela, seta, nuvem + cor + texto interno).
+- **6 tamanhos de coluna**: + `3/4` (75%) adicionado. Seletor no header do widget.
+- **Galeria modernizada**: hero section com gradiente + CTA buttons; cards `db-card2` com preview de blocos coloridos por tipo de widget; grid responsiva `auto-fill(220px)`.
+- **Templates pré-prontos**: 7 templates (Painel Executivo, Programação Cultural, Gestão de Pessoas, Financeiro, Operacional, Comunicação, Em Branco) com widgets pré-configurados usando datasets reais do catálogo.
+- **Sugestões do sistema**: 8 pills clicáveis acima do canvas no editor; usam IDs reais do catálogo (`acoes_mes`, `publico_acao`, `pessoas_setor`, etc.) para criar widgets com 1 clique.
+- **Aba "Análises" removida**: módulo exibe apenas Dashboard Builder. Foco total na criação de dashboards.
+- **Widget Editor redesenhado**: tipos em grid 3-col `db-tipo-grid` com `db-tipo-card`; seções dedicadas para texto/imagem/forma aparecem via `_weTipoChg`.
+- **Toolbar sticky**: barra do editor fica fixa no topo ao rolar; botão de templates inline.
+
+**Fase anterior (s142)**: **feat — Estúdio de Análises v4: Dashboard Builder (Power BI-like), 4 tipos de widget, grid flexível, editor modal, visibilidade + compartilhamento, fix [object Object] nos compartilhamentos — Deploy @1073.**
 
 **O que foi implementado agora**:
 - **Dashboard Builder completo**: aba "Dashboards" no Estúdio de Análises ao lado de "Análises". Galeria de dashboards com preview de ícones por widget, data de criação e indicador de visibilidade.
