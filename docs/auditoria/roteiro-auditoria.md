@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s147 @1092 (fix: flyout lápis/marcador/pincel expandido fora da toolbar) · s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s146 — fix crítico AnaliseEstudioUI + Dashboard Builder melhorado
+### Estado atual: s147 — fix Quadros: flyout de desenho fora da toolbar
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1092 | s147 | **QuadrosUI** (index.html): flyout do grupo de desenho (lápis/marcador/pincel) cortado pelo `overflow-y:auto` do `ftb`. Fix: flyout appendado ao `wrap` (container do canvas) em vez de `grpWrap` (interno ao ftb); posição calculada via `getBoundingClientRect` — mesmo padrão já usado por Templates e Sistema. |
+
+### Estado anterior: s146 — fix crítico AnaliseEstudioUI + Dashboard Builder melhorado
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |

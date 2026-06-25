@@ -477,6 +477,10 @@ body {
 .dc-ccbj         { background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%); }
 .dc-cultura      { background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); }
 .dc-sao-joao     { background: linear-gradient(135deg, #713f12 0%, #ca8a04 100%); }
+.dc-carnaval     { background: linear-gradient(135deg, #1d4ed8 0%, #dc2626 50%, #ca8a04 100%); }
+.dc-pascoa       { background: linear-gradient(135deg, #7e22ce 0%, #ec4899 50%, #fbbf24 100%); }
+.dc-maes         { background: linear-gradient(135deg, #9d174d 0%, #f43f5e 100%); }
+.dc-pais         { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); }
 
 /* Pulsing FAB (botão flutuante de atenção) */
 .fab-pulse { animation: fabPulseGlow 3.5s ease-in-out infinite; }
@@ -17606,13 +17610,18 @@ var DatasComemorativasAdmin = (function() {
     { id:'sao_joao',     label:'São João (confete amarelo/laranja)' },
     { id:'bairro',       label:'Comunidade (confete terroso/verde)' },
     { id:'ccbj_20anos',  label:'CCBJ Aniversário (roxo + badge)' },
-    { id:'cultura',      label:'Arte e Cultura (emojis + laranja)' }
+    { id:'cultura',      label:'Arte e Cultura (emojis + laranja)' },
+    { id:'carnaval',     label:'Carnaval (confete multicor festivo)' },
+    { id:'pascoa',       label:'Páscoa (ovos pastéis + cores primavera)' },
+    { id:'maes',         label:'Dia das Mães (flores + pétalas rosas)' },
+    { id:'pais',         label:'Dia dos Pais (azul + emojis de pai)' }
   ];
 
   var _MOTION_CLS = {
     fogos:'dc-ano-novo', neve:'dc-natal', papai_noel:'dc-natal', coracoes:'dc-namorados',
     estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ',
-    sao_joao:'dc-sao-joao', bairro:'dc-bairro', ccbj_20anos:'dc-ccbj', cultura:'dc-cultura'
+    sao_joao:'dc-sao-joao', bairro:'dc-bairro', ccbj_20anos:'dc-ccbj', cultura:'dc-cultura',
+    carnaval:'dc-carnaval', pascoa:'dc-pascoa', maes:'dc-maes', pais:'dc-pais'
   };
 
   function _clsParaMotion(motion) {
@@ -17678,7 +17687,10 @@ var DatasComemorativasAdmin = (function() {
               (inativo ? '<span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:10px;">inativo</span>' : '') +
             '</div>' +
             '<div style="font-size:11px;color:var(--muted);margin-top:1px;">' +
-              'Dia ' + dc.dia + ' de ' + _MESES[dc.mes] +
+              (dc.regra
+                ? '<span style="background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 5px;font-weight:700;margin-right:4px;font-size:10px;">MÓVEL</span>' +
+                  _regraLabel(dc.regra) + ' (em ' + new Date().getFullYear() + ': dia ' + dc.dia + ' de ' + _MESES[dc.mes] + ')'
+                : 'Dia ' + dc.dia + ' de ' + _MESES[dc.mes]) +
               (dc.sub ? ' — ' + escaparHtml(dc.sub) : '') +
             '</div>' +
             (motionLabel ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' +
@@ -17704,10 +17716,25 @@ var DatasComemorativasAdmin = (function() {
     el.innerHTML = html;
   }
 
+  // ── Helpers de regra ─────────────────────────────────────
+  var _NOMES_N   = ['','1°','2°','3°','4°'];
+  var _NOMES_DOW = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+  function _regraLabel(regra) {
+    if (!regra) return null;
+    if (regra.tipo==='pascoa')   return 'Páscoa (data variável)';
+    if (regra.tipo==='carnaval') return 'Terça de Carnaval (47 dias antes da Páscoa)';
+    if (regra.tipo==='ndom')     return _NOMES_N[regra.n]+' '+_NOMES_DOW[regra.dow]+' de '+_MESES[regra.mes];
+    return regra.tipo;
+  }
+
   // ── Modal criar/editar ────────────────────────────────────
   function abrirModal(dc) {
     dc = dc || {};
-    var isEdicao = !!dc.id;
+    var isEdicao    = !!dc.id;
+    var tipoInicial = dc.regra ? 'movel' : 'fixa';
+    var regraInicial = dc.regra || {};
+
     var motionOpts = _MOTIONS.map(function(m) {
       return '<option value="' + m.id + '"' + ((dc.motion||'') === m.id ? ' selected' : '') + '>' + m.label + '</option>';
     }).join('');
@@ -17722,8 +17749,25 @@ var DatasComemorativasAdmin = (function() {
       diasOpts += '<option value="' + d + '"' + (dc.dia === d ? ' selected' : '') + '>' + ('0'+d).slice(-2) + '</option>';
     }
 
+    var nOpts = [1,2,3,4].map(function(n) {
+      return '<option value="'+n+'"'+(regraInicial.n===n?' selected':'')+'>'+_NOMES_N[n]+' '+_NOMES_DOW[regraInicial.dow||0]+'</option>';
+    }).join('');
+
+    var dowOpts = _NOMES_DOW.map(function(nome,i) {
+      return '<option value="'+i+'"'+((regraInicial.dow||0)===i?' selected':'')+'>'+nome+'</option>';
+    }).join('');
+
+    var mesMOpts = _MESES.slice(1).map(function(nome,i) {
+      var v=i+1;
+      return '<option value="'+v+'"'+(regraInicial.mes===v?' selected':'')+'>'+('0'+v).slice(-2)+' — '+nome+'</option>';
+    }).join('');
+
+    var _sBtn = 'padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;';
+    var _sBtnSel = _sBtn+'background:var(--color-primary);color:#fff;border-color:var(--color-primary);';
+    var _sBtnInact = _sBtn+'background:var(--surface);color:var(--text2);';
+
     var html =
-      '<div style="background:var(--surface);border-radius:14px;overflow:hidden;min-width:420px;max-width:520px;">' +
+      '<div style="background:var(--surface);border-radius:14px;overflow:hidden;min-width:440px;max-width:560px;">' +
         '<div style="background:linear-gradient(135deg,rgba(79,70,229,.06),var(--surface));' +
           'border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:10px;">' +
           '<span class="ms" style="color:var(--color-primary);font-size:20px;">celebration</span>' +
@@ -17744,20 +17788,67 @@ var DatasComemorativasAdmin = (function() {
             '<input id="dc-sub" class="form-input" type="text" placeholder="Breve mensagem ou contexto histórico" ' +
               'value="' + escaparHtml(dc.sub||'') + '" maxlength="140">' +
           '</div>' +
-          // Ícone + data em linha
-          '<div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:10px;">' +
-            '<div class="form-group">' +
+          // Tipo de data
+          '<div class="form-group">' +
+            '<label class="form-label">Tipo de data</label>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button type="button" id="dc-tipo-btn-fixa" data-bg-skip="1" ' +
+                'onclick="DatasComemorativasAdmin._setTipoData(\'fixa\')" ' +
+                'style="' + (tipoInicial==='fixa' ? _sBtnSel : _sBtnInact) + '">' +
+                '<span class="ms" style="font-size:14px;vertical-align:middle;">event</span> Data fixa' +
+              '</button>' +
+              '<button type="button" id="dc-tipo-btn-movel" data-bg-skip="1" ' +
+                'onclick="DatasComemorativasAdmin._setTipoData(\'movel\')" ' +
+                'style="' + (tipoInicial==='movel' ? _sBtnSel : _sBtnInact) + '">' +
+                '<span class="ms" style="font-size:14px;vertical-align:middle;">loop</span> Data móvel' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+          // Ícone + campos de data
+          '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+            // Ícone
+            '<div class="form-group" style="width:90px;flex-shrink:0;">' +
               '<label class="form-label">Ícone (emoji)</label>' +
               '<input id="dc-icone" class="form-input" type="text" placeholder="🎉" ' +
                 'value="' + escaparHtml(dc.icone||'') + '" maxlength="10" style="text-align:center;font-size:22px;">' +
             '</div>' +
-            '<div class="form-group">' +
-              '<label class="form-label">Mês <span style="color:#ef4444;">*</span></label>' +
-              '<select id="dc-mes" class="form-input"><option value="">Selecione</option>' + mesesOpts + '</select>' +
+            // Campos fixa
+            '<div id="dc-campos-fixa" style="flex:1;display:' + (tipoInicial==='fixa'?'grid':'none') + ';grid-template-columns:1fr 1fr;gap:10px;">' +
+              '<div class="form-group">' +
+                '<label class="form-label">Mês <span style="color:#ef4444;">*</span></label>' +
+                '<select id="dc-mes" class="form-input"><option value="">Selecione</option>' + mesesOpts + '</select>' +
+              '</div>' +
+              '<div class="form-group">' +
+                '<label class="form-label">Dia <span style="color:#ef4444;">*</span></label>' +
+                '<select id="dc-dia" class="form-input"><option value="">Selecione</option>' + diasOpts + '</select>' +
+              '</div>' +
             '</div>' +
-            '<div class="form-group">' +
-              '<label class="form-label">Dia <span style="color:#ef4444;">*</span></label>' +
-              '<select id="dc-dia" class="form-input"><option value="">Selecione</option>' + diasOpts + '</select>' +
+            // Campos móvel
+            '<div id="dc-campos-movel" style="flex:1;display:' + (tipoInicial==='movel'?'flex':'none') + ';flex-direction:column;gap:8px;">' +
+              '<div class="form-group">' +
+                '<label class="form-label">Tipo de regra</label>' +
+                '<select id="dc-regra-tipo" class="form-input" onchange="DatasComemorativasAdmin._atualizarCamposRegra()">' +
+                  '<option value="ndom"'+((!regraInicial.tipo||regraInicial.tipo==='ndom')?' selected':'')+'>N° dia da semana do mês</option>' +
+                  '<option value="pascoa"'+(regraInicial.tipo==='pascoa'?' selected':'')+'>Páscoa (calculada automaticamente)</option>' +
+                  '<option value="carnaval"'+(regraInicial.tipo==='carnaval'?' selected':'')+'>Carnaval — Terça-feira (47 dias antes da Páscoa)</option>' +
+                '</select>' +
+              '</div>' +
+              '<div id="dc-regra-ndom" style="display:'+((!regraInicial.tipo||regraInicial.tipo==='ndom')?'grid':'none')+';grid-template-columns:1fr 1fr 1fr;gap:8px;">' +
+                '<div class="form-group">' +
+                  '<label class="form-label">Ocorrência</label>' +
+                  '<select id="dc-regra-n" class="form-input">' +
+                    [1,2,3,4].map(function(n){return '<option value="'+n+'"'+(regraInicial.n===n?' selected':'')+'>'+_NOMES_N[n]+'</option>';}).join('') +
+                  '</select>' +
+                '</div>' +
+                '<div class="form-group">' +
+                  '<label class="form-label">Dia da semana</label>' +
+                  '<select id="dc-regra-dow" class="form-input">' + dowOpts + '</select>' +
+                '</div>' +
+                '<div class="form-group">' +
+                  '<label class="form-label">Mês</label>' +
+                  '<select id="dc-regra-mes" class="form-input"><option value="">Selecione</option>' + mesMOpts + '</select>' +
+                '</div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
           // Motion
@@ -17786,13 +17877,44 @@ var DatasComemorativasAdmin = (function() {
 
     _abrirModalSimples(html);
     var box = document.querySelector('.modal-simples .modal-box-animar');
-    if (box) box.style.maxWidth = '540px';
+    if (box) box.style.maxWidth = '580px';
 
     // Preview ao vivo
     ['dc-label','dc-sub','dc-icone','dc-motion'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener('input', _atualizarPreview);
     });
+    var selMotion = document.getElementById('dc-motion');
+    if (selMotion) selMotion.addEventListener('change', _atualizarPreview);
+  }
+
+  // ── Controles tipo fixa/móvel ─────────────────────────────
+  function _setTipoData(tipo) {
+    var _sBtn = 'padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;';
+    var _sBtnSel   = _sBtn+'background:var(--color-primary);color:#fff;border-color:var(--color-primary);';
+    var _sBtnInact = _sBtn+'background:var(--surface);color:var(--text2);';
+    var btnFixa  = document.getElementById('dc-tipo-btn-fixa');
+    var btnMovel = document.getElementById('dc-tipo-btn-movel');
+    var divFixa  = document.getElementById('dc-campos-fixa');
+    var divMovel = document.getElementById('dc-campos-movel');
+    if (!btnFixa || !btnMovel || !divFixa || !divMovel) return;
+    if (tipo==='fixa') {
+      btnFixa.style.cssText  = _sBtnSel;
+      btnMovel.style.cssText = _sBtnInact;
+      divFixa.style.display  = 'grid';
+      divMovel.style.display = 'none';
+    } else {
+      btnFixa.style.cssText  = _sBtnInact;
+      btnMovel.style.cssText = _sBtnSel;
+      divFixa.style.display  = 'none';
+      divMovel.style.display = 'flex';
+    }
+  }
+
+  function _atualizarCamposRegra() {
+    var tipo  = (document.getElementById('dc-regra-tipo') || {}).value || 'ndom';
+    var ndom  = document.getElementById('dc-regra-ndom');
+    if (ndom) ndom.style.display = tipo==='ndom' ? 'grid' : 'none';
   }
 
   function _previewHtml(dc) {
@@ -17823,17 +17945,33 @@ var DatasComemorativasAdmin = (function() {
     var label  = (document.getElementById('dc-label')  || {}).value || '';
     var sub    = (document.getElementById('dc-sub')    || {}).value || '';
     var icone  = (document.getElementById('dc-icone')  || {}).value || '';
-    var mes    = parseInt((document.getElementById('dc-mes')    || {}).value, 10);
-    var dia    = parseInt((document.getElementById('dc-dia')    || {}).value, 10);
     var motion = (document.getElementById('dc-motion') || {}).value || null;
-
     label = label.trim();
-    if (!label)       { Toast.erro('Título é obrigatório.');  return; }
-    if (!mes || !dia) { Toast.erro('Mês e Dia são obrigatórios.'); return; }
+    if (!label) { Toast.erro('Título é obrigatório.'); return; }
 
-    var dados = { label:label, sub:sub.trim(), icone:icone.trim(),
-      mes:mes, dia:dia, motion:motion||null };
+    var divMovel = document.getElementById('dc-campos-movel');
+    var isMo = !!(divMovel && divMovel.style.display !== 'none');
+
+    var dados = { label:label, sub:sub.trim(), icone:icone.trim(), motion:motion||null };
     if (idExistente) dados.id = idExistente;
+
+    if (isMo) {
+      var regraTipo = (document.getElementById('dc-regra-tipo') || {}).value || 'ndom';
+      if (regraTipo==='ndom') {
+        var rn  = parseInt((document.getElementById('dc-regra-n')   || {}).value, 10);
+        var rdw = parseInt((document.getElementById('dc-regra-dow') || {}).value, 10);
+        var rm  = parseInt((document.getElementById('dc-regra-mes') || {}).value, 10);
+        if (!rm || isNaN(rn) || isNaN(rdw)) { Toast.erro('Preencha a ocorrência, dia da semana e mês da regra.'); return; }
+        dados.regra = { tipo:'ndom', n:rn, dow:rdw, mes:rm };
+      } else {
+        dados.regra = { tipo:regraTipo };
+      }
+    } else {
+      var mes = parseInt((document.getElementById('dc-mes') || {}).value, 10);
+      var dia = parseInt((document.getElementById('dc-dia') || {}).value, 10);
+      if (!mes || !dia) { Toast.erro('Mês e Dia são obrigatórios.'); return; }
+      dados.mes = mes; dados.dia = dia;
+    }
 
     var btn = document.getElementById('dc-btn-salvar');
     BtnGuard.wrap(btn, 'Salvando…', function(liberar) {
@@ -17876,7 +18014,10 @@ var DatasComemorativasAdmin = (function() {
     });
   }
 
-  return { carregar:carregar, abrirModal:abrirModal, salvar:salvar, excluir:excluir, toggle:toggle };
+  return {
+    carregar:carregar, abrirModal:abrirModal, salvar:salvar, excluir:excluir, toggle:toggle,
+    _setTipoData:_setTipoData, _atualizarCamposRegra:_atualizarCamposRegra
+  };
 
 })();
 
@@ -31284,21 +31425,55 @@ var App = (function() {
     { mes:11, dia:5,  id:'cultura_br',  label:'Dia da Cultura Brasileira',               sub:'A diversidade cultural que nos une como nação.',               icone:'🎨', cls:'dc-cultura',  motion:'cultura'      },
     { mes:11, dia:22, id:'musica',      label:'Dia da Música',                           sub:'Santa Cecília — padroeira dos músicos. Que o som continue!',   icone:'🎵', cls:'dc-cultura',  motion:'cultura'      },
     { mes:12, dia:2,  id:'samba',       label:'Dia Nacional do Samba',                  sub:'Ritmo, identidade e resistência negra na cultura brasileira.', icone:'🥁', cls:'dc-cultura',  motion:'cultura'      },
-    { mes:12, dia:13, id:'forro',       label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', cls:'dc-sao-joao', motion:'sao_joao'     }
+    { mes:12, dia:13, id:'forro',       label:'Dia Nacional do Forró',                  sub:'De Luiz Gonzaga ao Nordeste — o forró que pulsa no povo!',     icone:'🪗', cls:'dc-sao-joao', motion:'sao_joao'     },
+    // ── Datas móveis ────────────────────────────────────────────────────────
+    { id:'carnaval', regra:{tipo:'carnaval'},             label:'Feliz Carnaval!',       sub:'Alegria, cor, música e cultura popular — o maior espetáculo da terra!',   icone:'🎊', cls:'dc-carnaval', motion:'carnaval' },
+    { id:'pascoa',   regra:{tipo:'pascoa'},               label:'Feliz Páscoa!',          sub:'Renovação, esperança e o espírito de recomeço.',                          icone:'🐣', cls:'dc-pascoa',   motion:'pascoa'   },
+    { id:'maes',     regra:{tipo:'ndom',n:2,dow:0,mes:5}, label:'Feliz Dia das Mães!',   sub:'À todas as mães — presentes, memórias e amor incondicional.',              icone:'💐', cls:'dc-maes',     motion:'maes'     },
+    { id:'pais',     regra:{tipo:'ndom',n:2,dow:0,mes:8}, label:'Feliz Dia dos Pais!',   sub:'À todos os pais — referências, cuidado e presença que transforma.',        icone:'💙', cls:'dc-pais',     motion:'pais'     }
   ];
 
   var _DC_MOTION_CLS = {
     fogos:'dc-ano-novo', neve:'dc-natal', coracoes:'dc-namorados',
     estrelas:'dc-criancas', ouro:'dc-ceara', verde_amarelo:'dc-independ',
     papai_noel:'dc-natal', sao_joao:'dc-sao-joao', bairro:'dc-bairro',
-    ccbj_20anos:'dc-ccbj', cultura:'dc-cultura'
+    ccbj_20anos:'dc-ccbj', cultura:'dc-cultura',
+    carnaval:'dc-carnaval', pascoa:'dc-pascoa', maes:'dc-maes', pais:'dc-pais'
   };
 
+  function _calcularPascoaFront(ano) {
+    var a=ano%19,b=Math.floor(ano/100),c=ano%100,d=Math.floor(b/4),e=b%4;
+    var f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+    var h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+    var l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+    return {mes:Math.floor((h+l-7*m+114)/31), dia:((h+l-7*m+114)%31)+1};
+  }
+
+  function _resolverDataMovelFront(regra, ano) {
+    if (!regra || !regra.tipo) return null;
+    if (regra.tipo==='pascoa') return _calcularPascoaFront(ano);
+    if (regra.tipo==='carnaval') {
+      var p=_calcularPascoaFront(ano), dt=new Date(ano,p.mes-1,p.dia);
+      dt.setDate(dt.getDate()-47);
+      return {mes:dt.getMonth()+1, dia:dt.getDate()};
+    }
+    if (regra.tipo==='ndom') {
+      var dt=new Date(ano,regra.mes-1,1), delta=(regra.dow-dt.getDay()+7)%7;
+      return {mes:regra.mes, dia:1+delta+(regra.n-1)*7};
+    }
+    return null;
+  }
+
   function _detectarDataComemorativa() {
-    var h = new Date(); var m = h.getMonth()+1; var d = h.getDate();
+    var h = new Date(); var m = h.getMonth()+1; var d = h.getDate(); var ano = h.getFullYear();
     for (var i=0;i<_DATAS_COMEMORATIVAS.length;i++) {
       var dc = _DATAS_COMEMORATIVAS[i];
-      if (dc.mes===m && dc.dia===d) return dc;
+      var dm = dc.mes, dd = dc.dia;
+      if (dc.regra) {
+        var res = _resolverDataMovelFront(dc.regra, ano);
+        if (res) { dm = res.mes; dd = res.dia; }
+      }
+      if (dm===m && dd===d) return dc;
     }
     return null;
   }
@@ -31549,6 +31724,96 @@ var App = (function() {
         pts.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.life-=.8/MAX;
           ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
           ctx.fillStyle=p.cor; ctx.globalAlpha=Math.max(0,p.life); ctx.fill(); ctx.globalAlpha=1; });
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='carnaval') {
+      var _cvCores=['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899','#06b6d4','#f97316','#fbbf24','#10b981'];
+      for(var i=0;i<160;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*200,
+        vx:(Math.random()-.5)*5,vy:3+Math.random()*4,sz:4+Math.random()*8,
+        cor:_cvCores[Math.floor(Math.random()*_cvCores.length)],
+        rot:Math.random()*Math.PI*2,vrot:(Math.random()-.5)*.2,forma:Math.random()>.4?'rect':'circ'});
+      function animar(){
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,1-fr/MAX);
+          if(p.forma==='rect') ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);
+          else{ctx.beginPath();ctx.arc(0,0,p.sz/2,0,Math.PI*2);ctx.fill();}
+          ctx.restore();});
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='pascoa') {
+      var _pcCores=['#f9a8d4','#c084fc','#fde68a','#86efac','#93c5fd','#fca5a5','#d9f99d','#fbcfe8'];
+      for(var i=0;i<80;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*100,
+        vx:(Math.random()-.5)*2,vy:1.5+Math.random()*2.5,
+        a:5+Math.random()*4,b:8+Math.random()*6,
+        cor:_pcCores[Math.floor(Math.random()*_pcCores.length)],
+        rot:Math.random()*Math.PI*2,vrot:(Math.random()-.5)*.08});
+      function animar(){
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,1-fr/MAX);
+          ctx.beginPath();ctx.ellipse(0,0,p.a,p.b,0,0,Math.PI*2);ctx.fill();
+          ctx.restore();});
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='maes') {
+      var _mEm=['🌹','🌷','💐','🌸','🌺','🌼','💮','🌻'];
+      var _mFloats=[];
+      for(var _mi=0;_mi<14;_mi++){
+        (function(idx){
+          var el=document.createElement('div');
+          el.textContent=_mEm[idx%_mEm.length];
+          el.style.cssText='position:fixed;font-size:'+(20+Math.random()*22)+'px;' +
+            'left:'+(3+Math.random()*90)+'%;top:'+(6+Math.random()*72)+'%;' +
+            'pointer-events:none;z-index:9999;opacity:0;transition:opacity .4s;';
+          document.body.appendChild(el); _mFloats.push(el);
+          setTimeout(function(){el.style.opacity='1';},idx*85);
+        })(_mi);
+      }
+      setTimeout(function(){
+        _mFloats.forEach(function(e){e.style.opacity='0';setTimeout(function(){e.remove();},400);});
+      },3500);
+      var _mCores=['#f43f5e','#fb7185','#fda4af','#fce7f3','#fbcfe8','#e11d48','#f472b6'];
+      for(var i=0;i<120;i++) pts.push({x:Math.random()*cv.width,y:cv.height+10,
+        vx:(Math.random()-.5)*2,vy:-(1.5+Math.random()*2.5),sz:3+Math.random()*5,
+        cor:_mCores[Math.floor(Math.random()*_mCores.length)],life:1});
+      function animar(){
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.life-=.7/MAX;
+          ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,p.life);ctx.fill();ctx.globalAlpha=1;});
+        fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
+      }
+    } else if (tipo==='pais') {
+      var _paisEm=['👔','⚽','🛠️','🎣','🎸','🏋️','🚗','🍺','🎮'];
+      var _paisFloats=[];
+      for(var _pi=0;_pi<9;_pi++){
+        (function(idx){
+          var el=document.createElement('div');
+          el.textContent=_paisEm[idx%_paisEm.length];
+          el.style.cssText='position:fixed;font-size:'+(20+Math.random()*18)+'px;' +
+            'left:'+(5+Math.random()*86)+'%;top:'+(10+Math.random()*68)+'%;' +
+            'pointer-events:none;z-index:9999;opacity:0;transition:opacity .4s;';
+          document.body.appendChild(el); _paisFloats.push(el);
+          setTimeout(function(){el.style.opacity='1';},idx*110);
+        })(_pi);
+      }
+      setTimeout(function(){
+        _paisFloats.forEach(function(e){e.style.opacity='0';setTimeout(function(){e.remove();},400);});
+      },3200);
+      var _pCores=['#1d4ed8','#2563eb','#3b82f6','#93c5fd','#172554','#1e40af','#bfdbfe','#dbeafe'];
+      for(var i=0;i<110;i++) pts.push({x:Math.random()*cv.width,y:-20-Math.random()*150,
+        vx:(Math.random()-.5)*3,vy:2+Math.random()*3,sz:4+Math.random()*7,
+        cor:_pCores[Math.floor(Math.random()*_pCores.length)],
+        rot:Math.random()*Math.PI*2,vrot:(Math.random()-.5)*.15});
+      function animar(){
+        ctx.clearRect(0,0,cv.width,cv.height);
+        pts.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+          ctx.fillStyle=p.cor;ctx.globalAlpha=Math.max(0,1-fr/MAX);
+          ctx.fillRect(-p.sz/2,-p.sz/4,p.sz,p.sz/2);ctx.restore();});
         fr++; if(fr<MAX) requestAnimationFrame(animar); else cv.remove();
       }
     } else {
@@ -36891,7 +37156,9 @@ var QuadrosUI = (function() {
           if (ex) { ex.remove(); return; }
           var fly = document.createElement('div');
           fly.id = 'qdro-drw-flyout';
-          fly.style.cssText = 'position:absolute;left:calc(100% + 8px);top:0;z-index:400;background:#fff;border-radius:12px;'
+          var _btnRect = grpBtn.getBoundingClientRect();
+          var _wrapRect = wrap.getBoundingClientRect();
+          fly.style.cssText = 'position:absolute;left:68px;top:' + (_btnRect.top - _wrapRect.top) + 'px;z-index:400;background:#fff;border-radius:12px;'
             + 'box-shadow:0 4px 24px rgba(0,0,0,.15),0 0 0 1px rgba(0,0,0,.06);padding:6px;min-width:180px;';
           t.subs.forEach(function(sub) {
             var sb = document.createElement('button');
@@ -36916,7 +37183,7 @@ var QuadrosUI = (function() {
             })(sub.id, sub.ico);
             fly.appendChild(sb);
           });
-          grpWrap.appendChild(fly);
+          wrap.appendChild(fly);
           setTimeout(function() {
             function _closeFly(ev) {
               if (!fly.contains(ev.target) && ev.target !== grpBtn) {
