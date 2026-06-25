@@ -634,7 +634,26 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 121 (2026-06-25)
+## HANDOFF ATUAL — SESSÃO 122 (2026-06-25)
+
+### Estado atual: Feat — Quadros: mapa mental evoluído — Deploy pendente
+
+### O que foi feito nesta sessão (s149)
+| Deploy | O que foi implementado |
+|---|---|
+| pendente | **QuadrosUI** (index.html): `_iniciarMindMap` evoluído com toolbar dedicada (adicionar filho/irmão, editar, colapsar/expandir, centralizar, remover), arraste manual de nodos com persistência em `mmNodes[].dx/dy`, colapso persistente em `mmNodes[].collapsed`, clique no badge para recolher/expandir, setas para ajuste fino, `Shift+setas` para ajuste maior e `Ctrl+0` para centralizar. Snapshot segue retrocompatível via `snapshot.mmNodes`. |
+
+### Smoke test esperado
+- Quadros → criar/abrir quadro com categoria "Mindmap" → editor abre em modo mapa mental, não canvas livre.
+- Toolbar do mapa aparece no topo esquerdo; botões de adicionar filho/irmão, editar, colapsar, centralizar e remover funcionam.
+- Tab cria filho; Enter cria irmão; F2/duplo clique edita; Del remove; Esc desseleciona.
+- Arrastar um nodo muda sua posição; setas ajustam fino; salvar → reabrir preserva posição.
+- Criar filhos em um nodo → clicar no badge recolhe/expande; salvar → reabrir preserva colapso.
+- Ctrl+0 centraliza o mapa; scroll aplica zoom; arrastar fundo faz pan.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 121 (2026-06-25)
 
 ### Estado atual: Feat — Quadros v6: Mapa Mental + grupo de ferramentas + Vincular Pessoa — Deploy @1081
 
