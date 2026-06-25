@@ -39,16 +39,18 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s140)**: **feat — Estúdio de Análises v3: cruzamento livre de datasets, modo estático/ao vivo, Meu Painel personalizável, controle de visibilidade (privada/compartilhada/pública), filtragem por dono no backend — Deploy @1071 (pendente).**
+**Fase atual (s141)**: **feat — Quadros v5: conector inteligente (snap a âncoras), 8 novas figuras, marcador/pincel, estilo de linha, 14 novos templates categorizados, vincular tarefa/pessoa, dados do sistema — Deploy @1072.**
 
 **O que foi implementado agora**:
-- **Cruzamento livre de datasets**: no editor, após importar um dataset do catálogo, botão "Cruzar com..." reabre o catálogo em modo cruzamento. Backend `_cruzar_custom(dsA, dsB)` já existia; agora a UI expõe para qualquer par. `_dsId` e `_dsId2` rastreados por estado.
-- **Modo estático vs. Ao vivo**: toggle "Estática (dados fixos) / Ao vivo (re-busca ao abrir)" salvo no campo `modoUpdate`. Ao visualizar análise "Ao vivo", chama `GAS.analise.importarDados` ou `GAS.analise.cruzar` antes de renderizar. Painel também re-busca análises ao vivo.
-- **Meu Painel personalizável**: botão "Meu Painel" na galeria. Usuário fixa análises com pin; estado em `localStorage('ccbj_analise_painel')`. `_renderPainel()` renderiza grid com análises fixadas; badge de contador no botão.
-- **Controle de visibilidade**: picker 3 opções (Privada/Compartilhada/Pública) no editor. "Compartilhada" abre painel de destinatários (pessoa/setor/cargo). Campos `visibilidade` + `compartilhadoCom` salvos no backend.
-- **Filtragem no backend**: `ctrl_analise_listar` filtra por `_analise_podeVer(item, email)` — legado (sem dono) = público; privada = só dono; restrita = verifica pessoa/setor/cargo. Helper `_analise_getUserPerfil(email)` com cache por execução.
-- **`donoEmail` no salvar**: gravado na criação; proteção contra edição por terceiros.
-- **CSS**: `.analise-modo-badge`, `.analise-vis-badge`, `.analise-ds-fonte`, `.analise-painel-grid/card`, `.analise-comp-tag`, `.analise-vis-picker`.
+- **Conector inteligente**: ferramenta `connector` mostra 4 âncoras (N/S/L/O) em cada forma ao passar o mouse; snap automático ao clicar perto de uma âncora; cria seta com estilo de linha configurável; duplo clique edita etiqueta do conector.
+- **8 novas figuras**: Triângulo, Hexágono, Pentágono, Estrela, Balão de fala (`callout`), Marcador (pincel largo semitransparente), Pincel (largura variável por velocidade).
+- **Estilo de linha**: 3 botões na barra inferior — Sólida / Tracejada / Pontilhada — aplicados a line, arrow, connector.
+- **14 novos templates** em 4 categorias: Golden Circle, OKR, Matriz Eisenhower, Retrospectiva, Business Model Canvas, Persona de Usuário, User Flow, Wireframe Web, Mapa de Stakeholders, Jornada do Colaborador, Funil de Comunicação, Organograma.
+- **Vincular Tarefa**: busca e insere card de tarefa do módulo Pessoal com status colorido.
+- **Vincular Pessoa**: insere card com nome/cargo/módulo editáveis.
+- **Dados do Sistema**: painel lateral para inserir widgets de Quadro, Ação, Reunião, Resumo de Tarefas ou Indicador.
+
+**Fase anterior (s140)**: **feat — Estúdio de Análises v3: cruzamento livre de datasets, modo estático/ao vivo, Meu Painel personalizável, controle de visibilidade, filtragem por dono — Deploy @1071.**
 
 **Fase anterior (s139)**: **fix/feat — Quadros v4: 3 bugs críticos corrigidos + templates internos + pan por arrastar + abas removidas — Deploy @1070 (pendente).**
 

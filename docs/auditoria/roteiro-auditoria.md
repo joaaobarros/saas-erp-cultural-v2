@@ -1,13 +1,14 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s140 @1071 (Estúdio Análises v3: cruzamento livre, ao vivo, Meu Painel, visibilidade) · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s141 @1072 (Quadros v5: conector inteligente, 8 figuras, marcador/pincel, 14 templates, vincular tarefa/pessoa, dados do sistema) · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s140 — Estúdio de Análises v3: cruzamento livre + ao vivo + Meu Painel + visibilidade
+### Estado atual: s141 — Quadros v5: conector inteligente, figuras, templates, dados do sistema
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
+| @1072 | s141 | **QuadrosUI** (index.html): conector inteligente com snap a 4 âncoras por forma + etiqueta editável por duplo clique; 8 novas figuras (triângulo, hexágono, pentágono, estrela, callout, marcador, pincel, conector); estilo de linha (sólida/tracejada/pontilhada) na barra inferior; 14 templates em 4 categorias; vincular tarefa (busca GAS.tarefas), vincular pessoa (modal manual), dados do sistema (quadro/ação/reunião/tarefas/indicador como widget). |
 | @1071 | s140 | **AnaliseEstudioUI** + **analise_controller.gs**: cruzamento livre de qualquer par de datasets via "Cruzar com…"; modo Ao vivo (re-busca ao abrir); Meu Painel com pin e localStorage; picker visibilidade (Privada/Compartilhada/Pública) com destinatários por pessoa/setor/cargo; `donoEmail` gravado no backend; `_analise_podeVer()` filtra por email/setor/cargo; proteção de edição por não-dono. |
 
 ### Estado anterior: s139 — Quadros v4: bugs corrigidos + templates + pan
@@ -621,17 +622,22 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 117 (2026-06-23)
+## HANDOFF ATUAL — SESSÃO 118 (2026-06-25)
 
-### Estado atual: Feat — Dashboard: profundidade real nas 5 abas — Deploy @1035
+### Estado atual: Feat — Quadros v5: conector inteligente, figuras, templates, dados do sistema — Deploy @1072
 
-### O que foi feito nesta sessão (s117)
+### O que foi feito nesta sessão (s141)
 | Deploy | O que foi implementado |
 |---|---|
-| @1035 | Helpers `_renderTendencia`/`_renderBreakdown` em `DashboardUI`. Operacional ganhou tendência de reservas + top espaços/setores via `MetricsEngine.obterDashboard()` (código morto reativado). Estratégico ganhou sparkline de clima (6 rodadas) + ações por setor. Financeiro ganhou breakdown por fonte de recurso + tendência de contratos firmados. Estoque ganhou breakdown por categoria + tendência de saídas. Alertas ganhou breakdown por setor (banco de horas, férias). Ver detalhe completo em PROGRESS.md s117. |
+| @1072 | **QuadrosUI**: conector com snap a âncoras; 8 novas figuras; estilo de linha; 14 templates em 4 categorias; vincular tarefa/pessoa; widgets de dados do sistema. |
 
 ### Pendente para smoke test
-- Dashboard → cada uma das 5 abas (Operacional/Financeiro/Estratégico/Estoque/Alertas): tendência (sparkline) e breakdown (barras) aparecem abaixo dos cards, sem erro no console.
+- Quadros → novo quadro → testar conector (arrastar entre dois retângulos, verificar snap nos 4 pontos de ancoragem).
+- Templates → verificar Golden Circle, OKR, Business Model Canvas, Retrospectiva, Jornada do Colaborador.
+- Toolbar → verificar Marcador e Pincel (opacidade e largura variável).
+- Estilo de linha → criar linha/seta e alternar sólida/tracejada/pontilhada.
+- Vincular Tarefa → botão tarefa → buscar e inserir card de tarefa.
+- Dados do Sistema → escolher Ação e inserir widget.
 
 ---
 

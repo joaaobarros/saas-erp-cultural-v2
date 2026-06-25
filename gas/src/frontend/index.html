@@ -2132,6 +2132,44 @@ select.form-control { cursor: pointer; }
 .analise-comp-tag button { background:none;border:none;cursor:pointer;color:var(--text2);padding:0 0 0 2px;line-height:1;font-size:14px; }
 .analise-vis-picker label { transition:background .15s,border-color .15s; }
 
+/* ── Dashboard Builder ─────────────────────────────────────────────────────── */
+.db-canvas { display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start; }
+.db-widget { background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0;box-sizing:border-box;transition:box-shadow .2s; }
+.db-widget.db-w-full     { width:100%; }
+.db-widget.db-w-twothird { width:calc(66.67% - 6px); }
+.db-widget.db-w-half     { width:calc(50% - 6px); }
+.db-widget.db-w-third    { width:calc(33.33% - 8px); }
+.db-widget.db-w-quarter  { width:calc(25% - 9px); }
+@media(max-width:720px) { .db-widget { width:100% !important; } }
+.db-widget-hdr { padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0; }
+.db-widget-ico { color:var(--primary);font-size:16px;flex-shrink:0; }
+.db-widget-ttl { font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text); }
+.db-widget-body { padding:12px;flex:1; }
+.db-kpi-val { font-size:34px;font-weight:800;color:var(--primary);line-height:1.1;margin-bottom:4px; }
+.db-kpi-lbl { font-size:12px;color:var(--text2); }
+.db-sep-body { padding:14px 12px;border-left:4px solid var(--primary); }
+.db-sep-title { font-size:16px;font-weight:700;margin-bottom:4px;color:var(--text); }
+.db-sep-sub { font-size:12px;color:var(--text2); }
+.db-table { width:100%;border-collapse:collapse;font-size:12px; }
+.db-table th { background:var(--surface2);padding:5px 8px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border); }
+.db-table td { padding:5px 8px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.db-table tr:last-child td { border-bottom:none; }
+.db-galeria-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px; }
+.db-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s; }
+.db-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.db-card-preview { padding:12px;border-bottom:1px solid var(--border);background:var(--surface2);min-height:90px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center; }
+.db-card-info { padding:10px 12px;flex:1; }
+.db-card-actions { display:flex;gap:2px;padding:4px 6px;border-top:1px solid var(--border);background:var(--surface2); }
+.db-tab-btn { padding:8px 16px;background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);display:inline-flex;align-items:center;gap:5px;transition:color .15s,border-color .15s; }
+.db-tab-btn.ativo,.db-tab-btn:hover { color:var(--primary);border-bottom-color:var(--primary); }
+.db-tipo-pill { display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;background:var(--surface);transition:all .15s;color:var(--text); }
+.db-tipo-pill:hover,.db-tipo-pill.sel { background:var(--primary);color:#fff;border-color:var(--primary); }
+.db-size-chip { padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;background:var(--surface);transition:all .15s;color:var(--text); }
+.db-size-chip:hover,.db-size-chip.sel { background:var(--primary);color:#fff;border-color:var(--primary); }
+.db-add-menu { display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;min-width:190px;padding:6px; }
+.db-add-menu.aberto { display:block; }
+.db-view-toolbar { display:flex;align-items:center;gap:10px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;flex-wrap:wrap; }
+
   </style>
 </head>
 <body>
@@ -11465,11 +11503,15 @@ GAS.docSharing = {
   revogar:           function(tok,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_doc_revogar(tok); }
 };
 GAS.analise = {
-  listar:        function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_listar(); },
-  salvar:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_salvar(p||{}); },
-  excluir:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_excluir(p||{}); },
-  importarDados: function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_importar_dados(p||{}); },
-  cruzar:        function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_cruzar(p||{}); }
+  listar:            function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_listar(); },
+  salvar:            function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_salvar(p||{}); },
+  excluir:           function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_excluir(p||{}); },
+  importarDados:     function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_importar_dados(p||{}); },
+  cruzar:            function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_cruzar(p||{}); },
+  dashboardListar:   function(cb,err)   { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_dashboard_listar(); },
+  dashboardSalvar:   function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_dashboard_salvar(p||{}); },
+  dashboardExcluir:  function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_dashboard_excluir(p||{}); },
+  widgetDados:       function(p,cb,err) { google.script.run.withSuccessHandler(cb).withFailureHandler(err||GAS._err).ctrl_analise_widget_dados(p||{}); },
 };
 
 // Inicializa navegação por setas em tab bars com overflow (ADM-07, ACO-09)
@@ -36262,9 +36304,15 @@ var QuadrosUI = (function() {
       s.txtW = ctx.measureText(s.txt).width;
       ctx.fillText(s.txt, s.x, s.y);
     } else if (s.t === 'line') {
+      if (s.lineStyle === 'dashed') ctx.setLineDash([12, 6]);
+      else if (s.lineStyle === 'dotted') ctx.setLineDash([3, 5]);
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      ctx.setLineDash([]);
     } else if (s.t === 'arrow') {
+      if (s.lineStyle === 'dashed') ctx.setLineDash([12, 6]);
+      else if (s.lineStyle === 'dotted') ctx.setLineDash([3, 5]);
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      ctx.setLineDash([]);
       var ang = Math.atan2(s.y2 - s.y, s.x2 - s.x), hl = Math.max(12, (s.lw || 2) * 5);
       ctx.beginPath();
       ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2 - hl*Math.cos(ang - Math.PI/6), s.y2 - hl*Math.sin(ang - Math.PI/6));
@@ -36343,6 +36391,115 @@ var QuadrosUI = (function() {
       ctx.fillText((s.name || 'Arquivo').slice(0, 20), s.x + 5, s.y + H - 22);
       ctx.fillStyle = '#94a3b8'; ctx.font = '9px Inter,sans-serif';
       ctx.fillText('duplo clique = baixar', s.x + 5, s.y + H - 9);
+    } else if (s.t === 'connector') {
+      if (s.lineStyle === 'dashed') ctx.setLineDash([12, 6]);
+      else if (s.lineStyle === 'dotted') ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      ctx.setLineDash([]);
+      var cang = Math.atan2(s.y2-s.y, s.x2-s.x), chl = Math.max(12, (s.lw||2)*5);
+      ctx.beginPath();
+      ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2-chl*Math.cos(cang-Math.PI/6), s.y2-chl*Math.sin(cang-Math.PI/6));
+      ctx.moveTo(s.x2, s.y2); ctx.lineTo(s.x2-chl*Math.cos(cang+Math.PI/6), s.y2-chl*Math.sin(cang+Math.PI/6));
+      ctx.stroke();
+      if (s.label) {
+        var clmx = (s.x+s.x2)/2, clmy = (s.y+s.y2)/2;
+        ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'center';
+        var clbW = ctx.measureText(s.label).width;
+        ctx.fillStyle = '#fff'; ctx.fillRect(clmx-clbW/2-3, clmy-10, clbW+6, 14);
+        ctx.fillStyle = s.color||'#1e293b'; ctx.fillText(s.label, clmx, clmy+2); ctx.textAlign = 'left';
+      }
+    } else if (s.t === 'triangle') {
+      var trx = s.x, try2 = s.y, trw = Math.abs(s.w)||120, trh = Math.abs(s.h)||100;
+      ctx.beginPath(); ctx.moveTo(trx+trw/2, try2); ctx.lineTo(trx+trw, try2+trh); ctx.lineTo(trx, try2+trh); ctx.closePath();
+      if (s.fill) { ctx.fillStyle = s.fill; ctx.fill(); } ctx.stroke();
+      if (s.txt) { ctx.fillStyle = s.txtColor||s.color||'#1e293b'; ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(s.txt, trx+trw/2, try2+trh*0.65); ctx.textBaseline='alphabetic'; ctx.textAlign='left'; }
+    } else if (s.t === 'hexagon') {
+      var hcx = s.x+Math.abs(s.w||120)/2, hcy = s.y+Math.abs(s.h||104)/2, hR = Math.min(Math.abs(s.w||120),Math.abs(s.h||104))/2;
+      ctx.beginPath();
+      for (var hhi=0;hhi<6;hhi++){var haA=Math.PI/180*(60*hhi-30);if(hhi===0)ctx.moveTo(hcx+hR*Math.cos(haA),hcy+hR*Math.sin(haA));else ctx.lineTo(hcx+hR*Math.cos(haA),hcy+hR*Math.sin(haA));}
+      ctx.closePath(); if (s.fill){ctx.fillStyle=s.fill;ctx.fill();} ctx.stroke();
+      if (s.txt){ctx.fillStyle=s.txtColor||s.color||'#1e293b';ctx.font='bold 11px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.txt,hcx,hcy);ctx.textBaseline='alphabetic';ctx.textAlign='left';}
+    } else if (s.t === 'pentagon') {
+      var pcx = s.x+Math.abs(s.w||110)/2, pcy = s.y+Math.abs(s.h||105)/2, pR = Math.min(Math.abs(s.w||110),Math.abs(s.h||105))/2;
+      ctx.beginPath();
+      for (var ppi=0;ppi<5;ppi++){var ppA=Math.PI/180*(72*ppi-90);if(ppi===0)ctx.moveTo(pcx+pR*Math.cos(ppA),pcy+pR*Math.sin(ppA));else ctx.lineTo(pcx+pR*Math.cos(ppA),pcy+pR*Math.sin(ppA));}
+      ctx.closePath(); if (s.fill){ctx.fillStyle=s.fill;ctx.fill();} ctx.stroke();
+      if (s.txt){ctx.fillStyle=s.txtColor||s.color||'#1e293b';ctx.font='bold 11px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.txt,pcx,pcy);ctx.textBaseline='alphabetic';ctx.textAlign='left';}
+    } else if (s.t === 'star') {
+      var scx = s.x+Math.abs(s.w||120)/2, scy = s.y+Math.abs(s.h||120)/2;
+      var sRo = Math.min(Math.abs(s.w||120),Math.abs(s.h||120))/2, sRi = sRo*0.4;
+      ctx.beginPath();
+      for (var sti=0;sti<10;sti++){var stA=Math.PI/180*(36*sti-90);var stRr=sti%2===0?sRo:sRi;if(sti===0)ctx.moveTo(scx+stRr*Math.cos(stA),scy+stRr*Math.sin(stA));else ctx.lineTo(scx+stRr*Math.cos(stA),scy+stRr*Math.sin(stA));}
+      ctx.closePath(); if (s.fill){ctx.fillStyle=s.fill;ctx.fill();} ctx.stroke();
+    } else if (s.t === 'callout') {
+      var ccw = Math.abs(s.w)||200, cch = Math.abs(s.h)||120, ccr = 10, ctH = Math.min(28, cch*0.22);
+      ctx.fillStyle = s.fill||'#fff'; _roundRect(ctx, s.x, s.y, ccw, cch-ctH, ccr); ctx.fill();
+      ctx.strokeStyle = s.color||'#1e293b'; ctx.lineWidth = s.lw||2;
+      _roundRect(ctx, s.x, s.y, ccw, cch-ctH, ccr); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s.x+ccw*0.25, s.y+cch-ctH); ctx.lineTo(s.x+ccw*0.18, s.y+cch); ctx.lineTo(s.x+ccw*0.35, s.y+cch-ctH); ctx.closePath();
+      ctx.fillStyle=s.fill||'#fff'; ctx.fill(); ctx.stroke();
+      if (s.txt){ctx.fillStyle=s.txtColor||'#1e293b';ctx.font='12px Inter,sans-serif';ctx.textAlign='left';_wrapText(ctx,s.txt,s.x+12,s.y+20,ccw-24,16);}
+    } else if (s.t === 'marker') {
+      if (s.pts && s.pts.length > 1) {
+        ctx.save(); ctx.globalAlpha=0.45; ctx.lineWidth=(s.lw||2)*6; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=s.color||'#fbbf24';
+        ctx.beginPath(); ctx.moveTo(s.pts[0].x, s.pts[0].y);
+        for (var mki=1;mki<s.pts.length;mki++) ctx.lineTo(s.pts[mki].x, s.pts[mki].y);
+        ctx.stroke(); ctx.restore();
+      }
+    } else if (s.t === 'brush') {
+      if (s.pts && s.pts.length > 1) {
+        ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+        for (var bri=1;bri<s.pts.length;bri++){
+          var brP=s.pts[bri-1],brC=s.pts[bri],brD=Math.hypot(brC.x-brP.x,brC.y-brP.y);
+          ctx.lineWidth=Math.max(1,(s.lw||2)*4-brD*0.04); ctx.strokeStyle=s.color||'#1e293b';
+          ctx.beginPath(); ctx.moveTo(brP.x,brP.y); ctx.lineTo(brC.x,brC.y); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    } else if (s.t === 'task-card') {
+      var tcW=Math.abs(s.w)||220, tcH=Math.abs(s.h)||90;
+      var tcC={pendente:'#f59e0b',andamento:'#3b82f6',concluido:'#22c55e',cancelada:'#ef4444'}[s.status]||'#6366f1';
+      ctx.shadowColor='rgba(0,0,0,0.10)'; ctx.shadowBlur=6; ctx.shadowOffsetY=2;
+      ctx.fillStyle='#fff'; _roundRect(ctx,s.x,s.y,tcW,tcH,8); ctx.fill();
+      ctx.shadowColor='transparent';
+      ctx.strokeStyle=tcC; ctx.lineWidth=2; _roundRect(ctx,s.x,s.y,tcW,tcH,8); ctx.stroke();
+      ctx.fillStyle=tcC; ctx.fillRect(s.x,s.y+8,4,tcH-16);
+      ctx.fillStyle='#1e293b'; ctx.font='bold 12px Inter,sans-serif'; ctx.textAlign='left';
+      ctx.fillText((s.titulo||'Tarefa').slice(0,26), s.x+14, s.y+20);
+      if (s.responsavel){ctx.fillStyle='#64748b';ctx.font='10px Inter,sans-serif';ctx.fillText((s.responsavel||'').slice(0,24), s.x+14, s.y+36);}
+      if (s.status){
+        var stLbl={pendente:'Pendente',andamento:'Em andamento',concluido:'Concluído',cancelada:'Cancelado'}[s.status]||s.status;
+        ctx.fillStyle=tcC+'33'; _roundRect(ctx,s.x+14,s.y+tcH-26,tcW-28,17,4); ctx.fill();
+        ctx.fillStyle=tcC; ctx.font='bold 9px Inter,sans-serif'; ctx.textAlign='center';
+        ctx.fillText(stLbl.toUpperCase(), s.x+14+(tcW-28)/2, s.y+tcH-13); ctx.textAlign='left';
+      }
+      ctx.fillStyle='#94a3b8'; ctx.font='8px Inter,sans-serif'; ctx.textAlign='right';
+      ctx.fillText('tarefa', s.x+tcW-6, s.y+11); ctx.textAlign='left';
+    } else if (s.t === 'person-card') {
+      var ppcW=Math.abs(s.w)||180, ppcH=Math.abs(s.h)||76;
+      ctx.shadowColor='rgba(0,0,0,0.08)'; ctx.shadowBlur=5; ctx.shadowOffsetY=2;
+      ctx.fillStyle='#f8fafc'; _roundRect(ctx,s.x,s.y,ppcW,ppcH,8); ctx.fill();
+      ctx.shadowColor='transparent';
+      ctx.strokeStyle='#6366f1'; ctx.lineWidth=1.5; _roundRect(ctx,s.x,s.y,ppcW,ppcH,8); ctx.stroke();
+      ctx.fillStyle='#6366f1'; ctx.beginPath(); ctx.arc(s.x+28,s.y+ppcH/2,18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 15px Inter,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(((s.nome||'?')[0]).toUpperCase(), s.x+28, s.y+ppcH/2+5); ctx.textAlign='left';
+      ctx.fillStyle='#1e293b'; ctx.font='bold 12px Inter,sans-serif';
+      ctx.fillText((s.nome||'Pessoa').slice(0,18), s.x+54, s.y+ppcH/2-4);
+      if (s.cargo){ctx.fillStyle='#64748b';ctx.font='10px Inter,sans-serif';ctx.fillText(s.cargo.slice(0,20), s.x+54, s.y+ppcH/2+12);}
+      if (s.modulo){ctx.fillStyle='#94a3b8';ctx.font='8px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(s.modulo, s.x+ppcW-6, s.y+ppcH-6);ctx.textAlign='left';}
+    } else if (s.t === 'data-widget') {
+      var dwW=Math.abs(s.w)||240, dwH=Math.abs(s.h)||110;
+      ctx.fillStyle='#f1f5f9'; _roundRect(ctx,s.x,s.y,dwW,dwH,10); ctx.fill();
+      ctx.strokeStyle='#6366f1'; ctx.lineWidth=1.5; ctx.setLineDash([6,3]);
+      _roundRect(ctx,s.x,s.y,dwW,dwH,10); ctx.stroke(); ctx.setLineDash([]);
+      var dwIco={quadro:'⬡',acao:'🎭',reuniao:'📋',tarefas:'✅',indicador:'📊',equipe:'👥'}[s.subtipo]||'⬡';
+      ctx.fillStyle='#6366f1'; ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(dwIco+' '+(s.titulo||'Dado do Sistema').slice(0,26), s.x+12, s.y+22);
+      if (s.subtipo){ctx.fillStyle='#94a3b8';ctx.font='9px Inter,sans-serif';ctx.fillText(s.subtipo.toUpperCase(), s.x+12, s.y+36);}
+      if (s.resumo){ctx.fillStyle='#475569';ctx.font='11px Inter,sans-serif';_wrapText(ctx,s.resumo,s.x+12,s.y+52,dwW-24,15);}
+      ctx.fillStyle='#94a3b8'; ctx.font='9px Inter,sans-serif'; ctx.textAlign='right';
+      ctx.fillText('sistema', s.x+dwW-8, s.y+dwH-8); ctx.textAlign='left';
     }
     ctx.restore();
   }
@@ -36557,14 +36714,15 @@ var QuadrosUI = (function() {
     // ── Estado ──────────────────────────────────────────────────────────────
     _cvState = {
       shapes:   (snapshot && snapshot.shapes) ? JSON.parse(JSON.stringify(snapshot.shapes)) : [],
-      tool: 'select', color: '#1e293b', lineWidth: 2,
+      tool: 'select', color: '#1e293b', lineWidth: 2, lineStyle: 'solid',
       panX: 0, panY: 0, zoom: 1,
       drawing: false, cur: null, startWx: 0, startWy: 0,
       selIdx: -1, dragMode: null, dragBase: null, dragMouse: null,
       isPanning: false, panStart: null, spaceDown: false,
       isErasing: false,
       imgCache: {},
-      lastDocClick: 0, lastDocClickIdx: -1
+      lastDocClick: 0, lastDocClickIdx: -1,
+      connectorStart: null, connectorCurX: 0, connectorCurY: 0
     };
 
     // ── Inputs de arquivo (ocultos) ───────────────────────────────────────────
@@ -36602,25 +36760,39 @@ var QuadrosUI = (function() {
     }
 
     var TOOLS = [
-      {id:'select', ico:'near_me',        lbl:'Selecionar (V)'},
-      {id:'pencil', ico:'draw',           lbl:'Lápis (P)'},
+      {id:'select',    ico:'near_me',          lbl:'Selecionar (V)'},
       null,
-      {id:'line',   ico:'remove',         lbl:'Linha'},
-      {id:'arrow',  ico:'trending_flat',  lbl:'Seta'},
-      {id:'rect',   ico:'crop_square',    lbl:'Retângulo'},
-      {id:'circle', ico:'circle',         lbl:'Círculo'},
+      {id:'pencil',    ico:'draw',             lbl:'Lápis livre'},
+      {id:'marker',    ico:'edit',             lbl:'Marcador (transparente)'},
+      {id:'brush',     ico:'brush',            lbl:'Pincel (variável)'},
       null,
-      {id:'text',   ico:'text_fields',    lbl:'Texto'},
-      {id:'sticky', ico:'sticky_note_2',  lbl:'Sticky Note'},
-      {id:'frame',  ico:'crop_free',      lbl:'Frame / Slide'},
-      {id:'table',  ico:'table_chart',    lbl:'Tabela'},
+      {id:'connector', ico:'account_tree',     lbl:'Conector inteligente (liga pontos)'},
+      {id:'line',      ico:'remove',           lbl:'Linha'},
+      {id:'arrow',     ico:'trending_flat',    lbl:'Seta'},
       null,
-      {id:'eraser', ico:'ink_eraser',     lbl:'Borracha'},
+      {id:'rect',      ico:'crop_square',      lbl:'Retângulo'},
+      {id:'circle',    ico:'circle',           lbl:'Círculo'},
+      {id:'diamond',   ico:'diamond',          lbl:'Losango'},
+      {id:'triangle',  ico:'change_history',   lbl:'Triângulo'},
+      {id:'hexagon',   ico:'hexagon',          lbl:'Hexágono'},
+      {id:'pentagon',  ico:'pentagon',         lbl:'Pentágono'},
+      {id:'star',      ico:'star',             lbl:'Estrela'},
+      {id:'callout',   ico:'chat_bubble',      lbl:'Balão de fala'},
       null,
-      {id:'_img',   ico:'image',          lbl:'Inserir Imagem'},
-      {id:'_doc',   ico:'attach_file',    lbl:'Inserir Arquivo'},
+      {id:'text',      ico:'text_fields',      lbl:'Texto'},
+      {id:'sticky',    ico:'sticky_note_2',    lbl:'Sticky Note'},
+      {id:'frame',     ico:'crop_free',        lbl:'Frame / Slide'},
+      {id:'table',     ico:'table_chart',      lbl:'Tabela'},
       null,
-      {id:'_tpl',   ico:'widgets',        lbl:'Templates (mindmap, kanban, SWOT…)'}
+      {id:'eraser',    ico:'ink_eraser',       lbl:'Borracha'},
+      null,
+      {id:'_img',      ico:'image',            lbl:'Inserir Imagem'},
+      {id:'_doc',      ico:'attach_file',      lbl:'Inserir Arquivo'},
+      {id:'_task',     ico:'task_alt',         lbl:'Vincular Tarefa do sistema'},
+      {id:'_person',   ico:'person_pin',       lbl:'Vincular Pessoa / Membro'},
+      {id:'_sistema',  ico:'database',         lbl:'Inserir dado do sistema'},
+      null,
+      {id:'_tpl',      ico:'widgets',          lbl:'Templates (OKR, BMC, Kanban, SWOT…)'}
     ];
 
     TOOLS.forEach(function(t) {
@@ -36635,6 +36807,12 @@ var QuadrosUI = (function() {
         b.onclick = function() { inputDoc.click(); };
       } else if (t.id === '_tpl') {
         b.onclick = function() { _abrirTemplates(); };
+      } else if (t.id === '_task') {
+        b.onclick = function() { _inserirTarefa(); };
+      } else if (t.id === '_person') {
+        b.onclick = function() { _inserirPessoa(); };
+      } else if (t.id === '_sistema') {
+        b.onclick = function() { _abrirSistema(); };
       } else {
         b.onclick = (function(tid) { return function() { _setTool(tid); }; })(t.id);
       }
@@ -36643,14 +36821,30 @@ var QuadrosUI = (function() {
 
     // ── Templates de quadro ───────────────────────────────────────────────────
     var TEMPLATES = [
-      { id:'mindmap',    ico:'account_tree',  lbl:'Mapa Mental',      desc:'Ideia central + ramificações' },
-      { id:'brainstorm', ico:'lightbulb',     lbl:'Brainstorm',       desc:'Título + cluster de stickies' },
-      { id:'kanban',     ico:'view_kanban',   lbl:'Kanban',           desc:'A Fazer / Andamento / Concluído' },
-      { id:'swot',       ico:'grid_view',     lbl:'Análise SWOT',     desc:'Forças / Fraquezas / Oport. / Ameaças' },
-      { id:'fluxograma', ico:'schema',        lbl:'Fluxograma',       desc:'Início → Processo → Decisão → Fim' },
-      { id:'designthink',ico:'design_services',lbl:'Design Thinking', desc:'5 etapas: Empatia→Protótipo→Teste' },
-      { id:'cronograma', ico:'calendar_today',lbl:'Cronograma',       desc:'Tabela de atividades e datas' },
-      { id:'5w2h',       ico:'fact_check',    lbl:'5W2H',             desc:'What / Why / Who / When / Where / How / Cost' }
+      { grp:'Ideação & Análise' },
+      { id:'mindmap',    ico:'account_tree',    lbl:'Mapa Mental',          desc:'Ideia central + ramificações' },
+      { id:'brainstorm', ico:'lightbulb',       lbl:'Brainstorm',           desc:'Título + cluster de stickies' },
+      { id:'swot',       ico:'grid_view',       lbl:'Análise SWOT',         desc:'Forças / Fraquezas / Oport. / Ameaças' },
+      { id:'5w2h',       ico:'fact_check',      lbl:'5W2H',                 desc:'What / Why / Who / When / Where / How / Cost' },
+      { id:'golden',     ico:'trip_origin',     lbl:'Golden Circle',        desc:'Por quê → Como → O quê (Simon Sinek)' },
+      { grp:'Gestão & Projetos' },
+      { id:'kanban',     ico:'view_kanban',     lbl:'Kanban',               desc:'A Fazer / Andamento / Concluído' },
+      { id:'fluxograma', ico:'schema',          lbl:'Fluxograma',           desc:'Início → Processo → Decisão → Fim' },
+      { id:'cronograma', ico:'calendar_today',  lbl:'Cronograma',           desc:'Tabela de atividades e datas' },
+      { id:'okr',        ico:'flag',            lbl:'OKR',                  desc:'Objetivo + 3 Resultados-Chave' },
+      { id:'eisenhower', ico:'view_quilt',      lbl:'Matriz de Eisenhower', desc:'Urgente × Importante (4 quadrantes)' },
+      { id:'retrospect', ico:'replay',          lbl:'Retrospectiva',        desc:'Start / Stop / Continue' },
+      { id:'bmc',        ico:'business_center', lbl:'Business Model Canvas',desc:'9 blocos de modelo de negócio' },
+      { grp:'Prototipagem & Design' },
+      { id:'designthink',ico:'design_services', lbl:'Design Thinking',      desc:'5 etapas: Empatia→Protótipo→Teste' },
+      { id:'persona',    ico:'person_search',   lbl:'Persona de Usuário',   desc:'Nome / Bio / Dores / Objetivos' },
+      { id:'userflow',   ico:'route',           lbl:'User Flow',            desc:'Tela A → Ação → Tela B → Resultado' },
+      { id:'wireframe',  ico:'web',             lbl:'Wireframe Web',        desc:'Header / Hero / Conteúdo / Footer' },
+      { grp:'Cultura & Pessoas' },
+      { id:'stakeholders',ico:'hub',            lbl:'Mapa de Stakeholders', desc:'Alta/Baixa influência × interesse' },
+      { id:'jornada',    ico:'timeline',        lbl:'Jornada do Colaborador',desc:'Fases desde contratação até saída' },
+      { id:'funil',      ico:'filter_alt',      lbl:'Funil de Comunicação', desc:'Awareness → Engajamento → Ação' },
+      { id:'organograma',ico:'account_tree',    lbl:'Organograma',          desc:'Hierarquia vertical de cargos' }
     ];
 
     function _gerarTemplate(tipo) {
@@ -36719,6 +36913,126 @@ var QuadrosUI = (function() {
         var cells5 = [cols5, ['O quê?','Por quê?','Quem?','Quando?','Onde?','Como?','Quanto custa?'],['','','','','','',''],['','','','','','','']];
         shapes.push({ t:'table', x:cx-350, y:cy-80, w:700, h:200, rows:4, cols:7, cells:cells5, lw:1, color:'#1e293b' });
         shapes.push({ t:'text', x:cx-25, y:cy-100, txt:'5W2H', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'golden') {
+        shapes.push({ t:'circle', x:cx-160, y:cy-160, w:320, h:320, color:'#94a3b8', fill:'#f1f5f9', lw:1.5 });
+        shapes.push({ t:'circle', x:cx-110, y:cy-110, w:220, h:220, color:'#6366f1', fill:'#ede9fe', lw:1.5 });
+        shapes.push({ t:'circle', x:cx-60,  y:cy-60,  w:120, h:120, color:'#4f46e5', fill:'#6366f1', lw:2 });
+        shapes.push({ t:'text', x:cx-14, y:cy+6,  txt:'POR QUÊ?', color:'#fff',    lw:1, bold:true });
+        shapes.push({ t:'text', x:cx-20, y:cy+72, txt:'COMO?',    color:'#4f46e5', lw:1, bold:true });
+        shapes.push({ t:'text', x:cx-16, y:cy+140,txt:'O QUÊ?',   color:'#374151', lw:1, bold:true });
+        shapes.push({ t:'text', x:cx-80, y:cy-180,txt:'GOLDEN CIRCLE', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'okr') {
+        shapes.push({ t:'frame', x:cx-300, y:cy-160, w:600, h:60, label:'OBJETIVO', frameColor:'#6366f1', frameFill:'#ede9fe', lw:2 });
+        shapes.push({ t:'sticky', x:cx-280, y:cy-145, w:560, h:38, txt:'Descreva o objetivo aqui…', stickyColor:'#ede9fe', lw:1, color:'#4f46e5' });
+        var krCols = [{l:'KR 1',c:'#3b82f6'},{l:'KR 2',c:'#22c55e'},{l:'KR 3',c:'#f97316'}];
+        krCols.forEach(function(k,i) {
+          var kx = cx-300+i*210;
+          shapes.push({ t:'frame', x:kx, y:cy-80, w:200, h:230, label:k.l, frameColor:k.c, frameFill:k.c+'11', lw:2 });
+          shapes.push({ t:'sticky', x:kx+10, y:cy-60, w:180, h:70, txt:'Resultado-chave '+(i+1)+'\nMeta: 0 → 100%', stickyColor:'#fff', lw:1, color:'#1e293b' });
+          shapes.push({ t:'sticky', x:kx+10, y:cy+20, w:180, h:60, txt:'Iniciativa A', stickyColor:k.c+'22', lw:1, color:'#1e293b' });
+          shapes.push({ t:'sticky', x:kx+10, y:cy+90, w:180, h:60, txt:'Iniciativa B', stickyColor:k.c+'22', lw:1, color:'#1e293b' });
+        });
+        shapes.push({ t:'text', x:cx-80, y:cy-185, txt:'OKR', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'eisenhower') {
+        var eq = [{l:'Fazer agora',c:'#fee2e2',cc:'#dc2626',d:'Urgente + Importante'},{l:'Agendar',c:'#dbeafe',cc:'#1d4ed8',d:'Não urgente + Importante'},{l:'Delegar',c:'#fef9c3',cc:'#a16207',d:'Urgente + Não importante'},{l:'Eliminar',c:'#f1f5f9',cc:'#475569',d:'Não urgente + Não importante'}];
+        var ex=[0,220,0,220], ey=[0,0,220,220];
+        eq.forEach(function(q,i){ shapes.push({ t:'frame', x:cx-220+ex[i], y:cy-220+ey[i], w:200, h:200, label:q.l, frameColor:q.cc, frameFill:q.c, lw:2 }); shapes.push({ t:'text', x:cx-212+ex[i], y:cy-200+ey[i], txt:q.d, color:q.cc, lw:1 }); });
+        shapes.push({ t:'text', x:cx-60, y:cy-240, txt:'MATRIZ DE EISENHOWER', color:'#1e293b', lw:2, bold:true });
+        shapes.push({ t:'arrow', x:cx, y:cy-220, x2:cx, y2:cy+220, color:'#94a3b8', lw:1.5 });
+        shapes.push({ t:'arrow', x:cx-220, y:cy, x2:cx+220, y2:cy, color:'#94a3b8', lw:1.5 });
+        shapes.push({ t:'text', x:cx+2, y:cy-228, txt:'Importante', color:'#64748b', lw:1 });
+        shapes.push({ t:'text', x:cx+4, y:cy+230, txt:'Não importante', color:'#64748b', lw:1 });
+        shapes.push({ t:'text', x:cx-218, y:cy-6, txt:'Urgente', color:'#64748b', lw:1 });
+        shapes.push({ t:'text', x:cx+160, y:cy-6, txt:'Não urgente', color:'#64748b', lw:1 });
+      } else if (tipo === 'retrospect') {
+        var rcols = [{l:'Start',c:'#22c55e',cc:'#15803d',d:'O que devemos começar a fazer?'},{l:'Stop',c:'#ef4444',cc:'#991b1b',d:'O que devemos parar de fazer?'},{l:'Continue',c:'#3b82f6',cc:'#1d4ed8',d:'O que está funcionando e devemos manter?'}];
+        rcols.forEach(function(col,i){
+          var rx = cx-340+i*240;
+          shapes.push({ t:'frame', x:rx, y:cy-100, w:220, h:340, label:col.l, frameColor:col.cc, frameFill:col.c+'11', lw:2 });
+          shapes.push({ t:'text', x:rx+8, y:cy-78, txt:col.d, color:col.cc, lw:1 });
+          shapes.push({ t:'sticky', x:rx+12, y:cy-58, w:196, h:70, txt:'Clique para editar…', stickyColor:'#fff', lw:1, color:'#1e293b' });
+        });
+        shapes.push({ t:'text', x:cx-80, y:cy-125, txt:'RETROSPECTIVA', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'bmc') {
+        var bmcBlocks = [
+          {l:'Parceiros',x:-500,y:-150,w:140,h:300,c:'#ede9fe',cc:'#6366f1'},{l:'Atividades',x:-350,y:-150,w:140,h:140,c:'#dbeafe',cc:'#3b82f6'},
+          {l:'Recursos',x:-350,y:0,w:140,h:140,c:'#dcfce7',cc:'#22c55e'},{l:'Proposta de Valor',x:-200,y:-150,w:160,h:300,c:'#fef9c3',cc:'#a16207'},
+          {l:'Relacionamentos',x:-30,y:-150,w:140,h:140,c:'#fecdd3',cc:'#e11d48'},{l:'Canais',x:-30,y:0,w:140,h:140,c:'#fed7aa',cc:'#ea580c'},
+          {l:'Segmentos',x:120,y:-150,w:140,h:300,c:'#e0f2fe',cc:'#0284c7'},{l:'Estrutura de Custos',x:-500,y:160,w:380,h:100,c:'#f1f5f9',cc:'#475569'},
+          {l:'Fontes de Receita',x:-110,y:160,w:370,h:100,c:'#f0fdf4',cc:'#16a34a'}
+        ];
+        bmcBlocks.forEach(function(b){ shapes.push({ t:'frame', x:cx+b.x, y:cy+b.y, w:b.w, h:b.h, label:b.l, frameColor:b.cc, frameFill:b.c, lw:2 }); });
+        shapes.push({ t:'text', x:cx-140, y:cy-175, txt:'BUSINESS MODEL CANVAS', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'persona') {
+        shapes.push({ t:'frame', x:cx-300, y:cy-200, w:600, h:400, label:'Persona de Usuário', frameColor:'#6366f1', frameFill:'#f8fafc', lw:2 });
+        shapes.push({ t:'circle', x:cx-60, y:cy-170, w:120, h:120, color:'#6366f1', fill:'#ede9fe', lw:2 });
+        shapes.push({ t:'text', x:cx-40, y:cy-100, txt:'Avatar', color:'#6366f1', lw:1, bold:true });
+        var pSecs = [{l:'Nome / Cargo', y:-200},{l:'Bio / Contexto', y:-120},{l:'Objetivos', y:-40},{l:'Dores / Frustrações', y:40},{l:'Como usará o sistema', y:120}];
+        pSecs.forEach(function(sec){
+          shapes.push({ t:'text', x:cx+80, y:cy+sec.y, txt:sec.l+':', color:'#6366f1', lw:1, bold:true });
+          shapes.push({ t:'rect', x:cx+80, y:cy+sec.y+8, w:200, h:40, color:'#e2e8f0', fill:'#f8fafc', lw:1 });
+        });
+      } else if (tipo === 'userflow') {
+        var ufSteps = [{l:'Tela Inicial',c:'#22c55e',f:'#dcfce7'},{l:'Login',c:'#3b82f6',f:'#dbeafe'},{l:'Dashboard',c:'#6366f1',f:'#ede9fe'},{l:'Ação Principal',c:'#f97316',f:'#fff7ed'},{l:'Confirmação',c:'#22c55e',f:'#dcfce7'}];
+        ufSteps.forEach(function(s,i){
+          var ux = cx-440+i*220;
+          shapes.push({ t:'rect', x:ux, y:cy-50, w:180, h:100, color:s.c, fill:s.f, lw:2 });
+          shapes.push({ t:'text', x:ux+20, y:cy+8, txt:s.l, color:s.c, lw:1, bold:true });
+          if (i < ufSteps.length-1) shapes.push({ t:'connector', x:ux+180, y:cy, x2:ux+218, y2:cy, color:'#94a3b8', lw:1.5, lineStyle:'solid' });
+        });
+        shapes.push({ t:'text', x:cx-120, y:cy-80, txt:'USER FLOW', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'wireframe') {
+        shapes.push({ t:'rect', x:cx-360, y:cy-220, w:720, h:60, color:'#94a3b8', fill:'#e2e8f0', lw:1 });
+        shapes.push({ t:'text', x:cx-330, y:cy-183, txt:'HEADER — Logo / Navegação', color:'#64748b', lw:1 });
+        shapes.push({ t:'rect', x:cx-360, y:cy-155, w:720, h:120, color:'#6366f1', fill:'#ede9fe', lw:1.5 });
+        shapes.push({ t:'text', x:cx-180, y:cy-87, txt:'HERO — Título principal / CTA', color:'#4f46e5', lw:1, bold:true });
+        shapes.push({ t:'rect', x:cx-360, y:cy-30, w:460, h:180, color:'#cbd5e1', fill:'#f8fafc', lw:1 });
+        shapes.push({ t:'text', x:cx-340, y:cy+10, txt:'Conteúdo principal', color:'#64748b', lw:1 });
+        shapes.push({ t:'rect', x:cx+110, y:cy-30, w:250, h:180, color:'#cbd5e1', fill:'#f1f5f9', lw:1 });
+        shapes.push({ t:'text', x:cx+125, y:cy+10, txt:'Sidebar / Ações', color:'#64748b', lw:1 });
+        shapes.push({ t:'rect', x:cx-360, y:cy+155, w:720, h:50, color:'#94a3b8', fill:'#e2e8f0', lw:1 });
+        shapes.push({ t:'text', x:cx-240, y:cy+185, txt:'FOOTER — Links / Créditos', color:'#64748b', lw:1 });
+        shapes.push({ t:'text', x:cx-90, y:cy-245, txt:'WIREFRAME WEB', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'stakeholders') {
+        var stCircles = [{r:240,c:'#f1f5f9',cc:'#94a3b8',l:'Alta influência / Baixo interesse'},{r:160,c:'#dbeafe',cc:'#3b82f6',l:'Alta influência / Alto interesse'},{r:80,c:'#ede9fe',cc:'#6366f1',l:'Núcleo'}];
+        stCircles.forEach(function(s){ shapes.push({ t:'circle', x:cx-s.r, y:cy-s.r, w:s.r*2, h:s.r*2, color:s.cc, fill:s.c, lw:s.r===80?2:1 }); });
+        shapes.push({ t:'text', x:cx-25, y:cy+5, txt:'Org.', color:'#6366f1', lw:1, bold:true });
+        shapes.push({ t:'text', x:cx-100, y:cy-255, txt:'MAPA DE STAKEHOLDERS', color:'#1e293b', lw:2, bold:true });
+        var stNotes = ['Parceiro A','Parceiro B','Financiador','Comunidade','Governo','Mídia'];
+        var stAngs = [0.2,1.2,2.0,3.4,4.5,5.2];
+        stNotes.forEach(function(n,i){ var sa=stAngs[i],sr=190; shapes.push({ t:'sticky', x:cx+sr*Math.cos(sa)-65, y:cy+sr*Math.sin(sa)-30, w:130, h:60, txt:n, stickyColor:'#f8fafc', lw:1, color:'#1e293b' }); });
+      } else if (tipo === 'jornada') {
+        var jFases = [{l:'Atração',c:'#6366f1'},{l:'Contratação',c:'#3b82f6'},{l:'Integração',c:'#22c55e'},{l:'Desenvolvimento',c:'#f97316'},{l:'Saída',c:'#ef4444'}];
+        jFases.forEach(function(f,i){
+          var jx = cx-500+i*210;
+          shapes.push({ t:'frame', x:jx, y:cy-100, w:200, h:300, label:f.l, frameColor:f.c, frameFill:f.c+'11', lw:2 });
+          shapes.push({ t:'sticky', x:jx+10, y:cy-80, w:180, h:70, txt:'Experiências', stickyColor:'#fff', lw:1, color:'#1e293b' });
+          shapes.push({ t:'sticky', x:jx+10, y:cy+0,  w:180, h:70, txt:'Pontos de dor', stickyColor:'#fecdd3', lw:1, color:'#1e293b' });
+          shapes.push({ t:'sticky', x:jx+10, y:cy+80, w:180, h:70, txt:'Oportunidades', stickyColor:'#dcfce7', lw:1, color:'#1e293b' });
+        });
+        shapes.push({ t:'text', x:cx-140, y:cy-125, txt:'JORNADA DO COLABORADOR', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'funil') {
+        var fLevels = [{l:'Consciência',w:500,c:'#6366f1',f:'#ede9fe'},{l:'Interesse',w:380,c:'#3b82f6',f:'#dbeafe'},{l:'Consideração',w:280,c:'#f97316',f:'#fff7ed'},{l:'Intenção',w:200,c:'#22c55e',f:'#dcfce7'},{l:'Ação',w:140,c:'#ef4444',f:'#fee2e2'}];
+        fLevels.forEach(function(lv,i){
+          var fw = lv.w, foff = (500-fw)/2;
+          shapes.push({ t:'rect', x:cx-fw/2, y:cy-200+i*90, w:fw, h:80, color:lv.c, fill:lv.f, lw:2 });
+          shapes.push({ t:'text', x:cx-fw/2+10, y:cy-153+i*90, txt:lv.l, color:lv.c, lw:1, bold:true });
+        });
+        shapes.push({ t:'text', x:cx-120, y:cy-225, txt:'FUNIL DE COMUNICAÇÃO', color:'#1e293b', lw:2, bold:true });
+      } else if (tipo === 'organograma') {
+        shapes.push({ t:'rect', x:cx-80, y:cy-200, w:160, h:60, color:'#6366f1', fill:'#ede9fe', lw:2 });
+        shapes.push({ t:'text', x:cx-60, y:cy-162, txt:'Direção', color:'#4f46e5', lw:1, bold:true });
+        var ogCols = ['Coord. A','Coord. B','Coord. C'];
+        ogCols.forEach(function(label,i){
+          var ox = cx-240+i*240;
+          shapes.push({ t:'connector', x:cx, y:cy-140, x2:ox+60, y2:cy-80, color:'#94a3b8', lw:1, lineStyle:'solid' });
+          shapes.push({ t:'rect', x:ox, y:cy-80, w:160, h:55, color:'#3b82f6', fill:'#dbeafe', lw:2 });
+          shapes.push({ t:'text', x:ox+10, y:cy-45, txt:label, color:'#1d4ed8', lw:1, bold:true });
+          shapes.push({ t:'connector', x:ox+80, y:cy-25, x2:ox+80, y2:cy+30, color:'#94a3b8', lw:1, lineStyle:'solid' });
+          shapes.push({ t:'rect', x:ox, y:cy+30, w:160, h:50, color:'#22c55e', fill:'#dcfce7', lw:1.5 });
+          shapes.push({ t:'text', x:ox+10, y:cy+62, txt:'Equipe', color:'#15803d', lw:1 });
+        });
+        shapes.push({ t:'text', x:cx-60, y:cy-225, txt:'ORGANOGRAMA', color:'#1e293b', lw:2, bold:true });
       }
       _cvState.shapes = _cvState.shapes.concat(shapes);
       _cvState.selIdx = -1;
@@ -36733,6 +37047,10 @@ var QuadrosUI = (function() {
       panel.style.cssText = 'position:absolute;left:68px;top:50%;transform:translateY(-50%);z-index:200;background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.07);padding:12px;width:260px;max-height:80vh;overflow-y:auto;';
       var html = '<div style="font-size:11px;font-weight:700;color:var(--muted,#64748b);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding:0 4px;">Templates</div>';
       TEMPLATES.forEach(function(t) {
+        if (t.grp) {
+          html += '<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin:10px 4px 4px;">' + t.grp + '</div>';
+          return;
+        }
         html += '<button data-bg-skip="1" style="display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;padding:9px 8px;border:none;background:transparent;border-radius:8px;cursor:pointer;transition:background .12s;" '
           + 'onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'transparent\'" '
           + 'onclick="QuadrosUI._inserirTemplate(\'' + t.id + '\')">'
@@ -36813,6 +37131,34 @@ var QuadrosUI = (function() {
       });
     }
     _updWidthBtns(2);
+
+    // ── Seletor de estilo de linha (tracejado/pontilhado) ─────────────────────
+    var cs3 = document.createElement('div'); cs3.style.cssText = 'width:1px;height:16px;background:rgba(0,0,0,.1);margin:0 4px;flex-shrink:0;'; colorBar.appendChild(cs3);
+    var LINE_STYLES = [
+      {v:'solid',  svg:'<line x1="2" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', lbl:'Sólida'},
+      {v:'dashed', svg:'<line x1="2" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>', lbl:'Tracejada'},
+      {v:'dotted', svg:'<line x1="2" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="2" stroke-dasharray="2,5" stroke-linecap="round"/>', lbl:'Pontilhada'}
+    ];
+    LINE_STYLES.forEach(function(ls) {
+      var lb = document.createElement('button');
+      lb.id = 'qdro-ls-' + ls.v; lb.setAttribute('data-bg-skip','1'); lb.title = ls.lbl;
+      lb.style.cssText = 'width:36px;height:28px;border:1px solid rgba(0,0,0,.1);border-radius:6px;cursor:pointer;background:' + (ls.v==='solid'?'var(--color-primary)':'transparent') + ';color:' + (ls.v==='solid'?'#fff':'#4b5563') + ';display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;flex-shrink:0;';
+      lb.innerHTML = '<svg viewBox="0 0 30 10" width="28" height="10">' + ls.svg + '</svg>';
+      lb.onclick = (function(lsv) { return function() {
+        _cvState.lineStyle = lsv;
+        LINE_STYLES.forEach(function(x) {
+          var b2 = document.getElementById('qdro-ls-'+x.v); if (!b2) return;
+          var sel = x.v === lsv;
+          b2.style.background = sel ? 'var(--color-primary)' : 'transparent';
+          b2.style.color = sel ? '#fff' : '#4b5563';
+          b2.style.borderColor = sel ? 'var(--color-primary)' : 'rgba(0,0,0,.1)';
+        });
+        var inp = document.getElementById('qdro-line-style'); if (inp) inp.value = lsv;
+      }; })(ls.v);
+      colorBar.appendChild(lb);
+    });
+    var inpLS = document.createElement('input'); inpLS.type = 'hidden'; inpLS.id = 'qdro-line-style'; inpLS.value = 'solid';
+    colorBar.appendChild(inpLS);
 
     // ── Controles de zoom (canto inferior direito, flutuante) ─────────────────
     var zoomCtrl = document.createElement('div');
@@ -36926,6 +37272,23 @@ var QuadrosUI = (function() {
         if (i === _cvState.selIdx) _drawSel(ctx, s);
       });
       if (_cvState.cur) _drawShape(ctx, _cvState.cur, _cvState.imgCache, _redraw);
+      // Connector tool: show anchor points on all shapes + draft line
+      if (_cvState.tool === 'connector') {
+        _cvState.shapes.forEach(function(s) {
+          if (s.t === 'connector') return;
+          var bb = _bbox(s);
+          var anchors = [{x:bb.x+bb.w/2,y:bb.y},{x:bb.x+bb.w/2,y:bb.y+bb.h},{x:bb.x,y:bb.y+bb.h/2},{x:bb.x+bb.w,y:bb.y+bb.h/2}];
+          anchors.forEach(function(a) {
+            ctx.save(); ctx.fillStyle='#6366f1'; ctx.strokeStyle='#fff'; ctx.lineWidth=1.5/_cvState.zoom;
+            ctx.beginPath(); ctx.arc(a.x, a.y, 5/_cvState.zoom, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+          });
+        });
+        if (_cvState.connectorStart) {
+          ctx.save(); ctx.strokeStyle='#6366f1'; ctx.lineWidth=1.5/_cvState.zoom; ctx.setLineDash([6/_cvState.zoom,3/_cvState.zoom]);
+          ctx.beginPath(); ctx.moveTo(_cvState.connectorStart.x, _cvState.connectorStart.y); ctx.lineTo(_cvState.connectorCurX, _cvState.connectorCurY); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        }
+      }
       ctx.restore();
     }
 
@@ -36990,7 +37353,10 @@ var QuadrosUI = (function() {
 
     function _updCursor() {
       if (_cvState.spaceDown || _cvState.isPanning) { cv.style.cursor = _cvState.isPanning ? 'grabbing' : 'grab'; return; }
-      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair',
+      var C = { select:'default', pencil:'crosshair', marker:'crosshair', brush:'crosshair',
+                line:'crosshair', arrow:'crosshair', connector:'cell',
+                rect:'crosshair', circle:'crosshair', diamond:'crosshair', triangle:'crosshair',
+                hexagon:'crosshair', pentagon:'crosshair', star:'crosshair', callout:'crosshair',
                 text:'text', sticky:'copy', frame:'crosshair', table:'crosshair', eraser:'none' };
       cv.style.cursor = C[_cvState.tool] !== undefined ? C[_cvState.tool] : 'default';
     }
@@ -37099,6 +37465,11 @@ var QuadrosUI = (function() {
               }
               if (sh.t === 'sticky') { _editarSticky(sh); return; }
               if (sh.t === 'frame')  { _editarFrameLabel(sh); return; }
+              if (sh.t === 'connector') {
+                _modalInput({ titulo:'Etiqueta do Conector', label:'Texto (opcional)', obrigatorio:false, valorPadrao: sh.label||'' }, function(lbl) {
+                  if (lbl !== null) { sh.label = lbl; _redraw(); }
+                }); return;
+              }
               if (sh.t === 'text')   {
                 _modalInput({ titulo:'Editar Texto', label:'Texto', obrigatorio:true, valorPadrao: sh.txt }, function(txt) {
                   if (txt !== null) { sh.txt = txt; _redraw(); }
@@ -37130,9 +37501,19 @@ var QuadrosUI = (function() {
           _redraw();
         }); return;
       }
+      // Connector: snap start to nearest anchor
+      if (_cvState.tool === 'connector') {
+        var csn = _findNearestAnchor(p.x, p.y);
+        _cvState.connectorStart = { x: csn ? csn.x : p.x, y: csn ? csn.y : p.y };
+        _cvState.connectorCurX = _cvState.connectorStart.x; _cvState.connectorCurY = _cvState.connectorStart.y;
+        return;
+      }
       _cvState.drawing = true; _cvState.startWx = p.x; _cvState.startWy = p.y;
+      var ls = _cvState.lineStyle || 'solid';
       if (_cvState.tool === 'pencil') _cvState.cur = { t:'pencil', color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
-      else if (_cvState.tool === 'line' || _cvState.tool === 'arrow') _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, x2:p.x, y2:p.y };
+      else if (_cvState.tool === 'marker') _cvState.cur = { t:'marker', color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
+      else if (_cvState.tool === 'brush')  _cvState.cur = { t:'brush',  color:_cvState.color, lw:_cvState.lineWidth, pts:[{ x:p.x, y:p.y }] };
+      else if (_cvState.tool === 'line' || _cvState.tool === 'arrow') _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, lineStyle:ls, x:p.x, y:p.y, x2:p.x, y2:p.y };
       else _cvState.cur = { t:_cvState.tool, color:_cvState.color, lw:_cvState.lineWidth, x:p.x, y:p.y, w:0, h:0 };
     }
 
@@ -37145,6 +37526,12 @@ var QuadrosUI = (function() {
       }
       if (_cvState.isErasing) { e.preventDefault(); _eraserSx = p.sx; _eraserSy = p.sy; _eraseAt(p.x, p.y); return; }
       if (_cvState.tool === 'eraser' && !_cvState.isErasing) { _eraserSx = p.sx; _eraserSy = p.sy; _redraw(); _drawEraserPreview(); return; }
+      // Connector draft
+      if (_cvState.tool === 'connector' && _cvState.connectorStart) {
+        var csnap = _findNearestAnchor(p.x, p.y);
+        _cvState.connectorCurX = csnap ? csnap.x : p.x; _cvState.connectorCurY = csnap ? csnap.y : p.y;
+        _redraw(); return;
+      }
       if (_cvState.tool === 'select' && _cvState.dragMode && _cvState.selIdx >= 0) {
         e.preventDefault();
         var s = _cvState.shapes[_cvState.selIdx];
@@ -37155,21 +37542,34 @@ var QuadrosUI = (function() {
       }
       if (!_cvState.drawing || !_cvState.cur) return;
       e.preventDefault();
-      if (_cvState.tool === 'pencil') _cvState.cur.pts.push({ x:p.x, y:p.y });
+      if (_cvState.tool === 'pencil' || _cvState.tool === 'marker' || _cvState.tool === 'brush') _cvState.cur.pts.push({ x:p.x, y:p.y });
       else if (_cvState.tool === 'line' || _cvState.tool === 'arrow') { _cvState.cur.x2 = p.x; _cvState.cur.y2 = p.y; }
       else { _cvState.cur.w = p.x - _cvState.startWx; _cvState.cur.h = p.y - _cvState.startWy; }
       _redraw();
     }
 
-    function _onUp() {
+    function _onUp(e) {
       if (_cvState.isPanning) { _cvState.isPanning = false; _updCursor(); }
       if (_cvState.isErasing) { _cvState.isErasing = false; }
       if (_cvState.dragMode)  { _cvState.dragMode = null; }
+      // Connector: finalize
+      if (_cvState.tool === 'connector' && _cvState.connectorStart) {
+        var p2 = e ? _wpos(e) : { x:_cvState.connectorCurX, y:_cvState.connectorCurY };
+        var esnap = _findNearestAnchor(p2.x, p2.y);
+        var ex2 = esnap ? esnap.x : _cvState.connectorCurX, ey2 = esnap ? esnap.y : _cvState.connectorCurY;
+        var dist = Math.hypot(ex2 - _cvState.connectorStart.x, ey2 - _cvState.connectorStart.y);
+        if (dist > 8) {
+          _cvState.shapes.push({ t:'connector', id:'cn_'+Date.now(), x:_cvState.connectorStart.x, y:_cvState.connectorStart.y, x2:ex2, y2:ey2, color:_cvState.color, lw:_cvState.lineWidth, lineStyle:_cvState.lineStyle||'solid' });
+        }
+        _cvState.connectorStart = null; _redraw(); return;
+      }
       if (_cvState.drawing && _cvState.cur) {
         var sizeOk = Math.abs(_cvState.cur.w) > 3 || Math.abs(_cvState.cur.h) > 3;
-        var ok = (_cvState.tool === 'pencil' && _cvState.cur.pts && _cvState.cur.pts.length > 1)
+        var isPen = _cvState.tool === 'pencil' || _cvState.tool === 'marker' || _cvState.tool === 'brush';
+        var ok = (isPen && _cvState.cur.pts && _cvState.cur.pts.length > 1)
           || (_cvState.tool === 'line' || _cvState.tool === 'arrow')
-          || ((_cvState.tool === 'rect' || _cvState.tool === 'circle') && sizeOk)
+          || ((_cvState.tool === 'rect' || _cvState.tool === 'circle' || _cvState.tool === 'diamond') && sizeOk)
+          || ((_cvState.tool === 'triangle' || _cvState.tool === 'hexagon' || _cvState.tool === 'pentagon' || _cvState.tool === 'star' || _cvState.tool === 'callout') && sizeOk)
           || (_cvState.tool === 'frame' && sizeOk);
         if (ok) {
           if (_cvState.tool === 'frame') {
@@ -37278,6 +37678,188 @@ var QuadrosUI = (function() {
       });
     }
 
+    // ── Anchor snap helper ────────────────────────────────────────────────────
+    function _findNearestAnchor(wx, wy) {
+      var best = null, bestD = 30 / _cvState.zoom;
+      _cvState.shapes.forEach(function(s) {
+        if (s.t === 'connector') return;
+        var bb = _bbox(s);
+        var pts = [{x:bb.x+bb.w/2,y:bb.y},{x:bb.x+bb.w/2,y:bb.y+bb.h},{x:bb.x,y:bb.y+bb.h/2},{x:bb.x+bb.w,y:bb.y+bb.h/2}];
+        pts.forEach(function(a) { var d = Math.hypot(a.x-wx, a.y-wy); if (d < bestD) { bestD = d; best = {x:a.x, y:a.y}; } });
+      });
+      return best;
+    }
+
+    // ── Vincular Tarefa ───────────────────────────────────────────────────────
+    function _inserirTarefa() {
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:420px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+        + '<h3 style="margin:0 0 14px;font-size:15px;">Vincular Tarefa</h3>'
+        + '<input id="qdro-task-search" class="form-control" placeholder="Buscar tarefa…" style="margin-bottom:10px;">'
+        + '<div id="qdro-task-list" style="overflow-y:auto;flex:1;max-height:300px;display:flex;flex-direction:column;gap:6px;"><p class="muted-text">Carregando…</p></div>'
+        + '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">'
+        + '<button id="qdro-task-cancel" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar</button></div></div>';
+      document.body.appendChild(box);
+      document.getElementById('qdro-task-cancel').onclick = function() { document.body.removeChild(box); };
+      var _allTarefas = [];
+      function _renderTasks(list) {
+        var el = document.getElementById('qdro-task-list'); if (!el) return;
+        if (!list.length) { el.innerHTML = '<p class="muted-text" style="font-size:12px;">Nenhuma tarefa encontrada.</p>'; return; }
+        el.innerHTML = list.slice(0,40).map(function(t) {
+          var tid = JSON.stringify(t.id).replace(/"/g,"'");
+          var stC = {pendente:'#f59e0b',andamento:'#3b82f6',concluido:'#22c55e',cancelada:'#ef4444'}[t.status||'pendente']||'#94a3b8';
+          return '<div data-bg-skip="1" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;border-left:4px solid '+stC+';" '
+            + 'onclick="(function(){var d=document.body;var b=d.querySelector(\'[data-qdro-task-pick]\');if(b)b.click();})()"'
+            + '><div style="font-weight:600;font-size:13px;">' + escaparHtml(t.titulo||t.id) + '</div>'
+            + '<div style="font-size:11px;color:#64748b;">' + escaparHtml(t.responsavel||'Sem responsável') + ' · ' + escaparHtml(t.status||'pendente') + '</div>'
+            + '<button data-qdro-task-pick="1" data-bg-skip="1" style="display:none;" onclick="QuadrosUI._pickTask('+tid+')"></button>'
+            + '</div>';
+        }).join('');
+        el.querySelectorAll('[style*="cursor:pointer"]').forEach(function(row, idx) {
+          row.onclick = (function(tk) { return function() {
+            document.body.removeChild(box);
+            var cx2 = (cv.width/2 - _cvState.panX)/_cvState.zoom, cy2 = (cv.height/2 - _cvState.panY)/_cvState.zoom;
+            _cvState.shapes.push({ t:'task-card', id:'tc_'+Date.now(), titulo:tk.titulo||tk.id, responsavel:tk.responsavel||'', status:tk.status||'pendente', x:cx2-110, y:cy2-45, w:220, h:90 });
+            _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+          }; })(list[idx]);
+        });
+      }
+      GAS.tarefas.listar({}, function(resp) {
+        _allTarefas = (resp && resp.ok) ? (resp.data||[]) : [];
+        _renderTasks(_allTarefas);
+      }, function() { _renderTasks([]); });
+      document.getElementById('qdro-task-search').oninput = function() {
+        var q = this.value.toLowerCase();
+        _renderTasks(q ? _allTarefas.filter(function(t){ return (t.titulo||'').toLowerCase().indexOf(q) >= 0 || (t.responsavel||'').toLowerCase().indexOf(q) >= 0; }) : _allTarefas);
+      };
+    }
+
+    // ── Vincular Pessoa ───────────────────────────────────────────────────────
+    function _inserirPessoa() {
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+      box.innerHTML = '<div style="background:var(--surface);border-radius:12px;padding:24px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+        + '<h3 style="margin:0 0 14px;font-size:15px;">Vincular Pessoa</h3>'
+        + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">'
+        + '<input id="qdro-person-nome" class="form-control" placeholder="Nome *">'
+        + '<input id="qdro-person-cargo" class="form-control" placeholder="Cargo / Função">'
+        + '<input id="qdro-person-modulo" class="form-control" placeholder="Módulo / Setor">'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+        + '<button id="qdro-person-cancel" class="btn btn-secondary btn-sm" data-bg-skip="1">Cancelar</button>'
+        + '<button id="qdro-person-ok" class="btn btn-primary btn-sm" data-bg-skip="1">Inserir</button>'
+        + '</div></div>';
+      document.body.appendChild(box);
+      document.getElementById('qdro-person-cancel').onclick = function() { document.body.removeChild(box); };
+      document.getElementById('qdro-person-ok').onclick = function() {
+        var nome = (document.getElementById('qdro-person-nome')||{}).value||'';
+        if (!nome.trim()) { Toast.aviso('Nome obrigatório.'); return; }
+        document.body.removeChild(box);
+        var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+        _cvState.shapes.push({ t:'person-card', id:'pc_'+Date.now(), nome:nome.trim(), cargo:(document.getElementById('qdro-person-cargo')||{}).value||'', modulo:(document.getElementById('qdro-person-modulo')||{}).value||'', x:cx2-90, y:cy2-38, w:180, h:76 });
+        _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+      };
+      setTimeout(function(){ var el = document.getElementById('qdro-person-nome'); if (el) el.focus(); }, 60);
+    }
+
+    // ── Inserir dado do sistema ───────────────────────────────────────────────
+    function _abrirSistema() {
+      var existing = document.getElementById('qdro-sistema-panel');
+      if (existing) { existing.remove(); return; }
+      var panel = document.createElement('div');
+      panel.id = 'qdro-sistema-panel';
+      panel.style.cssText = 'position:absolute;left:68px;bottom:60px;z-index:200;background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.07);padding:12px;width:280px;max-height:70vh;overflow-y:auto;';
+      var opts = [
+        {subtipo:'quadro',   ico:'dashboard_customize', lbl:'Quadro existente',    fn: function() { _inserirRefQuadro(panel); }},
+        {subtipo:'acao',     ico:'theater_comedy',      lbl:'Ação cultural',       fn: function() { _inserirRefAcao(panel); }},
+        {subtipo:'reuniao',  ico:'groups',              lbl:'Reunião',             fn: function() { _inserirRefReuniao(panel); }},
+        {subtipo:'tarefas',  ico:'task_alt',            lbl:'Resumo de Tarefas',   fn: function() { _inserirWidgetTarefas(panel); }},
+        {subtipo:'indicador',ico:'bar_chart',           lbl:'Indicador / Métrica', fn: function() { _inserirWidgetIndicador(panel); }}
+      ];
+      var html = '<div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">Inserir do Sistema</div>';
+      opts.forEach(function(o, idx) {
+        html += '<button data-bg-skip="1" data-sys-idx="'+idx+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 8px;border:none;background:transparent;border-radius:8px;cursor:pointer;transition:background .12s;" onmouseover="this.style.background=\'#f1f5f9\'" onmouseout="this.style.background=\'transparent\'">'
+          + '<span class="ms" style="font-size:20px;color:#6366f1;">' + o.ico + '</span>'
+          + '<span style="font-size:13px;font-weight:600;color:#1e293b;">' + o.lbl + '</span></button>';
+      });
+      panel.innerHTML = html;
+      wrap.appendChild(panel);
+      panel.querySelectorAll('[data-sys-idx]').forEach(function(btn) {
+        btn.onclick = function() { opts[parseInt(this.getAttribute('data-sys-idx'))].fn(); };
+      });
+      setTimeout(function() {
+        document.addEventListener('click', function _closeSys(e) {
+          if (!panel.contains(e.target)) { if (panel.parentNode) panel.remove(); document.removeEventListener('click', _closeSys); }
+        });
+      }, 0);
+    }
+    function _inserirWidget(subtipo, titulo, resumo) {
+      if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+      var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+      _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:subtipo, titulo:titulo, resumo:resumo, x:cx2-120, y:cy2-55, w:240, h:110 });
+      _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+    }
+    function _inserirRefQuadro(panel) {
+      panel.remove();
+      GAS.quadros.listar({}, function(resp) {
+        var lista = (resp&&resp.ok) ? resp.data : [];
+        _modalInput({ titulo:'Escolher Quadro', label:'Selecione', tipo:'select', opcoes: lista.map(function(q){ return {v:q.id, l:q.titulo}; }) }, function(id) {
+          if (!id) return;
+          var q = lista.filter(function(x){ return x.id===id; })[0];
+          if (!q) return;
+          var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+          _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:'quadro', titulo:q.titulo, resumo:(q.descricao||'').slice(0,80), x:cx2-120, y:cy2-55, w:240, h:110 });
+          _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+        });
+      }, function() { Toast.erro('Erro ao carregar quadros.'); });
+    }
+    function _inserirRefAcao(panel) {
+      panel.remove();
+      GAS.acoes.listar({}, function(resp) {
+        var lista = (resp&&resp.ok) ? resp.data : [];
+        _modalInput({ titulo:'Escolher Ação', label:'Selecione', tipo:'select', opcoes: lista.slice(0,60).map(function(a){ return {v:a.id, l:a.nome||a.id}; }) }, function(id) {
+          if (!id) return;
+          var a = lista.filter(function(x){ return x.id===id; })[0];
+          if (!a) return;
+          var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+          _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:'acao', titulo:a.nome||a.id, resumo:'Status: '+(a.status||'—')+' · Setor: '+(a.setor||'—'), x:cx2-120, y:cy2-55, w:240, h:110 });
+          _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+        });
+      }, function() { Toast.erro('Erro ao carregar ações.'); });
+    }
+    function _inserirRefReuniao(panel) {
+      panel.remove();
+      GAS.reunioes.listar({}, function(resp) {
+        var lista = (resp&&resp.ok) ? resp.data : [];
+        _modalInput({ titulo:'Escolher Reunião', label:'Selecione', tipo:'select', opcoes: lista.slice(0,60).map(function(r){ return {v:r.id, l:(r.titulo||r.id)+' ('+fmtDataPtBR((r.dataHora||'').slice(0,10))+')'}; }) }, function(id) {
+          if (!id) return;
+          var r = lista.filter(function(x){ return x.id===id; })[0];
+          if (!r) return;
+          var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+          _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:'reuniao', titulo:r.titulo||r.id, resumo:'Data: '+fmtDataPtBR((r.dataHora||'').slice(0,10))+' · '+(r.status||'—'), x:cx2-120, y:cy2-55, w:240, h:110 });
+          _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+        });
+      }, function() { Toast.erro('Erro ao carregar reuniões.'); });
+    }
+    function _inserirWidgetTarefas(panel) {
+      panel.remove();
+      var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+      _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:'tarefas', titulo:'Resumo de Tarefas', resumo:'Dados carregados do módulo Pessoal', x:cx2-120, y:cy2-55, w:240, h:110 });
+      _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+    }
+    function _inserirWidgetIndicador(panel) {
+      panel.remove();
+      _modalInput({ titulo:'Indicador / Métrica', label:'Título do indicador', obrigatorio:true }, function(titulo) {
+        if (!titulo) return;
+        _modalInput({ titulo:'Valor / Resumo', label:'Valor ou descrição', obrigatorio:false }, function(resumo) {
+          var cx2 = (cv.width/2-_cvState.panX)/_cvState.zoom, cy2 = (cv.height/2-_cvState.panY)/_cvState.zoom;
+          _cvState.shapes.push({ t:'data-widget', id:'dw_'+Date.now(), subtipo:'indicador', titulo:titulo, resumo:resumo||'', x:cx2-120, y:cy2-55, w:240, h:110 });
+          _cvState.selIdx = _cvState.shapes.length-1; _redraw();
+        });
+      });
+    }
+
     // Cursor hover para select tool
     cv.addEventListener('mousemove', function(e) {
       if (_cvState.tool !== 'select' || _cvState.drawing || _cvState.isPanning || _cvState.dragMode || _cvState.spaceDown) return;
@@ -37342,7 +37924,7 @@ var QuadrosUI = (function() {
   // ── API pública do toolbar ─────────────────────────────────────────────────
   function _setTool(tool) {
     if (!_cvState) return; _cvState.tool = tool; _cvState.selIdx = -1;
-    var ALL = ['select','pencil','line','arrow','rect','circle','text','sticky','frame','table','eraser'];
+    var ALL = ['select','pencil','marker','brush','connector','line','arrow','rect','circle','diamond','triangle','hexagon','pentagon','star','callout','text','sticky','frame','table','eraser'];
     ALL.forEach(function(t) {
       var b = document.getElementById('qdro-tool-' + t); if (!b) return;
       if (t === tool) { b.classList.add('ativa'); }
@@ -40353,6 +40935,19 @@ var AnaliseEstudioUI = (function() {
   var _painelIds    = [];          // IDs fixados no painel pessoal
   var _catalogoCruz = false;       // true quando catálogo está em modo cruzamento
 
+  // ── Dashboard Builder state ─────────────────────────────────────────────────
+  var _dashLista      = [];
+  var _dashCarregado  = false;
+  var _dashTabAtual   = 'analises';  // 'analises' | 'dashboards'
+  var _dashEditandoId = null;
+  var _dashTitulo     = 'Novo Dashboard';
+  var _dashDescricao  = '';
+  var _dashVis        = 'privada';
+  var _dashComp       = [];
+  var _dashWidgets    = [];
+  var _weDraftWidget  = null;   // widget sendo editado no modal
+  var _weDraftCb      = null;   // callback ao confirmar widget
+
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
     { id:'barras',       label:'Barras',        icon:'bar_chart',       dica:'Ideal para comparar categorias distintas.' },
@@ -40367,7 +40962,7 @@ var AnaliseEstudioUI = (function() {
   ];
 
   // ── Público ────────────────────────────────────────────────────────────────
-  function aoAbrir() { _loadPainel(); if (!_carregado) _carregarGaleria(); }
+  function aoAbrir() { _loadPainel(); if (!_carregado) _carregarGaleria(); else _renderGaleria(); }
 
   function novaAnalise() {
     _editandoId = null;
@@ -40736,87 +41331,109 @@ var AnaliseEstudioUI = (function() {
   // ── Privado ────────────────────────────────────────────────────────────────
   function _carregarGaleria() {
     var root = document.getElementById('analise-studio-root');
-    if (root) root.innerHTML = '<p class="muted-text">Carregando análises…</p>';
+    if (root) root.innerHTML = '<p class="muted-text">Carregando…</p>';
+    var _pendente = 2;
+    function _onDone() {
+      if (--_pendente === 0) { _carregado = true; _dashCarregado = true; _renderGaleria(); }
+    }
     GAS.analise.listar(function(r) {
-      _lista     = (r && r.ok) ? (r.data || []) : [];
-      _carregado = true;
-      _renderGaleria();
-    }, function(){ _lista=[]; _carregado=true; _renderGaleria(); });
+      _lista = (r && r.ok) ? (r.data || []) : [];
+      _onDone();
+    }, function(){ _lista = []; _onDone(); });
+    GAS.analise.dashboardListar(function(r) {
+      _dashLista = (r && r.ok) ? (r.data || []) : [];
+      _onDone();
+    }, function(){ _dashLista = []; _onDone(); });
+  }
+
+  function setDashTab(tab) {
+    _dashTabAtual = tab;
+    _renderGaleria();
   }
 
   function _renderGaleria() {
     var root = document.getElementById('analise-studio-root');
     if (!root) return;
-    var meuEmail = ((App.getBoot && App.getBoot()) || {}).usuarioEmail || '';
     var pinCount = _painelIds.length;
 
     var html =
-      '<div class="view-header" style="margin-bottom:16px;">' +
+      '<div class="view-header" style="margin-bottom:12px;">' +
         '<div>' +
           '<div class="view-title">Estúdio de Análises</div>' +
-          '<div class="view-subtitle">Crie, cruze dados e compartilhe visualizações dentro das suas permissões.</div>' +
+          '<div class="view-subtitle">Crie gráficos, dashboards e compartilhe visualizações dentro das suas permissões.</div>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;align-items:center;">' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
           '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irPainel()" data-bg-skip="1">' +
-            '<span class="ms ms-sm">dashboard</span> Meu Painel' +
+            '<span class="ms ms-sm">push_pin</span> Meu Painel' +
             (pinCount ? ' <span style="background:var(--primary);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;">' + pinCount + '</span>' : '') +
           '</button>' +
-          '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
-            '<span class="ms ms-sm">add_chart</span> Nova análise' +
-          '</button>' +
+          (_dashTabAtual === 'dashboards' ?
+            '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novoDashboard()" data-bg-skip="1"><span class="ms ms-sm">add</span> Novo dashboard</button>' :
+            '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1"><span class="ms ms-sm">add_chart</span> Nova análise</button>'
+          ) +
         '</div>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">' +
+        '<button class="db-tab-btn' + (_dashTabAtual==='analises' ? ' ativo' : '') + '" onclick="AnaliseEstudioUI.setDashTab(\'analises\')" data-bg-skip="1">' +
+          '<span class="ms ms-sm">bar_chart</span> Análises' +
+          (_lista.length ? ' <span style="background:var(--surface2);color:var(--text2);border-radius:20px;padding:0 6px;font-size:10px;font-weight:600;">' + _lista.length + '</span>' : '') +
+        '</button>' +
+        '<button class="db-tab-btn' + (_dashTabAtual==='dashboards' ? ' ativo' : '') + '" onclick="AnaliseEstudioUI.setDashTab(\'dashboards\')" data-bg-skip="1">' +
+          '<span class="ms ms-sm">dashboard_customize</span> Dashboards' +
+          (_dashLista.length ? ' <span style="background:var(--surface2);color:var(--text2);border-radius:20px;padding:0 6px;font-size:10px;font-weight:600;">' + _dashLista.length + '</span>' : '') +
+        '</button>' +
       '</div>';
 
+    html += (_dashTabAtual === 'dashboards') ? _renderDashboardGaleria() : _renderAnalisesGaleria();
+    root.innerHTML = html;
+  }
+
+  function _renderAnalisesGaleria() {
+    var meuEmail = ((App.getBoot && App.getBoot()) || {}).usuarioEmail || '';
     if (!_lista.length) {
-      html +=
-        '<div style="text-align:center;padding:56px 20px;">' +
+      return '<div style="text-align:center;padding:56px 20px;">' +
           '<span class="ms" style="font-size:52px;color:var(--text2);display:block;margin-bottom:12px;">analytics</span>' +
           '<p style="color:var(--text2);font-size:14px;margin:0 0 6px;font-weight:600;">Nenhuma análise ainda.</p>' +
           '<p style="color:var(--text2);font-size:13px;margin:0 0 20px;">Importe dados de qualquer módulo, cruze datasets ou cole um CSV para começar.</p>' +
-          '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1">' +
-            '<span class="ms ms-sm">add_chart</span> Criar primeira análise' +
-          '</button>' +
+          '<button class="btn btn-primario" onclick="AnaliseEstudioUI.novaAnalise()" data-bg-skip="1"><span class="ms ms-sm">add_chart</span> Criar primeira análise</button>' +
         '</div>';
-    } else {
-      html += '<div class="analise-galeria-grid">';
-      _lista.slice().reverse().forEach(function(a) {
-        var ti      = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
-        var preview = _svgMiniatura(a);
-        var safeId  = JSON.stringify(a.id||'').replace(/"/g,"'");
-        var emPainel = _painelIds.indexOf(a.id) >= 0;
-        var isMinha  = !a.donoEmail || a.donoEmail === meuEmail;
-
-        var modoHtml = a.modoUpdate === 'dinamico'
-          ? '<span class="analise-modo-badge ao-vivo"><span class="ms" style="font-size:9px;">sync</span> Ao vivo</span>'
-          : '<span class="analise-modo-badge estatica">Estática</span>';
-        var vis = a.visibilidade || (a.donoEmail ? 'privada' : 'publica');
-        var visIcone = vis === 'privada' ? 'lock' : vis === 'restrita' ? 'group' : 'public';
-        var visLabel = vis === 'privada' ? 'Privada' : vis === 'restrita' ? 'Compartilhada' : 'Pública';
-        var visHtml  = '<span class="analise-vis-badge ' + vis + '" title="' + visLabel + '"><span class="ms" style="font-size:9px;">' + visIcone + '</span></span>';
-
-        html +=
-          '<div class="analise-card">' +
-            '<div class="analise-card-preview">' + preview + '</div>' +
-            '<div class="analise-card-info">' +
-              '<div style="font-size:14px;font-weight:600;margin-bottom:5px;">' + _esc(a.titulo) + '</div>' +
-              '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">' +
-                '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) + '</span>' +
-                modoHtml + visHtml +
-                (!isMinha && a.donoEmail ? '<span style="font-size:10px;color:var(--text2);">' + _esc(a.donoEmail.split('@')[0]) + '</span>' : '') +
-              '</div>' +
-              '<div style="font-size:11px;color:var(--text2);margin-top:3px;">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</div>' +
-            '</div>' +
-            '<div class="analise-card-actions">' +
-              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Tela cheia"><span class="ms ms-sm">open_in_full</span></button>' +
-              (isMinha ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' : '') +
-              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._painelToggle(' + safeId + ')" data-bg-skip="1" title="' + (emPainel?'Remover do painel':'Fixar no Meu Painel') + '" style="' + (emPainel?'color:var(--primary);':'') + '"><span class="ms ms-sm">push_pin</span></button>' +
-              (isMinha ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' : '') +
-            '</div>' +
-          '</div>';
-      });
-      html += '</div>';
     }
-    root.innerHTML = html;
+    var html = '<div class="analise-galeria-grid">';
+    _lista.slice().reverse().forEach(function(a) {
+      var ti      = _TIPOS.find(function(t){ return t.id===a.tipo; }) || _TIPOS[0];
+      var preview = _svgMiniatura(a);
+      var safeId  = JSON.stringify(a.id||'').replace(/"/g,"'");
+      var emPainel = _painelIds.indexOf(a.id) >= 0;
+      var isMinha  = !a.donoEmail || a.donoEmail === meuEmail;
+      var modoHtml = a.modoUpdate === 'dinamico'
+        ? '<span class="analise-modo-badge ao-vivo"><span class="ms" style="font-size:9px;">sync</span> Ao vivo</span>'
+        : '<span class="analise-modo-badge estatica">Estática</span>';
+      var vis = a.visibilidade || (a.donoEmail ? 'privada' : 'publica');
+      var visIcone = vis === 'privada' ? 'lock' : vis === 'restrita' ? 'group' : 'public';
+      var visLabel = vis === 'privada' ? 'Privada' : vis === 'restrita' ? 'Compartilhada' : 'Pública';
+      var visHtml  = '<span class="analise-vis-badge ' + vis + '" title="' + visLabel + '"><span class="ms" style="font-size:9px;">' + visIcone + '</span></span>';
+      html +=
+        '<div class="analise-card">' +
+          '<div class="analise-card-preview">' + preview + '</div>' +
+          '<div class="analise-card-info">' +
+            '<div style="font-size:14px;font-weight:600;margin-bottom:5px;">' + _esc(a.titulo) + '</div>' +
+            '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">' +
+              '<span class="badge badge-info" style="display:inline-flex;align-items:center;gap:3px;"><span class="ms ms-sm">' + ti.icon + '</span>' + _esc(ti.label) + '</span>' +
+              modoHtml + visHtml +
+              (!isMinha && a.donoEmail ? '<span style="font-size:10px;color:var(--text2);">' + _esc(a.donoEmail.split('@')[0]) + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--text2);margin-top:3px;">' + fmtDataPtBR((a.criadoEm||'').slice(0,10)) + '</div>' +
+          '</div>' +
+          '<div class="analise-card-actions">' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.visualizarAnalise(' + safeId + ')" data-bg-skip="1" title="Visualizar"><span class="ms ms-sm">open_in_full</span></button>' +
+            (isMinha ? '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarAnalise(' + safeId + ')" data-bg-skip="1" title="Editar"><span class="ms ms-sm">edit</span></button>' : '') +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._painelToggle(' + safeId + ')" data-bg-skip="1" title="' + (emPainel?'Remover do painel':'Fixar no Meu Painel') + '" style="' + (emPainel?'color:var(--primary);':'') + '"><span class="ms ms-sm">push_pin</span></button>' +
+            (isMinha ? '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.excluirAnalise(' + safeId + ')" data-bg-skip="1" title="Excluir"><span class="ms ms-sm">delete</span></button>' : '') +
+          '</div>' +
+        '</div>';
+    });
+    return html + '</div>';
   }
 
   function _renderEditor() {
@@ -41219,9 +41836,23 @@ var AnaliseEstudioUI = (function() {
     inp.type = tipo==='pessoa' ? 'email' : 'text';
     var boot = (App.getBoot&&App.getBoot())||{};
     var dl = document.getElementById('comp-val-dl-'+uid);
-    if (dl) dl.innerHTML = tipo==='setor'
-      ? (boot.setores||[]).map(function(s){ return '<option value="'+_esc(s)+'">'; }).join('')
-      : '';
+    if (!dl) return;
+    if (tipo==='setor') {
+      dl.innerHTML = (boot.setores||[]).map(function(s){
+        var v = s.id||s.nome||s.label||String(s);
+        var l = s.nome||s.label||s.id||v;
+        return '<option value="'+_esc(v)+'">'+_esc(l)+'</option>';
+      }).join('');
+    } else if (tipo==='cargo') {
+      var cargosSet = {};
+      (boot.pessoas||[]).forEach(function(p){ if(p.cargo) cargosSet[p.cargo]=true; });
+      dl.innerHTML = Object.keys(cargosSet).sort().map(function(c){ return '<option value="'+_esc(c)+'">'; }).join('');
+    } else {
+      dl.innerHTML = (boot.pessoas||boot.emails||[]).map(function(p){
+        var e = typeof p==='string' ? p : (p.email||p.emailInstitucional||'');
+        return e ? '<option value="'+_esc(e)+'">' : '';
+      }).join('');
+    }
   }
   function _compAdicionarUI(uid) {
     var tipo  = (document.getElementById('comp-tipo-'+uid)||{}).value||'pessoa';

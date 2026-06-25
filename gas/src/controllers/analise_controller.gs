@@ -591,3 +591,69 @@ function _cruzar_custom(dsA, dsB) {
   var colB = dB.colunas[1] || dsB;
   return _juntar(dA.linhas, dB.linhas, 'Chave', colA, colB);
 }
+
+// ─── Dashboard Builder ────────────────────────────────────────────────────────
+
+var _ANALISE_DASHBOARD_KEY = 'ANALISE_DASHBOARD_ITEMS';
+
+function ctrl_analise_dashboard_listar() {
+  return GasResponse.wrap(function() {
+    var email = getEmailSessao();
+    var raw   = PropertiesService.getScriptProperties().getProperty(_ANALISE_DASHBOARD_KEY);
+    var lista = raw ? JSON.parse(raw) : [];
+    return lista.filter(function(item) { return _analise_podeVer(item, email); });
+  }, 'ctrl_analise_dashboard_listar');
+}
+
+function ctrl_analise_dashboard_salvar(params) {
+  return GasResponse.wrap(function() {
+    var email = getEmailSessao();
+    var raw   = PropertiesService.getScriptProperties().getProperty(_ANALISE_DASHBOARD_KEY);
+    var lista = raw ? JSON.parse(raw) : [];
+    var item  = params || {};
+    if (!item.titulo) throw new Error('Título obrigatório');
+    if (item.id) {
+      var idx = -1;
+      for (var i = 0; i < lista.length; i++) { if (lista[i].id === item.id) { idx = i; break; } }
+      if (idx >= 0) {
+        if (lista[idx].donoEmail && lista[idx].donoEmail !== email) throw new Error('Sem permissão para editar este dashboard.');
+        for (var k in item) { lista[idx][k] = item[k]; }
+        lista[idx].atualizadoEm = new Date().toISOString();
+      } else {
+        item.donoEmail = email;
+        item.criadoEm  = new Date().toISOString();
+        lista.push(item);
+      }
+    } else {
+      item.id        = Utilities.getUuid();
+      item.donoEmail = email;
+      item.criadoEm  = new Date().toISOString();
+      lista.push(item);
+    }
+    PropertiesService.getScriptProperties().setProperty(_ANALISE_DASHBOARD_KEY, JSON.stringify(lista));
+    AuditoriaService.registrar('DASHBOARD_SALVAR', 'analise_studio', { titulo: item.titulo, widgets: (item.widgets||[]).length });
+    return { id: item.id };
+  }, 'ctrl_analise_dashboard_salvar');
+}
+
+function ctrl_analise_dashboard_excluir(params) {
+  return GasResponse.wrap(function() {
+    var raw   = PropertiesService.getScriptProperties().getProperty(_ANALISE_DASHBOARD_KEY);
+    var lista = raw ? JSON.parse(raw) : [];
+    var id    = (params || {}).id;
+    lista     = lista.filter(function(x) { return x.id !== id; });
+    PropertiesService.getScriptProperties().setProperty(_ANALISE_DASHBOARD_KEY, JSON.stringify(lista));
+    AuditoriaService.registrar('DASHBOARD_EXCLUIR', 'analise_studio', { id: id });
+    return true;
+  }, 'ctrl_analise_dashboard_excluir');
+}
+
+function ctrl_analise_widget_dados(params) {
+  return GasResponse.wrap(function() {
+    var dsId  = (params || {}).dsId;
+    var dsId2 = (params || {}).dsId2;
+    if (!dsId) throw new Error('dsId obrigatório');
+    if (dsId2) return _cruzar_custom(dsId, dsId2);
+    return _analise_dataset(dsId);
+  }, 'ctrl_analise_widget_dados');
+}
