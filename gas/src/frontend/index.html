@@ -2204,6 +2204,10 @@ select.form-control { cursor: pointer; }
 .db-suggest-row { display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px; }
 .db-suggest-pill { display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:11px;transition:all .15s;color:var(--text2); }
 .db-suggest-pill:hover { border-color:var(--primary);background:var(--primary-soft,#eef2ff);color:var(--primary); }
+.db-periodo-bar { display:flex;align-items:center;gap:6px;padding:8px 0 10px;flex-wrap:wrap; }
+.db-periodo-btn { border:1.5px solid var(--border);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--text2);transition:all .15s; }
+.db-periodo-btn:hover { border-color:var(--primary);color:var(--primary); }
+.db-periodo-btn.sel { background:var(--primary);color:#fff;border-color:var(--primary); }
 /* Widget: Texto */
 .db-texto-body { padding:6px 4px;min-height:50px;line-height:1.6; }
 /* Widget: Imagem */
@@ -42662,6 +42666,83 @@ var AnaliseEstudioUI = (function() {
     '</svg>';
   }
 
+  // ── Medidor (Gauge) ────────────────────────────────────────────────────────
+  function _svgMedidor(cols, rows, cfg) {
+    var mini=!!cfg._mini, W=mini?200:300, H=mini?75:140;
+    var r=mini?55:92, cx=W/2, cy=H*0.93;
+    var cor=cfg.corPrimaria||'#4f46e5';
+    var fmt=(cfg.ajustes||{}).formato||'auto';
+    var vals=rows.map(function(row){return Number(row[1])||0;});
+    var val=vals.reduce(function(s,v){return s+v;},0);
+    var max; if(rows.length===1&&cols.length>=3&&rows[0][2]) max=Number(rows[0][2])||val*2||100; else max=Math.max(val*1.5,1);
+    var pct=Math.min(Math.max(val/max,0),1);
+    function ap(deg){var rd=deg*Math.PI/180; return {x:(cx+r*Math.cos(rd)).toFixed(1),y:(cy+r*Math.sin(rd)).toFixed(1)};}
+    var bgS=ap(180),bgE=ap(0);
+    var bgPath='M '+bgS.x+' '+bgS.y+' A '+r+' '+r+' 0 0 1 '+bgE.x+' '+bgE.y;
+    var vEnd=180+pct*180; var vS=ap(180),vE=ap(vEnd); var lg=pct>0.5?1:0;
+    var vPath=pct>0.001?('M '+vS.x+' '+vS.y+' A '+r+' '+r+' 0 '+lg+' 1 '+vE.x+' '+vE.y):'';
+    var ndRad=(180+pct*180)*Math.PI/180; var nx=(cx+r*0.75*Math.cos(ndRad)).toFixed(1),ny=(cy+r*0.75*Math.sin(ndRad)).toFixed(1);
+    var sw=mini?9:16; var fv=_fmtVal(val,fmt), fmax=_fmtVal(max,fmt);
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;overflow:visible;">'+
+      '<path d="'+bgPath+'" fill="none" stroke="var(--border)" stroke-width="'+sw+'" stroke-linecap="round"/>'+
+      (vPath?'<path d="'+vPath+'" fill="none" stroke="'+cor+'" stroke-width="'+sw+'" stroke-linecap="round"/>':'')+
+      (!mini?'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="var(--text)" stroke-width="2" stroke-linecap="round"/>':'')+
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+(mini?3:6)+'" fill="'+cor+'"/>'+
+      (!mini?'<text x="'+cx+'" y="'+(cy-10)+'" text-anchor="middle" font-size="'+(pct<0.01?'14':'20')+'" font-weight="700" fill="var(--text)">'+fv+'</text>':'')+
+      (!mini?'<text x="'+(cx-r-2)+'" y="'+(cy+12)+'" text-anchor="end" font-size="8" fill="var(--text2)">0</text>':'')+
+      (!mini?'<text x="'+(cx+r+2)+'" y="'+(cy+12)+'" text-anchor="start" font-size="8" fill="var(--text2)">'+fmax+'</text>':'')+
+      (!mini?'<text x="'+cx+'" y="'+(H-4)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+_esc(cols[1]||'Valor')+'</text>':'')+
+    '</svg>';
+  }
+
+  // ── Radar ──────────────────────────────────────────────────────────────────
+  function _svgRadar(cols, rows, cfg) {
+    var mini=!!cfg._mini, W=mini?180:380, H=mini?100:280;
+    var n=rows.length; if(n<3) return _svgBarras(cols,rows,cfg);
+    var cx=W/2, cy=H/2-8, r=Math.min(cx,cy)*0.75;
+    var cor=cfg.corPrimaria||'#4f46e5';
+    var vals=rows.map(function(row){return Number(row[1])||0;});
+    var max=Math.max.apply(null,vals.concat([1]));
+    function pt(i,rad){var a=Math.PI*2*i/n-Math.PI/2; return {x:(cx+rad*Math.cos(a)).toFixed(1),y:(cy+rad*Math.sin(a)).toFixed(1)};}
+    var grid='',axes='',dots='',labels='';
+    [0.25,0.5,0.75,1].forEach(function(lv){
+      var pts=[]; for(var i=0;i<n;i++){var p=pt(i,r*lv);pts.push(p.x+','+p.y);}
+      grid+='<polygon points="'+pts.join(' ')+'" fill="none" stroke="var(--border)" stroke-width="'+(lv===1?1:0.5)+'" opacity="0.8"/>';
+    });
+    for(var i=0;i<n;i++){var p=pt(i,r); axes+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p.x+'" y2="'+p.y+'" stroke="var(--border)" stroke-width="0.5"/>';}
+    var dataPts=rows.map(function(row,i){var v=Number(row[1])||0;var p=pt(i,r*(max>0?v/max:0));return p.x+','+p.y;}).join(' ');
+    if(!mini){rows.forEach(function(row,i){var p=pt(i,r*1.18);var lbl=String(row[0]).slice(0,12); labels+='<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="var(--text2)">'+_esc(lbl)+'</text>';});}
+    rows.forEach(function(row,i){var v=Number(row[1])||0;var p=pt(i,r*(max>0?v/max:0));dots+='<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="'+cor+'" stroke="var(--surface)" stroke-width="1.5"><title>'+_esc(row[0])+': '+v+'</title></circle>';});
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+grid+axes+'<polygon points="'+dataPts+'" fill="'+cor+'" fill-opacity="0.2" stroke="'+cor+'" stroke-width="2"/>'+dots+labels+'</svg>';
+  }
+
+  // ── Combinado (barras + linha) ─────────────────────────────────────────────
+  function _svgCombinado(cols, rows, cfg) {
+    var has3=cols.length>=3&&rows.length&&rows[0].length>=3;
+    if(!has3) return _svgBarras(cols,rows,cfg);
+    var mini=!!cfg._mini,W=500,H=mini?80:260,PL=mini?28:46,PR=12,PT=14,PB=mini?18:38;
+    var xs=W-PL-PR,ys=H-PT-PB,n=rows.length;
+    if(!n) return _svgBarras(cols,rows,cfg);
+    var v1=rows.map(function(r){return Number(r[1])||0;}),v2=rows.map(function(r){return Number(r[2])||0;});
+    var m1=Math.max.apply(null,v1.concat([1])),m2=Math.max.apply(null,v2.concat([1]));
+    var gap=Math.floor(xs/n),bw=Math.max(2,Math.floor(gap*0.55));
+    var cor1=cfg.corPrimaria||'#4f46e5',cor2='#f59e0b';
+    var bars='',lnPts='',dots='',xlbls='';
+    rows.forEach(function(row,i){
+      var bx=PL+i*gap+(gap-bw)/2, bh=m1>0?Math.round(v1[i]/m1*ys):0, by=PT+ys-bh;
+      bars+='<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="'+cor1+'" opacity="0.82" rx="2"><title>'+_esc(row[0])+' ('+_esc(cols[1]||'')+') '+v1[i]+'</title></rect>';
+      var lx=PL+i*gap+gap/2, ly=PT+ys-(m2>0?Math.round(v2[i]/m2*ys):0);
+      lnPts+=(i===0?'M':'L')+lx+' '+ly;
+      dots+='<circle cx="'+lx+'" cy="'+ly+'" r="3.5" fill="'+cor2+'" stroke="var(--surface)" stroke-width="1.5"><title>'+_esc(row[0])+' ('+_esc(cols[2]||'')+') '+v2[i]+'</title></circle>';
+      if(!mini){var lb=String(row[0]).slice(0,8);xlbls+='<text x="'+(bx+bw/2)+'" y="'+(PT+ys+13)+'" text-anchor="middle" font-size="8.5" fill="var(--text2)">'+_esc(lb)+'</text>';}
+    });
+    var legHtml=!mini?'<text x="'+(PL+8)+'" y="'+(H-3)+'" font-size="9" fill="'+cor1+'">'+_esc(cols[1]||'S1')+'</text><text x="'+(PL+60)+'" y="'+(H-3)+'" font-size="9" fill="'+cor2+'">'+_esc(cols[2]||'S2')+'</text>':'';
+    return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;">'+
+      '<line x1="'+PL+'" y1="'+PT+'" x2="'+PL+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
+      '<line x1="'+PL+'" y1="'+(PT+ys)+'" x2="'+(W-PR)+'" y2="'+(PT+ys)+'" stroke="var(--border)" stroke-width="1"/>'+
+      bars+'<path d="'+lnPts+'" fill="none" stroke="'+cor2+'" stroke-width="2.5"/>'+dots+xlbls+legHtml+'</svg>';
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // DASHBOARD BUILDER v4
   // ═══════════════════════════════════════════════════════════════════════════
@@ -42839,14 +42920,37 @@ var AnaliseEstudioUI = (function() {
 
   function _dashSugestoes() {
     return [
-      {tipo:'kpi',   titulo:'Ações do Mês',      dsId:'acoes_mes',          kpiConfig:{agregacao:'contagem',serieIdx:1,formato:'numero'}, modoUpdate:'dinamico'},
-      {tipo:'kpi',   titulo:'Público Atendido',   dsId:'publico_acao',       kpiConfig:{agregacao:'soma',serieIdx:1,formato:'numero'},     modoUpdate:'dinamico'},
-      {tipo:'grafico',titulo:'Pessoas por Setor', dsId:'pessoas_setor',      config:{tipo:'pizza',corPrimaria:'#10b981'},                  modoUpdate:'dinamico'},
-      {tipo:'grafico',titulo:'Tarefas por Status',dsId:'tarefas_status',     config:{tipo:'barras_horiz',corPrimaria:'#0ea5e9'},            modoUpdate:'dinamico'},
-      {tipo:'grafico',titulo:'Reuniões por Mês',  dsId:'reunioes_mes',       config:{tipo:'linha',corPrimaria:'#8b5cf6'},                  modoUpdate:'dinamico'},
-      {tipo:'grafico',titulo:'Ações por Tipo',    dsId:'acoes_tipo',         config:{tipo:'rosca',corPrimaria:'#f59e0b'},                  modoUpdate:'dinamico'},
-      {tipo:'grafico',titulo:'Execução Fin.',     dsId:'financeiro_execucao',config:{tipo:'barras',corPrimaria:'#ef4444'},                 modoUpdate:'dinamico'},
-      {tipo:'tabela', titulo:'Colaboradores',     dsId:'pessoas_cargo',      tabelaConfig:{maxLinhas:6},                                  modoUpdate:'dinamico'},
+      // Ações Culturais
+      {tipo:'kpi',    titulo:'Ações este mês',      dsId:'acoes_mes',           kpiConfig:{agregacao:'contagem',serieIdx:1,formato:'numero'}, modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Ações por Tipo',       dsId:'acoes_tipo',          config:{tipo:'rosca',corPrimaria:'#f59e0b'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Ações por Mês',        dsId:'acoes_mes',           config:{tipo:'area',corPrimaria:'#f59e0b'},                   modoUpdate:'dinamico'},
+      // Público
+      {tipo:'kpi',    titulo:'Público Atendido',     dsId:'publico_acao',        kpiConfig:{agregacao:'soma',serieIdx:1,formato:'numero'},     modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Inscrições por Mês',   dsId:'publico_mes',         config:{tipo:'linha',corPrimaria:'#0ea5e9'},                  modoUpdate:'dinamico'},
+      // Pessoas
+      {tipo:'grafico',titulo:'Pessoas por Setor',    dsId:'pessoas_setor',       config:{tipo:'pizza',corPrimaria:'#10b981'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Pessoas por Cargo',    dsId:'pessoas_cargo',       config:{tipo:'barras_horiz',corPrimaria:'#10b981'},           modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Pessoas por Vínculo',  dsId:'pessoas_vinculo',     config:{tipo:'rosca',corPrimaria:'#8b5cf6'},                  modoUpdate:'dinamico'},
+      // Tarefas
+      {tipo:'grafico',titulo:'Tarefas por Status',   dsId:'tarefas_status',      config:{tipo:'barras_horiz',corPrimaria:'#0ea5e9'},            modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Tarefas por Setor',    dsId:'tarefas_setor',       config:{tipo:'funil',corPrimaria:'#4f46e5'},                  modoUpdate:'dinamico'},
+      // Reuniões
+      {tipo:'grafico',titulo:'Reuniões por Mês',     dsId:'reunioes_mes',        config:{tipo:'linha',corPrimaria:'#8b5cf6'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Encaminhamentos',      dsId:'encaminhamentos_status',config:{tipo:'pizza',corPrimaria:'#ec4899'},                modoUpdate:'dinamico'},
+      // Financeiro
+      {tipo:'grafico',titulo:'Execução Fin.',        dsId:'financeiro_execucao', config:{tipo:'barras',corPrimaria:'#ef4444'},                 modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Contratos por Status', dsId:'contratos_status',    config:{tipo:'rosca',corPrimaria:'#f97316'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Contratos por Fonte',  dsId:'contratos_fonte',     config:{tipo:'pizza',corPrimaria:'#f97316'},                  modoUpdate:'dinamico'},
+      // Espaços
+      {tipo:'grafico',titulo:'Reservas por Espaço',  dsId:'reservas_espaco',     config:{tipo:'barras_horiz',corPrimaria:'#4f46e5'},           modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Reservas por Mês',     dsId:'reservas_mes',        config:{tipo:'linha',corPrimaria:'#4f46e5'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Patrimônio por Status',dsId:'ativos_status',       config:{tipo:'rosca',corPrimaria:'#0ea5e9'},                  modoUpdate:'dinamico'},
+      // Comunicação
+      {tipo:'grafico',titulo:'Demandas por Tipo',    dsId:'balcao_tipo',         config:{tipo:'pizza',corPrimaria:'#ec4899'},                  modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Demandas por Setor',   dsId:'balcao_setor',        config:{tipo:'barras_horiz',corPrimaria:'#8b5cf6'},           modoUpdate:'dinamico'},
+      // Cruzamentos
+      {tipo:'grafico',titulo:'Ações × Público',      dsId:'cruzar_acoes_publico_mes', dsId2:null, config:{tipo:'combinado',corPrimaria:'#4f46e5'}, modoUpdate:'dinamico'},
+      {tipo:'grafico',titulo:'Pessoas × Tarefas',    dsId:'cruzar_pessoas_tarefas',   dsId2:null, config:{tipo:'barras_emp',corPrimaria:'#10b981'},  modoUpdate:'dinamico'},
     ];
   }
 
@@ -42907,11 +43011,11 @@ var AnaliseEstudioUI = (function() {
         '<span><span style="font-size:12px;font-weight:600;display:block;">'+opt.label+'</span><span style="font-size:10px;color:var(--text2);">'+opt.desc+'</span></span>' +
       '</label>';
     }).join('');
-    var sugs = _dashSugestoes();
+    _dashSugArr = _dashSugestoes();
     var sugHtml = '<div class="db-suggest-row">' +
-      sugs.map(function(s) {
+      _dashSugArr.map(function(s, i) {
         var ico = {grafico:'bar_chart',kpi:'speed',tabela:'table_chart'}[s.tipo]||'bar_chart';
-        return '<span class="db-suggest-pill" onclick="AnaliseEstudioUI._dashAddSugestao('+JSON.stringify(JSON.stringify(s)).replace(/"/g,"'")+')"><span class="ms" style="font-size:12px;">'+ico+'</span>'+_esc(s.titulo)+'</span>';
+        return '<span class="db-suggest-pill" onclick="AnaliseEstudioUI._dashAddSugestaoByIdx('+i+')"><span class="ms" style="font-size:12px;">'+ico+'</span>'+_esc(s.titulo)+'</span>';
       }).join('') +
     '</div>';
     var addMenuItems = _DB_TIPOS_EXTRA.map(function(t){
@@ -43153,22 +43257,26 @@ var AnaliseEstudioUI = (function() {
     });
   }
 
+  function _dashAddSugestaoByIdx(idx) {
+    var s = _dashSugArr[idx];
+    if (!s) { Toast.erro('Sugestão inválida.'); return; }
+    var defs = {grafico:{tamanho:'1/2'},kpi:{tamanho:'1/4'},tabela:{tamanho:'1/2'}};
+    var d = defs[s.tipo]||{tamanho:'1/2'};
+    var w = Object.assign({ id:'w-'+Date.now(), tamanho:d.tamanho, subtitulo:'', dsId2:null,
+      colunas:['Label','Valor'], linhas:[], conteudo:'',
+      config:{tipo:'barras',corPrimaria:'#4f46e5',ajustes:{rotulos:true,formato:'auto',grade:true,linhaRef:''}},
+      kpiConfig:{agregacao:'soma',serieIdx:1,formato:'numero'}, tabelaConfig:{maxLinhas:10},
+      textoConfig:{tamanho:'14px',negrito:false,italico:false,alinhamento:'left',cor:'var(--text)'},
+      imagemConfig:{url:'',alt:'',maxAltura:'180px'}, formaConfig:{forma:'circulo',cor:'#4f46e5',corTexto:'#ffffff',tamanho:'80',texto:''} }, s);
+    _dashWidgets.push(w);
+    var el = document.getElementById('dash-canvas');
+    if (el) el.innerHTML = _renderDashCanvas();
+    Toast.sucesso('"'+w.titulo+'" adicionado. Clique em tune para personalizar.');
+  }
+
+  // keep backward compat alias (just in case old onclick strings exist in saved data)
   function _dashAddSugestao(jsonStr) {
-    try {
-      var s = JSON.parse(jsonStr);
-      var defs = {grafico:{tamanho:'1/2'},kpi:{tamanho:'1/4'},tabela:{tamanho:'1/2'}};
-      var d = defs[s.tipo]||{tamanho:'1/2'};
-      var w = Object.assign({ id:'w-'+Date.now(), tamanho:d.tamanho, subtitulo:'', dsId2:null,
-        colunas:['Label','Valor'], linhas:[], conteudo:'',
-        config:{tipo:'barras',corPrimaria:'#4f46e5',ajustes:{rotulos:true,formato:'auto',grade:true,linhaRef:''}},
-        kpiConfig:{agregacao:'soma',serieIdx:1,formato:'numero'}, tabelaConfig:{maxLinhas:10},
-        textoConfig:{tamanho:'14px',negrito:false,italico:false,alinhamento:'left',cor:'var(--text)'},
-        imagemConfig:{url:'',alt:'',maxAltura:'180px'}, formaConfig:{forma:'circulo',cor:'#4f46e5',corTexto:'#ffffff',tamanho:'80',texto:''} }, s);
-      _dashWidgets.push(w);
-      var el = document.getElementById('dash-canvas');
-      if (el) el.innerHTML = _renderDashCanvas();
-      Toast.sucesso('"'+w.titulo+'" adicionado. Configure-o com o botão tune.');
-    } catch(e) { Toast.erro('Erro ao adicionar sugestão.'); }
+    try { var s=JSON.parse(jsonStr); _dashSugArr.push(s); _dashAddSugestaoByIdx(_dashSugArr.length-1); } catch(e) { Toast.erro('Erro ao adicionar sugestão.'); }
   }
 
   function _dashEditarWidget(idx) {
@@ -43492,40 +43600,80 @@ var AnaliseEstudioUI = (function() {
   }
 
   // ── Dashboard View (read-only) ─────────────────────────────────────────────
+  var _DB_PERIODO_PRESETS = [
+    {id:'tudo', label:'Tudo'},
+    {id:'30d',  label:'30 dias'},
+    {id:'90d',  label:'3 meses'},
+    {id:'180d', label:'6 meses'},
+    {id:'ano',  label:'Este ano'},
+  ];
+
+  function _dashSetFiltroTempo(preset) {
+    var now = new Date(), ate = now.toISOString().slice(0,10), de = null;
+    if      (preset==='30d')  de = new Date(now.getTime()-30*86400000).toISOString().slice(0,10);
+    else if (preset==='90d')  de = new Date(now.getTime()-90*86400000).toISOString().slice(0,10);
+    else if (preset==='180d') de = new Date(now.getTime()-180*86400000).toISOString().slice(0,10);
+    else if (preset==='ano')  de = now.getFullYear()+'-01-01';
+    _dashFiltroTempo = de ? {de:de, ate:ate, preset:preset} : null;
+    document.querySelectorAll('.db-periodo-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.preset===preset); });
+    var d = _dashLista.find(function(x){ return x.id===_dashEditandoId; });
+    if (d) _dashRecarregarWidgets(d.widgets||[]);
+  }
+
+  function _dashRecarregarWidgets(widgets) {
+    var canvas = document.getElementById('dash-view-canvas'); if (!canvas) return;
+    widgets.forEach(function(w, idx) {
+      if (w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma') return;
+      var el = document.getElementById('dbvw-'+idx); if (!el) return;
+      var body = el.querySelector('.db-widget-body'); if (!body) return;
+      body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;">Atualizando…</p>';
+      var fParams = _dashFiltroTempo ? {de:_dashFiltroTempo.de, ate:_dashFiltroTempo.ate} : {};
+      var onDone = function(linhas, colunas) {
+        if (!body.isConnected) return;
+        body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
+      };
+      if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
+      var onData = function(r){ onDone(r&&r.ok&&r.data?r.data.linhas||[]:w.linhas||[], r&&r.ok&&r.data?r.data.colunas||['Label','Valor']:w.colunas||['Label','Valor']); };
+      var onErr  = function(){ onDone(w.linhas||[], w.colunas||['Label','Valor']); };
+      if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},fParams), onData, onErr);
+      else         GAS.analise.importarDados(Object.assign({id:w.dsId},fParams), onData, onErr);
+    });
+  }
+
   function _renderDashboardView(d) {
     var root = document.getElementById('analise-studio-root'); if (!root) return;
     var boot = (App.getBoot&&App.getBoot())||{};
+    _dashFiltroTempo = null;
+    var periodoBar = '<div class="db-periodo-bar">' +
+      '<span class="ms" style="font-size:14px;color:var(--text2);">date_range</span>' +
+      '<span style="font-size:11px;color:var(--text2);font-weight:600;">Período:</span>' +
+      _DB_PERIODO_PRESETS.map(function(p){
+        return '<button class="db-periodo-btn'+((!_dashFiltroTempo&&p.id==='tudo')||(_dashFiltroTempo&&_dashFiltroTempo.preset===p.id)?' sel':'')+'" data-preset="'+p.id+'" onclick="AnaliseEstudioUI._dashSetFiltroTempo(\''+p.id+'\')" data-bg-skip="1">'+p.label+'</button>';
+      }).join('') +
+    '</div>';
     root.innerHTML =
-      '<div class="db-view-toolbar">' +
-        '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span> Galeria</button>' +
+      '<div class="db-view-toolbar" style="position:sticky;top:0;z-index:50;background:var(--surface);padding:8px 0;">' +
+        '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.irDashboardGaleria()" data-bg-skip="1"><span class="ms ms-sm">arrow_back</span></button>' +
         '<h2 style="margin:0;font-size:16px;font-weight:700;flex:1;">'+_esc(d.titulo)+'</h2>' +
         (d.descricao ? '<span style="font-size:12px;color:var(--text2);">'+_esc(d.descricao)+'</span>' : '') +
         (boot.usuarioEmail===d.donoEmail ?
           '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarDashboard(\''+_esc(d.id)+'\')" data-bg-skip="1"><span class="ms ms-sm">edit</span> Editar</button>' : '') +
       '</div>' +
+      periodoBar +
       '<div id="dash-view-canvas" class="db-canvas">' +
         (d.widgets||[]).map(function(w,idx){
-          var ico={kpi:'speed',tabela:'table_chart',separador:'title',grafico:'bar_chart'}[w.tipo]||'bar_chart';
+          var ticoMap={kpi:'speed',tabela:'table_chart',separador:'title',texto:'text_fields',imagem:'image',forma:'category',grafico:'bar_chart'};
+          var ico=ticoMap[w.tipo||'grafico']||'bar_chart';
           var sc=_dashSizeClass(w.tamanho||'full');
-          var bodyHtml = w.tipo==='separador' ? _renderWidgetBody(w,false) : '<p class="muted-text" style="text-align:center;padding:16px;">Carregando…</p>';
+          var isStatic = w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma';
+          var bodyHtml = isStatic ? _renderWidgetBody(w,false) : '<p class="muted-text" style="text-align:center;padding:16px;font-size:12px;">Carregando…</p>';
           return '<div class="db-widget '+sc+'" id="dbvw-'+idx+'">' +
             '<div class="db-widget-hdr"><span class="ms db-widget-ico">'+ico+'</span><span class="db-widget-ttl">'+_esc(w.titulo||'')+'</span></div>' +
             '<div class="db-widget-body">'+bodyHtml+'</div>' +
           '</div>';
         }).join('') +
       '</div>';
-    (d.widgets||[]).forEach(function(w,idx) {
-      if (w.tipo==='separador') return;
-      var onDone = function(linhas, colunas) {
-        var el=document.getElementById('dbvw-'+idx); if(!el) return;
-        var body=el.querySelector('.db-widget-body'); if(!body) return;
-        body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
-      };
-      if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
-      var onData=function(r){ onDone(r&&r.ok&&r.data?r.data.linhas||[]:w.linhas||[], r&&r.ok&&r.data?r.data.colunas||['Label','Valor']:w.colunas||['Label','Valor']); };
-      if (w.dsId2) GAS.analise.cruzar({dsA:w.dsId,dsB:w.dsId2}, onData, function(){ onDone(w.linhas||[],w.colunas||['Label','Valor']); });
-      else GAS.analise.importarDados({id:w.dsId}, onData, function(){ onDone(w.linhas||[],w.colunas||['Label','Valor']); });
-    });
+    _dashRecarregarWidgets(d.widgets||[]);
   }
 
   // ── Dashboard Save + Visibility ────────────────────────────────────────────
@@ -43622,9 +43770,10 @@ var AnaliseEstudioUI = (function() {
     _dashAdicionarWidget, _dashEditarWidget, _dashRemoverWidget, _dashMoverWidget, _dashMudarTamanho,
     _dashAtualizarTitulo, _dashToggleMenu, _dashCompTipoChg, _dashCompAdd, _dashRemComp,
     _weTipoChg, _weSetCor, _weTamanho, _weModoUpd, _weSelDs, _weSelDs2, _weConfirmar, _weCancelar, _weForma,
-    _abrirSeletorTemplates, _dashFromTemplate, _dashAddSugestao,
+    _abrirSeletorTemplates, _dashFromTemplate, _dashAddSugestao, _dashAddSugestaoByIdx,
     _dashDragStart, _dashDragOver, _dashDrop, _dashDragEnd,
-    _renderFormaWidget, _renderAnalisesGaleria
+    _renderFormaWidget, _renderAnalisesGaleria,
+    _dashSetFiltroTempo, _dashRecarregarWidgets
   };
 })();
 

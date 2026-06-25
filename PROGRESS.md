@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s144)**: **feat — Quadros v6: Mapa Mental MindMeister-like (Tab/Enter, bezier, auto-layout), grupo de ferramentas de desenho (lápis/marcador/pincel em flyout), Vincular Pessoa com busca em dados cadastrados; regra de negócio de vínculos nos docs — Deploy @1081.**
+**Fase atual (s144)**: **feat — Quadros v6: Mapa Mental MindMeister-like (Tab/Enter, bezier, auto-layout), grupo de ferramentas de desenho (lápis/marcador/pincel em flyout), Vincular Pessoa com busca em dados cadastrados; regra de negócio de vínculos nos docs; Estúdio de Análises: SVG Medidor/Radar/Combinado implementados, onclick sugestões por índice seguro — Deploy @1083.**
 
 **O que foi implementado agora**:
 - **Mapa Mental dedicado**: quadros com categoria `mindmap` abrem em modo exclusivo com engine separada. Nodos em árvore horizontal, connectors bezier, root ao centro. Tab cria filho, Enter cria irmão, F2/duplo-clique edita inline, Del remove, Esc desseleciona, scroll para zoom, arrastar para pan. Auto-layout com distribuição alternada L/R para filhos do root. Badge de filhos em cada nodo. Salvamento via `snapshot.mmNodes`, retrocompatível.
@@ -48,6 +48,8 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 - **Regra de vínculo nos docs**: `CLAUDE.md` recebeu seção `🔗 REGRA DE NEGÓCIO — VÍNCULOS SÃO SEMPRE DADOS CADASTRADOS` com tabela de implementação obrigatória e checklist.
 - **7 novos datasets do Estúdio de Análises** (analise_controller.gs): `ativos_status`, `tarefas_prioridade`, `contratos_status`, `contratos_fonte`, `presencas_acao`, `balcao_tipo`, `balcao_setor`; `_analise_filtrar_por_data` aplicado a `acoes_mes`, `publico_acao`, `publico_mes`.
 - **4 novos tipos de gráfico SVG** (index.html/AnaliseEstudioUI): Medidor (gauge semicircular), Radar (teia de aranha), Combinado (barras + linha), Dispersão (scatter); catálogo de 12 tipos com descrições; `_dashFiltroTempo` para filtro de período.
+- **SVG Medidor/Radar/Combinado implementados**: funções `_svgMedidor`, `_svgRadar`, `_svgCombinado` completas com renderização SVG.
+- **Fix segurança onclick sugestões**: substituído `JSON.stringify` inline no onclick por índice `_dashAddSugestaoByIdx(i)` com `_dashSugArr` — elimina risco de injeção via dados do usuário.
 
 **Fase anterior (s143)**: **feat — Estúdio de Análises v5: Dashboard Builder modernizado — drag & drop, 7 tipos de widget (texto/imagem/forma), galeria hero, templates pré-prontos, sugestões do sistema, aba Análises removida — Deploy @1079.**
 
