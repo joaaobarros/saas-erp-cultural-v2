@@ -2038,15 +2038,16 @@ select.form-control { cursor: pointer; }
 .timeline-dot { width:10px;height:10px;border-radius:50%;background:var(--color-primary);flex-shrink:0;margin-top:5px;z-index:1;position:relative; }
 .timeline-msg { flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px; }
 /* ── Quadros & Sessões Interativas ──────────────────────────────────────── */
-.quadro-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:box-shadow .2s; }
-.quadro-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.10); }
-.qdro-thumb { width:100%;height:80px;background:var(--surface2);border-radius:8px;margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted); }
-.qdro-thumb-miro { background:#4262ff18; }
-.qdro-thumb-napkin { background:#7c3aed18; }
-.badge-qdro-miro { display:inline-block;font-size:10px;font-weight:700;color:#4262ff;background:#4262ff15;border-radius:4px;padding:1px 6px;margin-right:3px; }
-.badge-qdro-napkin { display:inline-block;font-size:10px;font-weight:700;color:#7c3aed;background:#7c3aed15;border-radius:4px;padding:1px 6px;margin-right:3px; }
+.quadro-card { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:box-shadow .2s,transform .15s,border-color .15s; }
+.quadro-card:hover { box-shadow:0 8px 24px rgba(0,0,0,.10);transform:translateY(-2px);border-color:var(--color-primary); }
+.qdro-thumb { width:100%;height:88px;background:linear-gradient(135deg,#f1f5f9 0%,#e2e8f0 100%);border-radius:10px;margin-bottom:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted); }
 .qdro-apresentacao-overlay { position:fixed;inset:0;background:#000;z-index:1800;display:flex;flex-direction:column; }
 .qdro-apresentacao-bar { display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgba(0,0,0,.7);flex-shrink:0; }
+/* Botões do painel flutuante de ferramentas */
+.qdro-ftb-btn { width:36px;height:36px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;color:#4b5563;transition:background .12s,color .12s;flex-shrink:0; }
+.qdro-ftb-btn:hover { background:#f1f5f9; }
+.qdro-ftb-btn.ativa { background:var(--color-primary);color:#fff; }
+.qdro-ftb-btn.ativa:hover { background:var(--color-primary); }
 .badge-qdro-cat { display:inline-block;font-size:10px;border-radius:4px;padding:1px 6px;margin-right:3px;font-weight:600; }
 .badge-qdro-cat-mindmap    { color:#0ea5e9;background:#0ea5e915; }
 .badge-qdro-cat-fluxograma { color:#f59e0b;background:#f59e0b15; }
@@ -7624,8 +7625,6 @@ select.form-control { cursor: pointer; }
         <div class="tab-bar" style="margin-bottom:14px;flex-wrap:wrap;">
           <button class="tab-btn ativa" onclick="QuadrosUI.setTab('todos',this)" data-bg-skip="1">Todos</button>
           <button class="tab-btn" onclick="QuadrosUI.setTab('vinculados',this)" data-bg-skip="1">Vinculados</button>
-          <button class="tab-btn" style="color:#4262ff;font-weight:700;" onclick="QuadrosUI.setTab('miro',this)" data-bg-skip="1">Miro</button>
-          <button class="tab-btn" style="color:#7c3aed;font-weight:700;" onclick="QuadrosUI.setTab('napkin',this)" data-bg-skip="1">Napkin</button>
           <button class="tab-btn" onclick="QuadrosUI.setTab('mindmap',this)" data-bg-skip="1">Mindmaps</button>
           <button class="tab-btn" onclick="QuadrosUI.setTab('fluxograma',this)" data-bg-skip="1">Fluxogramas</button>
           <button class="tab-btn" onclick="QuadrosUI.setTab('infografico',this)" data-bg-skip="1">Infográficos</button>
@@ -7647,24 +7646,7 @@ select.form-control { cursor: pointer; }
             <div class="modal-body">
               <div class="form-group"><label>Título *</label><input type="text" id="qdro-titulo" class="form-control" required></div>
               <div class="form-group"><label>Descrição</label><textarea id="qdro-descricao" class="form-control" rows="2"></textarea></div>
-              <div class="form-group">
-                <label>Tipo de Quadro</label>
-                <select id="qdro-tipo" class="form-control" onchange="QuadrosUI._onTipoChange(this.value)">
-                  <option value="interno">Interno — Canvas próprio</option>
-                  <option value="miro">Miro</option>
-                  <option value="napkin">Napkin</option>
-                </select>
-              </div>
-              <div class="form-group" id="qdro-url-group" style="display:none;">
-                <label id="qdro-url-label">URL do Board</label>
-                <input type="url" id="qdro-url-externa" class="form-control" placeholder="Cole aqui a URL do quadro…">
-                <p id="qdro-url-hint" style="font-size:11px;color:var(--muted);margin-top:4px;"></p>
-              </div>
-              <div class="form-group" id="qdro-napkin-prompt-group" style="display:none;">
-                <label>Prompt / Conteúdo para Napkin <span style="font-weight:400;color:var(--muted)">(opcional — abre o Napkin com seu texto)</span></label>
-                <textarea id="qdro-napkin-prompt" class="form-control" rows="3" placeholder="Descreva o que deseja visualizar. Ex: Mostre o processo de aprovação de projetos do CCBJ em três etapas…"></textarea>
-              </div>
-              <div class="form-group">
+              <div class="form-group" id="qdro-categoria-group" style="display:none;">
                 <label>Categoria Visual</label>
                 <select id="qdro-categoria" class="form-control">
                   <option value="livre">Canvas Livre</option>
@@ -7674,6 +7656,9 @@ select.form-control { cursor: pointer; }
                   <option value="framework">Framework Visual</option>
                   <option value="dados">Gráficos de Dados</option>
                   <option value="imagens">Imagens / Assets</option>
+                  <option value="tabela">Tabelas</option>
+                  <option value="kanban">Kanban</option>
+                  <option value="brainstorm">Brainstorm</option>
                 </select>
               </div>
               <div class="form-group"><label>Ação Vinculada</label><select id="qdro-acao-id" class="form-control"><option value="">— Nenhuma —</option></select></div>
@@ -7708,24 +7693,6 @@ select.form-control { cursor: pointer; }
             </button>
           </div>
           <div id="qdro-editor-container" style="flex:1;min-height:0;"></div>
-        </div>
-        <!-- Overlay de ferramenta externa (Miro / Napkin) -->
-        <div id="qdro-ext-overlay" class="oculto" style="position:fixed;inset:0;background:var(--surface);z-index:1500;display:flex;flex-direction:column;">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-            <button class="btn btn-secondary btn-sm" onclick="QuadrosUI.fecharEditorExterno()" data-bg-skip="1">
-              <span class="ms ms-sm">arrow_back</span> Voltar
-            </button>
-            <span id="qdro-ext-badge"></span>
-            <h3 id="qdro-ext-titulo" style="margin:0;font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></h3>
-            <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" data-bg-skip="1"
-              onclick="QuadrosUI.apresentarExterno()">
-              <span class="ms ms-sm">present_to_all</span> Apresentar
-            </button>
-            <a id="qdro-ext-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="flex-shrink:0;" data-bg-skip="1">
-              <span class="ms ms-sm">open_in_new</span> Abrir em nova aba
-            </a>
-          </div>
-          <iframe id="qdro-ext-iframe" src="" style="flex:1;border:none;width:100%;background:#f0f0f0;" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
         </div>
         <!-- Overlay de apresentação (canvas interno em tela cheia) -->
         <div id="qdro-pres-overlay" class="oculto" style="position:fixed;inset:0;background:#1a1a2e;z-index:1600;display:flex;flex-direction:column;">
@@ -29713,10 +29680,7 @@ var AcoesUI = (function() {
                      diagrama:'Diagrama', kanban:'Kanban', brainstorm:'Brainstorm', marcacao:'Colaboração' };
       el.innerHTML = lista.map(function(q) {
         var eid = JSON.stringify(q.id).replace(/"/g,"'");
-        var tipo = q.tipo || 'interno';
-        var ic = tipo === 'miro' ? '<span style="font-size:12px;font-weight:800;color:#4262ff;">M</span>'
-               : tipo === 'napkin' ? '<span style="font-size:12px;font-weight:800;color:#7c3aed;">N</span>'
-               : '<span class="ms ms-sm" style="color:var(--muted)">edit_square</span>';
+        var ic = '<span class="ms ms-sm" style="color:var(--color-primary);opacity:.6">edit_square</span>';
         return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="QuadrosUI.abrirEditor(' + eid + ')">'
           + ic + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(q.titulo) + '</div>'
           + '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(catLbl[q.categoria||'livre']||'Canvas') + '</div></div>'
@@ -34848,6 +34812,9 @@ var ReunioesUI = (function() {
     if (tab === 'quadros' && _idAtual) _renderQuadrosReuniao(_idAtual);
   }
 
+  var _QDRO_CAT_LBL = { mindmap:'Mindmap', fluxograma:'Fluxograma', infografico:'Infográfico',
+                         framework:'Framework', dados:'Dados', imagens:'Imagens',
+                         tabela:'Tabelas', kanban:'Kanban', brainstorm:'Brainstorm', livre:'Canvas' };
   function _renderQuadrosReuniao(reuniaoId) {
     var el = document.getElementById('run-quadros-lista'); if (!el) return;
     el.innerHTML = '<p class="muted-text" style="grid-column:1/-1;">Carregando…</p>';
@@ -34861,13 +34828,11 @@ var ReunioesUI = (function() {
       }
       el.innerHTML = lista.map(function(q) {
         var eid = JSON.stringify(q.id).replace(/"/g,"'");
-        var tipo = q.tipo || 'interno';
-        var ic = tipo === 'miro' ? 'M' : tipo === 'napkin' ? 'N' : '';
-        var icStyle = tipo === 'miro' ? 'color:#4262ff;' : tipo === 'napkin' ? 'color:#7c3aed;' : '';
+        var catLbl = escaparHtml(_QDRO_CAT_LBL[q.categoria||'livre'] || 'Canvas');
         return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="QuadrosUI.abrirEditor(' + eid + ')">'
-          + (ic ? '<span style="font-size:13px;font-weight:800;' + icStyle + '">' + ic + '</span>' : '<span class="ms ms-sm" style="color:var(--muted)">edit_square</span>')
+          + '<span class="ms ms-sm" style="color:var(--color-primary);opacity:.6;">edit_square</span>'
           + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escaparHtml(q.titulo) + '</div>'
-          + '<div style="font-size:11px;color:var(--muted);">' + escaparHtml(_CATS[q.categoria||'livre']||'Canvas') + '</div></div>'
+          + '<div style="font-size:11px;color:var(--muted);">' + catLbl + '</div></div>'
           + '<button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0;" onclick="event.stopPropagation();QuadrosUI.abrirEditor(' + eid + ')" data-bg-skip="1"><span class="ms ms-sm">open_in_new</span></button>'
           + '</div>';
       }).join('');
@@ -36204,126 +36169,12 @@ var QuadrosUI = (function() {
                 tabela:'Tabelas', diagrama:'Diagramas', kanban:'Kanban', brainstorm:'Brainstorm', marcacao:'@Colaboração', livre:'' };
   var _CAT_ICO = { mindmap:'account_tree', fluxograma:'schema', infografico:'bar_chart', framework:'grid_view', dados:'show_chart', imagens:'image',
                    tabela:'table_chart', diagrama:'device_hub', kanban:'view_kanban', brainstorm:'lightbulb', marcacao:'alternate_email' };
-  var _CATS_BY_TIPO = {
-    'interno': [
-      { v:'livre',       l:'Board Infinito (Canvas Livre)' },
-      { v:'mindmap',     l:'Mapa Mental (Mindmap)' },
-      { v:'fluxograma',  l:'Fluxograma' },
-      { v:'infografico', l:'Infográfico' },
-      { v:'framework',   l:'Framework Visual' },
-      { v:'dados',       l:'Gráficos de Dados' },
-      { v:'imagens',     l:'Imagens / Assets' }
-    ],
-    'miro': [
-      { v:'livre',       l:'Board Infinito' },
-      { v:'tabela',      l:'Tabelas' },
-      { v:'diagrama',    l:'Diagramas' },
-      { v:'mindmap',     l:'Mapa Mental' },
-      { v:'kanban',      l:'Kanban' },
-      { v:'brainstorm',  l:'Brainstorm' },
-      { v:'marcacao',    l:'@Marcação de Colaboradores' }
-    ],
-    'napkin': [
-      { v:'mindmap',     l:'Mindmap' },
-      { v:'fluxograma',  l:'Fluxograma' },
-      { v:'infografico', l:'Infográfico' },
-      { v:'framework',   l:'Framework Visual' },
-      { v:'dados',       l:'Gráficos de Dados' },
-      { v:'imagens',     l:'Imagens / Assets' }
-    ]
-  };
 
   function setTab(tab, btn) {
     _tabAtual = tab;
     document.querySelectorAll('#view-quadros .tab-bar .tab-btn').forEach(function(b) { b.classList.remove('ativa'); });
     if (btn) btn.classList.add('ativa');
     _renderLista();
-  }
-
-  // ── Tipo change ───────────────────────────────────────────────────────────
-  function _onTipoChange(tipo) {
-    var grp  = document.getElementById('qdro-url-group');
-    var lbl  = document.getElementById('qdro-url-label');
-    var hint = document.getElementById('qdro-url-hint');
-    var napGrp = document.getElementById('qdro-napkin-prompt-group');
-    var catSel = document.getElementById('qdro-categoria');
-    // Rebuild categoria options
-    var opts = (_CATS_BY_TIPO[tipo] || _CATS_BY_TIPO['interno']);
-    if (catSel) {
-      var prev = catSel.value;
-      catSel.innerHTML = opts.map(function(o){ return '<option value="' + o.v + '">' + o.l + '</option>'; }).join('');
-      if (opts.some(function(o){ return o.v === prev; })) catSel.value = prev;
-    }
-    if (!grp) return;
-    if (tipo === 'miro') {
-      grp.style.display = '';
-      if (lbl)  lbl.textContent = 'URL do Board Miro';
-      if (hint) hint.innerHTML  = 'Cole a URL de compartilhamento do Miro. Ex: <code>https://miro.com/app/board/uXjVO.../</code>'
-        + '<br>Dica: no Miro use o botão <b>Share → Copy link</b>.';
-      if (napGrp) napGrp.style.display = 'none';
-    } else if (tipo === 'napkin') {
-      grp.style.display = '';
-      if (lbl)  lbl.textContent = 'URL do Board Napkin (opcional)';
-      if (hint) hint.innerHTML  = 'Se já tiver um board: cole a URL. Caso contrário, preencha o prompt abaixo.';
-      if (napGrp) napGrp.style.display = '';
-    } else {
-      grp.style.display = 'none';
-      if (hint) hint.textContent = '';
-      if (napGrp) napGrp.style.display = 'none';
-    }
-  }
-
-  // ── URL helpers ───────────────────────────────────────────────────────────
-  function _miroEmbedUrl(url) {
-    var m = url.match(/miro\.com\/app\/board\/([^/?#]+)/);
-    return m ? 'https://miro.com/app/live-embed/' + m[1] + '/?autoplay=yep&embedAutoplay=true' : url;
-  }
-
-  function _napkinEmbedUrl(url) { return url; }
-
-  // ── Editor externo (Miro / Napkin) ────────────────────────────────────────
-  var _qdroExtAtual = null;
-  function _abrirEditorExterno(q) {
-    _qdroExtAtual = q;
-    var tipo = q.tipo || 'interno';
-    var url = q.urlExterna || '';
-    var embedUrl = tipo === 'miro' ? _miroEmbedUrl(url) : _napkinEmbedUrl(url);
-    var badge = tipo === 'miro'
-      ? '<span class="badge-qdro-miro">Miro</span>'
-      : '<span class="badge-qdro-napkin">Napkin</span>';
-    var badgeEl = document.getElementById('qdro-ext-badge'); if (badgeEl) badgeEl.innerHTML = badge;
-    var tituloEl = document.getElementById('qdro-ext-titulo'); if (tituloEl) tituloEl.textContent = q.titulo || 'Quadro';
-    var linkEl = document.getElementById('qdro-ext-link'); if (linkEl) linkEl.href = url;
-    var ifr = document.getElementById('qdro-ext-iframe'); if (ifr) ifr.src = embedUrl;
-    document.getElementById('qdro-ext-overlay').classList.remove('oculto');
-  }
-
-  function fecharEditorExterno() {
-    document.getElementById('qdro-ext-overlay').classList.add('oculto');
-    var ifr = document.getElementById('qdro-ext-iframe'); if (ifr) ifr.src = '';
-    _qdroExtAtual = null; _idAtual = null;
-  }
-
-  // ── Apresentação — ferramenta externa (iframe fullscreen) ─────────────────
-  function apresentarExterno(idOpt) {
-    if (idOpt !== undefined) {
-      GAS.quadros.obter(idOpt, function(resp) {
-        if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
-        _qdroExtAtual = resp.data; _idAtual = idOpt;
-        _abrirEditorExterno(resp.data);
-        setTimeout(function() { _fullscreenIframe(); }, 300);
-      }, function(e) { Toast.erro(e.message || e); });
-      return;
-    }
-    _fullscreenIframe();
-  }
-
-  function _fullscreenIframe() {
-    var ifr = document.getElementById('qdro-ext-iframe');
-    if (!ifr) return;
-    var fn = ifr.requestFullscreen || ifr.webkitRequestFullscreen || ifr.mozRequestFullScreen;
-    if (fn) { fn.call(ifr); }
-    else { Toast.aviso('Fullscreen não suportado neste browser — use o botão "Abrir em nova aba".'); }
   }
 
   // ── Apresentação — canvas interno ─────────────────────────────────────────
@@ -36384,9 +36235,7 @@ var QuadrosUI = (function() {
     var el = document.getElementById('quadros-lista');
     var lista = _lista;
     if (_tabAtual === 'vinculados') lista = lista.filter(function(q){ return q.acaoId || q.reuniaoId; });
-    else if (_tabAtual === 'miro')   lista = lista.filter(function(q){ return (q.tipo||'interno') === 'miro'; });
-    else if (_tabAtual === 'napkin') lista = lista.filter(function(q){ return (q.tipo||'interno') === 'napkin'; });
-    else if (_tabAtual !== 'todos')  lista = lista.filter(function(q){ return (q.categoria||'livre') === _tabAtual; });
+    else if (_tabAtual !== 'todos') lista = lista.filter(function(q){ return (q.categoria||'livre') === _tabAtual; });
     if (!lista.length) {
       el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:40px;">'
         + '<span class="ms" style="font-size:40px;color:var(--muted)">dashboard_customize</span>'
@@ -36397,19 +36246,12 @@ var QuadrosUI = (function() {
     }
     el.innerHTML = lista.map(function(q) {
       var id = JSON.stringify(q.id).replace(/"/g,"'");
-      var tipo = q.tipo || 'interno';
-      var isExt = tipo === 'miro' || tipo === 'napkin';
       var colabs = (q.colaboradores || []).slice(0,4).map(function(c) {
         return '<span title="' + escaparHtml(c) + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--color-primary);color:#fff;font-size:8px;font-weight:700;margin-right:-3px;">' + escaparHtml((c||'?')[0].toUpperCase()) + '</span>';
       }).join('');
       var tags = '';
       if (q.acaoId)    tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;margin-right:3px;">Ação</span>';
       if (q.reuniaoId) tags += '<span style="font-size:10px;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 5px;">Reunião</span>';
-      var tipoBadge = tipo === 'miro'
-        ? '<span class="badge-qdro-miro">Miro</span>'
-        : tipo === 'napkin'
-          ? '<span class="badge-qdro-napkin">Napkin</span>'
-          : '';
       var cat = q.categoria || 'livre';
       var catLabel = _CATS[cat] || '';
       var catIco = _CAT_ICO[cat] || '';
@@ -36418,18 +36260,11 @@ var QuadrosUI = (function() {
           + (catIco ? '<span class="ms ms-sm" style="font-size:10px;vertical-align:middle;">' + catIco + '</span> ' : '')
           + catLabel + '</span>'
         : '';
-      var thumb = tipo === 'miro'
-        ? '<div class="qdro-thumb qdro-thumb-miro"><span style="font-size:30px;font-weight:900;color:#4262ff;letter-spacing:-1px;">M</span></div>'
-        : tipo === 'napkin'
-          ? '<div class="qdro-thumb qdro-thumb-napkin"><span style="font-size:30px;font-weight:900;color:#7c3aed;letter-spacing:-1px;">N</span></div>'
-          : '<div class="qdro-thumb"><span class="ms" style="font-size:32px;color:var(--muted);">edit_square</span></div>';
-      var btnApresentar = isExt
-        ? '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.apresentarExterno(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">present_to_all</span></button>'
-        : '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.apresentarCanvasDireto(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">present_to_all</span></button>';
+      var thumb = '<div class="qdro-thumb"><span class="ms" style="font-size:36px;color:var(--color-primary);opacity:.4;">edit_square</span></div>';
+      var btnApresentar = '<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="event.stopPropagation();QuadrosUI.apresentarCanvasDireto(' + id + ')" data-bg-skip="1"><span class="ms ms-sm">present_to_all</span></button>';
       return '<div class="quadro-card" onclick="QuadrosUI.abrirEditor(' + id + ')">'
         + thumb
-        + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap;">'
-          + (tipoBadge ? tipoBadge : '')
+        + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap;">'
           + (catBadge ? catBadge : '')
           + '<span style="font-weight:600;font-size:14px;">' + escaparHtml(q.titulo) + '</span>'
         + '</div>'
@@ -36449,12 +36284,12 @@ var QuadrosUI = (function() {
   function abrirForm(id) {
     _idAtual = id || null;
     document.getElementById('qdro-modal-titulo').textContent = id ? 'Configurar Quadro' : 'Novo Quadro';
-    ['qdro-titulo','qdro-descricao','qdro-acao-id','qdro-reuniao-id','qdro-colaboradores','qdro-url-externa','qdro-napkin-prompt'].forEach(function(eid) {
+    ['qdro-titulo','qdro-descricao','qdro-acao-id','qdro-reuniao-id','qdro-colaboradores'].forEach(function(eid) {
       var el = document.getElementById(eid); if (el) el.value = '';
     });
-    var tipoEl = document.getElementById('qdro-tipo'); if (tipoEl) tipoEl.value = 'interno';
-    _onTipoChange('interno');
     var catEl = document.getElementById('qdro-categoria'); if (catEl) catEl.value = 'livre';
+    var catGrp = document.getElementById('qdro-categoria-group');
+    if (catGrp) catGrp.style.display = id ? '' : 'none';
     if (id) {
       var q = _lista.filter(function(x){ return x.id === id; })[0];
       if (q) {
@@ -36463,11 +36298,6 @@ var QuadrosUI = (function() {
         document.getElementById('qdro-acao-id').value       = q.acaoId          || '';
         document.getElementById('qdro-reuniao-id').value    = q.reuniaoId       || '';
         document.getElementById('qdro-colaboradores').value = (q.colaboradores || []).join(', ');
-        var t = q.tipo || 'interno';
-        if (tipoEl) tipoEl.value = t;
-        _onTipoChange(t);
-        var urlEl = document.getElementById('qdro-url-externa'); if (urlEl) urlEl.value = q.urlExterna || '';
-        var npEl = document.getElementById('qdro-napkin-prompt'); if (npEl) npEl.value = q.napkinPrompt || '';
         var catEl2 = document.getElementById('qdro-categoria'); if (catEl2) catEl2.value = q.categoria || 'livre';
       }
     }
@@ -36481,27 +36311,13 @@ var QuadrosUI = (function() {
   function salvar(done) {
     var titulo = (document.getElementById('qdro-titulo')||{}).value || '';
     if (!titulo.trim()) { done(); Toast.aviso('Título obrigatório.'); return; }
-    var tipo = (document.getElementById('qdro-tipo')||{}).value || 'interno';
-    var urlExterna = ((document.getElementById('qdro-url-externa')||{}).value || '').trim();
-    var napkinPrompt = ((document.getElementById('qdro-napkin-prompt')||{}).value || '').trim();
-    if (tipo === 'napkin' && !urlExterna && napkinPrompt) {
-      urlExterna = 'https://app.napkin.ai/?text=' + encodeURIComponent(napkinPrompt);
-    }
-    if (tipo === 'miro' && !urlExterna) {
-      done(); Toast.aviso('URL do board Miro é obrigatória.'); return;
-    }
-    if (tipo === 'napkin' && !urlExterna) {
-      done(); Toast.aviso('Informe a URL do board ou o conteúdo para abrir no Napkin.'); return;
-    }
     var colabRaw = (document.getElementById('qdro-colaboradores')||{}).value || '';
     var colabs = colabRaw.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     GAS.quadros.salvar({
       id:            _idAtual || undefined,
       titulo:        titulo.trim(),
       descricao:     (document.getElementById('qdro-descricao')||{}).value    || '',
-      tipo:          tipo,
-      urlExterna:    urlExterna || null,
-      napkinPrompt:  napkinPrompt || null,
+      tipo:          'interno',
       categoria:     (document.getElementById('qdro-categoria')||{}).value || 'livre',
       acaoId:        (document.getElementById('qdro-acao-id')||{}).value       || '',
       reuniaoId:     (document.getElementById('qdro-reuniao-id')||{}).value    || '',
@@ -36535,8 +36351,6 @@ var QuadrosUI = (function() {
       if (!resp || !resp.ok) { Toast.erro('Erro ao carregar quadro.'); return; }
       var q = resp.data;
       _idAtual = id;
-      var tipo = q.tipo || 'interno';
-      if (tipo === 'miro' || tipo === 'napkin') { _abrirEditorExterno(q); return; }
       document.getElementById('qdro-editor-titulo').textContent = q.titulo || 'Quadro';
       var colabEl = document.getElementById('qdro-editor-colabs');
       if (colabEl) colabEl.innerHTML = (q.colaboradores || []).map(function(c) {
@@ -36582,59 +36396,7 @@ var QuadrosUI = (function() {
       lastDocClick: 0, lastDocClickIdx: -1
     };
 
-    // ── Toolbar ──────────────────────────────────────────────────────────────
-    var tb = document.createElement('div');
-    tb.style.cssText = 'display:flex;align-items:center;gap:5px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;flex-shrink:0;';
-
-    function _sep() {
-      var s = document.createElement('div');
-      s.style.cssText = 'width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0;';
-      return s;
-    }
-    function _mkBtn(ico, lbl, fn, id) {
-      var b = document.createElement('button');
-      b.className = 'btn btn-secondary btn-sm'; b.setAttribute('data-bg-skip','1');
-      if (id) b.id = id; b.title = lbl;
-      b.innerHTML = '<span class="ms ms-sm">' + ico + '</span>' + (lbl ? ' ' + lbl : '');
-      b.onclick = fn; return b;
-    }
-
-    var TOOLS = [
-      {id:'select', ico:'near_me',        lbl:'Selecionar'},
-      {id:'pencil', ico:'draw',           lbl:'Lápis'},
-      {id:'line',   ico:'remove',         lbl:'Linha'},
-      {id:'arrow',  ico:'trending_flat',  lbl:'Seta'},
-      {id:'rect',   ico:'rectangle',      lbl:'Retângulo'},
-      {id:'circle', ico:'circle',         lbl:'Círculo'},
-      {id:'text',   ico:'text_fields',    lbl:'Texto'},
-      {id:'sticky', ico:'sticky_note_2',  lbl:'Sticky Note'},
-      {id:'frame',  ico:'crop_free',      lbl:'Frame / Slide'},
-      {id:'table',  ico:'table_chart',    lbl:'Tabela'},
-      {id:'eraser', ico:'ink_eraser',     lbl:'Borracha'}
-    ];
-    TOOLS.forEach(function(t) {
-      var b = document.createElement('button');
-      b.id = 'qdro-tool-' + t.id; b.className = 'btn btn-secondary btn-sm';
-      b.setAttribute('data-bg-skip','1'); b.title = t.lbl;
-      b.innerHTML = '<span class="ms ms-sm">' + t.ico + '</span> ' + t.lbl;
-      b.style.cssText = t.id === 'select' ? 'background:var(--color-primary);color:#fff;' : '';
-      b.onclick = function() { _setTool(t.id); };
-      tb.appendChild(b);
-    });
-    tb.appendChild(_sep());
-
-    // Cor + Espessura
-    var lblC = document.createElement('span'); lblC.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);'; lblC.textContent = 'Cor'; tb.appendChild(lblC);
-    var inpC = document.createElement('input'); inpC.type = 'color'; inpC.id = 'qdro-color'; inpC.value = '#1e293b';
-    inpC.style.cssText = 'width:28px;height:26px;border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:1px;background:var(--surface);';
-    inpC.onchange = function() { _cvState.color = this.value; }; tb.appendChild(inpC);
-    var lblE = document.createElement('span'); lblE.style.cssText = 'font-size:11px;font-weight:700;color:var(--muted);'; lblE.textContent = 'Esp.'; tb.appendChild(lblE);
-    var inpE = document.createElement('input'); inpE.type = 'range'; inpE.id = 'qdro-width'; inpE.min = 1; inpE.max = 24; inpE.value = 2;
-    inpE.style.cssText = 'width:64px;accent-color:var(--color-primary);';
-    inpE.oninput = function() { _cvState.lineWidth = parseInt(this.value); }; tb.appendChild(inpE);
-    tb.appendChild(_sep());
-
-    // Imagem e Arquivo
+    // ── Inputs de arquivo (ocultos) ───────────────────────────────────────────
     var inputImg = document.createElement('input'); inputImg.type = 'file'; inputImg.accept = 'image/*'; inputImg.style.display = 'none';
     inputImg.onchange = function() { if (this.files[0]) _insertImage(this.files[0]); this.value = ''; };
     container.appendChild(inputImg);
@@ -36642,36 +36404,190 @@ var QuadrosUI = (function() {
     inputDoc.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv'; inputDoc.style.display = 'none';
     inputDoc.onchange = function() { if (this.files[0]) _insertDoc(this.files[0]); this.value = ''; };
     container.appendChild(inputDoc);
-    tb.appendChild(_mkBtn('image', 'Imagem', function() { inputImg.click(); }));
-    tb.appendChild(_mkBtn('attach_file', 'Arquivo', function() { inputDoc.click(); }));
-    tb.appendChild(_sep());
 
-    // Zoom
-    tb.appendChild(_mkBtn('zoom_in', '', function() { _doZoom(1.2); }));
-    var lblZ = document.createElement('span'); lblZ.id = 'qdro-zoom-label';
-    lblZ.style.cssText = 'font-size:11px;color:var(--muted);min-width:34px;text-align:center;'; lblZ.textContent = '100%'; tb.appendChild(lblZ);
-    tb.appendChild(_mkBtn('zoom_out', '', function() { _doZoom(0.8); }));
-    tb.appendChild(_mkBtn('fit_screen', 'Ajustar', function() { _resetView(); }));
-    tb.appendChild(_sep());
-
-    // Desfazer + Limpar
-    var right = document.createElement('div'); right.style.cssText = 'margin-left:auto;display:flex;gap:5px;';
-    right.appendChild(_mkBtn('undo', 'Desfazer', function() { _undo(); }));
-    right.appendChild(_mkBtn('delete_sweep', 'Limpar', function() { _clearCanvas(); }));
-    tb.appendChild(right);
-    container.appendChild(tb);
-
-    // ── Canvas ───────────────────────────────────────────────────────────────
+    // ── Canvas (área principal, conteúdo flutuante posicionado dentro) ────────
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#f8f9fb;min-height:0;';
+    wrap.style.cssText = 'flex:1;overflow:hidden;position:relative;background:#fff;min-height:0;';
     var cv = document.createElement('canvas');
     cv.id = 'qdro-canvas'; cv.tabIndex = 0;
     cv.style.cssText = 'display:block;cursor:default;touch-action:none;outline:none;';
     wrap.appendChild(cv);
+
+    // ── Painel esquerdo de ferramentas (flutuante) ────────────────────────────
+    var ftb = document.createElement('div');
+    ftb.style.cssText = [
+      'position:absolute;left:12px;top:50%;transform:translateY(-50%);z-index:100;',
+      'background:#fff;border-radius:14px;',
+      'box-shadow:0 2px 16px rgba(0,0,0,.13),0 0 0 1px rgba(0,0,0,.06);',
+      'display:flex;flex-direction:column;gap:1px;padding:6px;',
+      'user-select:none;max-height:90vh;overflow-y:auto;'
+    ].join('');
+    wrap.appendChild(ftb);
+
+    function _ftbSep() {
+      var s = document.createElement('div');
+      s.style.cssText = 'height:1px;background:rgba(0,0,0,.07);margin:3px 0;flex-shrink:0;';
+      return s;
+    }
+
+    var TOOLS = [
+      {id:'select', ico:'near_me',        lbl:'Selecionar (V)'},
+      {id:'pencil', ico:'draw',           lbl:'Lápis (P)'},
+      null,
+      {id:'line',   ico:'remove',         lbl:'Linha'},
+      {id:'arrow',  ico:'trending_flat',  lbl:'Seta'},
+      {id:'rect',   ico:'crop_square',    lbl:'Retângulo'},
+      {id:'circle', ico:'circle',         lbl:'Círculo'},
+      null,
+      {id:'text',   ico:'text_fields',    lbl:'Texto'},
+      {id:'sticky', ico:'sticky_note_2',  lbl:'Sticky Note'},
+      {id:'frame',  ico:'crop_free',      lbl:'Frame / Slide'},
+      {id:'table',  ico:'table_chart',    lbl:'Tabela'},
+      null,
+      {id:'eraser', ico:'ink_eraser',     lbl:'Borracha'},
+      null,
+      {id:'_img',   ico:'image',          lbl:'Inserir Imagem'},
+      {id:'_doc',   ico:'attach_file',    lbl:'Inserir Arquivo'}
+    ];
+
+    TOOLS.forEach(function(t) {
+      if (!t) { ftb.appendChild(_ftbSep()); return; }
+      var b = document.createElement('button');
+      if (t.id[0] !== '_') b.id = 'qdro-tool-' + t.id;
+      b.className = 'qdro-ftb-btn' + (t.id === 'select' ? ' ativa' : ''); b.setAttribute('data-bg-skip','1'); b.title = t.lbl;
+      b.innerHTML = '<span class="ms" style="font-size:20px;line-height:1;">' + t.ico + '</span>';
+      if (t.id === '_img') {
+        b.onclick = function() { inputImg.click(); };
+      } else if (t.id === '_doc') {
+        b.onclick = function() { inputDoc.click(); };
+      } else {
+        b.onclick = (function(tid) { return function() { _setTool(tid); }; })(t.id);
+      }
+      ftb.appendChild(b);
+    });
+
+    // ── Barra de cor + espessura (centro inferior, flutuante) ─────────────────
+    var colorBar = document.createElement('div');
+    colorBar.style.cssText = [
+      'position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:100;',
+      'background:#fff;border-radius:100px;',
+      'box-shadow:0 2px 16px rgba(0,0,0,.13),0 0 0 1px rgba(0,0,0,.06);',
+      'display:flex;align-items:center;gap:3px;padding:6px 12px;',
+      'user-select:none;white-space:nowrap;'
+    ].join('');
+    wrap.appendChild(colorBar);
+
+    var COLOR_PRESETS = ['#1e293b','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#64748b','#ffffff'];
+    COLOR_PRESETS.forEach(function(c) {
+      var sw = document.createElement('button');
+      sw.setAttribute('data-bg-skip','1'); sw.title = c;
+      sw.style.cssText = 'width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid rgba(0,0,0,.12);background:' + c + ';flex-shrink:0;transition:transform .1s,border-color .1s;box-sizing:border-box;';
+      sw.onmouseover = function() { this.style.transform = 'scale(1.3)'; this.style.borderColor = 'var(--color-primary)'; };
+      sw.onmouseout  = function() { this.style.transform = ''; this.style.borderColor = 'rgba(0,0,0,.12)'; };
+      sw.onclick = function() {
+        _cvState.color = c;
+        var inp = document.getElementById('qdro-color'); if (inp) inp.value = c;
+      };
+      colorBar.appendChild(sw);
+    });
+    var cs1 = document.createElement('div'); cs1.style.cssText = 'width:1px;height:16px;background:rgba(0,0,0,.1);margin:0 4px;flex-shrink:0;'; colorBar.appendChild(cs1);
+
+    var inpC = document.createElement('input'); inpC.type = 'color'; inpC.id = 'qdro-color'; inpC.value = '#1e293b';
+    inpC.title = 'Cor personalizada';
+    inpC.style.cssText = 'width:24px;height:24px;border:none;border-radius:50%;cursor:pointer;padding:0;background:none;outline:none;flex-shrink:0;';
+    inpC.onchange = function() { _cvState.color = this.value; };
+    colorBar.appendChild(inpC);
+
+    var cs2 = document.createElement('div'); cs2.style.cssText = 'width:1px;height:16px;background:rgba(0,0,0,.1);margin:0 4px;flex-shrink:0;'; colorBar.appendChild(cs2);
+
+    var WIDTHS = [{v:1,lbl:'Fino',sw:1.5},{v:3,lbl:'Médio',sw:3},{v:7,lbl:'Grosso',sw:6}];
+    WIDTHS.forEach(function(w) {
+      var wb = document.createElement('button');
+      wb.id = 'qdro-w-' + w.v; wb.setAttribute('data-bg-skip','1'); wb.title = w.lbl;
+      wb.style.cssText = 'width:34px;height:28px;border:1px solid rgba(0,0,0,.1);border-radius:6px;cursor:pointer;background:transparent;color:#4b5563;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s,border-color .12s;flex-shrink:0;';
+      wb.innerHTML = '<svg viewBox="0 0 30 10" width="26" height="8"><line x1="2" y1="5" x2="28" y2="5" stroke="currentColor" stroke-width="' + w.sw + '" stroke-linecap="round"/></svg>';
+      wb.onclick = function() {
+        _cvState.lineWidth = w.v;
+        var inp = document.getElementById('qdro-width'); if (inp) inp.value = w.v;
+        _updWidthBtns(w.v);
+      };
+      colorBar.appendChild(wb);
+    });
+
+    var inpE = document.createElement('input'); inpE.type = 'range'; inpE.id = 'qdro-width'; inpE.min = 1; inpE.max = 24; inpE.value = 2;
+    inpE.style.display = 'none';
+    inpE.oninput = function() { _cvState.lineWidth = parseInt(this.value); };
+    colorBar.appendChild(inpE);
+
+    function _updWidthBtns(v) {
+      WIDTHS.forEach(function(w) {
+        var b = document.getElementById('qdro-w-' + w.v); if (!b) return;
+        var sel = (w.v === 1 && v <= 1) || (w.v === 3 && v > 1 && v <= 5) || (w.v === 7 && v > 5);
+        b.style.background   = sel ? 'var(--color-primary)' : 'transparent';
+        b.style.color        = sel ? '#fff' : '#4b5563';
+        b.style.borderColor  = sel ? 'var(--color-primary)' : 'rgba(0,0,0,.1)';
+      });
+    }
+    _updWidthBtns(2);
+
+    // ── Controles de zoom (canto inferior direito, flutuante) ─────────────────
+    var zoomCtrl = document.createElement('div');
+    zoomCtrl.style.cssText = [
+      'position:absolute;bottom:16px;right:12px;z-index:100;',
+      'background:#fff;border-radius:100px;',
+      'box-shadow:0 2px 16px rgba(0,0,0,.13),0 0 0 1px rgba(0,0,0,.06);',
+      'display:flex;align-items:center;gap:1px;padding:4px 8px;user-select:none;'
+    ].join('');
+    wrap.appendChild(zoomCtrl);
+
+    function _mkZBtn(ico, fn, lbl) {
+      var b = document.createElement('button');
+      b.setAttribute('data-bg-skip','1'); b.title = lbl || '';
+      b.style.cssText = 'width:26px;height:26px;border:none;border-radius:6px;cursor:pointer;background:transparent;color:#4b5563;display:flex;align-items:center;justify-content:center;transition:background .1s;';
+      b.innerHTML = '<span class="ms" style="font-size:16px;line-height:1;">' + ico + '</span>';
+      b.onmouseover = function() { this.style.background = '#f1f5f9'; };
+      b.onmouseout  = function() { this.style.background = 'transparent'; };
+      b.onclick = fn; return b;
+    }
+    zoomCtrl.appendChild(_mkZBtn('remove', function() { _doZoom(0.8); }, 'Reduzir zoom'));
+    var lblZ = document.createElement('span');
+    lblZ.id = 'qdro-zoom-label';
+    lblZ.style.cssText = 'font-size:12px;font-weight:600;color:#374151;min-width:42px;text-align:center;cursor:pointer;';
+    lblZ.title = 'Resetar zoom'; lblZ.textContent = '100%';
+    lblZ.onclick = function() { _resetView(); };
+    zoomCtrl.appendChild(lblZ);
+    zoomCtrl.appendChild(_mkZBtn('add', function() { _doZoom(1.2); }, 'Aumentar zoom'));
+    zoomCtrl.appendChild(_mkZBtn('fit_screen', function() { _resetView(); }, 'Ajustar à tela'));
+
+    // ── Ações (desfazer/limpar, canto superior direito) ───────────────────────
+    var actBar = document.createElement('div');
+    actBar.style.cssText = [
+      'position:absolute;top:12px;right:12px;z-index:100;',
+      'background:#fff;border-radius:100px;',
+      'box-shadow:0 2px 16px rgba(0,0,0,.13),0 0 0 1px rgba(0,0,0,.06);',
+      'display:flex;align-items:center;gap:1px;padding:4px 6px;user-select:none;'
+    ].join('');
+    wrap.appendChild(actBar);
+
+    function _mkActBtn(ico, lbl, fn) {
+      var b = document.createElement('button');
+      b.setAttribute('data-bg-skip','1'); b.title = lbl;
+      b.style.cssText = 'height:28px;border:none;border-radius:20px;cursor:pointer;background:transparent;color:#4b5563;display:flex;align-items:center;gap:4px;padding:0 10px;font-size:12px;font-weight:500;font-family:inherit;transition:background .1s;';
+      b.innerHTML = '<span class="ms" style="font-size:16px;line-height:1;">' + ico + '</span>' + lbl;
+      b.onmouseover = function() { this.style.background = '#f1f5f9'; };
+      b.onmouseout  = function() { this.style.background = 'transparent'; };
+      b.onclick = fn; return b;
+    }
+    actBar.appendChild(_mkActBtn('undo', 'Desfazer', function() { _undo(); }));
+    var actsep = document.createElement('div'); actsep.style.cssText = 'width:1px;height:16px;background:rgba(0,0,0,.1);margin:0 2px;flex-shrink:0;'; actBar.appendChild(actsep);
+    actBar.appendChild(_mkActBtn('delete_sweep', 'Limpar', function() { _clearCanvas(); }));
+
+    // ── Dica de uso (canto inferior, acima do zoom) ───────────────────────────
     var hint = document.createElement('div');
-    hint.style.cssText = 'position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--muted);pointer-events:none;line-height:1.5;text-align:right;';
-    hint.innerHTML = 'Espaço+arrastar = mover &nbsp;·&nbsp; Scroll = zoom<br>Del = apagar selecionado &nbsp;·&nbsp; Duplo clique em arquivo = baixar';
+    hint.style.cssText = 'position:absolute;bottom:56px;right:12px;font-size:10px;color:rgba(0,0,0,.3);pointer-events:none;line-height:1.6;text-align:right;';
+    hint.innerHTML = 'Espaço+arrastar = mover &nbsp;·&nbsp; Scroll = zoom<br>Del = apagar &nbsp;·&nbsp; Duplo clique em arquivo = baixar';
     wrap.appendChild(hint);
+
     container.appendChild(wrap);
 
     // ── Resize ───────────────────────────────────────────────────────────────
@@ -37265,15 +37181,17 @@ var QuadrosUI = (function() {
   // ── API pública do toolbar ─────────────────────────────────────────────────
   function _setTool(tool) {
     if (!_cvState) return; _cvState.tool = tool; _cvState.selIdx = -1;
-    var ALL = ['select','pencil','line','arrow','rect','circle','text','eraser'];
+    var ALL = ['select','pencil','line','arrow','rect','circle','text','sticky','frame','table','eraser'];
     ALL.forEach(function(t) {
       var b = document.getElementById('qdro-tool-' + t); if (!b) return;
-      b.style.background = t === tool ? 'var(--color-primary)' : '';
-      b.style.color      = t === tool ? '#fff' : '';
+      if (t === tool) { b.classList.add('ativa'); }
+      else            { b.classList.remove('ativa'); }
     });
     var cvel = document.getElementById('qdro-canvas');
     if (cvel) {
-      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair', rect:'crosshair', circle:'crosshair', text:'text', eraser:'cell' };
+      var C = { select:'default', pencil:'crosshair', line:'crosshair', arrow:'crosshair',
+                rect:'crosshair', circle:'crosshair', text:'text', sticky:'copy',
+                frame:'crosshair', table:'crosshair', eraser:'cell' };
       cvel.style.cursor = C[tool] || 'default';
     }
     if (_editor && _editor._redraw) _editor._redraw();
@@ -37332,10 +37250,9 @@ var QuadrosUI = (function() {
   return { aoAbrir:aoAbrir, carregar:carregar, setTab:setTab,
            abrirForm:abrirForm, fecharForm:fecharForm, salvar:salvar, excluir:excluir,
            abrirEditor:abrirEditor, fecharEditor:fecharEditor, salvarSnapshot:salvarSnapshot,
-           fecharEditorExterno:fecharEditorExterno,
-           apresentarExterno:apresentarExterno, apresentarCanvas:apresentarCanvas,
+           apresentarCanvas:apresentarCanvas,
            apresentarCanvasDireto:apresentarCanvasDireto, fecharApresentacaoCanvas:fecharApresentacaoCanvas,
-           _onTipoChange:_onTipoChange, setAfterSaveCb:setAfterSaveCb,
+           setAfterSaveCb:setAfterSaveCb,
            _setTool:_setTool, _undo:_undo, _clearCanvas:_clearCanvas };
 })();
 Router.registrar('quadros', 'Quadros', QuadrosUI.aoAbrir);
@@ -40249,10 +40166,11 @@ var DashboardUI = (function() {
 })();
 Router.registrar('dashboard', 'BI — Central de Inteligência', DashboardUI.aoAbrir);
 
-// ─── Estúdio de Análises Visuais ─────────────────────────────────────────────
+// ─── Estúdio de Análises Visuais v2 ──────────────────────────────────────────
 var AnaliseEstudioUI = (function() {
   var _carregado  = false;
   var _modo       = 'galeria';
+  var _ajustesVis = false;
   var _colunas    = ['Label', 'Valor'];
   var _linhas     = [['',''],['',''],['',''],['',''],['','']];
   var _config     = { titulo: '', tipo: 'barras', corPrimaria: '#4f46e5' };

@@ -39,7 +39,16 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s136)**: **feat — Estúdio de Análises Visuais no BI: editor de tabela, 6 tipos de gráfico SVG, galeria, importação do ERP e colar CSV — Deploy @1065.**
+**Fase atual (s137)**: **fix/feat — Quadros v3: toolbar flutuante moderna (Excalidraw-style), sem Miro/Napkin, seleção visual de ferramenta corrigida, bug _CATS em Reunião corrigido — Deploy @1066.**
+
+**O que foi implementado agora**:
+- **Remoção de Miro e Napkin**: sem integrações externas; tudo interno. Abas Miro/Napkin removidas da tab-bar. Modal limpo (sem "Tipo de Quadro", sem campo URL, sem prompt Napkin).
+- **Toolbar flutuante moderna**: painel vertical à esquerda (pill flotante, ícones apenas, sem texto), barra de cores + espessura centralizada na base, controles de zoom no canto inferior direito, botões Desfazer/Limpar no canto superior direito.
+- **Seleção visual de ferramenta corrigida**: `_setTool` agora alterna classe CSS `.ativa` em todos os 11 botões (antes só 8 — sticky/frame/table não recebiam estado ativo).
+- **Bug crítico corrigido** em `_renderQuadrosReuniao` (ReunioesUI): função usava `_CATS` do escopo privado de `QuadrosUI` (inacessível) → TypeError ao recarregar lista após salvar quadro. Substituído por objeto local `_QDRO_CAT_LBL`.
+- **Categoria Visual** removida do form "Novo Quadro"; visível apenas em "Configurar" (edição). Canvas sempre infinito.
+
+**Fase anterior (s136)**: **feat — Estúdio de Análises Visuais no BI: editor de tabela, 6 tipos de gráfico SVG, galeria, importação do ERP e colar CSV — Deploy @1065.**
 
 **O que foi implementado agora**:
 - **Nova aba "Análises" no BI**: botão tab `analytics` no `DashboardUI`, div `#dash-tab-analises` + `#analise-studio-root`.

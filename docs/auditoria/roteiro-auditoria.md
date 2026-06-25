@@ -1,10 +1,16 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s136 @1065 (Estúdio de Análises Visuais: 6 tipos gráfico SVG, editor de tabela, galeria, import ERP, CSV) · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
+> Deploy atual: s137 @1066 (Quadros v3: toolbar flutuante, sem Miro/Napkin, _setTool corrigido, bug _CATS Reunião) · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036 · s117 @1035 · s116 @1034 · s115 @1033 · s113 @1031 · s112 @1030 · s111 @1029 · s110 @1026
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s136 — Estúdio de Análises Visuais no BI
+### Estado atual: s137 — Quadros v3: toolbar flutuante moderna, sem Miro/Napkin
+
+| Deploy | Fase | O que foi implementado |
+| --- | --- | --- |
+| @1066 | s137 | **QuadrosUI** (index.html): toolbar flutuante estilo Excalidraw (painel vertical ícones, barra cores+espessura, zoom). Miro/Napkin removidos; tipo sempre interno. `_setTool` corrigido: classe `.ativa` em todos 11 botões (antes 8 — sticky/frame/table excluídos). Bug crítico: `_renderQuadrosReuniao` usava `_CATS` privado do QuadrosUI (TypeError); corrigido com `_QDRO_CAT_LBL` local. Modal simplificado: sem Tipo/URL/Napkin; Categoria só em modo edição. |
+
+### Estado anterior: s136 — Estúdio de Análises Visuais no BI
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
