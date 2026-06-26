@@ -22784,7 +22784,7 @@ var InfraConfigMapaUI = (function() {
       if (!salvo) return;
       el._niveisEdit[i].terrenoConfig = { pontos: pontos, svgPath: svgPath };
       Toast.sucesso('Terreno do nível "' + escaparHtml(n.label) + '" configurado.');
-    });
+    }, _escalaInfra);
   }
 
   function _modalNivelEdPlanta(i) {
@@ -22796,7 +22796,7 @@ var InfraConfigMapaUI = (function() {
       if (!salvo) return;
       el._niveisEdit[i].plantaBase = { pontos: pontos, svgPath: svgPath };
       Toast.sucesso('Planta base do nível "' + escaparHtml(n.label) + '" configurada.');
-    });
+    }, _escalaInfra);
   }
 
   function _salvarNiveis() {
@@ -22857,7 +22857,7 @@ var InfraConfigMapaUI = (function() {
           Toast.erro('Erro ao salvar terreno: ' + ((err && err.message) || String(err)));
         }
       );
-    });
+    }, _escalaInfra);
   }
 
   // ── Ferramentas de edição: Esp. H / Esp. V / +Vértice / Mesclar ──
@@ -23055,6 +23055,7 @@ var InfraConfigMapaUI = (function() {
           if (g) g.setAttribute('transform',
             'translate(' + cfg.cx + ',' + cfg.cy + ') rotate(' + (cfg.rotacao || 0) + ')');
           _atualizarInputsInline();
+          _showProxLines(cfg.cx, cfg.cy, _modoEdicao.id);
         } else if (drag.type === 'resize') {
           _resizeInline(e, e.ctrlKey);
           if (_modoEdicao && _modoEdicao.cfg) _showDimHud(_modoEdicao.cfg.w || 80, _modoEdicao.cfg.h || 60, e.clientX, e.clientY, _modoEdicao.cfg.forma);
@@ -23076,6 +23077,7 @@ var InfraConfigMapaUI = (function() {
     document.addEventListener('mouseup', function() {
       if (_modoEdicao && _modoEdicao.drag) {
         _hideDimHud();
+        _hideProxLines();
         var tipo = _modoEdicao.drag.type;
         // Resize e rotate precisam re-renderizar os handles com novas dimensões
         if (tipo === 'resize' || tipo === 'rotate') _atualizarHandles();
@@ -23108,6 +23110,59 @@ var InfraConfigMapaUI = (function() {
     var btn = document.getElementById('cfg-mapa-expand-btn');
     if (btn) btn.title = _mapaExpandido ? 'Recolher mapa' : 'Expandir mapa';
     resetZoom();
+  }
+
+  // ── Indicador de distância entre espaços (durante arrasto) ──
+  function _showProxLines(cx, cy, excludeId) {
+    _hideProxLines();
+    var svgEl = document.getElementById('cfg-mapa-svg');
+    if (!svgEl || !_escalaInfra || !_escalaInfra.pixPorM) return;
+    var ppm = _escalaInfra.pixPorM;
+    var multiNivelP = _niveis && _niveis.length > 1;
+    var vizinhos = _espacos.filter(function(e) {
+      if (e.id === excludeId || !e.mapaConfig) return false;
+      if (multiNivelP && (e.nivel !== undefined ? e.nivel : 0) !== _nivelAtivo) return false;
+      return true;
+    }).map(function(e) {
+      var ddx = e.mapaConfig.cx - cx, ddy = e.mapaConfig.cy - cy;
+      var dp = Math.sqrt(ddx * ddx + ddy * ddy);
+      return { ox: e.mapaConfig.cx, oy: e.mapaConfig.cy, distPx: dp, distM: (dp / ppm).toFixed(1) };
+    }).sort(function(a, b) { return a.distPx - b.distPx; }).slice(0, 3);
+
+    var g = document.createElementNS(_NS, 'g');
+    g.id = 'cfg-prox-layer';
+    g.setAttribute('pointer-events', 'none');
+    vizinhos.forEach(function(o) {
+      if (o.distPx < 1) return;
+      var line = document.createElementNS(_NS, 'line');
+      line.setAttribute('x1', cx.toFixed(1)); line.setAttribute('y1', cy.toFixed(1));
+      line.setAttribute('x2', o.ox.toFixed(1)); line.setAttribute('y2', o.oy.toFixed(1));
+      line.setAttribute('stroke', 'rgba(234,88,12,0.65)');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '6,4');
+      g.appendChild(line);
+      var lx = (cx + o.ox) / 2, ly = (cy + o.oy) / 2;
+      var txt = o.distM + 'm';
+      var rw = txt.length * 6 + 12;
+      var bgR = document.createElementNS(_NS, 'rect');
+      bgR.setAttribute('x', (lx - rw / 2).toFixed(1)); bgR.setAttribute('y', (ly - 8).toFixed(1));
+      bgR.setAttribute('width', rw.toFixed(1)); bgR.setAttribute('height', '16');
+      bgR.setAttribute('rx', '4'); bgR.setAttribute('fill', 'rgba(234,88,12,0.85)');
+      g.appendChild(bgR);
+      var lt = document.createElementNS(_NS, 'text');
+      lt.setAttribute('x', lx.toFixed(1)); lt.setAttribute('y', (ly + 0.5).toFixed(1));
+      lt.setAttribute('text-anchor', 'middle'); lt.setAttribute('dominant-baseline', 'middle');
+      lt.setAttribute('font-size', '9'); lt.setAttribute('font-weight', '700');
+      lt.setAttribute('fill', '#fff');
+      lt.textContent = txt;
+      g.appendChild(lt);
+    });
+    svgEl.appendChild(g);
+  }
+
+  function _hideProxLines() {
+    var el = document.getElementById('cfg-prox-layer');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
   }
 
   function _showDimHud(wPx, hPx, clientX, clientY, forma) {

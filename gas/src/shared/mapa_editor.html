@@ -491,6 +491,15 @@ var MapaEditorUI = (function() {
         }).filter(function(p) { return !isNaN(p.x) && !isNaN(p.y); });
         _renderSideLabels(g, namedPts);
       }
+      // Dimension labels for rect/square/ellipse/circle
+      if (_escala && _escala.pixPorM) {
+        var ff = _cfg.forma;
+        if (ff === 'circle') {
+          _renderDimLabelCircle(g, _cfg.r || hw);
+        } else if (ff === 'rect' || ff === 'square' || ff === 'ellipse') {
+          _renderDimLabelRect(g, hw, hh);
+        }
+      }
     }
 
     // Handle de rotação (sempre presente)
@@ -551,6 +560,110 @@ var MapaEditorUI = (function() {
       t.textContent = lbl;
       g.appendChild(t);
     }
+  }
+
+  // ── Labels de dimensão real para rect/square/ellipse ─────
+  function _renderDimLabelRect(g, hw, hh) {
+    if (!_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var wM = (hw * 2 / ppm).toFixed(2) + 'm';
+    var hM = (hh * 2 / ppm).toFixed(2) + 'm';
+    // Width label — top edge
+    var rwW = Math.max(52, wM.length * 6.5 + 10);
+    var wBg = document.createElementNS(_NS, 'rect');
+    wBg.setAttribute('x', (-rwW / 2).toFixed(1)); wBg.setAttribute('y', (-hh - 22).toFixed(1));
+    wBg.setAttribute('width', rwW.toFixed(1)); wBg.setAttribute('height', '15');
+    wBg.setAttribute('rx', '3'); wBg.setAttribute('fill', 'rgba(79,70,229,0.82)');
+    wBg.setAttribute('cursor', 'pointer'); wBg.setAttribute('data-dim', 'w');
+    wBg.setAttribute('title', 'Clique para definir a largura');
+    g.appendChild(wBg);
+    var wTxt = document.createElementNS(_NS, 'text');
+    wTxt.setAttribute('x', '0'); wTxt.setAttribute('y', (-hh - 14.5).toFixed(1));
+    wTxt.setAttribute('text-anchor', 'middle'); wTxt.setAttribute('dominant-baseline', 'middle');
+    wTxt.setAttribute('font-size', '9'); wTxt.setAttribute('font-weight', '700');
+    wTxt.setAttribute('fill', '#fff'); wTxt.setAttribute('pointer-events', 'none');
+    wTxt.textContent = '↔ ' + wM;
+    g.appendChild(wTxt);
+    // Height label — right edge (rotated)
+    var rwH = Math.max(52, hM.length * 6.5 + 10);
+    var hBg = document.createElementNS(_NS, 'rect');
+    hBg.setAttribute('x', (hw + 6).toFixed(1)); hBg.setAttribute('y', (-rwH / 2).toFixed(1));
+    hBg.setAttribute('width', '15'); hBg.setAttribute('height', rwH.toFixed(1));
+    hBg.setAttribute('rx', '3'); hBg.setAttribute('fill', 'rgba(79,70,229,0.82)');
+    hBg.setAttribute('cursor', 'pointer'); hBg.setAttribute('data-dim', 'h');
+    hBg.setAttribute('title', 'Clique para definir a altura');
+    g.appendChild(hBg);
+    var cx_ = hw + 13.5, cy_ = 0;
+    var hTxt = document.createElementNS(_NS, 'text');
+    hTxt.setAttribute('x', cx_.toFixed(1)); hTxt.setAttribute('y', cy_.toFixed(1));
+    hTxt.setAttribute('text-anchor', 'middle'); hTxt.setAttribute('dominant-baseline', 'middle');
+    hTxt.setAttribute('font-size', '9'); hTxt.setAttribute('font-weight', '700');
+    hTxt.setAttribute('fill', '#fff'); hTxt.setAttribute('pointer-events', 'none');
+    hTxt.setAttribute('transform', 'rotate(90,' + cx_.toFixed(1) + ',' + cy_.toFixed(1) + ')');
+    hTxt.textContent = '↕ ' + hM;
+    g.appendChild(hTxt);
+  }
+
+  // ── Label de diâmetro para círculos ──────────────────────
+  function _renderDimLabelCircle(g, r) {
+    if (!_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var dM = (r * 2 / ppm).toFixed(2) + 'm';
+    // Dashed horizontal line showing diameter
+    var line = document.createElementNS(_NS, 'line');
+    line.setAttribute('x1', (-r).toFixed(1)); line.setAttribute('y1', '0');
+    line.setAttribute('x2', r.toFixed(1)); line.setAttribute('y2', '0');
+    line.setAttribute('stroke', 'rgba(79,70,229,0.5)');
+    line.setAttribute('stroke-width', '1'); line.setAttribute('stroke-dasharray', '4,3');
+    line.setAttribute('pointer-events', 'none');
+    g.appendChild(line);
+    var rw = Math.max(52, dM.length * 6.5 + 16);
+    var bg = document.createElementNS(_NS, 'rect');
+    bg.setAttribute('x', (-rw / 2).toFixed(1)); bg.setAttribute('y', '-7.5');
+    bg.setAttribute('width', rw.toFixed(1)); bg.setAttribute('height', '15');
+    bg.setAttribute('rx', '3'); bg.setAttribute('fill', 'rgba(79,70,229,0.82)');
+    bg.setAttribute('cursor', 'pointer'); bg.setAttribute('data-dim', 'r');
+    bg.setAttribute('title', 'Clique para definir o diâmetro');
+    g.appendChild(bg);
+    var txt = document.createElementNS(_NS, 'text');
+    txt.setAttribute('x', '0'); txt.setAttribute('y', '0.5');
+    txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('dominant-baseline', 'middle');
+    txt.setAttribute('font-size', '9'); txt.setAttribute('font-weight', '700');
+    txt.setAttribute('fill', '#fff'); txt.setAttribute('pointer-events', 'none');
+    txt.textContent = 'ø ' + dM;
+    g.appendChild(txt);
+  }
+
+  // ── Definir dimensão real (rect/square/ellipse/circle) ───
+  function _editarDimensao(tipo) {
+    if (!_cfg || !_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var curM, label, titulo;
+    if (tipo === 'w') {
+      curM = (_cfg.w || 80) / ppm; label = 'Largura real (metros)'; titulo = 'Definir largura';
+    } else if (tipo === 'h') {
+      curM = (_cfg.h || 60) / ppm; label = 'Altura real (metros)'; titulo = 'Definir altura';
+    } else if (tipo === 'r') {
+      curM = ((_cfg.r || 40) * 2) / ppm; label = 'Diâmetro real (metros)'; titulo = 'Definir diâmetro';
+    }
+    _modalInput({ titulo: titulo, label: label, valorPadrao: curM.toFixed(2), tipo: 'number', obrigatorio: true },
+    function(val) {
+      if (val === null) return;
+      var novoM = parseFloat(val);
+      if (isNaN(novoM) || novoM < 0.01) return;
+      var novoPx = novoM * ppm;
+      if (tipo === 'w') {
+        _cfg.w = Math.max(20, novoPx);
+        if (_cfg.forma === 'square') _cfg.h = _cfg.w;
+      } else if (tipo === 'h') {
+        _cfg.h = Math.max(20, novoPx);
+        if (_cfg.forma === 'square') _cfg.w = _cfg.h;
+      } else if (tipo === 'r') {
+        _cfg.r = Math.max(10, novoPx / 2);
+        _cfg.w = _cfg.r * 2; _cfg.h = _cfg.r * 2;
+      }
+      _renderShape();
+    });
   }
 
   function _editarLado(idx) {
@@ -807,10 +920,16 @@ var MapaEditorUI = (function() {
         e.stopPropagation(); e.preventDefault();
         _editarLado(parseInt(sideAttr));
 
-      } else if (e.target.closest && e.target.closest('#ed-shape-g')) {
-        e.stopPropagation(); e.preventDefault();
-        _drag = { type: 'body', startX: svgP.x, startY: svgP.y, origCX: _cfg.cx, origCY: _cfg.cy };
-        wrap.style.cursor = 'grabbing';
+      } else {
+        var dimAttr = e.target.getAttribute && e.target.getAttribute('data-dim');
+        if (dimAttr !== null && dimAttr !== undefined && dimAttr !== '') {
+          e.stopPropagation(); e.preventDefault();
+          _editarDimensao(dimAttr);
+        } else if (e.target.closest && e.target.closest('#ed-shape-g')) {
+          e.stopPropagation(); e.preventDefault();
+          _drag = { type: 'body', startX: svgP.x, startY: svgP.y, origCX: _cfg.cx, origCY: _cfg.cy };
+          wrap.style.cursor = 'grabbing';
+        }
       }
     });
 
@@ -1068,6 +1187,7 @@ var MapaEditorUI = (function() {
     _mesclarCom:              _mesclarCom,
     _onInputChange:           _onInputChange,
     _edZoom:                  _edZoom,
-    _edResetZoom:             _edResetZoom
+    _edResetZoom:             _edResetZoom,
+    _editarDimensao:          _editarDimensao
   };
 })();

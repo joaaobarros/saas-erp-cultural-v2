@@ -39,7 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s154b)**: **feat — Dashboard Builder: campos ABC em Métricas via drag ou mini-menu (COUNT por padrão); drag sem restrição de tipo entre zonas.**
+**Fase atual (s155)**: **feat — Editores de mapa: dimensões reais por lado/diâmetro + distância entre espaços ao mover.** Deploy @1121.
+
+**O que foi implementado em s155**:
+- **Editor de Terreno (`terreno_editor.html`)**: aceita `escala` como 3º parâmetro de `abrir()`; mostra label verde com comprimento em metros (ex: `L1: 12.5m`) em cada segmento reto do contorno; clique no label abre modal para definir comprimento exato; quando ponto está selecionado, sidebar exibe botões "L{i}: Xm → clicar para ajustar" para os 2 segmentos adjacentes. Exporta `_setSegLen`.
+- **Config map (`index.html`)**: os 3 calls de `TerrenoEditorUI.abrir()` agora passam `_escalaInfra` como 3º argumento.
+- **Editor de Espaços (`mapa_editor.html`)**: para formas `rect`/`square`/`ellipse`, labels roxas mostram largura (topo) e altura (lado direito rotacionado) em metros — clicáveis para definir valor exato. Para `circle`, label central com diâmetro `ø Xm` — clicável. Exporta `_editarDimensao`.
+- **Indicador de distância no mapa de config (`index.html`)**: ao arrastar um espaço (modo `body`), SVG overlay mostra linhas pontilhadas laranja + labels de distância em metros para os 3 espaços mais próximos do mesmo nível. `_showProxLines` / `_hideProxLines` (chamado no `mouseup`).
+
+**Fase anterior (s154b)**: **feat — Dashboard Builder: campos ABC em Métricas via drag ou mini-menu (COUNT por padrão); drag sem restrição de tipo entre zonas.**
 
 **O que foi implementado em s154b**:
 - **ABC → Métricas**: drag de campo ABC para a zona Métricas não é mais bloqueado — agrega com COUNT por padrão.

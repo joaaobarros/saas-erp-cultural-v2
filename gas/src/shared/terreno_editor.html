@@ -24,6 +24,7 @@ var TerrenoEditorUI = (function () {
   var _drag     = null;       // { tipo:'ponto'|'controle'|'pan', idx, startX, startY, origX, origY }
   var _dragPan  = null;
   var _sel      = null;       // { tipo:'ponto'|'controle', idx }
+  var _escala   = null;       // { pixPorM: number } ou null
 
   // Contorno padrão do CCBJ (polígono hexagonal aproximado)
   var _PADRAO = [
@@ -55,8 +56,9 @@ var TerrenoEditorUI = (function () {
   }
 
   // ── Abrir / Fechar ────────────────────────────────────────
-  function abrir(pontosInicial, callback) {
+  function abrir(pontosInicial, callback, escala) {
     _cb = callback;
+    _escala = (escala && escala.pixPorM) ? escala : null;
     if (pontosInicial && pontosInicial.length >= 3) {
       _pontos = JSON.parse(JSON.stringify(pontosInicial));
     } else {
@@ -260,6 +262,11 @@ var TerrenoEditorUI = (function () {
       '<text x="0" y="1" text-anchor="middle" dominant-baseline="middle" font-size="8" font-weight="700" fill="#4c1d95">N</text>';
     terrLayer.appendChild(nIndicator);
 
+    // Pre-compute centroid for dimension label placement
+    var _cxC = 0, _cyC = 0;
+    for (var jj = 0; jj < n; jj++) { _cxC += _pontos[jj].x; _cyC += _pontos[jj].y; }
+    _cxC /= n; _cyC /= n;
+
     // 2) Pontos de midpoint dos segmentos (dicas de inserção)
     for (var i = 0; i < n; i++) {
       var cur = _pontos[i];
@@ -278,6 +285,45 @@ var TerrenoEditorUI = (function () {
         mid.setAttribute('data-seg', i);
         mid.setAttribute('title', 'Inserir ponto aqui');
         hLayer.appendChild(mid);
+
+        // Segment length label (shown when scale is set)
+        if (_escala && _escala.pixPorM) {
+          var sDx = nxt.x - cur.x, sDy = nxt.y - cur.y;
+          var sPx = Math.sqrt(sDx * sDx + sDy * sDy);
+          if (sPx >= 4) {
+            var dM_ = (sPx / _escala.pixPorM).toFixed(1);
+            var dimTxt = 'L' + (i + 1) + ': ' + dM_ + 'm';
+            // Perpendicular direction outward from centroid
+            var sNx = -sDy / sPx, sNy = sDx / sPx;
+            var sd1 = (mx + sNx - _cxC) * (mx + sNx - _cxC) + (my + sNy - _cyC) * (my + sNy - _cyC);
+            var sd2 = (mx - sNx - _cxC) * (mx - sNx - _cxC) + (my - sNy - _cyC) * (my - sNy - _cyC);
+            var ox_ = sd1 > sd2 ? sNx : -sNx, oy_ = sd1 > sd2 ? sNy : -sNy;
+            var lx_ = mx + ox_ * 22, ly_ = my + oy_ * 22;
+            var rw_ = Math.max(44, dimTxt.length * 5.5 + 8), rh_ = 15;
+            var bgR_ = document.createElementNS(_NS, 'rect');
+            bgR_.setAttribute('x', (lx_ - rw_ / 2).toFixed(1));
+            bgR_.setAttribute('y', (ly_ - rh_ / 2).toFixed(1));
+            bgR_.setAttribute('width', rw_.toFixed(1));
+            bgR_.setAttribute('height', rh_);
+            bgR_.setAttribute('rx', '3');
+            bgR_.setAttribute('fill', 'rgba(22,163,74,0.82)');
+            bgR_.setAttribute('cursor', 'pointer');
+            bgR_.setAttribute('data-seglen', i);
+            bgR_.setAttribute('title', 'Clique para definir o comprimento');
+            hLayer.appendChild(bgR_);
+            var lt_ = document.createElementNS(_NS, 'text');
+            lt_.setAttribute('x', lx_.toFixed(1));
+            lt_.setAttribute('y', (ly_ + 0.5).toFixed(1));
+            lt_.setAttribute('text-anchor', 'middle');
+            lt_.setAttribute('dominant-baseline', 'middle');
+            lt_.setAttribute('font-size', '9');
+            lt_.setAttribute('font-weight', '700');
+            lt_.setAttribute('fill', '#fff');
+            lt_.setAttribute('pointer-events', 'none');
+            lt_.textContent = dimTxt;
+            hLayer.appendChild(lt_);
+          }
+        }
       }
     }
 
@@ -378,6 +424,28 @@ var TerrenoEditorUI = (function () {
           '<input type="checkbox" id="te-inp-curve"' + (p.curve ? ' checked' : '') + ' onchange="TerrenoEditorUI._onCurve()"> Segmento curvo após este ponto' +
         '</label>' +
         '<button onclick="TerrenoEditorUI._deletePoint(' + _sel.idx + ')" data-bg-skip="1" style="width:100%;background:none;border:1px solid #ef4444;color:#ef4444;border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;">Excluir ponto ' + (_sel.idx + 1) + '</button>';
+
+      // Adjacent segment lengths
+      if (_escala && _escala.pixPorM) {
+        var ppm_ = _escala.pixPorM;
+        var n_ = _pontos.length;
+        var iPrev_ = (_sel.idx - 1 + n_) % n_;
+        var iNext_ = _sel.idx;
+        var pprev_ = _pontos[iPrev_], pcur_ = _pontos[_sel.idx], pnext_ = _pontos[(_sel.idx + 1) % n_];
+        var dPrev_ = Math.sqrt(Math.pow(pcur_.x - pprev_.x, 2) + Math.pow(pcur_.y - pprev_.y, 2)) / ppm_;
+        var dNext_ = Math.sqrt(Math.pow(pnext_.x - pcur_.x, 2) + Math.pow(pnext_.y - pcur_.y, 2)) / ppm_;
+        var btnStyle_ = 'width:100%;background:rgba(22,163,74,0.08);border:1px solid rgba(22,163,74,0.3);color:#15803d;border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;margin-bottom:3px;text-align:left;';
+        box.innerHTML +=
+          '<div style="margin-top:8px;padding:6px;background:rgba(22,163,74,0.06);border-radius:6px;border:1px solid rgba(22,163,74,0.18);">' +
+            '<div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:5px;">Segmentos adjacentes</div>' +
+            '<button onclick="TerrenoEditorUI._setSegLen(' + iPrev_ + ')" data-bg-skip="1" style="' + btnStyle_ + '">' +
+              'L' + (iPrev_ + 1) + ': <b>' + dPrev_.toFixed(2) + 'm</b> &rarr; clicar para ajustar' +
+            '</button>' +
+            '<button onclick="TerrenoEditorUI._setSegLen(' + iNext_ + ')" data-bg-skip="1" style="' + btnStyle_ + '">' +
+              'L' + (iNext_ + 1) + ': <b>' + dNext_.toFixed(2) + 'm</b> &rarr; clicar para ajustar' +
+            '</button>' +
+          '</div>';
+      }
     } else {
       var i = _sel.idx;
       box.innerHTML =
@@ -402,6 +470,35 @@ var TerrenoEditorUI = (function () {
     if (!_sel || _sel.tipo !== 'ponto') return;
     _toggleCurva(_sel.idx);
     _atualizarSelInfo();
+  }
+
+  // ── Definir comprimento exato de um segmento ─────────────
+  function _setSegLen(idx) {
+    if (!_escala || !_escala.pixPorM) return;
+    var n = _pontos.length;
+    var cur = _pontos[idx], nxt = _pontos[(idx + 1) % n];
+    var dx = nxt.x - cur.x, dy = nxt.y - cur.y;
+    var curPx = Math.sqrt(dx * dx + dy * dy);
+    if (curPx < 0.001) return;
+    var curM = curPx / _escala.pixPorM;
+    _modalInput({
+      titulo: 'Comprimento — Segmento L' + (idx + 1),
+      label: 'Novo comprimento (metros)',
+      valorPadrao: curM.toFixed(2),
+      tipo: 'number',
+      obrigatorio: true
+    }, function(val) {
+      if (val === null) return;
+      var novoM = parseFloat(val);
+      if (isNaN(novoM) || novoM < 0.01) return;
+      var novoPx = novoM * _escala.pixPorM;
+      var ux = dx / curPx, uy = dy / curPx;
+      var ni = (idx + 1) % n;
+      _pontos[ni].x = parseFloat((cur.x + ux * novoPx).toFixed(1));
+      _pontos[ni].y = parseFloat((cur.y + uy * novoPx).toFixed(1));
+      _render();
+      _atualizarSelInfo();
+    });
   }
 
   // ── Interações ────────────────────────────────────────────
@@ -429,6 +526,13 @@ var TerrenoEditorUI = (function () {
         };
         _sel = { tipo: 'controle', idx: ci };
         _render(); _atualizarSelInfo();
+        return;
+      }
+
+      // ── Clique em label de comprimento de segmento ───────
+      var segLenAttr = target.getAttribute && target.getAttribute('data-seglen');
+      if (segLenAttr !== null && segLenAttr !== undefined && segLenAttr !== '') {
+        _setSegLen(parseInt(segLenAttr));
         return;
       }
 
@@ -689,6 +793,7 @@ var TerrenoEditorUI = (function () {
     _deletePoint: _deletePoint,
     _toggleCurva: _toggleCurva,
     _onXY:        _onXY,
-    _onCurve:     _onCurve
+    _onCurve:     _onCurve,
+    _setSegLen:   _setSegLen
   };
 })();
