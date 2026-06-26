@@ -670,20 +670,24 @@
 
 ## HANDOFF ANTERIOR — SESSÃO 122 (2026-06-25)
 
-### Estado atual: Feat — Quadros: mapa mental evoluído — Deploy @1094
+### Estado atual: Feat — Mapa Mental v4: engine enterprise — Deploy @1095
 
-### O que foi feito nesta sessão (s149)
+### O que foi feito nesta sessão (s150)
 | Deploy | O que foi implementado |
 |---|---|
-| @1094 | **QuadrosUI** (index.html): `_iniciarMindMap` evoluído com toolbar dedicada (adicionar filho/irmão, editar, colapsar/expandir, centralizar, remover), arraste manual de nodos com persistência em `mmNodes[].dx/dy`, colapso persistente em `mmNodes[].collapsed`, clique no badge para recolher/expandir, setas para ajuste fino, `Shift+setas` para ajuste maior e `Ctrl+0` para centralizar. Snapshot segue retrocompatível via `snapshot.mmNodes`. |
+| @1095 | **QuadrosUI** (index.html): `_iniciarMindMap` reescrito para engine enterprise v4. Múltiplos layouts (mindmap/treeright/treedown/org), undo/redo completo (Ctrl+Z/Y, stack 60 estados), menu contextual (clique dir.), pickers de cor (12 cores)/emoji (22)/status (6 opções), minimap dinâmico, exportação PNG/JSON/Markdown, busca com highlight, navegação por teclado (setas), reparent por drag-over-node. Snapshot v4 persiste layout+pan+zoom. Retrocompatível com v3. |
 
 ### Smoke test esperado
-- Quadros → criar/abrir quadro com categoria "Mindmap" → editor abre em modo mapa mental, não canvas livre.
-- Toolbar do mapa aparece no topo esquerdo; botões de adicionar filho/irmão, editar, colapsar, centralizar e remover funcionam.
-- Tab cria filho; Enter cria irmão; F2/duplo clique edita; Del remove; Esc desseleciona.
-- Arrastar um nodo muda sua posição; setas ajustam fino; salvar → reabrir preserva posição.
-- Criar filhos em um nodo → clicar no badge recolhe/expande; salvar → reabrir preserva colapso.
-- Ctrl+0 centraliza o mapa; scroll aplica zoom; arrastar fundo faz pan.
+- Quadros → abrir quadro "Mindmap" → toolbar aparece no topo com undo/redo, layout, recolher/expandir, fit, zoom, busca e exportar.
+- Trocar layout entre "Mapa Mental", "Árvore →", "Árvore ↓" e "Organograma" → estrutura muda instantaneamente sem perder dados.
+- Tab cria filho; Enter cria irmão; F2 edita; Del remove; Espaço recolhe; Setas navegam; Shift+Setas movem nó (mindmap).
+- Ctrl+Z desfaz última ação; Ctrl+Y refaz.
+- Clique direito → menu aparece com opções; escolher cor → picker abre; escolher emoji → nó exibe emoji.
+- Campo de busca filtra nós (destaque amarelo); Enter avança para próximo resultado.
+- Botão Exportar → três opções (PNG/JSON/Markdown) funcionam com download.
+- Arrastar nó sobre outro nó reparenta-o (indicador dashed border aparece no alvo).
+- Minimap aparece no canto superior direito para mapas com ≥4 nós; viewport indicator acompanha pan/zoom.
+- Salvar → reabrir → snapshot v4 restaura layout, pan e zoom.
 
 ---
 

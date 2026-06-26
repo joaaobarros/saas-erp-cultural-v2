@@ -122,12 +122,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 **Fase anterior (s149)**: **feat — Quadros: mapa mental evoluído com toolbar dedicada, colapsar/expandir ramos, arraste manual de nodos, setas para ajuste fino, centralizar mapa e snapshot retrocompatível (`mmNodes` + `dx/dy/collapsed`) — Deploy @1094.**
 
-**O que foi implementado em s149**:
-- **`_iniciarMindMap` completo**: mantém a engine dedicada para quadros `categoria=mindmap`, agora com toolbar visual para adicionar filho/irmão, editar, colapsar/expandir, centralizar e remover.
-- **Organização manual persistente**: nodos podem ser arrastados e reposicionados; setas movem o nodo selecionado em passos finos; `Shift+setas` move em passo maior. Offsets são salvos em `snapshot.mmNodes[].dx/dy`.
-- **Ramos colapsáveis**: clique no badge de filhos ou use Espaço para recolher/expandir descendentes. O estado é salvo em `snapshot.mmNodes[].collapsed`, sem apagar filhos.
-- **Compatibilidade preservada**: quadros antigos sem `dx/dy/collapsed` são normalizados ao abrir; contrato de salvamento continua em `snapshot.mmNodes`.
-- **Atalhos mantidos/ampliados**: Tab cria filho, Enter cria irmão, F2 edita, Del/Backspace remove, Esc desseleciona, Ctrl+0 centraliza, scroll aplica zoom e arrastar fundo faz pan.
+**Fase anterior (s150 — Quadros/Mapa Mental v4)**: **feat — Mapa Mental v4: engine enterprise com múltiplos layouts, undo/redo, menu contextual, cor/emoji/status por nó, minimap, exportação PNG/JSON/Markdown, busca com highlight, navegação por setas, reparent por drag — Deploy @1095.**
+
+**O que foi implementado em s150 — Mapa Mental v4**:
+- **`_iniciarMindMap` v4**: substituição completa com retrocompatibilidade total (versão 3 → versão 4, campos `dx/dy/collapsed` preservados).
+- **Múltiplos layouts**: Mapa Mental (radial), Árvore →, Árvore ↓, Organograma — troca instantânea sem perda de dados.
+- **Undo/redo completo**: Ctrl+Z/Y com stack de 60 estados; botões na toolbar com estado desabilitado correto.
+- **Menu contextual (clique direito)**: adicionar filho/irmão, editar, escolher cor, emoji, status, recolher/expandir, excluir.
+- **Pickers integrados**: seletor de 12 cores com reset, 22 emojis com remoção, 6 opções de status com indicador visual.
+- **Minimap**: visão geral do mapa no canto superior direito com viewport indicator; aparece para mapas com ≥4 nós.
+- **Exportação**: PNG (via canvas.toDataURL), JSON e Markdown com download automático.
+- **Busca com highlight**: campo na toolbar, destaca nós em amarelo, navega entre resultados com Enter.
+- **Navegação por teclado**: ←→↑↓ navegam pela árvore; Shift+seta move nó em mindmap mode.
+- **Reparent por drag**: arrastar nó sobre outro nó o torna filho daquele nó (com indicador dashed-border).
+- **Snapshot v4**: persiste `mmLayout`, `mmPanX`, `mmPanY`, `mmZoom` além de `mmNodes`.
 
 **Fase anterior (s148)**: **feat — Biblioteca de ícones SVG dc-icon: 156 ícones (Lucide ISC + Tabler MIT) + logos institucionais IDM/CCBJ/Secult-60/Ceará vetorizados; web component `<dc-icon>`; integração no index.html (banner, sidebar footer, DatasComemorativasAdmin) — Deploy @1094.**
 
