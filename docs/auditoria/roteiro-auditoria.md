@@ -2451,7 +2451,28 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF — SESSÃO 148 (2026-06-25) → PRÓXIMA SESSÃO
+## HANDOFF — SESSÃO 152 (2026-06-26) → PRÓXIMA SESSÃO
+
+### Estado: Deploy pendente · feat: Dashboard Builder v2 Fase 1 — novo modelo de dados
+
+### O que foi feito nesta sessão (s152)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | feat: _CAMPO_CATALOGO | Frontend: catálogo tipado com todos 35 datasets — cada dsId mapeia para `{label, modulo, campos:[{id,label,tipo,formato}]}`. Base para Widget Editor v2. |
+| pendente | feat: backend v2 params | `ctrl_analise_importar_dados` e `ctrl_analise_widget_dados` aceitam `filtros[]`, `ordenacao`, `limite`, `dimensoes[]`, `metricas[]`. Backward compat total. |
+| pendente | feat: helpers GAS | `_analise_extrairFiltroGlobal`, `_analise_filtrarLinhasPos`, `_analise_ordenarLinhas` em `analise_controller.gs`. |
+| pendente | feat: render normalizado | `_normColunas()` e `_campoCatalogoGet()` adicionados. KPI, tabela e gráfico no `_renderWidgetBody` passam por `_normColunas`. |
+| pendente | feat: pipeline v2 | `_dashCarregarWidgetPreview` e `_dashRecarregarWidgets` detectam `w.filtros` como array (v2) vs objeto (legado) e roteiam corretamente. Filtro de setor client-side removido (server-side). |
+
+### Pendentes / próxima ação
+- Executar `clasp push && clasp deploy` para publicar Fase 1
+- Confirmar smoke test: dashboards existentes ainda renderizam (backward compat)
+- Implementar **Fase 2** — Widget Editor com painel de campos (dimensões/métricas drag-and-drop)
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 148 (2026-06-25) → PRÓXIMA SESSÃO
 
 ### Estado: Deploy pendente · feat: Biblioteca SVG dc-icon + logos institucionais
 

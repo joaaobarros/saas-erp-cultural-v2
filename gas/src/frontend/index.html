@@ -5037,7 +5037,17 @@ select.form-control { cursor: pointer; }
                   </div>
                   <div class="form-group" style="grid-column:1/-1">
                     <label class="form-label">Nome da Ação / Evento *</label>
-                    <input type="text" id="res-nome-acao" class="form-input" placeholder="Ex: Oficina de Teatro">
+                    <div style="position:relative;">
+                      <input type="text" id="res-nome-acao" class="form-input"
+                             placeholder="Busque uma ação cadastrada ou escreva um nome novo…"
+                             oninput="ReservasUI._filtrarAcoes(this.value)"
+                             onclick="ReservasUI._filtrarAcoes(this.value)"
+                             onblur="setTimeout(function(){ReservasUI._fecharDropdownAcoes()},200)"
+                             autocomplete="off">
+                      <input type="hidden" id="res-acao-id">
+                      <div id="res-acao-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--surface);border:1px solid var(--border-color,#e2e8f0);border-radius:var(--r-sm);max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+                    </div>
+                    <small style="font-size:11px;color:var(--muted);">Selecione uma ação cadastrada ou escreva um nome livre para nova ação.</small>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Tipo de ação</label>
@@ -23399,6 +23409,7 @@ var ReservasUI = (function() {
     document.getElementById('res-hora-ini').value  = dados && dados.horaInicio || '';
     document.getElementById('res-hora-fim').value  = dados && dados.horaTermino || '';
     document.getElementById('res-nome-acao').value = dados && dados.nomeAcao || '';
+    document.getElementById('res-acao-id').value   = dados && dados.acaoId   || '';
     document.getElementById('res-tipo-acao').value = dados && dados.tipoAcao || '';
     var _bootData = App.getBoot ? App.getBoot() : null;
     // Para nova reserva, pré-seleciona o setor do usuário logado (ESP-08)
@@ -23436,7 +23447,7 @@ var ReservasUI = (function() {
     var blocoFixos = document.getElementById('res-itens-fixos-bloco');
     if (blocoFixos) blocoFixos.style.display = 'none';
     var blocoV = document.getElementById('res-itens-volantes-bloco');
-    if (blocoV) blocoV.style.display = 'none';
+    if (blocoV) blocoV.style.display = '';
     var chipsCont = document.getElementById('res-itens-chips');
     if (chipsCont) chipsCont.innerHTML = '';
     var hint = document.getElementById('res-itens-hint');
@@ -23448,10 +23459,11 @@ var ReservasUI = (function() {
         _itensChips.push({ id: p.nome, nome: p.nome, qtd: p.qtd, disponivel: 999 });
       });
       if (_itensChips.length > 0) {
-        if (blocoV) blocoV.style.display = '';
         _renderChips();
       }
     }
+    // Carregar catálogo de itens imediatamente (disponibilidade atualizada quando horário for informado)
+    _carregarDisponibilidadeItens();
     card.classList.remove('oculto');
   }
 
@@ -23463,6 +23475,7 @@ var ReservasUI = (function() {
     if (b) b.style.display = 'none';
     var f = document.getElementById('res-itens-fixos-bloco');
     if (f) f.style.display = 'none';
+    _fecharDropdownAcoes();
   }
 
   // Checagem de conflito client-side em tempo real (sem botão, sem chamada de backend)
@@ -23541,6 +23554,7 @@ var ReservasUI = (function() {
       Toast.erro('Há itens indisponíveis no horário selecionado. Remova-os antes de salvar.');
       return;
     }
+    var _acaoIdSalvar = (document.getElementById('res-acao-id').value||'').trim();
     var dados = {
       sala: sala, data: data, horaInicio: ini, horaTermino: fim,
       nomeAcao: nome,
@@ -23551,6 +23565,7 @@ var ReservasUI = (function() {
       minutosMontagem:     parseInt(document.getElementById('res-montagem').value||0, 10) || 0,
       minutosEncerramento: parseInt(document.getElementById('res-encerramento').value||0, 10) || 0
     };
+    if (_acaoIdSalvar) dados.acaoId = _acaoIdSalvar;
     var id = (document.getElementById('res-id').value||'').trim();
     // Fase 79: para novas reservas com itens do novo estoque, envia itensMateriais estruturados
     if (!id && _itensChips.length > 0) {
@@ -24432,16 +24447,17 @@ var ReservasUI = (function() {
     var fim  = (document.getElementById('res-hora-fim').value||'').trim();
     var blocoV = document.getElementById('res-itens-volantes-bloco');
     if (!blocoV) return;
-    if (!sala || !data || !ini || !fim) { blocoV.style.display = 'none'; return; }
+    // Sempre mostrar o bloco — disponibilidade calculada quando horário estiver completo
     blocoV.style.display = '';
-    // Fase 79: usa catálogo do novo sistema de Estoque (saldoDisponivel já desconta alocações)
+    var horarioCompleto = sala && data && ini && fim;
     GAS.estoque.listarItens({ visivelSolicitantes: true }, function(resp) {
       var itens = (resp && resp.ok && Array.isArray(resp.data)) ? resp.data : [];
       _itensDisponibilidade = itens.map(function(it) {
         return {
           id:        it.id,
           nome:      it.descricao || it.nome || '—',
-          disponivel: it.saldoDisponivel != null ? Number(it.saldoDisponivel) : 0
+          // Quando o horário está completo, usa saldo real; senão, mostra saldo total sem descontar conflitos
+          disponivel: it.saldoDisponivel != null ? Number(it.saldoDisponivel) : (horarioCompleto ? 0 : 999)
         };
       }).filter(function(it) { return it.id; });
       _populateItemSelect();
@@ -42213,6 +42229,182 @@ var AnaliseEstudioUI = (function() {
     { id:'cruzar_acoes_publico_mes',modulo:'Cruzamentos',     label:'Ações × Público (mês)' },
   ];
 
+  // ── Catálogo de campos tipados (Fase DB-v2) ─────────────────────────────────
+  // Cada entrada mapeia dsId → { label, modulo, campos:[{id, label, tipo, formato}] }
+  // tipo: 'dimensao' (texto/data, eixo X) ou 'metrica' (número, eixo Y)
+  // formato: 'texto' | 'inteiro' | 'moeda' | 'percent' | 'decimal' | 'data_mes' | 'data'
+  var _CAMPO_CATALOGO = {
+    // ── Espaços ──────────────────────────────────────────────────────────────
+    'reservas_espaco': { label:'Reservas por espaço', modulo:'Espaços', campos:[
+      { id:'espaco',      label:'Espaço',   tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Reservas', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'reservas_setor': { label:'Reservas por setor', modulo:'Espaços', campos:[
+      { id:'setor',       label:'Setor',    tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Reservas', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'reservas_mes': { label:'Reservas por mês', modulo:'Espaços', campos:[
+      { id:'mes',         label:'Mês',      tipo:'dimensao', formato:'data_mes' },
+      { id:'quantidade',  label:'Reservas', tipo:'metrica',  formato:'inteiro'  }
+    ]},
+    'carros_destino': { label:'Viagens por destino', modulo:'Espaços', campos:[
+      { id:'destino',     label:'Destino',  tipo:'dimensao', formato:'texto'   },
+      { id:'viagens',     label:'Viagens',  tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'carros_setor': { label:'Viagens por setor', modulo:'Espaços', campos:[
+      { id:'setor',       label:'Setor',    tipo:'dimensao', formato:'texto'   },
+      { id:'viagens',     label:'Viagens',  tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'ativos_status': { label:'Patrimônio por status', modulo:'Espaços', campos:[
+      { id:'status',      label:'Status',   tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Ativos',   tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Tarefas ───────────────────────────────────────────────────────────────
+    'tarefas_status': { label:'Tarefas por status', modulo:'Tarefas', campos:[
+      { id:'status',      label:'Status',   tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Tarefas',  tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'tarefas_setor': { label:'Tarefas por setor', modulo:'Tarefas', campos:[
+      { id:'setor',       label:'Setor',    tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Tarefas',  tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'tarefas_responsavel': { label:'Tarefas por responsável', modulo:'Tarefas', campos:[
+      { id:'responsavel', label:'Responsável', tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Tarefas',     tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'tarefas_prioridade': { label:'Tarefas por prioridade', modulo:'Tarefas', campos:[
+      { id:'prioridade',  label:'Prioridade', tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Tarefas',    tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Reuniões ──────────────────────────────────────────────────────────────
+    'reunioes_tipo': { label:'Reuniões por tipo', modulo:'Reuniões', campos:[
+      { id:'tipo',        label:'Tipo',     tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Reuniões', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'reunioes_mes': { label:'Reuniões por mês', modulo:'Reuniões', campos:[
+      { id:'mes',         label:'Mês',      tipo:'dimensao', formato:'data_mes' },
+      { id:'quantidade',  label:'Reuniões', tipo:'metrica',  formato:'inteiro'  }
+    ]},
+    'encaminhamentos_status': { label:'Encaminhamentos por status', modulo:'Reuniões', campos:[
+      { id:'status',      label:'Status',          tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Encaminhamentos', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Financeiro ────────────────────────────────────────────────────────────
+    'financeiro_execucao': { label:'Execução orçamentária', modulo:'Financeiro', campos:[
+      { id:'descricao',       label:'Descrição',   tipo:'dimensao', formato:'texto' },
+      { id:'valor_previsto',  label:'Previsto',    tipo:'metrica',  formato:'moeda' },
+      { id:'valor_executado', label:'Executado',   tipo:'metrica',  formato:'moeda' },
+      { id:'saldo',           label:'Saldo',       tipo:'metrica',  formato:'moeda' },
+      { id:'meta',            label:'Meta',        tipo:'dimensao', formato:'texto' },
+      { id:'setor',           label:'Setor',       tipo:'dimensao', formato:'texto' }
+    ]},
+    'financeiro_rubrica': { label:'Valor por rubrica', modulo:'Financeiro', campos:[
+      { id:'rubrica',     label:'Rubrica',     tipo:'dimensao', formato:'texto' },
+      { id:'valor',       label:'Valor (R$)',  tipo:'metrica',  formato:'moeda' }
+    ]},
+    'contratos_status': { label:'Contratos por status', modulo:'Financeiro', campos:[
+      { id:'status',      label:'Status',      tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Contratos',   tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'contratos_fonte': { label:'Contratos por fonte', modulo:'Financeiro', campos:[
+      { id:'fonte',       label:'Fonte',       tipo:'dimensao', formato:'texto' },
+      { id:'valor',       label:'Valor (R$)',  tipo:'metrica',  formato:'moeda' }
+    ]},
+    // ── Pessoas ───────────────────────────────────────────────────────────────
+    'pessoas_setor': { label:'Colaboradores por setor', modulo:'Pessoas', campos:[
+      { id:'setor',         label:'Setor',         tipo:'dimensao', formato:'texto'   },
+      { id:'colaboradores', label:'Colaboradores', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'pessoas_cargo': { label:'Colaboradores por cargo', modulo:'Pessoas', campos:[
+      { id:'cargo',         label:'Cargo',         tipo:'dimensao', formato:'texto'   },
+      { id:'colaboradores', label:'Colaboradores', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'pessoas_vinculo': { label:'Colaboradores por vínculo', modulo:'Pessoas', campos:[
+      { id:'vinculo',       label:'Vínculo',       tipo:'dimensao', formato:'texto'   },
+      { id:'colaboradores', label:'Colaboradores', tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Ações Culturais ───────────────────────────────────────────────────────
+    'acoes_status': { label:'Ações por status', modulo:'Ações Culturais', campos:[
+      { id:'status',      label:'Status',      tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Ações',       tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'acoes_tipo': { label:'Ações por tipo', modulo:'Ações Culturais', campos:[
+      { id:'tipo',        label:'Tipo',        tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Ações',       tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'acoes_mes': { label:'Ações por mês', modulo:'Ações Culturais', campos:[
+      { id:'mes',         label:'Mês',         tipo:'dimensao', formato:'data_mes' },
+      { id:'setor',       label:'Setor',       tipo:'dimensao', formato:'texto'    },
+      { id:'atividade',   label:'Atividade',   tipo:'dimensao', formato:'texto'    },
+      { id:'quantidade',  label:'Quantidade',  tipo:'metrica',  formato:'inteiro'  }
+    ]},
+    // ── Público ───────────────────────────────────────────────────────────────
+    'publico_acao': { label:'Público por ação', modulo:'Público', campos:[
+      { id:'acao',        label:'Ação',        tipo:'dimensao', formato:'texto'   },
+      { id:'inscricoes',  label:'Inscrições',  tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'publico_mes': { label:'Inscrições por mês', modulo:'Público', campos:[
+      { id:'mes',         label:'Mês',         tipo:'dimensao', formato:'data_mes' },
+      { id:'inscricoes',  label:'Inscrições',  tipo:'metrica',  formato:'inteiro'  }
+    ]},
+    'presencas_acao': { label:'Presenças por ação', modulo:'Público', campos:[
+      { id:'acao',        label:'Ação',        tipo:'dimensao', formato:'texto'   },
+      { id:'presencas',   label:'Presenças',   tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Estoque ───────────────────────────────────────────────────────────────
+    'estoque_categoria': { label:'Itens por categoria', modulo:'Estoque', campos:[
+      { id:'categoria',   label:'Categoria',   tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Itens',       tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Comunicação ───────────────────────────────────────────────────────────
+    'balcao_status': { label:'Demandas por status', modulo:'Comunicação', campos:[
+      { id:'status',      label:'Status',      tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Demandas',    tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'balcao_tipo': { label:'Demandas por tipo', modulo:'Comunicação', campos:[
+      { id:'tipo',        label:'Tipo',        tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Demandas',    tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'balcao_setor': { label:'Demandas por setor', modulo:'Comunicação', campos:[
+      { id:'setor',       label:'Setor',       tipo:'dimensao', formato:'texto'   },
+      { id:'quantidade',  label:'Demandas',    tipo:'metrica',  formato:'inteiro' }
+    ]},
+    // ── Escuta ────────────────────────────────────────────────────────────────
+    'escuta_pesquisa': { label:'Resultados de escuta', modulo:'Escuta', campos:[
+      { id:'indicador',   label:'Indicador',   tipo:'dimensao', formato:'texto'   },
+      { id:'valor',       label:'Valor',       tipo:'metrica',  formato:'decimal' }
+    ]},
+    // ── Cruzamentos ───────────────────────────────────────────────────────────
+    'cruzar_pessoas_tarefas': { label:'Pessoas × Tarefas (setor)', modulo:'Cruzamentos', campos:[
+      { id:'setor',         label:'Setor',         tipo:'dimensao', formato:'texto'   },
+      { id:'colaboradores', label:'Colaboradores', tipo:'metrica',  formato:'inteiro' },
+      { id:'tarefas',       label:'Tarefas',       tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'cruzar_reservas_tarefas': { label:'Reservas × Tarefas (setor)', modulo:'Cruzamentos', campos:[
+      { id:'setor',         label:'Setor',         tipo:'dimensao', formato:'texto'   },
+      { id:'reservas',      label:'Reservas',      tipo:'metrica',  formato:'inteiro' },
+      { id:'tarefas',       label:'Tarefas',       tipo:'metrica',  formato:'inteiro' }
+    ]},
+    'cruzar_acoes_publico_mes': { label:'Ações × Público (mês)', modulo:'Cruzamentos', campos:[
+      { id:'mes',           label:'Mês',           tipo:'dimensao', formato:'data_mes' },
+      { id:'acoes',         label:'Ações',         tipo:'metrica',  formato:'inteiro'  },
+      { id:'inscricoes',    label:'Inscrições',    tipo:'metrica',  formato:'inteiro'  }
+    ]}
+  };
+
+  // Retorna campos de um dsId ou [] se não cadastrado
+  function _campoCatalogoGet(dsId) {
+    var entry = _CAMPO_CATALOGO[dsId];
+    return entry ? entry.campos : [];
+  }
+
+  // Converte colunas [{id,label,tipo}] → ['label1','label2'] para renderização legada
+  function _normColunas(colunas) {
+    if (!colunas || !colunas.length) return ['Label', 'Valor'];
+    if (typeof colunas[0] === 'string') return colunas;
+    return colunas.map(function(c) { return c.label || c.id || '—'; });
+  }
+
   function abrirCatalogo(cruz) {
     _catalogoCruz = !!cruz;
     var cat = _CATALOGO_LOCAL;
@@ -43926,11 +44118,12 @@ var AnaliseEstudioUI = (function() {
         return _renderFormaWidget(w.formaConfig||{});
       }
       if (w.tipo === 'kpi') {
-        var kpiCfg = w.kpiConfig || {};
-        var kpiVal = _kpiCalc(w.linhas||[], w.colunas||['Label','Valor'], kpiCfg.agregacao||'soma', kpiCfg.serieIdx||1);
-        var kpiStr = kpiCfg.formato==='moeda' ? 'R$ '+kpiVal.toLocaleString('pt-BR',{maximumFractionDigits:0}) :
-                     kpiCfg.formato==='percent' ? kpiVal.toFixed(1)+'%' : _fmtNum(kpiVal);
-        var kpiColNm = ((w.colunas||[])[kpiCfg.serieIdx||1]) || (w.colunas||[])[1] || 'Valor';
+        var kpiCfg  = w.kpiConfig || {};
+        var kpiCols = _normColunas(w.colunas || ['Label','Valor']);
+        var kpiVal  = _kpiCalc(w.linhas||[], kpiCols, kpiCfg.agregacao||'soma', kpiCfg.serieIdx||1);
+        var kpiStr  = kpiCfg.formato==='moeda'   ? 'R$ '+kpiVal.toLocaleString('pt-BR',{maximumFractionDigits:0}) :
+                      kpiCfg.formato==='percent' ? kpiVal.toFixed(1)+'%' : _fmtNum(kpiVal);
+        var kpiColNm = kpiCols[kpiCfg.serieIdx||1] || kpiCols[1] || 'Valor';
         return '<div style="display:flex;flex-direction:column;justify-content:center;min-height:80px;">' +
           '<div class="db-kpi-val">'+kpiStr+'</div>' +
           '<div class="db-kpi-lbl">'+_esc(kpiColNm)+'</div>' +
@@ -43944,7 +44137,7 @@ var AnaliseEstudioUI = (function() {
       if (!rows.length) return '<p class="muted-text" style="text-align:center;padding:20px;font-size:12px;">Sem dados. Clique em <span class="ms" style="font-size:13px;vertical-align:middle;">tune</span> para configurar.</p>';
       var cfg2 = { titulo:'', tipo:(w.config&&w.config.tipo)||'barras', corPrimaria:(w.config&&w.config.corPrimaria)||'#4f46e5',
         ajustes: Object.assign({rotulos:true,formato:'auto',grade:true,linhaRef:''},(w.config&&w.config.ajustes)||{}) };
-      return _renderizarGrafico(w.colunas||['Label','Valor'], rows, cfg2);
+      return _renderizarGrafico(_normColunas(w.colunas||['Label','Valor']), rows, cfg2);
     } catch(e) { return '<p class="muted-text" style="text-align:center;padding:12px;">Erro ao renderizar.</p>'; }
   }
 
@@ -43992,8 +44185,9 @@ var AnaliseEstudioUI = (function() {
 
   function _tabelaRender(colunas, linhas) {
     if (!linhas.length) return '<p class="muted-text" style="padding:8px;font-size:12px;">Sem dados</p>';
+    var cols = _normColunas(colunas);
     return '<div style="overflow-x:auto;"><table class="db-table">' +
-      '<thead><tr>'+colunas.map(function(c){ return '<th>'+_esc(c)+'</th>'; }).join('')+'</tr></thead>' +
+      '<thead><tr>'+cols.map(function(c){ return '<th>'+_esc(c)+'</th>'; }).join('')+'</tr></thead>' +
       '<tbody>'+linhas.map(function(r){
         return '<tr>'+r.map(function(c){
           return '<td>'+_esc(String(c===null||c===undefined?'—':c))+'</td>';
@@ -44033,7 +44227,7 @@ var AnaliseEstudioUI = (function() {
     var body = el.querySelector('.db-widget-body'); if (!body) return;
     body.innerHTML = '<div class="db-widget-loading"><span class="ms" style="font-size:18px;color:var(--primary);">sync</span> Carregando…</div>';
     var onData = function(r) {
-      var linhas  = r&&r.ok&&r.data ? r.data.linhas||[]           : w.linhas||[];
+      var linhas  = r&&r.ok&&r.data ? r.data.linhas||[]                : w.linhas||[];
       var colunas = r&&r.ok&&r.data ? r.data.colunas||['Label','Valor'] : w.colunas||['Label','Valor'];
       _dashWidgets[idx].linhas  = linhas;
       _dashWidgets[idx].colunas = colunas;
@@ -44042,14 +44236,24 @@ var AnaliseEstudioUI = (function() {
     var onErr = function() {
       if (body.isConnected) body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;color:var(--danger);">Erro ao carregar dados.</p>';
     };
-    // Aplica filtros específicos do widget (sobrepõem filtros globais do dashboard)
-    var wFiltros = w.filtros || {};
-    var p = {};
-    if (wFiltros.de)    p.de    = wFiltros.de;
-    if (wFiltros.ate)   p.ate   = wFiltros.ate;
-    if (wFiltros.setor) p.setor = wFiltros.setor;
-    if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},p), onData, onErr);
-    else         GAS.analise.importarDados(Object.assign({id:w.dsId},p), onData, onErr);
+    // Monta parâmetros: suporta filtros legados (flat) e filtros v2 (declarativos)
+    var p = { id: w.dsId };
+    var wFiltros = w.filtros;
+    if (Array.isArray(wFiltros)) {
+      // v2: filtros declarativos + ordenacao + limite
+      p.filtros = wFiltros;
+      if (w.ordenacao)  p.ordenacao  = w.ordenacao;
+      if (w.limite != null) p.limite = w.limite;
+      if (w.dimensoes) p.dimensoes = w.dimensoes;
+      if (w.metricas)  p.metricas  = w.metricas;
+    } else if (wFiltros && typeof wFiltros === 'object') {
+      // legado: {de, ate, setor}
+      if (wFiltros.de)    p.de    = wFiltros.de;
+      if (wFiltros.ate)   p.ate   = wFiltros.ate;
+      if (wFiltros.setor) p.setor = wFiltros.setor;
+    }
+    if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2}, p.setor?{setor:p.setor}:{}), onData, onErr);
+    else         GAS.analise.importarDados(p, onData, onErr);
   }
 
   function _dashAdicionarWidget(tipo) {
@@ -44527,10 +44731,11 @@ var AnaliseEstudioUI = (function() {
 
   function _dashRecarregarWidgets(widgets) {
     var canvas = document.getElementById('dash-view-canvas'); if (!canvas) return;
-    var fParams = {};
-    if (_dashFiltroTempo && _dashFiltroTempo.de)  fParams.de  = _dashFiltroTempo.de;
-    if (_dashFiltroTempo && _dashFiltroTempo.ate) fParams.ate = _dashFiltroTempo.ate;
-    if (_dashFiltroExtra && _dashFiltroExtra.setor) fParams.setor = _dashFiltroExtra.setor;
+    // Filtros globais da barra do dashboard (período + setor)
+    var fGlobal = {};
+    if (_dashFiltroTempo && _dashFiltroTempo.de)    fGlobal.de    = _dashFiltroTempo.de;
+    if (_dashFiltroTempo && _dashFiltroTempo.ate)   fGlobal.ate   = _dashFiltroTempo.ate;
+    if (_dashFiltroExtra && _dashFiltroExtra.setor) fGlobal.setor = _dashFiltroExtra.setor;
     widgets.forEach(function(w, idx) {
       if (w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma') return;
       var el = document.getElementById('dbvw-'+idx); if (!el) return;
@@ -44538,19 +44743,35 @@ var AnaliseEstudioUI = (function() {
       body.innerHTML = '<div class="db-widget-loading"><span class="ms" style="font-size:14px;color:var(--primary);">sync</span> Atualizando…</div>';
       var onDone = function(linhas, colunas) {
         if (!body.isConnected) return;
-        // Filtro client-side por setor (primeiro campo = label de categoria)
-        if (fParams.setor && linhas.length) {
-          var sf = fParams.setor.toLowerCase();
-          var filtered = linhas.filter(function(r){ return (r[0]||'').toLowerCase()===sf; });
-          if (filtered.length) linhas = filtered;
-        }
         body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
       };
       if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
       var onData = function(r){ onDone(r&&r.ok&&r.data?r.data.linhas||[]:w.linhas||[], r&&r.ok&&r.data?r.data.colunas||['Label','Valor']:w.colunas||['Label','Valor']); };
       var onErr  = function(){ onDone(w.linhas||[], w.colunas||['Label','Valor']); };
-      if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},fParams), onData, onErr);
-      else         GAS.analise.importarDados(Object.assign({id:w.dsId},fParams), onData, onErr);
+      // v2: widget com filtros[] declarativos — mescla com filtros globais do dashboard
+      if (Array.isArray(w.filtros)) {
+        var filtrosMerge = (w.filtros||[]).slice();
+        if (fGlobal.de)    filtrosMerge.push({ campo:'de',    operador:'gte', valor:fGlobal.de    });
+        if (fGlobal.ate)   filtrosMerge.push({ campo:'ate',   operador:'lte', valor:fGlobal.ate   });
+        if (fGlobal.setor) filtrosMerge.push({ campo:'setor', operador:'eq',  valor:fGlobal.setor });
+        var pV2 = { id:w.dsId, filtros:filtrosMerge };
+        if (w.ordenacao)      pV2.ordenacao = w.ordenacao;
+        if (w.limite != null) pV2.limite    = w.limite;
+        if (w.dimensoes)      pV2.dimensoes = w.dimensoes;
+        if (w.metricas)       pV2.metricas  = w.metricas;
+        if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},fGlobal.setor?{setor:fGlobal.setor}:{}), onData, onErr);
+        else         GAS.analise.importarDados(pV2, onData, onErr);
+      } else {
+        // Legado: filtros flat ou ausentes — aplica filtros globais do dashboard
+        var pLeg = Object.assign({ id:w.dsId }, fGlobal);
+        if (w.filtros && typeof w.filtros === 'object') {
+          if (w.filtros.de)    pLeg.de    = w.filtros.de    || pLeg.de;
+          if (w.filtros.ate)   pLeg.ate   = w.filtros.ate   || pLeg.ate;
+          if (w.filtros.setor) pLeg.setor = w.filtros.setor || pLeg.setor;
+        }
+        if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},pLeg), onData, onErr);
+        else         GAS.analise.importarDados(pLeg, onData, onErr);
+      }
     });
   }
 

@@ -39,7 +39,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s151)**: **fix/feat — Reservas de Espaço: performance (chamadas GAS paralelas), lista padrão = hoje em ordem cronológica, form como modal-overlay, mapa multi-nível sem race condition, identificação de espaços com badge de andar, bug scan completo no controller — sem deploy (aguarda clasp push).**
+**Fase atual (s152)**: **feat — Dashboard Builder v2 Fase 1: novo modelo de dados — `_CAMPO_CATALOGO` tipado (35 datasets × campos dimensao/metrica), `ctrl_analise_importar_dados` e `ctrl_analise_widget_dados` aceitam `filtros[]`, `ordenacao`, `limite`; pipeline de render normaliza colunas tipadas; `_dashRecarregarWidgets` suporta filtros declarativos v2 mesclados com filtros globais do dashboard.**
+
+**O que foi implementado em s152**:
+- **`_CAMPO_CATALOGO` (frontend)**: objeto tipado com todos os 35 datasets do `_CATALOGO_LOCAL`, mapeando cada `dsId` → `{ label, modulo, campos:[{id, label, tipo:'dimensao'|'metrica', formato}] }`. Base para o Widget Editor v2 (Fase 2) que exibirá o painel de seleção de campos estilo Data Studio.
+- **`_normColunas(colunas)`**: helper que converte `[{id,label,tipo}]` → `['label1','label2']` para compatibilidade com renderers legados. Chamado em `_tabelaRender`, `_renderWidgetBody` (KPI e gráfico) antes de renderizar.
+- **`_campoCatalogoGet(dsId)`**: helper público para fase 2 retornar os campos de um dataset.
+- **Backend `ctrl_analise_importar_dados`**: aceita `filtros[]` (array declarativo `{campo, operador, valor}`), `ordenacao` `{campo, direcao}`, `limite` (Top N), `dimensoes[]`, `metricas[]`. Backward compat: sem esses params, comporta-se exatamente como antes.
+- **Backend `ctrl_analise_widget_dados`**: idem — mesmos novos params.
+- **Helpers GAS**: `_analise_extrairFiltroGlobal(filtros)` converte filtros declarativos para o mecanismo `_analise_filtro_global` existente (setor/de/ate). `_analise_filtrarLinhasPos` aplica filtros por coluna pós-agregação. `_analise_ordenarLinhas` ordena por qualquer coluna.
+- **`_dashCarregarWidgetPreview`**: detecta `w.filtros` como array (v2) e passa todos os novos params para o backend; detecta como objeto (legado) e usa o caminho antigo.
+- **`_dashRecarregarWidgets`**: mescla filtros declarativos do widget com filtros globais do dashboard (período + setor da barra) antes de chamar o backend. Filtro client-side de setor removido (filtering agora é server-side).
+
+**Fase anterior (s151)**: **fix/feat — Reservas de Espaço: performance (chamadas GAS paralelas), lista padrão = hoje em ordem cronológica, form como modal-overlay, mapa multi-nível sem race condition, identificação de espaços com badge de andar, bug scan completo no controller — sem deploy (aguarda clasp push).**
 
 **O que foi implementado em s151**:
 - **Performance EspacosUI**: 3 chamadas de métricas (reservas + chaves + ativos) agora são paralelas (não seriais aninhadas) → tempo de abertura do módulo cai ~60%.

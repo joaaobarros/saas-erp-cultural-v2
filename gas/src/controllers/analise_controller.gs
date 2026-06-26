@@ -230,14 +230,32 @@ function ctrl_analise_catalogo() {
 
 function ctrl_analise_importar_dados(params) {
   return GasResponse.wrap(function() {
-    var id = (params || {}).modulo || (params || {}).id || 'operacional';
+    var p = params || {};
+    var id        = p.modulo || p.id || 'operacional';
+    var filtrosV2 = Array.isArray(p.filtros)   ? p.filtros   : null;
+    var ordenacao = p.ordenacao                || null;
+    var limite    = (p.limite != null)         ? Number(p.limite) : null;
+    var useV2     = !!(filtrosV2 || ordenacao || (limite !== null) || p.dimensoes || p.metricas);
+
     var filtro = null;
-    if ((params||{}).de || (params||{}).ate || (params||{}).setor) {
-      filtro = { de: (params||{}).de, ate: (params||{}).ate, setor: (params||{}).setor||'' };
+    if (p.de || p.ate || p.setor) {
+      filtro = { de: p.de, ate: p.ate, setor: p.setor || '' };
+    } else if (filtrosV2) {
+      filtro = _analise_extrairFiltroGlobal(filtrosV2);
     }
     _analise_filtro_global = filtro;
-    try { return _analise_dataset(id); }
+    var resultado;
+    try { resultado = _analise_dataset(id); }
     finally { _analise_filtro_global = null; }
+
+    if (!useV2) return resultado;
+
+    var linhas  = (resultado.linhas  || []).slice();
+    var colunas = resultado.colunas  || ['Label', 'Valor'];
+    if (filtrosV2) linhas = _analise_filtrarLinhasPos(linhas, colunas, filtrosV2);
+    if (ordenacao) linhas = _analise_ordenarLinhas(linhas, colunas, ordenacao);
+    if (limite !== null && limite > 0) linhas = linhas.slice(0, limite);
+    return { colunas: colunas, linhas: linhas };
   }, 'ctrl_analise_importar_dados');
 }
 
@@ -755,6 +773,75 @@ function _cruzar_custom(dsA, dsB) {
   return _juntar(dA.linhas, dB.linhas, 'Chave', colA, colB);
 }
 
+// ─── Helpers v2: filtros declarativos, ordenação, limite ─────────────────────
+
+// Converte array de filtros declarativos → _analise_filtro_global (de/ate/setor)
+function _analise_extrairFiltroGlobal(filtros) {
+  if (!filtros || !filtros.length) return null;
+  var fg = {};
+  filtros.forEach(function(f) {
+    if (!f || !f.campo) return;
+    var c = f.campo, op = f.operador || 'eq', v = f.valor;
+    if (c === 'setor' && (op === 'eq' || op === 'in'))      fg.setor = Array.isArray(v) ? v[0] : String(v||'');
+    if (c === 'de'    || (c === 'data' && op === 'gte'))    fg.de  = String(v||'');
+    if (c === 'ate'   || (c === 'data' && op === 'lte'))    fg.ate = String(v||'');
+    if ((c === 'data' || c === 'criadoEm') && op === 'between' && Array.isArray(v) && v.length >= 2) {
+      fg.de = v[0]; fg.ate = v[1];
+    }
+  });
+  return Object.keys(fg).length ? fg : null;
+}
+
+// Filtra linhas pós-agregação (campos não cobertos pelo filtro global)
+function _analise_filtrarLinhasPos(linhas, colunas, filtros) {
+  if (!filtros || !filtros.length || !linhas || !linhas.length) return linhas;
+  var ignorados = { setor:1, de:1, ate:1, data:1, criadoEm:1 };
+  var ativos = filtros.filter(function(f) { return f && f.campo && !ignorados[f.campo]; });
+  if (!ativos.length) return linhas;
+  return linhas.filter(function(row) {
+    return ativos.every(function(f) {
+      var idx = -1;
+      for (var i = 0; i < colunas.length; i++) {
+        if ((typeof colunas[i] === 'string' && colunas[i] === f.campo) ||
+            (colunas[i] && colunas[i].id === f.campo)) { idx = i; break; }
+      }
+      if (idx < 0) return true;
+      var v = row[idx];
+      var fv = f.valor;
+      var op = f.operador || 'eq';
+      if (op === 'eq')       return String(v) === String(fv);
+      if (op === 'neq')      return String(v) !== String(fv);
+      if (op === 'gt')       return Number(v) > Number(fv);
+      if (op === 'lt')       return Number(v) < Number(fv);
+      if (op === 'gte')      return Number(v) >= Number(fv);
+      if (op === 'lte')      return Number(v) <= Number(fv);
+      if (op === 'in')       return Array.isArray(fv) && fv.some(function(x){ return String(v)===String(x); });
+      if (op === 'contains') return String(v).toLowerCase().indexOf(String(fv).toLowerCase()) >= 0;
+      return true;
+    });
+  });
+}
+
+// Ordena linhas por coluna (nome ou índice 1=Valor por default)
+function _analise_ordenarLinhas(linhas, colunas, ordenacao) {
+  if (!ordenacao || !linhas || !linhas.length) return linhas;
+  var idx = 1;
+  if (ordenacao.campo) {
+    for (var i = 0; i < colunas.length; i++) {
+      if ((typeof colunas[i] === 'string' && colunas[i] === ordenacao.campo) ||
+          (colunas[i] && colunas[i].id === ordenacao.campo)) { idx = i; break; }
+    }
+  }
+  var dir = ordenacao.direcao === 'asc' ? 1 : -1;
+  return linhas.slice().sort(function(a, b) {
+    var av = a[idx], bv = b[idx];
+    if (typeof av === 'number' && typeof bv === 'number') return dir * (av - bv);
+    var nA = Number(av), nB = Number(bv);
+    if (!isNaN(nA) && !isNaN(nB)) return dir * (nA - nB);
+    return dir * String(av||'').localeCompare(String(bv||''));
+  });
+}
+
 // ─── Dashboard Builder ────────────────────────────────────────────────────────
 
 var _ANALISE_DASHBOARD_KEY = 'ANALISE_DASHBOARD_ITEMS';
@@ -813,15 +900,35 @@ function ctrl_analise_dashboard_excluir(params) {
 
 function ctrl_analise_widget_dados(params) {
   return GasResponse.wrap(function() {
-    var dsId  = (params || {}).dsId;
-    var dsId2 = (params || {}).dsId2;
-    var filtro = null;
-    if ((params||{}).de || (params||{}).ate || (params||{}).setor) filtro = { de: (params||{}).de, ate: (params||{}).ate, setor: (params||{}).setor||'' };
+    var p     = params || {};
+    var dsId  = p.dsId;
+    var dsId2 = p.dsId2;
     if (!dsId) throw new Error('dsId obrigatório');
+
+    var filtrosV2 = Array.isArray(p.filtros)   ? p.filtros   : null;
+    var ordenacao = p.ordenacao                || null;
+    var limite    = (p.limite != null)         ? Number(p.limite) : null;
+    var useV2     = !!(filtrosV2 || ordenacao || (limite !== null) || p.dimensoes || p.metricas);
+
+    var filtro = null;
+    if (p.de || p.ate || p.setor) {
+      filtro = { de: p.de, ate: p.ate, setor: p.setor || '' };
+    } else if (filtrosV2) {
+      filtro = _analise_extrairFiltroGlobal(filtrosV2);
+    }
     _analise_filtro_global = filtro;
+    var resultado;
     try {
-      if (dsId2) return _cruzar_custom(dsId, dsId2);
-      return _analise_dataset(dsId);
+      resultado = dsId2 ? _cruzar_custom(dsId, dsId2) : _analise_dataset(dsId);
     } finally { _analise_filtro_global = null; }
+
+    if (!useV2) return resultado;
+
+    var linhas  = (resultado.linhas  || []).slice();
+    var colunas = resultado.colunas  || ['Label', 'Valor'];
+    if (filtrosV2) linhas = _analise_filtrarLinhasPos(linhas, colunas, filtrosV2);
+    if (ordenacao) linhas = _analise_ordenarLinhas(linhas, colunas, ordenacao);
+    if (limite !== null && limite > 0) linhas = linhas.slice(0, limite);
+    return { colunas: colunas, linhas: linhas };
   }, 'ctrl_analise_widget_dados');
 }
