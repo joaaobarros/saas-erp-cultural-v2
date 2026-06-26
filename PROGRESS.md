@@ -39,7 +39,12 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s155)**: **feat — Editores de mapa: dimensões reais por lado/diâmetro + distância entre espaços ao mover.** Deploy @1121.
+**Fase atual (s155b)**: **fix — Dashboard Builder: troca de tipo de widget atualiza card no canvas em tempo real.** Deploy @1122.
+
+**O que foi implementado em s155b**:
+- **`_weTipoChg` (`index.html`)**: ao trocar o chip de tipo (grafico→kpi→tabela→…) na sidebar de edição, o card correspondente no canvas é atualizado imediatamente — ícone do header e corpo do card — sem precisar clicar "Confirmar". Funciona apenas ao editar widgets existentes (busca o card pelo `_weDraftWidget.id` em `_dashWidgets`); novos widgets (criação) não têm card ainda e o bloco é pulado sem efeito colateral.
+
+**Fase anterior (s155)**: **feat — Editores de mapa: dimensões reais por lado/diâmetro + distância entre espaços ao mover.** Deploy @1121.
 
 **O que foi implementado em s155**:
 - **Editor de Terreno (`terreno_editor.html`)**: aceita `escala` como 3º parâmetro de `abrir()`; mostra label verde com comprimento em metros (ex: `L1: 12.5m`) em cada segmento reto do contorno; clique no label abre modal para definir comprimento exato; quando ponto está selecionado, sidebar exibe botões "L{i}: Xm → clicar para ajustar" para os 2 segmentos adjacentes. Exporta `_setSegLen`.

@@ -45399,6 +45399,22 @@ var AnaliseEstudioUI = (function() {
       ['we-tab-'+uid,       showTab],
       ['we-estilo-vazio-'+uid, !(showGraf||showKpi||showTab)],
     ].forEach(function(s){ var el=document.getElementById(s[0]); if(el) el.style.display=s[1]?'':'none'; });
+    // Atualiza o card no canvas em tempo real (quando editando widget existente)
+    if (_weDraftWidget.id) {
+      var _ticoMap={kpi:'speed',tabela:'table_chart',separador:'title',texto:'text_fields',imagem:'image',forma:'category',filtro:'filter_list',grafico:'bar_chart'};
+      for (var _i=0; _i<_dashWidgets.length; _i++) {
+        if (_dashWidgets[_i].id === _weDraftWidget.id) {
+          var _cardEl = document.getElementById('dbw-'+_i);
+          if (_cardEl) {
+            var _icoEl = _cardEl.querySelector('.db-widget-ico');
+            if (_icoEl) _icoEl.textContent = _ticoMap[tipo] || 'bar_chart';
+            var _bodyEl = _cardEl.querySelector('.db-widget-body');
+            if (_bodyEl) _bodyEl.innerHTML = _renderWidgetBody(_weDraftWidget, false);
+          }
+          break;
+        }
+      }
+    }
   }
 
   function _weForma(uid, forma) {
