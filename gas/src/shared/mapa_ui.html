@@ -245,13 +245,21 @@ var MapaUI=(function(){
       layer.appendChild(g);
     });
     // Ocultar formas estáticas sem espaço ativo correspondente (evita "fantasmas")
+    // Também ocultar estáticos de espaços com mapaConfig configurado para outro nível
     var _activeIds = {};
-    espacos.forEach(function(e){ _activeIds[e.id] = true; });
+    var _outroNivelIds = {};
+    espacos.forEach(function(e){
+      _activeIds[e.id] = true;
+      if (_multiNivel && e.mapaConfig) {
+        var eNivel = e.nivel !== undefined ? e.nivel : 0;
+        if (eNivel !== _nivelAtivo) _outroNivelIds[e.id] = true;
+      }
+    });
     document.querySelectorAll('#mapa-svg-inner .mapa-espaco').forEach(function(g){
       if (g.closest('#mapa-espacos-custom')) return;
       var gid = g.getAttribute('data-id') || '';
       if (gid.startsWith('__hidden_')) return;
-      if (!_activeIds[gid]) g.style.display = 'none';
+      if (!_activeIds[gid] || _outroNivelIds[gid]) g.style.display = 'none';
     });
   }
 

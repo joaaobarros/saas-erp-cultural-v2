@@ -2628,6 +2628,7 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 | @1113 | Fix: Mapa Reservas multi-nível | `ctrl_mapa_statusEspacos` não retornava `nivel` → espaços do 1º Andar nunca apareciam no mapa de Reservas. Adicionado `nivel: esp.nivel !== undefined ? esp.nivel : 0` ao objeto retornado |
 | @1113 | Fix: Config mapa expandível | Adicionado botão `fullscreen`/`fullscreen_exit` (#cfg-mapa-expand-btn) nos controles de zoom do mapa de Configurações; `InfraConfigMapaUI.toggleExpand()` alterna entre `height:430px` e `calc(100vh - 220px)` |
 | @1113 | Fix: Dimensões círculo | Painel de propriedades ao editar um espaço no Config Mapa: círculos agora mostram campo único "Diâmetro (px)" + "Diâmetro real (m)" (#cfged-dm) em vez de Larg.×Alt. duplicados; tooltip `_showDimHud` mostra "ø Xm" para círculos; `_atualizarInputsInline` e `_propDimMetrosInfraChange` atualizados para suportar `cfged-dm` |
+| @1115 | Fix: Espaços duplicados entre níveis | `mapa_ui.html _renderCustomSpaces`: espaços com `mapaConfig` em nível ≠ ativo (ex: 24, 32, 38 no 1ºAndar) tinham seus elementos estáticos do SVG visíveis no Térreo. Adicionado `_outroNivelIds` → estático é ocultado mesmo que o ID exista em `_activeIds` |
 
 ### Pendentes / próxima ação
 - Retomar auditoria de bugs ou próximas fases do Dashboard Builder v2

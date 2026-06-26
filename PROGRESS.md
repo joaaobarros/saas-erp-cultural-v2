@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s153b)**: **fix — Mapa: 3 correções — (1) nível dos espaços ausente na resposta de statusEspacos (espaços do 1º Andar não apareciam), (2) botão expandir mapa de configurações, (3) dimensão de círculos mostra Diâmetro em vez de Larg.×Alt.** Deploy @1113.
+**Fase atual (s153c)**: **fix — Mapa: espaços duplicados entre níveis — elementos estáticos do SVG de espaços configurados em outro nível (ex: 24, 32, 38 no 1ºAndar) não eram ocultados no Térreo. `_outroNivelIds` + lógica em `_renderCustomSpaces`.** Deploy @1115.
 
 **O que foi implementado em s153**:
 - **Fase 2 — Widget Editor Data Studio**: `_abrirWidgetEditor` reescrito com abas "Dados" e "Estilo". Aba Dados: campo panel com chips ABC (dimensão) e 123 (métrica) por dataset, click-to-add e HTML5 drag-and-drop para zonas Dimensão (1) e Métricas (n), filtros v2 dinâmicos (`campo|operador|valor`), ordenar por (campo + asc/desc), Limite (Top N), checkbox Interativo. Backward compat: widgets legados sem `dimensoes`/`metricas` auto-populam de `_CAMPO_CATALOGO`; `filtros` flat `{de,ate,setor}` normalizam para array v2.
