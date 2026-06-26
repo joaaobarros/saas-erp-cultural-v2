@@ -105,6 +105,9 @@ var MapaUI=(function(){
         if(!_niveis.find(function(n){return n.nivel===_nivelAtivo;})) _nivelAtivo=_niveis[0].nivel;
         _niveisCarregados=true;
         _renderNivelNav();
+        // Re-renderizar espaços se statusMap já foi populado (race condition: statusEspacos chegou primeiro)
+        var _espacosArr=Object.keys(_statusMap).map(function(k){return _statusMap[k];});
+        if(_espacosArr.length>0){_renderCustomSpaces(_espacosArr);_cores();}
       },function(){_niveisCarregados=true;});
     } else {
       _renderNivelNav();

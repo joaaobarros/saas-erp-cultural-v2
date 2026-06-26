@@ -1,10 +1,10 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s150 @1095 (feat: Estúdio de Análises Series Builder — múltiplas séries com filtros independentes, merge multi-coluna, Widget Editor com filtros de data/setor por widget) · s149 @1094 (feat: Quadros mind map evoluído — toolbar, colapsar/expandir, arraste manual, setas fine-tune) · s148 @1094 (feat: Biblioteca dc-icon 156 SVG + logos institucionais + web component) · s147 @1092 (fix: flyout lápis/marcador/pincel expandido fora da toolbar) · s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036
+> Deploy atual: s151 (pendente push) fix/feat: Reservas — performance paralela, lista=hoje, form modal, mapa race condition, espaços com badge andar, buscarPorId no backend · s150 @1095 (feat: Estúdio de Análises Series Builder — múltiplas séries com filtros independentes, merge multi-coluna, Widget Editor com filtros de data/setor por widget) · s149 @1094 (feat: Quadros mind map evoluído — toolbar, colapsar/expandir, arraste manual, setas fine-tune) · s148 @1094 (feat: Biblioteca dc-icon 156 SVG + logos institucionais + web component) · s147 @1092 (fix: flyout lápis/marcador/pincel expandido fora da toolbar) · s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
 
-### Estado atual: s150 — feat Estúdio de Análises: Series Builder (Data Studio)
+### Estado atual: s151 — fix/feat Reservas de Espaço (performance + UX + bugs)
 
 | Deploy | Fase | O que foi implementado |
 | --- | --- | --- |
@@ -642,7 +642,33 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 122 (2026-06-25)
+## HANDOFF ATUAL — SESSÃO 123 (2026-06-26)
+
+### Estado atual: Fix/feat — Reservas de Espaço — pendente deploy
+
+### O que foi feito nesta sessão (s151)
+| Arquivo | O que foi implementado |
+|---|---|
+| index.html | **EspacosUI.aoAbrir**: 3 chamadas de métricas (reservas+chaves+ativos) paralelizadas (antes seriais aninhadas) |
+| index.html | **ReservasUI.carregar**: `metricas` e `listar` paralelizados após `concluirAtrasadas` |
+| index.html | **EspacosUI.abrirTab('reservas')**: inicializa `res-filtro-data` = hoje na primeira abertura |
+| index.html | **_renderLista**: filtro por dia exato (`===`) em vez de `>=`; `_limparFiltros` restaura para hoje |
+| index.html | **posPassado**: botão pós-evento só exibido quando hora de término já passou (fix: não mostrava para eventos futuros do dia) |
+| index.html | **Form reservas**: convertido de `<div class="card">` para `<div class="modal-overlay oculto">` com modal-box/header/body; backdrop fecha; `abrirForm/fecharForm` usam classList |
+| index.html | **Identificação de espaços**: nome em negrito + badge de nível (Térreo/1º Andar…); `_espacosDetalhes` + `_nivelBadge()` |
+| mapa_ui.html | **Race condition níveis**: `lerNiveisMapa` callback re-renderiza espaços se `_statusMap` já foi populado |
+| reservas_controller.gs | **buscarPorId**: `ctrl_reservas_confirmar/atualizar/cancelar/vincular_calendar/desvincular_calendar` — substituem `ReservaEngine.listar({})` (O(N)) por `ReservaRepository.buscarPorId` (O(1) por ID) |
+
+### Smoke test esperado
+- Abrir Espaços → aba Reservas abre exibindo apenas as reservas de hoje, em ordem cronológica, sem esperar 3 chamadas seriais.
+- "Nova Reserva" → formulário abre como modal sobre a página, não inline; ESC ou clique fora fecha.
+- Reservas da lista mostram espaço em negrito com badge de andar (Térreo, 1º Andar etc).
+- Mapa → mudar de nível → espaços do nível correto aparecem imediatamente, sem mostrar espaços de outros andares.
+- Console F12: zero TypeError; zero undefined.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 122 (2026-06-25)
 
 ### Estado atual: Feat — Quadros: mapa mental evoluído — Deploy @1094
 

@@ -5000,118 +5000,124 @@ select.form-control { cursor: pointer; }
             </button>
           </div>
 
-          <!-- Form nova reserva — fora dos containers de modo para ser visível em qualquer view -->
-          <div class="card" id="reservas-form-card" style="display:none">
-            <div class="card-header">
-              <div class="card-titulo"><span class="ms">event</span> <span id="reservas-form-titulo">Nova Reserva</span></div>
-              <button class="btn btn-ghost btn-sm" onclick="ReservasUI.fecharForm()" data-bg-skip="1"><span class="ms ms-sm">close</span></button>
-            </div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Sala / Espaço *</label>
-                <select id="res-sala" class="form-input" onchange="ReservasUI.aoSelecionarEspaco(this);ReservasUI._checarConflito();">
-                  <option value="">Selecione o espaço…</option>
-                </select>
-                <small id="res-sala-hint" class="muted-text"></small>
+          <!-- Form nova reserva — modal sobre a página -->
+          <div class="modal-overlay oculto" id="reservas-form-card" onclick="if(event.target===this)ReservasUI.fecharForm()">
+            <div class="modal-box" style="max-width:680px;max-height:90vh;overflow-y:auto;">
+              <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;margin:0;font-size:1rem;font-weight:600;">
+                  <span class="ms">event</span> <span id="reservas-form-titulo">Nova Reserva</span>
+                </h3>
+                <button class="modal-close" onclick="ReservasUI.fecharForm()" data-bg-skip="1">✕</button>
               </div>
-              <div class="form-group">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                  <label class="form-label" style="margin:0;">Data *</label>
-                  <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1" style="height:22px;padding:0 8px;font-size:11px;gap:3px;">
-                    <span class="ms ms-sm" style="font-size:13px;">date_range</span> Lote
+              <div class="modal-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Sala / Espaço *</label>
+                    <select id="res-sala" class="form-input" onchange="ReservasUI.aoSelecionarEspaco(this);ReservasUI._checarConflito();">
+                      <option value="">Selecione o espaço…</option>
+                    </select>
+                    <small id="res-sala-hint" class="muted-text"></small>
+                  </div>
+                  <div class="form-group">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                      <label class="form-label" style="margin:0;">Data *</label>
+                      <button class="btn btn-ghost btn-sm" id="btn-res-lote" onclick="ReservasUI.abrirModalLote()" data-bg-skip="1" style="height:22px;padding:0 8px;font-size:11px;gap:3px;">
+                        <span class="ms ms-sm" style="font-size:13px;">date_range</span> Lote
+                      </button>
+                    </div>
+                    <input type="date" id="res-data" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._checarConflito();">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hora início *</label>
+                    <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Hora término *</label>
+                    <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
+                  </div>
+                  <div class="form-group" style="grid-column:1/-1">
+                    <label class="form-label">Nome da Ação / Evento *</label>
+                    <input type="text" id="res-nome-acao" class="form-input" placeholder="Ex: Oficina de Teatro">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tipo de ação</label>
+                    <select id="res-tipo-acao" class="form-input">
+                      <option value="">Selecione…</option>
+                      <option value="oficina">Oficina / Formação</option>
+                      <option value="espetaculo">Espetáculo</option>
+                      <option value="exposicao">Exposição</option>
+                      <option value="show">Show / Concerto</option>
+                      <option value="sarau">Sarau / Poesia</option>
+                      <option value="festival">Festival</option>
+                      <option value="conferencia">Conferência / Palestra</option>
+                      <option value="debate">Debate / Mesa-redonda</option>
+                      <option value="lancamento">Lançamento</option>
+                      <option value="ensaio">Ensaio / Preparação</option>
+                      <option value="cinema">Cinema / Audiovisual</option>
+                      <option value="reuniao">Reunião / Encontro</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Setor</label>
+                    <select id="res-setor" class="form-input"><option value="">Selecione o setor…</option></select>
+                  </div>
+                  <div class="form-group" style="grid-column:1/-1">
+                    <label class="form-label">Observações</label>
+                    <textarea id="res-obs" class="form-input" rows="2" placeholder="Equipamentos necessários, configuração…"></textarea>
+                  </div>
+                  <!-- Bloco: Tempos de montagem/encerramento -->
+                  <div class="form-group">
+                    <label class="form-label" title="Tempo de preparação antes do início da atividade (montagem, soundcheck, organização)">Montagem (min)</label>
+                    <input type="number" id="res-montagem" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" title="Tempo de encerramento após o fim da atividade (desmontagem, limpeza, retirada)">Encerramento (min)</label>
+                    <input type="number" id="res-encerramento" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="color:var(--muted);">Tempo de atividade</label>
+                    <div id="res-tempo-atividade" style="padding:7px 10px;background:var(--surface2);border-radius:var(--r-sm);font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center;">
+                      <span class="ms ms-sm" style="font-size:14px;margin-right:6px;color:var(--muted);">timer</span>
+                      <span id="res-tempo-atividade-val">—</span>
+                    </div>
+                  </div>
+                  <!-- Bloco: Itens fixos do espaço (informativo) -->
+                  <div class="form-group" id="res-itens-fixos-bloco" style="grid-column:1/-1;display:none;">
+                    <label class="form-label" style="color:var(--muted);">Equipamentos já disponíveis nesta sala</label>
+                    <div id="res-itens-fixos-lista" style="font-size:13px;color:var(--muted);padding:4px 0;"></div>
+                  </div>
+                  <!-- Bloco: Materiais necessários (Fase 79 — novo sistema de Estoque) -->
+                  <div class="form-group" id="res-itens-volantes-bloco" style="grid-column:1/-1;display:none;">
+                    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
+                      <label class="form-label" style="margin:0;">Materiais necessários</label>
+                      <span style="font-size:11px;color:var(--muted);">Uma solicitação será criada no almoxarifado ao salvar.</span>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
+                      <div style="flex:1;min-width:160px;">
+                        <select id="res-item-select" class="form-input" style="width:100%;"></select>
+                      </div>
+                      <div style="width:80px;">
+                        <input type="number" id="res-item-qtd" class="form-input" min="1" value="1">
+                      </div>
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._adicionarItem()" data-bg-skip="1">
+                        <span class="ms ms-sm">add</span> Adicionar
+                      </button>
+                    </div>
+                    <div id="res-itens-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
+                    <small id="res-itens-hint" style="display:none;color:var(--color-error);margin-top:4px;font-size:11px;">Quantidade solicitada excede o saldo disponível — ajuste antes de salvar.</small>
+                  </div>
+                </div>
+                <input type="hidden" id="res-id">
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;">
+                  <button class="btn btn-ghost" onclick="ReservasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
+                  <button class="btn btn-primario" id="btn-res-salvar" onclick="ReservasUI.salvar()">
+                    <span class="ms ms-sm">save</span> Salvar
                   </button>
                 </div>
-                <input type="date" id="res-data" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._checarConflito();">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Hora início *</label>
-                <input type="time" id="res-hora-ini" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Hora término *</label>
-                <input type="time" id="res-hora-fim" class="form-input" onchange="ReservasUI._atualizarDisponibilidadeSalas();ReservasUI._carregarDisponibilidadeItens();ReservasUI._atualizarTempoAtividade();ReservasUI._checarConflito();">
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">Nome da Ação / Evento *</label>
-                <input type="text" id="res-nome-acao" class="form-input" placeholder="Ex: Oficina de Teatro">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Tipo de ação</label>
-                <select id="res-tipo-acao" class="form-input">
-                  <option value="">Selecione…</option>
-                  <option value="oficina">Oficina / Formação</option>
-                  <option value="espetaculo">Espetáculo</option>
-                  <option value="exposicao">Exposição</option>
-                  <option value="show">Show / Concerto</option>
-                  <option value="sarau">Sarau / Poesia</option>
-                  <option value="festival">Festival</option>
-                  <option value="conferencia">Conferência / Palestra</option>
-                  <option value="debate">Debate / Mesa-redonda</option>
-                  <option value="lancamento">Lançamento</option>
-                  <option value="ensaio">Ensaio / Preparação</option>
-                  <option value="cinema">Cinema / Audiovisual</option>
-                  <option value="reuniao">Reunião / Encontro</option>
-                  <option value="outro">Outro</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Setor</label>
-                <select id="res-setor" class="form-input"><option value="">Selecione o setor…</option></select>
-              </div>
-              <div class="form-group" style="grid-column:1/-1">
-                <label class="form-label">Observações</label>
-                <textarea id="res-obs" class="form-input" rows="2" placeholder="Equipamentos necessários, configuração…"></textarea>
-              </div>
-              <!-- Bloco: Tempos de montagem/encerramento -->
-              <div class="form-group">
-                <label class="form-label" title="Tempo de preparação antes do início da atividade (montagem, soundcheck, organização)">Montagem (min)</label>
-                <input type="number" id="res-montagem" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
-              </div>
-              <div class="form-group">
-                <label class="form-label" title="Tempo de encerramento após o fim da atividade (desmontagem, limpeza, retirada)">Encerramento (min)</label>
-                <input type="number" id="res-encerramento" class="form-input" min="0" max="480" value="0" placeholder="0" oninput="ReservasUI._atualizarTempoAtividade()">
-              </div>
-              <div class="form-group">
-                <label class="form-label" style="color:var(--muted);">Tempo de atividade</label>
-                <div id="res-tempo-atividade" style="padding:7px 10px;background:var(--surface2);border-radius:var(--r-sm);font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center;">
-                  <span class="ms ms-sm" style="font-size:14px;margin-right:6px;color:var(--muted);">timer</span>
-                  <span id="res-tempo-atividade-val">—</span>
-                </div>
-              </div>
-              <!-- Bloco: Itens fixos do espaço (informativo) -->
-              <div class="form-group" id="res-itens-fixos-bloco" style="grid-column:1/-1;display:none;">
-                <label class="form-label" style="color:var(--muted);">Equipamentos já disponíveis nesta sala</label>
-                <div id="res-itens-fixos-lista" style="font-size:13px;color:var(--muted);padding:4px 0;"></div>
-              </div>
-              <!-- Bloco: Materiais necessários (Fase 79 — novo sistema de Estoque) -->
-              <div class="form-group" id="res-itens-volantes-bloco" style="grid-column:1/-1;display:none;">
-                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;">
-                  <label class="form-label" style="margin:0;">Materiais necessários</label>
-                  <span style="font-size:11px;color:var(--muted);">Uma solicitação será criada no almoxarifado ao salvar.</span>
-                </div>
-                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;">
-                  <div style="flex:1;min-width:160px;">
-                    <select id="res-item-select" class="form-input" style="width:100%;"></select>
-                  </div>
-                  <div style="width:80px;">
-                    <input type="number" id="res-item-qtd" class="form-input" min="1" value="1">
-                  </div>
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="ReservasUI._adicionarItem()" data-bg-skip="1">
-                    <span class="ms ms-sm">add</span> Adicionar
-                  </button>
-                </div>
-                <div id="res-itens-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
-                <small id="res-itens-hint" style="display:none;color:var(--color-error);margin-top:4px;font-size:11px;">Quantidade solicitada excede o saldo disponível — ajuste antes de salvar.</small>
+                <div id="res-disp-resultado" style="display:none;margin-top:12px;"></div>
               </div>
             </div>
-            <input type="hidden" id="res-id">
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;">
-              <button class="btn btn-ghost" onclick="ReservasUI.fecharForm()" data-bg-skip="1">Cancelar</button>
-              <button class="btn btn-primario" id="btn-res-salvar" onclick="ReservasUI.salvar()">
-                <span class="ms ms-sm">save</span> Salvar
-              </button>
-            </div>
-            <div id="res-disp-resultado" style="display:none;margin-top:12px;"></div>
           </div>
 
           <!-- MODO LISTA (padrão) -->
@@ -20492,7 +20498,12 @@ var EspacosUI = (function() {
     // Carregar dados da tab se ainda não carregou
     if (!_carregados[tab]) {
       _carregados[tab] = true;
-      if (tab === 'reservas')    ReservasUI.carregar();
+      if (tab === 'reservas') {
+        // Inicializar filtro de data com hoje (não carregar todo o histórico)
+        var _dpEl = document.getElementById('res-filtro-data');
+        if (_dpEl && !_dpEl.value) _dpEl.value = new Date().toISOString().slice(0, 10);
+        ReservasUI.carregar();
+      }
       if (tab === 'chaves')      ChavesUI.carregar();
       if (tab === 'emprestimos') AlmoxUI.carregar();
       if (tab === 'ativos')      AtivosUI.carregar();
@@ -20515,26 +20526,24 @@ var EspacosUI = (function() {
 
   function aoAbrir() {
     _verificarAcessoConfig();
-    // Carregar métricas topo e abrir tab padrão (Reservas)
-    GAS.reservas.metricas(function(rM) {
-      GAS.chaves.metricas(function(cM) {
-        GAS.ativos.metricas(function(aM) {
-          var rm = (rM&&rM.ok)?rM.data:{};
-          var cm = (cM&&cM.ok)?cM.data:{};
-          var am = (aM&&aM.ok)?aM.data:{};
-          document.getElementById('espacos-metricas-topo').innerHTML = [
-            { valor: (rm.pendente||0)+(rm.confirmado||0), label:'Reservas ativas',   icone:'event',       classe:'primary' },
-            { valor: cm.abertos||0,                       label:'Chaves em aberto',  icone:'key',         classe:'warning' },
-            { valor: cm.atrasados||0,                     label:'Chaves atrasadas',  icone:'warning',     classe:'error'   },
-            { valor: am.disponivel||0,                    label:'Ativos disponíveis',icone:'inventory_2', classe:'success' }
-          ].map(function(s) {
-            return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
-              +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
-              +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
-          }).join('');
-        });
-      });
-    });
+    // Carregar métricas topo em paralelo (3 chamadas simultâneas, não seriais)
+    var _rm = {}, _cm = {}, _am = {}, _pendente = 3;
+    function _renderMetricasTopo() {
+      if (--_pendente > 0) return;
+      document.getElementById('espacos-metricas-topo').innerHTML = [
+        { valor: (_rm.pendente||0)+(_rm.confirmado||0), label:'Reservas ativas',   icone:'event',       classe:'primary' },
+        { valor: _cm.abertos||0,                        label:'Chaves em aberto',  icone:'key',         classe:'warning' },
+        { valor: _cm.atrasados||0,                      label:'Chaves atrasadas',  icone:'warning',     classe:'error'   },
+        { valor: _am.disponivel||0,                     label:'Ativos disponíveis',icone:'inventory_2', classe:'success' }
+      ].map(function(s) {
+        return '<div class="stat-card"><div class="stat-icon '+s.classe+'"><span class="ms ms-lg">'+s.icone+'</span></div>'
+          +'<div class="stat-info"><div class="stat-valor">'+escaparHtml(s.valor)+'</div>'
+          +'<div class="stat-label">'+escaparHtml(s.label)+'</div></div></div>';
+      }).join('');
+    }
+    GAS.reservas.metricas(function(r){ _rm=(r&&r.ok)?r.data:{}; _renderMetricasTopo(); }, function(){ _renderMetricasTopo(); });
+    GAS.chaves.metricas(function(r){ _cm=(r&&r.ok)?r.data:{}; _renderMetricasTopo(); }, function(){ _renderMetricasTopo(); });
+    GAS.ativos.metricas(function(r){ _am=(r&&r.ok)?r.data:{}; _renderMetricasTopo(); }, function(){ _renderMetricasTopo(); });
     abrirTab('reservas');
   }
 
@@ -23143,13 +23152,13 @@ var ReservasUI = (function() {
     var el = document.getElementById('reservas-lista');
 
     var dpEl = document.getElementById('res-filtro-data');
-    var dataMin = (dpEl && dpEl.value) || '';
+    var dataFiltro = (dpEl && dpEl.value) || '';
 
     var sort = (document.getElementById('res-sort')||{}).value || 'data-hora';
 
-    // Filtrar: a partir de dataMin quando preenchido; sem filtro de data quando vazio
+    // Filtrar: dia exato quando preenchido; sem filtro quando vazio (mostra tudo)
     var exibir = (lista || []).filter(function(r) {
-      return !dataMin || (r.data || '') >= dataMin;
+      return !dataFiltro || (r.data || '') === dataFiltro;
     });
 
     // Ordenar
@@ -23173,6 +23182,7 @@ var ReservasUI = (function() {
 
     el.innerHTML = exibir.map(function(r) {
       var nomeEspaco = _espacosPorId[r.sala] || r.sala || '—';
+      var _espDet = _espacosDetalhes[r.sala] || {};
       var turnoLabel = _LABEL_TURNO_LISTA[r.turno] || r.turno || '';
       var btns = '';
       if (r.status === 'pendente') {
@@ -23204,8 +23214,13 @@ var ReservasUI = (function() {
       }
       btns += '<button class="btn btn-ghost btn-sm btn-res-editar" data-id="'+escaparHtml(r.id)+'" title="Editar"><span class="ms ms-sm">edit</span></button>';
 
-      var hoje = new Date().toISOString().slice(0,10);
-      var posPassado = (r.data || '') <= hoje && r.status !== 'cancelado';
+      var _agora = new Date();
+      var hoje = _agora.toISOString().slice(0,10);
+      var _horaAtual = String(_agora.getHours()).padStart(2,'0') + ':' + String(_agora.getMinutes()).padStart(2,'0');
+      // posPassado: só verdadeiro quando o evento já encerrou (data passada, ou hoje com hora de término no passado)
+      var posPassado = r.status !== 'cancelado' &&
+        ((r.data || '') < hoje ||
+         ((r.data || '') === hoje && (r.horaTermino || '23:59') <= _horaAtual));
       var temPos = posPassado && r.posEvento && r.posEvento.registradoEm;
 
       // Dia da semana a partir de r.data (YYYY-MM-DD)
@@ -23220,7 +23235,9 @@ var ReservasUI = (function() {
 
       var linhas = '';
       linhas += '<div class="pendente-meta" style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;">';
-      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">location_on</span> '+escaparHtml(nomeEspaco)+'</span>';
+      linhas += '<span><span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">location_on</span> <strong>'+escaparHtml(nomeEspaco)+'</strong>'
+        + (_espDet.nivel !== undefined && _espDet.nivel !== null ? ' ' + _nivelBadge(_espDet.nivel) : '')
+        + '</span>';
       // Data + dia da semana + botão pós-evento inline
       linhas += '<span style="display:inline-flex;align-items:center;gap:4px;">'
         + '<span class="ms ms-sm" style="font-size:12px;vertical-align:middle;">event</span> '
@@ -23304,17 +23321,18 @@ var ReservasUI = (function() {
 
     function _executar(done) {
       function _carregar() {
+        // Métricas e lista em paralelo — não esperar uma para disparar a outra
         GAS.reservas.metricas(function(respM) {
           if (respM && respM.ok) _renderMetricas(respM.data);
-          GAS.reservas.listar(filtros, function(resp) {
-            if (done) done();
-            if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
-            _listaCacheTotal = resp.data || [];
-            if (_modo === 'lista')    _renderLista(_listaCacheTotal);
-            if (_modo === 'diagrama') _renderDiagrama();
-            if (_modo === 'agenda')   _renderAgenda();
-          }, function(err) { if (done) done(); Toast.erro('Erro: '+(err.message||err)); });
-        }, function(err) { if (done) done(); });
+        }, function() {});
+        GAS.reservas.listar(filtros, function(resp) {
+          if (done) done();
+          if (!resp || !resp.ok) { Toast.erro('Erro ao carregar reservas.'); return; }
+          _listaCacheTotal = resp.data || [];
+          if (_modo === 'lista')    _renderLista(_listaCacheTotal);
+          if (_modo === 'diagrama') _renderDiagrama();
+          if (_modo === 'agenda')   _renderAgenda();
+        }, function(err) { if (done) done(); Toast.erro('Erro: '+(err.message||err)); });
       }
       GAS.reservas.concluirAtrasadas(function() { _carregar(); }, function() { _carregar(); });
     }
@@ -23331,6 +23349,12 @@ var ReservasUI = (function() {
   function popularSelectEspacos(valorAtual, onCarregado) {
     GAS.admin.listarEspacosPublicos(function(r) {
       _espacosCatalogo = (r && r.ok && Array.isArray(r.data)) ? r.data.filter(function(e){ return e.aceitaReserva !== false; }) : [];
+      _espacosCatalogo.forEach(function(e) {
+        if (e.id) {
+          _espacosPorId[e.id] = e.nome || e.id;
+          _espacosDetalhes[e.id] = { nome: e.nome || e.id, nivel: e.nivel, categoria: e.categoria };
+        }
+      });
       var sel = document.getElementById('res-sala');
       if (!sel) return;
       sel.innerHTML = '<option value="">Selecione o espaço…</option>' +
@@ -23404,7 +23428,8 @@ var ReservasUI = (function() {
         _elResData.min = '';
       }
     }
-    document.getElementById('res-disp-resultado').style.display = 'none';
+    var dispRes = document.getElementById('res-disp-resultado');
+    if (dispRes) dispRes.style.display = 'none';
     // Inicializar chips de itens volantes
     _itensChips = [];
     _itensDisponibilidade = [];
@@ -23427,12 +23452,11 @@ var ReservasUI = (function() {
         _renderChips();
       }
     }
-    card.style.display = '';
-    card.scrollIntoView({behavior:'smooth',block:'start'});
+    card.classList.remove('oculto');
   }
 
   function fecharForm() {
-    document.getElementById('reservas-form-card').style.display = 'none';
+    document.getElementById('reservas-form-card').classList.add('oculto');
     _itensChips = [];
     _itensDisponibilidade = [];
     var b = document.getElementById('res-itens-volantes-bloco');
@@ -23821,16 +23845,37 @@ var ReservasUI = (function() {
     return dias;
   }
 
+  // Mapa enriquecido: { [id]: { nome, nivel, categoria } }
+  var _espacosDetalhes = {};
+
   function _garantirEspacosPorId() {
     if (Object.keys(_espacosPorId).length > 0) return;
     try {
       var boot = (typeof App !== 'undefined' && App.getBoot) ? App.getBoot() : null;
       var esp  = (boot && boot.espacos) ? boot.espacos : [];
-      esp.forEach(function(e) { if (e.id) _espacosPorId[e.id] = e.nome || e.id; });
+      esp.forEach(function(e) {
+        if (e.id) {
+          _espacosPorId[e.id] = e.nome || e.id;
+          _espacosDetalhes[e.id] = { nome: e.nome || e.id, nivel: e.nivel, categoria: e.categoria };
+        }
+      });
     } catch (_) {}
     if (Object.keys(_espacosPorId).length === 0) {
-      _espacosCatalogo.forEach(function(e) { if (e.id) _espacosPorId[e.id] = e.nome || e.id; });
+      _espacosCatalogo.forEach(function(e) {
+        if (e.id) {
+          _espacosPorId[e.id] = e.nome || e.id;
+          _espacosDetalhes[e.id] = { nome: e.nome || e.id, nivel: e.nivel, categoria: e.categoria };
+        }
+      });
     }
+  }
+
+  var _NIVEL_LABEL = { 0:'Térreo', 1:'1º Andar', 2:'2º Andar', 3:'3º Andar', '-1':'Subsolo' };
+  function _nivelBadge(nivel) {
+    if (nivel === undefined || nivel === null || nivel === '') return '';
+    var label = _NIVEL_LABEL[String(nivel)] || 'Nível ' + nivel;
+    return '<span style="font-size:10px;font-weight:600;background:var(--surface2);color:var(--text2);'
+      + 'border-radius:4px;padding:1px 6px;white-space:nowrap;">' + escaparHtml(label) + '</span>';
   }
 
   // ── setModo ──────────────────────────────────────────────────────────────
@@ -24735,13 +24780,13 @@ var ReservasUI = (function() {
     _adicionarComprovacao: _adicionarComprovacao,
     _removerComprovacao:   _removerComprovacao,
     _salvarPosEvento:      _salvarPosEvento,
-    // ESP-21: limpar todos os filtros da lista de reservas
+    // ESP-21: limpar filtros — retorna ao padrão (hoje, sem status, cronológico)
     _limparFiltros: function() {
       var st = document.getElementById('res-filtro-status');
       var dt = document.getElementById('res-filtro-data');
       var so = document.getElementById('res-sort');
       if (st) st.value = '';
-      if (dt) dt.value = '';
+      if (dt) dt.value = new Date().toISOString().slice(0, 10);
       if (so) so.value = 'data-hora';
       ReservasUI.carregar();
     }

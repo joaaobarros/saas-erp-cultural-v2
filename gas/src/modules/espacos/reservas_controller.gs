@@ -330,9 +330,10 @@ function ctrl_reservas_atualizar(id, dados) {
     var nivel = _nivelReservas(ctx.email);
     // Colaborador só edita reservas próprias
     if (nivel === 'colaborador') {
-      var reserva = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId)
-        .filter(function (r) { return r.id === id; })[0];
-      if (!reserva) throw new Error('Sem permissão para editar esta reserva.');
+      var reserva = ReservaRepository.buscarPorId(id, ctx.orgId);
+      if (!reserva || String(reserva.responsavel || '').toLowerCase() !== ctx.email.toLowerCase()) {
+        throw new Error('Sem permissão para editar esta reserva.');
+      }
     }
     var r = ReservaEngine.atualizar(id, dados, ctx.email, ctx.orgId);
     _invalidarCachesReservas(ctx.orgId);
@@ -352,9 +353,10 @@ function ctrl_reservas_cancelar(id, motivo) {
     var nivel = _nivelReservas(ctx.email);
     // Colaborador só cancela as próprias; gestão cancela qualquer uma
     if (nivel === 'colaborador') {
-      var lista = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId);
-      var propria = lista.filter(function (r) { return r.id === id; })[0];
-      if (!propria) throw new Error('Sem permissão para cancelar esta reserva.');
+      var propria = ReservaRepository.buscarPorId(id, ctx.orgId);
+      if (!propria || String(propria.responsavel || '').toLowerCase() !== ctx.email.toLowerCase()) {
+        throw new Error('Sem permissão para cancelar esta reserva.');
+      }
     }
     var r = ReservaEngine.mudarStatus(id, 'cancelado', ctx.email, ctx.orgId, motivo || '');
     _invalidarCachesReservas(ctx.orgId);
@@ -380,12 +382,8 @@ function ctrl_reservas_confirmar(id) {
     if (!id) throw new Error('ID da reserva é obrigatório.');
     var nivel = _nivelReservas(ctx.email);
 
-    // Buscar a reserva para avaliação de permissão
-    var lista = ReservaEngine.listar({}, ctx.orgId);
-    var r = null;
-    for (var i = 0; i < lista.length; i++) {
-      if (lista[i].id === id) { r = lista[i]; break; }
-    }
+    // Buscar a reserva diretamente por ID (evita carregar toda a planilha)
+    var r = ReservaRepository.buscarPorId(id, ctx.orgId);
     if (!r) throw new Error('Reserva não encontrada.');
 
     // Anotar precisaAprovacao e diasPendente para usar nos helpers
@@ -491,9 +489,10 @@ function ctrl_reservas_vincular_calendar(id, opcoes) {
     if (!id) throw new Error('ID da reserva é obrigatório.');
     var nivel = _nivelReservas(ctx.email);
     if (nivel === 'colaborador') {
-      var propria = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId)
-        .filter(function (r) { return r.id === id; })[0];
-      if (!propria) throw new Error('Sem permissão para vincular esta reserva ao Calendar.');
+      var propria = ReservaRepository.buscarPorId(id, ctx.orgId);
+      if (!propria || String(propria.responsavel || '').toLowerCase() !== ctx.email.toLowerCase()) {
+        throw new Error('Sem permissão para vincular esta reserva ao Calendar.');
+      }
     }
     var r = ReservaEngine.vincularCalendar(id, opcoes || {}, ctx.email, ctx.orgId);
     _invalidarCachesReservas(ctx.orgId);
@@ -511,9 +510,10 @@ function ctrl_reservas_desvincular_calendar(id) {
     if (!id) throw new Error('ID da reserva é obrigatório.');
     var nivel = _nivelReservas(ctx.email);
     if (nivel === 'colaborador') {
-      var propria = ReservaEngine.listar({ responsavel: ctx.email }, ctx.orgId)
-        .filter(function (r) { return r.id === id; })[0];
-      if (!propria) throw new Error('Sem permissão para desvincular esta reserva do Calendar.');
+      var propria = ReservaRepository.buscarPorId(id, ctx.orgId);
+      if (!propria || String(propria.responsavel || '').toLowerCase() !== ctx.email.toLowerCase()) {
+        throw new Error('Sem permissão para desvincular esta reserva do Calendar.');
+      }
     }
     var r = ReservaEngine.desvincularCalendar(id, ctx.email, ctx.orgId);
     _invalidarCachesReservas(ctx.orgId);

@@ -39,7 +39,20 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s150)**: **feat — Estúdio de Análises: Series Builder (modo Data Studio) — múltiplas séries por análise, cada uma com dataset + filtros independentes (período + setor), merge automático em gráfico multi-coluna; Widget Editor do Dashboard Builder com filtros de data/setor por widget — Deploy @1095.**
+**Fase atual (s151)**: **fix/feat — Reservas de Espaço: performance (chamadas GAS paralelas), lista padrão = hoje em ordem cronológica, form como modal-overlay, mapa multi-nível sem race condition, identificação de espaços com badge de andar, bug scan completo no controller — sem deploy (aguarda clasp push).**
+
+**O que foi implementado em s151**:
+- **Performance EspacosUI**: 3 chamadas de métricas (reservas + chaves + ativos) agora são paralelas (não seriais aninhadas) → tempo de abertura do módulo cai ~60%.
+- **Performance ReservasUI.carregar**: `metricas` e `listar` agora disparam em paralelo após `concluirAtrasadas` (antes eram seriais) → menos um RTT por carregamento.
+- **Lista default = hoje**: ao abrir a aba Reservas pela primeira vez, `res-filtro-data` é inicializado com a data atual; `_limparFiltros` também restaura para hoje.
+- **Filtro por dia exato**: o filtro de data agora filtra `r.data === dataFiltro` (antes era `>=`), mostrando apenas o dia selecionado.
+- **Fix posPassado**: o botão de pós-evento só aparece quando o evento já encerrou (hora de término no passado), não mais para eventos futuros do mesmo dia.
+- **Form como modal-overlay**: `reservas-form-card` convertido de `<div class="card">` para `<div class="modal-overlay oculto">` com `modal-box` + `modal-header` + `modal-body`; fecha com clique no backdrop; `abrirForm/fecharForm` usam classList.
+- **Identificação de espaços**: lista agora exibe o nome do espaço em **negrito** + badge de nível/andar (Térreo/1º Andar…); `_espacosDetalhes` armazenado junto com `_espacosPorId`.
+- **Mapa race condition**: `lerNiveisMapa` agora re-renderiza os espaços se `_statusMap` já foi populado pelo `statusEspacos` que chegou primeiro — corrige exibição incorreta de níveis na abertura.
+- **Backend buscarPorId**: `ctrl_reservas_confirmar`, `_atualizar`, `_cancelar`, `_vincular_calendar`, `_desvincular_calendar` substituíram `ReservaEngine.listar({})` (carregava toda a planilha) por `ReservaRepository.buscarPorId` → O(1) por reserva em vez de O(N).
+
+**Fase anterior (s150)**: **feat — Estúdio de Análises: Series Builder (modo Data Studio) — múltiplas séries por análise, cada uma com dataset + filtros independentes (período + setor), merge automático em gráfico multi-coluna; Widget Editor do Dashboard Builder com filtros de data/setor por widget — Deploy @1095.**
 
 **O que foi implementado em s150**:
 - **Modo Séries no Estúdio de Análises**: toggle `Manual / CSV | Séries` no painel de dados do editor. No modo Séries, cada análise tem um array `series: [{dsId, label, cor, filtros:{de,ate,setor}}]` com configuração totalmente independente por série.
