@@ -41811,6 +41811,10 @@ var AnaliseEstudioUI = (function() {
   var _dashFiltroTempo = null;  // {de, ate, label} | null
   var _dashFiltroExtra = { setor: '' };  // filtros adicionais na view
 
+  // ── Series Builder state ───────────────────────────────────────────────────
+  var _series     = [];           // [{dsId, label, cor, filtros:{de,ate,setor}}]
+  var _modoEditor = 'tabela';     // 'tabela' | 'series'
+
   var _PALETA = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#ec4899'];
   var _TIPOS  = [
     { id:'barras',       label:'Barras',        icon:'bar_chart',         dica:'Ideal para comparar categorias distintas.' },
@@ -41838,6 +41842,7 @@ var AnaliseEstudioUI = (function() {
     _ajustes = { rotulos: true, formato: 'auto', grade: true, linhaRef: '' };
     _dsId = null; _dsId2 = null; _modoUpdate = 'estatico';
     _visibilidade = 'privada'; _compartilhados = [];
+    _series = []; _modoEditor = 'tabela';
     _modo = 'editor';
     _renderEditor();
   }
@@ -41855,6 +41860,8 @@ var AnaliseEstudioUI = (function() {
     _modoUpdate   = a.modoUpdate  || 'estatico';
     _visibilidade = a.visibilidade || 'privada';
     _compartilhados = (a.compartilhadoCom || []).slice();
+    _series     = (a.series || []).map(function(s){ return Object.assign({}, s, { filtros: Object.assign({}, s.filtros||{}) }); });
+    _modoEditor = (_series.length && a.modoEditor === 'series') ? 'series' : 'tabela';
     _modo = 'editor';
     _renderEditor();
   }
@@ -41864,21 +41871,56 @@ var AnaliseEstudioUI = (function() {
     if (!a) return;
     var cfg = { titulo: a.titulo, tipo: a.tipo, corPrimaria: (a.config||{}).corPrimaria||'#4f46e5',
                 ajustes: Object.assign({ rotulos:true, formato:'auto', grade:true, linhaRef:'' }, (a.config||{}).ajustes||{}) };
-    if (a.modoUpdate === 'dinamico' && a.dsId) {
-      var uid = 'viz-live-' + Date.now();
-      _abrirVisualizador(a.titulo, '<div id="' + uid + '" style="min-height:200px;display:flex;align-items:center;justify-content:center;"><p class="muted-text">⏳ Atualizando dados ao vivo…</p></div>');
-      var _cb = function(r) {
-        if (!r || !r.ok || !r.data) { var el=document.getElementById(uid); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao buscar dados.</p>'; return; }
-        var d = r.data;
-        var rows2 = (d.linhas||[]).filter(function(r2){ return r2[0]||r2[1]; });
-        var el = document.getElementById(uid);
-        if (el) el.outerHTML = _renderizarGrafico(d.colunas||a.colunas||['Label','Valor'], rows2, cfg);
-      };
-      var _err = function() { var el=document.getElementById(uid); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao atualizar.</p>'; };
-      if (a.dsId2) GAS.analise.cruzar({ dsA: a.dsId, dsB: a.dsId2 }, _cb, _err);
-      else GAS.analise.importarDados({ id: a.dsId }, _cb, _err);
+
+    // Modo Séries — busca cada série individualmente e mescla
+    if (a.modoEditor === 'series' && a.series && a.series.length) {
+      var uid = 'viz-series-' + Date.now();
+      _abrirVisualizador(a.titulo, '<div id="' + uid + '" style="min-height:200px;display:flex;align-items:center;justify-content:center;"><p class="muted-text">⏳ Carregando séries…</p></div>');
+      var sArr = a.series;
+      var results = new Array(sArr.length);
+      var done = 0;
+      sArr.forEach(function(s, si) {
+        var p = { id: s.dsId };
+        if (s.filtros) { if (s.filtros.de) p.de = s.filtros.de; if (s.filtros.ate) p.ate = s.filtros.ate; if (s.filtros.setor) p.setor = s.filtros.setor; }
+        var onOk = function(r) {
+          results[si] = { label: s.label, data: (r && r.ok && r.data) ? r.data : { linhas: [] } };
+          if (++done === sArr.length) {
+            var m = _mergeSeriesResult(results);
+            var el = document.getElementById(uid);
+            if (el) el.outerHTML = m.linhas.length ? _renderizarGrafico(m.colunas, m.linhas, cfg) : '<p class="muted-text" style="text-align:center;padding:30px;">Sem dados.</p>';
+          }
+        };
+        var onErr = function() {
+          results[si] = { label: s.label, data: { linhas: [] } };
+          if (++done === sArr.length) {
+            var m = _mergeSeriesResult(results);
+            var el = document.getElementById(uid);
+            if (el) el.outerHTML = m.linhas.length ? _renderizarGrafico(m.colunas, m.linhas, cfg) : '<p class="muted-text" style="color:var(--danger);text-align:center;padding:30px;">Erro ao buscar dados.</p>';
+          }
+        };
+        GAS.analise.importarDados(p, onOk, onErr);
+      });
       return;
     }
+
+    // Modo Ao Vivo (dataset único)
+    if (a.modoUpdate === 'dinamico' && a.dsId) {
+      var uid2 = 'viz-live-' + Date.now();
+      _abrirVisualizador(a.titulo, '<div id="' + uid2 + '" style="min-height:200px;display:flex;align-items:center;justify-content:center;"><p class="muted-text">⏳ Atualizando dados ao vivo…</p></div>');
+      var _cb = function(r) {
+        if (!r || !r.ok || !r.data) { var el=document.getElementById(uid2); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao buscar dados.</p>'; return; }
+        var d = r.data;
+        var rows2 = (d.linhas||[]).filter(function(r2){ return r2[0]||r2[1]; });
+        var el = document.getElementById(uid2);
+        if (el) el.outerHTML = _renderizarGrafico(d.colunas||a.colunas||['Label','Valor'], rows2, cfg);
+      };
+      var _err2 = function() { var el=document.getElementById(uid2); if(el) el.innerHTML='<p class="muted-text" style="color:var(--danger)">Erro ao atualizar.</p>'; };
+      if (a.dsId2) GAS.analise.cruzar({ dsA: a.dsId, dsB: a.dsId2 }, _cb, _err2);
+      else GAS.analise.importarDados({ id: a.dsId }, _cb, _err2);
+      return;
+    }
+
+    // Dados estáticos
     var rows = (a.linhas || []).filter(function(r){ return r[0]||r[1]; });
     _abrirVisualizador(a.titulo, _renderizarGrafico(a.colunas||['Label','Valor'], rows, cfg));
   }
@@ -41969,6 +42011,18 @@ var AnaliseEstudioUI = (function() {
 
   function gerarGrafico() {
     atualizarConfig();
+    // Modo Séries: busca cada série independentemente e mescla
+    if (_modoEditor === 'series') {
+      var area = document.getElementById('analise-chart-area');
+      if (!_series.length) {
+        if (area) area.innerHTML = '<p class="muted-text" style="text-align:center;padding:30px;">Adicione séries de dados para gerar o gráfico.</p>';
+        _atualizarStats([]);
+        return;
+      }
+      _gerarComSeries(null);
+      return;
+    }
+    // Modo Tabela (comportamento original)
     _sincDom();
     var area = document.getElementById('analise-chart-area');
     if (!area) return;
@@ -41982,7 +42036,6 @@ var AnaliseEstudioUI = (function() {
     try { area.innerHTML = _renderizarGrafico(_colunas, rows, cfgGraf); }
     catch(e) { area.innerHTML = '<p class="muted-text" style="text-align:center;">Erro ao renderizar.</p>'; }
     _atualizarStats(rows);
-    // dica contextual
     var ti = _TIPOS.find(function(t){ return t.id===_config.tipo; });
     var dEl = document.getElementById('analise-dica');
     if (dEl && ti) dEl.textContent = ti.dica;
@@ -42021,6 +42074,8 @@ var AnaliseEstudioUI = (function() {
       dsId:            _dsId   || undefined,
       dsId2:           _dsId2  || undefined,
       modoUpdate:      _modoUpdate,
+      modoEditor:      _modoEditor,
+      series:          _series.map(function(s){ return Object.assign({}, s, { filtros: Object.assign({}, s.filtros||{}) }); }),
       visibilidade:    _visibilidade,
       compartilhadoCom: _compartilhados.slice()
     };
@@ -42212,6 +42267,268 @@ var AnaliseEstudioUI = (function() {
     _importarDataset(modulo);
   }
 
+  // ── Series Builder ─────────────────────────────────────────────────────────
+
+  function setModoEditor(modo) {
+    _modoEditor = modo;
+    var btnT = document.getElementById('analise-modo-tabela');
+    var btnS = document.getElementById('analise-modo-series');
+    if (btnT) { btnT.style.background = modo==='tabela'?'var(--primary)':''; btnT.style.color = modo==='tabela'?'#fff':'var(--text)'; btnT.style.fontWeight = modo==='tabela'?'600':'400'; }
+    if (btnS) { btnS.style.background = modo==='series'?'var(--primary)':''; btnS.style.color = modo==='series'?'#fff':'var(--text)'; btnS.style.fontWeight = modo==='series'?'600':'400'; }
+    var panT = document.getElementById('analise-painel-tabela');
+    var panS = document.getElementById('analise-painel-series');
+    if (panT) panT.style.display = modo === 'tabela' ? '' : 'none';
+    if (panS) panS.style.display = modo === 'series' ? '' : 'none';
+    if (modo === 'series') _renderSeriesPanel();
+    gerarGrafico();
+  }
+
+  function adicionarSerie(conf) { _series.push(conf); _renderSeriesPanel(); }
+
+  function removerSerie(i) {
+    _series.splice(i, 1);
+    _renderSeriesPanel();
+    gerarGrafico();
+  }
+
+  function editarSerie(i) { _abrirModalSerie(i); }
+
+  function _renderSeriesPanel() {
+    var el = document.getElementById('analise-painel-series');
+    if (!el) return;
+    var html = '';
+    if (!_series.length) {
+      html = '<div style="text-align:center;padding:24px 12px;color:var(--text2);border:1.5px dashed var(--border);border-radius:10px;">' +
+        '<span class="ms" style="font-size:32px;display:block;margin-bottom:8px;color:var(--primary);">stacked_line_chart</span>' +
+        '<p style="font-size:13px;margin:0 0 10px;font-weight:600;">Nenhuma série configurada</p>' +
+        '<p style="font-size:12px;margin:0 0 12px;color:var(--text2);">Cada série é um dataset com filtros independentes de período e setor.</p>' +
+        '<button class="btn btn-primario btn-sm" onclick="AnaliseEstudioUI._abrirModalSerie(-1)" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar primeira série</button>' +
+      '</div>';
+    } else {
+      html = _series.map(function(s, i) {
+        var dsInfo = _CATALOGO_LOCAL.find(function(d){ return d.id === s.dsId; }) || { label: s.dsId||'—' };
+        var filtrosArr = [];
+        if (s.filtros) {
+          if (s.filtros.de || s.filtros.ate) {
+            var deStr = s.filtros.de ? fmtDataPtBR(s.filtros.de) : '…';
+            var ateStr = s.filtros.ate ? fmtDataPtBR(s.filtros.ate) : '…';
+            filtrosArr.push(deStr + ' – ' + ateStr);
+          }
+          if (s.filtros.setor) filtrosArr.push(s.filtros.setor);
+        }
+        var safeI = JSON.stringify(i);
+        var cor = s.cor || _PALETA[i % _PALETA.length];
+        return '<div style="border:1px solid var(--border);border-left:3px solid ' + cor + ';border-radius:8px;padding:10px 12px;margin-bottom:6px;background:var(--surface);">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<span style="width:10px;height:10px;border-radius:50%;background:' + cor + ';flex-shrink:0;display:inline-block;"></span>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(s.label || dsInfo.label) + '</div>' +
+              '<div style="font-size:11px;color:var(--text2);">' + _esc(dsInfo.label) + (filtrosArr.length ? ' · ' + filtrosArr.join(' · ') : '') + '</div>' +
+            '</div>' +
+            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.editarSerie(' + safeI + ')" data-bg-skip="1" title="Editar série"><span class="ms ms-sm">edit</span></button>' +
+            '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="AnaliseEstudioUI.removerSerie(' + safeI + ')" data-bg-skip="1" title="Remover série"><span class="ms ms-sm">close</span></button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    html += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+      '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI._abrirModalSerie(-1)" data-bg-skip="1"><span class="ms ms-sm">add</span> Adicionar série</button>' +
+      (_series.length >= 1 ? '<button class="btn btn-secundario btn-sm" onclick="AnaliseEstudioUI.gerarGrafico()" data-bg-skip="1"><span class="ms ms-sm">refresh</span> Gerar</button>' : '') +
+    '</div>';
+    el.innerHTML = html;
+  }
+
+  function _abrirModalSerie(idx) {
+    var editando = (idx >= 0 && !!_series[idx]);
+    var s = editando ? _series[idx] : { dsId: '', label: '', cor: _PALETA[_series.length % _PALETA.length], filtros: { de: '', ate: '', setor: '' } };
+    var uid = 'mserie-' + Date.now();
+
+    var grupos = {}, ordem = [];
+    _CATALOGO_LOCAL.filter(function(d){ return d.modulo !== 'Cruzamentos'; }).forEach(function(ds) {
+      if (!grupos[ds.modulo]) { grupos[ds.modulo] = []; ordem.push(ds.modulo); }
+      grupos[ds.modulo].push(ds);
+    });
+    var dsOpts = '<option value="">-- Selecionar dataset --</option>';
+    ordem.forEach(function(mod) {
+      dsOpts += '<optgroup label="' + _esc(mod) + '">';
+      grupos[mod].forEach(function(ds) {
+        dsOpts += '<option value="' + _esc(ds.id) + '"' + (ds.id === s.dsId ? ' selected' : '') + '>' + _esc(ds.label) + '</option>';
+      });
+      dsOpts += '</optgroup>';
+    });
+
+    var boot = (App.getBoot && App.getBoot()) || {};
+    var setorOpts = '<option value="">Todos os setores</option>' +
+      (boot.setores || []).map(function(st) {
+        var v = st.id || st.nome || st.label || String(st);
+        var l = st.nome || st.label || st.id || v;
+        var sel = (s.filtros && s.filtros.setor === v) ? ' selected' : '';
+        return '<option value="' + _esc(v) + '"' + sel + '>' + _esc(l) + '</option>';
+      }).join('');
+
+    var swatches = _PALETA.map(function(c) {
+      var isAtiva = (s.cor || _PALETA[0]) === c;
+      return '<span class="analise-swatch' + (isAtiva ? ' ativa' : '') + '" data-cor="' + c + '" ' +
+        'onclick="(function(el){document.getElementById(\'' + uid + '-cor\').value=\'' + c + '\';el.closest(\'.analise-swatch-row\').querySelectorAll(\'.analise-swatch\').forEach(function(x){x.classList.toggle(\'ativa\',x.dataset.cor===\'' + c + '\');});})(this)" ' +
+        'style="background:' + c + ';cursor:pointer;" title="' + c + '"></span>';
+    }).join('');
+
+    var ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.style.cssText = 'z-index:2200;';
+    ov.id = uid + '-ov';
+    ov.innerHTML =
+      '<div style="background:var(--surface);border-radius:14px;max-width:500px;width:97%;padding:24px;position:relative;box-shadow:0 24px 80px rgba(0,0,0,.3);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">' +
+          '<h3 style="margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;"><span class="ms" style="color:var(--primary);">stacked_line_chart</span>' + (editando ? 'Editar Série' : 'Nova Série') + '</h3>' +
+          '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'' + uid + '-ov\').remove()" data-bg-skip="1"><span class="ms">close</span></button>' +
+        '</div>' +
+
+        '<div class="form-group">' +
+          '<label class="form-label">Dataset <span style="color:var(--danger);">*</span></label>' +
+          '<select id="' + uid + '-ds" class="form-control">' + dsOpts + '</select>' +
+        '</div>' +
+
+        '<div class="form-group">' +
+          '<label class="form-label">Rótulo da série <span style="font-size:10px;color:var(--text2);">(deixe vazio para usar o nome do dataset)</span></label>' +
+          '<input id="' + uid + '-label" type="text" class="form-control" value="' + _esc(s.label || '') + '" placeholder="ex: Q1 2026, Setor Produção…">' +
+        '</div>' +
+
+        '<div class="form-group">' +
+          '<label class="form-label">Cor da série</label>' +
+          '<input type="hidden" id="' + uid + '-cor" value="' + _esc(s.cor || _PALETA[0]) + '">' +
+          '<div class="analise-swatch-row" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">' + swatches + '</div>' +
+        '</div>' +
+
+        '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">' +
+          '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:12px;">Filtros <span style="font-size:10px;font-weight:400;text-transform:none;color:var(--text2);">(opcionais — definem o recorte dos dados desta série)</span></div>' +
+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+            '<div class="form-group" style="margin:0;">' +
+              '<label class="form-label">Período de</label>' +
+              '<input id="' + uid + '-de" type="date" class="form-control" value="' + _esc((s.filtros && s.filtros.de) || '') + '">' +
+            '</div>' +
+            '<div class="form-group" style="margin:0;">' +
+              '<label class="form-label">Até</label>' +
+              '<input id="' + uid + '-ate" type="date" class="form-control" value="' + _esc((s.filtros && s.filtros.ate) || '') + '">' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="form-group">' +
+            '<label class="form-label">Setor</label>' +
+            '<select id="' + uid + '-setor" class="form-control">' + setorOpts + '</select>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+          '<button class="btn btn-ghost" onclick="document.getElementById(\'' + uid + '-ov\').remove()" data-bg-skip="1">Cancelar</button>' +
+          '<button class="btn btn-primario" onclick="AnaliseEstudioUI._confirmarSerie(\'' + uid + '\',' + JSON.stringify(idx) + ')" data-bg-skip="1"><span class="ms ms-sm">check</span> ' + (editando ? 'Salvar' : 'Adicionar') + '</button>' +
+        '</div>' +
+      '</div>';
+    ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+  }
+
+  function _confirmarSerie(uid, idx) {
+    var dsEl    = document.getElementById(uid + '-ds');
+    var labelEl = document.getElementById(uid + '-label');
+    var corEl   = document.getElementById(uid + '-cor');
+    var deEl    = document.getElementById(uid + '-de');
+    var ateEl   = document.getElementById(uid + '-ate');
+    var setorEl = document.getElementById(uid + '-setor');
+    if (!dsEl || !dsEl.value) { Toast.aviso('Selecione um dataset.'); return; }
+    var dsInfo = _CATALOGO_LOCAL.find(function(d){ return d.id === dsEl.value; });
+    var conf = {
+      dsId:   dsEl.value,
+      label:  (labelEl && labelEl.value.trim()) || (dsInfo ? dsInfo.label : dsEl.value),
+      cor:    (corEl && corEl.value) || _PALETA[_series.length % _PALETA.length],
+      filtros: {
+        de:    (deEl && deEl.value)    || '',
+        ate:   (ateEl && ateEl.value)  || '',
+        setor: (setorEl && setorEl.value) || ''
+      }
+    };
+    var ov = document.getElementById(uid + '-ov');
+    if (ov) ov.remove();
+    if (idx >= 0 && _series[idx]) _series[idx] = conf;
+    else _series.push(conf);
+    _renderSeriesPanel();
+    gerarGrafico();
+  }
+
+  // Busca todas as séries em paralelo (GAS executions são isoladas por request)
+  function _gerarComSeries(cb) {
+    if (!_series.length) { cb && cb(); return; }
+    var area = document.getElementById('analise-chart-area');
+    if (area) area.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);"><span class="ms" style="font-size:28px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;">sync</span><p style="font-size:13px;margin:0;">Carregando ' + _series.length + ' série(s)…</p></div>';
+    var results = new Array(_series.length);
+    var done = 0;
+    var n = _series.length;
+    _series.forEach(function(s, i) {
+      var p = { id: s.dsId };
+      if (s.filtros) {
+        if (s.filtros.de)    p.de    = s.filtros.de;
+        if (s.filtros.ate)   p.ate   = s.filtros.ate;
+        if (s.filtros.setor) p.setor = s.filtros.setor;
+      }
+      GAS.analise.importarDados(p, function(r) {
+        results[i] = { label: s.label, cor: s.cor, data: (r && r.ok && r.data) ? r.data : { colunas:['Label','Valor'], linhas:[] } };
+        if (++done === n) _finalizarSeries(results, cb);
+      }, function() {
+        results[i] = { label: s.label, cor: s.cor, data: { colunas:['Label','Valor'], linhas:[] } };
+        if (++done === n) _finalizarSeries(results, cb);
+      });
+    });
+  }
+
+  function _finalizarSeries(results, cb) {
+    var merged = _mergeSeriesResult(results);
+    _colunas = merged.colunas;
+    _linhas  = merged.linhas;
+    var area = document.getElementById('analise-chart-area');
+    if (area) {
+      var cfgGraf = Object.assign({}, _config, { ajustes: _ajustes });
+      // Para séries com cores individuais, sobrescreve a paleta base com as cores definidas
+      var coresPersonalizadas = results.map(function(r){ return r.cor || ''; }).filter(Boolean);
+      if (coresPersonalizadas.length) cfgGraf._seriesCores = coresPersonalizadas;
+      try { area.innerHTML = merged.linhas.length ? _renderizarGrafico(merged.colunas, merged.linhas, cfgGraf) : '<p class="muted-text" style="text-align:center;padding:30px;">Sem dados para as séries configuradas.</p>'; }
+      catch(e) { area.innerHTML = '<p class="muted-text" style="text-align:center;">Erro ao renderizar.</p>'; }
+    }
+    _atualizarStats(merged.linhas);
+    var ti = _TIPOS.find(function(t){ return t.id===_config.tipo; });
+    var dEl = document.getElementById('analise-dica');
+    if (dEl && ti) dEl.textContent = ti.dica;
+    cb && cb();
+  }
+
+  // Mescla resultados de múltiplas séries em tabela multi-coluna
+  function _mergeSeriesResult(results) {
+    var keyOrder = [], keySet = {};
+    results.forEach(function(sr) {
+      (sr.data.linhas || []).forEach(function(row) {
+        var k = String(row[0] != null ? row[0] : '');
+        if (k && !keySet[k]) { keySet[k] = true; keyOrder.push(k); }
+      });
+    });
+    var colunas = ['Dimensão'].concat(results.map(function(sr){ return sr.label || 'Série'; }));
+    var linhas = keyOrder.map(function(k) {
+      var row = [k];
+      results.forEach(function(sr) {
+        var found = null;
+        (sr.data.linhas || []).forEach(function(r){ if (String(r[0] != null ? r[0] : '') === k) found = r; });
+        row.push(found ? (Number(found[1]) || 0) : 0);
+      });
+      return row;
+    });
+    // Ordena pela soma de todas as colunas numéricas (desc)
+    if (linhas.length) linhas.sort(function(a, b) {
+      var sa = a.slice(1).reduce(function(s,v){ return s+(Number(v)||0); }, 0);
+      var sb = b.slice(1).reduce(function(s,v){ return s+(Number(v)||0); }, 0);
+      return sb - sa;
+    });
+    return { colunas: colunas, linhas: linhas };
+  }
+
   // ── Privado ────────────────────────────────────────────────────────────────
   function _carregarGaleria() {
     var root = document.getElementById('analise-studio-root');
@@ -42314,25 +42631,41 @@ var AnaliseEstudioUI = (function() {
         // ── Painel Dados
         '<div class="analise-painel-dados">' +
           '<div class="analise-section-title">Dados</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.abrirCatalogo()" data-bg-skip="1">' +
-              '<span class="ms ms-sm">dataset</span> Catálogo de dados' +
+          // Toggle Tabela / Séries
+          '<div style="display:flex;gap:0;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">' +
+            '<button id="analise-modo-tabela" class="btn" style="flex:1;border-radius:0;padding:7px;font-size:12px;' + (_modoEditor==='tabela'?'background:var(--primary);color:#fff;font-weight:600;':'') + '" onclick="AnaliseEstudioUI.setModoEditor(\'tabela\')" data-bg-skip="1" title="Entrada manual de dados ou CSV">' +
+              '<span class="ms ms-sm">table_chart</span> Manual / CSV' +
             '</button>' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.colarCsv()" data-bg-skip="1">' +
-              '<span class="ms ms-sm">content_paste</span> Colar CSV' +
+            '<button id="analise-modo-series" class="btn" style="flex:1;border-radius:0;padding:7px;font-size:12px;border-left:1px solid var(--border);' + (_modoEditor==='series'?'background:var(--primary);color:#fff;font-weight:600;':'') + '" onclick="AnaliseEstudioUI.setModoEditor(\'series\')" data-bg-skip="1" title="Múltiplas séries com filtros independentes">' +
+              '<span class="ms ms-sm">stacked_line_chart</span> Séries' +
             '</button>' +
           '</div>' +
-          '<div id="analise-fontes-wrap" style="margin-bottom:8px;"></div>' +
-          '<div style="overflow-x:auto;">' +
-            '<table class="analise-table-editor" id="analise-table">' +
-              '<thead><tr id="analise-thead-row">' + _renderCabecalho() + '</tr></thead>' +
-              '<tbody id="analise-tbody">' + _renderLinhas() + '</tbody>' +
-            '</table>' +
+
+          // Painel Tabela (manual)
+          '<div id="analise-painel-tabela" style="display:' + (_modoEditor==='tabela'?'':'none') + ';">' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.abrirCatalogo()" data-bg-skip="1">' +
+                '<span class="ms ms-sm">dataset</span> Catálogo de dados' +
+              '</button>' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.colarCsv()" data-bg-skip="1">' +
+                '<span class="ms ms-sm">content_paste</span> Colar CSV' +
+              '</button>' +
+            '</div>' +
+            '<div id="analise-fontes-wrap" style="margin-bottom:8px;"></div>' +
+            '<div style="overflow-x:auto;">' +
+              '<table class="analise-table-editor" id="analise-table">' +
+                '<thead><tr id="analise-thead-row">' + _renderCabecalho() + '</tr></thead>' +
+                '<tbody id="analise-tbody">' + _renderLinhas() + '</tbody>' +
+              '</table>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:6px;">' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarLinha()" data-bg-skip="1"><span class="ms ms-sm">add</span> Linha</button>' +
+              '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarColuna()" data-bg-skip="1" title="Adicionar série (máx 4)"><span class="ms ms-sm">add</span> Série</button>' +
+            '</div>' +
           '</div>' +
-          '<div style="display:flex;gap:6px;margin-top:6px;">' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarLinha()" data-bg-skip="1"><span class="ms ms-sm">add</span> Linha</button>' +
-            '<button class="btn btn-ghost btn-sm" onclick="AnaliseEstudioUI.adicionarColuna()" data-bg-skip="1" title="Adicionar série (máx 4)"><span class="ms ms-sm">add</span> Série</button>' +
-          '</div>' +
+
+          // Painel Séries (Data Studio)
+          '<div id="analise-painel-series" style="display:' + (_modoEditor==='series'?'':'none') + ';min-height:60px;"></div>' +
 
           // Visibilidade
           '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">' +
@@ -42403,8 +42736,13 @@ var AnaliseEstudioUI = (function() {
       '</div>';
 
     root.innerHTML = html;
-    gerarGrafico();
-    _renderFontes();
+    if (_modoEditor === 'series') {
+      _renderSeriesPanel();
+      if (_series.length) gerarGrafico();
+    } else {
+      gerarGrafico();
+      _renderFontes();
+    }
     _renderComp();
   }
 
@@ -43659,8 +43997,14 @@ var AnaliseEstudioUI = (function() {
     var onErr = function() {
       if (body.isConnected) body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;color:var(--danger);">Erro ao carregar dados.</p>';
     };
-    if (w.dsId2) GAS.analise.cruzar({dsA:w.dsId,dsB:w.dsId2}, onData, onErr);
-    else         GAS.analise.importarDados({id:w.dsId}, onData, onErr);
+    // Aplica filtros específicos do widget (sobrepõem filtros globais do dashboard)
+    var wFiltros = w.filtros || {};
+    var p = {};
+    if (wFiltros.de)    p.de    = wFiltros.de;
+    if (wFiltros.ate)   p.ate   = wFiltros.ate;
+    if (wFiltros.setor) p.setor = wFiltros.setor;
+    if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},p), onData, onErr);
+    else         GAS.analise.importarDados(Object.assign({id:w.dsId},p), onData, onErr);
   }
 
   function _dashAdicionarWidget(tipo) {
@@ -43794,6 +44138,26 @@ var AnaliseEstudioUI = (function() {
             '<span style="color:var(--text2);font-size:11px;font-weight:600;">Atualização:</span>' +
             '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="we-upd-'+uid+'" value="estatico"'+(wDraft.modoUpdate!=='dinamico'?' checked':'')+' onchange="AnaliseEstudioUI._weModoUpd(\'estatico\')"><span>Estática</span></label>' +
             '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="radio" name="we-upd-'+uid+'" value="dinamico"'+(wDraft.modoUpdate==='dinamico'?' checked':'')+' onchange="AnaliseEstudioUI._weModoUpd(\'dinamico\')"><span style="color:#16a34a;font-weight:600;">Ao vivo</span></label>' +
+          '</div>' +
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">' +
+            '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px;">Filtros <span style="font-weight:400;text-transform:none;color:var(--text2);">(opcionais)</span></div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
+              '<div class="form-group" style="margin:0;">' +
+                '<label class="form-label" style="font-size:11px;">Período de</label>' +
+                '<input id="we-filtro-de-'+uid+'" type="date" class="form-control" value="'+_esc((wDraft.filtros&&wDraft.filtros.de)||'')+'">' +
+              '</div>' +
+              '<div class="form-group" style="margin:0;">' +
+                '<label class="form-label" style="font-size:11px;">Até</label>' +
+                '<input id="we-filtro-ate-'+uid+'" type="date" class="form-control" value="'+_esc((wDraft.filtros&&wDraft.filtros.ate)||'')+'">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-group" style="margin:0;">' +
+              '<label class="form-label" style="font-size:11px;">Setor</label>' +
+              '<select id="we-filtro-setor-'+uid+'" class="form-control">' +
+                '<option value="">Todos os setores</option>' +
+                (((App.getBoot&&App.getBoot())||{}).setores||[]).map(function(st){ var v=st.id||st.nome||st.label||String(st); var l=st.nome||st.label||st.id||v; var sel=(wDraft.filtros&&wDraft.filtros.setor===v)?' selected':''; return '<option value="'+_esc(v)+'"'+sel+'>'+_esc(l)+'</option>'; }).join('') +
+              '</select>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<div id="we-graf-'+uid+'" style="display:'+(showGraf?'':'none')+';">' +
@@ -44055,6 +44419,17 @@ var AnaliseEstudioUI = (function() {
       _weDraftWidget.formaConfig.tamanho  = parseInt(gv('we-forma-sz-'+uid))||80;
       if (!_weDraftWidget.formaConfig.forma) _weDraftWidget.formaConfig.forma='circulo';
     }
+    // Filtros de período e setor por widget
+    var fDeEl    = document.getElementById('we-filtro-de-'+uid);
+    var fAteEl   = document.getElementById('we-filtro-ate-'+uid);
+    var fSetorEl = document.getElementById('we-filtro-setor-'+uid);
+    if (fDeEl || fAteEl || fSetorEl) {
+      _weDraftWidget.filtros = {
+        de:    (fDeEl    && fDeEl.value)    || '',
+        ate:   (fAteEl   && fAteEl.value)   || '',
+        setor: (fSetorEl && fSetorEl.value) || ''
+      };
+    }
     // Fecha sidebar ou modal central
     var sb = document.getElementById('db-widget-sidebar');
     if (sb && sb.classList.contains('aberta')) {
@@ -44279,6 +44654,10 @@ var AnaliseEstudioUI = (function() {
     importarModulo, abrirCatalogo, toggleAjustes, sugerirTipo,
     _csvConfirmar, _importarDataset, _filtrarCatalogo, _cancelarCruz,
     _cruzarCom, _removerDs, setModoUpdate,
+    // Series Builder
+    setModoEditor, adicionarSerie, removerSerie, editarSerie,
+    _renderSeriesPanel, _abrirModalSerie, _confirmarSerie,
+    _gerarComSeries, _finalizarSeries, _mergeSeriesResult,
     setVisibilidade, adicionarCompartilhamento, removerCompartilhamento,
     _compTipoChange, _compAdicionarUI, _renderFontes, _renderComp, _dsLabel,
     // Dashboard Builder

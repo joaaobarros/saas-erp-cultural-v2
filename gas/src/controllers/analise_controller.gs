@@ -816,7 +816,7 @@ function ctrl_analise_widget_dados(params) {
     var dsId  = (params || {}).dsId;
     var dsId2 = (params || {}).dsId2;
     var filtro = null;
-    if ((params||{}).de || (params||{}).ate) filtro = { de: (params||{}).de, ate: (params||{}).ate };
+    if ((params||{}).de || (params||{}).ate || (params||{}).setor) filtro = { de: (params||{}).de, ate: (params||{}).ate, setor: (params||{}).setor||'' };
     if (!dsId) throw new Error('dsId obrigatório');
     _analise_filtro_global = filtro;
     try {

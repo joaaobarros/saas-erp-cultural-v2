@@ -39,7 +39,19 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s149)**: **feat — Quadros: mapa mental evoluído com toolbar dedicada, colapsar/expandir ramos, arraste manual de nodos, setas para ajuste fino, centralizar mapa e snapshot retrocompatível (`mmNodes` + `dx/dy/collapsed`) — Deploy @1094.**
+**Fase atual (s150)**: **feat — Estúdio de Análises: Series Builder (modo Data Studio) — múltiplas séries por análise, cada uma com dataset + filtros independentes (período + setor), merge automático em gráfico multi-coluna; Widget Editor do Dashboard Builder com filtros de data/setor por widget — Deploy @1095.**
+
+**O que foi implementado em s150**:
+- **Modo Séries no Estúdio de Análises**: toggle `Manual / CSV | Séries` no painel de dados do editor. No modo Séries, cada análise tem um array `series: [{dsId, label, cor, filtros:{de,ate,setor}}]` com configuração totalmente independente por série.
+- **Series Builder UI**: painel `#analise-painel-series` com cards por série (cor, label, dataset, filtros); botão "Adicionar série"; botão editar/remover por série.
+- **Modal de série**: seletor de dataset via `<optgroup>` por módulo (exclui Cruzamentos), campo de rótulo, paleta de cores (swatches), inputs `de`/`ate` e select de setor (`App.getBoot().setores`).
+- **Fetch paralelo + merge**: `_gerarComSeries` lança um `GAS.analise.importarDados` por série (execuções GAS independentes, sem race condition); quando todos respondem, `_mergeSeriesResult` faz a união dos rótulos e monta matriz `[dimensão, serie1, serie2, ...]`.
+- **Visualização de análises salvas em modo séries**: `visualizarAnalise` detecta `a.modoEditor==='series'` e faz fetch paralelo das séries antes de renderizar.
+- **Persistência**: campos `modoEditor` e `series` adicionados ao objeto salvo; backward compat — análises antigas sem esses campos continuam no modo tabela.
+- **Fix backend**: `ctrl_analise_widget_dados` agora passa `setor` para o filtro (estava sendo silenciosamente descartado).
+- **Widget Editor filtros por widget**: seção "Filtros (opcionais)" com `de`/`ate` + select de setor no editor de cada widget. Valores persistidos em `w.filtros`; `_dashCarregarWidgetPreview` aplica os filtros ao buscar dados ao vivo (sobrepõem filtros globais do dashboard).
+
+**Fase anterior (s149)**: **feat — Quadros: mapa mental evoluído com toolbar dedicada, colapsar/expandir ramos, arraste manual de nodos, setas para ajuste fino, centralizar mapa e snapshot retrocompatível (`mmNodes` + `dx/dy/collapsed`) — Deploy @1094.**
 
 **O que foi implementado em s149**:
 - **`_iniciarMindMap` completo**: mantém a engine dedicada para quadros `categoria=mindmap`, agora com toolbar visual para adicionar filho/irmão, editar, colapsar/expandir, centralizar e remover.
