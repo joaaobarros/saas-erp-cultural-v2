@@ -39,7 +39,12 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s155b)**: **fix — Dashboard Builder: troca de tipo de widget atualiza card no canvas em tempo real.** Deploy @1122.
+**Fase atual (s155c)**: **feat — Editor de espaços: painel lateral "Dimensões reais" — inputs editáveis por lado, altura e diâmetro.** Deploy @1125.
+
+**O que foi implementado em s155c**:
+- **`_atualizarDimPanel()` (`mapa_editor.html`)**: painel "Dimensões reais" no rodapé da sidebar do editor de espaços. Para `rect`/`ellipse`: inputs "Largura (m)" e "Altura (m)". Para `square`: input "Lado (m)" (atualiza w e h). Para `circle`: input "Diâmetro (m)". Para polígonos (`poly_custom`, tri, hex, trap, diamond, pent): botões por lado "L{i}: Xm → ajustar" que abrem `_editarLado()`. Cache por `_lastDimShape` evita re-render desnecessário durante arrasto. Inputs sincronizados via `_onDimInputChange` (onchange, não oninput). Exporta `_onDimInputChange`.
+
+**Fase anterior (s155b)**: **fix — Dashboard Builder: troca de tipo de widget atualiza card no canvas em tempo real.** Deploy @1122.
 
 **O que foi implementado em s155b**:
 - **`_weTipoChg` (`index.html`)**: ao trocar o chip de tipo (grafico→kpi→tabela→…) na sidebar de edição, o card correspondente no canvas é atualizado imediatamente — ícone do header e corpo do card — sem precisar clicar "Confirmar". Funciona apenas ao editar widgets existentes (busca o card pelo `_weDraftWidget.id` em `_dashWidgets`); novos widgets (criação) não têm card ainda e o bloco é pulado sem efeito colateral.

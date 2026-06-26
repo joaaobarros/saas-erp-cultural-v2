@@ -27,6 +27,7 @@ var MapaEditorUI = (function() {
   var _edDragPan = null;
   var _clipboard    = null; // cfg copiado via Ctrl+C
   var _edKbHandler  = null; // referência para removeEventListener
+  var _lastDimShape = '';   // chave de cache para o painel de dimensões reais
 
   // ── Figuras predefinidas ────────────────────────────────
   var _FORMAS = [
@@ -317,6 +318,9 @@ var MapaEditorUI = (function() {
               '<div style="font-size:9px;color:var(--muted,#94a3b8);line-height:1.5;">Os vértices dos dois espaços são combinados. Ajuste o resultado manualmente.</div>' +
             '</div>' +
           '</div>' +
+
+          // ─── Painel dimensões reais ───
+          '<div id="ed-dim-panel" style="display:none;"></div>' +
 
         '</div>' +
 
@@ -739,6 +743,95 @@ var MapaEditorUI = (function() {
     }
   }
 
+  // ── Painel de dimensões reais (sidebar) ─────────────────
+  function _inputDim(id, label) {
+    return '<div style="margin-bottom:7px;">' +
+      '<label style="font-size:11px;color:var(--text2,#64748b);display:block;margin-bottom:3px;">' + label + '</label>' +
+      '<input id="' + id + '" type="number" step="0.01" min="0.01" ' +
+        'style="width:100%;padding:5px 8px;border:1px solid var(--border,#e2e8f0);border-radius:5px;font-size:12px;background:var(--surface2,#f8fafc);color:var(--text,#1e293b);" ' +
+        'onchange="MapaEditorUI._onDimInputChange()">' +
+      '</div>';
+  }
+
+  function _onDimInputChange() {
+    if (!_cfg || !_escala || !_escala.pixPorM) return;
+    var ppm = _escala.pixPorM;
+    var f = _cfg.forma;
+    if (f === 'circle') {
+      var dm = parseFloat((document.getElementById('ed-dm') || {}).value);
+      if (!isNaN(dm) && dm > 0) { _cfg.r = Math.max(10, dm * ppm / 2); _cfg.w = _cfg.r * 2; _cfg.h = _cfg.r * 2; }
+    } else {
+      var wm = parseFloat((document.getElementById('ed-wm') || {}).value);
+      var hm = parseFloat((document.getElementById('ed-hm') || {}).value);
+      if (!isNaN(wm) && wm > 0) _cfg.w = Math.max(20, wm * ppm);
+      if (!isNaN(hm) && hm > 0) _cfg.h = Math.max(20, hm * ppm);
+      if (f === 'square') _cfg.h = _cfg.w;
+    }
+    _renderShape();
+  }
+
+  function _atualizarDimPanel() {
+    var panel = document.getElementById('ed-dim-panel');
+    if (!panel) return;
+    if (!_cfg || !_escala || !_escala.pixPorM) {
+      panel.style.display = 'none';
+      _lastDimShape = '';
+      return;
+    }
+    panel.style.display = '';
+    var ppm = _escala.pixPorM;
+    var f = _cfg.forma;
+    var POLYS = ['tri', 'hex', 'trap', 'diamond', 'pent'];
+    var isPolyLike = f === 'poly_custom' || POLYS.indexOf(f) !== -1;
+    var dimKey = isPolyLike ? (f + '|' + ((_cfg.pontos || []).length)) : f;
+    var setF_ = function(id, v) {
+      var el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = v;
+    };
+    var hdrStyle = 'font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#94a3b8);' +
+                   'margin-bottom:8px;letter-spacing:.06em;border-top:1px solid var(--border,#e2e8f0);padding-top:10px;';
+
+    if (!isPolyLike) {
+      if (_lastDimShape !== dimKey) {
+        _lastDimShape = dimKey;
+        var hdr = '<div style="' + hdrStyle + '">Dimensões reais (m)</div>';
+        if (f === 'circle') panel.innerHTML = hdr + _inputDim('ed-dm', 'Diâmetro');
+        else if (f === 'square') panel.innerHTML = hdr + _inputDim('ed-wm', 'Lado');
+        else panel.innerHTML = hdr + _inputDim('ed-wm', 'Largura') + _inputDim('ed-hm', 'Altura');
+      }
+      var bbox = _bboxHW(_cfg);
+      if (f === 'circle') setF_('ed-dm', ((_cfg.r || bbox.hw) * 2 / ppm).toFixed(2));
+      else {
+        setF_('ed-wm', (bbox.hw * 2 / ppm).toFixed(2));
+        if (f !== 'square') setF_('ed-hm', (bbox.hh * 2 / ppm).toFixed(2));
+      }
+    } else {
+      _lastDimShape = dimKey;
+      var pts;
+      if (f === 'poly_custom' && _cfg.pontos && _cfg.pontos.length) {
+        pts = _cfg.pontos;
+      } else {
+        var pStr = _cfgPontos(_cfg);
+        pts = pStr.split(' ').map(function(p) {
+          var xy = p.split(','); return { x: parseFloat(xy[0]), y: parseFloat(xy[1]) };
+        }).filter(function(p) { return !isNaN(p.x) && !isNaN(p.y); });
+      }
+      var n = pts.length;
+      var hdr2 = '<div style="' + hdrStyle + '">Lados (metros)</div>';
+      var bStyle = 'width:100%;background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.2);color:#4338ca;' +
+                   'border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;margin-bottom:3px;text-align:left;display:block;';
+      var btns = '';
+      for (var si = 0; si < n; si++) {
+        var sa = pts[si], sb = pts[(si + 1) % n];
+        var sdx = sb.x - sa.x, sdy = sb.y - sa.y;
+        var sM = (Math.sqrt(sdx * sdx + sdy * sdy) / ppm).toFixed(2);
+        btns += '<button onclick="MapaEditorUI._editarLado(' + si + ')" data-bg-skip="1" style="' + bStyle + '">' +
+                'L' + (si + 1) + ': <b>' + sM + 'm</b> &rarr; ajustar</button>';
+      }
+      panel.innerHTML = hdr2 + btns;
+    }
+  }
+
   // ── Inputs numéricos ─────────────────────────────────────
   function _atualizarInputs() {
     var isPolyCustom = _cfg && _cfg.forma === 'poly_custom';
@@ -778,6 +871,9 @@ var MapaEditorUI = (function() {
         });
       }
     }
+
+    // Painel de dimensões reais
+    _atualizarDimPanel();
   }
 
   function _setInp(id, v) { var el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v; }
@@ -1186,6 +1282,7 @@ var MapaEditorUI = (function() {
     _converterParaPolyCustom: _converterParaPolyCustom,
     _mesclarCom:              _mesclarCom,
     _onInputChange:           _onInputChange,
+    _onDimInputChange:        _onDimInputChange,
     _edZoom:                  _edZoom,
     _edResetZoom:             _edResetZoom,
     _editarDimensao:          _editarDimensao
