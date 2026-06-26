@@ -24560,6 +24560,62 @@ var ReservasUI = (function() {
     return _itensChips.some(function(c){ return c.disponivel < c.qtd; });
   }
 
+  // ── Autocomplete de Ações ─────────────────────────────
+  var _acoesCache = null;
+
+  function _carregarAcoesCache(cb) {
+    if (_acoesCache !== null) { cb(_acoesCache); return; }
+    var boot = App.getBoot ? App.getBoot() : null;
+    if (boot && Array.isArray(boot.acoes) && boot.acoes.length > 0) {
+      _acoesCache = boot.acoes;
+      cb(_acoesCache);
+      return;
+    }
+    GAS.acoes.listar({}, function(r) {
+      _acoesCache = (r && r.ok && Array.isArray(r.data)) ? r.data : [];
+      cb(_acoesCache);
+    }, function() { _acoesCache = []; cb([]); });
+  }
+
+  function _filtrarAcoes(q) {
+    var dd = document.getElementById('res-acao-dropdown');
+    if (!dd) return;
+    _carregarAcoesCache(function(lista) {
+      q = (q || '').toLowerCase().trim();
+      var matches = q.length === 0
+        ? lista.slice(0, 12)
+        : lista.filter(function(a) {
+            return (a.nome || a.titulo || '').toLowerCase().indexOf(q) >= 0;
+          }).slice(0, 12);
+      if (!matches.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = matches.map(function(a) {
+        var nome   = escaparHtml(a.nome || a.titulo || '—');
+        var status = a.status ? ' <span style="font-size:10px;color:var(--muted);">(' + escaparHtml(a.status) + ')</span>' : '';
+        var safeId   = JSON.stringify(a.id   || '').replace(/"/g,"'");
+        var safeNome = JSON.stringify(a.nome || a.titulo || '').replace(/"/g,"'");
+        return '<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border-color,#f1f5f9);"'
+          + ' onmousedown="ReservasUI._selecionarAcao(' + safeId + ',' + safeNome + ')"'
+          + ' onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\'">'
+          + nome + status
+          + '</div>';
+      }).join('');
+      dd.style.display = '';
+    });
+  }
+
+  function _selecionarAcao(id, nome) {
+    var elNome = document.getElementById('res-nome-acao');
+    var elId   = document.getElementById('res-acao-id');
+    if (elNome) elNome.value = nome;
+    if (elId)   elId.value   = id || '';
+    _fecharDropdownAcoes();
+  }
+
+  function _fecharDropdownAcoes() {
+    var dd = document.getElementById('res-acao-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+
   // ── Manutenção de Espaço ─────────────────────────────
   var _espacosManutencao = [];
 
@@ -24783,6 +24839,10 @@ var ReservasUI = (function() {
     _adicionarItem:                _adicionarItem,
     _removerItemChip:              _removerItemChip,
     _carregarDisponibilidadeItens: _carregarDisponibilidadeItens,
+    // Autocomplete de ações
+    _filtrarAcoes:       _filtrarAcoes,
+    _selecionarAcao:     _selecionarAcao,
+    _fecharDropdownAcoes:_fecharDropdownAcoes,
     // Manutenção
     abrirModalManutencao:    abrirModalManutencao,
     _fecharModalManutencao:  _fecharModalManutencao,

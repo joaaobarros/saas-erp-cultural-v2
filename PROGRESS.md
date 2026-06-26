@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s152)**: **feat — Dashboard Builder v2 Fase 1: novo modelo de dados — `_CAMPO_CATALOGO` tipado (35 datasets × campos dimensao/metrica), `ctrl_analise_importar_dados` e `ctrl_analise_widget_dados` aceitam `filtros[]`, `ordenacao`, `limite`; pipeline de render normaliza colunas tipadas; `_dashRecarregarWidgets` suporta filtros declarativos v2 mesclados com filtros globais do dashboard.**
+**Fase atual (s152b)**: **feat — ReservasUI: autocomplete de Ações (vinculação via cadastro); inclui s152 — Dashboard Builder v2 Fase 1.**
 
 **O que foi implementado em s152**:
 - **`_CAMPO_CATALOGO` (frontend)**: objeto tipado com todos os 35 datasets do `_CATALOGO_LOCAL`, mapeando cada `dsId` → `{ label, modulo, campos:[{id, label, tipo:'dimensao'|'metrica', formato}] }`. Base para o Widget Editor v2 (Fase 2) que exibirá o painel de seleção de campos estilo Data Studio.

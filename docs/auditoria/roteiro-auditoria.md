@@ -2451,9 +2451,26 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF — SESSÃO 152 (2026-06-26) → PRÓXIMA SESSÃO
+## HANDOFF — SESSÃO 152b (2026-06-26) → PRÓXIMA SESSÃO
 
-### Estado: Deploy pendente · feat: Dashboard Builder v2 Fase 1 — novo modelo de dados
+### Estado: Deploy pendente · feat: ReservasUI autocomplete de Ações + DB v2 Fase 1
+
+### O que foi feito nesta sessão (s152b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | feat: autocomplete ações | `ReservasUI`: `_carregarAcoesCache`, `_filtrarAcoes`, `_selecionarAcao`, `_fecharDropdownAcoes` — vinculação de ação via cadastro, não texto livre |
+
+### Pendentes / próxima ação
+- Executar `clasp push && clasp deploy` para publicar
+- Smoke test: autocomplete de ações no formulário de reserva
+- Implementar **Fase 2 do Dashboard Builder** — Widget Editor com painel de campos
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 152 (2026-06-26) → 152b
+
+### Estado: Deploy @1105 · feat: Dashboard Builder v2 Fase 1 — novo modelo de dados
 
 ### O que foi feito nesta sessão (s152)
 
