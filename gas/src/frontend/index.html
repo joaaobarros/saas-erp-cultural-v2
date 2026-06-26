@@ -4959,7 +4959,7 @@ select.form-control { cursor: pointer; }
             </div>
 
             <!-- ── Mapa + sidebar ── -->
-            <div style="display:flex;gap:0;height:430px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);">
+            <div id="cfg-mapa-wrapper" style="display:flex;gap:0;height:430px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);transition:height .2s;">
               <!-- Sidebar: lista de espaços com/sem posição -->
               <div id="cfg-mapa-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;">
                 <p class="muted-text" style="padding:12px;font-size:12px;">Carregando…</p>
@@ -4975,11 +4975,12 @@ select.form-control { cursor: pointer; }
                 <div id="cfg-mapa-canvas" style="width:100%;height:100%;overflow:hidden;cursor:grab;background:var(--surface2);">
                   <p class="muted-text" style="padding:20px;font-size:12px;">Carregando mapa…</p>
                 </div>
-                <!-- Zoom controls -->
+                <!-- Zoom + expand controls -->
                 <div style="position:absolute;bottom:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:4px;">
                   <button onclick="InfraConfigMapaUI.zoom(1)" data-bg-skip="1" class="mapa-zoom-btn" title="Ampliar">+</button>
                   <button onclick="InfraConfigMapaUI.zoom(-1)" data-bg-skip="1" class="mapa-zoom-btn" title="Reduzir">−</button>
                   <button onclick="InfraConfigMapaUI.resetZoom()" data-bg-skip="1" class="mapa-zoom-btn" title="Ajustar ao tamanho" style="font-size:14px;"><span class="ms" style="font-size:15px;vertical-align:middle;">fit_screen</span></button>
+                  <button id="cfg-mapa-expand-btn" onclick="InfraConfigMapaUI.toggleExpand()" data-bg-skip="1" class="mapa-zoom-btn" title="Expandir mapa" style="font-size:14px;"><span class="ms" id="cfg-mapa-expand-icon" style="font-size:15px;vertical-align:middle;">fullscreen</span></button>
                 </div>
               </div>
             </div>
@@ -21622,27 +21623,43 @@ var InfraConfigMapaUI = (function() {
       '</div>';
 
     if (cfg) {
-      var _wM = (_escalaInfra && _escalaInfra.pixPorM && cfg.w) ? (cfg.w / _escalaInfra.pixPorM).toFixed(2) : null;
-      var _hM = (_escalaInfra && _escalaInfra.pixPorM && cfg.h) ? (cfg.h / _escalaInfra.pixPorM).toFixed(2) : null;
+      var _ppm    = _escalaInfra && _escalaInfra.pixPorM ? _escalaInfra.pixPorM : null;
+      var _eCirc  = (cfg.forma === 'circle');
+      var _eLivre = (cfg.forma === 'livre');
+      var _wM = (_ppm && cfg.w) ? (cfg.w / _ppm).toFixed(2) : null;
+      var _hM = (_ppm && cfg.h) ? (cfg.h / _ppm).toFixed(2) : null;
+      var _rM = (_ppm && cfg.r) ? ((cfg.r * 2) / _ppm).toFixed(2) : (_ppm && cfg.w) ? (cfg.w / _ppm).toFixed(2) : null;
+      var _dimBlock = '';
+      if (_ppm) {
+        if (_eCirc) {
+          _dimBlock =
+            '<div style="margin-bottom:4px;">' +
+              '<label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Diâmetro real (m)</label>' +
+              '<input id="cfged-dm" type="number" min="0.01" step="0.1" value="' + (_rM || '') + '" ' +
+                'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
+                'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>';
+        } else if (!_eLivre && _wM !== null) {
+          _dimBlock =
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:4px;">' +
+              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Largura real (m)</label>' +
+                '<input id="cfged-wm" type="number" min="0.01" step="0.1" value="' + _wM + '" ' +
+                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
+                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
+              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Altura real (m)</label>' +
+                '<input id="cfged-hm" type="number" min="0.01" step="0.1" value="' + _hM + '" ' +
+                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
+                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
+            '</div>';
+        }
+      }
       html +=
         '<div style="padding:6px 8px 4px;border-top:1px solid var(--border);margin-top:4px;">' +
           '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:6px;">Propriedades</div>' +
           _inputInline('cfged-cx',  'Posição X') +
           _inputInline('cfged-cy',  'Posição Y') +
-          _inputInline('cfged-w',   'Largura (px)') +
-          _inputInline('cfged-h',   'Altura (px)') +
-          (_wM !== null ?
-            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:4px;">' +
-              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Larg. real (m)</label>' +
-                '<input id="cfged-wm" type="number" min="0.01" step="0.1" value="' + _wM + '" ' +
-                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
-                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
-              '<div><label style="font-size:9.5px;color:var(--muted);display:block;margin-bottom:2px;">Alt. real (m)</label>' +
-                '<input id="cfged-hm" type="number" min="0.01" step="0.1" value="' + _hM + '" ' +
-                  'style="width:100%;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface2);box-sizing:border-box;" ' +
-                  'onchange="InfraConfigMapaUI._propDimMetrosInfraChange()"></div>' +
-            '</div>'
-          : '') +
+          (_eCirc ? _inputInline('cfged-w', 'Diâmetro (px)') : _inputInline('cfged-w', 'Largura (px)')) +
+          (_eCirc ? '' : _inputInline('cfged-h', 'Altura (px)')) +
+          _dimBlock +
           _inputInline('cfged-rot', 'Rotação °') +
         '</div>' +
         '<div style="padding:4px 8px 4px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
@@ -21708,11 +21725,25 @@ var InfraConfigMapaUI = (function() {
       var el = document.getElementById(id);
       if (el && document.activeElement !== el) el.value = Math.round(v);
     }
+    function setF(id, v) {
+      var el = document.getElementById(id);
+      if (el && document.activeElement !== el) el.value = v;
+    }
     setV('cfged-cx',  cfg.cx  || 450);
     setV('cfged-cy',  cfg.cy  || 330);
     setV('cfged-w',   bbox.hw * 2);
-    setV('cfged-h',   bbox.hh * 2);
+    if (cfg.forma !== 'circle') setV('cfged-h', bbox.hh * 2);
     setV('cfged-rot', cfg.rotacao || 0);
+    // Atualizar inputs de metros reais (se escala ativa)
+    if (_escalaInfra && _escalaInfra.pixPorM) {
+      var ppm = _escalaInfra.pixPorM;
+      if (cfg.forma === 'circle') {
+        setF('cfged-dm', ((cfg.r || bbox.hw) * 2 / ppm).toFixed(2));
+      } else {
+        setF('cfged-wm', (bbox.hw * 2 / ppm).toFixed(2));
+        setF('cfged-hm', (bbox.hh * 2 / ppm).toFixed(2));
+      }
+    }
   }
 
   function _onNomeChange(val) {
@@ -22344,15 +22375,23 @@ var InfraConfigMapaUI = (function() {
     if (!_escalaInfra || !_escalaInfra.pixPorM || !_modoEdicao || !_modoEdicao.cfg) return;
     var ppm = _escalaInfra.pixPorM;
     var cfg = _modoEdicao.cfg;
-    var wmV = parseFloat((document.getElementById('cfged-wm') || {}).value);
-    var hmV = parseFloat((document.getElementById('cfged-hm') || {}).value);
-    if (!isNaN(wmV) && wmV > 0) cfg.w = Math.max(20, wmV * ppm);
-    if (!isNaN(hmV) && hmV > 0) cfg.h = Math.max(20, hmV * ppm);
-    if (cfg.forma === 'circle') cfg.r = Math.min(cfg.w, cfg.h) / 2;
+    if (cfg.forma === 'circle') {
+      var dmV = parseFloat((document.getElementById('cfged-dm') || {}).value);
+      if (!isNaN(dmV) && dmV > 0) {
+        cfg.r = Math.max(10, dmV * ppm / 2);
+        cfg.w = cfg.r * 2;
+        cfg.h = cfg.r * 2;
+      }
+    } else {
+      var wmV = parseFloat((document.getElementById('cfged-wm') || {}).value);
+      var hmV = parseFloat((document.getElementById('cfged-hm') || {}).value);
+      if (!isNaN(wmV) && wmV > 0) cfg.w = Math.max(20, wmV * ppm);
+      if (!isNaN(hmV) && hmV > 0) cfg.h = Math.max(20, hmV * ppm);
+    }
     // Atualizar inputs px
     var wInp = document.getElementById('cfged-w');
     var hInp = document.getElementById('cfged-h');
-    if (wInp) wInp.value = Math.round(cfg.w);
+    if (wInp) wInp.value = Math.round(cfg.forma === 'circle' ? cfg.r * 2 : cfg.w);
     if (hInp) hInp.value = Math.round(cfg.h);
     _modoEdicao.cfg = cfg;
     _atualizarHandles();
@@ -23010,7 +23049,7 @@ var InfraConfigMapaUI = (function() {
           _atualizarInputsInline();
         } else if (drag.type === 'resize') {
           _resizeInline(e, e.ctrlKey);
-          if (_modoEdicao && _modoEdicao.cfg) _showDimHud(_modoEdicao.cfg.w || 80, _modoEdicao.cfg.h || 60, e.clientX, e.clientY);
+          if (_modoEdicao && _modoEdicao.cfg) _showDimHud(_modoEdicao.cfg.w || 80, _modoEdicao.cfg.h || 60, e.clientX, e.clientY, _modoEdicao.cfg.forma);
         } else if (drag.type === 'rotate') {
           var svgP2 = _svgPt(e);
           var curAngle = Math.atan2(svgP2.y - cfg.cy, svgP2.x - cfg.cx) * 180 / Math.PI;
@@ -23050,10 +23089,25 @@ var InfraConfigMapaUI = (function() {
     }, { passive: false });
   }
 
-  function _showDimHud(wPx, hPx, clientX, clientY) {
+  var _mapaExpandido = false;
+  function toggleExpand() {
+    var wrapper = document.getElementById('cfg-mapa-wrapper');
+    var icon    = document.getElementById('cfg-mapa-expand-icon');
+    if (!wrapper) return;
+    _mapaExpandido = !_mapaExpandido;
+    wrapper.style.height = _mapaExpandido ? 'calc(100vh - 220px)' : '430px';
+    if (icon) icon.textContent = _mapaExpandido ? 'fullscreen_exit' : 'fullscreen';
+    var btn = document.getElementById('cfg-mapa-expand-btn');
+    if (btn) btn.title = _mapaExpandido ? 'Recolher mapa' : 'Expandir mapa';
+    resetZoom();
+  }
+
+  function _showDimHud(wPx, hPx, clientX, clientY, forma) {
     if (!_escalaInfra || !_escalaInfra.pixPorM) return;
     var ppm = _escalaInfra.pixPorM;
-    var txt = (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
+    var txt = forma === 'circle'
+      ? 'ø ' + (wPx / ppm).toFixed(1) + 'm'
+      : (wPx / ppm).toFixed(1) + 'm × ' + (hPx / ppm).toFixed(1) + 'm';
     var hud = document.getElementById('_dim-hud');
     if (!hud) {
       hud = document.createElement('div');
@@ -23118,6 +23172,7 @@ var InfraConfigMapaUI = (function() {
     _modalNivelEdTerr:             _modalNivelEdTerr,
     _modalNivelEdPlanta:           _modalNivelEdPlanta,
     _onNivelEdicaoChange:          _onNivelEdicaoChange,
+    toggleExpand:                  toggleExpand,
     getEscala: function() { return _escalaInfra ? JSON.parse(JSON.stringify(_escalaInfra)) : null; }
   };
 })();

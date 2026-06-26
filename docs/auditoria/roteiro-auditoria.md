@@ -2617,6 +2617,23 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ANTERIOR — SESSÃO 50b (2026-06-26) → próxima sessão
+
+### Estado: Deploy @1113 · Mapa — 3 correções de UI/dados
+
+### O que foi feito nesta sessão (s153b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| @1113 | Fix: Mapa Reservas multi-nível | `ctrl_mapa_statusEspacos` não retornava `nivel` → espaços do 1º Andar nunca apareciam no mapa de Reservas. Adicionado `nivel: esp.nivel !== undefined ? esp.nivel : 0` ao objeto retornado |
+| @1113 | Fix: Config mapa expandível | Adicionado botão `fullscreen`/`fullscreen_exit` (#cfg-mapa-expand-btn) nos controles de zoom do mapa de Configurações; `InfraConfigMapaUI.toggleExpand()` alterna entre `height:430px` e `calc(100vh - 220px)` |
+| @1113 | Fix: Dimensões círculo | Painel de propriedades ao editar um espaço no Config Mapa: círculos agora mostram campo único "Diâmetro (px)" + "Diâmetro real (m)" (#cfged-dm) em vez de Larg.×Alt. duplicados; tooltip `_showDimHud` mostra "ø Xm" para círculos; `_atualizarInputsInline` e `_propDimMetrosInfraChange` atualizados para suportar `cfged-dm` |
+
+### Pendentes / próxima ação
+- Retomar auditoria de bugs ou próximas fases do Dashboard Builder v2
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 49 (2026-06-13) → SESSÃO 49b
 
 ### Estado: Deploy @847 · RH Histórico — Mudança de Setor + cargo na Admissão + ordenação por data

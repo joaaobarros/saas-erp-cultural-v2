@@ -127,6 +127,7 @@ function ctrl_mapa_statusEspacos(params) {
         possuiChaves:     esp.possuiChaves  === true,
         aceitaReserva:    esp.aceitaReserva !== false,
         mapaConfig:       esp.mapaConfig   || null,
+        nivel:            esp.nivel !== undefined ? esp.nivel : 0,
         emManutencao:     !!esp.emManutencao,
         itensFixos:       esp.itensFixos   || {},
         status:           calc.status,
