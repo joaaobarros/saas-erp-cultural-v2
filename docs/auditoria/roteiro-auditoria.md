@@ -2616,6 +2616,26 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
+## HANDOFF ANTERIOR — SESSÃO s154 (2026-06-26) → próxima sessão
+
+### Estado: Deploy pendente · Dashboard Builder v2 Fase 5: agregações + sidebar push
+
+### O que foi implementado em s154
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | DB v2 Fase 5: sidebar push | `#analise-studio-root.we-sidebar-open { padding-right:368px }` — canvas recua ao abrir editor; sidebar e canvas visíveis simultaneamente |
+| pendente | DB v2 Fase 5: múltiplas dimensões | Zona Dimensões aceita N campos (click e drag acumulam); `dimensoes[]` armazena `{id, label, granularidade?}` |
+| pendente | DB v2 Fase 5: função de agregação | Badge métrica exibe `[SUM ▾]` → dropdown SUM/COUNT/DISTINCT/AVG/MIN/MAX via `_weToggleAggDropdown`/`_weSetAgregacao` |
+| pendente | DB v2 Fase 5: granularidade data | Badge dimensão date exibe `[mes ▾]` → granularidade Dia/Semana/Mês/Trimestre/Ano via `_weToggleGranDropdown`/`_weSetGranularidade` |
+| pendente | DB v2 Fase 5: agregação client-side | `_weAgregarDados`: GROUP BY por dimensões + função selecionada aplicado no preview e reload do dashboard view |
+| pendente | DB v2 Fase 5: CSS | `.we-badge-agg`, `.we-badge-gran`, `.we-inline-dd`, `.we-sidebar-open` |
+
+### Pendentes / próxima ação
+- Verificar comportamento da agregação com dados reais no dashboard
+
+---
+
 ## HANDOFF ANTERIOR — SESSÃO 50 (2026-06-13) → SESSÃO 51
 
 ### Estado: Deploy @863 · Performance — AppCache em 5 módulos + boot TTL 300s
