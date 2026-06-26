@@ -2451,9 +2451,29 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF — SESSÃO 153 (2026-06-26) → PRÓXIMA SESSÃO
+## HANDOFF — SESSÃO 154 (2026-06-26) → PRÓXIMA SESSÃO
 
-### Estado: Deploy pendente · feat: Dashboard Builder v2 Fases 2+3+4
+### Estado: Deploy pendente · fix/feat: Dashboard Builder v2 — sidebar push, múltiplas dims, agregação por campo
+
+### O que foi feito nesta sessão (s154)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | fix: sidebar push | `#analise-studio-root.we-sidebar-open { padding-right:368px }` — canvas recua ao abrir editor |
+| pendente | feat: múltiplas dims | `_weAdicionarCampo` push (não replace), drag/drop push objetos, zona Dimensões aceita N |
+| pendente | feat: modelo objetos | `dimensoes/metricas` como `{id,label,granularidade?/agregacao}` — normalização automática de strings legadas |
+| pendente | feat: badges agregação | `.we-badge-agg [SUM▾]` dropdown com SUM/COUNT/DISTINCT/AVG/MIN/MAX; `.we-badge-gran [mes▾]` com Dia/Semana/Mês/Trimestre/Ano |
+| pendente | feat: client-side agg | `_weAgregarDados` — GROUP BY por dimensões + função por métrica; aplicado em preview e dashboard view |
+
+### Pendentes / próxima ação
+- `clasp push && clasp deploy` para publicar s154
+- Smoke test: editor → 2+ dimensões → mudar agregação → confirmar → canvas atualiza
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 153 (2026-06-26) → 154
+
+### Estado: Deploy @1111 · feat: Dashboard Builder v2 Fases 2+3+4
 
 ### O que foi feito nesta sessão (s153)
 

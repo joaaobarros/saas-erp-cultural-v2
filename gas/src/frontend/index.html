@@ -2250,14 +2250,22 @@ select.form-control { cursor: pointer; }
 .we-campo-chip:hover { background:var(--surface2);border-color:var(--primary); }
 .we-campo-chip.sel { opacity:.45;background:var(--surface2);cursor:default; }
 .we-campo-chip[draggable="true"] { cursor:grab; }
-.we-campo-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap; }
+.we-campo-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;position:relative; }
 .we-campo-badge.dim { background:#eef2ff;color:#4f46e5;border:1.5px solid #c7d2fe; }
 .we-campo-badge.met { background:#ecfdf5;color:#059669;border:1.5px solid #a7f3d0; }
 .we-campo-badge button { background:none;border:none;cursor:pointer;padding:0 0 0 3px;font-size:13px;line-height:1;color:inherit;opacity:.7; }
 .we-campo-badge button:hover { opacity:1; }
+.we-badge-agg { font-size:9px!important;font-weight:800!important;background:rgba(5,150,105,.18)!important;color:#059669!important;border:1px solid #a7f3d0!important;border-radius:3px!important;padding:1px 4px!important;cursor:pointer!important;letter-spacing:.3px;opacity:1!important; }
+.we-badge-gran { font-size:9px!important;font-weight:800!important;background:rgba(79,70,229,.18)!important;color:#4f46e5!important;border:1px solid #c7d2fe!important;border-radius:3px!important;padding:1px 4px!important;cursor:pointer!important;letter-spacing:.3px;opacity:1!important; }
+.we-inline-dd { position:absolute;top:100%;left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);min-width:155px;padding:4px 0;margin-top:3px; }
+.we-inline-dd button { display:block;width:100%;text-align:left;padding:5px 12px;font-size:11px;border:none;background:none;cursor:pointer;color:var(--text); }
+.we-inline-dd button:hover { background:var(--surface2); }
 .we-campo-zone { min-height:36px;border:2px dashed var(--border);border-radius:6px;padding:4px 6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;transition:border-color .15s; }
 .we-campo-zone.drag-over { border-color:var(--primary);background:var(--primary-soft,#eef2ff); }
 .we-filtro-row { display:flex;gap:4px;margin-bottom:5px;align-items:center; }
+/* Sidebar push — canvas recua quando a sidebar abre */
+#analise-studio-root { transition:padding-right .28s cubic-bezier(.4,0,.2,1); }
+#analise-studio-root.we-sidebar-open { padding-right:368px; }
 /* ── Cross-filter (Fase 3) ───────────────────────────────────────────────── */
 .db-cw { position:relative; }
 .db-cw [data-cv] { cursor:pointer;transition:opacity .2s; }
@@ -44461,6 +44469,55 @@ var AnaliseEstudioUI = (function() {
   }
 
   // Carrega pré-visualização de dados para um widget no canvas do editor
+  // ── Agregação client-side (GROUP BY + função por campo) ───────────────────
+  function _weAgregarDados(linhas, colunas, dimensoesObj, metricasObj) {
+    var dimObjs = (dimensoesObj||[]).map(function(d){return typeof d==='string'?{id:d,label:d,agregacao:null}:d;});
+    var metObjs = (metricasObj||[]).map(function(m){return typeof m==='string'?{id:m,label:m,agregacao:'sum'}:m;});
+    if (!dimObjs.length && !metObjs.length) return {linhas:linhas, colunas:colunas};
+    // Match campo labels/ids to column indices (case-insensitive)
+    function colIdx(obj) {
+      var lbl = (obj.label||obj.id||'').toLowerCase();
+      var id  = (obj.id||'').toLowerCase();
+      for (var i=0;i<colunas.length;i++) {
+        var cn = (colunas[i]||'').toLowerCase();
+        if (cn===lbl||cn===id) return i;
+      }
+      return -1;
+    }
+    var dimIdxs = dimObjs.map(colIdx).filter(function(i){return i>=0;});
+    var metIdxs = metObjs.map(function(m,mi){return {idx:colIdx(m),mi:mi};}).filter(function(x){return x.idx>=0;});
+    if (!dimIdxs.length && !metIdxs.length) return {linhas:linhas, colunas:colunas};
+    // Group
+    var groups={}, keys=[];
+    linhas.forEach(function(row) {
+      var key = dimIdxs.map(function(i){return String(row[i]!=null?row[i]:'');}).join('\x00');
+      if (!groups[key]) { groups[key]={dims:dimIdxs.map(function(i){return row[i];}), mets:metIdxs.map(function(){return [];})};  keys.push(key); }
+      metIdxs.forEach(function(x,gi){ groups[key].mets[gi].push(row[x.idx]); });
+    });
+    var _agg = function(vals, fn) {
+      var nums = vals.map(Number);
+      if (fn==='count') return vals.length;
+      if (fn==='count_distinct') { var s={};vals.forEach(function(v){s[v]=1;});return Object.keys(s).length; }
+      if (fn==='avg') return nums.reduce(function(a,b){return a+b;},0)/(nums.length||1);
+      if (fn==='min') return Math.min.apply(null,nums);
+      if (fn==='max') return Math.max.apply(null,nums);
+      return nums.reduce(function(a,b){return a+b;},0); // sum (default)
+    };
+    var newLinhas = keys.map(function(key){
+      var g = groups[key];
+      var row = g.dims.slice();
+      metIdxs.forEach(function(x, gi){
+        var agg = metObjs[x.mi].agregacao||'sum';
+        var r = _agg(g.mets[gi], agg);
+        row.push(isNaN(r)?0:Math.round(r*1000)/1000);
+      });
+      return row;
+    });
+    var dimLabels = dimObjs.filter(function(d){return colIdx(d)>=0;}).map(function(d){return d.label||d.id;});
+    var metLabels = metObjs.filter(function(m,mi){return metIdxs.some(function(x){return x.mi===mi;});}).map(function(m){return m.label||m.id;});
+    return {linhas:newLinhas, colunas:dimLabels.concat(metLabels)};
+  }
+
   function _dashCarregarWidgetPreview(idx) {
     var w = _dashWidgets[idx]; if (!w) return;
     if (w.tipo==='separador'||w.tipo==='texto'||w.tipo==='imagem'||w.tipo==='forma') return;
@@ -44471,6 +44528,11 @@ var AnaliseEstudioUI = (function() {
     var onData = function(r) {
       var linhas  = r&&r.ok&&r.data ? r.data.linhas||[]                : w.linhas||[];
       var colunas = r&&r.ok&&r.data ? r.data.colunas||['Label','Valor'] : w.colunas||['Label','Valor'];
+      // Aplica agregação client-side se o widget tem dimensoes/metricas configurados
+      if ((w.dimensoes&&w.dimensoes.length)||(w.metricas&&w.metricas.length)) {
+        var aggResult = _weAgregarDados(linhas, colunas, w.dimensoes, w.metricas);
+        linhas = aggResult.linhas; colunas = aggResult.colunas;
+      }
       _dashWidgets[idx].linhas  = linhas;
       _dashWidgets[idx].colunas = colunas;
       if (body.isConnected) body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false);
@@ -44478,18 +44540,18 @@ var AnaliseEstudioUI = (function() {
     var onErr = function() {
       if (body.isConnected) body.innerHTML = '<p class="muted-text" style="text-align:center;padding:14px;font-size:12px;color:var(--danger);">Erro ao carregar dados.</p>';
     };
-    // Monta parâmetros: suporta filtros legados (flat) e filtros v2 (declarativos)
+    // Monta parâmetros — extrai IDs dos objetos de dimensao/metrica
     var p = { id: w.dsId };
+    var dimIds = (w.dimensoes||[]).map(function(d){return typeof d==='string'?d:d.id;});
+    var metIds = (w.metricas||[]).map(function(m){return typeof m==='string'?m:m.id;});
     var wFiltros = w.filtros;
     if (Array.isArray(wFiltros)) {
-      // v2: filtros declarativos + ordenacao + limite
       p.filtros = wFiltros;
       if (w.ordenacao)  p.ordenacao  = w.ordenacao;
       if (w.limite != null) p.limite = w.limite;
-      if (w.dimensoes) p.dimensoes = w.dimensoes;
-      if (w.metricas)  p.metricas  = w.metricas;
+      if (dimIds.length) p.dimensoes = dimIds;
+      if (metIds.length) p.metricas  = metIds;
     } else if (wFiltros && typeof wFiltros === 'object') {
-      // legado: {de, ate, setor}
       if (wFiltros.de)    p.de    = wFiltros.de;
       if (wFiltros.ate)   p.ate   = wFiltros.ate;
       if (wFiltros.setor) p.setor = wFiltros.setor;
@@ -44600,13 +44662,35 @@ var AnaliseEstudioUI = (function() {
     if (!wDraft.filtroConfig) wDraft.filtroConfig = {campo:'', modo:'select', labelCustom:''};
     if (wDraft.interativo === undefined) wDraft.interativo = true;
 
+    // Normaliza strings → objetos {id, label, agregacao?/granularidade?}
+    var _catNorm = _CAMPO_CATALOGO[wDraft.dsId] || {campos:[]};
+    wDraft.dimensoes = wDraft.dimensoes.map(function(d) {
+      if (typeof d === 'string') {
+        var meta = _catNorm.campos.find(function(c){return c.id===d;})||{};
+        var isDate = meta.formato==='data'||meta.formato==='date';
+        return {id:d, label:meta.label||d, granularidade:isDate?'mes':null};
+      }
+      return d;
+    });
+    wDraft.metricas = wDraft.metricas.map(function(m) {
+      if (typeof m === 'string') {
+        var meta2 = _catNorm.campos.find(function(c){return c.id===m;})||{};
+        return {id:m, label:meta2.label||m, agregacao:'sum'};
+      }
+      if (!m.agregacao) m.agregacao = 'sum';
+      return m;
+    });
+
     // Backward compat: widget legado com dsId mas sem dimensoes/metricas → auto-popular
     if (wDraft.dsId && !wDraft.dimensoes.length && !wDraft.metricas.length) {
       var _cat0 = _CAMPO_CATALOGO[wDraft.dsId];
       if (_cat0) {
         _cat0.campos.forEach(function(c) {
-          if (c.tipo==='dimensao' && !wDraft.dimensoes.length) wDraft.dimensoes.push(c.id);
-          else if (c.tipo==='metrica' && wDraft.metricas.length < 2) wDraft.metricas.push(c.id);
+          var isDate0 = c.formato==='data'||c.formato==='date';
+          if (c.tipo==='dimensao' && !wDraft.dimensoes.length)
+            wDraft.dimensoes.push({id:c.id, label:c.label, granularidade:isDate0?'mes':null});
+          else if (c.tipo==='metrica' && wDraft.metricas.length < 2)
+            wDraft.metricas.push({id:c.id, label:c.label, agregacao:'sum'});
         });
       }
     }
@@ -44825,6 +44909,9 @@ var AnaliseEstudioUI = (function() {
           '<button class="btn btn-primario" onclick="AnaliseEstudioUI._weConfirmar(\''+uid+'\')" data-bg-skip="1">Confirmar</button>' +
         '</div>';
       sb.classList.add('aberta');
+      // Push canvas left so editor doesn't fully cover the dashboard
+      var _root = document.getElementById('analise-studio-root');
+      if (_root) _root.classList.add('we-sidebar-open');
       return;
     }
     // Fallback: modal central
@@ -44883,6 +44970,8 @@ var AnaliseEstudioUI = (function() {
   function _weCancelarSidebar() {
     var sb = document.getElementById('db-widget-sidebar');
     if (sb) { sb.classList.remove('aberta'); }
+    var _root = document.getElementById('analise-studio-root');
+    if (_root) _root.classList.remove('we-sidebar-open');
     _weDraftWidget = null; _weDraftCb = null;
   }
 
@@ -44898,12 +44987,25 @@ var AnaliseEstudioUI = (function() {
   }
 
   // ── Widget Editor v2: Campo Panel ─────────────────────────────────────────
+  var _WE_AGGS = [
+    {v:'sum',l:'SUM — Soma'},{v:'count',l:'COUNT — Contagem'},{v:'count_distinct',l:'DISTINCT — Únicos'},
+    {v:'avg',l:'AVG — Média'},{v:'min',l:'MIN — Mínimo'},{v:'max',l:'MAX — Máximo'},
+  ];
+  var _WE_AGGS_SHORT = {sum:'SUM',count:'CNT',count_distinct:'DIST',avg:'AVG',min:'MIN',max:'MAX'};
+  var _WE_GRANS = [
+    {v:'dia',l:'Por Dia'},{v:'semana',l:'Por Semana'},{v:'mes',l:'Por Mês'},
+    {v:'trimestre',l:'Por Trimestre'},{v:'ano',l:'Por Ano'},
+  ];
+
   function _weRenderCampoPanel(uid, dsId, dimensoes, metricas) {
     if (!dsId) return '';
     var cat = _CAMPO_CATALOGO[dsId];
     if (!cat) return '<p class="muted-text" style="font-size:11px;">Campos não configurados para este dataset.</p>';
-    var dimSel = dimensoes||[], metSel = metricas||[];
-    var allSel = dimSel.concat(metSel);
+    var dimObjs = (dimensoes||[]).map(function(d){return typeof d==='string'?{id:d,label:d,granularidade:null}:d;});
+    var metObjs = (metricas||[]).map(function(m){return typeof m==='string'?{id:m,label:m,agregacao:'sum'}:m;});
+    var dimIds = dimObjs.map(function(d){return d.id;});
+    var metIds = metObjs.map(function(m){return m.id;});
+    var allSel = dimIds.concat(metIds);
     var camposHtml = cat.campos.map(function(c) {
       var sel = allSel.indexOf(c.id)>=0;
       var icon = c.tipo==='dimensao'?'ABC':'123';
@@ -44911,38 +45013,104 @@ var AnaliseEstudioUI = (function() {
       var safeId = JSON.stringify(c.id).replace(/"/g,"'"), safeTipo = JSON.stringify(c.tipo).replace(/"/g,"'");
       return '<div class="we-campo-chip'+(sel?' sel':'')+'" draggable="true" data-campo-id="'+c.id+'" data-campo-tipo="'+c.tipo+'" '+
         'ondragstart="AnaliseEstudioUI._weCampoDragStart(event,'+safeId+','+safeTipo+')" '+
-        'onclick="AnaliseEstudioUI._weAdicionarCampo(\''+uid+'\','+safeId+','+safeTipo+')" title="'+_esc(c.label)+' ('+c.tipo+')">' +
+        'onclick="AnaliseEstudioUI._weAdicionarCampo(\''+uid+'\','+safeId+','+safeTipo+')" title="'+_esc(c.label)+' — clique para adicionar">' +
         '<span style="'+iStyle+'font-weight:700;font-size:9px;font-family:monospace;width:24px;display:inline-block;text-align:center;">'+icon+'</span>' +
         '<span>'+_esc(c.label)+'</span>' +
+        (c.formato?'<span style="font-size:9px;color:var(--text2);margin-left:auto;padding-left:4px;">'+_esc(c.formato)+'</span>':'') +
       '</div>';
     }).join('');
-    var dimBadge = dimSel.length > 0 ? (function(){
-      var c = cat.campos.find(function(x){ return x.id===dimSel[0]; });
-      return '<span class="we-campo-badge dim">'+_esc(c?c.label:dimSel[0])+'<button onclick="AnaliseEstudioUI._weRemoverDimensao(\''+uid+'\')" data-bg-skip="1">×</button></span>';
-    })() : '';
-    var metBadges = metSel.map(function(id, i) {
-      var c = cat.campos.find(function(x){ return x.id===id; });
-      return '<span class="we-campo-badge met">'+_esc(c?c.label:id)+'<button onclick="AnaliseEstudioUI._weRemoverMetrica(\''+uid+'\','+i+')" data-bg-skip="1">×</button></span>';
+    var dimBadges = dimObjs.map(function(d, i) {
+      var meta = cat.campos.find(function(x){return x.id===d.id;})||{};
+      var isDate = meta.formato==='data'||meta.formato==='date';
+      var gran = d.granularidade||'mes';
+      var granBtn = isDate
+        ? '<button class="we-badge-gran" onclick="AnaliseEstudioUI._weToggleGranDropdown(\''+uid+'\','+i+')" data-bg-skip="1">'+gran+'▾</button>'
+        : '';
+      return '<span class="we-campo-badge dim">' +
+        granBtn+_esc(d.label||d.id) +
+        '<button onclick="AnaliseEstudioUI._weRemoverDimensao(\''+uid+'\','+i+')" data-bg-skip="1" title="Remover">×</button></span>';
+    }).join('');
+    var metBadges = metObjs.map(function(m, i) {
+      var agg = m.agregacao||'sum';
+      var aggShort = _WE_AGGS_SHORT[agg]||'SUM';
+      return '<span class="we-campo-badge met">' +
+        '<button class="we-badge-agg" onclick="AnaliseEstudioUI._weToggleAggDropdown(\''+uid+'\','+i+')" data-bg-skip="1">'+aggShort+'▾</button>' +
+        _esc(m.label||m.id) +
+        '<button onclick="AnaliseEstudioUI._weRemoverMetrica(\''+uid+'\','+i+')" data-bg-skip="1" title="Remover">×</button></span>';
     }).join('');
     return '<div>' +
       '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:5px;">Campos disponíveis</div>' +
       '<input type="search" class="form-control" style="font-size:12px;margin-bottom:6px;" placeholder="Buscar…" oninput="AnaliseEstudioUI._weFiltrarCampos(this.value,\''+uid+'\')">' +
-      '<div id="we-campos-list-'+uid+'" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">'+camposHtml+'</div>' +
+      '<div id="we-campos-list-'+uid+'" style="max-height:110px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">'+camposHtml+'</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
         '<div>' +
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#4f46e5;margin-bottom:4px;">Dimensão</div>' +
-          '<div id="we-dim-zone-'+uid+'" class="we-campo-zone" style="'+(dimBadge?'':'justify-content:center;')+'" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="AnaliseEstudioUI._weCampoDropDim(event,\''+uid+'\')">' +
-            (dimBadge||'<span style="font-size:10px;color:var(--text2);">arraste ABC aqui</span>') +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#4f46e5;margin-bottom:4px;">Dimensões <span style="font-weight:400;font-size:9px;">(ABC)</span></div>' +
+          '<div id="we-dim-zone-'+uid+'" class="we-campo-zone" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="AnaliseEstudioUI._weCampoDropDim(event,\''+uid+'\')">' +
+            (dimBadges||'<span style="font-size:10px;color:var(--text2);">arraste ABC aqui</span>') +
           '</div>' +
         '</div>' +
         '<div>' +
-          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;margin-bottom:4px;">Métricas</div>' +
-          '<div id="we-met-zone-'+uid+'" class="we-campo-zone" style="'+(metBadges?'':'justify-content:center;')+'" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="AnaliseEstudioUI._weCampoDropMet(event,\''+uid+'\')">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;margin-bottom:4px;">Métricas <span style="font-weight:400;font-size:9px;">(123)</span></div>' +
+          '<div id="we-met-zone-'+uid+'" class="we-campo-zone" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="AnaliseEstudioUI._weCampoDropMet(event,\''+uid+'\')">' +
             (metBadges||'<span style="font-size:10px;color:var(--text2);">arraste 123 aqui</span>') +
           '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
+  }
+
+  function _weToggleAggDropdown(uid, idx) {
+    var ddId = 'we-agg-dd-'+uid+'-'+idx;
+    if (document.getElementById(ddId)) { document.getElementById(ddId).remove(); return; }
+    var zone = document.getElementById('we-met-zone-'+uid); if (!zone) return;
+    var badge = zone.querySelectorAll('.we-campo-badge.met')[idx]; if (!badge) return;
+    var dd = document.createElement('div');
+    dd.className = 'we-inline-dd'; dd.id = ddId;
+    _WE_AGGS.forEach(function(a) {
+      var btn = document.createElement('button');
+      btn.textContent = a.l; btn.setAttribute('data-bg-skip','1');
+      btn.onclick = function(e){ e.stopPropagation(); AnaliseEstudioUI._weSetAgregacao(uid, idx, a.v); };
+      dd.appendChild(btn);
+    });
+    badge.appendChild(dd);
+    setTimeout(function(){
+      document.addEventListener('click', function _closeDd(e){ if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',_closeDd);} });
+    }, 0);
+  }
+
+  function _weToggleGranDropdown(uid, idx) {
+    var ddId = 'we-gran-dd-'+uid+'-'+idx;
+    if (document.getElementById(ddId)) { document.getElementById(ddId).remove(); return; }
+    var zone = document.getElementById('we-dim-zone-'+uid); if (!zone) return;
+    var badge = zone.querySelectorAll('.we-campo-badge.dim')[idx]; if (!badge) return;
+    var dd = document.createElement('div');
+    dd.className = 'we-inline-dd'; dd.id = ddId;
+    _WE_GRANS.forEach(function(g) {
+      var btn = document.createElement('button');
+      btn.textContent = g.l; btn.setAttribute('data-bg-skip','1');
+      btn.onclick = function(e){ e.stopPropagation(); AnaliseEstudioUI._weSetGranularidade(uid, idx, g.v); };
+      dd.appendChild(btn);
+    });
+    badge.appendChild(dd);
+    setTimeout(function(){
+      document.addEventListener('click', function _closeDd2(e){ if(!dd.contains(e.target)){dd.remove();document.removeEventListener('click',_closeDd2);} });
+    }, 0);
+  }
+
+  function _weSetAgregacao(uid, idx, agg) {
+    if (!_weDraftWidget || !_weDraftWidget.metricas[idx]) return;
+    var m = _weDraftWidget.metricas[idx];
+    if (typeof m === 'string') _weDraftWidget.metricas[idx] = {id:m, label:m, agregacao:agg};
+    else m.agregacao = agg;
+    _weAtualizarCampoPanel(uid);
+  }
+
+  function _weSetGranularidade(uid, idx, gran) {
+    if (!_weDraftWidget || !_weDraftWidget.dimensoes[idx]) return;
+    var d = _weDraftWidget.dimensoes[idx];
+    if (typeof d === 'string') _weDraftWidget.dimensoes[idx] = {id:d, label:d, granularidade:gran};
+    else d.granularidade = gran;
+    _weAtualizarCampoPanel(uid);
   }
 
   function _weAtualizarCampoPanel(uid) {
@@ -44953,18 +45121,25 @@ var AnaliseEstudioUI = (function() {
 
   function _weAdicionarCampo(uid, campoId, tipo) {
     if (!_weDraftWidget) return;
+    var cat = _CAMPO_CATALOGO[_weDraftWidget.dsId];
+    var meta = cat ? cat.campos.find(function(c){return c.id===campoId;}) : null;
+    var label = meta ? meta.label : campoId;
+    var isDate = meta && (meta.formato==='data'||meta.formato==='date');
     if (tipo === 'dimensao') {
-      _weDraftWidget.dimensoes = [campoId];
+      if (!Array.isArray(_weDraftWidget.dimensoes)) _weDraftWidget.dimensoes = [];
+      if (_weDraftWidget.dimensoes.some(function(d){return (d.id||d)===campoId;})) return;
+      _weDraftWidget.dimensoes.push({id:campoId, label:label, granularidade:isDate?'mes':null});
     } else {
       if (!Array.isArray(_weDraftWidget.metricas)) _weDraftWidget.metricas = [];
-      if (_weDraftWidget.metricas.indexOf(campoId) < 0) _weDraftWidget.metricas.push(campoId);
+      if (_weDraftWidget.metricas.some(function(m){return (m.id||m)===campoId;})) return;
+      _weDraftWidget.metricas.push({id:campoId, label:label, agregacao:'sum'});
     }
     _weAtualizarCampoPanel(uid);
   }
 
-  function _weRemoverDimensao(uid) {
+  function _weRemoverDimensao(uid, idx) {
     if (!_weDraftWidget) return;
-    _weDraftWidget.dimensoes = [];
+    _weDraftWidget.dimensoes.splice(idx, 1);
     _weAtualizarCampoPanel(uid);
   }
 
@@ -44984,8 +45159,13 @@ var AnaliseEstudioUI = (function() {
     e.preventDefault();
     var el = document.getElementById('we-dim-zone-'+uid); if(el) el.classList.remove('drag-over');
     if (!_weDraftWidget || !_weDragCampoId) return;
-    if (_weDragCampoTipo !== 'dimensao') { Toast.aviso('Apenas campos ABC (dimensão) aqui.'); return; }
-    _weDraftWidget.dimensoes = [_weDragCampoId];
+    if (_weDragCampoTipo !== 'dimensao') { Toast.aviso('Apenas campos ABC (dimensão) aqui.'); _weDragCampoId=null;_weDragCampoTipo=null; return; }
+    if (!Array.isArray(_weDraftWidget.dimensoes)) _weDraftWidget.dimensoes = [];
+    if (_weDraftWidget.dimensoes.some(function(d){return (d.id||d)===_weDragCampoId;})) { _weDragCampoId=null;_weDragCampoTipo=null; return; }
+    var cat = _CAMPO_CATALOGO[_weDraftWidget.dsId];
+    var meta = cat ? cat.campos.find(function(c){return c.id===_weDragCampoId;}) : null;
+    var isDate = meta && (meta.formato==='data'||meta.formato==='date');
+    _weDraftWidget.dimensoes.push({id:_weDragCampoId, label:meta?meta.label:_weDragCampoId, granularidade:isDate?'mes':null});
     _weDragCampoId = null; _weDragCampoTipo = null;
     _weAtualizarCampoPanel(uid);
   }
@@ -44994,9 +45174,12 @@ var AnaliseEstudioUI = (function() {
     e.preventDefault();
     var el = document.getElementById('we-met-zone-'+uid); if(el) el.classList.remove('drag-over');
     if (!_weDraftWidget || !_weDragCampoId) return;
-    if (_weDragCampoTipo !== 'metrica') { Toast.aviso('Apenas campos 123 (métrica) aqui.'); return; }
+    if (_weDragCampoTipo !== 'metrica') { Toast.aviso('Apenas campos 123 (métrica) aqui.'); _weDragCampoId=null;_weDragCampoTipo=null; return; }
     if (!Array.isArray(_weDraftWidget.metricas)) _weDraftWidget.metricas = [];
-    if (_weDraftWidget.metricas.indexOf(_weDragCampoId) < 0) _weDraftWidget.metricas.push(_weDragCampoId);
+    if (_weDraftWidget.metricas.some(function(m){return (m.id||m)===_weDragCampoId;})) { _weDragCampoId=null;_weDragCampoTipo=null; return; }
+    var cat2 = _CAMPO_CATALOGO[_weDraftWidget.dsId];
+    var meta2 = cat2 ? cat2.campos.find(function(c){return c.id===_weDragCampoId;}) : null;
+    _weDraftWidget.metricas.push({id:_weDragCampoId, label:meta2?meta2.label:_weDragCampoId, agregacao:'sum'});
     _weDragCampoId = null; _weDragCampoTipo = null;
     _weAtualizarCampoPanel(uid);
   }
@@ -45157,12 +45340,15 @@ var AnaliseEstudioUI = (function() {
     if (cpEl) {
       if (val && !isFiltro) {
         cpEl.style.display = '';
-        // Auto-popular dimensao e metrica padrão
+        // Auto-popular dimensao e metrica padrão como objetos
         var _c = _CAMPO_CATALOGO[val];
         if (_c) {
           _c.campos.forEach(function(c) {
-            if (c.tipo==='dimensao' && !_weDraftWidget.dimensoes.length) _weDraftWidget.dimensoes.push(c.id);
-            else if (c.tipo==='metrica' && _weDraftWidget.metricas.length < 2) _weDraftWidget.metricas.push(c.id);
+            var isDateC = c.formato==='data'||c.formato==='date';
+            if (c.tipo==='dimensao' && !_weDraftWidget.dimensoes.length)
+              _weDraftWidget.dimensoes.push({id:c.id, label:c.label, granularidade:isDateC?'mes':null});
+            else if (c.tipo==='metrica' && _weDraftWidget.metricas.length < 2)
+              _weDraftWidget.metricas.push({id:c.id, label:c.label, agregacao:'sum'});
           });
         }
         cpEl.innerHTML = _weRenderCampoPanel(uid, val, _weDraftWidget.dimensoes, _weDraftWidget.metricas);
@@ -45251,8 +45437,11 @@ var AnaliseEstudioUI = (function() {
     if (limEl) _weDraftWidget.limite = limEl.value ? (parseInt(limEl.value)||null) : null;
     // Fecha sidebar ou modal central
     var sb = document.getElementById('db-widget-sidebar');
-    if (sb && sb.classList.contains('aberta')) { sb.classList.remove('aberta'); }
-    else { var modal=document.querySelector('.modal-simples'); if(modal) modal.remove(); }
+    if (sb && sb.classList.contains('aberta')) {
+      sb.classList.remove('aberta');
+      var _root2 = document.getElementById('analise-studio-root');
+      if (_root2) _root2.classList.remove('we-sidebar-open');
+    } else { var modal=document.querySelector('.modal-simples'); if(modal) modal.remove(); }
     var cb=_weDraftCb, w=_weDraftWidget; _weDraftWidget=null; _weDraftCb=null;
     if (cb) cb(w);
   }
@@ -45413,12 +45602,19 @@ var AnaliseEstudioUI = (function() {
       body.innerHTML = '<div class="db-widget-loading"><span class="ms" style="font-size:14px;color:var(--primary);">sync</span> Atualizando…</div>';
       var onDone = function(linhas, colunas) {
         if (!body.isConnected) return;
+        // Agrega client-side se o widget tem dimensoes/metricas configurados
+        if ((w.dimensoes&&w.dimensoes.length)||(w.metricas&&w.metricas.length)) {
+          var ar = _weAgregarDados(linhas, colunas, w.dimensoes, w.metricas);
+          linhas = ar.linhas; colunas = ar.colunas;
+        }
         body.innerHTML = _renderWidgetBody(Object.assign({},w,{linhas:linhas,colunas:colunas}), false, true);
         _dashAtualizarBadgeFiltros();
       };
       if (!w.dsId) { onDone(w.linhas||[], w.colunas||['Label','Valor']); return; }
       var onData = function(r){ onDone(r&&r.ok&&r.data?r.data.linhas||[]:w.linhas||[], r&&r.ok&&r.data?r.data.colunas||['Label','Valor']:w.colunas||['Label','Valor']); };
       var onErr  = function(){ onDone(w.linhas||[], w.colunas||['Label','Valor']); };
+      var dimIds2 = (w.dimensoes||[]).map(function(d){return typeof d==='string'?d:d.id;});
+      var metIds2 = (w.metricas||[]).map(function(m){return typeof m==='string'?m:m.id;});
       // v2: widget com filtros[] declarativos — mescla com filtros globais do dashboard
       if (Array.isArray(w.filtros)) {
         var filtrosMerge = (w.filtros||[]).slice();
@@ -45426,14 +45622,13 @@ var AnaliseEstudioUI = (function() {
         if (fGlobal.ate)   filtrosMerge.push({ campo:'ate',   operador:'lte', valor:fGlobal.ate   });
         if (fGlobal.setor) filtrosMerge.push({ campo:'setor', operador:'eq',  valor:fGlobal.setor });
         var pV2 = { id:w.dsId, filtros:filtrosMerge };
-        if (w.ordenacao)      pV2.ordenacao = w.ordenacao;
-        if (w.limite != null) pV2.limite    = w.limite;
-        if (w.dimensoes)      pV2.dimensoes = w.dimensoes;
-        if (w.metricas)       pV2.metricas  = w.metricas;
+        if (w.ordenacao)       pV2.ordenacao = w.ordenacao;
+        if (w.limite != null)  pV2.limite    = w.limite;
+        if (dimIds2.length)    pV2.dimensoes = dimIds2;
+        if (metIds2.length)    pV2.metricas  = metIds2;
         if (w.dsId2) GAS.analise.cruzar(Object.assign({dsA:w.dsId,dsB:w.dsId2},fGlobal.setor?{setor:fGlobal.setor}:{}), onData, onErr);
         else         GAS.analise.importarDados(pV2, onData, onErr);
       } else {
-        // Legado: filtros flat ou ausentes — aplica filtros globais do dashboard
         var pLeg = Object.assign({ id:w.dsId }, fGlobal);
         if (w.filtros && typeof w.filtros === 'object') {
           if (w.filtros.de)    pLeg.de    = w.filtros.de    || pLeg.de;
@@ -45616,11 +45811,13 @@ var AnaliseEstudioUI = (function() {
     _renderFormaWidget, _renderAnalisesGaleria,
     _dashSetFiltroTempo, _dashRecarregarWidgets, _dashCarregarWidgetPreview,
     _dashSetFiltroSetor, _dashSetFiltroDatas,
-    // Dashboard Builder v2 — Fases 2, 3, 4
+    // Dashboard Builder v2 — Fases 2, 3, 4 + melhorias
     _weAbrirTab, _weAdicionarCampo, _weRemoverDimensao, _weRemoverMetrica,
     _weCampoDragStart, _weCampoDropDim, _weCampoDropMet,
     _weFiltrarCampos, _weAdicionarFiltroRow, _weRemoverFiltroRow,
     _weToggleOrdenacaoDir, _weInterativo,
+    _weToggleAggDropdown, _weToggleGranDropdown, _weSetAgregacao, _weSetGranularidade,
+    _weAgregarDados,
     _dashEmitirFiltro, _dashLimparFiltros, _dashCwClick,
     _renderFiltroWidget, _dashFiltroMultiChange
   };

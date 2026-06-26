@@ -39,7 +39,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s153c)**: **fix — Mapa: espaços duplicados entre níveis — elementos estáticos do SVG de espaços configurados em outro nível (ex: 24, 32, 38 no 1ºAndar) não eram ocultados no Térreo. `_outroNivelIds` + lógica em `_renderCustomSpaces`.** Deploy @1115.
+**Fase atual (s154)**: **fix/feat — Dashboard Builder v2: sidebar push-layout, múltiplas dimensões, função de agregação por campo (SUM/COUNT/AVG/MIN/MAX/DISTINCT), granularidade de data, agregação client-side.**
+
+**O que foi implementado em s154**:
+- **Sidebar push-layout**: ao abrir o editor, canvas recua `368px` via `#analise-studio-root.we-sidebar-open { padding-right:368px }` — dashboard visível durante edição.
+- **Múltiplas dimensões**: zona Dimensões aceita N campos; click e drag adicionam sem substituir.
+- **Modelo de objetos**: `dimensoes[]` e `metricas[]` agora armazenam `{id, label, granularidade?}` / `{id, label, agregacao}`. Strings legadas normalizadas ao abrir.
+- **Função de agregação**: badge métrica exibe `[SUM ▾]` → dropdown SUM/COUNT/DISTINCT/AVG/MIN/MAX. Badge dimensão date exibe `[mes ▾]` → granularidade (Dia/Semana/Mês/Trimestre/Ano).
+- **Agregação client-side `_weAgregarDados`**: GROUP BY por dimensões + função selecionada. Aplicado no preview do editor e no reload do dashboard view.
+- **CSS**: `.we-badge-agg`, `.we-badge-gran`, `.we-inline-dd`, `.we-sidebar-open`.
+
+**Fase anterior (s153c)**: **fix — Mapa: espaços duplicados entre níveis — elementos estáticos do SVG de espaços configurados em outro nível (ex: 24, 32, 38 no 1ºAndar) não eram ocultados no Térreo. `_outroNivelIds` + lógica em `_renderCustomSpaces`.** Deploy @1115.
 
 **O que foi implementado em s153**:
 - **Fase 2 — Widget Editor Data Studio**: `_abrirWidgetEditor` reescrito com abas "Dados" e "Estilo". Aba Dados: campo panel com chips ABC (dimensão) e 123 (métrica) por dataset, click-to-add e HTML5 drag-and-drop para zonas Dimensão (1) e Métricas (n), filtros v2 dinâmicos (`campo|operador|valor`), ordenar por (campo + asc/desc), Limite (Top N), checkbox Interativo. Backward compat: widgets legados sem `dimensoes`/`metricas` auto-populam de `_CAMPO_CATALOGO`; `filtros` flat `{de,ate,setor}` normalizam para array v2.
