@@ -1,5 +1,5 @@
 # AUDITORIA ERP Cultural SaaS v2 — Roteiro Vivo
-> Deploy atual: s155c @1125 feat: Editor espaços sidebar dimensões reais por lado/diâmetro · s155b @1122 · s155 @1121 · s154b @1120 · s154 @1119 · s153c @1115 · s153b @1114 · s153 @1113 · s152b @1112 · s152 @1111 · s151 @1110 · s150 @1095 (feat: Estúdio de Análises Series Builder — múltiplas séries com filtros independentes, merge multi-coluna, Widget Editor com filtros de data/setor por widget) · s149 @1094 (feat: Quadros mind map evoluído — toolbar, colapsar/expandir, arraste manual, setas fine-tune) · s148 @1094 (feat: Biblioteca dc-icon 156 SVG + logos institucionais + web component) · s147 @1092 (fix: flyout lápis/marcador/pincel expandido fora da toolbar) · s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036
+> Deploy atual: s156 @1126 feat: Config Mapa — painel "Lados (m)" para polígonos · s155c @1125 feat: Editor espaços sidebar dimensões reais por lado/diâmetro · s155b @1122 · s155 @1121 · s154b @1120 · s154 @1119 · s153c @1115 · s153b @1114 · s153 @1113 · s152b @1112 · s152 @1111 · s151 @1110 · s150 @1095 (feat: Estúdio de Análises Series Builder — múltiplas séries com filtros independentes, merge multi-coluna, Widget Editor com filtros de data/setor por widget) · s149 @1094 (feat: Quadros mind map evoluído — toolbar, colapsar/expandir, arraste manual, setas fine-tune) · s148 @1094 (feat: Biblioteca dc-icon 156 SVG + logos institucionais + web component) · s147 @1092 (fix: flyout lápis/marcador/pincel expandido fora da toolbar) · s146 @1091 (fix crítico: AnaliseEstudioUI IIFE crash — todos botões restaurados; Dashboard: sidebar lateral, dados ao vivo, filtros setor+datas) · s145 @1087 (Estúdio de Análises v6: filtro de período, 22 sugestões, catálogo 35 datasets, fix definitivo onclick) · s144 @1083 (SVG Medidor/Radar/Combinado; fix onclick sugestões por índice) · s143 @1079 (Estúdio de Análises v5: Dashboard modernizado — drag & drop, 7 tipos widget, templates, sugestões, aba Análises removida) · s142 @1073 · s141 @1072 · s140 @1071 · s139 @1070 · s138 @1069 · s137 @1066 · s136 @1065 · s135 @1063 · s134 @1054 · s133 @1053 · s132 @1052 · s131 @1051 · s130 @1050 · s129 @1049 · s128 @1048 · s127 @1045 · s126 @1044 · s125 @1037 · s118 @1036
 > Claude dirige a auditoria — não perguntar qual módulo seguir.
 
 ---
@@ -642,7 +642,27 @@
 
 ---
 
-## HANDOFF ATUAL — SESSÃO 123 (2026-06-26)
+## HANDOFF ATUAL — SESSÃO 124 (2026-06-26)
+
+### Estado atual: Feat — Config Mapa: painel "Lados (m)" para polígonos — Deploy @1126
+
+### O que foi feito nesta sessão (s156)
+| Arquivo | O que foi implementado |
+|---|---|
+| index.html | **`_ladosBlock`** (`InfraConfigMapaUI._renderSidebarEdicao`): seção "Lados (m)" aparece quando `forma==='livre'` + escala ativa; grid 2 colunas com input por aresta numerada `1→2`…`N→1` |
+| index.html | **`_onLadoChange(idx, val)`**: escala a aresta simetricamente a partir do ponto médio — ambos os vértices movem pela metade do delta em px; chama `_atualizarHandles` + `_atualizarLadosInputs` |
+| index.html | **`_atualizarLadosInputs()`**: atualiza todos os inputs de lado sem rebuild do sidebar; chamada por `_atualizarInputsInline` (invocada no mouseup de drag de vértice) |
+
+### Smoke test esperado
+- Infraestrutura → Configurações → Mapa → garantir escala configurada (1m=100un).
+- Clicar num espaço polígono (qualquer forma não-retângulo/círculo) → painel lateral mostra seção "Lados (m)" com N inputs.
+- Alterar um input (ex.: mudar 0.63 para 1.00) → forma se ajusta no mapa com a nova medida naquela aresta.
+- Arrastar um vértice diretamente → inputs de lados adjacentes atualizam automaticamente.
+- Console F12: zero TypeError.
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 123 (2026-06-26)
 
 ### Estado atual: Fix/feat — Reservas de Espaço — pendente deploy
 
