@@ -2451,7 +2451,25 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF — SESSÃO 152b (2026-06-26) → PRÓXIMA SESSÃO
+## HANDOFF — SESSÃO 153 (2026-06-26) → PRÓXIMA SESSÃO
+
+### Estado: Deploy pendente · feat: Dashboard Builder v2 Fases 2+3+4
+
+### O que foi feito nesta sessão (s153)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | feat: Fase 2 Widget Editor | `_abrirWidgetEditor` reescrito com abas Dados/Estilo. Campo panel com chips ABC/123, drag-and-drop, zonas Dimensão/Métricas, filtros v2 dinâmicos, ordenação, limite, interativo. Backward compat total. |
+| pendente | feat: Fase 3 Cross-Filtering | `_dashFiltrosAtivos[]`, `_dashEmitirFiltro`, `_dashAplicarFiltrosGlobais`, `_dashCwClick`; `data-cv` em SVG e tabelas; badge no toolbar; CSS `.has-sel/.cv-sel`. |
+| pendente | feat: Fase 4 Widget Filtro | Tipo `filtro` com modos select/multi_select/radio/range_data; `_renderFiltroWidget`; valores únicos carregados via `GAS.analise.importarDados` com cache; `_dashFiltroMultiChange` para multi. |
+
+### Pendentes / próxima ação
+- Executar `clasp push && clasp deploy` para publicar s153
+- Smoke test: abrir dashboard view → clicar em barra de gráfico → ver badge de cross-filter → adicionar widget tipo filtro → selecionar valor → outros widgets atualizam
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 152b (2026-06-26) → 153
 
 ### Estado: Deploy pendente · feat: ReservasUI autocomplete de Ações + DB v2 Fase 1
 
@@ -2460,11 +2478,6 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 | Deploy | Fase | O que foi implementado |
 |---|---|---|
 | pendente | feat: autocomplete ações | `ReservasUI`: `_carregarAcoesCache`, `_filtrarAcoes`, `_selecionarAcao`, `_fecharDropdownAcoes` — vinculação de ação via cadastro, não texto livre |
-
-### Pendentes / próxima ação
-- Executar `clasp push && clasp deploy` para publicar
-- Smoke test: autocomplete de ações no formulário de reserva
-- Implementar **Fase 2 do Dashboard Builder** — Widget Editor com painel de campos
 
 ---
 

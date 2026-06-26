@@ -39,7 +39,16 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s152b)**: **feat — ReservasUI: autocomplete de Ações (vinculação via cadastro); inclui s152 — Dashboard Builder v2 Fase 1.**
+**Fase atual (s153)**: **feat — Dashboard Builder v2 Fases 2, 3 e 4: Widget Editor com painel de campos Data Studio, cross-filtering entre widgets e widget tipo 'filtro'.**
+
+**O que foi implementado em s153**:
+- **Fase 2 — Widget Editor Data Studio**: `_abrirWidgetEditor` reescrito com abas "Dados" e "Estilo". Aba Dados: campo panel com chips ABC (dimensão) e 123 (métrica) por dataset, click-to-add e HTML5 drag-and-drop para zonas Dimensão (1) e Métricas (n), filtros v2 dinâmicos (`campo|operador|valor`), ordenar por (campo + asc/desc), Limite (Top N), checkbox Interativo. Backward compat: widgets legados sem `dimensoes`/`metricas` auto-populam de `_CAMPO_CATALOGO`; `filtros` flat `{de,ate,setor}` normalizam para array v2.
+- **Fase 3 — Cross-Filtering**: `_dashFiltrosAtivos[]` como estado global; `_dashEmitirFiltro(widgetId,campo,valor)` toggle por widget+campo; `_dashAplicarFiltrosGlobais()` re-busca todos widgets interativos com filtros mesclados; elementos SVG (`rect/path/circle`) e `<tr>` de tabela recebem `data-cv` para delegação via `.db-cw`; badge "Filtros: N" no toolbar do dashboard view com × para limpar; `.has-sel [data-cv]:not(.cv-sel) { opacity:.35 }` para feedback visual.
+- **Fase 4 — Widget tipo 'filtro'**: novo tipo no `_DB_TIPOS_EXTRA`; modelo `{ filtroConfig:{campo,modo,labelCustom} }`; editor no widget sidebar (dataset → campo de dimensão → modo → label); renderização em 4 modos: `select`, `multi_select` (checkboxes), `radio` e `range_data` (date inputs de/até); valores únicos carregados via `GAS.analise.importarDados` com cache em `w._valoresCache`; emite via `_dashEmitirFiltro` (inclusive `operador:'in'` para multi_select).
+- **CSS**: `.we-campo-chip`, `.we-campo-badge`, `.we-campo-zone`, `.we-filtro-row`, `.db-cw`, `.cv-sel`, `.dash-cross-badge`, `.db-filtro-ctl`, `.db-filtro-ctl-multi`, `.db-filtro-ctl-radio`.
+- **Exports**: todas as novas funções adicionadas ao `return{}` do módulo `AnaliseEstudioUI`.
+
+**Fase anterior (s152b)**: **feat — ReservasUI: autocomplete de Ações (vinculação via cadastro); inclui s152 — Dashboard Builder v2 Fase 1.**
 
 **O que foi implementado em s152**:
 - **`_CAMPO_CATALOGO` (frontend)**: objeto tipado com todos os 35 datasets do `_CATALOGO_LOCAL`, mapeando cada `dsId` → `{ label, modulo, campos:[{id, label, tipo:'dimensao'|'metrica', formato}] }`. Base para o Widget Editor v2 (Fase 2) que exibirá o painel de seleção de campos estilo Data Studio.
