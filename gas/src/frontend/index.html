@@ -45011,9 +45011,13 @@ var AnaliseEstudioUI = (function() {
       var icon = c.tipo==='dimensao'?'ABC':'123';
       var iStyle = c.tipo==='dimensao'?'color:#4f46e5;':'color:#059669;';
       var safeId = JSON.stringify(c.id).replace(/"/g,"'"), safeTipo = JSON.stringify(c.tipo).replace(/"/g,"'");
+      // ABC: clique abre mini-menu (Dimensão | Métrica COUNT); 123: clique vai direto p/ Métricas
+      var clickFn = c.tipo==='dimensao'
+        ? 'AnaliseEstudioUI._weChipMenuDim(event,\''+uid+'\','+safeId+')'
+        : 'AnaliseEstudioUI._weAdicionarCampo(\''+uid+'\','+safeId+','+safeTipo+')';
       return '<div class="we-campo-chip'+(sel?' sel':'')+'" draggable="true" data-campo-id="'+c.id+'" data-campo-tipo="'+c.tipo+'" '+
         'ondragstart="AnaliseEstudioUI._weCampoDragStart(event,'+safeId+','+safeTipo+')" '+
-        'onclick="AnaliseEstudioUI._weAdicionarCampo(\''+uid+'\','+safeId+','+safeTipo+')" title="'+_esc(c.label)+' — clique para adicionar">' +
+        'onclick="'+clickFn+'" title="'+_esc(c.label)+' — clique para adicionar">' +
         '<span style="'+iStyle+'font-weight:700;font-size:9px;font-family:monospace;width:24px;display:inline-block;text-align:center;">'+icon+'</span>' +
         '<span>'+_esc(c.label)+'</span>' +
         (c.formato?'<span style="font-size:9px;color:var(--text2);margin-left:auto;padding-left:4px;">'+_esc(c.formato)+'</span>':'') +
@@ -45057,6 +45061,43 @@ var AnaliseEstudioUI = (function() {
         '</div>' +
       '</div>' +
     '</div>';
+  }
+
+  // Mini-menu ao clicar em chip ABC: Dimensão ou Métrica (COUNT)
+  function _weChipMenuDim(e, uid, campoId) {
+    e.stopPropagation();
+    var existingDd = document.getElementById('we-chip-menu-'+uid+'-'+campoId.replace(/[^a-z0-9]/gi,'-'));
+    if (existingDd) { existingDd.remove(); return; }
+    var chip = e.currentTarget; if (!chip) return;
+    var dd = document.createElement('div');
+    dd.className = 'we-inline-dd'; dd.id = 'we-chip-menu-'+uid+'-'+campoId.replace(/[^a-z0-9]/gi,'-');
+    dd.style.cssText = 'left:0;top:100%;min-width:160px;';
+    var safeUid = uid, safeCampoId = JSON.stringify(campoId).replace(/"/g,"'");
+    [
+      {l:'➕ Dimensão',  fn: function(){ AnaliseEstudioUI._weAdicionarCampo(safeUid, campoId, 'dimensao'); dd.remove(); }},
+      {l:'🔢 Métrica — COUNT', fn: function(){ AnaliseEstudioUI._weAdicionarCampoComoMet(safeUid, campoId, 'count'); dd.remove(); }},
+    ].forEach(function(item) {
+      var btn = document.createElement('button');
+      btn.textContent = item.l; btn.setAttribute('data-bg-skip','1');
+      btn.onclick = function(ev){ ev.stopPropagation(); item.fn(); };
+      dd.appendChild(btn);
+    });
+    chip.style.position = 'relative';
+    chip.appendChild(dd);
+    setTimeout(function(){
+      document.addEventListener('click', function _closeCmDd(ev){ if(!dd.contains(ev.target)){dd.remove();document.removeEventListener('click',_closeCmDd);} });
+    }, 0);
+  }
+
+  function _weAdicionarCampoComoMet(uid, campoId, agg) {
+    if (!_weDraftWidget) return;
+    var cat = _CAMPO_CATALOGO[_weDraftWidget.dsId];
+    var meta = cat ? cat.campos.find(function(c){return c.id===campoId;}) : null;
+    var label = meta ? meta.label : campoId;
+    if (!Array.isArray(_weDraftWidget.metricas)) _weDraftWidget.metricas = [];
+    if (_weDraftWidget.metricas.some(function(m){return (m.id||m)===campoId;})) return;
+    _weDraftWidget.metricas.push({id:campoId, label:label, agregacao:agg||'count'});
+    _weAtualizarCampoPanel(uid);
   }
 
   function _weToggleAggDropdown(uid, idx) {
@@ -45125,14 +45166,19 @@ var AnaliseEstudioUI = (function() {
     var meta = cat ? cat.campos.find(function(c){return c.id===campoId;}) : null;
     var label = meta ? meta.label : campoId;
     var isDate = meta && (meta.formato==='data'||meta.formato==='date');
+    var campoTipo = meta ? meta.tipo : tipo; // tipo real do campo no catálogo
     if (tipo === 'dimensao') {
+      // Clicou no chip ABC — adiciona a Dimensões
       if (!Array.isArray(_weDraftWidget.dimensoes)) _weDraftWidget.dimensoes = [];
       if (_weDraftWidget.dimensoes.some(function(d){return (d.id||d)===campoId;})) return;
       _weDraftWidget.dimensoes.push({id:campoId, label:label, granularidade:isDate?'mes':null});
     } else {
+      // Clicou no chip 123 — adiciona a Métricas
+      // ABC em Métricas → COUNT por padrão (contar ocorrências); 123 → SUM
       if (!Array.isArray(_weDraftWidget.metricas)) _weDraftWidget.metricas = [];
       if (_weDraftWidget.metricas.some(function(m){return (m.id||m)===campoId;})) return;
-      _weDraftWidget.metricas.push({id:campoId, label:label, agregacao:'sum'});
+      var defaultAgg = campoTipo === 'dimensao' ? 'count' : 'sum';
+      _weDraftWidget.metricas.push({id:campoId, label:label, agregacao:defaultAgg});
     }
     _weAtualizarCampoPanel(uid);
   }
@@ -45174,12 +45220,13 @@ var AnaliseEstudioUI = (function() {
     e.preventDefault();
     var el = document.getElementById('we-met-zone-'+uid); if(el) el.classList.remove('drag-over');
     if (!_weDraftWidget || !_weDragCampoId) return;
-    if (_weDragCampoTipo !== 'metrica') { Toast.aviso('Apenas campos 123 (métrica) aqui.'); _weDragCampoId=null;_weDragCampoTipo=null; return; }
     if (!Array.isArray(_weDraftWidget.metricas)) _weDraftWidget.metricas = [];
     if (_weDraftWidget.metricas.some(function(m){return (m.id||m)===_weDragCampoId;})) { _weDragCampoId=null;_weDragCampoTipo=null; return; }
     var cat2 = _CAMPO_CATALOGO[_weDraftWidget.dsId];
     var meta2 = cat2 ? cat2.campos.find(function(c){return c.id===_weDragCampoId;}) : null;
-    _weDraftWidget.metricas.push({id:_weDragCampoId, label:meta2?meta2.label:_weDragCampoId, agregacao:'sum'});
+    // ABC → COUNT por padrão (contar ocorrências de texto); 123 → SUM
+    var defaultAgg2 = _weDragCampoTipo === 'dimensao' ? 'count' : 'sum';
+    _weDraftWidget.metricas.push({id:_weDragCampoId, label:meta2?meta2.label:_weDragCampoId, agregacao:defaultAgg2});
     _weDragCampoId = null; _weDragCampoTipo = null;
     _weAtualizarCampoPanel(uid);
   }
@@ -45817,7 +45864,7 @@ var AnaliseEstudioUI = (function() {
     _weFiltrarCampos, _weAdicionarFiltroRow, _weRemoverFiltroRow,
     _weToggleOrdenacaoDir, _weInterativo,
     _weToggleAggDropdown, _weToggleGranDropdown, _weSetAgregacao, _weSetGranularidade,
-    _weAgregarDados,
+    _weAgregarDados, _weChipMenuDim, _weAdicionarCampoComoMet,
     _dashEmitirFiltro, _dashLimparFiltros, _dashCwClick,
     _renderFiltroWidget, _dashFiltroMultiChange
   };

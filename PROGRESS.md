@@ -39,7 +39,14 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s154)**: **fix/feat — Dashboard Builder v2: sidebar push-layout, múltiplas dimensões, função de agregação por campo (SUM/COUNT/AVG/MIN/MAX/DISTINCT), granularidade de data, agregação client-side.**
+**Fase atual (s154b)**: **feat — Dashboard Builder: campos ABC em Métricas via drag ou mini-menu (COUNT por padrão); drag sem restrição de tipo entre zonas.**
+
+**O que foi implementado em s154b**:
+- **ABC → Métricas**: drag de campo ABC para a zona Métricas não é mais bloqueado — agrega com COUNT por padrão.
+- **Mini-menu no chip ABC**: clicar num chip ABC abre dropdown "Dimensão" ou "Métrica — COUNT". Chips 123 continuam indo direto para Métricas com SUM.
+- **`_weChipMenuDim`** e **`_weAdicionarCampoComoMet`**: funções novas que gerenciam o mini-menu e a adição de ABC como métrica.
+
+**Fase anterior (s154)**: **fix/feat — Dashboard Builder v2: sidebar push-layout, múltiplas dimensões, função de agregação por campo (SUM/COUNT/AVG/MIN/MAX/DISTINCT), granularidade de data, agregação client-side.**
 
 **O que foi implementado em s154**:
 - **Sidebar push-layout**: ao abrir o editor, canvas recua `368px` via `#analise-studio-root.we-sidebar-open { padding-right:368px }` — dashboard visível durante edição.

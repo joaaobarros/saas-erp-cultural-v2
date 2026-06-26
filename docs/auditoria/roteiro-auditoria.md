@@ -2451,9 +2451,22 @@ Motor flexível de Ponto/AFD — backend completo (Fases 1-4). Zero alterações
 
 ---
 
-## HANDOFF — SESSÃO 154 (2026-06-26) → PRÓXIMA SESSÃO
+## HANDOFF — SESSÃO 154b (2026-06-26) → PRÓXIMA SESSÃO
 
-### Estado: Deploy pendente · fix/feat: Dashboard Builder v2 — sidebar push, múltiplas dims, agregação por campo
+### Estado: Deploy pendente · feat: ABC em Métricas, mini-menu chip, drag livre
+
+### O que foi feito nesta sessão (s154b)
+
+| Deploy | Fase | O que foi implementado |
+|---|---|---|
+| pendente | feat: ABC→Métricas | drag de campo ABC para zona Métricas sem restrição — COUNT por padrão |
+| pendente | feat: mini-menu chip | clicar chip ABC abre "Dimensão" ou "Métrica — COUNT" |
+
+---
+
+## HANDOFF ANTERIOR — SESSÃO 154 (2026-06-26) → 154b
+
+### Estado: Deploy @1117 · fix/feat: Dashboard Builder v2 — sidebar push, múltiplas dims, agregação por campo
 
 ### O que foi feito nesta sessão (s154)
 
