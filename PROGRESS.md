@@ -39,7 +39,7 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s157b)**: **fix — Dashboard Builder: `_weToggleAlerta` implementada; `_weConfirmar` completo (semáforo, bullet, tabela); renderer bullet usa `bulletConfig.formato`.** Deploy pendente.
+**Fase atual (s157b)**: **fix — Dashboard Builder: `_weToggleAlerta` implementada; `_weConfirmar` completo (semáforo, bullet, tabela); renderer bullet usa `bulletConfig.formato`.** Deploy @1132.
 
 **O que foi implementado em s157b**:
 - **`_weToggleAlerta(uid)`** (nova função): toggle de visibilidade do bloco `we-kpi-alerta-cfg-*` ao marcar/desmarcar o checkbox semáforo.
