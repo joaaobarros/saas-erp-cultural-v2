@@ -45641,28 +45641,69 @@ var AnaliseEstudioUI = (function() {
         '</div>' +
 
         // Cor principal
-        '<div id="we-cor-wrap-'+uid+'" style="display:'+(tipoAtual==='grafico'||tipoAtual==='kpi'?'':'none')+';">' +
+        '<div id="we-cor-wrap-'+uid+'" style="display:'+(tipoAtual==='grafico'||tipoAtual==='kpi'||tipoAtual==='sparkline_kpi'||tipoAtual==='bullet'?'':'none')+';">' +
           '<div class="analise-section-title">Cor principal</div>' +
           '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">'+swatches+'</div>' +
         '</div>' +
 
-        // KPI
-        '<div id="we-kpi-'+uid+'" style="display:'+(tipoAtual==='kpi'?'':'none')+';">' +
+        // KPI (shared by kpi + sparkline_kpi)
+        '<div id="we-kpi-'+uid+'" style="display:'+(['kpi','sparkline_kpi'].indexOf(tipoAtual)>=0?'':'none')+';">' +
           '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
             '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Agregação</label>' +
               '<select id="we-kpi-agreg-'+uid+'" class="form-control">'+kpiAgregOpts+'</select></div>' +
             '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Formato</label>' +
               '<select id="we-kpi-fmt-'+uid+'" class="form-control">'+kpiFmtOpts+'</select></div>' +
           '</div>' +
+          // Semáforo (traffic-light)
+          '<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:8px;cursor:pointer;">' +
+              '<input type="checkbox" id="we-kpi-alerta-'+uid+'"'+(kpiCfg.alertaAtivo?' checked':'')+' onchange="AnaliseEstudioUI._weToggleAlerta(\''+uid+'\')">' +
+              '<span>Semáforo (verde / amarelo / vermelho)</span>' +
+            '</label>' +
+            '<div id="we-kpi-alerta-cfg-'+uid+'" style="display:'+(kpiCfg.alertaAtivo?'':'none')+';">' +
+              '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+                '<div class="form-group" style="margin:0;flex:1;"><label class="form-label" style="font-size:10px;">Sentido bom</label>' +
+                  '<select id="we-kpi-sentido-'+uid+'" class="form-control" style="font-size:12px;">' +
+                    '<option value="up"'+(kpiCfg.alertaSentido!=='down'?' selected':'')+'">▲ Maior é melhor</option>' +
+                    '<option value="down"'+(kpiCfg.alertaSentido==='down'?' selected':'')+'">▼ Menor é melhor</option>' +
+                  '</select></div>' +
+                '<div class="form-group" style="margin:0;flex:1;"><label class="form-label" style="font-size:10px;color:#d97706;">⚠ Mínimo aceitável</label>' +
+                  '<input id="we-kpi-alertabaixo-'+uid+'" type="number" class="form-control" style="font-size:12px;" value="'+(kpiCfg.alertaBaixo!=null?kpiCfg.alertaBaixo:'')+'" placeholder="ex: 50"></div>' +
+                '<div class="form-group" style="margin:0;flex:1;"><label class="form-label" style="font-size:10px;color:#16a34a;">✓ Meta atingida</label>' +
+                  '<input id="we-kpi-alertaalto-'+uid+'" type="number" class="form-control" style="font-size:12px;" value="'+(kpiCfg.alertaAlto!=null?kpiCfg.alertaAlto:'')+'" placeholder="ex: 100"></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Bullet Chart config
+        '<div id="we-bullet-'+uid+'" style="display:'+(tipoAtual==='bullet'?'':'none')+';">' +
+          '<div class="analise-section-title">Bullet Chart</div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
+            '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Formato</label>' +
+              '<select id="we-bullet-fmt-'+uid+'" class="form-control" style="font-size:12px;">' +
+                ['numero','moeda','percent'].map(function(f){var l={numero:'Número',moeda:'Moeda (R$)',percent:'Porcentagem'}[f];return '<option value="'+f+'"'+((kpiCfg.formato===f)?' selected':'')+'>'+l+'</option>';}).join('') +
+              '</select></div>' +
+            '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Valor máximo</label>' +
+              '<input id="we-bullet-max-'+uid+'" type="number" class="form-control" style="font-size:12px;" value="'+(wDraft.bulletConfig&&wDraft.bulletConfig.maximo?wDraft.bulletConfig.maximo:'')+'" placeholder="Auto"></div>' +
+          '</div>' +
+          '<p style="font-size:11px;color:var(--text2);margin:0;">Dados: Coluna1=Rótulo, Coluna2=Realizado, Coluna3=Meta</p>' +
         '</div>' +
 
         // Tabela
         '<div id="we-tab-'+uid+'" style="display:'+(tipoAtual==='tabela'?'':'none')+';">' +
-          '<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Máx. linhas exibidas</label>' +
-            '<input id="we-tabmax-'+uid+'" type="number" class="form-control" value="'+(tblCfg.maxLinhas||10)+'" min="3" max="100"></div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
+            '<div class="form-group" style="margin:0;flex:1;"><label class="form-label">Máx. linhas</label>' +
+              '<input id="we-tabmax-'+uid+'" type="number" class="form-control" value="'+(tblCfg.maxLinhas||10)+'" min="3" max="200"></div>' +
+          '</div>' +
+          '<div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="we-tab-heatmap-'+uid+'"'+(tblCfg.heatmapAtivo?' checked':'')+'>Heatmap nas colunas numéricas</label>' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="we-tab-sort-'+uid+'"'+(tblCfg.sortavel?' checked':'')+'>Ordenação por clique no cabeçalho</label>' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="we-tab-csv-'+uid+'"'+(tblCfg.exportarCSV?' checked':'')+'>Botão exportar CSV</label>' +
+          '</div>' +
         '</div>' +
 
-        '<p id="we-estilo-vazio-'+uid+'" class="muted-text" style="font-size:12px;'+((tipoAtual==='grafico'||tipoAtual==='kpi'||tipoAtual==='tabela')?'display:none;':'')+'">Nenhuma configuração de estilo para este tipo.</p>' +
+        '<p id="we-estilo-vazio-'+uid+'" class="muted-text" style="font-size:12px;'+(['grafico','kpi','sparkline_kpi','bullet','tabela'].indexOf(tipoAtual)>=0?'display:none;':'')+'">Nenhuma configuração de estilo para este tipo.</p>' +
       '</div>' + // /we-pane-estilo
 
       '</div>'; // /we-modal
@@ -53770,7 +53811,7 @@ var BiDemograficoUI = (function () {
       }
       html += '</div>';
       if (faixasGlobal['Muito Baixo'] + faixasGlobal['Baixo'] > totalRegs * 0.5) {
-        html += '<p style="font-size:11px;color:#dc2626;margin-top:8px;font-weight:600;">⚠ Maioria reside em territórios de baixo desenvolvimento humano — dado relevante para planejamento de ações e captação de recursos.</p>';
+        html += '<p style="font-size:11px;color:#dc2626;margin-top:8px;font-weight:600;">⚠ Maioria reside em territórios de baixo desenvolvimento humano.</p>';
       }
       html += '<p style="font-size:10px;color:var(--text3);margin-top:6px;">Fonte: Atlas Brasil 2013, PNUD/IPEA/FJP. IDH atualizado conforme disponibilidade de dados públicos.</p>';
       html += '</div>';

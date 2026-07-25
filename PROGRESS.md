@@ -39,7 +39,17 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s156)**: **feat — Config Mapa: painel "Lados (m)" para polígonos — edição manual do comprimento real de cada aresta.** Deploy @1126.
+**Fase atual (s157)**: **feat — Dashboard Builder: painel de estilo expandido para sparkline_kpi e bullet; semáforo KPI; tabela com heatmap/sort/CSV.** Deploy pendente.
+
+**O que foi implementado em s157**:
+- **Painel "Cor principal"**: agora visível também para `sparkline_kpi` e `bullet` (antes só para `grafico` e `kpi`).
+- **Painel KPI compartilhado**: seção `we-kpi-*` ativa para `kpi` e `sparkline_kpi`.
+- **Semáforo (traffic-light)**: checkbox "Semáforo (verde/amarelo/vermelho)" no painel KPI — ao ativar, exibe campos "Sentido bom" (▲/▼), "Mínimo aceitável" e "Meta atingida". Persiste em `kpiCfg.alertaAtivo/alertaSentido/alertaBaixo/alertaAlto`. Toggle via `_weToggleAlerta(uid)`.
+- **Bullet Chart config**: nova seção `we-bullet-*` com select de formato (número/moeda/porcentagem) e input "Valor máximo". Instrução de uso dos dados (Coluna1=Rótulo, Coluna2=Realizado, Coluna3=Meta).
+- **Tabela aprimorada**: max linhas aumentado para 200; 3 novos checkboxes: "Heatmap nas colunas numéricas", "Ordenação por clique no cabeçalho" e "Botão exportar CSV". IDs `we-tab-heatmap-*`, `we-tab-sort-*`, `we-tab-csv-*`.
+- **BiDemografico**: texto de alerta IDH encurtado (removida cauda "dado relevante para…").
+
+**Fase anterior (s156)**: **feat — Config Mapa: painel "Lados (m)" para polígonos — edição manual do comprimento real de cada aresta.** Deploy @1126.
 
 **O que foi implementado em s156**:
 - **Seção "Lados (m)" (`index.html` — `InfraConfigMapaUI`)**: aparece no painel de edição lateral quando o espaço é polígono (`forma === 'livre'`) e há escala configurada (`pixPorM`). Exibe grid 2 colunas com um input por aresta, numerados `1→2`, `2→3`, … `N→1`, valor em metros com precisão 0,01 m.
