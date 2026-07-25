@@ -39,7 +39,15 @@ Após qualquer nova implementação ou fase concluída, **é obrigatório testar
 
 ## ⚡ RETOMANDO AGORA? LEIA ISTO PRIMEIRO
 
-**Fase atual (s157)**: **feat — Dashboard Builder: painel de estilo expandido para sparkline_kpi e bullet; semáforo KPI; tabela com heatmap/sort/CSV.** Deploy pendente.
+**Fase atual (s157b)**: **fix — Dashboard Builder: `_weToggleAlerta` implementada; `_weConfirmar` completo (semáforo, bullet, tabela); renderer bullet usa `bulletConfig.formato`.** Deploy pendente.
+
+**O que foi implementado em s157b**:
+- **`_weToggleAlerta(uid)`** (nova função): toggle de visibilidade do bloco `we-kpi-alerta-cfg-*` ao marcar/desmarcar o checkbox semáforo.
+- **`_weConfirmar` expandido**: agora lê e persiste `kpiConfig.alertaAtivo/alertaSentido/alertaBaixo/alertaAlto`, `bulletConfig.formato/maximo`, `tabelaConfig.heatmapAtivo/sortavel/exportarCSV`.
+- **Fix renderer bullet**: `bFmt` agora prioriza `bulletConfig.formato` (novo) com fallback para `kpiConfig.formato` (retrocompat).
+- **`_weToggleAlerta` exportada** no objeto público de `AnaliseEstudioUI`.
+
+**Fase anterior (s157)**: **feat — Dashboard Builder: painel de estilo expandido para sparkline_kpi e bullet; semáforo KPI; tabela com heatmap/sort/CSV.** Deploy @1130.
 
 **O que foi implementado em s157**:
 - **Painel "Cor principal"**: agora visível também para `sparkline_kpi` e `bullet` (antes só para `grafico` e `kpi`).

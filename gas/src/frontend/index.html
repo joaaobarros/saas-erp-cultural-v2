@@ -44984,7 +44984,7 @@ var AnaliseEstudioUI = (function() {
         if (!bRows.length) return '<p class="muted-text" style="text-align:center;padding:20px;font-size:12px;">Sem dados. Configure a fonte.</p>';
         var bMaxV=Number(bCfg.maximo)||Math.max.apply(null,bRows.map(function(r){return Math.max(Number(r[1])||0,Number(r[2])||0);}).concat([100]));
         var bCor=(w.config&&w.config.corPrimaria)||'#4f46e5';
-        var bFmt=(w.kpiConfig&&w.kpiConfig.formato)||'numero';
+        var bFmt=(bCfg.formato)||(w.kpiConfig&&w.kpiConfig.formato)||'numero';
         var bHtml='<div class="db-bullet-wrap">';
         bRows.forEach(function(row){
           var lbl=String(row[0]||''),real=Number(row[1])||0,meta=row[2]!=null?Number(row[2]):null;
@@ -46262,6 +46262,12 @@ var AnaliseEstudioUI = (function() {
     }, function(){ Toast.erro('Erro ao cruzar.'); });
   }
 
+  function _weToggleAlerta(uid) {
+    var chk=document.getElementById('we-kpi-alerta-'+uid);
+    var cfg=document.getElementById('we-kpi-alerta-cfg-'+uid);
+    if (chk && cfg) cfg.style.display=chk.checked?'':'none';
+  }
+
   function _weConfirmar(uid) {
     if (!_weDraftWidget) { var m=document.querySelector('.modal-simples'); if(m) m.remove(); return; }
     function gv(id){ var e=document.getElementById(id); return e?(e.type==='checkbox'?e.checked:e.value):null; }
@@ -46270,13 +46276,27 @@ var AnaliseEstudioUI = (function() {
     // Gráfico
     if (!_weDraftWidget.config) _weDraftWidget.config={};
     var gtEl=document.getElementById('we-grtipo-'+uid); if(gtEl) _weDraftWidget.config.tipo=gtEl.value;
-    // KPI
+    // KPI + sparkline_kpi (semáforo)
     if (!_weDraftWidget.kpiConfig) _weDraftWidget.kpiConfig={};
     var agEl=document.getElementById('we-kpi-agreg-'+uid); if(agEl) _weDraftWidget.kpiConfig.agregacao=agEl.value;
     var fmEl=document.getElementById('we-kpi-fmt-'+uid);  if(fmEl) _weDraftWidget.kpiConfig.formato=fmEl.value;
+    var alChk=document.getElementById('we-kpi-alerta-'+uid);
+    if (alChk) {
+      _weDraftWidget.kpiConfig.alertaAtivo = alChk.checked;
+      _weDraftWidget.kpiConfig.alertaSentido = gv('we-kpi-sentido-'+uid)||'up';
+      var bxv=gv('we-kpi-alertabaixo-'+uid); _weDraftWidget.kpiConfig.alertaBaixo=(bxv!==null&&bxv!=='')?Number(bxv):null;
+      var alv=gv('we-kpi-alertaalto-'+uid);  _weDraftWidget.kpiConfig.alertaAlto=(alv!==null&&alv!=='')?Number(alv):null;
+    }
+    // Bullet
+    if (!_weDraftWidget.bulletConfig) _weDraftWidget.bulletConfig={};
+    var bfEl=document.getElementById('we-bullet-fmt-'+uid); if(bfEl) _weDraftWidget.bulletConfig.formato=bfEl.value;
+    var bmEl=document.getElementById('we-bullet-max-'+uid); if(bmEl) _weDraftWidget.bulletConfig.maximo=bmEl.value?Number(bmEl.value):null;
     // Tabela
     if (!_weDraftWidget.tabelaConfig) _weDraftWidget.tabelaConfig={};
     var mxEl=document.getElementById('we-tabmax-'+uid); if(mxEl) _weDraftWidget.tabelaConfig.maxLinhas=parseInt(mxEl.value)||10;
+    var hmEl=document.getElementById('we-tab-heatmap-'+uid); if(hmEl) _weDraftWidget.tabelaConfig.heatmapAtivo=hmEl.checked;
+    var stEl=document.getElementById('we-tab-sort-'+uid);    if(stEl) _weDraftWidget.tabelaConfig.sortavel=stEl.checked;
+    var cvEl=document.getElementById('we-tab-csv-'+uid);     if(cvEl) _weDraftWidget.tabelaConfig.exportarCSV=cvEl.checked;
     // Texto
     if (_weDraftWidget.tipo==='texto') {
       var cnt=document.getElementById('we-conteudo-'+uid); if(cnt) _weDraftWidget.conteudo=cnt.value;
@@ -46681,7 +46701,7 @@ var AnaliseEstudioUI = (function() {
     irDashboardGaleria, salvarDashboard, setDashVisibilidade,
     _dashAdicionarWidget, _dashEditarWidget, _dashRemoverWidget, _dashMoverWidget, _dashMudarTamanho,
     _dashAtualizarTitulo, _dashToggleMenu, _dashCompTipoChg, _dashCompAdd, _dashRemComp,
-    _weTipoChg, _weSetCor, _weTamanho, _weModoUpd, _weSelDs, _weSelDs2, _weConfirmar, _weCancelar, _weForma,
+    _weTipoChg, _weSetCor, _weTamanho, _weModoUpd, _weSelDs, _weSelDs2, _weConfirmar, _weCancelar, _weForma, _weToggleAlerta,
     _weCancelarSidebar,
     _abrirSeletorTemplates, _dashFromTemplate, _dashAddSugestao, _dashAddSugestaoByIdx,
     _dashDragStart, _dashDragOver, _dashDrop, _dashDragEnd,
